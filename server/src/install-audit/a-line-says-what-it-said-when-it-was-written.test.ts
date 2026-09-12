@@ -41,6 +41,14 @@ const seedPool = process.env.SEED_DATABASE_URL
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 /**
+ * **A version this build is not**, for the same reason the class below is the
+ * wrong one: a row written under an older schema is what an upgrade leaves
+ * behind, and a reader stamping the current constant answers identically for
+ * every row until one of them disagrees with it.
+ */
+const WRITTEN_UNDER = '1.6.0'
+
+/**
  * A sign-in, recorded as an account change.
  *
  * Deliberately the wrong class for the event: `signed_in` maps to
@@ -55,6 +63,7 @@ const AS_WRITTEN = {
   typeUid: CLASS.accountChange.uid * 100 + 3,
   severityId: 1,
   statusId: 1,
+  schemaVersion: WRITTEN_UNDER,
 }
 
 const asAdmin = { user: { id: 'audit-reader', role: 'admin' } } as never
@@ -108,12 +117,14 @@ describe.skipIf(!db)('a line written before an upgrade', () => {
    * reader that filled it in for some rows and not others is the failure this
    * catches; a check on one line cannot see it.
    */
-  it('names its vocabulary and that vocabulary version on every line', async () => {
+  it('names its vocabulary and a vocabulary version on every line', async () => {
     const page = await reader.page({ limit: 200 }, asAdmin, {})
     expect(page.events.length, 'no line came back, so nothing is being read').toBeGreaterThan(0)
 
+    // **Shaped, not merely present.** `schema_version` is unconstrained `text`,
+    // so a check for a non-empty string passes on anything a writer puts there.
     const unnamed = page.events
-      .filter((one) => one.metadata?.version !== OCSF_VERSION || !one.typeUid)
+      .filter((one) => !/^\d+\.\d+\.\d+$/.test(one.metadata?.version ?? '') || !one.typeUid)
       .map((one) => `${one.id}: version=${String(one.metadata?.version)} typeUid=${String(one.typeUid)}`)
 
     expect(
@@ -121,6 +132,33 @@ describe.skipIf(!db)('a line written before an upgrade', () => {
       'these lines do not say which vocabulary version they were written against, so a ' +
         'collector has to infer the shape it is mapping',
     ).toEqual([])
+  })
+
+  /**
+   * *The install MUST say which version of the vocabulary a line was written
+   * against*, and the identity is *decided when the line is written*.
+   *
+   * **Asserted against the stored value, not against the constant.** A check
+   * that every line equals `OCSF_VERSION` cannot fail where the reader stamps
+   * it: that asserts the reader stamps the value the reader stamps, and says
+   * nothing about what the line was written under.
+   */
+  it('keeps the vocabulary version it was written under, not this build\'s', async () => {
+    expect(
+      OCSF_VERSION,
+      'the row is stored under the version this build declares, so reading it back says ' +
+        'nothing about where the value came from',
+    ).not.toBe(WRITTEN_UNDER)
+
+    const page = await reader.page({ limit: 200 }, asAdmin, {})
+    const written = page.events.find((one) => one.id === id)
+    expect(written, 'the written line did not come back, so nothing below is about it').toBeDefined()
+
+    expect(
+      written!.metadata?.version,
+      'the line reports the version this build declares rather than the one it was written ' +
+        'under, so an upgrade rewrites what every historical line claims to be mapped to',
+    ).toBe(WRITTEN_UNDER)
   })
 
   it('is read back with the identity it was written with', async () => {

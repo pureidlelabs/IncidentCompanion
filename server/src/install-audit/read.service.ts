@@ -133,12 +133,20 @@ export class InstallActivityReadService {
      * **The cost is a window over everything the filters admit.** A request
      * that names no `since` scans the whole log, so the range a caller passes
      * is what bounds it, through `install_activity_channel_at_idx`.
+     *
+     * **`schemaVersion` partitions too, so a run never spans an upgrade.** The
+     * page reports the head of each run, so a run holding rows written under
+     * two vocabulary versions would report one of them for all of them --
+     * which is the thing a stored version exists to prevent. Splitting the run
+     * costs an extra line across an upgrade, in the same direction as the
+     * bucket boundary above: it under-reports a run rather than mis-stating it.
      */
     const window = sql`
       partition by ${installActivity.event},
                    coalesce(${installActivity.actorId}, ''),
                    coalesce(${installActivity.targetLabel}, ''),
                    coalesce(${installActivity.ipAddress}, ''),
+                   ${installActivity.schemaVersion},
                    floor(extract(epoch from ${installActivity.at}) / ${runWindowSeconds})
     `
 
@@ -153,6 +161,7 @@ export class InstallActivityReadService {
         typeUid: installActivity.typeUid,
         severityId: installActivity.severityId,
         statusId: installActivity.statusId,
+        schemaVersion: installActivity.schemaVersion,
         at: installActivity.at,
         actorLabel: installActivity.actorLabel,
         targetLabel: installActivity.targetLabel,
@@ -178,6 +187,7 @@ export class InstallActivityReadService {
         typeUid: runs.typeUid,
         severityId: runs.raisedSeverityId,
         statusId: runs.statusId,
+        schemaVersion: runs.schemaVersion,
         at: runs.at,
         actorLabel: runs.actorLabel,
         targetLabel: runs.targetLabel,

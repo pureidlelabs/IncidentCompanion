@@ -24,7 +24,7 @@ import { InstallActivityPruneService, refuseRetention } from './prune.service.js
 import { recordInstallActivity } from './record.js'
 import { OPERATIONAL_FLOOR_DAYS, RETENTION_FLOOR_DAYS, installActivity } from '../db/schema/install-activity.js'
 import { asRole, openTestPool } from '../../test/database.js'
-import { classify } from './ocsf.js'
+import { OCSF_VERSION, classify } from './ocsf.js'
 import { SEVERITY_ID, outcomeOf, severityOf } from './severity.js'
 import type { InstallEvent } from './record.js'
 
@@ -37,6 +37,7 @@ function ocsfColumns(event: InstallEvent) {
     typeUid: ocsf.typeUid,
     severityId: SEVERITY_ID[severityOf({ event })],
     statusId: outcomeOf(event) === 'failure' ? 2 : 1,
+    schemaVersion: OCSF_VERSION,
   }
 }
 

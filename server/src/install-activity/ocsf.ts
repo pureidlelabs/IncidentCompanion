@@ -237,9 +237,19 @@ export interface OcsfMetadata {
   logName: string
 }
 
-export function metadataFor(logName: string): OcsfMetadata {
+/**
+ * **The version is the row's, not this build's.** Taking it from
+ * `OCSF_VERSION` here made `metadata.version` a property of whoever was
+ * reading: bump the constant and every line ever written starts claiming it
+ * was mapped under the new schema, including lines whose ids were decided
+ * under the old one and are correctly never rewritten.
+ *
+ * `product.version` is this build's and stays so -- it says which build
+ * answered, which is what it is for.
+ */
+export function metadataFor(logName: string, version: string): OcsfMetadata {
   return {
-    version: OCSF_VERSION,
+    version,
     product: { name: 'IncidentCompanion', vendorName: 'IncidentCompanion', version: BUILD_VERSION },
     logName,
   }

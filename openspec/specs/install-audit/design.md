@@ -70,6 +70,10 @@ Lines identify themselves in a published schema, and the version is stamped on e
 
 This is an application whose users already run security monitoring. A private vocabulary would make ingesting the audit a mapping exercise per install, and the mapping would be the thing that is wrong. Stamping the version means an upgrade does not change what an already-written line means.
 
+**What is the line's and what is the reader's.** The numbers are the line's: the class, the activity, the type and the version it was decided under are all stored, and none is recomputed. The words are not. A class name and an activity name are looked up from the build's own tables by the stored number, so a line written under an older version is described in this build's words while claiming its own version. That is the right way round — a consumer maps on the numbers, and rendering a retired vocabulary's wording would mean carrying every version's tables for the benefit of a screen. It does mean the mapping behind a retired version is verified by nothing: the schema check runs against the version this build declares, and only that one.
+
+**A run never spans a version.** The reader collapses repeated events to one line, so a run holding rows from either side of an upgrade would report one version for all of them. The version partitions the run, which costs an extra line across an upgrade and states no line's version wrongly.
+
 ## Reading the audit is audited, at a rate that does not drown it
 
 The read is recorded, because who has been through the record is part of the record. It is recorded at most once per administrator per window, so working through the audit does not fill it with the fact that somebody was working through it.

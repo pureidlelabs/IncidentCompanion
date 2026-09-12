@@ -388,6 +388,16 @@ export const installActivity = pgTable(
     statusId: integer('status_id').notNull(),
 
     /**
+     * Which version of the vocabulary the ids above were decided under.
+     *
+     * **No default, so a writer that does not decide it cannot insert.** A
+     * default equal to the build's current constant is indistinguishable from a
+     * correct stamp until the constant moves, which is the one day this column
+     * is for.
+     */
+    schemaVersion: text('schema_version').notNull(),
+
+    /**
      * Who did it. Null when the account is gone, or when nobody was signed in
      * - a failed sign-in has no actor by definition.
      */

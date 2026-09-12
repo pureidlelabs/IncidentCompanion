@@ -17,7 +17,7 @@ import type { IncomingHttpHeaders } from 'node:http'
 import type { Database } from '../db/client.js'
 import { retentionClassOf } from './retention-class.js'
 import { CHANNEL_OF, installActivity } from '../db/schema/install-activity.js'
-import { classify } from './ocsf.js'
+import { OCSF_VERSION, classify } from './ocsf.js'
 import { SEVERITY_ID, outcomeOf, severityOf } from './severity.js'
 
 export type InstallEvent = (typeof installActivity.event.enumValues)[number]
@@ -138,6 +138,9 @@ export async function recordInstallActivity(
       classUid: ocsf.classUid,
       activityId: ocsf.activityId,
       typeUid: ocsf.typeUid,
+      // Stamped beside the ids it describes: they were decided under this
+      // version, and a later build's constant does not apply to them.
+      schemaVersion: OCSF_VERSION,
       severityId: SEVERITY_ID[severity],
       statusId: (input.outcome ?? outcomeOf(input.event)) === 'failure' ? 2 : 1,
       actorId: input.actor?.id ?? null,
