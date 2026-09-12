@@ -15,6 +15,7 @@ import { UnprocessableEntityException } from '@nestjs/common'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { actionWriteSchema, eventWriteSchema } from '../domain/entities/timeline.js'
 import { CollectionService, type CollectionDefinition } from '../collections/collection.service.js'
+import type { Executor } from '../db/scope.js'
 import type { Candidate, PreviewResult, RawIncident, TimelineCandidate } from '../domain/incident-import.js'
 import { parseEntity } from './providers/sentinel/entities.js'
 import { mapEntity, startsChecked, SEPARATOR } from './providers/sentinel/mapping.js'
@@ -144,6 +145,14 @@ export class ImportService {
     approved: readonly string[],
     edits: readonly { id: string; field: string; value: unknown }[],
     defs: ImportDefinitions,
+    /**
+     * **The handle when the case is being opened by the same act.** Both writes
+     * go on it, so a failure at the second takes the first and the case itself
+     * with it. Left unset, each write opens its own transaction and the seam
+     * between them stays -- which the specification permits, because matching
+     * runs against the store and a retry finishes rather than doubling.
+     */
+    on?: Executor,
   ): Promise<{ entities: number; timeline: number; skippedExisting: number }> {
     const plan = await this.preview(caseId, incidents, defs)
     const wanted = new Set(approved)
@@ -188,7 +197,7 @@ export class ImportService {
       }
     }
 
-    const written = await this.collections.createAcross(caseId, actorId, groups)
+    const written = await this.collections.createAcross(caseId, actorId, groups, 'refuse', on)
     for (const group of order) {
       const ids = written.ids[group.collection] ?? []
       group.ids.forEach((candidate, at) => {
@@ -199,9 +208,10 @@ export class ImportService {
 
     // **The timeline is written after, and in its own call for one reason:**
     // its rows name the entity ids the call above minted. Both are inside the
-    // same case and the same guards; a failure here leaves entities written,
-    // which is the one seam this design does not close and the reason the
-    // route reports both counts.
+    // same case and the same guards. A failure here leaves the entities written
+    // when the two calls are the whole act, which the specification permits
+    // because a retry matches against the store and finishes; given `on`, both
+    // are inside one transaction and a failure here takes them together.
     const rows = plan.timeline
       .filter((one) => wanted.has(one.id))
       .map((one) => ({
@@ -211,7 +221,7 @@ export class ImportService {
       }))
 
     const timeline = rows.length
-      ? await this.collections.createMany(defs.timeline, caseId, rows, actorId)
+      ? await this.collections.createMany(defs.timeline, caseId, rows, actorId, 'refuse', on)
       : { ids: [] as string[] }
 
     return {

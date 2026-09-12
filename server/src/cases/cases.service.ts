@@ -25,7 +25,7 @@ import { LiveGateway } from '../live/live.gateway.js'
 import { timelineToWire } from '../domain/entities/timeline.js'
 import { isGapped } from '../domain/tiering.js'
 import { SEVERITY } from '../domain/vocabularies.js'
-import { withCase } from '../db/scope.js'
+import { withCase, type Executor } from '../db/scope.js'
 import { inSeries } from '../db/in-series.js'
 import { columnOf } from '../db/column-access.js'
 import type { PgTable } from 'drizzle-orm/pg-core'
@@ -317,8 +317,15 @@ export class CasesService {
     },
     actorId: string,
     seed?: CaseSeed,
+    /**
+     * **A handle when the case is one half of a larger act.** An import that
+     * opens a case and fills it has to leave no case behind when the filling
+     * fails, so it passes its own transaction and this opens a savepoint inside
+     * it rather than a second transaction of its own. -> `db/scope.ts`
+     */
+    on: Executor = this.db,
   ): Promise<CaseRow> {
-    return this.db.transaction(async (tx) => {
+    return on.transaction(async (tx) => {
       const [row] = await tx
         .insert(cases)
         .values({ ...input, createdBy: actorId, updatedBy: actorId })

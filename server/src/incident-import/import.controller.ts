@@ -16,6 +16,7 @@
 import {
   Body,
   Controller,
+  Inject,
   Param,
   ParseUUIDPipe,
   Post,
@@ -27,6 +28,8 @@ import { z } from 'zod'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { CasesService } from '../cases/cases.service.js'
+import { DATABASE } from '../db/db.module.js'
+import type { Database } from '../db/client.js'
 import {
   commitBodySchema,
   importedSchema,
@@ -124,6 +127,7 @@ export class StartImportController {
   constructor(
     private readonly imports: ImportService,
     private readonly cases: CasesService,
+    @Inject(DATABASE) private readonly db: Database,
   ) {}
 
   /**
@@ -145,13 +149,12 @@ export class StartImportController {
   }
 
   /**
-   * Create the case, then import into it.
+   * Create the case and import into it, as one act.
    *
-   * **Two transactions, where the requirement asks for one.** *Creating the
-   * case and filling it MUST be one act. A failure MUST leave no case* -- and
-   * the case is written first because the import needs its id to scope every
-   * row, so a failure after that leaves exactly the empty case the requirement
-   * refuses. -> #50
+   * **One transaction, opened here.** The case is still written first, because
+   * every row the import writes is scoped by its id -- but both writes run on
+   * the handle this opens, so a failure at any of them takes the case with it
+   * and the analyst is left with nothing rather than with an empty case.
    */
   @Post('case')
   @ZodResponse({
@@ -160,24 +163,29 @@ export class StartImportController {
     description: 'The case that was created, and what the incident put in it.',
   })
   async start(@Body() body: StartBodyDto, @Session() session: UserSession) {
-    const created = await this.cases.create(
-      {
-        title: body.title,
-        customer: body.customer,
-        reference: body.reference,
-        severity: caseSeverityOf(body.incidents),
-        detectedAt: body.detectedAt == null ? body.detectedAt : new Date(body.detectedAt),
-      },
-      session.user.id,
-    )
-    const imported = await this.imports.commit(
-      created.id,
-      session.user.id,
-      body.incidents,
-      body.approved,
-      body.edits,
-      definitions(),
-    )
-    return { ...imported, caseId: created.id }
+    return this.db.transaction(async (tx) => {
+      const created = await this.cases.create(
+        {
+          title: body.title,
+          customer: body.customer,
+          reference: body.reference,
+          severity: caseSeverityOf(body.incidents),
+          detectedAt: body.detectedAt == null ? body.detectedAt : new Date(body.detectedAt),
+        },
+        session.user.id,
+        undefined,
+        tx,
+      )
+      const imported = await this.imports.commit(
+        created.id,
+        session.user.id,
+        body.incidents,
+        body.approved,
+        body.edits,
+        definitions(),
+        tx,
+      )
+      return { ...imported, caseId: created.id }
+    })
   }
 }

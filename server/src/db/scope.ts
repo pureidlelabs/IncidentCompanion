@@ -14,8 +14,19 @@ import { sql } from 'drizzle-orm'
 
 import type { Database, Transaction } from './client.js'
 
+/**
+ * Either a pool or a transaction already open on it.
+ *
+ * **A caller composing two writes into one act passes its own handle**, and
+ * gets a savepoint rather than a second transaction: Drizzle opens a nested
+ * `transaction()` as one, so a throw anywhere inside rolls the whole act back.
+ * `set_config(..., true)` is transaction-local, so the scope is set again on the
+ * savepoint rather than inherited by accident.
+ */
+export type Executor = Database | Transaction
+
 export function withCase<T>(
-  db: Database,
+  db: Executor,
   caseId: string,
   work: (tx: Transaction) => Promise<T>,
 ): Promise<T> {

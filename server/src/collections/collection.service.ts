@@ -32,7 +32,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { changeFeed } from '../db/schema/index.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
-import { withCase } from '../db/scope.js'
+import { withCase, type Executor } from '../db/scope.js'
 import { TABLES, type BulkTarget } from './registry.js'
 import {
   coerceTimes,
@@ -336,12 +336,13 @@ export class CollectionService {
     rows: Record<string, unknown>[],
     actorId: string,
     onForeignReference: 'refuse' | 'drop' = 'refuse',
+    on: Executor = this.db,
   ): Promise<{ ids: string[]; unlinked: number }> {
     if (rows.length === 0) return { ids: [], unlinked: 0 }
-    await def.refuseIfClosed?.(this.db, caseId, { rows })
+    await def.refuseIfClosed?.(on, caseId, { rows })
 
     let unlinked = 0
-    const ids = await withCase(this.db, caseId, async (tx) => {
+    const ids = await withCase(on, caseId, async (tx) => {
       const written = await this.insertWithin(tx, def, caseId, rows, actorId, onForeignReference)
       unlinked += written.unlinked
       return written.ids
@@ -430,15 +431,16 @@ export class CollectionService {
     actorId: string,
     groups: { def: CollectionDefinition; rows: Record<string, unknown>[] }[],
     onForeignReference: 'refuse' | 'drop' = 'refuse',
+    on: Executor = this.db,
   ): Promise<{ ids: Record<string, string[]>; unlinked: number }> {
     const wanted = groups.filter((group) => group.rows.length > 0)
     if (wanted.length === 0) return { ids: {}, unlinked: 0 }
     for (const group of wanted) {
-      await group.def.refuseIfClosed?.(this.db, caseId, { rows: group.rows })
+      await group.def.refuseIfClosed?.(on, caseId, { rows: group.rows })
     }
 
     let unlinked = 0
-    const ids = await withCase(this.db, caseId, async (tx) => {
+    const ids = await withCase(on, caseId, async (tx) => {
       const written: Record<string, string[]> = {}
       for (const group of wanted) {
         const one = await this.insertWithin(
