@@ -15,7 +15,7 @@ import {
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -300,6 +300,39 @@ export class CasesService {
    * that exists and was never announced is invisible to every picker already
    * open, and one holding half a checklist looks started.
    */
+  /**
+   * Refuses a reference the customer is already using, naming the case.
+   *
+   * **The refusal is here and the guarantee is the index**, which is the split
+   * the merge path does not need: `cases_customer_reference_idx` cannot be
+   * bypassed, and this is what turns its violation into an answer an analyst
+   * can act on rather than a failed query. A lookup alone would race two
+   * simultaneous creates; the index alone would say only that something
+   * collided.
+   *
+   * **Grouped by a null `customer_id`, because that is what a created case
+   * has.** `create` writes the free-text `customer` column being retired and
+   * cannot reach the foreign key, so every case it makes belongs to the
+   * default customer -- which the specification calls a customer like any
+   * other. The index groups the same way, by `coalesce`. -> #218
+   */
+  private async referenceIsFree(tx: Executor, reference?: string | undefined): Promise<void> {
+    // The absence of a reference is not a value and never collides, which is
+    // also why the index is partial.
+    if (!reference) return
+
+    const [held] = await tx
+      .select({ title: cases.title })
+      .from(cases)
+      .where(and(eq(cases.reference, reference), isNull(cases.customerId)))
+      .limit(1)
+    if (!held) return
+
+    throw new ConflictException({
+      message: `"${held.title}" already carries ${reference}. Give this case a different reference.`,
+    })
+  }
+
   async create(
     /**
      * **What a case may be minted with.** `severity` and `detectedAt` are here
@@ -321,6 +354,7 @@ export class CasesService {
     on: Executor = this.db,
   ): Promise<CaseRow> {
     return on.transaction(async (tx) => {
+      await this.referenceIsFree(tx, input.reference)
       const [row] = await tx
         .insert(cases)
         .values({ ...input, createdBy: actorId, updatedBy: actorId })
