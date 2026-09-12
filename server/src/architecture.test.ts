@@ -67,7 +67,13 @@ const MAY_IMPORT: Record<string, string[]> = {
   db: ['config'],
   config: [],
   demos: ['db', 'domain', 'config'],
-  auth: ['db', 'config', 'install-activity', 'policy'],
+  /**
+   * `wire` for the one decision three folders share: whether the caller's
+   * claimed address may be believed. It is a leaf, so the edge cannot become
+   * a cycle, and the alternative to the edge is each folder deciding for
+   * itself - which is the defect it replaces. -> `wire/caller-address.ts`
+   */
+  auth: ['db', 'config', 'install-activity', 'policy', 'wire'],
   cases: ['db', 'domain', 'demos', 'library', 'config', 'access', 'live', 'install-activity'],
   collections: ['db', 'domain', 'config', 'live', 'access', 'evidence', 'report'],
   /** No `cases`: one row per case, scoped by the `caseId` in the URL alone. */
@@ -102,12 +108,15 @@ const MAY_IMPORT: Record<string, string[]> = {
   // A leaf on purpose: the settings route writes these and the controls
   // they bound read them, and those two folders already point one way.
   policy: ['db', 'config'],
-  'install-activity': ['db'],
+  // Still appends a row and reads nothing back. `wire` is the address rule,
+  // and this folder already takes `IncomingHttpHeaders` from its callers, so
+  // the edge adds a shared decision rather than a new awareness.
+  'install-activity': ['db', 'wire'],
   // The guard records its own refusals, so it reaches the writer and the
-  // database - and nothing else. A rate limit that grew a dependency on a
-  // feature folder would be a limit that could not be applied before that
-  // feature was built.
-  throttle: ['db', 'auth', 'install-activity'],
+  // database - and no *feature* folder, which is the edge that would make a
+  // rate limit unappliable until that feature was built. `wire` is a leaf
+  // holding the address rule this shares with the audit and Better Auth.
+  throttle: ['db', 'auth', 'install-activity', 'wire'],
   /** Above `auth`, because reading the audit is admin-gated. */
   'install-audit': ['db', 'auth', 'install-activity', 'preferences', 'policy', 'config'],
   /** A leaf: the certificate is materialised before the Nest container exists. */

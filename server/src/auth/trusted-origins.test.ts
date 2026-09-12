@@ -91,17 +91,30 @@ describe('the origins allowed to drive this server', () => {
   /**
    * **The mode the server actually runs in, not the one this file types.**
    * Every assertion above passes `'production'` as a literal, so none of them
-   * asks which branch the app boots into; this one resolves `NODE_ENV` the way
+   * asks which branch the app boots into; these two resolve `NODE_ENV` the way
    * the app does.
+   *
+   * **An unnamed mode refuses to start, where it used to default closed.** A
+   * default could only be safe for one of the two decisions reading this
+   * variable: `production` closes the origin list and opens the client-IP
+   * header. -> `wire/caller-address.ts`
    */
-  it('does not trust the dev server on the default this app boots with', () => {
-    const env = loadEnv({
-      DATABASE_URL: 'postgres://u:p@127.0.0.1:5432/db',
-      SEED_DATABASE_URL: 'postgres://u:p@127.0.0.1:5432/db',
-      REDIS_URL: 'redis://127.0.0.1:6379',
-      AUTH_SECRET: 'x'.repeat(32),
-      AUTH_BASE_URL: BASE,
-    })
+  const settings = {
+    DATABASE_URL: 'postgres://u:p@127.0.0.1:5432/db',
+    SEED_DATABASE_URL: 'postgres://u:p@127.0.0.1:5432/db',
+    REDIS_URL: 'redis://127.0.0.1:6379',
+    AUTH_SECRET: 'x'.repeat(32),
+    AUTH_BASE_URL: BASE,
+  }
+
+  it('refuses to start when nothing says which mode it is', () => {
+    expect(() => loadEnv(settings), 'an unnamed mode was resolved rather than refused').toThrow(
+      /NODE_ENV/,
+    )
+  })
+
+  it('does not trust the dev server in the mode the image sets', () => {
+    const env = loadEnv({ ...settings, NODE_ENV: 'production' })
 
     const allowed = trustedOrigins(BASE, env.NODE_ENV)
     expect(allowed).not.toContain('https://127.0.0.1:5173')

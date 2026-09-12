@@ -73,12 +73,11 @@ const schema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(8080),
 
   /**
-   * Defaults to the closed setting, because a default deciding a security
-   * posture must be the safe one: `development` widens the trusted-origin
-   * list to Vite's port, and that list is applied as app-wide CORS with
-   * credentials. The dev script says `NODE_ENV=development` out loud.
+   * Required, with no default: two security decisions read it and the closed
+   * setting is a different value for each.
+   * -> `openspec/specs/deployment/design.md`
    */
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
+  NODE_ENV: z.enum(['development', 'test', 'production']),
 
   /**
    * Where the audit is sent, as an OTLP/HTTP logs endpoint with its path.

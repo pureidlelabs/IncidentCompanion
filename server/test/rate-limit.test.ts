@@ -13,7 +13,7 @@
  *   sixth click. That is what the first case here is for.
  * - The limit keyed on the proxy rather than the caller. Not reachable in this
  *   process - there is no nginx in front of it - so it is held by
- *   `src/throttle/caller.test.ts` instead, and named here so the gap is not
+ *   `src/wire/caller-address.test.ts` instead, and named here so the gap is not
  *   mistaken for coverage.
  *
  * **And the credential routes are not this limiter's at all.** Better Auth is
