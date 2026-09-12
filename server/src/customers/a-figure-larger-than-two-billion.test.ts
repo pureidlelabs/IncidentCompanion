@@ -1,26 +1,30 @@
 /**
- * **An organisation's annual turnover does not fit in an `integer`.**
+ * **A figure a regime asks a large entity for does not fit in an `integer`.**
  *
- * `int4` stops at 2,147,483,647, which is EUR 2.1bn - and the regimes that ask
- * for this figure ask it of exactly the entities above that line. NIS2 sizes
- * an essential entity by turnover; a bank inside DORA's scope is routinely a
- * multiple of it. The column would refuse the answer for the organisations the
- * question is for.
+ * `int4` stops at 2,147,483,647, and the regimes that ask for these figures
+ * ask them of exactly the entities above that line: EUR 2.1bn of turnover is
+ * inside the range NIS2 sizes an essential entity by, and one breach has
+ * reached three billion accounts. The column would refuse the answer for the
+ * organisations the question is for.
  *
  * **Asserted against Postgres rather than the ORM**, because the ceiling is
  * the column type's and Drizzle will happily hand it a number that the
  * database then refuses.
  *
- * The same fact lives on the case as a copy, so both are checked: a customer
- * that can hold the figure and a case that cannot would fail at the moment the
- * copy is taken, which is further from the cause.
+ * **One file for the rule rather than one per column**, across every table
+ * that holds such a figure -- the organisation, its case's copy, and the
+ * impact rows the case counts. A file per column is where the next one is
+ * forgotten, which is how the euro columns came to be widened two at a time.
+ *
+ * Columns deliberately left `int4` are asserted nowhere, because they are not
+ * in the class: a duration of 2,147,483,647 minutes is 4,083 years.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { caseCompliance } from '../db/schema/case-compliance.js'
-import { cases, customers } from '../db/schema/index.js'
+import { cases, customers, impact } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -42,7 +46,7 @@ afterAll(async () => {
   await pool?.end()
 })
 
-describe.skipIf(!db)('a turnover larger than two billion', () => {
+describe.skipIf(!db)('a figure larger than two billion', () => {
   beforeEach(async () => {
     await seed!.delete(cases)
     await seed!.delete(customers)
@@ -77,11 +81,6 @@ describe.skipIf(!db)('a turnover larger than two billion', () => {
    * losses and NIS2 for the economic damage; nothing about a supply-chain or
    * ransomware event at a bank is bounded by EUR 2bn, and the column would be
    * the thing that decided the answer.
-   *
-   * **Written here rather than in a file of its own**, because the ceiling is
-   * one fact about one table: three euro columns on the same row, asked by the
-   * same regimes of the same organisations. A second file would be the place
-   * the fourth column is forgotten.
    */
   it('does not cap what the incident itself cost', async () => {
     const [row] = await seed!.insert(cases).values({ title: 'A costly incident' }).returning()
@@ -145,5 +144,25 @@ describe.skipIf(!db)('a turnover larger than two billion', () => {
 
     const [read] = await seed!.select().from(customers).where(eq(customers.id, made!.id))
     expect(read!.usersTotalCount).toBe(THREE_BILLION)
+  })
+
+  /**
+   * **The same figure on the row an analyst actually counts it on.** The
+   * compliance answers are a summary; `impact` is where the per-category
+   * counting happens, and its own docstring cites Art 33(3)(a) - the
+   * approximate number of data subjects, inside 72 hours. `volume_bytes` on
+   * the same row was widened for this reason and these two were left.
+   */
+  it('does not cap how many subjects or records one impact reached', async () => {
+    const [row] = await seed!.insert(cases).values({ title: 'A wide impact' }).returning()
+    await seed!.insert(impact).values({
+      caseId: row!.id,
+      subjectCount: THREE_BILLION,
+      recordCount: THREE_BILLION,
+    })
+
+    const [read] = await seed!.select().from(impact).where(eq(impact.caseId, row!.id))
+    expect(read!.subjectCount, 'the count Art 33(3)(a) asks for does not fit').toBe(THREE_BILLION)
+    expect(read!.recordCount, 'the records a breach touched do not fit').toBe(THREE_BILLION)
   })
 })

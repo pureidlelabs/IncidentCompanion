@@ -152,9 +152,14 @@ export const impact = pgTable(
      * **Nullable, and that is the difference between "none" and "not counted
      * yet".** Art 33(3)(a) asks for an approximate figure inside 72 hours; a
      * zero default would answer it with a number nobody established.
+     *
+     * **`bigint` for the reason `volume_bytes` gives**, applied to the count
+     * rather than the size: `int4` stops at 2,147,483,647 and one breach has
+     * reached three billion accounts, so the column would refuse the figure
+     * the article asks for.
      */
-    subjectCount: integer('subject_count'),
-    recordCount: integer('record_count'),
+    subjectCount: bigint('subject_count', { mode: 'number' }),
+    recordCount: bigint('record_count', { mode: 'number' }),
     /**
      * **`bigint` because 4GB fits in a mailbox export.** `integer` tops out at
      * 2.1e9, which is under three gigabytes - reachable by an ordinary
