@@ -293,20 +293,49 @@ describe('the ladder agrees with keyOf, on every collection', () => {
    * `keyOf`'s key; the CSV import keys on `keyOf` while the incident import
    * matches on the ladder, so the two drifting apart means one door merges what
    * the other splits.
+   *
+   * **Every keyed collection, and the sparse row is the one that matters.** A
+   * ladder may carry a field the key does not -- an indicator's `scope` -- so
+   * the rung built when a row falls below its floor is where the two can
+   * differ, and a row carrying only its leading field is how that rung is
+   * reached.
    */
-  it('agrees with keyOf on the rung keyOf owns', () => {
-    for (const row of [
-      { collection: 'accounts', row: { accountName: 'svc_backup' } },
-      { collection: 'accounts', row: { accountName: 'admin', domain: 'corp.local' } },
-      { collection: 'systems', row: { hostname: 'WKS-1' } },
-    ]) {
-      const alone = keyOf(row.collection, row.row)
-      expect(alone, `${row.collection} has no key at all`).not.toBeNull()
-      expect(
-        identitiesOf(row.collection, row.row),
-        `the ladder for ${row.collection} no longer offers the key \`keyOf\` builds, so the ` +
-          'two import doors disagree about what is the same row',
-      ).toContain(alone)
-    }
+  it.each([
+    ['systems', { hostname: 'WKS-1' }],
+    ['accounts', { accountName: 'svc_backup' }],
+    ['accounts', { accountName: 'admin', domain: 'corp.local' }],
+    ['network_indicators', { value: '10.0.0.1' }],
+    ['network_indicators', { value: '10.0.0.1', type: 'ipv4', scope: 'internal' }],
+    ['malware', { hash: 'abc' }],
+    ['malware', { filename: 'dropper.bin' }],
+    ['cloud_apps', { appName: 'Dropbox' }],
+  ])('offers the key keyOf builds, for %s', (collection, row) => {
+    const alone = keyOf(collection, row)
+    if (alone === null) return
+
+    expect(
+      identitiesOf(collection, row),
+      `the ladder for ${collection} no longer offers the key \`keyOf\` builds, so the CSV ` +
+        'door and the incident door disagree about what is the same row',
+    ).toContain(alone)
+  })
+
+  /**
+   * **The agreement above is satisfied by a ladder that answers nothing else**,
+   * which would be a ladder that had stopped laddering: an incoming row keyed
+   * on everything it knows would match no stored row keyed on less, and the
+   * import would double the table rather than merge into it.
+   */
+  it('still offers rungs keyOf does not', () => {
+    const rich = identitiesOf('network_indicators', {
+      value: '10.0.0.1',
+      type: 'ipv4',
+      scope: 'internal',
+    })
+
+    expect(
+      rich.length,
+      'the ladder offers one key, so it is answering `keyOf` and nothing more',
+    ).toBeGreaterThan(1)
   })
 })

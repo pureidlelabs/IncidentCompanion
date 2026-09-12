@@ -266,11 +266,17 @@ export function identitiesOf(collection: string, row: Record<string, unknown>): 
        * named at all. An account with no domain answers to
        * `accounts<NUL>accountName<NUL>svc_backup<NUL>domain<NUL>`, which
        * matches another domainless account of that name and never
-       * `admin@corp.local`. Returning nothing
-       * here drops every local and service account from an import silently,
-       * and breaks this module's own claim that the weakest rung is `keyOf`'s.
+       * `admin@corp.local`. Returning nothing here drops every local and
+       * service account from an import silently.
+       *
+       * **`keyOf`'s key, asked for rather than rebuilt.** A ladder may carry
+       * a field the key does not -- an indicator's `scope` -- so building this
+       * rung from the ladder's own fields gives a key `keyOf` never produces,
+       * and the two doors stop agreeing about a row neither can match. Where a
+       * collection has a ladder and no key there is nothing to ask, and the
+       * ladder's own shape is all there is.
        */
-      out.push(qualified(collection, pairs))
+      out.push(keyOf(collection, row) ?? qualified(collection, pairs))
     } else {
       for (let count = held.length; count >= floor; count -= 1) {
         out.push(qualified(collection, held.slice(0, count)))
