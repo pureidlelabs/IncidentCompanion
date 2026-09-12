@@ -27,6 +27,7 @@ import socket
 import ssl
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -924,3 +925,129 @@ def test_the_api_reference_boots_through_the_edge(running_container):
     assert _status(f"https://127.0.0.1:{PORT}/api/openapi.json") == 200, (
         "the viewer booted with nothing to render: the document it fetches is "
         "not being served through the edge")
+
+
+
+
+def _refused(url: str, method: str = "GET") -> tuple[int, str | None, str]:
+    """Status, `Retry-After`, and the content type that says who refused.
+
+    `urlopen` raises on a 429 and the headers a caller acts on are on the
+    exception rather than on a response, so a probe written the obvious way
+    reads them off nothing.
+
+    **The content type is the discriminator, and this file needs one.** Three
+    limiters answer 429 on these paths: nginx's two zones, the app's throttler,
+    and Better Auth's own. Only nginx renders its error page as `text/html`;
+    the other two answer JSON and name the wait under their own spellings. A
+    probe filtering on status alone asserts the edge's contract against
+    whichever of the three happened to refuse first.
+    """
+    request = urllib.request.Request(url, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=10, context=_UNVERIFIED) as response:
+            return response.status, response.headers.get("Retry-After"), \
+                response.headers.get("Content-Type", "")
+    except urllib.error.HTTPError as refusal:
+        return refusal.code, refusal.headers.get("Retry-After"), \
+            refusal.headers.get("Content-Type", "")
+
+
+def _storm(url: str, n: int) -> list[tuple[int, str | None, str]]:
+    """`n` at once. Sequentially, a rate window outlasts the loop and nothing
+    is ever exceeded."""
+    with ThreadPoolExecutor(max_workers=min(n, 64)) as pool:
+        return list(pool.map(lambda _: _refused(url), range(n)))
+
+
+def _edge_refusals(answers):
+    return [(code, told) for code, told, kind in answers
+            if code == 429 and "text/html" in kind]
+
+
+#: `ic_auth` is 10r/m with `burst=20`, so this clears the burst; `ic_all` is
+#: 30r/s with `burst=60`, so the root location needs rather more.
+_AUTH_STORM = 40
+_ROOT_STORM = 120
+
+
+def test_the_edge_tells_a_refused_caller_when_to_come_back_on_the_credential_paths(
+        running_container):
+    """*It is refused, AND told when it may try again* -- where the edge is the
+    only limiter a deployment is guaranteed.
+
+    `throttle/tiers.ts` says why: the app's guard never runs on `/api/auth/*`
+    because Better Auth is middleware, its own limiter is production-gated, and
+    a deployment without it "has nginx's `ic_auth` zone and nothing else".
+
+    **A path the app does not serve**, so no credential attempt is spent:
+    `ic_auth` counts the request whatever the app would have answered.
+
+    Break-verified by removing this location's `error_page 429`: every edge
+    refusal arrives with no `Retry-After`. -> #142
+    """
+    _wait_for_app(HEALTH)
+    answers = _storm(f"https://127.0.0.1:{PORT}/api/auth/not-a-real-route", _AUTH_STORM)
+
+    refused = _edge_refusals(answers)
+    assert refused, (
+        "the edge refused nothing, so this asserts nothing about its refusal -- "
+        f"seen: {sorted({(code, kind) for code, _, kind in answers})}")
+
+    for _, told in refused:
+        assert told == "6", (
+            f"the edge refused with Retry-After {told!r}. `ic_auth` is 10r/m, so a "
+            "caller obeying anything shorter is refused again")
+
+
+def test_the_edge_tells_a_refused_caller_when_to_come_back_on_every_other_path(
+        running_container):
+    """The same, for the location that serves the rest of the app.
+
+    **Its own test because its own handler.** The two locations carry separate
+    `error_page` lines and separate waits, so a test that only storms
+    `/api/auth/*` passes with the root location's handler deleted -- which is
+    the original defect, restored for every route an analyst actually uses.
+    """
+    _wait_for_app(HEALTH)
+    answers = _storm(f"https://127.0.0.1:{PORT}/not-a-real-route", _ROOT_STORM)
+
+    refused = _edge_refusals(answers)
+    assert refused, (
+        "the edge refused nothing, so this asserts nothing about its refusal -- "
+        f"seen: {sorted({(code, kind) for code, _, kind in answers})}")
+
+    for _, told in refused:
+        assert told == "1", (
+            f"the edge refused with Retry-After {told!r}, which is not what this "
+            "location's handler names for `ic_all`")
+
+
+def test_a_response_the_edge_did_not_refuse_carries_no_retry_time(running_container):
+    """The other half of `add_header ... always`, and the reason for the seam.
+
+    `always` is what makes a header reach a 429 at all, and it reaches every
+    other status too -- so set in the location rather than in the handler that
+    renders the refusal, it would tell a caller whose request succeeded to come
+    back later.
+
+    **Both locations**, because the mistake can be made in either and a probe
+    of one would not see it. The credential path has no anonymous 200, so what
+    is asserted there is a refusal of a different kind: Better Auth's own,
+    which is JSON and carries its own spelling.
+    """
+    _wait_for_app(HEALTH)
+
+    with urllib.request.urlopen(HEALTH, timeout=10, context=_UNVERIFIED) as ok:
+        assert ok.status == 200
+        assert ok.headers.get("Retry-After") is None, (
+            "a response the edge did not refuse carries a retry time, so the "
+            "header is on everything rather than on the refusal")
+
+    code, told, _ = _refused(f"https://127.0.0.1:{PORT}/api/auth/not-a-real-route")
+    assert code != 429, (
+        "the credential zone was already exhausted, so this says nothing about "
+        "an unrefused response through that location")
+    assert told is None, (
+        f"a {code} through the credential location carries Retry-After {told!r}, so "
+        "that location's header is on everything rather than on its refusal")

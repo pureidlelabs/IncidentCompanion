@@ -299,10 +299,25 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
     locations = re.findall(r"^\s*location\s+([^\s{]+)\s*\{(.*?)^\s*\}",
                            conf, re.MULTILINE | re.DOTALL)
     assert locations, "no location blocks found, so nothing proxies"
-    missing = [name for name, body in locations if "ic-proxy.inc" not in body]
-    assert not missing, (
-        f"location(s) {missing} proxy without including ic-proxy.inc, so a "
-        f"request through them carries the caller's own X-Real-IP")
+
+    # **Every location either forwards through the fragment or answers for
+    # itself.** The first is the original invariant: the fragment is the only
+    # thing that overwrites `X-Real-IP`, so a location reaching the app without
+    # it forwards whatever the caller sent. The second is the exemption the
+    # refusal handlers need -- `error_page 429` renders them, they return a
+    # literal, and no upstream is reached for a header to survive into.
+    #
+    # **Stated as one condition, not two.** Asking separately whether a
+    # location has `proxy_pass` tests nothing here: `proxy_pass` lives in the
+    # fragment, so it appears nowhere in this file and such an arm is dead the
+    # day it is written.
+    stray = [name for name, body in locations
+             if "ic-proxy.inc" not in body
+             and not re.search(r"^\s*return\s+\d", body, re.MULTILINE)]
+    assert not stray, (
+        f"location(s) {stray} neither include ic-proxy.inc nor answer for "
+        f"themselves -- one that reaches the app without the fragment forwards "
+        f"the caller's own X-Real-IP")
 
 
 def test_the_only_published_port_belongs_to_the_tls_edge():
