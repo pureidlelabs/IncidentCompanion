@@ -65,6 +65,8 @@ const INCIDENT = {
   number: 'INC-88213',
   title: 'A phish',
   firstActivity: '2026-07-30T08:55:00Z',
+  /** The provider's own spelling, which the case vocabulary refuses verbatim. */
+  severity: 'High',
 }
 
 /**
@@ -460,6 +462,29 @@ describe('the Sentinel import container', () => {
       // when the incident actually started.
       expect(starts[0]?.kase.reference).toBe(INCIDENT.number)
       expect(starts[0]?.kase.detectedAt).toBe(INCIDENT.firstActivity)
+    })
+
+    /**
+     * **The severity travels in the payload, not in the case fields.** It is
+     * the provider's own word: this tier does not map it, and the create door
+     * refuses a level composed here. So the assertion is that the word arrives
+     * unaltered -- a `toLowerCase()` creeping in on this side is as much a
+     * defect as dropping it. -> #516
+     */
+    it("carries the provider's severity in the payload, unmapped", async () => {
+      const held = await readyToStart()
+
+      await held.create!(WORKSPACE.key, ['SEN-1001'], { title: 'From an incident' }, EVERY_ROW)
+
+      const sent = starts[0]?.payload.incidents[0] as { severity?: unknown } | undefined
+      expect(
+        sent?.severity,
+        'the incident reached the server without the severity the provider reported, so the ' +
+          'case it opens has nothing to be marked from',
+      ).toBe(INCIDENT.severity)
+      expect(starts[0]?.kase, 'the browser composed a level the create door refuses').not.toHaveProperty(
+        'severity',
+      )
     })
 
     it('refuses to create from a selection the review was never given', async () => {

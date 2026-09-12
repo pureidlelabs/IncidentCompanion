@@ -61,16 +61,18 @@ export function startCaseFromIncident(
   payload: ImportPayload,
   decision: ImportDecision,
   /**
-   * What the case starts as. **Severity and detected-at are the incident's**,
-   * seeded by the wizard and correctable by the analyst -- a case created
-   * without them loses what the provider already reported, which is the whole
-   * reason the seed exists.
+   * What the case starts as. **Detected-at is the incident's**, seeded by the
+   * wizard and correctable by the analyst -- a case created without it loses
+   * what the provider already reported, which is the whole reason the seed
+   * exists.
+   *
+   * **Severity is not here**: it rides in the payload as the provider's own
+   * word, and the server maps it.
    */
   kase: {
     title: string
     customer?: string
     reference?: string
-    severity?: string | null
     detectedAt?: string | null
   },
 ): Promise<Imported & { caseId: string }> {

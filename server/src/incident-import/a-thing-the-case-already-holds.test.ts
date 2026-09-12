@@ -58,6 +58,7 @@ function recorder(hosts: () => Record<string, unknown>[]) {
 const incident = () => ({
   key: 'inc-1',
   title: 'One host',
+  severity: '',
   alerts: [
     {
       id: 'a-1',

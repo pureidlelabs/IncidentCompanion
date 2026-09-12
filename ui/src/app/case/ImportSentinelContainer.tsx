@@ -119,9 +119,10 @@ export function ImportSentinelContainer({
    * than sent empty -- the wire refuses `''` as a datetime, and the refusal
    * would be of the whole create.
    *
-   * Severity is not seeded. The provider spells it `High` and the case
-   * vocabulary is lower-case, and translating a platform's words is the
-   * server's job in this capability rather than the browser's. -> #516
+   * Severity is not among them, and is not lost either: it rides in the
+   * payload as the provider's own word, and the server maps it onto the case
+   * vocabulary. Translating a platform's words is the server's job in this
+   * capability rather than the browser's.
    */
   const seedFrom = (
     incidentIds: readonly string[],
@@ -202,14 +203,22 @@ export function ImportSentinelContainer({
       .map((id) => listing.current.get(id))
       .filter((one): one is RemoteIncident => one !== undefined)
     return Promise.all(
-      wanted.map(async (incident) => {
+      wanted.map(async (incident): Promise<RawIncident> => {
         const detail = await reached.fetchDetail(held, workspace, incident)
+        /**
+         * **Annotated rather than cast.** `raw` holds its arrays `readonly` and
+         * the wire shape does not, which is the whole of what the old
+         * `as RawIncident` was for -- and a cast answers every other question
+         * too, so a field dropped here stopped being a compile error. Copying
+         * the two arrays buys the check back.
+         */
         return {
           key: incident.key,
           title: incident.title,
-          alerts: detail.raw.alerts,
-          entities: detail.raw.entities,
-        } as RawIncident
+          severity: incident.severity,
+          alerts: [...detail.raw.alerts],
+          entities: [...detail.raw.entities],
+        }
       }),
     )
   }

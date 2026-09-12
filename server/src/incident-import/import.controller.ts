@@ -27,7 +27,6 @@ import { z } from 'zod'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { CasesService } from '../cases/cases.service.js'
-import { caseFormSchema } from '../domain/case.js'
 import { ordered } from '../collections/entities.controller.js'
 import { TABLES } from '../collections/registry.js'
 import { DEFINITION as TIMELINE_DEFINITION } from '../collections/timeline.controller.js'
@@ -38,6 +37,7 @@ import {
   previewResultSchema,
 } from '../domain/incident-import.js'
 import { ImportService, type ImportDefinitions } from './import.service.js'
+import { caseSeverityOf } from './providers/sentinel/severity.js'
 
 class PreviewBodyDto extends createZodDto(previewBodySchema) {}
 class PreviewResultDto extends createZodDto(previewResultSchema) {}
@@ -49,14 +49,14 @@ class ImportedDto extends createZodDto(importedSchema) {}
  *
  * **The fields the incident can seed, plus the one it cannot.** Sentinel names
  * an incident rather than an engagement, so the title and the customer are the
- * analyst's to give -- but the reference, the severity and the first activity
- * are the incident's own, and a case created without them loses what the
- * provider already knew. The client seeds them and the analyst may correct
- * them; either way they arrive here.
+ * analyst's to give -- but the reference and the first activity are the
+ * incident's own, and a case created without them loses what the provider
+ * already knew. The client seeds them and the analyst may correct them; either
+ * way they arrive here.
  *
- * **`severity` is the case form's own declaration**, picked off
- * `caseFormSchema` rather than restated: the vocabulary is decided there, and a
- * second spelling here is a second thing to keep true.
+ * **`severity` is not among them.** It is derived from `incidents`, already in
+ * this body, by the mapper that owns the provider's words -- so a caller
+ * naming one is refused rather than obeyed.
  *
  * **`detectedAt` cannot be**, and the reason is the document rather than the
  * type. The form declares it as `z.coerce.date()`, which `createZodDto` cannot
@@ -69,11 +69,10 @@ const startBodySchema = commitBodySchema
     title: z.string().trim().min(1).max(200),
     customer: z.string().trim().max(200).optional(),
     reference: z.string().trim().max(64).optional(),
-    severity: caseFormSchema.shape.severity,
     // **The offset spelling, which `DateTimeInput` no longer writes.** Its
     // `SUFFIX` is `Z`, and Zod's bare `z.iso.datetime()` refuses an offset --
     // so narrowing this refuses any seed still carrying one, and a refused seed
-    // is a 400 on the whole create rather than a complaint about one field.
+    // is a 422 on the whole create rather than a complaint about one field.
     detectedAt: z.iso.datetime({ offset: true }).nullish(),
   })
   .strict()
@@ -191,7 +190,7 @@ export class StartImportController {
         title: body.title,
         customer: body.customer,
         reference: body.reference,
-        severity: body.severity,
+        severity: caseSeverityOf(body.incidents),
         detectedAt: body.detectedAt == null ? body.detectedAt : new Date(body.detectedAt),
       },
       session.user.id,

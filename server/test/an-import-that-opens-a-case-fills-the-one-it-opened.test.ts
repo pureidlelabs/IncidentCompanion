@@ -46,9 +46,14 @@ const host = (name: string) => ({
   properties: { hostName: name, dnsDomain: 'example.test' },
 })
 
+/** The provider's spelling, which this product's vocabulary refuses verbatim. */
+const REPORTED_SEVERITY = 'High'
+const MARKED = 'high'
+
 const INCIDENT = {
   key: 'an-import-that-opens-a-case',
   title: 'Suspicious sign-in followed by lateral movement',
+  severity: REPORTED_SEVERITY,
   alerts: [],
   entities: [host(KEPT), host(DECLINED)],
 }
@@ -113,7 +118,6 @@ describe.skipIf(!(await bootable()))('an import asked to open a case and fill it
     const started = await post('/api/imports/case', {
       provider: 'sentinel',
       title: TITLE,
-      severity: 'medium',
       incidents: [INCIDENT],
       approved,
       edits: [],
@@ -149,5 +153,23 @@ describe.skipIf(!(await bootable()))('an import asked to open a case and fill it
     const kase = (await answer.json()) as { title?: string }
 
     expect(kase.title, 'the case carries a title nobody asked for').toBe(TITLE)
+  })
+
+  /**
+   * **Read back through the API, because a level nothing serves is one no
+   * analyst sees.** The browser never sent a severity: this is the payload's
+   * own word, mapped by the tier that owns the provider's vocabulary.
+   */
+  it('carries the severity the provider reported, in this vocabulary', async () => {
+    const answer = await fetch(`${harness!.base}/api/cases/${caseId}`, {
+      headers: { cookie: admin.cookie },
+    })
+    const kase = (await answer.json()) as { severity?: string | null }
+
+    expect(
+      kase.severity,
+      `the incident was reported ${REPORTED_SEVERITY} and the case it opened is marked ` +
+        `${String(kase.severity)}, so the case lost what the provider already knew`,
+    ).toBe(MARKED)
   })
 })

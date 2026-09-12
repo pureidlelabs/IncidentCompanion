@@ -11,6 +11,7 @@ import { z } from 'zod'
 
 import { SEVERITY, TACTIC } from '../../../domain/vocabularies.lists.js'
 import type { RawIncident } from '../../../domain/incident-import.js'
+import { severityOf } from './severity.js'
 
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
 
@@ -34,27 +35,17 @@ const alertSchema = z.object({
 })
 
 /**
- * **Sentinel's severities against this product's, and the default is the
- * cautious one.** `informational` rather than `low`: an import asserting an
- * unnamed severity is `low` is a claim nobody made. Narrower than `SEVERITY`
- * on purpose -- the vocabulary has `critical` and no detection produces it.
- *
- * A `Map` because the key is a vendor string, which `DEFAULT_SEVERITY` alone
- * does not cover.
+ * **The cautious one.** `informational` rather than `low`: an import asserting
+ * that an unnamed severity is `low` is a claim nobody made.
+ * -> `severity.ts` for the table this defaults against.
  */
-const SEVERITY_MAP: ReadonlyMap<string, (typeof SEVERITY)[number]> = new Map([
-  ['high', 'high'],
-  ['medium', 'medium'],
-  ['low', 'low'],
-  ['informational', 'informational'],
-])
 const DEFAULT_SEVERITY: (typeof SEVERITY)[number] = 'informational'
 
 /**
  * The product's tactics, keyed by the spelling with spacing and case removed.
  *
- * A `Map` for the same reason `SEVERITY_MAP` is one, and here the guard that
- * fails is `if (tactic) break`.
+ * A `Map` for the same reason `severityOf` reads one -- the key is a vendor
+ * string -- and here the guard that fails is `if (tactic) break`.
  */
 const SQUASHED_TACTICS: ReadonlyMap<string, string> = new Map(
   TACTIC.map((tactic) => [tactic.replace(/[ _-]/g, '').toLowerCase(), tactic]),
@@ -101,7 +92,7 @@ export function alertToTimeline(raw: unknown, incident: RawIncident): MappedAler
       time: text(p.timeGenerated) || text(p.startTimeUtc) || new Date().toISOString(),
       eventSource: 'siem alert',
       tactic,
-      severity: SEVERITY_MAP.get(text(p.severity).toLowerCase()) ?? DEFAULT_SEVERITY,
+      severity: severityOf(p.severity) ?? DEFAULT_SEVERITY,
       sourceTool: 'Microsoft Sentinel',
       /**
        * **Unset rather than asserted.** An import says nothing about how sure

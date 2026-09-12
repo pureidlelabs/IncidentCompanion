@@ -54,6 +54,7 @@ function recorder() {
 const incident = () => ({
   key: 'inc-1',
   title: 'Two hosts',
+  severity: '',
   alerts: [
     {
       id: 'a-1',

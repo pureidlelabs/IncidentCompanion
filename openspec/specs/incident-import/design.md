@@ -42,6 +42,18 @@ An analyst's correction is validated by the same description that governs the co
 
 An incoming collection the application does not recognise is refused rather than passed through, because passing it through is how a write reaches a table nothing validates.
 
+## Translating the platform's vocabulary is the install's side of the boundary
+
+A platform spells its vocabularies in its own words, and somebody has to turn them into this application's. The browser cannot: it holds the credential, which is the whole reason any work happens there, and a translation table in that tier is one written where none of the schemas that judge a write can be seen. So a platform's word crosses the boundary as the platform sent it, and the mapping happens on the far side.
+
+Where it happens also decides how a mismatch fails. A level composed in the browser is validated as one field of the request that creates the case, so a spelling this application does not carry refuses the whole act rather than the field — an import that would otherwise have succeeded does not happen at all. Mapped on the install's side, an unrecognised word costs only what it describes.
+
+**What a case is opened with is derived from the payload, never accepted from the caller.** A field the caller may set and the install may derive has two answers, and the caller's wins; that is the arrangement in which a door appears to carry a value, is tested through that door with a spelling no platform uses, and hands the analyst a case without it.
+
+**Where one case is opened from several incidents, it takes the worst level any of them reported.** Over-marking and under-marking are not symmetric: a case that reads worse than it is gets opened and corrected, and one that reads milder does not get opened, so nothing corrects it. The ordering is the vocabulary's own rather than a second list beside it.
+
+**What an unrecognised word becomes belongs to the caller rather than to the table.** A timeline entry owes its column a level and takes the most cautious one; a case may honestly be unmarked, and is left so. Folding that into the mapping would force one answer on both, and the cautious default is the wrong one for a case — a level asserts a judgement where an empty field asks for one.
+
 ## The boundary between the two seams, which are not the same failure
 
 Entities are written before the events that refer to them, because an event naming an entity that does not yet exist cannot be checked. That ordering is a dependency rather than a choice.

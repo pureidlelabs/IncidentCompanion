@@ -62,6 +62,7 @@ function recorder() {
 const incident = () => ({
   key: 'inc-1',
   title: 'Impossible travel sign-in',
+  severity: '',
   alerts: [
     {
       id: 'a-1',

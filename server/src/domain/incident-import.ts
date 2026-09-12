@@ -33,11 +33,15 @@ export const MAX_ENTITIES = 2000
  * produced them reads them, and a shape stated here would be Sentinel's shape
  * imposed on the next provider. The provider's own parser is what refuses a malformed
  * payload, per kind, with the field names of that vendor.
+ *
+ * **`severity` is the provider's own word, unmapped**, like `title`. The
+ * provider's mapper is what turns it into a level.
  */
 export const rawIncidentSchema = z
   .object({
     key: z.string().trim().min(1).max(400),
     title: z.string().trim().max(400).default(''),
+    severity: z.string().trim().max(64).default(''),
     alerts: z.array(z.record(z.string(), z.unknown())).max(MAX_ENTITIES),
     entities: z.array(z.record(z.string(), z.unknown())).max(MAX_ENTITIES),
   })
