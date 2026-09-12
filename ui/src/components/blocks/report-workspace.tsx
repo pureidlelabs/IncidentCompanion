@@ -8,19 +8,7 @@ import { ReportAddSectionMenu } from '@/components/blocks/report-add-section-men
 import { ReportPaperPage, sectionDomId } from '@/components/blocks/report-paper-page'
 import { ReportPreviewPane } from '@/components/blocks/report-preview-pane'
 import { idsAfterDrop } from '@/components/blocks/report-reorder'
-import {
-  WRITTEN_KINDS,
-  blocksOf,
-  demoReport,
-  factsFor,
-  headingIsFinal,
-  headingOf,
-  isFrozen,
-  railSectionsOf,
-  sectionTally,
-  stateOf,
-  type RailSection,
-} from '@/components/blocks/report-shape'
+import { WRITTEN_KINDS, blocksOf, factsFor, headingIsFinal, headingOf, isFrozen, railSectionsOf, sectionTally, stateOf, type RailSection } from '@/components/blocks/report-shape'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
@@ -71,7 +59,14 @@ import { cn } from '@/lib/cn'
 export type ViewMode = 'compose' | 'paper' | 'preview'
 
 export interface ReportWorkspaceProps {
-  report?: Report
+  /**
+   * **Required, where it used to default to the demo's first report.** A
+   * shipping component that falls back to demo content reads the captured case
+   * to do it, which put the whole capture in the bundle an operator downloads;
+   * the one caller in the app always passes a report, so the default was
+   * reachable from stories alone. -> #141
+   */
+  report: Report
   /** The whole `report_blocks` table; this takes the report's own. */
   blocks: readonly ReportBlock[] | undefined
   /** The case the generated sections count from. */
@@ -149,7 +144,7 @@ const VIEWS: readonly { id: ViewMode; label: string; icon: typeof FileText }[] =
 ]
 
 export function ReportWorkspace({
-  report = demoReport(0),
+  report,
   blocks: blocksGiven,
   kase,
   prose,

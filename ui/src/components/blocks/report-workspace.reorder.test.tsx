@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ReportBlock } from '@/api/model'
 import { campaignCase } from '@/fixtures/campaign'
 
-import { DEMO_BLOCKS, DEMO_PROSE, blocksOf, demoReport, headingOf } from './report-shape'
+import { blocksOf, headingOf } from './report-shape'
+import { DEMO_BLOCKS, DEMO_PROSE, demoReport } from '@/fixtures/report-demo'
 import { ReportWorkspace } from './report-workspace'
 
 /**

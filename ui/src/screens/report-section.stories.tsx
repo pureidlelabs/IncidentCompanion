@@ -2,7 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { DEMO_LAYOUTS, DEMO_TLP } from '@/components/blocks/report-layouts'
 
-import { DEMO_BLOCKS, DEMO_REPORTS, blocksOf } from '@/components/blocks/report-shape'
+import { blocksOf } from '@/components/blocks/report-shape'
+import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
 import { inACase } from '@/fixtures/in-a-case'
 

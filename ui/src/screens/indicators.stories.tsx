@@ -4,7 +4,7 @@ import { expect, within } from 'storybook/test'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
-import { EMPTY_CASE } from '@/components/blocks/entity-scope'
+import { EMPTY_CASE } from '@/fixtures/empty-cases'
 import { IndicatorsScreen } from './indicators'
 
 /**

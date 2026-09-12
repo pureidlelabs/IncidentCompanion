@@ -5,14 +5,8 @@ import { Awareness } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
 import type { ReportBlock } from '@/api/model'
-import {
-  BLOCKS_WITH_AN_UNRESOLVED_HEADING,
-  DEMO_BLOCKS,
-  DEMO_PROSE,
-  blocksOf,
-  demoReport,
-  headingOf,
-} from '@/components/blocks/report-shape'
+import { blocksOf, headingOf } from '@/components/blocks/report-shape'
+import { BLOCKS_WITH_AN_UNRESOLVED_HEADING, DEMO_BLOCKS, DEMO_PROSE, demoReport } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
 import { bareInACase } from '@/fixtures/in-a-case'
 import { drawn } from '@/fixtures/viewport'
@@ -43,6 +37,9 @@ const meta = {
   args: {
     onAddSection: fn(),
     onReorder: fn(),
+    // The component takes a report rather than defaulting to one, so the demo
+    // content it draws is named here. -> #141
+    report: demoReport(0),
     blocks: DEMO_BLOCKS,
     kase: campaignCase,
     prose: DEMO_PROSE,

@@ -5,7 +5,7 @@ import { DEMO_LAYOUTS, DEMO_TLP } from '@/components/blocks/report-layouts'
 
 import { CaseFrame } from '@/components/blocks/case-frame'
 import { EntityCardProvider } from '@/components/blocks/entity-card'
-import { DEMO_BLOCKS, DEMO_REPORTS } from '@/components/blocks/report-shape'
+import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
 
 import { ReportSectionScreen } from './report-section'

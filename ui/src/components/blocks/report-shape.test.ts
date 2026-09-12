@@ -2,20 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import type { Report, ReportBlock } from '@/api/model'
 
-import {
-  DEMO_BLOCKS,
-  DEMO_REPORTS,
-  blocksOf,
-  railSectionsOf,
-  sectionTally,
-  demoReport,
-  headingIsFinal,
-  headingOf,
-  isFrozen,
-  outstandingIn,
-  shortDate,
-  stateOf,
-} from './report-shape'
+import { blocksOf, railSectionsOf, sectionTally, headingIsFinal, headingOf, isFrozen, outstandingIn, shortDate, stateOf } from './report-shape'
+import { DEMO_BLOCKS, DEMO_REPORTS, demoReport } from '@/fixtures/report-demo'
 
 /**
  * What the three report screens agree about a report, attacked.

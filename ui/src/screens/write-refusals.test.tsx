@@ -29,7 +29,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
 import { regimesFixture } from '@/fixtures/regimes'
 import { specsFixture } from '@/fixtures/specs'
-import { DEMO_BLOCKS, DEMO_REPORTS } from '@/components/blocks/report-shape'
+import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
 
 /**
  * **Presence rather than paint, and only here.** The overview draws its form on
