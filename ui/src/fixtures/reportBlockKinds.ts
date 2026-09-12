@@ -42,8 +42,3 @@ export const reportBlockKinds: BlockKindGroup[] = [
     { kind: 'glossary', label: 'Terms used in this report' },
   ] },
 ]
-
-/** `{kind: label}`, for a story feeding `ReportIndex`'s chips. */
-export const reportBlockLabels: Record<string, string> = Object.fromEntries(
-  reportBlockKinds.flatMap((group) => group.kinds.map((kind) => [kind.kind, kind.label])),
-)

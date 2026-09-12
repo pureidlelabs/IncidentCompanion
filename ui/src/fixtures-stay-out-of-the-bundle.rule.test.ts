@@ -28,20 +28,11 @@ const MAY_READ = /(\.(test|stories)\.tsx?$)|(^fixtures\/)|(^demo\/)/
  * demo's first report. The directory is the boundary, so the rule holds
  * however the fixtures are arranged among themselves.
  *
- * **One exception, and it stands in for nothing.**
- * `fixtures/reportBlockKinds` also exports `reportBlockLabels`, which two
- * shipping modules read as an unconditional label lookup rather than as a
- * fallback: shipping data that happens to live under `fixtures/`, which is its
- * own defect rather than this rule's. Matched on the whole path, because a
- * suffix would also exempt `fixtures/anything/reportBlockKinds`. -> #572
- *
  * **Every import shape, because the defect needs only one.** A relative
  * spelling reaches the same module -- `vite.config.ts` aliases `@` to `src` --
  * and a re-export, a bare side-effect import or a dynamic `import()` put the
  * bytes in the graph exactly as a named import does.
  */
-const SHIPPING_DATA_UNDER_FIXTURES = '@/fixtures/reportBlockKinds'
-
 function importsAFixture(source: string): boolean {
   const specifiers = [
     // `from '...'` covers both an import and a re-export; the other two arms
@@ -54,7 +45,7 @@ function importsAFixture(source: string): boolean {
   return specifiers
     .filter((one) => /^(@\/fixtures\/|\.{1,2}\/(\.\.\/)*fixtures\/)/.test(one))
     .map((one) => one.replace(/^\.{1,2}\/(\.\.\/)*fixtures\//, '@/fixtures/'))
-    .some((one) => one !== SHIPPING_DATA_UNDER_FIXTURES)
+    .length > 0
 }
 
 describe('the captured demo case', () => {
