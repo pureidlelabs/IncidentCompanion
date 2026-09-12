@@ -20,6 +20,8 @@ import {
   tlpMarking,
   toCsvRows,
   INDICATOR_CSV_COLUMNS,
+  PREDEFINED_TLP_1_MARKINGS,
+  TLP_NAMES,
 } from './indicators.js'
 
 const NOW = new Date('2026-03-04T05:06:07.000Z')
@@ -171,11 +173,17 @@ describe('the STIX bundle', () => {
     expect(JSON.stringify(bundle)).not.toContain('Shady App')
   })
 
+  /**
+   * **`spec_version` is asked of every object and the rest only of the
+   * indicators.** A marked bundle also carries the marking it references, and
+   * that object has neither a pattern nor an `indicator--` id.
+   */
   it('is a 2.1 bundle whose objects declare their spec version', () => {
     const bundle = toStixBundle(indicators, { now: NOW, ids })
     expect(bundle['type']).toBe('bundle')
     for (const object of bundle['objects'] as Record<string, unknown>[]) {
       expect(object['spec_version']).toBe('2.1')
+      if (object['type'] !== 'indicator') continue
       expect(object['pattern_type']).toBe('stix')
       expect(String(object['id'])).toMatch(/^indicator--/)
     }
@@ -199,6 +207,52 @@ describe('the STIX bundle', () => {
     expect(first['object_marking_refs']).toEqual([
       'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82',
     ])
+  })
+
+  /**
+   * **Every marking a bundle references is one its reader can resolve.**
+   * Asserted as an invariant over the whole vocabulary rather than per level,
+   * because the defect it replaces was one level behaving unlike its
+   * neighbours and nothing comparing them.
+   *
+   * The two TLP versions travel differently, and that is the whole subject.
+   * TLP 1.0's four markings are predefined in STIX 2.1, so a reference with
+   * no object is complete. TLP 2.0's are property-extension objects that no
+   * consumer has by default, so a reference with no object is dangling -- and
+   * MISP drops a non-conforming object silently, which makes the symptom an
+   * empty import rather than an error.
+   */
+  it.each(TLP_NAMES)('marks a bundle %s with a marking its reader can resolve', (level) => {
+    const bundle = toStixBundle(indicators, { now: NOW, ids, tlp: level })
+    const objects = bundle['objects'] as Record<string, unknown>[]
+    const carried = new Set(objects.map((one) => String(one['id'])))
+
+    const referenced = objects
+      .flatMap((one) => (one['object_marking_refs'] as string[] | undefined) ?? [])
+      .filter((ref) => ref.startsWith('marking-definition--'))
+    expect(referenced, 'the level was asked for and nothing is marked').not.toEqual([])
+
+    for (const ref of referenced) {
+      if (PREDEFINED_TLP_1_MARKINGS.has(ref)) continue
+      expect(
+        carried.has(ref),
+        `${level} references ${ref}, which STIX 2.1 does not predefine and the bundle does not carry`,
+      ).toBe(true)
+    }
+  })
+
+  /**
+   * **The strictest sharing constraint short of RED, and the export could not
+   * express it.** An analyst who marked a report `TLP:AMBER+STRICT` had to
+   * under-mark the bundle to `amber`, which widens who may act on it.
+   */
+  it('can mark a bundle with the level the report side calls AMBER+STRICT', () => {
+    const bundle = toStixBundle(indicators, { now: NOW, ids, tlp: 'amber+strict' })
+    const objects = bundle['objects'] as Record<string, unknown>[]
+
+    const marking = objects.find((one) => one['type'] === 'marking-definition')
+    expect(marking?.['id']).toBe('marking-definition--939a9414-2ddd-4d32-a0cd-375ea402b003')
+    expect(marking?.['name']).toBe('TLP:AMBER+STRICT')
   })
 
   it('refuses a TLP nobody defined', () => {
