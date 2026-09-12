@@ -128,6 +128,14 @@ export class CollectionService {
     @Optional() private readonly channel?: CaseChannel,
   ) {}
 
+  /**
+   * **Only where this opened the transaction.** Composed into a caller's
+   * handle, the write has not committed when the call returns -- `withCase`
+   * returning is a released savepoint -- and `case-channel.service.ts` requires
+   * that it has: a subscriber told to re-read would read what is not there yet,
+   * or what a rollback is about to remove. A caller that composes owns the
+   * announcement, after its own commit.
+   */
   private announce(caseId: string, scopes: readonly Scope[], by: string): void {
     this.channel?.announce(caseId, scopes, by)
   }
@@ -260,9 +268,9 @@ export class CollectionService {
    * The `caseId` clause is what makes the query use the index, not what makes
    * it safe - row-level security already refuses every row outside the scope.
    */
-  list(def: CollectionDefinition, caseId: string): Promise<unknown[]> {
+  list(def: CollectionDefinition, caseId: string, on: Executor = this.db): Promise<unknown[]> {
     const cols = columns(def)
-    return withCase(this.db, caseId, (tx) =>
+    return withCase(on, caseId, (tx) =>
       tx
         .select()
         .from(def.table)
@@ -348,7 +356,7 @@ export class CollectionService {
       return written.ids
     })
 
-    this.announce(caseId, [def.name], actorId)
+    if (on === this.db) this.announce(caseId, [def.name], actorId)
     return { ids, unlinked }
   }
 
@@ -452,7 +460,9 @@ export class CollectionService {
       return written
     })
 
-    this.announce(caseId, wanted.map((group) => group.def.name), actorId)
+    if (on === this.db) {
+      this.announce(caseId, wanted.map((group) => group.def.name), actorId)
+    }
     return { ids, unlinked }
   }
 

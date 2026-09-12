@@ -317,12 +317,7 @@ export class CasesService {
     },
     actorId: string,
     seed?: CaseSeed,
-    /**
-     * **A handle when the case is one half of a larger act.** An import that
-     * opens a case and fills it has to leave no case behind when the filling
-     * fails, so it passes its own transaction and this opens a savepoint inside
-     * it rather than a second transaction of its own. -> `db/scope.ts`
-     */
+    /** A caller's transaction, where the case is one half of a larger act. */
     on: Executor = this.db,
   ): Promise<CaseRow> {
     return on.transaction(async (tx) => {

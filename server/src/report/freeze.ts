@@ -30,10 +30,7 @@ export interface WriteTarget {
 /**
  * Throws if the write lands in a closed row; returns quietly otherwise.
  *
- * **Takes the handle its caller is writing on, not the pool.** A write composed
- * into a larger transaction has to be judged against what that transaction can
- * see: a guard reading the pool would miss the case the same act has just
- * opened, and row-level security answers a missed row as an absent one.
+ * Takes the handle its caller is writing on, which may be a transaction.
  */
 export type ClosedRowGuard = (
   db: Executor,

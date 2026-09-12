@@ -18,7 +18,11 @@ The wizard that fills a case and the one that makes the case it fills are the sa
 
 So the ending is chosen by whether a create call was supplied. A door that starts a case supplies one and the importer inside a case does not, which also decides where the title is asked: at the review, once the analyst has seen the incidents and while nothing is written, rather than before the wizard runs when the name could only be a guess from an identifier.
 
-**What the one call does and does not promise.** It answers the requirement that abandoning the wizard leaves no case: nothing is written until the review is accepted, so walking away writes nothing. It does not yet make the case and its rows atomic against a failure part way through the write -- the case is written first because the rows need its id to be scoped -- so a write that fails after the case exists leaves the case. That gap is what the ledger records as unbuilt against *An import asked to create a case fails*.
+**What the one call promises.** Abandoning the wizard leaves no case, because nothing is written until the review is accepted. A failure part way through the write leaves no case either: the case is still written first, because every row the import writes is scoped by its id, but the door opens one transaction and both halves run on it.
+
+**That is composition rather than compensation, and the difference is the failure nobody sees.** Deleting the case after a failed write is the obvious alternative and cannot cover a process that dies between the two, which is the case an operator would never be able to explain.
+
+**A write composed into somebody else's act obeys two rules that a write opening its own transaction does not.** It reads on the handle it was given -- a read reaching the pool from inside an open transaction holds one connection while asking for another, which is a deadlock rather than a slow query. And it announces nothing: the write has not committed when the call returns, so a subscriber told to re-read would read what is not there yet, or what a rollback is about to remove. The act that opened the transaction owns the announcement.
 
 ## The credential never reaches the install
 

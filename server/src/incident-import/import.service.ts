@@ -61,12 +61,15 @@ export class ImportService {
     caseId: string | null,
     incidents: readonly RawIncident[],
     defs: ImportDefinitions,
+    on?: Executor,
   ): Promise<PreviewResult> {
     const skipped = { unsupportedKind: 0, unmappable: 0 }
     const entities: Candidate[] = []
     const timeline: TimelineCandidate[] = []
     const seen = new Map<string, Candidate>()
-    const existing = caseId ? await this.existingByIdentity(caseId, defs) : new Map<string, string>()
+    const existing = caseId
+      ? await this.existingByIdentity(caseId, defs, on)
+      : new Map<string, string>()
 
     for (const incident of incidents) {
       /** ARM's own entity id to the candidate it became, for the alert links. */
@@ -146,15 +149,12 @@ export class ImportService {
     edits: readonly { id: string; field: string; value: unknown }[],
     defs: ImportDefinitions,
     /**
-     * **The handle when the case is being opened by the same act.** Both writes
-     * go on it, so a failure at the second takes the first and the case itself
-     * with it. Left unset, each write opens its own transaction and the seam
-     * between them stays -- which the specification permits, because matching
-     * runs against the store and a retry finishes rather than doubling.
+     * A caller's transaction. Every read and both writes go on it, so a failure
+     * at any of them takes the rest. Left unset, each opens its own.
      */
     on?: Executor,
   ): Promise<{ entities: number; timeline: number; skippedExisting: number }> {
-    const plan = await this.preview(caseId, incidents, defs)
+    const plan = await this.preview(caseId, incidents, defs, on)
     const wanted = new Set(approved)
     const editsById = new Map<string, { field: string; value: unknown }[]>()
     for (const edit of edits) {
@@ -208,10 +208,8 @@ export class ImportService {
 
     // **The timeline is written after, and in its own call for one reason:**
     // its rows name the entity ids the call above minted. Both are inside the
-    // same case and the same guards. A failure here leaves the entities written
-    // when the two calls are the whole act, which the specification permits
-    // because a retry matches against the store and finishes; given `on`, both
-    // are inside one transaction and a failure here takes them together.
+    // same case and the same guards, and whether a failure here leaves the
+    // entities written is `on`'s to decide.
     const rows = plan.timeline
       .filter((one) => wanted.has(one.id))
       .map((one) => ({
@@ -288,16 +286,22 @@ export class ImportService {
   private async existingByIdentity(
     caseId: string,
     defs: ImportDefinitions,
+    on?: Executor,
   ): Promise<Map<string, string>> {
     const index = new Map<string, string>()
     // **The reads are independent, so they wait once rather than once each.**
     // `commit` re-runs the preview, so a serial version costs a large case two
     // round trips per collection per import, all of them inside the wait
     // between the analyst pressing a button and seeing anything.
+    //
+    // **Given `on`, they queue on that one handle instead**, which is the point
+    // rather than a cost: five reads reaching the pool from inside an open
+    // transaction is a connection held while five more are asked for, and a
+    // pool with none left never answers.
     const listed = await Promise.all(
       Object.entries(defs.byName).map(async ([name, def]) => ({
         name,
-        rows: await this.collections.list(def, caseId),
+        rows: await this.collections.list(def, caseId, on),
       })),
     )
     for (const { name, rows } of listed) {

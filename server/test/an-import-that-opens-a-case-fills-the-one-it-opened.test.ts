@@ -182,15 +182,21 @@ describe.skipIf(!(await bootable()))('an import asked to open a case and fill it
    * *Creating the case and filling it MUST be one act. A failure MUST leave no
    * case.*
    *
-   * **Driven at the second write, not the first.** The entities land, then the
-   * timeline rows are built and one of them is refused -- so the case and its
-   * entity rows already exist when the act fails. A door that opened the case
-   * in its own transaction leaves exactly the empty case the requirement
-   * refuses, and nothing retries it out of existence.
+   * **Driven at the second write.** The entities are written, then the timeline
+   * rows are built and one of them is refused by the timeline's own schema.
    *
    * **The title is the assertion's handle**, because a refused create answers
    * no id: the only way to ask whether a case was left behind is to look for
    * one nobody else would have made.
+   *
+   * **What this establishes, and what it does not.** It shows the act fails at
+   * the timeline schema and that no case survives; the tests above show the
+   * same payload otherwise opens a case and fills it. It does not observe the
+   * entity rows existing and then going -- nothing outside the transaction can,
+   * which is the point of the transaction. So a refusal moved ahead of the case
+   * insert would satisfy this test while proving something weaker, and the
+   * assertion on the refused field is what makes that visible rather than
+   * silent.
    */
   it('leaves no case behind when the import fails after the case was created', async () => {
     const TITLE_OF_THE_FAILURE = 'A case whose import was refused halfway'
@@ -218,6 +224,20 @@ describe.skipIf(!(await bootable()))('an import asked to open a case and fill it
       refused.status,
       `the refused correction did not refuse the import: ${refused.said}`,
     ).toBe(422)
+
+    /**
+     * **Which write refused, not merely that one did.** The whole claim is that
+     * the case and its entity rows already existed when the act failed; a
+     * refusal raised before the case insert would leave no case either, and
+     * satisfy every other assertion here while proving nothing. `severity`
+     * belongs to the timeline's schema, and the timeline is written after the
+     * entities.
+     */
+    expect(
+      JSON.stringify(refused.body),
+      'the import was refused by something other than the timeline correction, so the ' +
+        'failure may have happened before the case was ever written',
+    ).toContain('severity')
 
     const all = (await (
       await fetch(`${harness!.base}/api/cases`, { headers: { cookie: admin.cookie } })

@@ -106,4 +106,27 @@ describe.skipIf(!db)('what one case can see of another', () => {
 
     expect(await db!.select().from(systems)).toEqual([])
   })
+
+  /**
+   * **A nested scope is released, not rolled back, so it outlives its
+   * savepoint unless something puts the outer one back.** `set_config(..., true)`
+   * is undone by `rollback to savepoint` and by nothing else -- so without the
+   * restore, the rest of the outer act runs scoped to the inner case, and
+   * row-level security answers that as an empty table rather than as an error.
+   *
+   * Written from the composition the import's start door performs: one act,
+   * two cases in it would be the shape that bites.
+   */
+  it('puts the outer case back after a nested scope for a different one', async () => {
+    const seen = await withCase(db!, mine, async (outer) => {
+      await withCase(outer, theirs, (inner) => inner.select().from(systems))
+      return outer.select().from(systems)
+    })
+
+    expect(
+      seen.map((row) => row.hostname),
+      'the outer act carried on scoped to the case the nested one opened, so its own ' +
+        'rows read as absent rather than as refused',
+    ).toEqual(['MY-HOST'])
+  })
 })
