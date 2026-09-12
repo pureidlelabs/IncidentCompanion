@@ -266,6 +266,13 @@ describe('duplicate detection', () => {
     expect(preview.rows[0]?.duplicate).toBe(true)
   })
 
+  it('matches a hostname carrying a character nobody can see, as the write does', () => {
+    const table = parseCsvTable('hostname\r\nPC\u200b-1\r\n')
+    if (!table) throw new Error('expected a table')
+    const preview = buildPreview(table, systemForm, 'systems', existingSystems)
+    expect(preview.rows[0]?.duplicate, 'the preview counts a row the write will dedupe').toBe(true)
+  })
+
   it('offers no duplicate detection at all for a table with no natural key', () => {
     const table = parseCsvTable('description,time,action_type\r\nsame,2024-01-01T00:00:00Z,other\r\n')
     if (!table) throw new Error('expected a table')

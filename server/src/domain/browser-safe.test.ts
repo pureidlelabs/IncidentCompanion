@@ -45,7 +45,7 @@ const ALLOWED_PACKAGES = new Set(['zod'])
  * refusing the import and nothing walks what it drags in, so the check reads as
  * covering a surface it has never opened.
  */
-const ENTRIES = ['collections.ts', 'indicator-shape.ts', 'malware-shape.ts']
+const ENTRIES = ['collections.ts', 'identity.ts', 'indicator-shape.ts', 'malware-shape.ts']
 
 function importsOf(source: string): string[] {
   const specs: string[] = []

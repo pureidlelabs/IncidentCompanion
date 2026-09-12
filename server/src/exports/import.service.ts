@@ -16,7 +16,7 @@ import { ConflictsService } from '../collections/conflicts.service.js'
 import { TABLES, type BulkTarget } from '../collections/registry.js'
 import { COLLECTION_SCHEMAS, IMPORTABLE } from '../domain/collections.js'
 import { camelKeys } from '../wire/naming.js'
-import { hasIdentity, indexOf, keyOf, type Known } from '../collections/identity.js'
+import { hasIdentity, indexOf, keyOf, type Known } from '../domain/identity.js'
 
 @Injectable()
 export class ImportService {
@@ -131,7 +131,7 @@ export class ImportService {
      * **Nothing to dedup against for a collection with no identity.** An
      * action, a note, an evidence record and an impact row are events or
      * judgements rather than things: two that look alike are two facts, and
-     * merging them loses one. -> `collections/identity.ts`
+     * merging them loses one. -> `domain/identity.ts`
      */
     if (!hasIdentity(collection)) {
       const written = await this.collections.createMany(def, caseId, rows, actorId, 'drop')
