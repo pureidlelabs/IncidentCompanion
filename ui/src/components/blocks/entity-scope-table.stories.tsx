@@ -41,6 +41,17 @@ type Story = StoryObj<typeof meta>
  * answers `disabled` or `active`, and the column paints from no tone map
  * because neither is a judgement.
  */
+export const Unscoped: Story = {
+  name: 'Every kind at once',
+  play: async ({ canvasElement, step }) => {
+    const canvas = within(canvasElement)
+    await step('an account`s state is a word rather than the boolean behind it', async () => {
+      await expect(canvas.getAllByText(/^(disabled|active)$/).length).toBeGreaterThan(0)
+      await expect(canvas.queryByText(/^(true|false)$/)).toBeNull()
+    })
+  },
+}
+
 /**
  * **What an import writes, in the column that reports it.** Every fixture
  * carries `manual`; a platform's name is three times as wide, and `Source` is
@@ -62,17 +73,6 @@ export const Imported: Story = {
     const canvas = within(canvasElement)
     await step('the platform that wrote the row is readable, not only its first word', async () => {
       await expect(canvas.getByText('Microsoft Sentinel')).toBeInTheDocument()
-    })
-  },
-}
-
-export const Unscoped: Story = {
-  name: 'Every kind at once',
-  play: async ({ canvasElement, step }) => {
-    const canvas = within(canvasElement)
-    await step('an account`s state is a word rather than the boolean behind it', async () => {
-      await expect(canvas.getAllByText(/^(disabled|active)$/).length).toBeGreaterThan(0)
-      await expect(canvas.queryByText(/^(true|false)$/)).toBeNull()
     })
   },
 }
