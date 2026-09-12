@@ -60,8 +60,8 @@ describe.skipIf(!(await bootable()))('a caller asking faster than the install pe
    *
    * The header is `retry-after-burst` rather than `Retry-After`:
    * `@nestjs/throttler` 6.5.0 suffixes the name of every tier that is not
-   * called `default` (`throttler.guard.js:117`), and all three of ours are
-   * named. Matched by prefix so that naming a fourth tier does not fail this,
+   * called `default` (`throttler.guard.js:117`), and both of ours are named.
+   * Matched by prefix so that naming a third tier does not fail this,
    * and the value is asserted as a number of seconds because that is the part
    * a caller acts on.
    */

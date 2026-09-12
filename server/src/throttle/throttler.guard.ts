@@ -19,7 +19,7 @@ import {
   type ThrottlerLimitDetail,
   type ThrottlerRequest,
 } from '@nestjs/throttler'
-import type { Request, Response } from 'express'
+import type { Request } from 'express'
 
 import { tierApplies } from './applies.js'
 import { NO_ADDRESS, callerAddress } from '../wire/caller-address.js'
@@ -54,41 +54,10 @@ export class AuditedThrottlerGuard extends ThrottlerGuard {
     return Promise.resolve(found ?? NO_ADDRESS)
   }
 
-  /**
-   * Says the retry wait again under the name the standard registers.
-   *
-   * **`@nestjs/throttler` suffixes the header with the tier's name** for every
-   * tier not called `default`, and both of ours are named -- so a refusal
-   * carried `Retry-After-burst`, which no off-the-shelf retry library looks
-   * for. `Retry-After` is the registered field (RFC 9110 s10.2.3), and a
-   * caller that cannot find it falls back to polling, which is what the limit
-   * exists to prevent.
-   *
-   * **Mirrored rather than recomputed.** The library has already written its
-   * own header by the time this runs, so copying that value keeps the two
-   * spellings of one fact from drifting; computing a second number from
-   * `detail` would be a second source of truth for the same answer.
-   *
-   * **Added, never replacing.** The suffixed name carries which tier refused,
-   * which is information a caller reading one header cannot otherwise have.
-   */
-  private alsoSayItTheStandardWay(context: ExecutionContext, detail: ThrottlerLimitDetail): void {
-    const response = context.switchToHttp().getResponse<Response>()
-    if (response.getHeader('Retry-After') !== undefined) return
-
-    const already = response.getHeader(`Retry-After-${tierNameFor(detail)}`)
-    // `timeToBlockExpire` is what the library writes; the window's own expiry
-    // is the answer where a tier blocks for no longer than it counts.
-    const seconds = already ?? detail.timeToBlockExpire ?? detail.timeToExpire
-    if (seconds === undefined) return
-    response.setHeader('Retry-After', String(seconds))
-  }
-
   protected override async throwThrottlingException(
     context: ExecutionContext,
     detail: ThrottlerLimitDetail,
   ): Promise<void> {
-    this.alsoSayItTheStandardWay(context, detail)
     if (this.db) {
       const request = context.switchToHttp().getRequest<Request>()
       /**
