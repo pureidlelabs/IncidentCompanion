@@ -9,8 +9,9 @@
  * "unmapped, excluded" bucket as an unknown column - one rule instead of two,
  * and the app's own export still round-trips.
  *
- * **`DEDUP_KEYS` holds the natural key per collection**, and a collection
- * missing from it has none, so it never reports a duplicate.
+ * **A duplicate is decided by the server's own key**, imported rather than
+ * restated: a collection `keyOf` gives no key has none, so it never reports a
+ * duplicate. -> `@contract/identity`
  *
  * **The row number a refusal names is the *submitted* array's, not the CSV's**,
  * skipped rows having already been dropped. `buildSubmission` returns `refs`,
@@ -22,6 +23,7 @@ import { toCamel } from '@/api/naming'
 import { fieldsOf, type FieldSpec, type FormSpec } from '@/api/specs'
 import type { CollectionName } from '@/api/model'
 import type { CsvTable } from '@/lib/csv'
+import { hasIdentity, keyOf } from '@contract/identity'
 
 export interface ColumnMapping {
   header: string
@@ -84,40 +86,6 @@ export function fieldProblems<TData>(field: FieldSpec<TData>, raw: string | unde
   return []
 }
 
-function normalise(value: string | undefined): string | null {
-  const trimmed = (value ?? '').trim().toLowerCase()
-  return trimmed === '' ? null : trimmed
-}
-
-/**
- * The natural-key rule per collection, read off mapped CSV values.
- *
- * Keyed by the wire (snake_case) collection name, the spelling
- * `CollectionName` uses, and absent for every collection with no natural key.
- * **The rules match the server's row for row** - an importer that disagrees
- * doubles the case on a re-import.
- * -> `server/src/collections/identity.ts`
- */
-const DEDUP_KEYS: Partial<Record<CollectionName, (values: Record<string, string>) => string | null>> = {
-  systems: (values) => normalise(values.hostname),
-  accounts: (values) => {
-    const name = normalise(values.accountName)
-    return name === null ? null : `${name}\u0000${normalise(values.domain) ?? ''}`
-  },
-  network_indicators: (values) => {
-    // The pair, matching `identity.ts`: one value read two ways is two rows.
-    const value = (values.value ?? '').trim()
-    return value === '' ? null : `${value}\u0000${normalise(values.type) ?? ''}`
-  },
-  malware: (values) => normalise(values.hash),
-  cloud_apps: (values) => normalise(values.appName),
-}
-
-/** Whether `collection` has a natural key at all - gates the skip-duplicate column. */
-export function hasDedupKey(collection: CollectionName): boolean {
-  return collection in DEDUP_KEYS
-}
-
 /**
  * Parse, map and validate a CSV against one form, flagging duplicates
  * against both `existing` (the case's own rows) and earlier rows in this
@@ -137,12 +105,12 @@ export function buildPreview<TData extends { id: string }>(
   const columns = mapColumns(csv.header, form)
   const unmappedHeaders = columns.filter((column) => column.field === null).map((column) => column.header)
   const fields = fieldsOf(form)
-  const dedupKey = DEDUP_KEYS[collection]
+  const keyed = hasIdentity(collection)
 
   const seen = new Set<string>()
-  if (dedupKey) {
+  if (keyed) {
     for (const entry of existing) {
-      const key = dedupKey(entry)
+      const key = keyOf(collection, entry)
       if (key !== null) seen.add(key)
     }
   }
@@ -159,8 +127,8 @@ export function buildPreview<TData extends { id: string }>(
         : [`row has ${String(cells.length)} column(s); the header has ${String(csv.header.length)}`]
 
     let duplicate = false
-    if (dedupKey) {
-      const key = dedupKey(values)
+    if (keyed) {
+      const key = keyOf(collection, values)
       if (key !== null) {
         duplicate = seen.has(key)
         seen.add(key)
