@@ -12,7 +12,14 @@
  * `vocabularies.lists.test.ts` asserts it.
  */
 
-/** Incident severity. **OCSF `severity_id`**, without its `fatal`. */
+/**
+ * Incident severity. **OCSF `severity_id`**, without its `fatal`.
+ *
+ * **Worst first, and the order is read as a ladder.** OCSF numbers the same
+ * scale the other way, so aligning this list with the standard it names, or
+ * with the order a picker lists it in, silently inverts every comparison that
+ * ranks two of these. `providers/sentinel/severity.ts` is one such reader.
+ */
 export const SEVERITY = ['critical', 'high', 'medium', 'low', 'informational'] as const
 
 /**

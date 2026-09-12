@@ -14,8 +14,6 @@ Where a case is opened from more than one incident, it MUST carry the worst seve
 
 Where no incident reported a severity this vocabulary can express, the case MUST be left unmarked. An import that chose a level would be asserting something the provider never said.
 
-The analyst MUST be able to change what the case was marked, on the case, afterwards.
-
 #### Scenario: An incident the provider judged
 
 - GIVEN an analyst opening a case from an incident the provider reported as its second-highest level
@@ -38,4 +36,4 @@ The analyst MUST be able to change what the case was marked, on the case, afterw
 
 - GIVEN a request to open a case that names a severity of its own
 - WHEN the request is made
-- THEN it is refused, and the severity a case is opened with remains the one derived from the incidents
+- THEN it is refused, and no case is opened

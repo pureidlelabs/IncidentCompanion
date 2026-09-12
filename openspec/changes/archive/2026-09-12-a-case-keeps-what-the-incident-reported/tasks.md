@@ -14,5 +14,6 @@
 
 ## 3. What the change made visible
 
-- [x] 3.1 Stop the wizard composing a level, and seed nothing it would have to translate
+- [x] 3.1 Send the provider's word from the wizard, which composed no level and so sent nothing at all
 - [x] 3.2 Assert the mapping rather than the round trip, where a fixture was sending a spelling no provider uses
+- [x] 3.3 Annotate the payload the wizard builds rather than casting it, so a field dropped there is a compile error

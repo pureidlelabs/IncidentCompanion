@@ -438,12 +438,23 @@ describe.skipIf(!runnable)('importing an incident', () => {
       expect(kase.detectedAt).not.toBeNull()
     }, 60_000)
 
-    /** What a payload opened the case marked as, read back through the API. */
-    const severityOfCaseFrom = async (incidents: unknown[], title: string) => {
+    /**
+     * The case a payload opened: what it was marked, and what it holds.
+     *
+     * **Everything the preview offered is approved**, because the scenarios
+     * these serve say the case *holds what was approved* as well as how it is
+     * marked. A create with an empty approval satisfies the marking clause
+     * while writing nothing, which is a case that proves only half of itself.
+     */
+    const caseOpenedFrom = async (incidents: unknown[], title: string) => {
+      const plan = (await (
+        await post('/api/imports/preview', { provider: 'sentinel', incidents })
+      ).json()) as { entities: { id: string }[]; timeline: { id: string }[] }
+
       const answer = await post('/api/imports/case', {
         provider: 'sentinel',
         incidents,
-        approved: [],
+        approved: [...plan.entities.map((one) => one.id), ...plan.timeline.map((one) => one.id)],
         edits: [],
         title,
       })
@@ -454,11 +465,16 @@ describe.skipIf(!runnable)('importing an incident', () => {
       const kase = (await (
         await fetch(`${harness.base}/api/cases/${caseId}`, { headers: { cookie: admin.cookie } })
       ).json()) as { severity: string | null }
-      return kase.severity
+      const systems = (await (
+        await fetch(`${harness.base}/api/cases/${caseId}/systems`, {
+          headers: { cookie: admin.cookie },
+        })
+      ).json()) as unknown[]
+      return { severity: kase.severity, systems: systems.length }
     }
 
     it('marks a case opened from several incidents with the worst of them', async () => {
-      const marked = await severityOfCaseFrom(
+      const opened = await caseOpenedFrom(
         [
           { ...incident('inc-the-milder-one'), severity: 'Low' },
           { ...incident('inc-the-worse-one'), severity: 'High' },
@@ -467,24 +483,32 @@ describe.skipIf(!runnable)('importing an incident', () => {
       )
 
       expect(
-        marked,
+        opened.severity,
         'the case took a severity that is not the worst reported, so opening it from two ' +
           'incidents under-reported one of them',
       ).toBe('high')
     }, 60_000)
 
-    it('leaves the case unmarked where the reported level is a word it cannot say', async () => {
-      const marked = await severityOfCaseFrom(
+    it('opens and fills the case where the reported level is a word it cannot say', async () => {
+      const opened = await caseOpenedFrom(
         [{ ...incident('inc-an-unknown-ladder'), severity: 'Sev1' }],
         'An unfamiliar ladder',
       )
 
       expect(
-        marked,
+        opened.severity,
         'the case was marked from a word the vocabulary does not carry, so the import asserted ' +
           'a level the provider never reported',
       ).toBeNull()
+      expect(
+        opened.systems,
+        'an unmappable severity cost the import its rows, so the case is unmarked because ' +
+          'nothing was written rather than because nothing was reported',
+      ).toBeGreaterThan(0)
     }, 60_000)
+
+    /** Distinctive, because the assertion is that no case carries it. */
+    const REFUSED_TITLE = 'A caller with opinions about severity'
 
     /**
      * **A caller naming the severity is refused, rather than quietly obeyed.**
@@ -498,7 +522,7 @@ describe.skipIf(!runnable)('importing an incident', () => {
         incidents: [incident('inc-names-its-own-severity')],
         approved: [],
         edits: [],
-        title: 'A caller with opinions',
+        title: REFUSED_TITLE,
         severity: 'low',
       })
 
@@ -506,6 +530,17 @@ describe.skipIf(!runnable)('importing an incident', () => {
         answer.status,
         'the create door took a severity from the caller, so the derived one is not the only answer',
       ).toBe(422)
+
+      // **The refusal left nothing behind**, which is the half a status alone
+      // does not show: a door that wrote the case and then refused the body
+      // answers 422 too.
+      const cases = (await (
+        await fetch(`${harness.base}/api/cases`, { headers: { cookie: admin.cookie } })
+      ).json()) as { title: string }[]
+      expect(
+        cases.map((one) => one.title),
+        'the refused create still opened a case, so the refusal is not what it looks like',
+      ).not.toContain(REFUSED_TITLE)
     }, 60_000)
   })
 })

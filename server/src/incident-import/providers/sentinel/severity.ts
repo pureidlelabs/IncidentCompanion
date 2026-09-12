@@ -3,8 +3,7 @@
  *
  * **Narrower than `SEVERITY`**: the vocabulary has `critical` and Sentinel's
  * scale stops at `High`, so a word above the ladder is unmapped rather than
- * guessed at. What an unmapped word becomes is the caller's -- an alert takes a
- * cautious default, a case stays unmarked.
+ * guessed at. What an unmapped word becomes is the caller's to decide.
  */
 import { SEVERITY } from '../../../domain/vocabularies.lists.js'
 
@@ -26,17 +25,13 @@ export function severityOf(reported: unknown): Severity | null {
 /**
  * What a payload of incidents marks the case it opens, or null for unmarked.
  *
- * The worst any of them reported. `SEVERITY` is ordered worst-first, so the
- * ladder is the vocabulary's own rather than a second list here.
+ * The worst any of them reported, walking `SEVERITY` from its worst end, so
+ * the ladder is the vocabulary's own rather than a second list here.
  */
 export function caseSeverityOf(
   incidents: readonly { readonly severity?: unknown }[],
 ): Severity | null {
-  let worst: Severity | null = null
-  for (const incident of incidents) {
-    const named = severityOf(incident.severity)
-    if (named === null) continue
-    if (worst === null || SEVERITY.indexOf(named) < SEVERITY.indexOf(worst)) worst = named
-  }
-  return worst
+  return (
+    SEVERITY.find((level) => incidents.some((one) => severityOf(one.severity) === level)) ?? null
+  )
 }

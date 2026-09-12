@@ -36,9 +36,8 @@ const alertSchema = z.object({
 
 /**
  * **The cautious one.** `informational` rather than `low`: an import asserting
- * that an unnamed severity is `low` is a claim nobody made. A timeline entry
- * owes its column a level, which is what makes this a default here and null at
- * the case seed. -> `severity.ts` for the table both read.
+ * that an unnamed severity is `low` is a claim nobody made.
+ * -> `severity.ts` for the table this defaults against.
  */
 const DEFAULT_SEVERITY: (typeof SEVERITY)[number] = 'informational'
 

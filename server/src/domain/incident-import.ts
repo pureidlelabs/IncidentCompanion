@@ -35,8 +35,7 @@ export const MAX_ENTITIES = 2000
  * payload, per kind, with the field names of that vendor.
  *
  * **`severity` is the provider's own word, unmapped**, like `title`. The
- * provider's mapper is what turns it into a level; narrowing it to `SEVERITY`
- * here would refuse the whole payload over one field.
+ * provider's mapper is what turns it into a level.
  */
 export const rawIncidentSchema = z
   .object({
