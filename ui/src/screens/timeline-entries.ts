@@ -391,9 +391,8 @@ export function timelineRowActions(
 }
 
 // ---------------------------------------------------------------------------
-// Cases the stories mount
+// Blank rows the entry dialogs open with
 // ---------------------------------------------------------------------------
-
 
 /**
  * A timeline row's fields as they stand before the analyst fills any in.

@@ -211,7 +211,6 @@ export function factsFor(kind: string, kase: Case): string {
   }
 }
 
-
 /**
  * How much of a report the analyst has written, 0 to 1.
  *

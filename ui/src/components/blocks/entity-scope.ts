@@ -333,7 +333,6 @@ export function attentionCounts(rows: readonly EntityRowView[]): {
   }
 }
 
-
 /**
  * The `Case` property each kind's rows are stored on -- a third spelling of
  * the same five kinds beside the slug and the collection, differing from
