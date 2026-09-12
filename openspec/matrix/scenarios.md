@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 455 |
-| Demonstrated | 346 |
+| Scenarios | 459 |
+| Demonstrated | 350 |
 | Undemonstrable | 1 |
 | Unbuilt | 96 |
 | Undemonstrated | 12 |
@@ -331,6 +331,10 @@
 | An analyst can start a case from an incident | The analyst names the case at the review | demonstrated | ui/src/screens/import-sentinel-starts-a-case.test.tsx |
 | An analyst can start a case from an incident | An analyst leaves the wizard | demonstrated | ui/src/screens/import-sentinel-starts-a-case.test.tsx |
 | An analyst can start a case from an incident | A case is named by what an analyst had to give it | demonstrated | ui/src/app/case/CaseFrameContainer.test.tsx |
+| A case opened from an incident keeps what the provider reported | An incident the provider judged | demonstrated | server/test/an-import-that-opens-a-case-fills-the-one-it-opened.test.ts |
+| A case opened from an incident keeps what the provider reported | One case from several incidents | demonstrated | server/test/incident-import.test.ts |
+| A case opened from an incident keeps what the provider reported | A level this vocabulary cannot express | demonstrated | server/test/incident-import.test.ts |
+| A case opened from an incident keeps what the provider reported | A caller naming the severity itself | demonstrated | server/test/incident-import.test.ts |
 
 ## install-audit
 

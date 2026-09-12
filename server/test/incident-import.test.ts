@@ -438,6 +438,54 @@ describe.skipIf(!runnable)('importing an incident', () => {
       expect(kase.detectedAt).not.toBeNull()
     }, 60_000)
 
+    /** What a payload opened the case marked as, read back through the API. */
+    const severityOfCaseFrom = async (incidents: unknown[], title: string) => {
+      const answer = await post('/api/imports/case', {
+        provider: 'sentinel',
+        incidents,
+        approved: [],
+        edits: [],
+        title,
+      })
+      const said = await answer.text()
+      expect(answer.status, `the import would not open a case: ${said}`).toBe(201)
+
+      const { caseId } = JSON.parse(said) as { caseId: string }
+      const kase = (await (
+        await fetch(`${harness.base}/api/cases/${caseId}`, { headers: { cookie: admin.cookie } })
+      ).json()) as { severity: string | null }
+      return kase.severity
+    }
+
+    it('marks a case opened from several incidents with the worst of them', async () => {
+      const marked = await severityOfCaseFrom(
+        [
+          { ...incident('inc-the-milder-one'), severity: 'Low' },
+          { ...incident('inc-the-worse-one'), severity: 'High' },
+        ],
+        'Two incidents, one case',
+      )
+
+      expect(
+        marked,
+        'the case took a severity that is not the worst reported, so opening it from two ' +
+          'incidents under-reported one of them',
+      ).toBe('high')
+    }, 60_000)
+
+    it('leaves the case unmarked where the reported level is a word it cannot say', async () => {
+      const marked = await severityOfCaseFrom(
+        [{ ...incident('inc-an-unknown-ladder'), severity: 'Sev1' }],
+        'An unfamiliar ladder',
+      )
+
+      expect(
+        marked,
+        'the case was marked from a word the vocabulary does not carry, so the import asserted ' +
+          'a level the provider never reported',
+      ).toBeNull()
+    }, 60_000)
+
     /**
      * **A caller naming the severity is refused, rather than quietly obeyed.**
      * The level is derived from the payload; a door that also accepted one
