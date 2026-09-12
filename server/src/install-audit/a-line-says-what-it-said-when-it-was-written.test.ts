@@ -55,7 +55,6 @@ const WRITTEN_UNDER = '1.6.0'
  * Authentication, so nothing writing rows today could produce this pairing and
  * a reader returning it can only have read it.
  */
-
 const AS_WRITTEN = {
   event: 'signed_in' as const,
   channel: 'authentication' as const,
@@ -122,8 +121,10 @@ describe.skipIf(!db)('a line written before an upgrade', () => {
     const page = await reader.page({ limit: 200 }, asAdmin, {})
     expect(page.events.length, 'no line came back, so nothing is being read').toBeGreaterThan(0)
 
+    // **Shaped, not merely present.** `schema_version` is unconstrained `text`,
+    // so a check for a non-empty string passes on anything a writer puts there.
     const unnamed = page.events
-      .filter((one) => !one.metadata?.version || !one.typeUid)
+      .filter((one) => !/^\d+\.\d+\.\d+$/.test(one.metadata?.version ?? '') || !one.typeUid)
       .map((one) => `${one.id}: version=${String(one.metadata?.version)} typeUid=${String(one.typeUid)}`)
 
     expect(

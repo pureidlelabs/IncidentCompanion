@@ -25,6 +25,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { Logger } from '@nestjs/common'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { OCSF_VERSION } from './ocsf.js'
 import { recordInstallActivity } from './record.js'
 import { installActivity, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
@@ -72,6 +73,30 @@ describe.skipIf(!db)('the install audit log', () => {
   async function written(target: string) {
     return db!.select().from(installActivity).where(eq(installActivity.targetLabel, target))
   }
+
+  /**
+   * *The install MUST say which version of the vocabulary a line was written
+   * against*, decided at write.
+   *
+   * **Asserted against the constant, not against its current value.** The
+   * column's default is a literal equal to today's `OCSF_VERSION`, so a writer
+   * that stamped nothing would be indistinguishable from one that stamps
+   * correctly. The column carries no default for that reason: an insert with
+   * no version is refused, so a writer that stops deciding it fails here and
+   * in every other test that writes a line.
+   */
+  it('stamps the vocabulary version the writing build declares', async () => {
+    const target = `version-me-${Date.now()}`
+    await recordInstallActivity(db!, { event: 'account_disabled', target })
+
+    const [row] = await written(target)
+
+    expect(
+      row?.schemaVersion,
+      'the line does not carry the version its ids were decided under, so it takes ' +
+        "whatever the column defaults to rather than the writing build's",
+    ).toBe(OCSF_VERSION)
+  })
 
   it('refuses to let the app role edit a line after it is written', async () => {
     const target = `edit-me-${Date.now()}`

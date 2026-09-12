@@ -390,9 +390,12 @@ export const installActivity = pgTable(
     /**
      * Which version of the vocabulary the ids above were decided under.
      *
-     * The default is what a row predating the column was written under.
+     * **No default, so a writer that does not decide it cannot insert.** A
+     * default equal to the build's current constant is indistinguishable from a
+     * correct stamp until the constant moves, which is the one day this column
+     * is for.
      */
-    schemaVersion: text('schema_version').notNull().default('1.7.0'),
+    schemaVersion: text('schema_version').notNull(),
 
     /**
      * Who did it. Null when the account is gone, or when nobody was signed in
