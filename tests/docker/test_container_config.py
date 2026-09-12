@@ -300,28 +300,24 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
                            conf, re.MULTILINE | re.DOTALL)
     assert locations, "no location blocks found, so nothing proxies"
 
-    # **The property is about forwarding, not about being a location.** A
-    # location that answers the request itself reaches no upstream, so there is
-    # no `X-Real-IP` for it to forward and nothing for the fragment to rewrite:
-    # the refusal handlers `error_page 429` renders are exactly that shape.
+    # **Every location either forwards through the fragment or answers for
+    # itself.** The first is the original invariant: the fragment is the only
+    # thing that overwrites `X-Real-IP`, so a location reaching the app without
+    # it forwards whatever the caller sent. The second is the exemption the
+    # refusal handlers need -- `error_page 429` renders them, they return a
+    # literal, and no upstream is reached for a header to survive into.
     #
-    # Stated as three cases rather than one so it cannot go slack. A location
-    # that forwards must carry the fragment; one that answers for itself must
-    # actually answer; one that does neither is a location nothing reaches,
-    # which is a mistake whatever it was meant to be.
-    forwards = [name for name, body in locations
-                if "proxy_pass" in body and "ic-proxy.inc" not in body]
-    assert not forwards, (
-        f"location(s) {forwards} proxy without including ic-proxy.inc, so a "
-        f"request through them carries the caller's own X-Real-IP")
-
-    inert = [name for name, body in locations
-             if "ic-proxy.inc" not in body and "proxy_pass" not in body
+    # **Stated as one condition, not two.** Asking separately whether a
+    # location has `proxy_pass` tests nothing here: `proxy_pass` lives in the
+    # fragment, so it appears nowhere in this file and such an arm is dead the
+    # day it is written.
+    stray = [name for name, body in locations
+             if "ic-proxy.inc" not in body
              and not re.search(r"^\s*return\s+\d", body, re.MULTILINE)]
-    assert not inert, (
-        f"location(s) {inert} neither forward upstream nor answer for "
-        f"themselves, so a request reaching them falls through to nginx's own "
-        f"handling rather than to this app")
+    assert not stray, (
+        f"location(s) {stray} neither include ic-proxy.inc nor answer for "
+        f"themselves -- one that reaches the app without the fragment forwards "
+        f"the caller's own X-Real-IP")
 
 
 def test_the_only_published_port_belongs_to_the_tls_edge():

@@ -581,22 +581,26 @@ export function refusals(method: string, path: string, hasBody: boolean): Record
       ...json(CONFLICT),
     }
   }
-  // **Two limiters answer with this status and no controller declares either.**
-  // nginx (`limit_req_status`, `docker/nginx/default.conf`) refuses at the edge;
-  // the throttler (`throttle/tiers.ts`) refuses inside. `proxy_intercept_errors`
-  // is off, so the application's refusal reaches the caller as it was written
-  // rather than being re-rendered by the edge -- which is what lets the two name
-  // the wait differently.
+  // **Three limiters answer with this status and no controller declares any of
+  // them.** nginx (`limit_req_status`, `docker/nginx/default.conf`) refuses at
+  // the edge; the throttler (`throttle/tiers.ts`) refuses inside; Better Auth
+  // refuses on `/api/auth/*`, which the throttler's guard never sees because
+  // middleware runs first. `proxy_intercept_errors` is off, so the two behind
+  // the edge reach the caller as they were written -- which is why three
+  // spellings of one fact survive to the wire.
   //
-  // The thresholds stay out: they live in those two files, and a copy here would
-  // be both a second thing to keep true and wrong as shipped.
+  // **No `json(...)`, because the edge's refusal is not JSON**: nginx renders
+  // its own `text/html` error page, and a body shape declared here would have a
+  // generated client parse it. The thresholds stay out too -- they live in those
+  // three files, and a copy here would be a second thing to keep true.
   out['429'] = {
     description:
       'Rate-limited, by the reverse proxy at the edge or by the application behind it. ' +
-      'The wait is named by `Retry-After` in seconds where the proxy refused, and by a ' +
-      '`retry-after-` header suffixed with the tier that refused where the application ' +
-      'did. The auth routes carry a lower threshold than the rest.',
-    ...json(REFUSAL),
+      'Which one answered decides both the body and the header naming the wait: the ' +
+      'proxy renders HTML and sends `Retry-After` in seconds, the application sends ' +
+      'JSON with a `retry-after-` header suffixed by the tier that refused, and the ' +
+      'credential routes send JSON with `X-Retry-After`. The credential routes carry a ' +
+      'lower threshold than the rest.',
   }
   // Every `description` here is a reference entry rather than an error message:
   // it names the condition and the discriminating field, and gives no advice.
