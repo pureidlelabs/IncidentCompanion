@@ -13,6 +13,7 @@ import { LiveGateway } from './live/live.gateway.js'
 import compression from 'compression'
 
 import { noStoreOnTheApi, securityHeaders } from './wire/headers.js'
+import { retryAfterOnEveryRefusal } from './wire/retry-after.js'
 
 /**
  * Applies the platform layer to a built application, before `init`.
@@ -34,6 +35,7 @@ export function applyPlatform(
 
   app.use(securityHeaders())
   app.use(noStoreOnTheApi())
+  app.use(retryAfterOnEveryRefusal())
 
   if (options.bundle) app.useStaticAssets(options.bundle, { index: false })
   if (options.vendor) {

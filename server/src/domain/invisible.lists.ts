@@ -23,7 +23,7 @@
  * artefact.
  *
  * **The C0 and C1 control characters are in the set, and one of them is
- * load-bearing.** `collections/identity.ts` joins a composite key with `U+0000`
+ * load-bearing.** `identity.ts` joins a composite key with `U+0000`
  * and says nothing in a hostname or an account name can be one. The column
  * stores a NUL happily, so stripping here is what makes that sentence true.
  *

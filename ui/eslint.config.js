@@ -212,7 +212,7 @@ export default tseslint.config(
       'no-restricted-imports': ['error', {
         patterns: [{
           /**
-           * **Three exceptions, and they are exceptions for different reasons.**
+           * **Four exceptions, and they are exceptions for different reasons.**
            *
            * `*.lists` imports nothing at all, which
            * `server/src/domain/vocabularies.lists.test.ts` holds for every one
@@ -234,6 +234,11 @@ export default tseslint.config(
            * entry point in `browser-safe.test.ts`, so the closure is walked
            * rather than argued from, and a test holds the two lists level.
            *
+           * `identity` is the natural key an import is deduplicated on, and the
+           * client value-imports it so the preview counts what the write will
+           * do rather than a second rule that agrees until it does not. Its
+           * runtime closure is `invisible.lists` alone.
+           *
            * **Everything else stays types-only**, and the reason is unchanged:
            * `server/src/domain` also holds modules that reach a Drizzle table.
            */
@@ -241,14 +246,15 @@ export default tseslint.config(
             '@contract/*',
             '!@contract/*.lists',
             '!@contract/collections',
+            '!@contract/identity',
             '!@contract/indicator-shape',
             '!@contract/malware-shape',
           ],
           allowTypeImports: true,
           message:
-            'Types only, except @contract/*.lists, @contract/collections and ' +
-            'the @contract/*-shape advice modules. A value import from anywhere ' +
-            'else can reach a Drizzle table.',
+            'Types only, except @contract/*.lists, @contract/collections, ' +
+            '@contract/identity and the @contract/*-shape advice modules. A ' +
+            'value import from anywhere else can reach a Drizzle table.',
         }],
         paths: [{
           name: 'zod',

@@ -71,7 +71,7 @@ def test_no_source_file_holds_a_literal_nul() -> None:
     ["ui/src/api/useCaseChanges.ts",
      "ui/src/components/blocks/entity-combobox.tsx",
      "ui/src/components/blocks/entity-graph.ts",
-     "ui/src/components/blocks/csv-import.ts"],
+     "server/src/domain/identity.ts"],
 )
 def test_the_deliberate_sentinels_still_carry_a_nul(path: str) -> None:
     """Escaping them must not have turned them into ordinary strings.

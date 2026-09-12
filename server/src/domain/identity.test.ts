@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { hasIdentity, identitiesOf, indexOf, keyOf } from './identity.js'
-import { REVIEWABLE } from './registry.js'
+import { REVIEWABLE } from '../collections/registry.js'
 
 const HAS_IDENTITY = ['systems', 'accounts', 'malware', 'network_indicators', 'cloud_apps']
 
