@@ -205,7 +205,9 @@ function qualified(
  * may ever match another row.
  */
 export function keyOf(collection: string, row: Record<string, unknown>): IdentityKey | null {
-  const fields = KEYED[collection as keyof typeof KEYED]
+  const fields = Object.hasOwn(KEYED, collection)
+    ? KEYED[collection as keyof typeof KEYED]
+    : undefined
   if (!fields) return null
 
   const pairs = fields.map(
@@ -241,7 +243,9 @@ export function keyOf(collection: string, row: Record<string, unknown>): Identit
  * a ladder run down past its floor.
  */
 export function identitiesOf(collection: string, row: Record<string, unknown>): IdentityKey[] {
-  const alternatives = LADDERS[collection as keyof typeof LADDERS]
+  const alternatives = Object.hasOwn(LADDERS, collection)
+    ? LADDERS[collection as keyof typeof LADDERS]
+    : undefined
   if (!alternatives) return []
 
   const value = (field: string) => normalised(collection, row, field)
@@ -288,7 +292,7 @@ export function identitiesOf(collection: string, row: Record<string, unknown>): 
 }
 
 export function hasIdentity(collection: string): boolean {
-  return collection in KEYED
+  return Object.hasOwn(KEYED, collection)
 }
 
 /**

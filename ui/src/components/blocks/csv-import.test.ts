@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import type { SystemEntry, MalwareEntry, TimelineEntry } from '@/api/model'
-import { formSpec } from '@/api/specs'
+import { fieldsOf, formSpec } from '@/api/specs'
 import { specsFixture } from '@/fixtures/specs'
 import { parseCsv, parseCsvTable } from '@/lib/csv'
+import { IDENTITY_FIELDS } from '@contract/identity'
 
 import {
   buildPreview,
@@ -270,7 +271,7 @@ describe('duplicate detection', () => {
     const table = parseCsvTable('hostname\r\nPC\u200b-1\r\n')
     if (!table) throw new Error('expected a table')
     const preview = buildPreview(table, systemForm, 'systems', existingSystems)
-    expect(preview.rows[0]?.duplicate, 'the preview counts a row the write will dedupe').toBe(true)
+    expect(preview.rows[0]?.duplicate, 'the preview counts a row `POST .../{collection}.csv` will dedupe').toBe(true)
   })
 
   it('offers no duplicate detection at all for a table with no natural key', () => {
@@ -360,5 +361,45 @@ describe('a reference the case does not have', () => {
     expect(adviceFor("SystemEntry has no field 'nope'")).toBeNull()
     expect(adviceFor('Validation failed')).toBeNull()
     expect(adviceFor('')).toBeNull()
+  })
+})
+
+/**
+ * **A key field the served form does not carry is duplicate detection off.**
+ *
+ * The preview reads a value only where `toCamel(header)` matched a field of the
+ * form the server served, so a field `keyOf` keys on and the form has not got
+ * is read as absent -- `keyOf` then answers `null` for a leading field and
+ * every row is new. Nothing else goes red: the key is built, the import runs,
+ * and the case doubles on the next re-import.
+ *
+ * Held against the fixture rather than the served document, which
+ * `server/src/specs/specs.controller.test.ts` holds to each other.
+ *
+ * What this does not check is the folding -- the two tiers now run one
+ * function, so there is no second implementation left to disagree about it.
+ */
+const KEYED_FORMS: [string, string][] = [
+  ['systems', 'SYSTEM_FIELDS'],
+  ['accounts', 'ACCOUNT_FIELDS'],
+  ['network_indicators', 'NETWORK_FIELDS'],
+  ['malware', 'MALWARE_FIELDS'],
+  ['cloud_apps', 'CLOUD_APP_FIELDS'],
+]
+
+describe('the form a key is read off', () => {
+  it('offers a field for every collection the key rules name', () => {
+    expect(Object.keys(IDENTITY_FIELDS).sort(), 'the key rules name other collections').toEqual(
+      KEYED_FORMS.map(([collection]) => collection).sort(),
+    )
+  })
+
+  it.each(KEYED_FORMS)('carries every field %s is keyed on', (collection, key) => {
+    const offered = new Set(
+      fieldsOf(formSpec(specsFixture, key as never)).map((field) => field.name),
+    )
+    const missing = (IDENTITY_FIELDS[collection] ?? []).filter((one) => !offered.has(one))
+
+    expect(missing, `${collection} is keyed on a field its form does not carry`).toEqual([])
   })
 })

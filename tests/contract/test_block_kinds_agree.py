@@ -12,8 +12,8 @@ render it; one added the other way is a menu entry that inserts a kind the
 server does not know, and the failure arrives at the write rather than at the
 menu.
 
-**Read off the source rather than executed**, because the two live in different
-workspaces and neither suite can import the other. So this compares the *declarations* -- the headings and the kinds under
+**Read off the source rather than executed**, because the two live in
+different workspaces and neither suite can import the other. So this compares the *declarations* -- the headings and the kinds under
 each -- and not the labels, which the server takes from the English pack and the
 fixture spells out. A label drifting is visible on screen; a kind drifting is
 not.
