@@ -12,6 +12,7 @@ import { z } from 'zod'
 import { SEVERITY, TACTIC } from '../../../domain/vocabularies.lists.js'
 import type { RawIncident } from '../../../domain/incident-import.js'
 import { severityOf } from './severity.js'
+import { PLATFORM } from './platform.js'
 
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
 
@@ -93,7 +94,7 @@ export function alertToTimeline(raw: unknown, incident: RawIncident): MappedAler
       eventSource: 'siem alert',
       tactic,
       severity: severityOf(p.severity) ?? DEFAULT_SEVERITY,
-      sourceTool: 'Microsoft Sentinel',
+      sourceTool: PLATFORM,
       /**
        * **Unset rather than asserted.** An import says nothing about how sure
        * the analyst is; `unreviewed`, which the server stamps, is what records

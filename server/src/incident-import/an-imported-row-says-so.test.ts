@@ -15,6 +15,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { ImportService } from './import.service.js'
+import { PLATFORM } from './providers/sentinel/platform.js'
 import { TABLES } from '../collections/registry.js'
 import { ordered } from '../collections/entities.controller.js'
 import { DEFINITION as TIMELINE_DEFINITION } from '../collections/timeline.controller.js'
@@ -132,6 +133,50 @@ describe('a row an import writes', () => {
       unstamped,
       'an imported entry does not say it was imported, or does not say nobody has read ' +
         'it -- so material nobody has reviewed reads as material somebody has',
+    ).toEqual([])
+  })
+
+  /**
+   * **The entity half.** The timeline's marking is above; these are the rows an
+   * analyst reads in the Systems, Accounts and Indicators sections, and a
+   * marking present in one section and absent in the others reads as *this was
+   * reviewed* rather than as *this was never stamped*.
+   *
+   * **Not covered here:** that anything draws it. The column is served and the
+   * client reads it nowhere.
+   */
+  it('stamps every entity row with the platform it came from', async () => {
+    const written = await importedRows()
+    const entities = written.filter((group) => group.collection !== 'timeline')
+
+    expect(entities.length, 'the import wrote no entity row to stamp').toBeGreaterThan(0)
+
+    const unstamped = entities.flatMap((group) =>
+      group.rows
+        .filter((row) => row['source'] !== PLATFORM)
+        .map((row) => `${group.collection}: ${JSON.stringify(row['source'])}`),
+    )
+
+    expect(
+      unstamped,
+      'an imported entity row does not say which platform it came from, so it is ' +
+        'indistinguishable from a row the analyst typed',
+    ).toEqual([])
+  })
+
+  /**
+   * **The stamp is written unconditionally, so every target must be able to
+   * hold it.** `IMPORT_TARGETS` is a hand-kept list and the insert is cast, so
+   * a collection added to it without the column fails at request time with no
+   * compile error in front of it.
+   */
+  it('imports only into collections whose table can hold the mark', () => {
+    const cannot = IMPORT_TARGETS.filter((name) => !('source' in TABLES[name]))
+
+    expect(
+      cannot,
+      'an import target has no `source` column, so stamping it writes a field the table ' +
+        'does not have',
     ).toEqual([])
   })
 

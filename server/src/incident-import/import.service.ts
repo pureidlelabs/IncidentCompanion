@@ -20,6 +20,7 @@ import { parseEntity } from './providers/sentinel/entities.js'
 import { mapEntity, startsChecked, SEPARATOR } from './providers/sentinel/mapping.js'
 import { identitiesOf } from '../collections/identity.js'
 import { alertToTimeline, entityRefsOf } from './providers/sentinel/alerts.js'
+import { PLATFORM } from './providers/sentinel/platform.js'
 import { IMPORTED_STAMP } from '../collections/timeline.controller.js'
 
 /** What a candidate is keyed by, so `commit` can name what `preview` showed. */
@@ -166,7 +167,16 @@ export class ImportService {
       }
       if (!wanted.has(candidate.id)) continue
 
-      const fields = this.edited(candidate.collection, candidate.fields, editsById.get(candidate.id))
+      /**
+       * **Stamped after the edit, like the timeline's marker below.** `source`
+       * is server-owned -- `domain/wire.ts` keeps it off the write schema for
+       * the reason it gives there -- so neither the payload nor a correction
+       * the analyst made in the review panel can reach it.
+       */
+      const fields = {
+        ...this.edited(candidate.collection, candidate.fields, editsById.get(candidate.id)),
+        source: PLATFORM,
+      }
       const group = groups.find((one) => one.def.name === candidate.collection)
       if (group) {
         group.rows.push(fields)
