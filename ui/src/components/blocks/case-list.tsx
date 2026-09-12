@@ -2,6 +2,7 @@ import { FolderOpen, PlayCircle, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import type { CaseSummary } from '@/api/case'
+import { DOOR_LABELS, SECTIONS } from './case-sections'
 import { casePath } from './case-paths'
 import { matchesCase } from './picker-rows'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
@@ -122,9 +123,9 @@ function waysIn(doors: {
       onSelect: doors.onNewCase,
     },
     {
-      label: 'Import incidents',
-      icon: Upload,
-      hint: 'Start a case and pull incidents in',
+      label: DOOR_LABELS.import ?? '',
+      icon: SECTIONS.import?.icon ?? Upload,
+      hint: 'Start a case and bring rows in from a CSV',
       onSelect: doors.onImportIncidents,
     },
     {

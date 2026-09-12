@@ -297,7 +297,7 @@ describe('the states the block owes', () => {
     }
     render(<CaseList cases={[]} {...doors} />)
 
-    for (const label of ['New case', 'Import incidents', 'Import archive', 'Demo cases']) {
+    for (const label of ['New case', 'Import from a file', 'Import archive', 'Demo cases']) {
       await user.click(screen.getByRole('button', { name: new RegExp(label) }))
     }
 
@@ -308,7 +308,7 @@ describe('the states the block owes', () => {
   it('refuses every way in that was given no door', () => {
     render(<CaseList cases={[]} />)
 
-    for (const label of ['New case', 'Import incidents', 'Import archive', 'Demo cases']) {
+    for (const label of ['New case', 'Import from a file', 'Import archive', 'Demo cases']) {
       const offer = screen.getByRole('button', { name: new RegExp(label) })
       expect(offer.hasAttribute('disabled') || offer.getAttribute('aria-disabled') === 'true').toBe(
         true,

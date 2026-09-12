@@ -66,6 +66,20 @@ export const SECTIONS: Readonly<Record<string, SectionIdentity>> = {
   indicators: { title: 'Indicators', icon: Fingerprint },
 }
 
+/**
+ * What each import door is called, wherever one is offered.
+ *
+ * **Named for what it takes rather than for what it produces.** Both make a
+ * case, so saying so tells an analyst nothing about which to press; one takes a
+ * file and the other reaches a platform. The pane and the picker rail read this
+ * rather than each spelling it, a second name for one act being two acts as far
+ * as anybody reading both screens is concerned.
+ */
+export const DOOR_LABELS: Readonly<Record<string, string>> = {
+  import: 'Import from a file',
+  'import-sentinel': 'Start from a live source',
+}
+
 export interface RailRowSpec {
   slug: string
   /** Views of this row's page, as fragments on its address. Not sections. */
