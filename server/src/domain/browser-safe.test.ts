@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 /**
- * What the browser bundles when the client validates a draft.
+ * What the browser bundles by reaching through a door it may value-import.
  *
  * **The stronger rule this sits under is no longer true of every module.**
  * `vocabularies.lists.test.ts` holds the `.lists` modules to importing
@@ -45,7 +45,7 @@ const ALLOWED_PACKAGES = new Set(['zod'])
  * refusing the import and nothing walks what it drags in, so the check reads as
  * covering a surface it has never opened.
  */
-const ENTRIES = ['collections.ts', 'indicator-shape.ts', 'malware-shape.ts']
+const ENTRIES = ['collections.ts', 'identity.ts', 'indicator-shape.ts', 'malware-shape.ts']
 
 function importsOf(source: string): string[] {
   const specs: string[] = []
@@ -111,7 +111,7 @@ describe('what the client bundles to validate a draft', () => {
    * regex that stopped matching, or an entry that was renamed, passes both
    * assertions above while covering nothing.
    */
-  it('walked the schemas it is about', () => {
+  it('walked the doors it is about', () => {
     const { files } = closure()
     const names = files.map((one) => relative(HERE, one))
     expect(names).toContain('entities/network-indicator.ts')

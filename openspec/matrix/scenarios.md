@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 459 |
-| Demonstrated | 351 |
+| Scenarios | 462 |
+| Demonstrated | 354 |
 | Undemonstrable | 1 |
 | Unbuilt | 95 |
 | Undemonstrated | 12 |
@@ -186,7 +186,7 @@
 | A reference points inside its own case, and the store alone cannot enforce it | A referenced row is removed | demonstrated | server/src/collections/method-references.test.ts |
 | Only some collections have an identity, and the rest are events | The same host is imported twice | demonstrated | server/src/exports/import.service.test.ts |
 | Only some collections have an identity, and the rest are events | The same timeline entry is imported twice | demonstrated | server/src/collections/an-event-is-never-the-same-as-another.test.ts |
-| Only some collections have an identity, and the rest are events | A second way of creating rows is added | demonstrated | server/src/collections/identity.test.ts |
+| Only some collections have an identity, and the rest are events | A second way of creating rows is added | demonstrated | server/src/domain/identity.test.ts |
 | Doing something to many rows obeys every rule that governs one | Some rows in a bulk write have moved | demonstrated | server/src/collections/bulk.test.ts |
 | Doing something to many rows obeys every rule that governs one | A bulk write crosses the case boundary | demonstrated | server/src/collections/bulk.test.ts |
 | Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | demonstrated | server/src/collections/order-survives.test.ts |
@@ -265,6 +265,9 @@
 | An indicator feed is what a defender can act on | A disposition the application does not recognise | demonstrated | server/src/exports/indicators.test.ts |
 | An indicator feed is what a defender can act on | A feed is published for sharing | demonstrated | server/src/exports/indicators.test.ts |
 | An indicator feed is what a defender can act on | A restriction is named for a form that cannot carry one | demonstrated | server/src/exports/exports.controller.test.ts |
+| A row says which door it came through, and the install decides that | A row read out of a file | demonstrated | server/src/exports/import.service.test.ts |
+| A row says which door it came through, and the install decides that | A file claims an origin of its own | demonstrated | server/src/exports/import.service.test.ts |
+| A row says which door it came through, and the install decides that | A collection that records no origin | demonstrated | server/src/exports/import.service.test.ts |
 
 ## deployment
 

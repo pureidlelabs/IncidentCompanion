@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { z } from 'zod'
 
-import { IDENTITY_FIELDS } from '../../collections/identity.js'
+import { IDENTITY_FIELDS } from '../identity.js'
 import { COLLECTION_SCHEMAS } from '../collections.js'
 
 /**
@@ -55,14 +55,14 @@ describe('every field an identity is made of survives a paste', () => {
  */
 describe('the key a row is known by ignores what nobody can see', () => {
   it('keys a pasted hostname as the hostname', async () => {
-    const { keyOf } = await import('../../collections/identity.js')
+    const { keyOf } = await import('../identity.js')
     expect(keyOf('systems', { hostname: `web01${ZWSP}` })).toBe(
       keyOf('systems', { hostname: 'web01' }),
     )
   })
 
   it('keys a padded digest as the digest', async () => {
-    const { keyOf } = await import('../../collections/identity.js')
+    const { keyOf } = await import('../identity.js')
     const digest = 'd41d8cd98f00b204e9800998ecf8427e'
     expect(keyOf('malware', { hash: `d41d8cd98f00b204${ZWSP}e9800998ecf8427e` })).toBe(
       keyOf('malware', { hash: digest }),

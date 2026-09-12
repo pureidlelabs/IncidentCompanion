@@ -9,10 +9,10 @@ import {
   adviceFor,
   buildPreview,
   buildSubmission,
-  hasDedupKey,
   type ImportPreview,
   type RowResult,
 } from '@/components/blocks/csv-import'
+import { hasIdentity } from '@contract/identity'
 import { Dialog, DialogBody, DialogFooter, DialogHeader } from '@/components/ui/dialog'
 import { DropZone, FileTrigger } from '@/components/ui/drop-zone'
 import {
@@ -115,7 +115,7 @@ export function ImportCsvDialog<TData extends { id: string }>({
   }
 
   const mappedColumns = preview?.columns.filter((column) => column.field !== null) ?? []
-  const showSkip = hasDedupKey(collection)
+  const showSkip = hasIdentity(collection)
   const includedCount = preview?.rows.filter((row) => !row.skip).length ?? 0
   const hasBlockingProblem =
     preview?.rows.some((row) => !row.skip && row.problems.length > 0) ?? false
