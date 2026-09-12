@@ -299,10 +299,29 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
     locations = re.findall(r"^\s*location\s+([^\s{]+)\s*\{(.*?)^\s*\}",
                            conf, re.MULTILINE | re.DOTALL)
     assert locations, "no location blocks found, so nothing proxies"
-    missing = [name for name, body in locations if "ic-proxy.inc" not in body]
-    assert not missing, (
-        f"location(s) {missing} proxy without including ic-proxy.inc, so a "
+
+    # **The property is about forwarding, not about being a location.** A
+    # location that answers the request itself reaches no upstream, so there is
+    # no `X-Real-IP` for it to forward and nothing for the fragment to rewrite:
+    # the refusal handlers `error_page 429` renders are exactly that shape.
+    #
+    # Stated as three cases rather than one so it cannot go slack. A location
+    # that forwards must carry the fragment; one that answers for itself must
+    # actually answer; one that does neither is a location nothing reaches,
+    # which is a mistake whatever it was meant to be.
+    forwards = [name for name, body in locations
+                if "proxy_pass" in body and "ic-proxy.inc" not in body]
+    assert not forwards, (
+        f"location(s) {forwards} proxy without including ic-proxy.inc, so a "
         f"request through them carries the caller's own X-Real-IP")
+
+    inert = [name for name, body in locations
+             if "ic-proxy.inc" not in body and "proxy_pass" not in body
+             and not re.search(r"^\s*return\s+\d", body, re.MULTILINE)]
+    assert not inert, (
+        f"location(s) {inert} neither forward upstream nor answer for "
+        f"themselves, so a request reaching them falls through to nginx's own "
+        f"handling rather than to this app")
 
 
 def test_the_only_published_port_belongs_to_the_tls_edge():
