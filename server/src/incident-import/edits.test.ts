@@ -13,18 +13,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { ImportService } from './import.service.js'
-import { TABLES } from '../collections/registry.js'
-import { ordered } from '../collections/entities.controller.js'
-import { DEFINITION as TIMELINE_DEFINITION } from '../collections/timeline.controller.js'
-
-const IMPORT_TARGETS = ['systems', 'accounts', 'network_indicators', 'malware', 'cloud_apps'] as const
-
-function defs() {
-  return {
-    byName: Object.fromEntries(IMPORT_TARGETS.map((name) => [name, ordered(name, TABLES[name])])),
-    timeline: TIMELINE_DEFINITION,
-  }
-}
+import { definitions as defs } from './targets.js'
 
 function recorder() {
   const written: { collection: string; rows: Record<string, unknown>[] }[] = []

@@ -132,8 +132,19 @@ describe.skipIf(!runnable)('importing an incident', () => {
         await fetch(`${harness.base}/api/cases/${caseId}/systems`, {
           headers: { cookie: admin.cookie },
         })
-      ).json()) as { id: string; hostname: string }[]
+      ).json()) as { id: string; hostname: string; source: string }[]
       expect(systems.map((one) => one.hostname)).toEqual(['WKS-0142'])
+      /**
+       * **Read back through the API, because the column is served and a row
+       * nothing serves says nothing to an analyst.** `manual` here is the
+       * table default, which is what an imported row read as while nothing
+       * stamped it. -> #156
+       */
+      expect(
+        systems[0]?.source,
+        'the imported host reads as work an analyst did, so the case cannot be told apart ' +
+          'from one somebody typed',
+      ).toBe('Microsoft Sentinel')
 
       const timeline = (await (
         await fetch(`${harness.base}/api/cases/${caseId}/timeline`, {
