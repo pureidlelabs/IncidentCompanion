@@ -207,6 +207,7 @@ export function ImportSentinelContainer({
         return {
           key: incident.key,
           title: incident.title,
+          severity: incident.severity,
           alerts: detail.raw.alerts,
           entities: detail.raw.entities,
         } as RawIncident

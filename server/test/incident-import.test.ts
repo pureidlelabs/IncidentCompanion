@@ -40,6 +40,8 @@ const alert = (name: string, properties: Record<string, unknown> = {}) => ({
 const incident = (key = 'inc-1') => ({
   key,
   title: 'Impossible travel sign-in',
+  /** The provider's own spelling, which this product's vocabulary refuses. */
+  severity: 'High',
   alerts: [alert('Impossible travel sign-in')],
   entities: [
     entity('Host', { hostName: 'WKS-0142', dnsDomain: 'corp.example', osFamily: 'Windows' }, 'e-host'),
@@ -397,7 +399,8 @@ describe.skipIf(!runnable)('importing an incident', () => {
         customer: 'Import Ltd',
         // Seeded by the wizard from the incident, and correctable there.
         reference: '4471',
-        severity: 'high',
+        // **No `severity` here, and the route refuses one**: a fixture sending
+        // `high` would have the assertion below read back its own input.
         // **The offset spelling the control actually writes.** `DateTimeInput`
         // joins its halves with `+00:00`, so a fixture sending only `Z` would
         // admit a schema that refuses every real submission.
@@ -426,10 +429,35 @@ describe.skipIf(!runnable)('importing an incident', () => {
        * a route that took the body and dropped them left two controls on
        * screen whose values went nowhere, which is worse than not offering
        * them at all.
+       *
+       * **`severity` is the payload's, not the body's**, so what is asserted
+       * is the mapping rather than the round trip.
        */
       expect(kase.reference).toBe('4471')
       expect(kase.severity).toBe('high')
       expect(kase.detectedAt).not.toBeNull()
+    }, 60_000)
+
+    /**
+     * **A caller naming the severity is refused, rather than quietly obeyed.**
+     * The level is derived from the payload; a door that also accepted one
+     * would have two answers for the same field and the caller's would win --
+     * which is the arrangement that let a case be opened unmarked.
+     */
+    it('refuses a caller that names the severity itself', async () => {
+      const answer = await post('/api/imports/case', {
+        provider: 'sentinel',
+        incidents: [incident('inc-names-its-own-severity')],
+        approved: [],
+        edits: [],
+        title: 'A caller with opinions',
+        severity: 'low',
+      })
+
+      expect(
+        answer.status,
+        'the create door took a severity from the caller, so the derived one is not the only answer',
+      ).toBe(400)
     }, 60_000)
   })
 })

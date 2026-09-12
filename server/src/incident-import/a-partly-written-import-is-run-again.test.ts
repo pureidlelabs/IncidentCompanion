@@ -70,6 +70,7 @@ function flaky() {
 const incident = () => ({
   key: 'inc-1',
   title: 'Retried',
+  severity: '',
   alerts: [
     {
       id: 'a-1',

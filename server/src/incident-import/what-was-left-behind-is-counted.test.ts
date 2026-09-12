@@ -50,7 +50,7 @@ const ALERT = {
 const GOOD_HOST = { kind: 'Host', id: 'e-ok', name: 'e-ok', properties: { hostName: 'WKS-1' } }
 
 function incident(entities: Record<string, unknown>[]) {
-  return { key: 'inc-1', title: 'Left behind', alerts: [ALERT], entities }
+  return { key: 'inc-1', title: 'Left behind', severity: '', alerts: [ALERT], entities }
 }
 
 async function previewOf(entities: Record<string, unknown>[]) {
