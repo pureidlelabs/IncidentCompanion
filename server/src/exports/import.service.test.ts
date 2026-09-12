@@ -15,7 +15,7 @@ import { CSV_IMPORT, ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
-import { cases, evidence, impact, systems, user } from '../db/schema/index.js'
+import { cases, changeFeed, evidence, impact, systems, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -118,6 +118,34 @@ describe.skipIf(!db)('importing a CSV', () => {
     const [row] = await seed!.select().from(systems).where(eq(systems.caseId, emptyCaseId))
 
     expect(row!.source, 'an imported row claims a door it did not come through').not.toBe('manual')
+    expect(row!.source).toBe(CSV_IMPORT)
+  })
+
+  /**
+   * Covers what is recorded, not what is stored: the query builder drops a key
+   * naming no column, so the row itself is right either way and the change
+   * feed is the only place the difference is visible.
+   */
+  it('names no door on a collection that has no column for one', async () => {
+    await service.fromCsv('impact', emptyCaseId, 'label,category\nMailbox down,credentials\n', ME)
+    const [change] = await seed!
+      .select()
+      .from(changeFeed)
+      .where(eq(changeFeed.caseId, emptyCaseId))
+
+    expect(change!.fields, 'the change feed names a column impact has not got').not.toContain(
+      'source',
+    )
+  })
+
+  it('believes no file about where its own rows came from', async () => {
+    const csv = 'hostname,source\nWKS-CLAIMED,Microsoft Sentinel\n'
+    await service.fromCsv('systems', emptyCaseId, csv, ME)
+    const [row] = await seed!.select().from(systems).where(eq(systems.caseId, emptyCaseId))
+
+    expect(row!.source, 'a file named its own origin and was believed').not.toBe(
+      'Microsoft Sentinel',
+    )
     expect(row!.source).toBe(CSV_IMPORT)
   })
 
