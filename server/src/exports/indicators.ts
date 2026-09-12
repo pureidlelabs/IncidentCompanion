@@ -202,26 +202,99 @@ export function toStixBundle(
     ]
   })
 
-  return { type: 'bundle', id: `bundle--${mint()}`, objects }
+  // The marking leads the bundle, so a consumer reading in order has the
+  // definition before the first object that references it.
+  const marked = options.tlp ? [...markingObjects(options.tlp), ...objects] : objects
+  return { type: 'bundle', id: `bundle--${mint()}`, objects: marked }
 }
 
 /**
- * TLP markings are fixed, specification-assigned ids, never minted. The map
- * spans two TLP versions on purpose: `white` is TLP 1.0 and `clear` its TLP
- * 2.0 successor, with an id of its own.
+ * TLP markings are fixed, specification-assigned ids, never minted -- and the
+ * two TLP versions do not travel the same way, which is why they are two maps
+ * rather than one.
+ *
+ * The vocabulary spans both on purpose: `white` is TLP 1.0 and `clear` its
+ * TLP 2.0 successor, so a bundle can be marked for a consumer that speaks
+ * either.
  */
-const TLP_MARKINGS: ReadonlyMap<string, string> = new Map(Object.entries({
-  clear: 'marking-definition--94868c89-83c2-464b-929b-a1a8aa3c8487',
+const TLP_1_MARKINGS: ReadonlyMap<string, string> = new Map(Object.entries({
   white: 'marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9',
   green: 'marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da',
   amber: 'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82',
   red: 'marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed',
 }))
 
+/**
+ * TLP 1.0's four ids, which STIX 2.1 predefines.
+ *
+ * A reference to one of these needs no object in the bundle: every consumer
+ * already has them. That is what makes them different from TLP 2.0's.
+ */
+export const PREDEFINED_TLP_1_MARKINGS: ReadonlySet<string> = new Set(TLP_1_MARKINGS.values())
+
+/** The extension every TLP 2.0 marking declares itself through. */
+const TLP_2_EXTENSION = 'extension-definition--60a3c5c5-0d10-413e-aab3-9e08dde9e88d'
+
+/**
+ * The timestamp the TLP 2.0 objects carry, which is theirs and not this
+ * bundle's: it is part of the published object, like the id.
+ */
+const TLP_2_CREATED = '2022-10-01T00:00:00.000Z'
+
+/**
+ * TLP 2.0's markings, which STIX 2.1 does **not** predefine.
+ *
+ * Each is a property-extension object no consumer has by default, so a bundle
+ * that only references one is dangling - and MISP drops a non-conforming
+ * object silently, which makes the symptom an empty import rather than an
+ * error. `markingObjects` is what carries them.
+ */
+const TLP_2_MARKINGS: ReadonlyMap<string, { id: string; name: string }> = new Map(
+  Object.entries({
+    clear: { id: 'marking-definition--94868c89-83c2-464b-929b-a1a8aa3c8487', name: 'TLP:CLEAR' },
+    'amber+strict': {
+      id: 'marking-definition--939a9414-2ddd-4d32-a0cd-375ea402b003',
+      name: 'TLP:AMBER+STRICT',
+    },
+  }),
+)
+
 export function tlpMarking(tlp: string): string {
-  const marking = TLP_MARKINGS.get(tlp.toLowerCase())
+  const level = tlp.toLowerCase()
+  const marking = TLP_1_MARKINGS.get(level) ?? TLP_2_MARKINGS.get(level)?.id
   if (!marking) throw new Error(`No TLP marking ${tlp}.`)
   return marking
 }
 
-export const TLP_NAMES = [...TLP_MARKINGS.keys()]
+/**
+ * The objects a bundle has to carry so the marking it references resolves.
+ *
+ * Empty for a TLP 1.0 level, because those are predefined. For a TLP 2.0 one
+ * it is the marking and the extension that defines it, both reproduced as
+ * published rather than built from this bundle's clock.
+ */
+function markingObjects(tlp: string): Record<string, unknown>[] {
+  const marking = TLP_2_MARKINGS.get(tlp.toLowerCase())
+  if (!marking) return []
+  const level = tlp.toLowerCase()
+  return [
+    {
+      type: 'marking-definition',
+      spec_version: '2.1',
+      id: marking.id,
+      created: TLP_2_CREATED,
+      name: marking.name,
+      extensions: {
+        [TLP_2_EXTENSION]: { extension_type: 'property-extension', tlp_2_0: level },
+      },
+    },
+  ]
+}
+
+/**
+ * The vocabulary, in the order the level tightens.
+ *
+ * `white` sits beside `clear` rather than in sequence, being the same level
+ * under the older version.
+ */
+export const TLP_NAMES = ['clear', 'white', 'green', 'amber', 'amber+strict', 'red']

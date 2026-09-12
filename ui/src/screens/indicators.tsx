@@ -69,7 +69,7 @@ const VALUE_COLUMN = 'Value'
  * The route marks a bundle only when `tlp` is on the query, so an absent
  * default ships unmarked bundles rather than restrictive ones.
  */
-const TLP_LEVELS = ['clear', 'white', 'green', 'amber', 'red'] as const
+const TLP_LEVELS = ['clear', 'white', 'green', 'amber', 'amber+strict', 'red'] as const
 const DEFAULT_TLP = 'amber'
 
 export function IndicatorsScreen({
