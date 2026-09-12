@@ -27,6 +27,7 @@ import socket
 import ssl
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -924,3 +925,76 @@ def test_the_api_reference_boots_through_the_edge(running_container):
     assert _status(f"https://127.0.0.1:{PORT}/api/openapi.json") == 200, (
         "the viewer booted with nothing to render: the document it fetches is "
         "not being served through the edge")
+
+
+def _refusal(url: str) -> tuple[int, str | None]:
+    """The status and the `Retry-After` the edge sent with it.
+
+    `urlopen` raises on a 429, and the headers a caller needs to act on are on
+    the exception rather than on a response -- so a probe written the obvious
+    way reads them off nothing.
+    """
+    try:
+        with urllib.request.urlopen(url, timeout=10, context=_UNVERIFIED) as response:
+            return response.status, response.headers.get("Retry-After")
+    except urllib.error.HTTPError as refused:
+        return refused.code, refused.headers.get("Retry-After")
+
+
+def test_a_caller_the_edge_refuses_is_told_when_to_come_back(running_container):
+    """*It is refused, AND told when it may try again* -- the proxy's half.
+
+    **The credential paths, because that is where the edge is the only limiter
+    there is.** `throttle/tiers.ts` says so in as many words: the app's guard
+    never runs on `/api/auth/*`, Better Auth's own limiter is production-gated,
+    and a deployment without it "has nginx's `ic_auth` zone and nothing else".
+    So a refusal here carrying no retry time is a caller left with polling as
+    its only strategy.
+
+    **A path the app does not serve**, so nothing under test consumes a
+    credential attempt: `ic_auth` counts the request whatever the app would
+    have answered, and the zone is what this is about.
+
+    **Fired at once.** `ic_auth` is 10r/m with `burst=20`, so a sequential loop
+    over TLS outlasts the window and never exceeds anything.
+
+    Break-verified by removing `error_page 429` from the location: the
+    refusals arrive with no `Retry-After` at all, which is the defect. -> #142
+    """
+    _wait_for_app(HEALTH)
+    url = f"https://127.0.0.1:{PORT}/api/auth/not-a-real-route"
+
+    with ThreadPoolExecutor(max_workers=32) as pool:
+        answers = list(pool.map(lambda _: _refusal(url), range(40)))
+
+    refused = [(code, told) for code, told in answers if code == 429]
+    assert refused, (
+        "nothing was refused by the edge, so this asserts nothing about a "
+        f"refusal -- statuses seen: {sorted({code for code, _ in answers})}")
+
+    unhelpful = [code for code, told in refused if told is None]
+    assert not unhelpful, (
+        f"{len(unhelpful)} of {len(refused)} refusals carried no Retry-After, so a "
+        "caller is told to stop and not when it may resume")
+
+    for _, told in refused:
+        assert told is not None and told.isdigit() and int(told) > 0, (
+            f"Retry-After was {told!r}, which is not a number of seconds a client "
+            "library can act on")
+
+
+def test_a_permitted_response_carries_no_retry_time(running_container):
+    """The other half of `add_header ... always`, and the reason for the seam.
+
+    `always` is what makes a header reach a 429 at all, and it reaches every
+    other status too -- so set beside `limit_req_status` rather than in the
+    handler that renders the refusal, it would tell a caller whose request
+    succeeded to come back later.
+    """
+    _wait_for_app(HEALTH)
+
+    with urllib.request.urlopen(HEALTH, timeout=10, context=_UNVERIFIED) as response:
+        assert response.status == 200
+        assert response.headers.get("Retry-After") is None, (
+            "a response that was not refused carries a retry time, so the header "
+            "is being added to everything rather than to the refusal")

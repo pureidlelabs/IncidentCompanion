@@ -581,14 +581,21 @@ export function refusals(method: string, path: string, hasBody: boolean): Record
       ...json(CONFLICT),
     }
   }
-  // 429 comes from nginx (`limit_req_status` in `docker/nginx/default.conf`),
-  // so no controller can declare it. The thresholds stay out: they live in that
-  // config, and a copy here would be both a second thing to keep true and wrong
-  // as shipped.
+  // **Two limiters answer with this status and no controller declares either.**
+  // nginx (`limit_req_status`, `docker/nginx/default.conf`) refuses at the edge;
+  // the throttler (`throttle/tiers.ts`) refuses inside. `proxy_intercept_errors`
+  // is off, so the application's refusal reaches the caller as it was written
+  // rather than being re-rendered by the edge -- which is what lets the two name
+  // the wait differently.
+  //
+  // The thresholds stay out: they live in those two files, and a copy here would
+  // be both a second thing to keep true and wrong as shipped.
   out['429'] = {
     description:
-      'Rate-limited by the reverse proxy rather than the application, so it applies to ' +
-      'every route. The auth routes carry a lower threshold than the rest.',
+      'Rate-limited, by the reverse proxy at the edge or by the application behind it. ' +
+      'The wait is named by `Retry-After` in seconds where the proxy refused, and by a ' +
+      '`retry-after-` header suffixed with the tier that refused where the application ' +
+      'did. The auth routes carry a lower threshold than the rest.',
     ...json(REFUSAL),
   }
   // Every `description` here is a reference entry rather than an error message:
