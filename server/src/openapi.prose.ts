@@ -596,9 +596,9 @@ export function refusals(method: string, path: string, hasBody: boolean): Record
   out['429'] = {
     description:
       'Rate-limited, by the reverse proxy at the edge or by the application behind it. ' +
-      'Which one answered decides both the body and the header naming the wait: the ' +
-      'proxy renders HTML and sends `Retry-After` in seconds, the application sends ' +
-      'JSON with a `retry-after-` header suffixed by the tier that refused, and the ' +
+      'Both send `Retry-After` in seconds. Which one answered decides the body and what ' +
+      'else is named: the proxy renders HTML, the application sends JSON and repeats the ' +
+      'wait in a `retry-after-` header suffixed by the tier that refused, and the ' +
       'credential routes send JSON with `X-Retry-After`. The credential routes carry a ' +
       'lower threshold than the rest.',
   }
