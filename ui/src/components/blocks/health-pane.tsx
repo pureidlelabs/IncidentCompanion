@@ -63,10 +63,20 @@ export function HealthPane({
     >
       <div className="flex max-w-[900px] flex-col gap-6">
         <Frame>
-          <FrameHeader>
+          <FrameHeader className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <FrameTitle className="text-2xs font-medium uppercase tracking-micro text-ink-muted">
               Serving
             </FrameTitle>
+            {/*
+              **What was polled, beside the verdicts rather than under them.**
+              These describe the app server that answered and the dependencies
+              that server reached. Behind a load balancer or with a read
+              replica that is one member, and a screen consulted while somebody
+              decides whether the platform is the problem must not report more
+              than it checked -- green here while a second app server is down
+              is worse than admitting it cannot tell.
+            */}
+            <span className="text-2xs text-ink-muted">Checked from this instance</span>
           </FrameHeader>
           <FramePanel className="flex flex-col gap-3">
             <div className="flex flex-wrap gap-x-10 gap-y-3">

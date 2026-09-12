@@ -106,4 +106,25 @@ describe('the Health pane reports every read it makes', () => {
     render(<HealthPaneView onPane={vi.fn()} userMenu={null} onAbout={vi.fn()} />)
     expect(screen.queryByRole('alert')).toBeNull()
   })
+
+  /**
+   * **A health screen is consulted when somebody is deciding whether the
+   * platform is the problem**, so it may not report more than it checked.
+   * Behind a load balancer or with a read replica these verdicts describe the
+   * one app server that answered and the dependencies that server reached --
+   * not the deployment. Reporting green while a second app server is down is
+   * worse than admitting it cannot tell.
+   *
+   * Asserted on the section that carries the verdicts. The gauges already say
+   * `this container` and `this machine`, and the figures are read from the
+   * database and really are install-wide.
+   */
+  it('says the serving verdicts are what this instance can see', () => {
+    render(<HealthPaneView onPane={vi.fn()} userMenu={null} onAbout={vi.fn()} />)
+
+    expect(
+      screen.getByText(/this instance/i),
+      'the verdicts are reported without saying what was polled',
+    ).toBeInTheDocument()
+  })
 })
