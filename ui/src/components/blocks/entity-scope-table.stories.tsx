@@ -312,6 +312,12 @@ export const LongestValue: Story = {
           id: 'longest',
           hostname:
             'fin-prod-sql-cluster-node-07.corp.internal.meridian-logistics.example',
+          /**
+           * What an import writes, rather than the `manual` every fixture
+           * carries: three times the width, in a cell beside the one this
+           * story stretches.
+           */
+          source: 'Microsoft Sentinel',
         },
         ...campaignCase.systems.slice(1),
       ],

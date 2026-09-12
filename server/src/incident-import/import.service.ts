@@ -168,10 +168,9 @@ export class ImportService {
       if (!wanted.has(candidate.id)) continue
 
       /**
-       * **Stamped after the edit, like the timeline's marker below.** `source`
-       * is server-owned -- `domain/wire.ts` keeps it off the write schema for
-       * the reason it gives there -- so neither the payload nor a correction
-       * the analyst made in the review panel can reach it.
+       * `source` is on no collection's write schema, so `edited()` has already
+       * dropped any the payload or a correction carried. Stamping after it is
+       * the second refusal rather than the first.
        */
       const fields = {
         ...this.edited(candidate.collection, candidate.fields, editsById.get(candidate.id)),

@@ -12,22 +12,13 @@
  * put in a column, so a marker absent here is absent from the case -- and the
  * recorder makes that visible without a stack.
  */
+import { getTableColumns } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { ImportService } from './import.service.js'
 import { PLATFORM } from './providers/sentinel/platform.js'
 import { TABLES } from '../collections/registry.js'
-import { ordered } from '../collections/entities.controller.js'
-import { DEFINITION as TIMELINE_DEFINITION } from '../collections/timeline.controller.js'
-
-const IMPORT_TARGETS = ['systems', 'accounts', 'network_indicators', 'malware', 'cloud_apps'] as const
-
-function defs() {
-  return {
-    byName: Object.fromEntries(IMPORT_TARGETS.map((name) => [name, ordered(name, TABLES[name])])),
-    timeline: TIMELINE_DEFINITION,
-  }
-}
+import { IMPORT_TARGETS, definitions as defs } from './targets.js'
 
 function recorder() {
   const written: { collection: string; rows: Record<string, unknown>[] }[] = []
@@ -112,10 +103,6 @@ describe('a row an import writes', () => {
    * stamped by the bulk door rather than by the mapping -- `alerts.ts` says
    * why in as many words: *a caller able to assert `imported` could forge an
    * evidentiary claim*.
-   *
-   * The entity collections have no equivalent, and their `source` column
-   * stays at its `'manual'` default. That is #156 rather than an assertion
-   * here, because a failing test cannot land.
    */
   it('stamps every timeline entry as imported and unread', async () => {
     const written = await importedRows()
@@ -137,13 +124,11 @@ describe('a row an import writes', () => {
   })
 
   /**
-   * **The entity half.** The timeline's marking is above; these are the rows an
-   * analyst reads in the Systems, Accounts and Indicators sections, and a
-   * marking present in one section and absent in the others reads as *this was
-   * reviewed* rather than as *this was never stamped*.
+   * **The entity half**, which the Entities and Indicators tables draw in a
+   * `Source` column -- so what is asserted here reaches the analyst rather than
+   * only the database.
    *
-   * **Not covered here:** that anything draws it. The column is served and the
-   * client reads it nowhere.
+   * **Not covered here:** how it renders. -> `visual-check`
    */
   it('stamps every entity row with the platform it came from', async () => {
     const written = await importedRows()
@@ -166,17 +151,21 @@ describe('a row an import writes', () => {
 
   /**
    * **The stamp is written unconditionally, so every target must be able to
-   * hold it.** `IMPORT_TARGETS` is a hand-kept list and the insert is cast, so
-   * a collection added to it without the column fails at request time with no
-   * compile error in front of it.
+   * hold it -- and nothing else would say so.** Measured: an insert carrying
+   * `source` against a table without the column drops the key and succeeds, so
+   * the row is written silently unstamped, which is the defect this file is
+   * about rather than an error anybody sees.
+   *
+   * Asserted against the shipping list rather than this file's own, because a
+   * copy cannot guard the thing it was copied from.
    */
   it('imports only into collections whose table can hold the mark', () => {
-    const cannot = IMPORT_TARGETS.filter((name) => !('source' in TABLES[name]))
+    const cannot = IMPORT_TARGETS.filter((name) => !('source' in getTableColumns(TABLES[name])))
 
     expect(
       cannot,
       'an import target has no `source` column, so stamping it writes a field the table ' +
-        'does not have',
+        'does not have and the row lands unmarked',
     ).toEqual([])
   })
 

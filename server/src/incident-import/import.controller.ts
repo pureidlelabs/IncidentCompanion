@@ -27,17 +27,15 @@ import { z } from 'zod'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { CasesService } from '../cases/cases.service.js'
-import { ordered } from '../collections/entities.controller.js'
-import { TABLES } from '../collections/registry.js'
-import { DEFINITION as TIMELINE_DEFINITION } from '../collections/timeline.controller.js'
 import {
   commitBodySchema,
   importedSchema,
   previewBodySchema,
   previewResultSchema,
 } from '../domain/incident-import.js'
-import { ImportService, type ImportDefinitions } from './import.service.js'
+import { ImportService } from './import.service.js'
 import { caseSeverityOf } from './providers/sentinel/severity.js'
+import { definitions } from './targets.js'
 
 class PreviewBodyDto extends createZodDto(previewBodySchema) {}
 class PreviewResultDto extends createZodDto(previewResultSchema) {}
@@ -80,29 +78,6 @@ class StartBodyDto extends createZodDto(startBodySchema) {}
 
 const startedSchema = importedSchema.extend({ caseId: z.uuid() })
 class StartedDto extends createZodDto(startedSchema) {}
-
-/**
- * Every collection an import may write.
- *
- * **A literal tuple, so `TABLES` is indexed by a name it knows**: a name here
- * that is not a bulk target is a type error. The reverse does not hold -- this
- * is a subset of the registry rather than a second copy of it, and a collection
- * added to `TABLES` is simply not imported until it is named here too.
- */
-const IMPORT_TARGETS = ['systems', 'accounts', 'network_indicators', 'malware', 'cloud_apps'] as const
-
-/**
- * **The shipping controllers' own definitions, never rebuilt here.** A
- * hand-written copy is a second door that a guard added to the first never
- * reaches -- a timeline definition without `schemaFor` loses the whole
- * reference check on an imported entry the analyst edits.
- */
-function definitions(): ImportDefinitions {
-  return {
-    byName: Object.fromEntries(IMPORT_TARGETS.map((name) => [name, ordered(name, TABLES[name])])),
-    timeline: TIMELINE_DEFINITION,
-  }
-}
 
 @Controller('api/cases/:caseId/imports')
 @UseGuards(CaseAccessGuard)
