@@ -15,6 +15,7 @@ import { Logger } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
 
 import type { Database } from '../db/client.js'
+import { callerAddress } from '../wire/caller-address.js'
 import { retentionClassOf } from './retention-class.js'
 import { CHANNEL_OF, installActivity } from '../db/schema/install-activity.js'
 import { OCSF_VERSION, classify } from './ocsf.js'
@@ -79,17 +80,21 @@ function forOneLine(value: string): string {
 /**
  * The request's origin, as far as this install can honestly know it.
  *
- * **`x-real-ip` and nothing else, matching `auth.config.ts`'s
- * `ipAddressHeaders`.** nginx overwrites it on every request and the container
- * publishes no port, so it is the one spelling a caller cannot choose for
- * themselves. Reading `x-forwarded-for` would let anyone reaching the app
- * write their own address into the audit, which is worse than recording none.
+ * **The address is decided by `callerAddress` rather than read here**, so the
+ * audit believes the header on exactly the same terms the two rate limiters
+ * do. No socket is passed: this writes from a request it was handed rather
+ * than one it is holding, and inventing an address for the line would be the
+ * forgery the column exists to prevent. -> `wire/caller-address.ts`
+ *
+ * The agent is caller text in every mode and is not a partition column of the
+ * reader's run window, so it is recorded rather than dropped; `forOneLine` is
+ * what makes it safe to put in a log line.
  */
 function originOf(headers: IncomingHttpHeaders | undefined) {
   const one = (value: string | string[] | undefined) =>
     (Array.isArray(value) ? value[0] : value) ?? null
   return {
-    ipAddress: one(headers?.['x-real-ip']),
+    ipAddress: callerAddress(headers ?? {}, undefined),
     userAgent: one(headers?.['user-agent']),
   }
 }

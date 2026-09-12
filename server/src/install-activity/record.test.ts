@@ -173,13 +173,26 @@ describe.skipIf(!db)('the install audit log', () => {
     expect(row?.actorLabel).toBe('Audit Analyst')
   })
 
-  it('does not let a caller write their own origin', async () => {
+  /**
+   * **The scenario, asked the only way that can fail.** `x-real-ip` is
+   * believable exactly when nginx overwrote it, and nothing but the mode says
+   * whether nginx is there -- so a test that presents the header and asserts
+   * it was recorded demonstrates the requirement only for the spelling nobody
+   * trusts anyway. Presented here as the caller's own, in the mode the suite
+   * runs under, which is the mode a reader of `NODE_ENV` calls untrusted.
+   *
+   * `ip_address` is a partition column of the reader's run window, so a caller
+   * who varies it keeps every one of their failures a run of one and `Low` for
+   * ever. That is what makes this the address's problem and not only the log's.
+   */
+  it('discards an address the caller presented, where no proxy set it', async () => {
     const target = `forge-origin-${Date.now()}`
     await recordInstallActivity(db!, {
       event: 'sign_in_failed',
       target,
       headers: {
-        // Attacker-controlled at this app's edge: nginx does not overwrite it.
+        // Both spellings are the caller's here: nginx overwrites each of them,
+        // and outside production there is no nginx to have done it.
         'x-forwarded-for': '10.0.0.1',
         'x-real-ip': '203.0.113.9',
         'user-agent': 'Probe/1.0',
@@ -187,11 +200,28 @@ describe.skipIf(!db)('the install audit log', () => {
     })
 
     const [row] = await written(target)
-    expect(row?.ipAddress).toBe('203.0.113.9')
+    expect(row?.ipAddress, 'a caller wrote their own address into the audit').toBeNull()
+    // The agent is caller text in every mode and is not a partition column, so
+    // it is recorded rather than dropped. Escaping is what makes it safe.
     expect(row?.userAgent).toBe('Probe/1.0')
   })
 
-  it('records no origin at all rather than a forged one', async () => {
+  it('keeps the address the proxy set, where there is a proxy', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    const target = `proxy-origin-${Date.now()}`
+    await recordInstallActivity(db!, {
+      event: 'sign_in_failed',
+      target,
+      headers: { 'x-real-ip': '203.0.113.9', 'user-agent': 'Probe/1.0' },
+    })
+
+    const [row] = await written(target)
+    expect(row?.ipAddress, 'the one header nginx overwrites was not believed').toBe('203.0.113.9')
+    vi.unstubAllEnvs()
+  })
+
+  it('never reads x-forwarded-for, even where a proxy is in front', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
     const target = `no-real-ip-${Date.now()}`
     await recordInstallActivity(db!, {
       event: 'sign_in_failed',
@@ -201,6 +231,7 @@ describe.skipIf(!db)('the install audit log', () => {
 
     const [row] = await written(target)
     expect(row?.ipAddress).toBeNull()
+    vi.unstubAllEnvs()
   })
 })
 

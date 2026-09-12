@@ -10,6 +10,7 @@ import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { eq, sql } from 'drizzle-orm'
 
 import { recordInstallActivity } from '../install-activity/record.js'
+import { trustedAddressHeaders } from '../wire/caller-address.js'
 import { admin } from 'better-auth/plugins'
 import { createAccessControl } from 'better-auth/plugins/access'
 import { defaultStatements } from 'better-auth/plugins/admin/access'
@@ -663,19 +664,21 @@ export function authOptions(
     /**
      * Which headers may name the caller the rate limiter counts against.
      *
-     * **Exactly one in production, and none anywhere else.** `x-real-ip` is
-     * overwritten by nginx on every request and the app publishes no port, so
-     * it is the one spelling a caller cannot choose; `dev-node.sh` has no proxy
-     * in front of it, where the same setting would be a bypass. `[]` is not the
-     * same as unset - the library reads `ipAddressHeaders || DEFAULT_IP_HEADERS`
-     * and an empty array is truthy, so omitting the key restores
-     * `x-forwarded-for`. Asserted in `auth.config.test.ts`.
+     * **Decided by `trustedAddressHeaders`, which the audit and the throttler
+     * also read**, so the three cannot disagree about when the header is
+     * believable. -> `wire/caller-address.ts`
+     *
+     * **It resolves the process mode rather than taking this function's
+     * `mode`, and that is the point.** `mode` comes from `env.ts`, which
+     * defaults `NODE_ENV` to `production` because that is the closed setting
+     * for the trusted-origin list - and it is the open one here. An install
+     * that names no mode would otherwise believe a header no proxy set.
      *
      * Never set `disableIpTracking`: the limiter returns early on it and
      * applies no rule at all.
      */
     advanced: {
-      ipAddress: { ipAddressHeaders: mode === 'production' ? ['x-real-ip'] : [] },
+      ipAddress: { ipAddressHeaders: trustedAddressHeaders() },
     },
     /**
      * Half of *core makes no outbound request*, and the half a config can hold.

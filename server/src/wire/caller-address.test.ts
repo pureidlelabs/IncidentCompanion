@@ -12,9 +12,9 @@
  * The header can only be trusted because `docker/nginx/ic-proxy.inc` sets
  * `X-Real-IP $remote_addr` as an overwrite. That is what these cases encode.
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { callerAddress } from './caller.js'
+import { addressMode, callerAddress, trustedAddressHeaders } from './caller-address.js'
 
 const SOCKET = '10.0.0.7'
 
@@ -75,4 +75,52 @@ describe('the address a limit counts against, in the dev loop', () => {
   it('is null when there is no socket either', () => {
     expect(callerAddress({}, undefined, 'development')).toBeNull()
   })
+})
+
+/**
+ * The mode this decision reads, asked for the value nobody set.
+ *
+ * **`env.ts` resolves an unset `NODE_ENV` to `production`**, because that is
+ * the closed setting for the trusted-origin list. It is the open one here, so
+ * this must not share it: an install that names no mode has no proxy this app
+ * knows of.
+ */
+describe('when a header may be believed at all', () => {
+  it('treats a mode nobody set as untrusted', () => {
+    vi.stubEnv('NODE_ENV', '')
+    expect(addressMode(), 'an unset mode resolved to the trusting answer').not.toBe('production')
+    expect(trustedAddressHeaders()).toEqual([])
+    vi.unstubAllEnvs()
+  })
+
+  it.each(['development', 'test', 'staging', 'Production', 'PRODUCTION'])(
+    'trusts no header where the mode is %o',
+    (mode) => {
+      expect(trustedAddressHeaders(mode), 'a mode that is not production was trusted').toEqual([])
+    },
+  )
+
+  it('names exactly one header where a proxy set it', () => {
+    expect(trustedAddressHeaders('production')).toEqual(['x-real-ip'])
+  })
+
+  /**
+   * **The whole point of the module, asserted as agreement rather than per
+   * reader.** Better Auth takes a header list and the other two take a value,
+   * so nothing else compares them -- and the defect this replaces was one
+   * reader believing the header while another refused it, for the same
+   * request.
+   */
+  it.each(['production', 'development', 'test', ''])(
+    'answers the value and the list consistently, in mode %o',
+    (mode) => {
+      const believed = trustedAddressHeaders(mode).length > 0
+      const answer = callerAddress({ 'x-real-ip': '203.0.113.9' }, '10.0.0.7', mode)
+
+      expect(
+        answer === '203.0.113.9',
+        'the value read a header the list does not name, or refused one it does',
+      ).toBe(believed)
+    },
+  )
 })

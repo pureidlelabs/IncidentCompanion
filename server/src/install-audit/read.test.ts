@@ -105,12 +105,10 @@ describe.skipIf(!db)('reading the audit', () => {
    * it, because a page-local count would answer 1.
    */
   it('counts a run across the table, not within the page', async () => {
-    const headers = { 'x-real-ip': `203.0.113.${String(Date.now() % 200)}` }
     for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
       await recordInstallActivity(db!, {
         event: 'sign_in_failed',
         target: 'runner@example.test',
-        headers,
       })
     }
 
@@ -131,11 +129,10 @@ describe.skipIf(!db)('reading the audit', () => {
    */
   it('collapses a repeat but never merges two different targets', async () => {
     const mark = `collapse-${String(Date.now())}`
-    const headers = { 'x-real-ip': `198.51.100.${String(Date.now() % 200)}` }
     for (let i = 0; i < 3; i += 1) {
-      await recordInstallActivity(db!, { event: 'case_created', target: mark, headers })
+      await recordInstallActivity(db!, { event: 'case_created', target: mark })
     }
-    await recordInstallActivity(db!, { event: 'case_created', target: `${mark}-other`, headers })
+    await recordInstallActivity(db!, { event: 'case_created', target: `${mark}-other` })
 
     const page = await reads.page({ channel: 'case', limit: 50 }, session, {})
     const ours = page.events.filter((one) => one.targetLabel?.startsWith(mark))
@@ -238,10 +235,9 @@ describe.skipIf(!db)('reading the audit', () => {
    * which hides exactly the lines a severity filter is reached for.
    */
   it('keeps a run raised to High, whose stored severity is below the floor', async () => {
-    const headers = { 'x-real-ip': `192.0.2.${String(Date.now() % 200)}` }
     const target = `raised-${String(Date.now())}@example.test`
     for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
-      await recordInstallActivity(db!, { event: 'sign_in_failed', target, headers })
+      await recordInstallActivity(db!, { event: 'sign_in_failed', target })
     }
 
     const stored = await db!
@@ -265,12 +261,10 @@ describe.skipIf(!db)('reading the audit', () => {
    * `High 0` chip over a page of High lines.
    */
   it('counts each severity as the number the filter would return', async () => {
-    const headers = { 'x-real-ip': `198.18.0.${String(Date.now() % 200)}` }
     for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
       await recordInstallActivity(db!, {
         event: 'sign_in_failed',
         target: `tally-${String(Date.now())}@example.test`,
-        headers,
       })
     }
 
