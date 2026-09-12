@@ -16,8 +16,8 @@
  * impact rows the case counts. A file per column is where the next one is
  * forgotten, which is how the euro columns came to be widened two at a time.
  *
- * Columns deliberately left `int4` are asserted nowhere, because they are not
- * in the class: a duration of 2,147,483,647 minutes is 4,083 years.
+ * Columns whose answers cannot reach the ceiling are asserted nowhere, and the
+ * schema is where each says so.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -112,11 +112,9 @@ describe.skipIf(!db)('a figure larger than two billion', () => {
    * by name, and the 2013 Yahoo breach was three billion accounts. The column
    * refuses that figure with the same `22003` the euro columns did.
    *
-   * **Read without `Number()`, on purpose.** The wrapper would convert a
-   * string return and pass, and a string is not harmless here: the compliance
-   * gates compare these with `>`, where `'3000000000' > 500000` is a lexical
-   * comparison that answers false. Asserting the raw value is what makes the
-   * read a check on the type as well as the magnitude.
+   * **Read without `Number()`**, which would convert a string return and pass:
+   * the raw value checks the declared `mode: 'number'` mapping as well as the
+   * magnitude, and the mapping is what every arithmetic reader assumes.
    */
   it('does not cap how many people an incident reached', async () => {
     const [row] = await seed!.insert(cases).values({ title: 'A wide incident' }).returning()

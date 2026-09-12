@@ -53,21 +53,17 @@ export const caseCompliance = pgTable(
     personalDataInvolved: text('personal_data_involved'),
     usersAffected: text('users_affected').notNull().default(''),
     /**
-     * **`bigint` wherever a regime asks a large entity for a figure.** `int4`
-     * stops at 2,147,483,647 and Postgres refuses the write rather than
-     * truncating it, so the column would be what decided the answer. That
-     * ceiling is inside the turnover NIS2 sizes an essential entity by, and
-     * one breach has reached three billion accounts. `mode: 'number'` keeps
-     * the value a JavaScript number, whose own ceiling is past both.
-     *
-     * A duration is not in that class, which is why the minutes below stay
-     * `int4`: 2,147,483,647 of them is 4,083 years.
+     * `bigint`, because a real answer passes `int4`; the two minute columns
+     * stay `int4` because no answer in minutes reaches it. `mode: 'number'`
+     * reads them as JavaScript numbers.
+     * -> `openspec/specs/compliance/design.md`
      */
     usersAffectedCount: bigint('users_affected_count', { mode: 'number' }),
     usersTotalCount: bigint('users_total_count', { mode: 'number' }),
     serviceDowntimeMinutes: integer('service_downtime_minutes'),
     serviceDowntimeComplete: boolean('service_downtime_complete').notNull().default(false),
     financialImpact: text('financial_impact').notNull().default(''),
+    /** The same ceiling in euros, and `customer.ts` holds the turnover twin. */
     financialLossEur: bigint('financial_loss_eur', { mode: 'number' }),
     annualTurnoverEur: bigint('annual_turnover_eur', { mode: 'number' }),
     recurringIncident: text('recurring_incident'),

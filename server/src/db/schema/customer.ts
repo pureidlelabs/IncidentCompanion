@@ -53,15 +53,9 @@ export const customers = pgTable(
     dpoContact: text('dpo_contact').notNull().default(''),
 
     /**
-     * **`bigint`, because `int4` stops at 2,147,483,647** -- and the regimes
-     * that ask an organisation for these figures ask them of the entities
-     * above that line. Postgres refuses the write rather than truncating, so
-     * the column would simply decline the answer for the organisations the
-     * question is for: EUR 2.1bn of turnover, and a user base one breach has
-     * already exceeded.
-     *
-     * `mode: 'number'` keeps them JavaScript numbers: the ceiling that matters
-     * is the column's, and 2^53 is past both.
+     * `bigint`, because a real answer passes `int4` and the entities these
+     * are asked of are the ones above that line.
+     * -> `openspec/specs/compliance/design.md`
      */
     usersTotalCount: bigint('users_total_count', { mode: 'number' }),
     annualTurnoverEur: bigint('annual_turnover_eur', { mode: 'number' }),
