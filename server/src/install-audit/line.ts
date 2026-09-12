@@ -29,7 +29,7 @@ export function lineOf(
     activityId: row.activityId,
     activityName: nameOfActivity(row.classUid, row.activityId),
     typeUid: row.typeUid,
-    metadata: metadataFor(row.channel),
+    metadata: metadataFor(row.channel, row.schemaVersion),
     outcome: row.statusId === 2 ? 'failure' : 'success',
     statusId: row.statusId,
     severityId,
