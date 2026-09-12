@@ -294,13 +294,6 @@ export class CasesService {
   }
 
   /**
-   * Raise a case, optionally seeded from a template.
-   *
-   * The insert, its change-feed row and the seed are one transaction: a case
-   * that exists and was never announced is invisible to every picker already
-   * open, and one holding half a checklist looks started.
-   */
-  /**
    * Refuses a reference the customer is already using, naming the case.
    *
    * **The refusal is here and the guarantee is the index**, which is the split
@@ -316,7 +309,7 @@ export class CasesService {
    * default customer -- which the specification calls a customer like any
    * other. The index groups the same way, by `coalesce`. -> #218
    */
-  private async referenceIsFree(tx: Executor, reference?: string | undefined): Promise<void> {
+  private async referenceIsFree(tx: Executor, reference?: string): Promise<void> {
     // The absence of a reference is not a value and never collides, which is
     // also why the index is partial.
     if (!reference) return
@@ -332,6 +325,14 @@ export class CasesService {
       message: `"${held.title}" already carries ${reference}. Give this case a different reference.`,
     })
   }
+
+  /**
+   * Raise a case, optionally seeded from a template.
+   *
+   * The insert, its change-feed row and the seed are one transaction: a case
+   * that exists and was never announced is invisible to every picker already
+   * open, and one holding half a checklist looks started.
+   */
 
   async create(
     /**

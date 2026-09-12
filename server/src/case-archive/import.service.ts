@@ -6,8 +6,14 @@
  * imported it. Evidence rows keep their digests, so a handover archive
  * imports rows whose files are absent.
  */
-import { Inject, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common'
-import { getTableColumns, sql } from 'drizzle-orm'
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  UnprocessableEntityException,
+} from '@nestjs/common'
+import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -157,11 +163,39 @@ export class ArchiveImportService {
     }
 
     return this.db.transaction(async (tx) => {
+      const reference = typeof record.reference === 'string' ? record.reference : ''
+      /**
+       * **An import is a second case for one ticket, and is refused like a
+       * create.** A reference is unique within its customer, so reading an
+       * archive of a case this install still holds has to say which case
+       * holds it rather than fail as a query -- the operator's way out is to
+       * free the reference on one of them, and they cannot do that without
+       * being told which.
+       *
+       * Grouped by a null `customer_id`, which is what an imported case has:
+       * the archive carries the free-text customer and nothing resolves it to
+       * a record. -> `cases/cases.service.ts`
+       */
+      if (reference) {
+        const [held] = await tx
+          .select({ title: cases.title })
+          .from(cases)
+          .where(and(eq(cases.reference, reference), isNull(cases.customerId)))
+          .limit(1)
+        if (held) {
+          throw new ConflictException({
+            message:
+              `"${held.title}" already carries ${reference}. ` +
+              'Free that reference before reading this archive.',
+          })
+        }
+      }
+
       const [made] = await tx
         .insert(cases)
         .values({
           title: String(record.title),
-          reference: typeof record.reference === 'string' ? record.reference : '',
+          reference,
           customer: typeof record.customer === 'string' ? record.customer : '',
           summary: typeof record.summary === 'string' ? record.summary : '',
           createdBy: actorId,

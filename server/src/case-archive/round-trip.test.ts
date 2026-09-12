@@ -43,11 +43,33 @@ describe.skipIf(!db)('a case, out and back', () => {
   let actorId: string
   let other: string
   let root: string
+  let minted = 0
+
+  /**
+   * Frees the original's reference so the copy may carry it.
+   *
+   * **A reference is unique within its customer, and a re-import onto the same
+   * install is a second case for one ticket.** So the import is refused,
+   * naming the case that holds it, exactly as a create is -- which is what an
+   * operator re-importing a case they still have has to act on. The archive
+   * is built first, so the file under test still carries the reference and the
+   * import is still exercised taking one.
+   *
+   * Freed rather than deleted, because the case next door is what several of
+   * these assert survived. -> `cases/a-reference-is-unique-within-its-customer.test.ts`
+   */
+  async function freeTheReference(caseId: string): Promise<void> {
+    await seed!.update(cases).set({ reference: '' }).where(eq(cases.id, caseId))
+  }
 
   /** A case with a system, a timeline entry pointing at it, and an attachment. */
   async function furnished() {
+    // **A reference per case, because this file makes one per test and never
+    // clears the table.** A reference is unique within its customer, so a
+    // fixture reusing one collides with the previous test's case rather than
+    // with anything the test is about.
     const row = await cases_.create(
-      { title: 'Archived incident', reference: 'INC-9', customer: 'Acme' },
+      { title: 'Archived incident', reference: `INC-9-${String(minted++)}`, customer: 'Acme' },
       actorId,
     )
     const [box] = await seed!
@@ -137,6 +159,7 @@ describe.skipIf(!db)('a case, out and back', () => {
     // check has nothing to check against.
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+    await freeTheReference(made.caseId)
     const result = await importer.load(built.bytes, '', other)
 
     expect(result.id).not.toBe(made.caseId)
@@ -151,6 +174,7 @@ describe.skipIf(!db)('a case, out and back', () => {
     // entry silently describes a different machine.
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+    await freeTheReference(made.caseId)
     const result = await importer.load(built.bytes, '', other)
 
     const [entry] = await seed!
@@ -173,6 +197,7 @@ describe.skipIf(!db)('a case, out and back', () => {
   it('remaps every id in a list, not only the ones a map happened to name', async () => {
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+    await freeTheReference(made.caseId)
     const result = await importer.load(built.bytes, '', other)
 
     const [entry] = await seed!.select().from(timeline).where(eq(timeline.caseId, result.id))
@@ -197,6 +222,7 @@ describe.skipIf(!db)('a case, out and back', () => {
       .where(eq(systems.id, made.systemId))
 
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+    await freeTheReference(made.caseId)
     const result = await importer.load(built.bytes, '', other)
 
     const [box] = await seed!.select().from(systems).where(eq(systems.caseId, result.id))
@@ -208,6 +234,7 @@ describe.skipIf(!db)('a case, out and back', () => {
     // one is unresolvable here and draws a blank avatar.
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+    await freeTheReference(made.caseId)
     const result = await importer.load(built.bytes, '', other)
 
     const [box] = await seed!.select().from(systems).where(eq(systems.caseId, result.id))
@@ -217,6 +244,7 @@ describe.skipIf(!db)('a case, out and back', () => {
   it('carries the artefact bytes, and they still resolve', async () => {
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+    await freeTheReference(made.caseId)
     const result = await importer.load(built.bytes, '', other)
 
     const [row] = await seed!.select().from(evidence).where(eq(evidence.caseId, result.id))
@@ -231,6 +259,7 @@ describe.skipIf(!db)('a case, out and back', () => {
     // from nothing - the same class as the supersede re-keying.
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+    await freeTheReference(made.caseId)
     const result = await importer.load(built.bytes, '', other)
 
     const [report] = await seed!.select().from(reports).where(eq(reports.caseId, result.id))
@@ -259,12 +288,34 @@ describe.skipIf(!db)('a case, out and back', () => {
     expect(Object.keys(members)).toContain(`prose/${made.reportId}.ydoc`)
   })
 
+  /**
+   * **Reading an archive of a case this install still holds is refused, and
+   * the refusal names the case.** A reference is unique within its customer
+   * and an import is a second case for one ticket, so the rule applies here
+   * with no exemption -- the archive import writes the row itself rather than
+   * going through `CasesService.create`, which is why the refusal is stated in
+   * both places and asserted in both.
+   *
+   * The operator's way out is to free the reference on one of the two, and
+   * they cannot do that without being told which holds it.
+   */
+  it('refuses an archive whose reference this install already holds', async () => {
+    const made = await furnished()
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+
+    await expect(
+      importer.load(built.bytes, '', other),
+      'a second case took a reference the first still holds',
+    ).rejects.toThrow(/already carries INC-9/)
+  })
+
   describe('a handover, exported without its files', () => {
     it('says so rather than looking damaged', async () => {
       const made = await furnished()
       const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
       expect(built.attachments).toBe('omitted')
 
+      await freeTheReference(made.caseId)
       const result = await importer.load(built.bytes, '', other)
       expect(result.attachments).toBe('omitted')
       expect(result.missingFiles).toBe(1)
@@ -273,6 +324,7 @@ describe.skipIf(!db)('a case, out and back', () => {
     it('keeps the digest on the row and does not claim to hold the file', async () => {
       const made = await furnished()
       const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
+      await freeTheReference(made.caseId)
       const result = await importer.load(built.bytes, '', other)
 
       const [row] = await seed!.select().from(evidence).where(eq(evidence.caseId, result.id))
@@ -301,6 +353,7 @@ describe.skipIf(!db)('a case, out and back', () => {
       expect(isSealed(built.bytes)).toBe(true)
       expect(built.bytes.includes(Buffer.from('Archived incident'))).toBe(false)
 
+      await freeTheReference(made.caseId)
       const result = await importer.load(built.bytes, PASS, other)
       expect(result.title).toBe('Archived incident')
     })
