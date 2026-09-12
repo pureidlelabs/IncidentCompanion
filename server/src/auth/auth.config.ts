@@ -605,10 +605,12 @@ export function authOptions(
            * Entra without a second call site the day SSO lands. A path list
            * is the thing that silently stops covering the newest door.
            *
-           * The row carries the origin the library resolved, so this does not
-           * re-read the headers - and `advanced.ipAddress` already restricts
-           * that to `x-real-ip` in production, which is the same rule
-           * `record.ts` applies.
+           * **The row carries the origin the library already resolved, so it
+           * is handed over as an origin rather than as headers.** Passing it
+           * as a header name would put it back through the trust rule that
+           * decides what a *caller* may claim, and outside production that
+           * rule discards it -- losing the one address on this path the
+           * install itself established. -> `install-activity/record.ts`
            */
           after: async (session: Record<string, unknown>) => {
             const id = typeof session['userId'] === 'string' ? session['userId'] : null
@@ -629,10 +631,9 @@ export function authOptions(
             await recordInstallActivity(db, {
               event: 'signed_in',
               actor: { id, label: who?.name || who?.email || null },
-              headers: {
-                'x-real-ip': typeof session['ipAddress'] === 'string' ? session['ipAddress'] : '',
-                'user-agent':
-                  typeof session['userAgent'] === 'string' ? session['userAgent'] : '',
+              origin: {
+                ipAddress: typeof session['ipAddress'] === 'string' ? session['ipAddress'] : null,
+                userAgent: typeof session['userAgent'] === 'string' ? session['userAgent'] : null,
               },
             })
           },

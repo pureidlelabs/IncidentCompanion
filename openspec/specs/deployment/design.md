@@ -37,3 +37,15 @@ Nothing else. Anything held elsewhere is reconstructible, and the install can be
 An install reports whether it is serving, and distinguishes *started* from *serving*: a component that has begun and cannot yet answer is not ready, and treating it as ready is how a broken install looks healthy.
 
 Where a part is unwell, what is wrong is nameable without reading a log — which store, which dependency, which piece of preparation.
+
+## The install says which mode it is, and is refused if it does not
+
+An install declares whether it is running in production. Nothing infers it, and there is no default, because more than one security decision reads that declaration and the safe answer is a different value for each of them.
+
+Running in production is what makes a client-IP header believable: the edge overwrites that header on every request, so the value cannot be the caller's, and the app publishes no port of its own. Outside production there is no edge to have overwritten it, so the same header is whatever the caller typed and no header may be believed.
+
+Running in production is also what withholds the trusted-origin grant to the development server's port, which is applied as cross-origin access with credentials.
+
+So a single default would close one of those and open the other. An install that declares no mode is refused at startup, naming what it must declare, rather than being given whichever answer happened to be the default.
+
+Every intended way to start the application declares it, which is what makes refusal the right answer rather than an obstacle: the development script, the shipped image and the test harness each say which mode they are.

@@ -6,7 +6,7 @@ proxy_pass http://app:8080;
 proxy_http_version 1.1;
 
 # **Overwrite, never append, and the app depends on it.** In production
-# `auth.config.ts` sets `ipAddressHeaders: ['x-real-ip']`, so this line is the
+# `wire/caller-address.ts` names `x-real-ip` the one trusted header, so this line is the
 # only reason that header cannot be forged -- a caller's value is discarded here
 # rather than extended. Outside production the app trusts no header, because the
 # dev loop has no proxy to do this.

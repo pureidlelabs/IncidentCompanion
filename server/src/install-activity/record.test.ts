@@ -15,8 +15,9 @@
  * - **A row outlives the account it names.** `actorId` goes null on delete;
  *   `actorLabel` is what is left, and it is the whole reason the label is
  *   copied rather than joined.
- * - **A caller cannot write their own origin.** `x-forwarded-for` is
- *   attacker-controlled at this app's edge and must not reach `ip_address`.
+ * - **A caller cannot write their own origin.** Neither client-IP spelling
+ *   reaches `ip_address` where no proxy set it, and an address the install
+ *   resolved for itself is written as given rather than judged again.
  * - **A failed write does not fail the thing being audited, and does not go
  *   quiet.**
  */
@@ -218,6 +219,32 @@ describe.skipIf(!db)('the install audit log', () => {
     const [row] = await written(target)
     expect(row?.ipAddress, 'the one header nginx overwrites was not believed').toBe('203.0.113.9')
     vi.unstubAllEnvs()
+  })
+
+  /**
+   * **An address the install resolved is not a claim to be re-judged.** The
+   * sign-in line is written from the session row, whose address Better Auth
+   * resolved when it made the row; putting it back through the rule that
+   * decides what a caller may claim discards it in every mode but one.
+   *
+   * Asserted outside production deliberately, because that is where the two
+   * provenances give different answers -- and `getIP` answers `127.0.0.1`
+   * there rather than nothing, so the value being dropped is real.
+   */
+  it('writes an origin the install resolved, whatever the mode', async () => {
+    const target = `own-origin-${Date.now()}`
+    await recordInstallActivity(db!, {
+      event: 'signed_in',
+      target,
+      origin: { ipAddress: '198.51.100.20', userAgent: 'Session/1.0' },
+    })
+
+    const [row] = await written(target)
+    expect(
+      row?.ipAddress,
+      'the trust rule was applied to an address the caller never sent',
+    ).toBe('198.51.100.20')
+    expect(row?.userAgent).toBe('Session/1.0')
   })
 
   it('never reads x-forwarded-for, even where a proxy is in front', async () => {

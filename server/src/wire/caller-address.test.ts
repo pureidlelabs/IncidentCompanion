@@ -12,7 +12,7 @@
  * The header can only be trusted because `docker/nginx/ic-proxy.inc` sets
  * `X-Real-IP $remote_addr` as an overwrite. That is what these cases encode.
  */
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { addressMode, callerAddress, trustedAddressHeaders } from './caller-address.js'
 
@@ -86,14 +86,33 @@ describe('the address a limit counts against, in the dev loop', () => {
  * knows of.
  */
 describe('when a header may be believed at all', () => {
-  it('treats a mode nobody set as untrusted', () => {
-    vi.stubEnv('NODE_ENV', '')
-    expect(addressMode(), 'an unset mode resolved to the trusting answer').not.toBe('production')
-    expect(trustedAddressHeaders()).toEqual([])
+  afterEach(() => {
     vi.unstubAllEnvs()
   })
 
-  it.each(['development', 'test', 'staging', 'Production', 'PRODUCTION'])(
+  /**
+   * **Deleted rather than stubbed empty, which is the only way to reach the
+   * fallback.** `vi.stubEnv(name, '')` assigns the string, so `??` never
+   * fires and the case passes without exercising it; `vi.stubEnv(name,
+   * undefined)` deletes through a proxy with no `deleteProperty` trap and
+   * leaves the value in place. `env.ts` refuses to start without the
+   * variable, so this asserts the module's own floor rather than a reachable
+   * deployment.
+   */
+  it('treats a mode nobody set as untrusted', () => {
+    const had = process.env['NODE_ENV']
+    try {
+      delete process.env['NODE_ENV']
+      expect(process.env['NODE_ENV'], 'the delete did not apply').toBeUndefined()
+      expect(addressMode(), 'an unset mode resolved to the trusting answer').not.toBe('production')
+      expect(trustedAddressHeaders()).toEqual([])
+    } finally {
+      if (had === undefined) delete process.env['NODE_ENV']
+      else process.env['NODE_ENV'] = had
+    }
+  })
+
+  it.each(['development', 'test', 'staging', '', 'Production', 'PRODUCTION'])(
     'trusts no header where the mode is %o',
     (mode) => {
       expect(trustedAddressHeaders(mode), 'a mode that is not production was trusted').toEqual([])

@@ -40,7 +40,22 @@ export interface InstallActivityInput {
   /** The account, regime or language tag this was done to. */
   target?: string | null | undefined
   detail?: Record<string, string> | undefined
+  /**
+   * A live request's headers, from which the address is derived under the
+   * trust rule. The caller's until that rule clears it.
+   */
   headers?: IncomingHttpHeaders | undefined
+  /**
+   * An origin the install resolved for itself, written as given.
+   *
+   * **Separate from `headers` because the provenance differs, and the trust
+   * rule must not be applied twice.** A session row's address was resolved
+   * when the session was made; re-deciding it against the mode discards what
+   * the install already established. The sign-in line is written from the row
+   * rather than from the request that produced it, which is why it takes this
+   * and not `headers`.
+   */
+  origin?: { ipAddress?: string | null; userAgent?: string | null } | undefined
   /**
    * The OCSF outcome, when the caller knows better than the event does.
    *
@@ -118,7 +133,9 @@ export async function recordInstallActivity(
   db: Database,
   input: InstallActivityInput,
 ): Promise<boolean> {
-  const { ipAddress, userAgent } = originOf(input.headers)
+  const { ipAddress, userAgent } = input.origin
+    ? { ipAddress: input.origin.ipAddress ?? null, userAgent: input.origin.userAgent ?? null }
+    : originOf(input.headers)
   try {
     /**
      * **The OCSF identity is stamped here, from the event alone.** It is a
