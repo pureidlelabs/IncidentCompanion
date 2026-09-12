@@ -24,7 +24,7 @@ import { specsFixture } from '@/fixtures/specs'
 
 import { InvestigationGraphScreen } from './investigation-graph'
 import { KillchainCoverageScreen } from './killchain-coverage'
-import { EMPTY_CAMPAIGN } from './timeline-entries'
+import { EMPTY_CAMPAIGN } from '@/fixtures/empty-cases'
 
 /** The query a link carries, as pairs. Parsed, never string-matched: an
  *  unencoded `&` reads correctly in the raw href and splits into two params. */

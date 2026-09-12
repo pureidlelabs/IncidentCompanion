@@ -15,7 +15,7 @@ import { msOf } from '@/lib/case-time'
 import type { TimelineEntry } from '@/api/model'
 
 import { TimelineScreen, type TimelineFields, type TimelineWrites } from './timeline'
-import { EMPTY_CAMPAIGN } from './timeline-entries'
+import { EMPTY_CAMPAIGN } from '@/fixtures/empty-cases'
 
 /**
  * The case as it happened, and the holes in it.

@@ -2,11 +2,13 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { DEMO_LAYOUTS, DEMO_TLP } from '@/components/blocks/report-layouts'
 
-import { DEMO_BLOCKS, DEMO_REPORTS, blocksOf } from '@/components/blocks/report-shape'
+import { blocksOf } from '@/components/blocks/report-shape'
+import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
 import { inACase } from '@/fixtures/in-a-case'
 
 import { ReportSectionScreen } from './report-section'
+import { reportBlockKinds } from '@/fixtures/reportBlockKinds'
 
 /**
  * The report section as an analyst meets it: the case's documents on the rail,
@@ -248,7 +250,9 @@ function manyBlocks() {
  */
 export const AddingASection: Story = {
   name: 'A section added to the open report',
-  args: { onAddSection: fn(), openId: second?.id ?? null },
+  // `blockKinds` because the menu no longer defaults to the fixture, and this
+  // story presses a kind in it. -> #237
+  args: { onAddSection: fn(), openId: second?.id ?? null, blockKinds: reportBlockKinds },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(second).toBeDefined()

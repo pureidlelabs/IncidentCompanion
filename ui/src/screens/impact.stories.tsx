@@ -6,7 +6,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
 import { ImpactScreen, type ImpactWrites } from './impact'
-import { EMPTY_CAMPAIGN } from './timeline-entries'
+import { EMPTY_CAMPAIGN } from '@/fixtures/empty-cases'
 import { inACase } from '@/fixtures/in-a-case'
 
 /**

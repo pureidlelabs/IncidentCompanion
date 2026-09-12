@@ -1,6 +1,5 @@
-import type { Case, TimelineAction, TimelineEntry, TimelineEvent } from '@/api/model'
+import type { TimelineAction, TimelineEntry, TimelineEvent } from '@/api/model'
 import { isEvent } from '@/api/model'
-import { campaignCase } from '@/fixtures/campaign'
 import { dayKeyOf, msOf } from '@/lib/case-time'
 import { withinWindow, type TimeWindow } from '@/lib/time-window'
 
@@ -392,30 +391,8 @@ export function timelineRowActions(
 }
 
 // ---------------------------------------------------------------------------
-// Cases the stories mount
+// Blank rows the entry dialogs open with
 // ---------------------------------------------------------------------------
-
-/**
- * The campaign demo with every collection these screens draw emptied.
- *
- * The case document itself is kept, so an empty story is a real case nobody
- * has written to yet rather than a document with no fields.
- */
-export const EMPTY_CAMPAIGN: Case = {
-  ...campaignCase,
-  timeline: [],
-  impact: [],
-  casenotes: [],
-  systems: [],
-  accounts: [],
-  networkIndicators: [],
-  malware: [],
-  cloudApps: [],
-  evidence: [],
-  actions: [],
-  reports: [],
-  reportBlocks: [],
-}
 
 /**
  * A timeline row's fields as they stand before the analyst fills any in.

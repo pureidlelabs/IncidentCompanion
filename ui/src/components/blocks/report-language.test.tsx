@@ -2,7 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { DEMO_BLOCKS, blocksOf, demoReport } from '@/components/blocks/report-shape'
+import { blocksOf } from '@/components/blocks/report-shape'
+import { DEMO_BLOCKS, demoReport } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
 
 import { ReportWorkspace } from './report-workspace'
