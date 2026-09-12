@@ -70,4 +70,39 @@ describe.skipIf(!db)('a turnover larger than two billion', () => {
       .where(eq(caseCompliance.caseId, row!.id))
     expect(Number(read!.annualTurnoverEur)).toBe(THREE_BILLION)
   })
+
+  /**
+   * **What the incident cost has the same ceiling and is asked of the same
+   * entities.** DORA asks a financial entity for a major incident's costs and
+   * losses and NIS2 for the economic damage; nothing about a supply-chain or
+   * ransomware event at a bank is bounded by EUR 2bn, and the column would be
+   * the thing that decided the answer.
+   *
+   * **Written here rather than in a file of its own**, because the ceiling is
+   * one fact about one table: three euro columns on the same row, asked by the
+   * same regimes of the same organisations. A second file would be the place
+   * the fourth column is forgotten.
+   */
+  it('does not cap what the incident itself cost', async () => {
+    const [row] = await seed!.insert(cases).values({ title: 'A costly incident' }).returning()
+    await seed!.insert(caseCompliance).values({
+      caseId: row!.id,
+      financialLossEur: THREE_BILLION,
+      doraCostsEur: THREE_BILLION,
+    })
+
+    const [read] = await seed!
+      .select()
+      .from(caseCompliance)
+      .where(eq(caseCompliance.caseId, row!.id))
+
+    expect(
+      Number(read!.financialLossEur),
+      'the loss an incident caused does not fit the column that holds it',
+    ).toBe(THREE_BILLION)
+    expect(
+      Number(read!.doraCostsEur),
+      'the costs DORA asks for do not fit the column that holds them',
+    ).toBe(THREE_BILLION)
+  })
 })

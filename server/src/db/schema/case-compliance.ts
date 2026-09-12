@@ -57,8 +57,13 @@ export const caseCompliance = pgTable(
     serviceDowntimeMinutes: integer('service_downtime_minutes'),
     serviceDowntimeComplete: boolean('service_downtime_complete').notNull().default(false),
     financialImpact: text('financial_impact').notNull().default(''),
-    financialLossEur: integer('financial_loss_eur'),
-    /** `bigint` for the reason `customer.ts` gives: `int4` stops at EUR 2.1bn. */
+    /**
+     * `bigint` for the reason `customer.ts` gives: `int4` stops at EUR 2.1bn,
+     * and the regimes asking what an incident cost ask it of the entities
+     * above that line. `mode: 'number'` keeps it a JavaScript number, whose own
+     * ceiling is past any figure in euros.
+     */
+    financialLossEur: bigint('financial_loss_eur', { mode: 'number' }),
     annualTurnoverEur: bigint('annual_turnover_eur', { mode: 'number' }),
     recurringIncident: text('recurring_incident'),
     recurringEarlierCases: text('recurring_earlier_cases').notNull().default(''),
@@ -96,7 +101,8 @@ export const caseCompliance = pgTable(
     doraReputationalImpact: text('dora_reputational_impact'),
     doraDataAdverseImpact: text('dora_data_adverse_impact'),
     doraDurationMinutes: integer('dora_duration_minutes'),
-    doraCostsEur: integer('dora_costs_eur'),
+    /** `bigint`, like the two euro columns above and for the same reason. */
+    doraCostsEur: bigint('dora_costs_eur', { mode: 'number' }),
 
     /**
      * The organisation facts this case answered itself rather than copied.
