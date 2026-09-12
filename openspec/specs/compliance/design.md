@@ -35,3 +35,13 @@ Where an instrument sets different thresholds by kind of organisation, the one a
 Where a regime requires more than one submission over time, which have been made is tracked against the case as its own record, independent of the case's state and of the assessment's outcome.
 
 An assessment says what is owed. The stage record says what has been done about it. Neither is derived from the other.
+
+## A figure a regime asks for is stored wide enough to hold the answer
+
+The quantities an assessment weighs are stored so that no real answer is refused by the width of the column holding it. A 32-bit integer stops at 2,147,483,647, and Postgres refuses a larger write rather than truncating it, so a column of that width decides the answer instead of recording it.
+
+That ceiling falls inside the answers these instruments ask for. It is below the turnover by which NIS2 sizes an essential entity, and below the number of accounts a single breach has reached. The entities the questions are asked of are the ones above the line, which is what makes the width a correctness property rather than a capacity estimate.
+
+Whether the ceiling is reachable is what decides the width, not whether a regime asks for the figure. A duration in minutes is asked for by the same instruments and cannot approach it, so it is not stored wide; the same question asked about a count of people or a sum of money can.
+
+The validation above the column carries no upper bound of its own, so the column is the only ceiling. Where a figure is stored wider than the validation's own integer range, what the read schema accepts and what the column can hold stop agreeing, and the read is where that disagreement surfaces. -> #564

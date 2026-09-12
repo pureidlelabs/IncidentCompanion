@@ -16,7 +16,7 @@
  * what was true when it was written. The copy is taken once, when the
  * compliance row is raised. -> `compliance/compliance.service.ts`
  */
-import { bigint, boolean, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 import { rowVersioning } from './columns.js'
@@ -52,16 +52,12 @@ export const customers = pgTable(
     competentAuthority: text('competent_authority').notNull().default(''),
     dpoContact: text('dpo_contact').notNull().default(''),
 
-    usersTotalCount: integer('users_total_count'),
     /**
-     * **`bigint`, because `int4` stops at EUR 2.1bn** -- and the regimes that
-     * ask for this figure ask it of the entities above that line. Postgres
-     * refuses the write rather than truncating, so the column would simply
-     * decline the answer for the organisations the question is for.
-     *
-     * `mode: 'number'` keeps it a JavaScript number: the ceiling that matters
-     * is the column's, and 2^53 is past any turnover in euros.
+     * `bigint`, because a real answer passes `int4` and the entities these
+     * are asked of are the ones above that line.
+     * -> `openspec/specs/compliance/design.md`
      */
+    usersTotalCount: bigint('users_total_count', { mode: 'number' }),
     annualTurnoverEur: bigint('annual_turnover_eur', { mode: 'number' }),
 
     doraCriticalFunctions: text('dora_critical_functions'),
