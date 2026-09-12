@@ -119,9 +119,10 @@ export function ImportSentinelContainer({
    * than sent empty -- the wire refuses `''` as a datetime, and the refusal
    * would be of the whole create.
    *
-   * Severity is not seeded. The provider spells it `High` and the case
-   * vocabulary is lower-case, and translating a platform's words is the
-   * server's job in this capability rather than the browser's. -> #516
+   * Severity is not among them, and is not lost either: it rides in the
+   * payload as the provider's own word, and the server maps it onto the case
+   * vocabulary. Translating a platform's words is the server's job in this
+   * capability rather than the browser's.
    */
   const seedFrom = (
     incidentIds: readonly string[],

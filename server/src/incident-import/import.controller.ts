@@ -72,7 +72,7 @@ const startBodySchema = commitBodySchema
     // **The offset spelling, which `DateTimeInput` no longer writes.** Its
     // `SUFFIX` is `Z`, and Zod's bare `z.iso.datetime()` refuses an offset --
     // so narrowing this refuses any seed still carrying one, and a refused seed
-    // is a 400 on the whole create rather than a complaint about one field.
+    // is a 422 on the whole create rather than a complaint about one field.
     detectedAt: z.iso.datetime({ offset: true }).nullish(),
   })
   .strict()
