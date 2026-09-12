@@ -1,5 +1,5 @@
-import type { Collection } from '../domain/collections.js'
-import { withoutInvisibles } from '../domain/invisible.lists.js'
+import type { Collection } from './collections.js'
+import { withoutInvisibles } from './invisible.lists.js'
 
 /**
  * "Have I already got this host, account, indicator?" - asked by every importer.
@@ -133,7 +133,7 @@ const LADDERS: Partial<
  * across two rows, so a character nobody can see in one of them is a row that
  * never matches itself -- and the check that the columns strip them reads this
  * list rather than repeating it.
- * -> `domain/entities/identity-fields-are-pasted.test.ts`
+ * -> `entities/identity-fields-are-pasted.test.ts`
  */
 export const IDENTITY_FIELDS: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   [...new Set([...Object.keys(KEYED), ...Object.keys(LADDERS)])].map((collection) => [
@@ -171,7 +171,7 @@ function normalised(collection: string, row: Record<string, unknown>, field: str
   // a mapped provider row that no schema has parsed, so the normaliser the
   // columns carry has not run yet - and an invisible character at the end
   // leaves ordinary space stranded in front of it, where `.trim()` cannot
-  // reach. -> `domain/pasted.ts`
+  // reach. -> `pasted.ts`
   const text = typeof raw === 'string' ? withoutInvisibles(raw).trim() : ''
   return CASE_SENSITIVE.has(`${collection}.${field}`) ? text : text.toLowerCase()
 }
@@ -205,7 +205,9 @@ function qualified(
  * may ever match another row.
  */
 export function keyOf(collection: string, row: Record<string, unknown>): IdentityKey | null {
-  const fields = KEYED[collection as keyof typeof KEYED]
+  const fields = Object.hasOwn(KEYED, collection)
+    ? KEYED[collection as keyof typeof KEYED]
+    : undefined
   if (!fields) return null
 
   const pairs = fields.map(
@@ -241,7 +243,9 @@ export function keyOf(collection: string, row: Record<string, unknown>): Identit
  * a ladder run down past its floor.
  */
 export function identitiesOf(collection: string, row: Record<string, unknown>): IdentityKey[] {
-  const alternatives = LADDERS[collection as keyof typeof LADDERS]
+  const alternatives = Object.hasOwn(LADDERS, collection)
+    ? LADDERS[collection as keyof typeof LADDERS]
+    : undefined
   if (!alternatives) return []
 
   const value = (field: string) => normalised(collection, row, field)
@@ -288,7 +292,7 @@ export function identitiesOf(collection: string, row: Record<string, unknown>): 
 }
 
 export function hasIdentity(collection: string): boolean {
-  return collection in KEYED
+  return Object.hasOwn(KEYED, collection)
 }
 
 /**

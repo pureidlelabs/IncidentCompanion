@@ -16,7 +16,7 @@
  */
 import { isIP } from 'node:net'
 
-import { identitiesOf } from '../../../collections/identity.js'
+import { identitiesOf } from '../../../domain/identity.js'
 import { qualified } from '../../../domain/naming.lists.js'
 import { COLLECTION_SCHEMAS } from '../../../domain/collections.js'
 import type { ParsedEntity, SentinelKind } from './entities.js'
@@ -271,7 +271,7 @@ export function mapEntity(entity: ParsedEntity): MappedEntity | null {
    * An identity read from the provider's own properties asks a question the
    * stored row cannot answer, so the candidate and the row already in the case
    * would be keyed differently and never match. `identitiesOf` reads columns,
-   * and it is `collections/identity.ts`'s -- the module every importer uses,
+   * and it is `domain/identity.ts`'s -- the module every importer uses,
    * so a second copy cannot grow its own rules about IPv6 case, which field a
    * malware row keys on, or whether an account needs its domain.
    */

@@ -9,7 +9,7 @@ import { INVISIBLE, pasted } from './pasted.js'
  *
  * The stakes are silent rather than loud. A value carrying an invisible
  * character renders identically to one without, so nothing on screen ever
- * shows the difference -- and `collections/identity.ts` keys on the string, so
+ * shows the difference -- and `identity.ts` keys on the string, so
  * the two are two rows for ever.
  */
 const schema = pasted(z.string().trim().max(255))
