@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto'
 
 import { hashTypeOf } from '../domain/hashes.lists.js'
 import { qualified } from '../domain/naming.lists.js'
+import { tlpMarking, tlpMarkingObjects } from '../domain/tlp.lists.js'
 
 const NON_ACTIONABLE = new Set(['benign', 'clean'])
 
@@ -202,26 +203,8 @@ export function toStixBundle(
     ]
   })
 
-  return { type: 'bundle', id: `bundle--${mint()}`, objects }
+  // The marking leads the bundle, so a consumer reading in order has the
+  // definition before the first object that references it.
+  const marked = options.tlp ? [...tlpMarkingObjects(options.tlp), ...objects] : objects
+  return { type: 'bundle', id: `bundle--${mint()}`, objects: marked }
 }
-
-/**
- * TLP markings are fixed, specification-assigned ids, never minted. The map
- * spans two TLP versions on purpose: `white` is TLP 1.0 and `clear` its TLP
- * 2.0 successor, with an id of its own.
- */
-const TLP_MARKINGS: ReadonlyMap<string, string> = new Map(Object.entries({
-  clear: 'marking-definition--94868c89-83c2-464b-929b-a1a8aa3c8487',
-  white: 'marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9',
-  green: 'marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da',
-  amber: 'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82',
-  red: 'marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed',
-}))
-
-export function tlpMarking(tlp: string): string {
-  const marking = TLP_MARKINGS.get(tlp.toLowerCase())
-  if (!marking) throw new Error(`No TLP marking ${tlp}.`)
-  return marking
-}
-
-export const TLP_NAMES = [...TLP_MARKINGS.keys()]
