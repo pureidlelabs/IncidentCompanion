@@ -129,4 +129,39 @@ describe.skipIf(!db)('what one case can see of another', () => {
         'rows read as absent rather than as refused',
     ).toEqual(['MY-HOST'])
   })
+
+  /**
+   * **The shape the import's start door actually opens**: a plain transaction
+   * carrying no scope, with the scoped writes nested inside it.
+   *
+   * **Unset and empty are one answer here.** A connection that has never
+   * carried a scope reads `NULL` and one that has reads `''` for ever after, so
+   * a restore that told them apart would put the scope back or not depending on
+   * which pooled connection the request was handed.
+   */
+  it('leaves a raw outer transaction as unscoped as it found it', async () => {
+    /**
+     * **Its own pool, because the defect this covers lives on a connection that
+     * has never carried a scope.** `current_setting('app.case_id', true)`
+     * answers `NULL` there and `''` on a connection that has set one before, so
+     * run against the shared pool this passes whatever the code does -- by the
+     * time it runs, every connection has been scoped.
+     */
+    const virgin = openTestPool(URL_, 'ic_app')
+    try {
+      const fresh = drizzle({ client: virgin })
+      const seen = await fresh.transaction(async (outer) => {
+        await withCase(outer, theirs, (inner) => inner.select().from(systems))
+        return outer.select().from(systems)
+      })
+
+      expect(
+        seen,
+        'a transaction that opened with no case kept the one a nested write set, so every ' +
+          'later read on it answers from that case rather than from none',
+      ).toEqual([])
+    } finally {
+      await virgin.end()
+    }
+  })
 })

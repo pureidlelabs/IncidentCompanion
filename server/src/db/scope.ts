@@ -29,10 +29,18 @@ function nested(db: Executor): db is Transaction {
   return !('$client' in db)
 }
 
-/** The scope in force, across the two shapes a driver answers `execute` with. */
-function scopeIn(answer: unknown): string | null {
-  const rows = (answer as { rows?: { held: string | null }[] }).rows ?? (answer as { held: string | null }[])
-  return Array.isArray(rows) ? (rows[0]?.held ?? null) : null
+/**
+ * The scope in force, as the empty string where there is none.
+ *
+ * **Unset and empty are the same answer and must not be told apart here.** A
+ * connection that has never carried a scope reads `NULL`; once any transaction
+ * on it has set one, it reads `''` for ever after. Branching on that would make
+ * the restore below depend on which pooled connection a request happened to
+ * get. `scoped.ts` maps both to no case: `nullif(..., '')::uuid`.
+ */
+function scopeIn(answer: unknown): string {
+  const rows = (answer as { rows?: { held: string | null }[] }).rows
+  return rows?.[0]?.held ?? ''
 }
 
 export function withCase<T>(
@@ -53,15 +61,22 @@ export function withCase<T>(
      */
     const held = nested(db)
       ? scopeIn(await tx.execute(sql`select current_setting('app.case_id', true) as held`))
-      : null
+      : caseId
 
     await tx.execute(sql`select set_config('app.case_id', ${caseId}, true)`)
     const answer = await work(tx)
 
-    // Only where `work` returned. A throw rolls the savepoint back, which
-    // restores the setting itself -- and an aborted transaction refuses the
-    // statement that would have done it, masking the error that caused it.
-    if (held !== null && held !== caseId) {
+    /**
+     * **Only where `work` returned**: a throw rolls the savepoint back, which
+     * puts the setting back without being asked.
+     *
+     * The restore can itself fail, where a callback swallowed a query error and
+     * returned anyway -- the transaction is aborted and refuses this too, so
+     * `withCase` throws where that callback meant to return. No callback in the
+     * tree does that, and the alternative is to swallow a failed restore, which
+     * leaves the scope wrong and says nothing.
+     */
+    if (held !== caseId) {
       await tx.execute(sql`select set_config('app.case_id', ${held}, true)`)
     }
     return answer
