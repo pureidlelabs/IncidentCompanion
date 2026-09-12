@@ -586,8 +586,9 @@ export function refusals(method: string, path: string, hasBody: boolean): Record
   // the edge; the throttler (`throttle/tiers.ts`) refuses inside; Better Auth
   // refuses on `/api/auth/*`, which the throttler's guard never sees because
   // middleware runs first. `proxy_intercept_errors` is off, so the two behind
-  // the edge reach the caller as they were written -- which is why three
-  // spellings of one fact survive to the wire.
+  // the edge reach the caller as they were written -- each under a name of its
+  // own, which is why `wire/retry-after.ts` states the registered one for all
+  // three rather than each limiter stating it for itself.
   //
   // **No `json(...)`, because the edge's refusal is not JSON**: nginx renders
   // its own `text/html` error page, and a body shape declared here would have a
@@ -596,11 +597,11 @@ export function refusals(method: string, path: string, hasBody: boolean): Record
   out['429'] = {
     description:
       'Rate-limited, by the reverse proxy at the edge or by the application behind it. ' +
-      'Which one answered decides both the body and the header naming the wait: the ' +
-      'proxy renders HTML and sends `Retry-After` in seconds, the application sends ' +
-      'JSON with a `retry-after-` header suffixed by the tier that refused, and the ' +
-      'credential routes send JSON with `X-Retry-After`. The credential routes carry a ' +
-      'lower threshold than the rest.',
+      'The wait is in `Retry-After`, in seconds, whichever answered. Which one answered ' +
+      'decides the body and what else is named: the proxy renders HTML, the application ' +
+      'sends JSON and repeats the wait in a `retry-after-` header suffixed by the tier ' +
+      'that refused, and the credential routes send JSON and repeat it in ' +
+      '`X-Retry-After`. The credential routes carry a lower threshold than the rest.',
   }
   // Every `description` here is a reference entry rather than an error message:
   // it names the condition and the discriminating field, and gives no advice.
