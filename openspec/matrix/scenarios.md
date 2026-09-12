@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 459 |
-| Demonstrated | 351 |
+| Scenarios | 460 |
+| Demonstrated | 352 |
 | Undemonstrable | 1 |
 | Unbuilt | 95 |
 | Undemonstrated | 12 |
@@ -315,6 +315,7 @@
 | Nothing is written until an analyst has approved it | An analyst declines part of an import | demonstrated | server/src/incident-import/only-what-was-approved-is-written.test.ts |
 | Nothing is written until an analyst has approved it | An analyst corrects a value before it is written | demonstrated | server/src/incident-import/edits.test.ts |
 | Nothing is written until an analyst has approved it | A correction the description would refuse | demonstrated | server/src/incident-import/edits.test.ts |
+| Nothing is written until an analyst has approved it | An approval the import cannot account for | demonstrated | server/src/incident-import/a-stale-review-is-refused.test.ts |
 | An import is matched against what the case already holds | An imported thing is already in the case | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | The case changed while the import was reviewed | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | An event is imported twice | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
