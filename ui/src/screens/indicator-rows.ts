@@ -1,4 +1,5 @@
 import { hashTypeOf } from '@contract/hashes.lists'
+import { tlpMarking, tlpMarkingObjects } from '@contract/tlp.lists'
 
 import type { Case } from '@/api/model'
 
@@ -206,15 +207,12 @@ function patternFor(row: Indicator): string {
  * empty one: a bundle a consumer refuses is worse than a shorter bundle.
  */
 export function indicatorsStix(rows: readonly Indicator[], tlp: string): string {
-  const marking = tlp
-    ? {
-        type: 'marking-definition',
-        spec_version: '2.1',
-        id: `marking-definition--${tlp.toLowerCase()}`,
-        definition_type: 'tlp',
-        name: `TLP:${tlp.toUpperCase()}`,
-      }
-    : undefined
+  // **The id comes from `@contract/tlp.lists`, never from the level's text.**
+  // A minted `marking-definition--amber` is not an identifier, and STIX 2.1
+  // forbids any TLP marking but the published ones; the same table decides
+  // which levels travel with the bundle and which are referenced alone.
+  const reference = tlp ? tlpMarking(tlp) : ''
+  const carried = tlp ? tlpMarkingObjects(tlp) : []
   const objects = rows
     .map((row) => ({ row, pattern: patternFor(row) }))
     .filter(({ pattern }) => pattern !== '')
@@ -226,7 +224,7 @@ export function indicatorsStix(rows: readonly Indicator[], tlp: string): string 
       description: row.context,
       pattern,
       pattern_type: 'stix',
-      ...(marking ? { object_marking_refs: [marking.id] } : {}),
+      ...(reference ? { object_marking_refs: [reference] } : {}),
     }))
-  return `${JSON.stringify({ type: 'bundle', id: 'bundle--indicators', objects: [...(marking ? [marking] : []), ...objects] }, null, 2)}\n`
+  return `${JSON.stringify({ type: 'bundle', id: 'bundle--indicators', objects: [...carried, ...objects] }, null, 2)}\n`
 }

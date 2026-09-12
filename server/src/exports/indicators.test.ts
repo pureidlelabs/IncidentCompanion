@@ -17,12 +17,10 @@ import {
   actionable,
   collect,
   toStixBundle,
-  tlpMarking,
   toCsvRows,
   INDICATOR_CSV_COLUMNS,
-  PREDEFINED_TLP_1_MARKINGS,
-  TLP_NAMES,
 } from './indicators.js'
+import { PREDEFINED_TLP_1_MARKINGS, TLP_NAMES, tlpMarking } from '../domain/tlp.lists.js'
 
 const NOW = new Date('2026-03-04T05:06:07.000Z')
 const ids = () => '11111111-2222-3333-4444-555555555555'

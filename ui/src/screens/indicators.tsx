@@ -9,6 +9,7 @@ import { useEntityTable, type EntityColumn } from '@/components/blocks/data-tabl
 import { useFilters } from '@/components/blocks/filter-set'
 import { FieldToneBadge } from '@/components/blocks/severity-badge'
 import { TlpChip } from '@/components/blocks/tlp-chip'
+import { TLP_NAMES } from '@contract/tlp.lists'
 import { ButtonLink } from '@/components/ui/button'
 import { Link } from '@/components/ui/link'
 import { ListBoxItem } from '@/components/ui/list-box'
@@ -69,7 +70,7 @@ const VALUE_COLUMN = 'Value'
  * The route marks a bundle only when `tlp` is on the query, so an absent
  * default ships unmarked bundles rather than restrictive ones.
  */
-const TLP_LEVELS = ['clear', 'white', 'green', 'amber', 'amber+strict', 'red'] as const
+const TLP_LEVELS = TLP_NAMES
 const DEFAULT_TLP = 'amber'
 
 export function IndicatorsScreen({
