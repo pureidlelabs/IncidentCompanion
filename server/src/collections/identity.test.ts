@@ -259,4 +259,54 @@ describe('the ladder agrees with keyOf, on every collection', () => {
   it('keys a malware row with no hash on its filename', () => {
     expect(identitiesOf('malware', { filename: 'dropper.bin' })).not.toEqual([])
   })
+
+  /**
+   * **The rung a value came from is part of the key, not only the value.**
+   * Two alternatives reaching the same depth produce keys of the same shape, so
+   * a key built from values alone cannot tell which field meant what: a
+   * filename that reads like a digest keys identically to that digest, and the
+   * importer merges on exactly this.
+   *
+   * The exclusivity rules make it residual rather than routine -- a row with a
+   * hash never falls through to the filename rung -- but the two rows below are
+   * each keyed by the only rung they have, and nothing about the values stops
+   * them meeting.
+   */
+  it('does not merge a filename that reads like a hash with that hash', () => {
+    const looksLikeADigest = 'd41d8cd98f00b204e9800998ecf8427e'
+    const byHash = identitiesOf('malware', { hash: looksLikeADigest })
+    const byName = identitiesOf('malware', { filename: looksLikeADigest })
+
+    expect(byHash, 'the hash row has no identity, so this compares nothing').not.toEqual([])
+    expect(byName, 'the filename row has no identity, so this compares nothing').not.toEqual([])
+
+    expect(
+      byHash.filter((key) => byName.includes(key)),
+      'a filename and a hash of the same text are the same key, so an import merges a ' +
+        'sample somebody named with one somebody hashed',
+    ).toEqual([])
+  })
+
+  /**
+   * **`keyOf` and the ladder's weakest rung are the same key, and must stay
+   * so.** The module's own claim is that a row below its floor still answers to
+   * `keyOf`'s key; the CSV import keys on `keyOf` while the incident import
+   * matches on the ladder, so the two drifting apart means one door merges what
+   * the other splits.
+   */
+  it('agrees with keyOf on the rung keyOf owns', () => {
+    for (const row of [
+      { collection: 'accounts', row: { accountName: 'svc_backup' } },
+      { collection: 'accounts', row: { accountName: 'admin', domain: 'corp.local' } },
+      { collection: 'systems', row: { hostname: 'WKS-1' } },
+    ]) {
+      const alone = keyOf(row.collection, row.row)
+      expect(alone, `${row.collection} has no key at all`).not.toBeNull()
+      expect(
+        identitiesOf(row.collection, row.row),
+        `the ladder for ${row.collection} no longer offers the key \`keyOf\` builds, so the ` +
+          'two import doors disagree about what is the same row',
+      ).toContain(alone)
+    }
+  })
 })

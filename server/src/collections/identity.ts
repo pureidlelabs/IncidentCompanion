@@ -109,8 +109,8 @@ const LADDERS: Partial<
   /**
    * **Exclusive: a row with a hash is known by its hash and not also by its
    * name.** Both alternatives ran, so a stored binary exposed
-   * `malware<NUL>svchost.exe` as a weaker rung and a *different* binary of
-   * that name matched it -- read as a duplicate and silently not imported.
+   * `malware<NUL>filename<NUL>svchost.exe` as a weaker rung and a *different*
+   * binary of that name matched it -- read as a duplicate and not imported.
    * Two files of one name are two files.
    *
    * **This position is also wrong, and it is held because it fails visibly.**
@@ -177,24 +177,46 @@ function normalised(collection: string, row: Record<string, unknown>, field: str
 }
 
 /**
+ * A key from field/value pairs, which is the only way either builder makes one.
+ *
+ * **The field name is in the key, not only its value.** Without it two
+ * alternatives reaching the same depth produce keys of the same shape, and
+ * nothing distinguishes a value that meant one field from the same text
+ * meaning another -- a filename that reads like a digest keys identically to
+ * that digest, and the importer merges on exactly this.
+ *
+ * **Shared so the two builders agree by construction.** `keyOf` names the rung
+ * the ladder's weakest alternative also emits; two parallel implementations of
+ * one string format is how the CSV door and the incident door come to disagree
+ * about what is the same row.
+ */
+function qualified(
+  collection: string,
+  pairs: readonly (readonly [string, string])[],
+): IdentityKey {
+  return [collection, ...pairs.flatMap(([field, value]) => [field, value])].join(SEPARATOR)
+}
+
+/**
  * The key a row is known by, or `null` when it has none.
  *
  * **`null` for a keyless collection *and* for a keyed row with an empty
  * leading field**, which are different reasons for the same answer: neither
  * may ever match another row.
  */
-
 export function keyOf(collection: string, row: Record<string, unknown>): IdentityKey | null {
   const fields = KEYED[collection as keyof typeof KEYED]
   if (!fields) return null
 
-  const parts = fields.map((field) => normalised(collection, row, field))
+  const pairs = fields.map(
+    (field) => [field, normalised(collection, row, field)] as const,
+  )
 
   // **The *first* field is the identity; the rest qualify it.** An account with
   // a name and no domain is still an account, and matches another of the same
   // name with no domain. An account with a domain and no name is not one.
-  if (!parts[0]) return null
-  return [collection, ...parts].join(SEPARATOR)
+  if (!pairs[0]?.[1]) return null
+  return qualified(collection, pairs)
 }
 
 /**
@@ -231,26 +253,27 @@ export function identitiesOf(collection: string, row: Record<string, unknown>): 
     // through to the next alternative.
     if (only && value(only) === '') continue
 
-    const parts = fields.map(value)
+    const pairs = fields.map((field) => [field, value(field)] as const)
     // The leading field is the identity; without it this alternative says
     // nothing, exactly as `keyOf` returns null for the same reason.
-    if (!parts[0]) continue
+    if (!pairs[0]?.[1]) continue
 
-    const held = parts.filter((part, at) => at === 0 || part !== '')
+    const held = pairs.filter(([, part], at) => at === 0 || part !== '')
     if (held.length < floor) {
       /**
        * **Below its floor the row still has an identity -- `keyOf`'s own.**
        * The floor caps how weak a *match* may be, not whether the row can be
        * named at all. An account with no domain answers to
-       * `accounts<NUL>svc_backup<NUL>`, which matches another domainless
-       * account of that name and never `admin@corp.local`. Returning nothing
+       * `accounts<NUL>accountName<NUL>svc_backup<NUL>domain<NUL>`, which
+       * matches another domainless account of that name and never
+       * `admin@corp.local`. Returning nothing
        * here drops every local and service account from an import silently,
        * and breaks this module's own claim that the weakest rung is `keyOf`'s.
        */
-      out.push([collection, ...parts].join(SEPARATOR))
+      out.push(qualified(collection, pairs))
     } else {
       for (let count = held.length; count >= floor; count -= 1) {
-        out.push([collection, ...held.slice(0, count)].join(SEPARATOR))
+        out.push(qualified(collection, held.slice(0, count)))
       }
     }
     if (only) break
