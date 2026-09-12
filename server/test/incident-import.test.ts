@@ -505,7 +505,7 @@ describe.skipIf(!runnable)('importing an incident', () => {
       expect(
         answer.status,
         'the create door took a severity from the caller, so the derived one is not the only answer',
-      ).toBe(400)
+      ).toBe(422)
     }, 60_000)
   })
 })

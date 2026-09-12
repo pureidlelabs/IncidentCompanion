@@ -6,7 +6,7 @@ A case started from an incident is created with no severity at all, whatever the
 
 So the loss is not a rule being broken. Severity is one of the first columns an analyst sorts a case list by, and a provider that already judged the incident is the best answer the install will get; a case arriving unmarked reads as one nobody has triaged.
 
-What made it unmarked is a vocabulary boundary nobody owns. The provider spells the ladder `High` and this product's vocabulary is lower-case, so a seed composed in the browser is refused by the case form -- and because it is one field of the create body, the refusal is a 400 on the whole act rather than a complaint about one value. The client is the wrong tier to translate in: it was deliberately emptied of mapping, and the next provider's spelling is not lower-case either.
+What made it unmarked is a vocabulary boundary nobody owns. The provider spells the ladder `High` and this product's vocabulary is lower-case, so a seed composed in the browser is refused by the case form -- and because it is one field of the create body, the refusal is a 422 on the whole act rather than a complaint about one value. The client is the wrong tier to translate in: it was deliberately emptied of mapping, and the next provider's spelling is not lower-case either.
 
 The seed the browser cannot compose is one the server already can. The payload the create body carries is the provider's own, and the tier that maps it onto this product's vocabularies is the one the import already runs in.
 
