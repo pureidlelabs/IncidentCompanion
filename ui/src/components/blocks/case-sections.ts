@@ -60,7 +60,7 @@ export const SECTIONS: Readonly<Record<string, SectionIdentity>> = {
   notes: { title: 'Case notes', icon: NotebookPen },
   compliance: { title: 'Compliance', icon: Gavel },
   report: { title: 'Report', icon: Newspaper },
-  import: { title: 'Import Data', icon: Upload },
+  import: { title: 'Import from a file', icon: Upload },
   'import-sentinel': { title: 'Import from Sentinel', icon: CloudDownload },
   archive: { title: 'Case archive', icon: Archive },
   indicators: { title: 'Indicators', icon: Fingerprint },
@@ -75,8 +75,10 @@ export const SECTIONS: Readonly<Record<string, SectionIdentity>> = {
  * rather than each spelling it, a second name for one act being two acts as far
  * as anybody reading both screens is concerned.
  */
-export const DOOR_LABELS: Readonly<Record<string, string>> = {
-  import: 'Import from a file',
+export const DOOR_LABELS: Readonly<Record<'import' | 'import-sentinel', string>> = {
+  // Quoted, where an unquoted `import:` reads as an import statement to
+  // `test_ui_copy.py` and takes the label out of the only tier that lints copy.
+  'import': 'Import from a file',
   'import-sentinel': 'Start from a live source',
 }
 

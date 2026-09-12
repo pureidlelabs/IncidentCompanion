@@ -291,7 +291,7 @@ describe('the states the block owes', () => {
     const user = userEvent.setup()
     const doors = {
       onNewCase: vi.fn(),
-      onImportIncidents: vi.fn(),
+      onImportFile: vi.fn(),
       onImportArchive: vi.fn(),
       onDemoCases: vi.fn(),
     }

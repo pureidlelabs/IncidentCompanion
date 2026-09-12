@@ -74,7 +74,7 @@ export const Empty: Story = {
   args: {
     cases: [],
     onNewCase: () => undefined,
-    onImportIncidents: () => undefined,
+    onImportFile: () => undefined,
     onImportArchive: () => undefined,
     onDemoCases: () => undefined,
   },

@@ -42,7 +42,7 @@ export function StartCasePane({ onBlank, onImport, onLiveSource }: StartCasePane
             ...(onBlank ? { onSelect: onBlank } : {}),
           },
           {
-            title: DOOR_LABELS.import ?? '',
+            title: DOOR_LABELS.import,
             detail: 'Start a case and bring rows in from a CSV.',
             // **The glyph the section it opens draws.** A door wearing another
             // section's glyph says it goes somewhere it does not, and the rail
@@ -51,7 +51,7 @@ export function StartCasePane({ onBlank, onImport, onLiveSource }: StartCasePane
             ...(onImport ? { onSelect: onImport } : {}),
           },
           {
-            title: DOOR_LABELS['import-sentinel'] ?? '',
+            title: DOOR_LABELS['import-sentinel'],
             detail: 'Pull an incident from Sentinel. The case is made at the end, not the start.',
             icon: SECTIONS['import-sentinel']?.icon ?? FilePlus2,
             ...(onLiveSource ? { onSelect: onLiveSource } : {}),

@@ -1,19 +1,19 @@
 /**
- * **The file door wears the glyph of the section it opens.**
+ * **A door wears the glyph of the section it opens.**
  *
- * It landed on the file importer wearing the glyph the rail gives the Sentinel
- * section, so an analyst saw that glyph twice for two different destinations
- * and the tile said it went to the one it did not.
+ * The file door landed on the file importer wearing the glyph the rail gives
+ * the Sentinel section, so an analyst saw that glyph twice for two different
+ * destinations and the tile said it went to the one it did not.
  *
  * Read off the rendered glyph rather than off the source, so an icon passed
  * through a wrapper or renamed at the import is still the one compared. The
  * `lucide-` tokens only: the tile sizes its own glyph and the bare render does
  * not, so the full class strings differ over something that is not identity.
  *
- * What no case here covers: where the tile navigates to, which is
- * `NewCaseContainer`'s; and the live-source tile, which draws `Radio` where its
- * section draws `CloudDownload` -- deliberate, the picker rail offering no
- * live-source row for it to disagree with.
+ * **What this does not reach is where a tile navigates to**, which is
+ * `NewCaseContainer`'s. Pointing that at another slug leaves this green while
+ * the glyph becomes confidently wrong -- so this holds the tile to a section,
+ * and nothing holds the section to the route.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
@@ -24,7 +24,10 @@ import { StartCasePane } from '@/components/blocks/start-case-pane'
 /** Which glyph, by the `lucide-` tokens that carry its name. */
 function glyphOf(within: HTMLElement): string[] {
   const classes = within.querySelector('svg')?.getAttribute('class') ?? ''
-  return classes.split(/\s+/).filter((one) => one.startsWith('lucide-')).sort()
+  return classes
+    .split(/\s+/)
+    .filter((one) => one.startsWith('lucide-'))
+    .sort()
 }
 
 function glyphOfSection(slug: string): string[] {
@@ -42,7 +45,9 @@ function tile(label: string): HTMLElement {
 }
 
 describe('the pane a case starts from', () => {
-  it('draws the file door with the glyph of the section it opens', () => {
+  const DOORS = ['import', 'import-sentinel'] as const
+
+  it.each(DOORS)('draws the %s door with the glyph of the section it opens', (slug) => {
     render(
       <StartCasePane
         onBlank={() => undefined}
@@ -51,11 +56,19 @@ describe('the pane a case starts from', () => {
       />,
     )
 
-    const wanted = glyphOfSection('import')
+    const wanted = glyphOfSection(slug)
     expect(wanted, 'the section draws no glyph, so this compares nothing').not.toEqual([])
     expect(
-      glyphOf(tile(DOOR_LABELS.import ?? '')),
-      'the file door wears a glyph that belongs to another section',
+      glyphOf(tile(DOOR_LABELS[slug])),
+      `the ${slug} door wears a glyph that belongs to another section`,
     ).toEqual(wanted)
+  })
+
+  /**
+   * Both doors are covered above only while they name different glyphs. Two
+   * sections sharing one would make either case pass against the other's.
+   */
+  it('offers two doors that are told apart by their glyphs', () => {
+    expect(glyphOfSection('import')).not.toEqual(glyphOfSection('import-sentinel'))
   })
 })
