@@ -55,9 +55,13 @@ function refuseAStaleReview(
   const missing = [...named].filter((id) => !offered.has(id))
   if (missing.length === 0) return
 
+  const gone =
+    named.size === 1
+      ? 'the row it names is'
+      : `${String(missing.length)} of the ${String(named.size)} rows it names ` +
+        (missing.length === 1 ? 'is' : 'are')
   throw new UnprocessableEntityException(
-    `This review is out of date: ${String(missing.length)} of ${String(named.size)} rows it ` +
-      'names are no longer in the import. Run the review again.',
+    `This review is out of date: ${gone} no longer in the import. Run the review again.`,
   )
 }
 

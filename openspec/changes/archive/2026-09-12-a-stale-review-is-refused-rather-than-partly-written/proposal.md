@@ -16,6 +16,6 @@ A partial mismatch is the worse half: the rows that still resolve are written, t
 
 ## Impact
 
-- `openspec/specs/incident-import/spec.md` -- one requirement gains a paragraph and a scenario.
+- `openspec/specs/incident-import/spec.md` -- one requirement gains two paragraphs and two scenarios.
 - `server/src/incident-import/import.service.ts` -- one check, before any write.
 - An analyst holding a preview across a deployment that changes the identity rules is now told to run the review again, where before they were told the import had succeeded.

@@ -57,6 +57,8 @@ A correction the analyst makes MUST be checked against the same description that
 
 An approval naming rows the import no longer proposes MUST be refused, and the refusal MUST say that the review is out of date. Writing the part that still resolves would write less than the analyst approved and report it as a success, which tells them the import did something it did not do.
 
+A correction addressed to a row the import no longer proposes MUST be refused the same way. Applying the corrections that still resolve and dropping the rest writes a row carrying the value the analyst edited away, which is the same failure with no count to notice it by.
+
 #### Scenario: An import is previewed
 
 - GIVEN an incident selected on a detection platform
@@ -90,6 +92,13 @@ An approval naming rows the import no longer proposes MUST be refused, and the r
 - THEN the import is refused
 - AND nothing is written
 - AND the refusal says the review is out of date
+
+#### Scenario: A correction the import cannot account for
+
+- GIVEN a correction addressed to a row the import no longer proposes
+- WHEN it is submitted
+- THEN the import is refused
+- AND no row is written carrying the value that was corrected away
 
 ### Requirement: An import is matched against what the case already holds
 
