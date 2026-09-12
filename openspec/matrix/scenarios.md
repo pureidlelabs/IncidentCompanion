@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 459 |
-| Demonstrated | 350 |
+| Demonstrated | 351 |
 | Undemonstrable | 1 |
-| Unbuilt | 96 |
+| Unbuilt | 95 |
 | Undemonstrated | 12 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
@@ -323,7 +323,7 @@
 | An imported row says that it was imported, and that nobody has read it | An analyst reviews an imported row | unbuilt | Not built: `unreviewed` is owned by the server and no route clears it. -> #168 |
 | What could not be brought in is counted rather than dropped | The platform sends something unrecognised | demonstrated | server/test/incident-import.test.ts |
 | What could not be brought in is counted rather than dropped | An analyst asks what was left behind | demonstrated | server/src/incident-import/what-was-left-behind-is-counted.test.ts |
-| A failed import never leaves a case behind | An import asked to create a case fails | unbuilt | Not built: the case and its contents are two transactions. -> #50 |
+| A failed import never leaves a case behind | An import asked to create a case fails | demonstrated | server/test/an-import-that-opens-a-case-fills-the-one-it-opened.test.ts |
 | A failed import never leaves a case behind | An import asked to create a case succeeds | demonstrated | server/test/an-import-that-opens-a-case-fills-the-one-it-opened.test.ts |
 | An import that failed partway can be run again without doing it twice | An import fails partway and is run again | demonstrated | server/src/incident-import/a-partly-written-import-is-run-again.test.ts |
 | An import that failed partway can be run again without doing it twice | A partly written import is reported | unbuilt | Not built: a partial write throws rather than reporting. -> #170 |

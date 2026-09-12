@@ -12,9 +12,8 @@
 import { ConflictException } from '@nestjs/common'
 import { and, eq, inArray, isNotNull } from 'drizzle-orm'
 
-import type { Database } from '../db/client.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
-import { withCase } from '../db/scope.js'
+import { withCase, type Executor } from '../db/scope.js'
 
 /**
  * The rows a write is about to touch.
@@ -28,9 +27,13 @@ export interface WriteTarget {
   readonly ids?: readonly string[]
 }
 
-/** Throws if the write lands in a closed row; returns quietly otherwise. */
+/**
+ * Throws if the write lands in a closed row; returns quietly otherwise.
+ *
+ * Takes the handle its caller is writing on, which may be a transaction.
+ */
 export type ClosedRowGuard = (
-  db: Database,
+  db: Executor,
   caseId: string,
   target: WriteTarget,
 ) => Promise<void>
