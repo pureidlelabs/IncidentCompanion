@@ -216,9 +216,10 @@ const UNKEYED_LABELS: Readonly<Record<string, string>> = {
 /**
  * The words a kind is drawn under, where the block itself supplies none.
  *
- * The heading key is the real answer and arrives with the report; this is the
- * last resort, and it falls through to the kind rather than inventing English
- * words for a report that is not in English.
+ * The heading key is the real answer and arrives with the report, so this is
+ * reached only by a block that carries none. The words are English and the
+ * install's own, taken from the same pack rather than invented here; a kind
+ * neither map names falls through to the kind itself.
  */
 export function labelForKind(kind: string): string {
   return UNKEYED_LABELS[kind] ?? HEADING_LABELS[`heading.${kind}`] ?? kind
