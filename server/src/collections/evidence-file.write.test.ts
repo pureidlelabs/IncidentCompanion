@@ -7,7 +7,7 @@
  * that never had bytes, a row whose bytes have gone, a digest the caller
  * supplied rather than the server computing, and a row in another case.
  */
-import { POLICY_SETTINGS } from '../policy/keys.js'
+import { defaultPolicy } from '../policy/read.js'
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from '@zip.js/zip.js'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -97,14 +97,10 @@ function recorder() {
  * The install's bounds, as the doors read them.
  *
  * **A stub, because these cases are not about the bounds.** Every door reads
- * them per act now, so a fixture that cannot answer fails with a type error
- * rather than silently falling back to a constant -- which is the state #588
- * was about.
+ * them per act now, so a fixture that cannot answer fails to compile rather
+ * than falling back to a constant -- which is the state #588 was about.
  */
-const POLICY_DEFAULTS = Object.fromEntries(
-  Object.entries(POLICY_SETTINGS).map(([key, one]) => [key, one.fallback]),
-) as never
-
+const POLICY_DEFAULTS = defaultPolicy()
 const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 /**

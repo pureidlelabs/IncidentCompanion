@@ -126,10 +126,10 @@ export class ArchiveImportService {
 
   async load(archive: Buffer, passphrase: string, actorId: string): Promise<ImportResult> {
     const plain = await this.unsealed(archive, passphrase)
-    const stored = await this.policy.read()
+    const stored_ = await this.policy.read()
     const { members, attachments } = await readArchive(plain, {
-      memberBytes: stored['evidence.attachmentMegabytes'] * 1024 * 1024,
-      totalBytes: stored['evidence.archiveMegabytes'] * 1024 * 1024,
+      memberBytes: stored_['evidence.attachmentMegabytes'] * 1024 * 1024,
+      totalBytes: stored_['evidence.archiveMegabytes'] * 1024 * 1024,
     })
 
     const raw = members[CASE_NAME]
@@ -158,6 +158,10 @@ export class ArchiveImportService {
         (async function* () {
           yield Buffer.from(bytes)
         })(),
+        undefined,
+        // The ceiling this import already read, rather than one read per
+        // member: an archive may hold 10,000 of them.
+        stored_['evidence.attachmentMegabytes'] * 1024 * 1024,
       )
       held.add(stored.hash)
     }

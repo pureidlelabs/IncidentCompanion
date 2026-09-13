@@ -21,7 +21,7 @@ import {
   pack,
   type Attachments,
 } from '../archive/format.js'
-import { seal } from '../archive/envelope.js'
+import { WeakPassphrase, seal } from '../archive/envelope.js'
 import { PolicyService } from '../policy/policy.service.js'
 
 export interface ExportRequest {
@@ -56,6 +56,19 @@ export class ArchiveExportService {
   ) {}
 
   async build(request: ExportRequest): Promise<ExportedArchive> {
+    /**
+     * **Refused before the archive is built, not after `seal` throws.** A case
+     * exported with its files packs the whole zip; discarding it because the
+     * passphrase was short is work nobody asked for, once per attempt.
+     *
+     * **Read now, like every other bound**: a minimum cached at boot is one an
+     * administrator cannot raise without a restart. -> `policy/read.ts`
+     */
+    const minimumChars = (await this.policy.read())['evidence.passphraseChars']
+    if (request.passphrase && request.passphrase.length < minimumChars) {
+      throw new WeakPassphrase(`A passphrase is at least ${String(minimumChars)} characters.`)
+    }
+
     const data = (await this.cases.getWithCollections(request.caseId)) as unknown as Record<
       string,
       unknown
@@ -104,12 +117,7 @@ export class ArchiveExportService {
     }
 
     const zip = await pack(members, attachments)
-    // **Read now, like every other bound.** A minimum cached at boot is one
-    // an administrator cannot raise without a restart. -> `policy/read.ts`
-    const stored = await this.policy.read()
-    const bytes = request.passphrase
-      ? await seal(zip, request.passphrase, stored['evidence.passphraseChars'])
-      : zip
+    const bytes = request.passphrase ? await seal(zip, request.passphrase, minimumChars) : zip
 
     return {
       bytes,

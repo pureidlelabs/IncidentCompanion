@@ -25,18 +25,16 @@ import { LanguageService } from '../report/language.service.js'
 import { ReportLifecycleService } from '../report/lifecycle.service.js'
 import { ReportRenderService } from '../report/render.service.js'
 import { EvidenceStore } from '../evidence/store.js'
-import { POLICY_SETTINGS } from '../policy/keys.js'
+import { defaultPolicy } from '../policy/read.js'
 
 /**
  * The install's bounds, as the doors read them.
  *
  * **A stub, because these cases are not about the bounds.** Every door reads
- * them per act now, so a fixture that cannot answer fails with a type error
- * rather than falling back to a constant -- which is the state #588 was about.
+ * them per act now, so a fixture that cannot answer fails to compile rather
+ * than falling back to a constant -- which is the state #588 was about.
  */
-const POLICY_DEFAULTS = Object.fromEntries(
-  Object.entries(POLICY_SETTINGS).map(([key, one]) => [key, one.fallback]),
-) as never
+const POLICY_DEFAULTS = defaultPolicy()
 const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 /**

@@ -14,7 +14,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAdmin, type Harness } from './app-harness.js'
-import { ATTACHMENT_MEGABYTES, PASSPHRASE_CHARS } from '../src/policy/keys.js'
+import {
+  ARCHIVE_MEGABYTES,
+  ATTACHMENT_MEGABYTES,
+  PASSPHRASE_CHARS,
+} from '../src/policy/keys.js'
 
 const RUNNABLE = await bootable()
 
@@ -64,6 +68,9 @@ describe.skipIf(!RUNNABLE)('an evidence limit an operator set', () => {
     await limitIs('evidence.attachmentMegabytes', ATTACHMENT_MEGABYTES).catch((why: unknown) => {
       process.stdout.write(`  ! the attachment ceiling was not restored: ${String(why)}\n`)
     })
+    await limitIs('evidence.archiveMegabytes', ARCHIVE_MEGABYTES).catch((why: unknown) => {
+      process.stdout.write(`  ! the archive ceiling was not restored: ${String(why)}\n`)
+    })
     await harness.close()
   })
 
@@ -90,8 +97,10 @@ describe.skipIf(!RUNNABLE)('an evidence limit an operator set', () => {
   })
 
   /**
-   * The other direction, so the case above is not passing on a refusal that
-   * refuses everything.
+   * **A control, and only that.** It says the route does not refuse
+   * everything; it cannot show the bound moved, because a passphrase long
+   * enough for the raised minimum is long enough for the old constant too.
+   * The case below is the one that bites in this direction.
    */
   it('takes a passphrase that meets the raised minimum', async () => {
     await limitIs('evidence.passphraseChars', RAISED_CHARS)
@@ -105,6 +114,27 @@ describe.skipIf(!RUNNABLE)('an evidence limit an operator set', () => {
   })
 
   /**
+   * **Lowered, which the old constant cannot express.** Nine characters is
+   * under the compile-time twelve and over a minimum an operator set to eight,
+   * so this is refused by the constant and accepted by the setting -- the one
+   * shape that tells the two apart in this direction.
+   */
+  it('takes a passphrase the install lowered its minimum to accept', async () => {
+    await limitIs('evidence.passphraseChars', 8)
+    try {
+      const answered = await archiveWith('x'.repeat(9))
+
+      expect(
+        answered.ok,
+        'a passphrase the install accepts was refused against the compile-time minimum',
+      ).toBe(true)
+    } finally {
+      await limitIs('evidence.passphraseChars', PASSPHRASE_CHARS)
+    }
+  })
+
+
+  /**
    * **The Health pane states the limit an operator is held to**, so a screen
    * that reports the compile-time constant tells them the wrong number -- and
    * agrees with the code while both disagree with the setting.
@@ -112,12 +142,13 @@ describe.skipIf(!RUNNABLE)('an evidence limit an operator set', () => {
   it('reports every raised limit on the settings screen', async () => {
     await limitIs('evidence.passphraseChars', RAISED_CHARS)
     await limitIs('evidence.attachmentMegabytes', RAISED_MEGABYTES)
+    await limitIs('evidence.archiveMegabytes', RAISED_MEGABYTES)
     try {
       const answered = await fetch(`${harness.base}/api/settings`, {
         headers: { cookie: admin.cookie },
       })
       const body = (await answered.json()) as {
-        limits?: { passphraseChars?: number; attachmentBytes?: number }
+        limits?: { passphraseChars?: number; attachmentBytes?: number; archiveBytes?: number }
       }
 
       expect(
@@ -128,9 +159,14 @@ describe.skipIf(!RUNNABLE)('an evidence limit an operator set', () => {
         body.limits?.attachmentBytes,
         'the settings screen reports an attachment ceiling nothing enforces',
       ).toBe(RAISED_MEGABYTES * 1024 * 1024)
+      expect(
+        body.limits?.archiveBytes,
+        'the settings screen reports an archive ceiling nothing enforces',
+      ).toBe(RAISED_MEGABYTES * 1024 * 1024)
     } finally {
       await limitIs('evidence.passphraseChars', PASSPHRASE_CHARS)
       await limitIs('evidence.attachmentMegabytes', ATTACHMENT_MEGABYTES)
+      await limitIs('evidence.archiveMegabytes', ARCHIVE_MEGABYTES)
     }
-  })
+  }, 30_000)
 })

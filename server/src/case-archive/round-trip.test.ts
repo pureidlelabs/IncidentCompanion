@@ -8,7 +8,7 @@
  * longer exists, and an archive exported without its files importing as though
  * it were damaged.
  */
-import { POLICY_SETTINGS } from '../policy/keys.js'
+import { defaultPolicy } from '../policy/read.js'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -130,6 +130,45 @@ describe.skipIf(!db)('a case, out and back', () => {
   afterAll(async () => {
     await seed!.delete(cases)
     await rm(root, { recursive: true, force: true })
+  })
+
+  /**
+   * That the ceiling an archive is read against is the install's, not a constant.
+   *
+   * **Every read site of `evidence.archiveMegabytes` reverted to a constant in
+   * one run with the whole suite still green** -- the setting was registered,
+   * bounded, offered and audited, and asserted by nothing anywhere. -> #588
+   *
+   * **At the service rather than the route.** The route's own cap fires while
+   * the body is still being read, so it aborts the connection instead of
+   * answering and there is no status to assert on.
+   */
+  it('reads an archive against the ceiling the install states', async () => {
+    const made = await furnished()
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+
+    /** The same importer, on an install that allows almost nothing. */
+    // **Below the floor a route would accept, deliberately.** What this asks
+    // is whether the stored value is read and used, and the archive a case
+    // fixture builds is smaller than the smallest an operator may set.
+    const mean = new ArchiveImportService(db!, store, {
+      read: () =>
+        Promise.resolve({
+          ...POLICY_DEFAULTS,
+          'evidence.archiveMegabytes': 0,
+          'evidence.attachmentMegabytes': 0,
+        }),
+    } as never)
+
+    await expect(
+      mean.load(built.bytes, '', other),
+      'an archive over the install ceiling was read',
+    ).rejects.toThrow()
+
+    // And the same bytes go in where the install allows them, so the refusal
+    // above is the ceiling rather than the archive being unreadable.
+    const result = await importer.load(built.bytes, '', other)
+    expect(result.id).toBeDefined()
   })
 
   it('brings the case back as a new case, not over the old one', async () => {
@@ -267,14 +306,10 @@ const ARCHIVE_LIMITS = { memberBytes: 256 * 1024 * 1024, totalBytes: 512 * 1024 
  * The install's bounds, as the doors read them.
  *
  * **A stub, because these cases are not about the bounds.** Every door reads
- * them per act now, so a fixture that cannot answer fails with a type error
- * rather than silently falling back to a constant -- which is the state #588
- * was about.
+ * them per act now, so a fixture that cannot answer fails to compile rather
+ * than falling back to a constant -- which is the state #588 was about.
  */
-const POLICY_DEFAULTS = Object.fromEntries(
-  Object.entries(POLICY_SETTINGS).map(([key, one]) => [key, one.fallback]),
-) as never
-
+const POLICY_DEFAULTS = defaultPolicy()
 const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 describe('a handover, exported without its files', () => {

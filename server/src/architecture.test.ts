@@ -181,7 +181,7 @@ const MAY_IMPORT: Record<string, string[]> = {
    * constants, so it agreed with the code while both disagreed with the
    * setting an operator had changed. -> #588
    */
-  health: ['config', 'evidence', 'archive', 'db', 'domain', 'policy'],
+  health: ['config', 'db', 'domain', 'policy'],
   spa: ['config'],
   test: ['db', 'config'],
 }

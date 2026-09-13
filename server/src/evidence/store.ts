@@ -24,7 +24,12 @@ import type { Env } from '../config/env.js'
 import { PolicyService } from '../policy/policy.service.js'
 
 /**
- * The default attachment ceiling. The live one is `evidence.attachmentMegabytes`.
+ * The attachment ceiling a fresh install starts with.
+ *
+ * **A default, and no longer what `put` caps against**: that is
+ * `evidence.attachmentMegabytes`, read per act. Kept because the streaming
+ * case measures against a known number, and named so nobody reads it as the
+ * limit. -> #588
  *
  * **A ceiling, not a target.** Anything larger belongs in an evidence locker
  * with its path in `location` - the app is not a repository for disk images,
@@ -65,7 +70,19 @@ export class EvidenceStore {
    * Written to a temporary name and renamed, so a failed or capped upload
    * never leaves a partial file at the digest of the whole.
    */
-  async put(source: AsyncIterable<Buffer>, name?: string): Promise<StoredArtefact> {
+  async put(
+    source: AsyncIterable<Buffer>,
+    name?: string,
+    /**
+     * The ceiling to cap against, where the caller has already read it.
+     *
+     * **Passed in by a caller writing more than one artefact.** An archive may
+     * hold 10,000 members and `put` is called for each, so reading the policy
+     * here made an import `1 + N` round trips for a bound that cannot change
+     * mid-import.
+     */
+    ceilingBytes?: number,
+  ): Promise<StoredArtefact> {
     await mkdir(this.root, { recursive: true })
 
     /**
@@ -74,7 +91,8 @@ export class EvidenceStore {
      * operator can raise, and a constant here is what let them raise it and
      * still meet a refusal quoting the old number. -> #588, `policy/read.ts`
      */
-    const ceiling = (await this.policy.read())['evidence.attachmentMegabytes'] * 1024 * 1024
+    const ceiling =
+      ceilingBytes ?? (await this.policy.read())['evidence.attachmentMegabytes'] * 1024 * 1024
 
     const digest = createHash('sha256')
     const chunks: Buffer[] = []
