@@ -33,9 +33,8 @@ import { CollectionService } from '../collections/collection.service.js'
 import { columnOf } from '../db/column-access.js'
 import { withCase } from '../db/scope.js'
 import { BULK_TARGETS, REFERENCE_TABLES, TABLES, type BulkTarget } from '../collections/registry.js'
-import { COLLECTION_SCHEMAS } from '../domain/collections.js'
+import { referencesOf } from '../domain/collections.js'
 import { nameOf } from '../domain/reference-key.js'
-import { referenceFieldsOf } from '../domain/references.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
@@ -147,8 +146,11 @@ export class ExportsController {
     collection: string,
     caseId: string,
   ): Promise<(property: string, value: unknown) => unknown> {
-    const schema = COLLECTION_SCHEMAS[collection]
-    const references = schema ? referenceFieldsOf(schema) : []
+    // **`referencesOf`, not `COLLECTION_SCHEMAS`.** The timeline publishes no
+    // single schema and has more reference fields than anything else, so the
+    // narrower lookup answered "no references" and wrote every one of them as
+    // a row id. -> `domain/collections.ts`
+    const references = referencesOf(collection)
     if (references.length === 0) return (_property, value) => value
 
     const names = new Map<string, Map<string, string>>()

@@ -86,3 +86,29 @@ describe('writing rows', () => {
     expect(csv.trim()).toBe('a,b')
   })
 })
+
+/**
+ * A list cell, which carries analyst text since a reference travels as a name.
+ *
+ * **Both of these were unreachable until then.** Every list column held
+ * `z.array(z.uuid())`, so no item could lead with a formula character and none
+ * could contain the separator. -> #51
+ */
+describe('a list cell', () => {
+  it('neutralises every item, not only the one the join starts with', async () => {
+    const written = await toCsv([{ names: ['Aaa first', '=HYPERLINK("http://x","click")'] }], ['names'])
+
+    expect(
+      written,
+      'a formula in the second item of a list reached the cell unquoted',
+    ).toContain("'=HYPERLINK")
+  })
+
+  it('escapes a separator inside an item, so a name is not two names', async () => {
+    const written = await toCsv([{ names: ['Log dump; part 2', 'Second'] }], ['names'])
+    const cell = written.split('\n')[1] ?? ''
+
+    // The item's own `;` is escaped; the one between items is not.
+    expect(cell).toContain('Log dump\\; part 2;Second')
+  })
+})

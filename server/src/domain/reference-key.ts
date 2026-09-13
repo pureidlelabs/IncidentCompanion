@@ -23,23 +23,61 @@
 import type { Collection } from './collections.js'
 
 /**
- * What a row of each referenceable collection is named by, strongest first.
+ * How a row of each referenceable collection is named in a file.
  *
- * **Every `refTarget` in the tree is here**, and
- * `every-reference-target-can-be-named.test.ts` is what keeps that true: a
- * reference added to a collection missing from this table would travel as
- * nothing and be reported lost on every import.
+ * **Qualified the way the identity is, where the identity qualifies.** A name
+ * that carried only the leading field was less discriminating than the row's
+ * own identity, so a case holding `admin@corp.local` and `admin@partner.local`
+ * lost the link on a round trip through its *own* file: both answered to
+ * `admin`, the match was ambiguous, and an ambiguous match resolves to
+ * nothing. Two indicators of one value and different kinds, and two instances
+ * of one cloud app, are the same shape. -> #51
+ *
+ * **A qualifier the row has not got is left off**, so an account with no
+ * domain is `admin` and still answers to a file that says `admin`. The
+ * identity's own `floor` makes the same allowance.
+ *
+ * **Rendered, never parsed.** The import compares a file's value against each
+ * candidate row's rendered name, so these forms are read by people and by
+ * nothing else -- which is why they are written the way an analyst would type
+ * them rather than joined by a separator chosen for a parser.
+ *
+ * **Several alternatives where a row can be named more than one way.** A
+ * binary is named by its digest or by its filename and carries either.
  */
-export const REFERENCE_KEY_FIELDS: Partial<Record<Collection, readonly string[]>> = {
-  systems: ['hostname'],
-  accounts: ['accountName'],
-  network_indicators: ['value'],
-  malware: ['hash', 'filename'],
-  cloud_apps: ['appName'],
+type Naming = readonly ((row: Record<string, unknown>) => string | null)[]
+
+/** A row's field, trimmed, or `null` where it has none worth using. */
+function held(row: Record<string, unknown>, field: string): string | null {
+  const value = row[field]
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null
+}
+
+/** The leading field, with a qualifier appended where the row carries one. */
+function qualified(lead: string, qualifier: string, between: string) {
+  return (row: Record<string, unknown>): string | null => {
+    const first = held(row, lead)
+    if (first === null) return null
+    const second = held(row, qualifier)
+    return second === null ? first : `${first}${between}${second}`
+  }
+}
+
+/** A row named by one field alone. */
+function only(field: string) {
+  return (row: Record<string, unknown>): string | null => held(row, field)
+}
+
+const NAMINGS: Partial<Record<Collection, Naming>> = {
+  systems: [only('hostname')],
+  accounts: [qualified('accountName', 'domain', '@')],
+  network_indicators: [qualified('value', 'type', ' as ')],
+  malware: [only('hash'), only('filename')],
+  cloud_apps: [qualified('appName', 'instance', ' at ')],
   // The three with no deduplication identity, and the reason this module is
   // separate from `identity.ts`.
-  methods: ['name'],
-  evidence: ['name'],
+  methods: [only('name')],
+  evidence: [only('name')],
   /**
    * **Reachable by no file today**, because neither `reports` nor
    * `report_blocks` publishes a write schema and `IMPORTABLE` is built from
@@ -48,10 +86,17 @@ export const REFERENCE_KEY_FIELDS: Partial<Record<Collection, readonly string[]>
    * the target out would make this table's own guard the thing that has to be
    * remembered rather than the thing that reminds you.
    */
-  reports: ['label'],
-} as const
+  reports: [only('label')],
+}
 
-/** Whether a reference to this collection can be written in a file at all. */
+/** Published so a test can hold the table to the schemas. */
+export const REFERENCE_KEY_FIELDS = NAMINGS
+
+function namingOf(collection: string): Naming | undefined {
+  return Object.hasOwn(NAMINGS, collection) ? NAMINGS[collection as Collection] : undefined
+}
+
+/** Whether a reference to this collection can be named in a file at all. */
 export function canBeNamed(collection: string): boolean {
   return Object.hasOwn(REFERENCE_KEY_FIELDS, collection)
 }
@@ -59,19 +104,14 @@ export function canBeNamed(collection: string): boolean {
 /**
  * What to write in a file for a reference to this row, or `null`.
  *
- * `null` where the row answers to none of its own key fields -- a binary with
- * neither digest nor filename cannot be named, and a reference to it is one the
- * file cannot carry.
+ * `null` where the row answers to none of its own namings -- a binary with
+ * neither digest nor filename cannot be named, and a reference to it is one
+ * the file cannot carry.
  */
 export function nameOf(collection: string, row: Record<string, unknown>): string | null {
-  const fields = Object.hasOwn(REFERENCE_KEY_FIELDS, collection)
-    ? REFERENCE_KEY_FIELDS[collection as Collection]
-    : undefined
-  if (!fields) return null
-
-  for (const field of fields) {
-    const value = row[field]
-    if (typeof value === 'string' && value.trim() !== '') return value.trim()
+  for (const naming of namingOf(collection) ?? []) {
+    const named = naming(row)
+    if (named !== null) return named
   }
   return null
 }
@@ -82,24 +122,19 @@ export function nameOf(collection: string, row: Record<string, unknown>): string
  * **Compared the way the name was written, case-folded.** A hostname in a file
  * is the hostname somebody typed, and refusing `WKS-001` against a stored
  * `wks-001` makes the ordinary export-and-reimport lose its links. Any of the
- * row's key fields may answer, for the reason `REFERENCE_KEY_FIELDS` carries
- * more than one.
+ * row's namings may answer, for the reason a binary carries two.
  */
 export function answersTo(
   collection: string,
   row: Record<string, unknown>,
   named: string,
 ): boolean {
-  const fields = Object.hasOwn(REFERENCE_KEY_FIELDS, collection)
-    ? REFERENCE_KEY_FIELDS[collection as Collection]
-    : undefined
-  if (!fields) return false
-
   const wanted = named.trim().toLowerCase()
   if (wanted === '') return false
 
-  return fields.some((field) => {
-    const value = row[field]
-    return typeof value === 'string' && value.trim().toLowerCase() === wanted
-  })
+  for (const naming of namingOf(collection) ?? []) {
+    const mine = naming(row)
+    if (mine !== null && mine.toLowerCase() === wanted) return true
+  }
+  return false
 }

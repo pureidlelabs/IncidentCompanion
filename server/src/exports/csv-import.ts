@@ -14,6 +14,35 @@
 import { parse } from 'csv-parse/sync'
 
 /** A 10MB file is already far past what anyone pastes in; past it is a mistake. */
+/**
+ * A list cell's items, honouring the escape `csv.ts` writes.
+ *
+ * A bare `;` separates; `\;` is one the item itself holds, and `\\` is a
+ * literal backslash. Written as a walk rather than a regular expression
+ * because the two are a contract and a lookbehind reads as though it were a
+ * detail of this side. -> `csv.ts`, `SEPARATOR`
+ */
+export function splitList(value: string): string[] {
+  const items: string[] = []
+  let item = ''
+  for (let at = 0; at < value.length; at += 1) {
+    const here = value[at]
+    if (here === '\\' && at + 1 < value.length) {
+      item += value[at + 1]
+      at += 1
+      continue
+    }
+    if (here === ';') {
+      items.push(item)
+      item = ''
+      continue
+    }
+    item += here
+  }
+  items.push(item)
+  return items
+}
+
 export const MAX_CSV_BYTES = 10 * 1024 * 1024
 export const MAX_CSV_ROWS = 50_000
 
@@ -153,10 +182,9 @@ export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>
       if (value === undefined) throw new CsvInvalid(`CSV row ${line} is missing a value.`)
 
       if (shape.lists.has(name)) {
-        row[name] = value
-          .split(';')
-          .map((item) => unquote(item.trim()))
-          .filter((item) => item.length > 0)
+        row[name] = splitList(value).map((item) => unquote(item.trim())).filter(
+          (item) => item.length > 0,
+        )
         continue
       }
       if (shape.booleans.has(name)) {

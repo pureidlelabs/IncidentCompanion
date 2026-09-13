@@ -89,3 +89,55 @@ describe('a name', () => {
     expect(answersTo('systems', { hostname: '' }, '   ')).toBe(false)
   })
 })
+
+/**
+ * A name is as discriminating as the row's identity, where the identity
+ * qualifies.
+ *
+ * **The defect this is written against loses a link inside one case.** A name
+ * of the leading field alone made `admin@corp.local` and `admin@partner.local`
+ * both answer to `admin`, so a file exported from that case and imported back
+ * into it resolved neither -- the ambiguity is honest, and the loss was not.
+ * -> #51
+ */
+describe('a qualified name', () => {
+  it('carries the qualifier the identity is made of', () => {
+    expect(nameOf('accounts', { accountName: 'admin', domain: 'corp.local' })).toBe(
+      'admin@corp.local',
+    )
+  })
+
+  it('leaves off a qualifier the row has not got', () => {
+    expect(nameOf('accounts', { accountName: 'admin', domain: '' })).toBe('admin')
+  })
+
+  it('tells two rows apart that share their leading field', () => {
+    const mine = { accountName: 'admin', domain: 'corp.local' }
+    const theirs = { accountName: 'admin', domain: 'partner.local' }
+
+    expect(answersTo('accounts', mine, 'admin@corp.local')).toBe(true)
+    expect(
+      answersTo('accounts', theirs, 'admin@corp.local'),
+      'an account of another domain answered to this one',
+    ).toBe(false)
+  })
+
+  /**
+   * `1.2.3.4` seen as an address and `1.2.3.4` seen as a domain are two
+   * indicators, which is why `type` is part of the identity.
+   */
+  it('tells two indicators of one value apart', () => {
+    const address = { value: '1.2.3.4', type: 'ipv4' }
+    const domain = { value: '1.2.3.4', type: 'domain' }
+
+    expect(nameOf('network_indicators', address)).toBe('1.2.3.4 as ipv4')
+    expect(answersTo('network_indicators', domain, '1.2.3.4 as ipv4')).toBe(false)
+  })
+
+  it('tells two instances of one cloud app apart', () => {
+    expect(nameOf('cloud_apps', { appName: 'Okta', instance: 'acme' })).toBe('Okta at acme')
+    expect(answersTo('cloud_apps', { appName: 'Okta', instance: 'other' }, 'Okta at acme')).toBe(
+      false,
+    )
+  })
+})

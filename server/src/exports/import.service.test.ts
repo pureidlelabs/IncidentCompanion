@@ -15,7 +15,7 @@ import { CSV_IMPORT, ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
-import { cases, changeFeed, evidence, impact, systems, user } from '../db/schema/index.js'
+import { accounts, cases, changeFeed, evidence, impact, systems, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -501,6 +501,66 @@ describe.skipIf(!db)('importing a CSV', () => {
     const same = after.find((row) => row.id === linked!.id)
     expect(same!.systemId, 'a round trip through its own case moved the reference').toBe(
       linked!.systemId,
+    )
+  })
+
+  /**
+   * **The timeline, which carries more references than anything else.**
+   *
+   * It publishes no single write schema, so a lookup through
+   * `COLLECTION_SCHEMAS` saw none of its eight reference fields and wrote
+   * every one as a row id -- silently, and in the one export the security
+   * half of this design is about. -> #51
+   */
+  it('writes no row id into the timeline export, which has the most references', async () => {
+    const csv = await exports_.collectionCsv(caseId, 'timeline')
+    const head = csv.split('\n')[0] ?? ''
+
+    expect(head, 'the timeline export carries no reference column to check').toContain('system_id')
+
+    const rows = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
+    expect(rows.length, 'the demo case holds no host to be named by').toBeGreaterThan(0)
+    for (const host of rows) {
+      expect(csv, `the timeline export named a host by its id: ${host.id}`).not.toContain(host.id)
+    }
+  })
+
+  /**
+   * **A case holding two accounts of one name keeps both links.**
+   *
+   * The round trip is through the case's *own* file, which is the ordinary way
+   * to move work -- so a name less discriminating than the row's identity
+   * loses a link that the id it replaced did not. `admin@corp.local` and
+   * `admin@partner.local` are this project's own example of why an account is
+   * the pair. -> #51
+   */
+  it('keeps the link where two accounts share a name and differ in domain', async () => {
+    const [mine] = await seed!
+      .insert(accounts)
+      .values({
+        caseId: emptyCaseId,
+        accountName: 'admin',
+        domain: 'corp.local',
+        createdBy: ME,
+        updatedBy: ME,
+      })
+      .returning()
+    await seed!.insert(accounts).values({
+      caseId: emptyCaseId,
+      accountName: 'admin',
+      domain: 'partner.local',
+      createdBy: ME,
+      updatedBy: ME,
+    })
+
+    const csv = 'label,category,account_id\nTwo of one name,credentials,admin@corp.local\n'
+    const result = await service.fromCsv('impact', emptyCaseId, csv, ME)
+
+    expect(result.unlinked, 'a qualified name was reported as uncarryable').toBe(0)
+
+    const [landed] = await seed!.select().from(impact).where(eq(impact.caseId, emptyCaseId))
+    expect(landed!.accountId, 'the reference did not reach the account the file named').toBe(
+      mine!.id,
     )
   })
 
