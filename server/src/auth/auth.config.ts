@@ -22,12 +22,41 @@ import { randomUUID } from 'node:crypto'
 import { Algorithm, hash as argonHash, verify as argonVerify } from '@node-rs/argon2'
 import type { Database } from '../db/client.js'
 import * as schema from '../db/schema/index.js'
-import { MINIMUM_PASSWORD_LENGTH } from './password-policy.js'
+import { MINIMUM_PASSWORD_LENGTH, PASSWORD_REFUSED, refusePassword } from './password-policy.js'
 import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
 import { sameAddress } from './same-address.js'
 import { readPolicy } from '../policy/read.js'
 import { SESSION_LIFETIME_CEILING_MINUTES } from '../policy/keys.js'
 import { sessionEnded } from './session-ended.js'
+
+/**
+ * What a failed sign-in is recorded against.
+ *
+ * A constant, so every failure from one caller falls in one run however many
+ * identifiers they tried. The identifier itself is in `detail`.
+ */
+export const SIGN_IN = 'sign-in'
+
+/**
+ * The endpoints that write a password, and the body field each carries it in.
+ *
+ * Two are the library's own and reach no controller of ours; three are reached
+ * in process by `setup.controller.ts` and `accounts.controller.ts`, which
+ * `disabledPaths` does not intercept. -> #374
+ *
+ * **A path is what this can match, so a server-only endpoint is not here.**
+ * `setPassword` is `createAuthEndpoint.serverOnly` and has no URL at all, so
+ * `'/set-password'` matched nothing and read as coverage. Nothing calls it;
+ * anything that did would take the boot-time minimum, and would need guarding
+ * where it is called rather than here.
+ */
+const PASSWORD_WRITES: Readonly<Record<string, string>> = {
+  '/sign-up/email': 'password',
+  '/admin/create-user': 'password',
+  '/change-password': 'newPassword',
+  '/reset-password': 'newPassword',
+  '/admin/set-user-password': 'newPassword',
+}
 
 const ARGON2ID = {
   algorithm: Algorithm.Argon2id,
@@ -434,6 +463,47 @@ export function authOptions(
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         /**
+         * **Every door that writes a password, in one place.** The install's
+         * minimum is a stored number and `minPasswordLength` is fixed when
+         * these options are built, so the library's own `/change-password` and
+         * `/reset-password` -- neither of which is in `disabledPaths` -- would
+         * go on taking whatever was set at boot. A check in a controller
+         * reaches neither of them.
+         *
+         * **Read now, like every other bound here.** A minimum cached at boot
+         * is one an administrator cannot raise without a restart, which for a
+         * security control is the same as not settable.
+         *
+         * **Sign-in is not on this list and must never be.** The bound governs
+         * what may be *written*; applying it to what is *offered* would lock
+         * every account holding a password shorter than a raised minimum out
+         * of the install, which is the opposite of the control.
+         */
+        const writes = PASSWORD_WRITES[ctx.path]
+        if (writes) {
+          const supplied = (ctx.body as Record<string, unknown> | undefined)?.[writes]
+          if (typeof supplied === 'string') {
+            const stored = await readPolicy(db)
+            /**
+             * **The refusal says no and not how short.** This runs ahead of
+             * the endpoint's own session and token checks -- that is what
+             * makes it cover the library's routes -- so its message reaches an
+             * anonymous caller, and the minimum is otherwise readable only
+             * through an `@AdminOnly` route. `change-password.controller.ts`
+             * is behind a session and composes the number for the analyst it
+             * belongs to.
+             *
+             * A caller can still learn that some password was too short, which
+             * is a narrower thing to know than the number and is the cost of
+             * refusing before the endpoint runs at all.
+             */
+            if (refusePassword(supplied, stored['auth.minPasswordLength'])) {
+              throw new APIError('UNPROCESSABLE_ENTITY', { message: PASSWORD_REFUSED })
+            }
+          }
+        }
+
+        /**
          * **A shut account is refused before the password is checked**, so a
          * lockout costs an attacker the guess rather than merely the answer -
          * and so a correct password found during the window still does not
@@ -517,9 +587,10 @@ export function authOptions(
        * **A sign-out deletes the session**, so the end of an access period is
        * recoverable only from here. ISO names log-on *and* log-off.
        *
-       * The attempted address is recorded and the password never is: the
-       * address is what makes a run of failures legible as one attack rather
-       * than as five unrelated typos, and this column is read by every admin.
+       * The attempted address is recorded and the password never is. It is
+       * recorded in `detail` rather than as the target, the target being a
+       * partition of the run window and therefore not the caller's to pick.
+       * -> #541
        */
       after: createAuthMiddleware(async (ctx) => {
         const headers = Object.fromEntries(ctx.headers?.entries() ?? [])
@@ -549,10 +620,28 @@ export function authOptions(
         // place a sign-in's outcome is visible: a refusal writes no row, so
         // there is nothing else to read afterwards.
         const attempted = (ctx.body as { email?: unknown } | undefined)?.email
+        /**
+         * **The target is ours, and the identifier they typed is not.**
+         * `target_label` partitions the run window, so a caller who chooses it
+         * chooses whether their own attempts are counted together -- and one
+         * attempt each at a hundred accounts is password spraying, held at a
+         * run of one and `Low` for ever. The account travels in `detail`,
+         * which does not partition, exactly as a refused socket carries the
+         * case it asked for.
+         *
+         * **What that costs, and it is not nothing.** The activity pane draws
+         * no attributes, so on the screen the account is gone until it does --
+         * and a collapsed run of three different accounts could not show one
+         * of them honestly anyway. A collector receives `detail` whole.
+         * -> #541, #544
+         */
         await recordInstallActivity(db, {
           event: 'sign_in_failed',
-          target: typeof attempted === 'string' ? attempted : null,
-          detail: { path: ctx.path },
+          target: SIGN_IN,
+          detail: {
+            path: ctx.path,
+            ...(typeof attempted === 'string' && attempted !== '' ? { account: attempted } : {}),
+          },
           headers,
         })
         if (typeof attempted === 'string' && attempted !== '') {
@@ -670,10 +759,10 @@ export function authOptions(
      * believable. -> `wire/caller-address.ts`
      *
      * **It resolves the process mode rather than taking this function's
-     * `mode`, and that is the point.** `mode` comes from `env.ts`, which
-     * defaults `NODE_ENV` to `production` because that is the closed setting
-     * for the trusted-origin list - and it is the open one here. An install
-     * that names no mode would otherwise believe a header no proxy set.
+     * `mode`, and that is the point.** The two disagree about what an absent
+     * mode means: `env.ts` refuses to start without one, while this decision
+     * keeps a fallback of its own and closes on it. An install that names no
+     * mode would otherwise believe a header no proxy set.
      *
      * Never set `disableIpTracking`: the limiter returns early on it and
      * applies no rule at all.

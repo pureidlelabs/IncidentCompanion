@@ -9,14 +9,23 @@
 import { BadRequestException, Injectable, Optional } from '@nestjs/common'
 import { getTableColumns } from 'drizzle-orm'
 
-
 import { CsvInvalid, parseCsv, type CsvShape } from './csv-import.js'
 import { CollectionService } from '../collections/collection.service.js'
+import type { CollectionName } from '../domain/wire.js'
 import { ConflictsService } from '../collections/conflicts.service.js'
-import { TABLES, type BulkTarget } from '../collections/registry.js'
-import { COLLECTION_SCHEMAS, IMPORTABLE } from '../domain/collections.js'
+import { REFERENCE_TABLES, TABLES, type BulkTarget } from '../collections/registry.js'
+import { COLLECTION_SCHEMAS, IMPORTABLE, referencesOf } from '../domain/collections.js'
 import { camelKeys } from '../wire/naming.js'
-import { hasIdentity, indexOf, keyOf, type Known } from '../collections/identity.js'
+import { hasIdentity, indexOf, keyOf, type Known } from '../domain/identity.js'
+import { namesOf } from '../domain/reference-key.js'
+
+/**
+ * Which door a row came through, for one read out of a file.
+ *
+ * Prose rather than a key, matching what the other door calls itself.
+ * -> `incident-import/providers/sentinel/platform.ts`
+ */
+export const CSV_IMPORT = 'CSV import'
 
 @Injectable()
 export class ImportService {
@@ -30,6 +39,127 @@ export class ImportService {
     private readonly collections: CollectionService,
     @Optional() private readonly conflicts?: ConflictsService,
   ) {}
+
+  /**
+   * Turn every reference cell from what it names into what the case holds.
+   *
+   * Answers how many references could not be carried, by the kind of thing
+   * they pointed at, and leaves the cell empty for each of those -- a file
+   * describing things the destination does not hold is an ordinary import, so
+   * the row lands without the link rather than being refused.
+   *
+   * **Resolved only on exactly one match.** A name says which row the source
+   * meant; it makes no claim that two rows sharing it are the same fact. Two
+   * methods called `Mailbox audit` make a reference to that name unanswerable,
+   * and picking either would attach the row to whichever the scan reached
+   * first.
+   *
+   * **A value that is where a row was kept resolves to nothing**, and needs no
+   * rule of its own to do so: a uuid is not a hostname, so it matches no row
+   * in the destination and is reported lost like any other name the case does
+   * not hold. That is what stops a file naming a row in a case its importer
+   * may not reach. -> `openspec/specs/data-exchange/spec.md`
+   */
+  private async resolveReferences(
+    collection: BulkTarget,
+    caseId: string,
+    rows: Record<string, unknown>[],
+  ): Promise<Record<string, number>[]> {
+    // The same lookup the export reads, so the two halves cannot disagree
+    // about which fields are references. -> `domain/collections.ts`
+    const references = referencesOf(collection)
+    if (references.length === 0) return rows.map(() => ({}))
+
+    // **Per row, because a row that is skipped never landed.** A total counted
+    // over the parsed file told an analyst a reference could not be carried on
+    // a re-import that wrote nothing at all.
+    const lost: Record<string, number>[] = rows.map(() => ({}))
+    const held = new Map<string, Map<string, string | null>>()
+
+    for (const { field, target } of references) {
+      const table = REFERENCE_TABLES[target]
+      // A target with no table is one nothing can resolve through, which is a
+      // wiring fault rather than a file's: say so instead of losing the links.
+      if (!table) throw new Error(`no table for reference target ${target}`)
+
+      if (!held.has(target)) {
+        const rows_ = (await this.collections.list(
+          // **`refTarget` is spelled as the collection route**, which is what
+          // `CollectionName` is: `registry.ts` says so, and says what it cost
+          // to learn.
+          { name: target as CollectionName, table, orderBy: 'createdAt' },
+          caseId,
+        )) as Record<string, unknown>[]
+
+        /**
+         * **An index rather than a scan per cell.** A filter over every
+         * candidate for every reference cell is O(rows x candidates), and the
+         * import is capped at 50,000 rows: 20,000 impact rows against 5,000
+         * hosts spent 12s of the 13.6s total inside resolution. Built once per
+         * target, it is O(rows + candidates) and keeps the rule exactly.
+         *
+         * **`null` is ambiguous, and is not the same as absent.** Two rows
+         * answering to one name resolve to nothing; a row answering to two
+         * names is not ambiguous with itself, which is why the id is compared
+         * rather than the presence of the key.
+         */
+        const answers = new Map<string, string | null>()
+        for (const one of rows_) {
+          const id = one['id'] as string
+          for (const name of namesOf(target, one)) {
+            const key = name.toLowerCase()
+            const seen = answers.get(key)
+            if (seen === undefined) answers.set(key, id)
+            else if (seen !== id) answers.set(key, null)
+          }
+        }
+        held.set(target, answers)
+      }
+      const answering = held.get(target)!
+
+      /** The one row of the destination answering to this name, or null. */
+      const resolve = (name: string): string | null =>
+        answering.get(name.trim().toLowerCase()) ?? null
+
+      for (const [at, row] of rows.entries()) {
+        const mine = lost[at]!
+        const given = row[field]
+        if (given === undefined || given === null) continue
+        // **A cell of spaces is one nobody filled in.** Counting it as a
+        // reference the case could not resolve reports a loss for a link the
+        // file never asked for.
+        if (typeof given === 'string' && given.trim() === '') {
+          delete row[field]
+          continue
+        }
+
+        // **A list keeps the half that resolves.** `evidenceIds` is `NOT NULL`
+        // with a `[]` default, so emptying it for one unresolvable name would
+        // discard the ones that were fine and die on the constraint.
+        if (Array.isArray(given)) {
+          const kept: string[] = []
+          for (const one of given) {
+            if (typeof one !== 'string' || one === '') continue
+            const id = resolve(one)
+            if (id) kept.push(id)
+            else mine[target] = (mine[target] ?? 0) + 1
+          }
+          row[field] = kept
+          continue
+        }
+
+        if (typeof given !== 'string') continue
+        const id = resolve(given)
+        if (id) row[field] = id
+        else {
+          delete row[field]
+          mine[target] = (mine[target] ?? 0) + 1
+        }
+      }
+    }
+
+    return lost
+  }
 
   /**
    * What the parser is allowed to see, derived from the schema rather than
@@ -101,18 +231,42 @@ export class ImportService {
       if (error instanceof CsvInvalid) throw new BadRequestException({ message: error.message })
       throw error
     }
-    if (parsed.length === 0) return { added: 0, skipped: 0, replaced: 0, refused: 0, unlinked: 0 }
+    if (parsed.length === 0) {
+      return { added: 0, skipped: 0, replaced: 0, refused: 0, unlinked: 0, unlinkedBy: {} }
+    }
 
     const schema = COLLECTION_SCHEMAS[collection]
-    const rows = parsed.map((raw, index) => {
-      /**
-       * An empty cell is a value nobody gave, not an empty string - a CSV has
-       * no way to write "absent", and the export writes a blank for a null
-       * timestamp. The cost: an import cannot set a text field to the empty
-       * string.
-       */
-      const given = Object.fromEntries(Object.entries(raw).filter(([, value]) => value !== ''))
-      const result = schema.safeParse(camelKeys(given))
+    /**
+     * **Five of the ten importable tables have no `source` column**, and a key
+     * naming no column is dropped by the query builder without a word -- so an
+     * unconditional stamp is silent on half of them and puts a field those
+     * tables lack into the change feed's own record of what was written.
+     */
+    const stampable = 'source' in getTableColumns(TABLES[collection])
+
+    /**
+     * An empty cell is a value nobody gave, not an empty string - a CSV has no
+     * way to write "absent", and the export writes a blank for a null
+     * timestamp. The cost: an import cannot set a text field to the empty
+     * string.
+     */
+    const named: Record<string, unknown>[] = parsed.map(
+      (raw) =>
+        camelKeys(
+          Object.fromEntries(Object.entries(raw).filter(([, value]) => value !== '')),
+        ) as Record<string, unknown>,
+    )
+
+    /**
+     * **Before the schema sees them, because a name is not a uuid.** A
+     * reference cell carries what the row is called in the case that wrote the
+     * file, and every reference field is declared `z.uuid()` -- so a file's own
+     * spelling would be refused as invalid rather than resolved.
+     */
+    const lost = await this.resolveReferences(collection, caseId, named)
+
+    const rows = named.map((given, index) => {
+      const result = schema.safeParse(given)
       if (!result.success) {
         const first = result.error.issues[0]
         throw new BadRequestException({
@@ -121,7 +275,10 @@ export class ImportService {
           }`,
         })
       }
-      return result.data
+      // Stamped, never read from the file: the write schemas declare no
+      // `source` field, so the parse above drops whatever a file claimed.
+      // -> `openspec/specs/data-exchange/spec.md`
+      return stampable ? { ...result.data, source: CSV_IMPORT } : result.data
     })
 
     const def = { name: collection, table: TABLES[collection], orderBy: 'createdAt' }
@@ -131,7 +288,7 @@ export class ImportService {
      * **Nothing to dedup against for a collection with no identity.** An
      * action, a note, an evidence record and an impact row are events or
      * judgements rather than things: two that look alike are two facts, and
-     * merging them loses one. -> `collections/identity.ts`
+     * merging them loses one. -> `domain/identity.ts`
      */
     if (!hasIdentity(collection)) {
       const written = await this.collections.createMany(def, caseId, rows, actorId, 'drop')
@@ -140,10 +297,9 @@ export class ImportService {
         skipped: 0,
         replaced: 0,
         refused: 0,
-        unlinked: written.unlinked,
+        ...carried(lost, written.unlinked),
       }
     }
-
     /**
      * **Decided before the insert, not caught on conflict.** `createMany` is
      * one transaction so a file's 400th row failing leaves the case untouched -
@@ -158,18 +314,23 @@ export class ImportService {
     >[])
 
     const fresh: Record<string, unknown>[] = []
-    const collisions: { known: Known; row: Record<string, unknown> }[] = []
-    for (const row of rows) {
+    const freshLost: Record<string, number>[] = []
+    const collisions: { known: Known; row: Record<string, unknown>; lost: Record<string, number> }[] =
+      []
+    for (const [at, row] of rows.entries()) {
+      const mine = lost[at] ?? {}
       const key = keyOf(collection, row)
       // **A row with no key is always fresh.** An empty hostname is an absent
       // identity rather than an identity of "", so two blank rows are two rows.
       if (key === null) {
         fresh.push(row)
+        freshLost.push(mine)
         continue
       }
       const already = seen.get(key)
       if (already === undefined) {
         fresh.push(row)
+        freshLost.push(mine)
         // **Added as we go, or a file listing one host twice imports it
         // twice** - the same defect through the file rather than the case.
         // **The empty id marks it as minted here rather than found**, and a
@@ -180,7 +341,7 @@ export class ImportService {
         seen.set(key, { id: '', version: 0 })
         continue
       }
-      collisions.push({ known: already, row })
+      collisions.push({ known: already, row, lost: mine })
     }
 
     const written = await this.collections.createMany(def, caseId, fresh, actorId, 'drop')
@@ -191,7 +352,7 @@ export class ImportService {
         skipped: collisions.length,
         replaced: 0,
         refused: 0,
-        unlinked: written.unlinked,
+        ...carried(freshLost, written.unlinked),
       }
     }
 
@@ -207,7 +368,8 @@ export class ImportService {
      */
     let replaced = 0
     let refused = 0
-    for (const { known, row } of collisions) {
+    const landed = [...freshLost]
+    for (const { known, row, lost: mine } of collisions) {
       if (!known.id) continue
       /**
        * Passes the version it read, so the check still applies and a
@@ -228,6 +390,7 @@ export class ImportService {
 
       if (result?.ok) {
         replaced += 1
+        landed.push(mine)
         continue
       }
 
@@ -252,7 +415,7 @@ export class ImportService {
       skipped: collisions.length - replaced - refused,
       replaced,
       refused,
-      unlinked: written.unlinked,
+      ...carried(landed, written.unlinked),
     }
   }
 }
@@ -265,7 +428,30 @@ export class ImportService {
  * import, which is a reasonable thing to want after correcting a source file
  * and a bad thing to do without being asked.
  */
+
 export type OnDuplicate = 'skip' | 'replace'
+
+/**
+ * What the rows that landed could not carry, totalled and split by target.
+ *
+ * **`dropForeignReferences`' count is added and cannot say to what.** It
+ * answers 1 per row rather than 1 per reference and names no collection, so it
+ * moves the total without moving the split. It should never fire now -- every
+ * id left in a row was resolved inside the destination case -- and it is added
+ * rather than ignored because if it ever does, a reference was lost and the
+ * analyst is owed it.
+ */
+function carried(
+  lost: readonly Record<string, number>[],
+  dropped: number,
+): { unlinked: number; unlinkedBy: Readonly<Record<string, number>> } {
+  const by: Record<string, number> = {}
+  for (const row of lost) {
+    for (const [target, count] of Object.entries(row)) by[target] = (by[target] ?? 0) + count
+  }
+  const named = Object.values(by).reduce((all, one) => all + one, 0)
+  return { unlinked: named + dropped, unlinkedBy: by }
+}
 
 export interface ImportResult {
   added: number
@@ -279,8 +465,7 @@ export interface ImportResult {
    */
   refused: number
   /**
-   * Rows that landed with a reference nulled, because it named a row in
-   * another case.
+   * References the destination case could not resolve, on rows that landed.
    *
    * **Its own number for the same reason `refused` is.** The row is in the
    * case and the link is not, which is neither "added and fine" nor "not
@@ -288,6 +473,14 @@ export interface ImportResult {
    * know how many of their lines came across less connected than they left.
    */
   unlinked: number
+  /**
+   * What could not be carried, by the kind of thing it pointed at.
+   *
+   * **Because a number alone does not tell an analyst what to go and look
+   * for.** *Four references could not be carried* leaves them reading the
+   * whole import; *four to hosts* names the collection to bring across first.
+   */
+  unlinkedBy: Readonly<Record<string, number>>
 }
 
 function snake(field: string): string {

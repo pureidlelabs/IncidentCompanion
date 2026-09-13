@@ -9,7 +9,7 @@
  * Why the derivation is here rather than in the browser, and why nothing is
  * parked between the two, is `openspec/specs/incident-import/design.md`.
  */
-import { Injectable } from '@nestjs/common'
+import { HttpException, Injectable, Logger } from '@nestjs/common'
 import { UnprocessableEntityException } from '@nestjs/common'
 
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
@@ -19,7 +19,7 @@ import type { Executor } from '../db/scope.js'
 import type { Candidate, PreviewResult, RawIncident, TimelineCandidate } from '../domain/incident-import.js'
 import { parseEntity } from './providers/sentinel/entities.js'
 import { mapEntity, startsChecked, SEPARATOR } from './providers/sentinel/mapping.js'
-import { identitiesOf } from '../collections/identity.js'
+import { identitiesOf } from '../domain/identity.js'
 import { alertToTimeline, entityRefsOf } from './providers/sentinel/alerts.js'
 import { PLATFORM } from './providers/sentinel/platform.js'
 import { IMPORTED_STAMP } from '../collections/timeline.controller.js'
@@ -27,6 +27,42 @@ import { IMPORTED_STAMP } from '../collections/timeline.controller.js'
 /** What a candidate is keyed by, so `commit` can name what `preview` showed. */
 function candidateId(incident: string, identity: string): string {
   return `${incident}${SEPARATOR}${identity}`
+}
+
+/**
+ * Refuses a commit naming rows the freshly built plan does not hold.
+ *
+ * Throws `UnprocessableEntityException` naming how many were not found.
+ *
+ * **A candidate's id is derived from the payload, not minted and kept**, so
+ * anything that changes a row's identity between the preview and the commit
+ * changes its id -- a change to the identity rules, to the separator, or to the
+ * incident key, and a preview held across any of them. Selection by set
+ * membership answers "not selected" to an id nobody recognises, which writes a
+ * strict subset of what was approved and reports it as a success.
+ *
+ * **Both lists, because they name rows the same way.** A correction addressed
+ * to an id no candidate carries is dropped just as quietly, and the row is then
+ * written with the value the analyst edited away.
+ */
+function refuseAStaleReview(
+  plan: { entities: readonly { id: string }[]; timeline: readonly { id: string }[] },
+  approved: readonly string[],
+  edits: readonly { id: string }[],
+): void {
+  const offered = new Set([...plan.entities, ...plan.timeline].map((one) => one.id))
+  const named = new Set([...approved, ...edits.map((one) => one.id)])
+  const missing = [...named].filter((id) => !offered.has(id))
+  if (missing.length === 0) return
+
+  const gone =
+    named.size === 1
+      ? 'the row it names is'
+      : `${String(missing.length)} of the ${String(named.size)} rows it names ` +
+        (missing.length === 1 ? 'is' : 'are')
+  throw new UnprocessableEntityException(
+    `This review is out of date: ${gone} no longer in the import. Run the review again.`,
+  )
 }
 
 export interface ImportDefinitions {
@@ -45,8 +81,35 @@ function timelineSchemaFor(row: Record<string, unknown>) {
   return row['kind'] === 'action' ? actionWriteSchema : eventWriteSchema
 }
 
+/**
+ * What a failed import tells the analyst it left behind.
+ *
+ * Three states and they read differently: rows that are in the case and want
+ * finishing, a run that wrote nothing because the case already held it all,
+ * and a run whose caller took the whole act back.
+ */
+function partlyWrote(entities: number, matched: number, kept: boolean): string {
+  if (!kept) {
+    return (
+      'The import wrote nothing: it failed at the timeline and the whole of it was taken ' +
+      'back, the case included. Run it again.'
+    )
+  }
+  if (entities === 0) {
+    const already = matched > 0 ? ' Everything it would have added was already in the case.' : ''
+    return `The import wrote nothing: it failed at the timeline.${already} Run it again.`
+  }
+  return (
+    `The import partly wrote: ${String(entities)} ` +
+    `${entities === 1 ? 'entity' : 'entities'} landed and the timeline did not. ` +
+    'Run it again to finish it - what is already there is matched rather than doubled.'
+  )
+}
+
 @Injectable()
 export class ImportService {
+  private readonly log = new Logger(ImportService.name)
+
   constructor(private readonly collections: CollectionService) {}
 
   /**
@@ -150,11 +213,14 @@ export class ImportService {
     defs: ImportDefinitions,
     /**
      * A caller's transaction. Every read and both writes go on it, so a failure
-     * at any of them takes the rest. Left unset, each opens its own.
+     * at any of them takes the rest -- which is what a failure at the timeline
+     * reports, rather than naming rows the rollback removed. Left unset, each
+     * opens its own and the entities survive.
      */
     on?: Executor,
   ): Promise<{ entities: number; timeline: number; skippedExisting: number }> {
     const plan = await this.preview(caseId, incidents, defs, on)
+    refuseAStaleReview(plan, approved, edits)
     const wanted = new Set(approved)
     const editsById = new Map<string, { field: string; value: unknown }[]>()
     for (const edit of edits) {
@@ -218,9 +284,79 @@ export class ImportService {
         ...IMPORTED_STAMP,
       }))
 
-    const timeline = rows.length
-      ? await this.collections.createMany(defs.timeline, caseId, rows, actorId, 'refuse', on)
-      : { ids: [] as string[] }
+    /**
+     * **A failure here has already written the entities**, and the store's own
+     * error says nothing about them -- so a caller could not tell a run that
+     * wrote five rows from one that wrote none, and an analyst who does not
+     * immediately retry goes to the case unable to tell what arrived from this
+     * import and what was already there.
+     *
+     * **The retry is the requirement's own answer and this is beside it**, not
+     * instead of it: `commit` re-runs `preview`, so a second run matches
+     * against the store and finishes the job. This is for the analyst who does
+     * not run it again. -> #170
+     *
+     * **Rethrown, never swallowed.** The first half of the requirement is that
+     * a partly written import does not report success, and returning a count
+     * here would report exactly that.
+     */
+    let timeline: { ids: string[] }
+    try {
+      timeline = rows.length
+        ? await this.collections.createMany(defs.timeline, caseId, rows, actorId, 'refuse', on)
+        : { ids: [] as string[] }
+    } catch (why) {
+      /**
+       * **This app's own refusal passes through unchanged.** The timeline
+       * write runs the case-boundary reference check, and its refusal is
+       * deterministic and names the row -- so wrapping it turned a permanent
+       * "this file points outside the case, at row 12" into a transient
+       * "partly wrote, run it again", which is advice that can only fail and
+       * loses the row number to `detail`.
+       */
+      if (why instanceof HttpException) throw why
+
+      /**
+       * **Whether the entities survive is the caller's transaction to decide.**
+       * Left unset, each write opened its own and they are in the case; handed
+       * one -- which `POST /imports/case` does, because the case itself is
+       * being created in the same act -- the failure takes everything back,
+       * and naming rows that landed would send an analyst looking for rows
+       * nobody can find.
+       */
+      const kept = on === undefined
+      const entities = kept
+        ? Object.values(written.ids).reduce((all, ids) => all + ids.length, 0)
+        : 0
+      const matched = kept ? skippedExisting : 0
+
+      /**
+       * **The store's own words are logged, never served.** They carry
+       * constraint names, table names and row values, and the refusal shape
+       * this route documents says the cause is in the server log only.
+       * -> `wire/refusals.ts`, `openapi.prose.ts`
+       */
+      this.log.error(
+        `An import of case ${caseId} failed at the timeline: ${
+          why instanceof Error ? why.message : String(why)
+        }`,
+      )
+
+      throw new UnprocessableEntityException({
+        /**
+         * **Read off the counts rather than asserted beside them.** The first
+         * draft said "the entities landed" whatever the numbers were, so a
+         * retry -- where every entity matches a row already there and nothing
+         * is written -- reported a partial write forever, its own `wrote`
+         * saying zero three lines below.
+         *
+         * The sentence is what an analyst sees: `import-sentinel.tsx` puts
+         * `error.message` on the screen and reads no other field.
+         */
+        message: partlyWrote(entities, matched, kept),
+        wrote: { entities, skippedExisting: matched, timeline: 0 },
+      })
+    }
 
     return {
       entities: Object.values(written.ids).reduce((count, ids) => count + ids.length, 0),

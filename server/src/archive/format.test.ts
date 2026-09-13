@@ -42,10 +42,17 @@ async function forge(
   return zipOf({ ...members, [MANIFEST_NAME]: bytes(JSON.stringify(stated)) })
 }
 
+/**
+ * What an archive may hold, stated here because `archive/` holds no ceiling of
+ * its own: the install answers that, and a pure module reaches nothing.
+ * -> #588
+ */
+const LIMITS = { memberBytes: 256 * 1024 * 1024, totalBytes: 512 * 1024 * 1024 }
+
 describe('an archive this code wrote', () => {
   it('comes back byte for byte', async () => {
     const made = await pack({ 'case.json': bytes('{"a":1}'), 'prose/x.ydoc': bytes('yjs') }, 'included')
-    const { members, attachments } = await readArchive(made)
+    const { members, attachments } = await readArchive(made, LIMITS)
     expect(Buffer.from(members['case.json']!).toString()).toBe('{"a":1}')
     expect(Buffer.from(members['prose/x.ydoc']!).toString()).toBe('yjs')
     expect(attachments).toBe('included')
@@ -54,7 +61,7 @@ describe('an archive this code wrote', () => {
   it('says whether the attachments travelled', async () => {
     // Without this an import cannot tell a deliberate handover from a backup
     // somebody damaged, and reports missing files for both.
-    expect((await readArchive(await pack({ 'case.json': bytes('{}') }, 'omitted'))).attachments).toBe(
+    expect((await readArchive(await pack({ 'case.json': bytes('{}') }, 'omitted'), LIMITS)).attachments).toBe(
       'omitted',
     )
   })
@@ -62,16 +69,16 @@ describe('an archive this code wrote', () => {
 
 describe('an archive somebody else built', () => {
   it('refuses a member that climbs out of the archive', async () => {
-    await expect(unpack(await forge({ '../../etc/passwd': bytes('x') }))).rejects.toThrow(BadArchive)
+    await expect(unpack(await forge({ '../../etc/passwd': bytes('x') }), LIMITS)).rejects.toThrow(BadArchive)
   })
 
   it('refuses an absolute member name', async () => {
-    await expect(unpack(await forge({ '/etc/passwd': bytes('x') }))).rejects.toThrow(BadArchive)
-    await expect(unpack(await forge({ 'C:\\windows\\x': bytes('x') }))).rejects.toThrow(BadArchive)
+    await expect(unpack(await forge({ '/etc/passwd': bytes('x') }), LIMITS)).rejects.toThrow(BadArchive)
+    await expect(unpack(await forge({ 'C:\\windows\\x': bytes('x') }), LIMITS)).rejects.toThrow(BadArchive)
   })
 
   it('refuses a backslash, which is a separator where the archive came from', async () => {
-    await expect(unpack(await forge({ 'a\\..\\..\\b': bytes('x') }))).rejects.toThrow(BadArchive)
+    await expect(unpack(await forge({ 'a\\..\\..\\b': bytes('x') }), LIMITS)).rejects.toThrow(BadArchive)
   })
 
   it('refuses a member swapped after the manifest was written', async () => {
@@ -83,7 +90,7 @@ describe('an archive somebody else built', () => {
       attachments: 'included',
       files,
     })
-    await expect(unpack(forged)).rejects.toThrow(/does not match the digest/)
+    await expect(unpack(forged, LIMITS)).rejects.toThrow(/does not match the digest/)
   })
 
   it('refuses a member the manifest never named', async () => {
@@ -94,7 +101,7 @@ describe('an archive somebody else built', () => {
       attachments: 'included',
       files: {},
     })
-    await expect(unpack(forged)).rejects.toThrow(/not in its manifest/)
+    await expect(unpack(forged, LIMITS)).rejects.toThrow(/not in its manifest/)
   })
 
   it('refuses a manifest naming a member that is not there', async () => {
@@ -103,12 +110,12 @@ describe('an archive somebody else built', () => {
       attachments: 'included',
       files: { 'case.json': sha256(bytes('{}')), 'evidence/gone': 'a'.repeat(64) },
     })
-    await expect(unpack(forged)).rejects.toThrow(/named in the manifest and missing/)
+    await expect(unpack(forged, LIMITS)).rejects.toThrow(/named in the manifest and missing/)
   })
 
   it('refuses an archive with no manifest at all', async () => {
     const bare = await zipOf({ 'case.json': bytes('{}') })
-    await expect(unpack(bare)).rejects.toThrow(/no manifest/)
+    await expect(unpack(bare, LIMITS)).rejects.toThrow(/no manifest/)
   })
 
   it('refuses a manifest that does not say whether the files travelled', async () => {
@@ -116,7 +123,7 @@ describe('an archive somebody else built', () => {
       version: ARCHIVE_VERSION,
       files: { 'case.json': sha256(bytes('{}')) },
     })
-    await expect(unpack(forged)).rejects.toThrow(/whether its files travelled/)
+    await expect(unpack(forged, LIMITS)).rejects.toThrow(/whether its files travelled/)
   })
 
   it('refuses a format version it does not read', async () => {
@@ -126,7 +133,7 @@ describe('an archive somebody else built', () => {
       attachments: 'included',
       files: { 'case.json': sha256(bytes('{}')) },
     })
-    await expect(unpack(forged)).rejects.toThrow(/version 99/)
+    await expect(unpack(forged, LIMITS)).rejects.toThrow(/version 99/)
   })
 
   it('refuses more members than an archive may hold', async () => {
@@ -134,7 +141,7 @@ describe('an archive somebody else built', () => {
     // the file green.
     const many: Record<string, Uint8Array> = {}
     for (let i = 0; i <= MAX_MEMBERS; i += 1) many[`m${String(i)}`] = bytes('x')
-    await expect(unpack(await zipOf(many))).rejects.toThrow(/too many members/)
+    await expect(unpack(await zipOf(many), LIMITS)).rejects.toThrow(/too many members/)
     // **The timeout is raised because building the archive is the cost, not
     // the assertion.** This one case is most of the file's runtime, and the
     // 5s default leaves no headroom: under a full-suite run on a loaded
@@ -145,7 +152,7 @@ describe('an archive somebody else built', () => {
    * **The two *byte* ceilings are not cheaply reachable from here, and saying
    * so is better than a test that looks like it covers them.**
    *
-   * `MAX_MEMBER_BYTES` is 256MB and `MAX_TOTAL_BYTES` is 512MB, so reaching
+   * the member ceiling is 256MB and the total ceiling is 512MB, so reaching
    * either honestly means allocating half a gigabyte in a unit test. The
    * dishonest route - a central directory that *claims* a huge member over a
    * small file - does not reach our bound at all: zip.js validates the
@@ -157,12 +164,12 @@ describe('an archive somebody else built', () => {
    * count above is the one this tier can hold.
    */
   it('refuses something that is not a zip', async () => {
-    await expect(unpack(Buffer.from('this is a text file, not an archive'))).rejects.toThrow(BadArchive)
+    await expect(unpack(Buffer.from('this is a text file, not an archive'), LIMITS)).rejects.toThrow(BadArchive)
   })
 
   it('refuses an unreadable manifest rather than importing nothing', async () => {
     const forged = await zipOf({ 'case.json': bytes('{}'), [MANIFEST_NAME]: bytes('{not json') })
-    await expect(unpack(forged)).rejects.toThrow(/manifest is unreadable/)
+    await expect(unpack(forged, LIMITS)).rejects.toThrow(/manifest is unreadable/)
   })
 })
 
@@ -186,7 +193,7 @@ describe('an archive written under an older shape', () => {
     const files: Record<string, string> = { 'case.json': sha256(members['case.json']) }
     const older = await forge(members, { version: 0, attachments: 'included', files })
 
-    const thrown = await readArchive(older).then(
+    const thrown = await readArchive(older, LIMITS).then(
       () => null,
       (error: unknown) => error as Error,
     )

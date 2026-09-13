@@ -20,6 +20,7 @@ import type { Database } from '../db/client.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { BadArchive, CASE_NAME, EVIDENCE_PREFIX, PROSE_PREFIX, readArchive } from '../archive/format.js'
 import { MalformedEnvelope, WrongPassphrase, isSealed, open } from '../archive/envelope.js'
+import { PolicyService } from '../policy/policy.service.js'
 import { REFERENCE_FIELD_NAMES } from '../domain/collections.js'
 import { z } from 'zod'
 import {
@@ -126,11 +127,16 @@ export class ArchiveImportService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Inject(EvidenceStore) private readonly store: EvidenceStore,
+    private readonly policy: PolicyService,
   ) {}
 
   async load(archive: Buffer, passphrase: string, actorId: string): Promise<ImportResult> {
     const plain = await this.unsealed(archive, passphrase)
-    const { members, attachments } = await readArchive(plain)
+    const stored_ = await this.policy.read()
+    const { members, attachments } = await readArchive(plain, {
+      memberBytes: stored_['evidence.attachmentMegabytes'] * 1024 * 1024,
+      totalBytes: stored_['evidence.archiveMegabytes'] * 1024 * 1024,
+    })
 
     const raw = members[CASE_NAME]
     if (!raw) throw new BadArchive('this archive carries no case')
@@ -158,6 +164,10 @@ export class ArchiveImportService {
         (async function* () {
           yield Buffer.from(bytes)
         })(),
+        undefined,
+        // The ceiling this import already read, rather than one read per
+        // member: an archive may hold 10,000 of them.
+        stored_['evidence.attachmentMegabytes'] * 1024 * 1024,
       )
       held.add(stored.hash)
     }

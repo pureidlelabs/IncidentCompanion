@@ -12,9 +12,7 @@ import { ConfigService } from '@nestjs/config'
 import { z } from 'zod'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 
-import { MAX_ATTACHMENT_BYTES } from '../evidence/store.js'
-import { MAX_TOTAL_BYTES } from '../archive/format.js'
-import { MIN_PASSPHRASE_CHARS } from '../archive/envelope.js'
+import { PolicyService } from '../policy/policy.service.js'
 import type { Env } from '../config/env.js'
 
 /**
@@ -76,7 +74,10 @@ export class InstallSettingsDto extends createZodDto(installSettingsSchema) {}
 
 @Controller('api')
 export class InstallSettingsController {
-  constructor(@Inject(ConfigService) private readonly config: ConfigService<Env, true>) {}
+  constructor(
+    @Inject(ConfigService) private readonly config: ConfigService<Env, true>,
+    private readonly policy: PolicyService,
+  ) {}
 
   @Get('settings')
   @ZodResponse({
@@ -84,7 +85,8 @@ export class InstallSettingsController {
     type: InstallSettingsDto,
     description: 'How this install is configured. No value here is a secret.',
   })
-  read(): InstallSettings {
+  async read(): Promise<InstallSettings> {
+    const stored = await this.policy.read()
     return {
       transport: {
         // **Not read from the environment.** There is no plaintext port, no
@@ -106,10 +108,15 @@ export class InstallSettingsController {
           'so antivirus cannot quarantine your evidence. This app does not scan them, ' +
           'and your endpoint protection cannot see inside them.',
       },
+      /**
+       * **What the install enforces, not what it shipped with.** These were
+       * the compile-time constants, so the screen agreed with the code and
+       * both disagreed with the setting an operator had changed. -> #588
+       */
       limits: {
-        attachmentBytes: MAX_ATTACHMENT_BYTES,
-        archiveBytes: MAX_TOTAL_BYTES,
-        passphraseChars: MIN_PASSPHRASE_CHARS,
+        attachmentBytes: stored['evidence.attachmentMegabytes'] * 1024 * 1024,
+        archiveBytes: stored['evidence.archiveMegabytes'] * 1024 * 1024,
+        passphraseChars: stored['evidence.passphraseChars'],
       },
       // **Named rather than duplicated.** A read-only copy of a switch that is
       // writable elsewhere is a second answer that can disagree with the first.

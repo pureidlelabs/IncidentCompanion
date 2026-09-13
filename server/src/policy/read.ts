@@ -26,6 +26,22 @@ import { POLICY_SETTINGS, type PolicyKey } from './keys.js'
 
 export type PolicyValues = Record<PolicyKey, number>
 
+/**
+ * Every bound at the value a fresh install starts with.
+ *
+ * **What `readPolicy` falls back to, published rather than rebuilt.** A stored
+ * row that no longer parses is read as its default, and a caller with no
+ * install to ask -- a test, a tool -- wants the same set rather than a second
+ * copy that drifts from it.
+ */
+export function defaultPolicy(): PolicyValues {
+  const out = {} as PolicyValues
+  for (const key of Object.keys(POLICY_SETTINGS) as PolicyKey[]) {
+    out[key] = POLICY_SETTINGS[key].fallback
+  }
+  return out
+}
+
 export async function readPolicy(db: Database): Promise<PolicyValues> {
   const keys = Object.keys(POLICY_SETTINGS) as PolicyKey[]
   const rows = await db

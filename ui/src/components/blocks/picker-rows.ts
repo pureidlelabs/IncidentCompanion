@@ -36,14 +36,14 @@ export const PICKER_AUDIT_NOW = Date.parse('2026-08-24T15:00:00.000Z')
 /** Newest first, and wide enough that the pager has a second page to offer. */
 export const PICKER_AUDIT: readonly AuditRow[] = [
   audit('v1', '2026-08-24T14:32:00.000Z', 'Low', 'Sign-in', 'authentication', 'Success', 'r.okonkwo', null, '10.20.4.18', 1),
-  audit('v2', '2026-08-24T14:29:00.000Z', 'High', 'Sign-in failed', 'authentication', 'Failure', null, 'm.delacroix', '198.51.100.24', 6),
-  audit('v3', '2026-08-24T13:58:00.000Z', 'Medium', 'Account locked', 'administration', 'Success', null, 'm.delacroix', '198.51.100.24', 1),
+  audit('v2', '2026-08-24T14:29:00.000Z', 'High', 'Sign-in failed', 'authentication', 'Failure', null, 'sign-in', '198.51.100.24', 6, { account: 'm.delacroix@meridian.example' }, true),
+  audit('v3', '2026-08-24T13:58:00.000Z', 'Medium', 'Account locked', 'administration', 'Success', null, 'm.delacroix', '198.51.100.24', 1, { failures: '5', minutes: '15' }),
   audit('v4', '2026-08-24T11:04:00.000Z', 'Low', 'Case opened', 'case', 'Success', 't.brennan', 'Meridian Logistics ransomware', '10.20.4.31', 1),
   audit('v5', '2026-08-24T10:47:00.000Z', 'Informational', 'Report exported', 'case', 'Success', 't.brennan', 'Customer RCA', '10.20.4.31', 1),
   audit('v6', '2026-08-23T16:20:00.000Z', 'Critical', 'Case deleted', 'case', 'Success', 'r.okonkwo', 'Exposed S3 bucket', '10.20.4.18', 1),
   audit('v7', '2026-08-23T16:02:00.000Z', 'High', 'Role changed', 'administration', 'Success', 'r.okonkwo', 's.iqbal', '10.20.4.18', 1),
   audit('v8', '2026-08-23T09:15:00.000Z', 'Low', 'Account created', 'administration', 'Success', 'r.okonkwo', 'd.novak', '10.20.4.18', 1),
-  audit('v9', '2026-08-22T22:41:00.000Z', 'Medium', 'Request refused', 'operations', 'Failure', null, null, '203.0.113.9', 44),
+  audit('v9', '2026-08-22T22:41:00.000Z', 'Medium', 'Request refused', 'operations', 'Failure', null, null, '203.0.113.9', 44, { tier: 'burst', limit: '120' }),
   audit('v10', '2026-08-22T08:00:00.000Z', 'Informational', 'Installation started', 'operations', 'Success', null, null, null, 1),
 ]
 
@@ -58,8 +58,23 @@ function audit(
   target: string | null,
   source: string | null,
   runLength: number,
+  attributes: Readonly<Record<string, string>> = {},
+  detailsVary = false,
 ): AuditRow {
-  return { id, at, severity, activity, channel, outcome, actor, target, source, runLength }
+  return {
+    id,
+    at,
+    severity,
+    activity,
+    channel,
+    outcome,
+    actor,
+    target,
+    source,
+    runLength,
+    attributes,
+    detailsVary,
+  }
 }
 
 /** The three checklists a new case can start from. */
@@ -271,7 +286,7 @@ export const PICKER_TABLES: readonly TableRow[] = [
   { name: 'account', approximateRows: 5, bytes: 32_768 },
 ]
 
-export const PICKER_UPTIME = 'up 3d 4h'
+export const PICKER_UPTIME = 'this server, up 3d 4h'
 
 /** One setting on the administration pane, and the choices it offers. */
 export interface BoundRow {

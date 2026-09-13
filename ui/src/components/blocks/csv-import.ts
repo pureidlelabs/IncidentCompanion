@@ -6,11 +6,19 @@
  * **A header is mapped by `toCamel(header)` against `fieldsOf(form)`, and
  * nothing is special-cased.** The identity column and the `<field>_display`
  * companions an export writes match no field, so they fall into the same
- * "unmapped, excluded" bucket as an unknown column - one rule instead of two,
- * and the app's own export still round-trips.
+ * "unmapped, excluded" bucket as an unknown column - one rule instead of two.
  *
- * **`DEDUP_KEYS` holds the natural key per collection**, and a collection
- * missing from it has none, so it never reports a duplicate.
+ * **It does not carry a reference, and the app's own export no longer
+ * round-trips through it.** A reference leaves as the name of the row it
+ * points at, and resolving a name against the destination case is the
+ * `.csv` route's work -- `POST .../{collection}/bulk`, which this builds for,
+ * takes an id and refuses a name. Nothing mounts this control today; whoever
+ * does either drops its reference columns or sends the file to the route that
+ * resolves them. -> #51, `server/src/exports/import.service.ts`
+ *
+ * **A duplicate is decided by the server's own key**, imported rather than
+ * restated: a collection `keyOf` gives no key has none, so it never reports a
+ * duplicate. -> `@contract/identity`
  *
  * **The row number a refusal names is the *submitted* array's, not the CSV's**,
  * skipped rows having already been dropped. `buildSubmission` returns `refs`,
@@ -22,6 +30,7 @@ import { toCamel } from '@/api/naming'
 import { fieldsOf, type FieldSpec, type FormSpec } from '@/api/specs'
 import type { CollectionName } from '@/api/model'
 import type { CsvTable } from '@/lib/csv'
+import { hasIdentity, keyOf } from '@contract/identity'
 
 export interface ColumnMapping {
   header: string
@@ -62,9 +71,11 @@ export function mapColumns<TData>(header: readonly string[], form: FormSpec<TDat
  * required-empty - plus a `select` field's own vocabulary, which the server
  * checks on the write and which is cheap to catch here first.
  * `autocomplete`, free text and reference kinds are not vocabulary-checked:
- * an id or an open-ended value has no closed list to fail against, so a
- * reference field is trusted through unresolved (this module's
- * docstring says why full referential-integrity checking is out of scope).
+ * an open-ended value has no closed list to fail against, so a reference field
+ * is trusted through unresolved -- and since a file names what a reference
+ * points at rather than where it was kept, what goes through is a name the
+ * bulk route will refuse. The module's docstring says where that leaves this
+ * door.
  */
 export function fieldProblems<TData>(field: FieldSpec<TData>, raw: string | undefined): string[] {
   const value = raw ?? ''
@@ -82,40 +93,6 @@ export function fieldProblems<TData>(field: FieldSpec<TData>, raw: string | unde
     return [`${field.label}: "${value}" is not one of the offered options`]
   }
   return []
-}
-
-function normalise(value: string | undefined): string | null {
-  const trimmed = (value ?? '').trim().toLowerCase()
-  return trimmed === '' ? null : trimmed
-}
-
-/**
- * The natural-key rule per collection, read off mapped CSV values.
- *
- * Keyed by the wire (snake_case) collection name, the spelling
- * `CollectionName` uses, and absent for every collection with no natural key.
- * **The rules match the server's row for row** - an importer that disagrees
- * doubles the case on a re-import.
- * -> `server/src/collections/identity.ts`
- */
-const DEDUP_KEYS: Partial<Record<CollectionName, (values: Record<string, string>) => string | null>> = {
-  systems: (values) => normalise(values.hostname),
-  accounts: (values) => {
-    const name = normalise(values.accountName)
-    return name === null ? null : `${name}\u0000${normalise(values.domain) ?? ''}`
-  },
-  network_indicators: (values) => {
-    // The pair, matching `identity.ts`: one value read two ways is two rows.
-    const value = (values.value ?? '').trim()
-    return value === '' ? null : `${value}\u0000${normalise(values.type) ?? ''}`
-  },
-  malware: (values) => normalise(values.hash),
-  cloud_apps: (values) => normalise(values.appName),
-}
-
-/** Whether `collection` has a natural key at all - gates the skip-duplicate column. */
-export function hasDedupKey(collection: CollectionName): boolean {
-  return collection in DEDUP_KEYS
 }
 
 /**
@@ -137,12 +114,12 @@ export function buildPreview<TData extends { id: string }>(
   const columns = mapColumns(csv.header, form)
   const unmappedHeaders = columns.filter((column) => column.field === null).map((column) => column.header)
   const fields = fieldsOf(form)
-  const dedupKey = DEDUP_KEYS[collection]
+  const keyed = hasIdentity(collection)
 
   const seen = new Set<string>()
-  if (dedupKey) {
+  if (keyed) {
     for (const entry of existing) {
-      const key = dedupKey(entry)
+      const key = keyOf(collection, entry)
       if (key !== null) seen.add(key)
     }
   }
@@ -159,8 +136,8 @@ export function buildPreview<TData extends { id: string }>(
         : [`row has ${String(cells.length)} column(s); the header has ${String(csv.header.length)}`]
 
     let duplicate = false
-    if (dedupKey) {
-      const key = dedupKey(values)
+    if (keyed) {
+      const key = keyOf(collection, values)
       if (key !== null) {
         duplicate = seen.has(key)
         seen.add(key)

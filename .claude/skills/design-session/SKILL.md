@@ -98,7 +98,7 @@ Two failure modes, both seen:
 curl -sk https://localhost/api/settings | jq .limits
 ```
 
-`MAX_ATTACHMENT_BYTES` is **256MB** (`server/src/evidence/store.ts`), beside an archive cap and a passphrase length. A list stressed at a smaller number is designed for a case the app does not have, so read the constant rather than recalling it. A select's stress case is its whole vocabulary. Where the server states no limit, the ceiling is what a real SIEM export or a real customer produces — run the importer over one and count.
+The attachment ceiling **defaults** to 256MB and an install may move it, between 1MB and what the edge carries -- `evidence.attachmentMegabytes` in `server/src/policy/keys.ts`, beside an archive cap and a passphrase length. A list stressed at a smaller number is designed for a case the app does not have, so read the setting's bounds rather than recalling a number: the one in the code is where it starts, not where it stops. A select's stress case is its whole vocabulary. Where the server states no limit, the ceiling is what a real SIEM export or a real customer produces — run the importer over one and count.
 
 - **Stress the axis the design is about.** For a table that is row count and the longest value in the widest column; for a graph, node count and the deepest lane; for a header, the number of actions plus the longest title.
 - **Group before you count.** 96 identical Sentinel beacons are **one** card, so the timeline's stress case is distinct beats, not raw entries — stressing the number the renderer never sees measures nothing.

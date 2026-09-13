@@ -17,10 +17,10 @@ import {
   actionable,
   collect,
   toStixBundle,
-  tlpMarking,
   toCsvRows,
   INDICATOR_CSV_COLUMNS,
 } from './indicators.js'
+import { TLP_NAMES, tlpMarking } from '../domain/tlp.lists.js'
 
 const NOW = new Date('2026-03-04T05:06:07.000Z')
 const ids = () => '11111111-2222-3333-4444-555555555555'
@@ -171,11 +171,17 @@ describe('the STIX bundle', () => {
     expect(JSON.stringify(bundle)).not.toContain('Shady App')
   })
 
+  /**
+   * **`spec_version` is asked of every object and the rest only of the
+   * indicators.** A marked bundle also carries the marking it references, and
+   * that object has neither a pattern nor an `indicator--` id.
+   */
   it('is a 2.1 bundle whose objects declare their spec version', () => {
     const bundle = toStixBundle(indicators, { now: NOW, ids })
     expect(bundle['type']).toBe('bundle')
     for (const object of bundle['objects'] as Record<string, unknown>[]) {
       expect(object['spec_version']).toBe('2.1')
+      if (object['type'] !== 'indicator') continue
       expect(object['pattern_type']).toBe('stix')
       expect(String(object['id'])).toMatch(/^indicator--/)
     }
@@ -195,10 +201,59 @@ describe('the STIX bundle', () => {
    */
   it('uses the specification id for a TLP marking', () => {
     const bundle = toStixBundle(indicators, { now: NOW, ids, tlp: 'amber' })
-    const first = (bundle['objects'] as Record<string, unknown>[])[0]!
-    expect(first['object_marking_refs']).toEqual([
-      'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82',
+    const objects = bundle['objects'] as Record<string, unknown>[]
+    // Found rather than indexed: a level that carries its own marking puts
+    // that object in the bundle too, and which comes first is not the subject.
+    const marked = objects.find((one) => one['type'] === 'indicator')
+
+    expect(marked, 'no indicator in the bundle, so nothing was marked').toBeDefined()
+    expect(marked!['object_marking_refs']).toEqual([
+      'marking-definition--55d920b0-5e8b-4f79-9ee9-91f868d9b421',
     ])
+  })
+
+  /**
+   * **Every marking a bundle references is one its reader can resolve.**
+   * Asserted as an invariant over the whole vocabulary rather than per level,
+   * because the defect it replaces was one level behaving unlike its
+   * neighbours and nothing comparing them.
+   *
+   * Every level is TLP 2.0, and those are property-extension objects that no
+   * consumer has by default -- so a reference with no object is dangling, and
+   * MISP drops a non-conforming object silently, which makes the symptom an
+   * empty import rather than an error. Nothing is exempt from being carried,
+   * which is what the STIX 2.1 predefined set used to buy and no longer does.
+   */
+  it.each(TLP_NAMES)('marks a bundle %s with a marking its reader can resolve', (level) => {
+    const bundle = toStixBundle(indicators, { now: NOW, ids, tlp: level })
+    const objects = bundle['objects'] as Record<string, unknown>[]
+    const carried = new Set(objects.map((one) => String(one['id'])))
+
+    const referenced = objects
+      .flatMap((one) => (one['object_marking_refs'] as string[] | undefined) ?? [])
+      .filter((ref) => ref.startsWith('marking-definition--'))
+    expect(referenced, 'the level was asked for and nothing is marked').not.toEqual([])
+
+    for (const ref of referenced) {
+      expect(
+        carried.has(ref),
+        `${level} references ${ref}, which no consumer has by default and the bundle does not carry`,
+      ).toBe(true)
+    }
+  })
+
+  /**
+   * **The strictest sharing constraint short of RED, and the export could not
+   * express it.** An analyst who marked a report `TLP:AMBER+STRICT` had to
+   * under-mark the bundle to `amber`, which widens who may act on it.
+   */
+  it('can mark a bundle with the level the report side calls AMBER+STRICT', () => {
+    const bundle = toStixBundle(indicators, { now: NOW, ids, tlp: 'amber+strict' })
+    const objects = bundle['objects'] as Record<string, unknown>[]
+
+    const marking = objects.find((one) => one['type'] === 'marking-definition')
+    expect(marking?.['id']).toBe('marking-definition--939a9414-2ddd-4d32-a0cd-375ea402b003')
+    expect(marking?.['name']).toBe('TLP:AMBER+STRICT')
   })
 
   it('refuses a TLP nobody defined', () => {

@@ -2,20 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import type { Report, ReportBlock } from '@/api/model'
 
-import {
-  DEMO_BLOCKS,
-  DEMO_REPORTS,
-  blocksOf,
-  railSectionsOf,
-  sectionTally,
-  demoReport,
-  headingIsFinal,
-  headingOf,
-  isFrozen,
-  outstandingIn,
-  shortDate,
-  stateOf,
-} from './report-shape'
+import { blocksOf, railSectionsOf, sectionTally, headingIsFinal, headingOf, isFrozen, outstandingIn, shortDate, stateOf } from './report-shape'
+import { DEMO_BLOCKS, DEMO_REPORTS, demoReport } from '@/fixtures/report-demo'
 
 /**
  * What the three report screens agree about a report, attacked.
@@ -155,6 +143,17 @@ describe('what a section is called', () => {
   it('uses the kind label when there is no heading and no key', () => {
     const one = block({ heading: '', headingKey: '', kind: 'timeline' })
     expect(headingOf(one)).toBe('Timeline of events')
+    expect(headingIsFinal(one)).toBe(true)
+  })
+
+  /**
+   * **A written section has no heading key at all**, so it is the one kind
+   * whose label cannot come from the pack. It is also the common path: an
+   * analyst inserts one and does not title it.
+   */
+  it('names an untitled written section rather than drawing its slug', () => {
+    const one = block({ heading: '', headingKey: '', kind: 'written' })
+    expect(headingOf(one)).toBe('Written section')
     expect(headingIsFinal(one)).toBe(true)
   })
 })

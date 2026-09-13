@@ -6,7 +6,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { bareInACase } from '@/fixtures/in-a-case'
 import { specsFixture } from '@/fixtures/specs'
 
-import { EMPTY_CASE } from './entity-scope'
+import { EMPTY_CASE } from '@/fixtures/empty-cases'
 import { EntityScopeTable, type EntityWrites } from './entity-scope-table'
 
 /**

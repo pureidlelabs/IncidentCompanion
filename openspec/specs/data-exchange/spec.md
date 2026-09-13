@@ -186,6 +186,8 @@ A feed intended for action MUST carry only indicators an analyst would act on. A
 
 A feed MUST carry the handling restriction under which it is shared, because an indicator feed leaves the install and the restriction is what tells the receiver what they may do with it.
 
+The restriction a feed carries MUST mean to its receiver what it meant to the analyst who chose it. Where the vocabulary has versions that spell a level alike and define it differently, the application MUST offer one of those versions and mark every feed under it. A restriction that reads the same to both ends and permits more to one of them is a disclosure the analyst did not make.
+
 #### Scenario: An indicator is recorded as harmless
 
 - GIVEN a case holding an indicator dispositioned as harmless
@@ -212,3 +214,40 @@ A feed MUST carry the handling restriction under which it is shared, because an 
 - WHEN the feed is requested
 - THEN it is refused
 - AND the refusal names the form that cannot carry it
+
+#### Scenario: A level two versions of the vocabulary spell alike
+
+- GIVEN a restriction whose name means one audience under an older version of the vocabulary and a narrower one under the version the application offers
+- WHEN a feed is marked with it
+- THEN the feed carries the version the application offers
+- AND a receiver reading it is permitted no wider an audience than the analyst chose
+
+
+### Requirement: A row says which door it came through, and the install decides that
+
+A row written by importing a file MUST say that it came through a file, on every collection that records where a row came from. An analyst reading a collection MUST be able to tell a row somebody typed from a row that arrived in a file.
+
+What the file says about a row's own origin MUST NOT be read. A file naming itself as some platform is a claim by whoever wrote the file, not evidence of where the row came from, so the answer is the install's and never the data's.
+
+A collection with no field for that answer MUST record nothing, rather than a field it does not have.
+
+#### Scenario: A row read out of a file
+
+- GIVEN a collection that records where a row came from
+- WHEN a file is imported into a case
+- THEN each row written says it came through a file
+- AND no row claims an analyst typed it
+
+#### Scenario: A file claims an origin of its own
+
+- GIVEN a file carrying a column that names where its rows came from
+- WHEN it is imported
+- THEN what that column says is not written
+- AND the rows say they came through a file
+
+#### Scenario: A collection that records no origin
+
+- GIVEN a collection with no field for where a row came from
+- WHEN a file is imported into a case
+- THEN the rows are written
+- AND nothing records a field that collection does not have

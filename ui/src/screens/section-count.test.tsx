@@ -14,7 +14,7 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { ReactElement } from 'react'
-import { DEMO_BLOCKS, DEMO_REPORTS } from '@/components/blocks/report-shape'
+import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
 
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'

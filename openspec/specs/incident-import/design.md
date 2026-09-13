@@ -38,6 +38,8 @@ The preview and the write are derived from the same incoming payload rather than
 
 The alternative is holding the proposed rows server-side between the two, which means a per-analyst staging area with its own lifetime, its own reach question, and its own way of going stale. Re-deriving costs a second pass over data that is already small.
 
+**Re-deriving has its own way of going stale, and the answer is to notice.** A candidate is named by a value derived from what the row is, so a change to the identity rules restates every name at once, and an approval written against the earlier run names rows the later one does not propose. Selection by membership answers *not chosen* to a name nobody recognises, which writes less than was approved and reports that as the whole of it. So the names a commit carries are reconciled against the run it is committing, and a mismatch is refused rather than dropped. The boundary this sets: an approval outlives nothing, and an analyst holding a review across a change to the rules is asked for it again.
+
 **Matching is done against the store, not against what the browser was told.** The preview a browser holds is a snapshot, and a case is not. Deciding what is a duplicate against the snapshot would duplicate anything another analyst added while the import was being read.
 
 ## A correction goes through the ordinary write path

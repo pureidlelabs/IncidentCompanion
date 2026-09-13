@@ -34,7 +34,7 @@ export const Default: Story = {
       await expect(
         canvas.getByText('An empty case, or one seeded from a case template.'),
       ).toBeVisible()
-      await expect(canvas.getByText('Import incidents into a new case.')).toBeVisible()
+      await expect(canvas.getByText('Start a case and bring rows in from a CSV.')).toBeVisible()
       await expect(canvas.getByText('Start from a live source')).toBeVisible()
     })
     await step('and pressing one opens that form and not the other', async () => {
@@ -58,13 +58,13 @@ export const NoImporter: Story = {
   args: { onBlank: fn() },
   play: async ({ args, canvas, step }) => {
     await step('every tile is drawn, so the feature is still visible', async () => {
-      await expect(canvas.getByText('Import incidents')).toBeVisible()
+      await expect(canvas.getByText('Import from a file')).toBeVisible()
       await expect(canvas.getByText('Start from a live source')).toBeVisible()
       await expect(canvas.getByText('Blank case')).toBeVisible()
     })
     await step('the ones with nothing behind them are refused', async () => {
       const tiles = canvas.getAllByRole('button')
-      for (const label of ['Import incidents', 'Start from a live source']) {
+      for (const label of ['Import from a file', 'Start from a live source']) {
         await expect(tiles.find((one) => one.textContent.includes(label))).toBeDisabled()
       }
     })

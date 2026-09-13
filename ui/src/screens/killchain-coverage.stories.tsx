@@ -5,7 +5,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
 import { KillchainCoverageScreen } from './killchain-coverage'
-import { EMPTY_CAMPAIGN } from './timeline-entries'
+import { EMPTY_CAMPAIGN } from '@/fixtures/empty-cases'
 
 /**
  * Whether the chain is accounted for.

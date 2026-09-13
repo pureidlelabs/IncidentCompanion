@@ -13,6 +13,7 @@ import { IncidentImportModule } from './incident-import/incident-import.module.j
 import { ComplianceModule } from './compliance/compliance.module.js'
 import { AccessModule } from './access/access.module.js'
 import { DbModule } from './db/db.module.js'
+import { PolicyModule } from './policy/policy.module.js'
 import { ThrottleModule } from './throttle/throttle.module.js'
 import { InstallActivityModule } from './install-activity/install-activity.module.js'
 import { InstallAuditModule } from './install-audit/install-audit.module.js'
@@ -44,6 +45,7 @@ import { ValidationPipe } from './wire/refusals.js'
       validate: loadEnv,
     }),
     DbModule,
+    PolicyModule,
     AccessModule,
     InstallActivityModule,
     ThrottleModule,

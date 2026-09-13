@@ -200,6 +200,63 @@ describe('the indicators search reads the Value column', () => {
   })
 })
 
+/**
+ * The bundle the analyst is actually handed, which is this one.
+ *
+ * **The screen builds its own file rather than asking the route for it**, so
+ * the server's marking table governs nothing here -- these two exporters ship
+ * separately and a marking is a sharing constraint. Covered by nothing until
+ * the table moved to `@contract/tlp.lists`: every level was emitted with a
+ * minted `marking-definition--<level>` id, which is not an identifier and
+ * which STIX 2.1 forbids as a second instance of a published marking.
+ */
+describe('the marking the download carries', () => {
+  const bundle = (tlp: string) =>
+    JSON.parse(indicatorsStix([row({ value: 'evil.test', type: 'domain' })], tlp)) as {
+      objects: { type?: string; object_marking_refs?: string[] }[]
+    }
+
+  it.each([
+    ['clear', 'marking-definition--94868c89-83c2-464b-929b-a1a8aa3c8487'],
+    ['amber+strict', 'marking-definition--939a9414-2ddd-4d32-a0cd-375ea402b003'],
+    ['amber', 'marking-definition--55d920b0-5e8b-4f79-9ee9-91f868d9b421'],
+  ])('references the published id for %s', (tlp, id) => {
+    const referenced = bundle(tlp).objects.flatMap((one) => one.object_marking_refs ?? [])
+    expect(referenced, 'the download marked nothing').not.toEqual([])
+    expect(referenced, 'a minted marking id, which no consumer resolves').toEqual([id])
+  })
+
+  /**
+   * Every level is TLP 2.0, so every one travels with its own marking object:
+   * a consumer has none of them by default and a bare reference is dangling.
+   */
+  it.each([
+    ['clear', 1],
+    ['green', 1],
+    ['amber', 1],
+    ['amber+strict', 1],
+    ['red', 1],
+  ] as const)('carries %s with %i marking object of its own', (tlp, carried) => {
+    const markings = bundle(tlp).objects.filter((one) => one.type === 'marking-definition')
+    expect(markings).toHaveLength(carried)
+  })
+
+  /**
+   * `white` is `clear` under the older version of the vocabulary, and the
+   * vocabulary offers one of them. The screen picks from `TLP_NAMES`, so this
+   * is reachable only by a caller composing the query itself.
+   */
+  it('refuses the level the older version called white', () => {
+    expect(() => bundle('white')).toThrow(/No TLP marking/)
+  })
+
+  it('marks nothing when no level was chosen', () => {
+    const objects = bundle('').objects
+    expect(objects.every((one) => one.object_marking_refs === undefined)).toBe(true)
+    expect(objects.some((one) => one.type === 'marking-definition')).toBe(false)
+  })
+})
+
 describe('the STIX bundle cannot be broken out of', () => {
   const patternOf = (value: string, type = 'domain'): string =>
     (JSON.parse(indicatorsStix([row({ value, type })], '')) as {

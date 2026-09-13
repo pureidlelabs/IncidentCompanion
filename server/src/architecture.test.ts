@@ -151,7 +151,13 @@ const MAY_IMPORT: Record<string, string[]> = {
   wire: [],
   /** A pure transformation of bytes: it knows an archive's members, not a case. */
   archive: [],
-  'case-archive': ['db', 'archive', 'cases', 'evidence', 'access', 'domain'],
+  /**
+   * `policy` because both of its doors are bounded by an install setting: the
+   * passphrase an archive is sealed with, and how large one may be. They held
+   * constants of their own until #588, which is how the settings came to be
+   * offered and read by nothing.
+   */
+  'case-archive': ['db', 'archive', 'cases', 'evidence', 'access', 'domain', 'policy'],
   brand: [],
   /** Bytes on disk. It knows where they go and nothing about a case. */
   evidence: ['config', 'policy'],
@@ -170,8 +176,12 @@ const MAY_IMPORT: Record<string, string[]> = {
    * `library`, `report`, `preferences` and three others do. The alternative is a
    * second copy of the schema outside `domain`, which is what that tier exists
    * to prevent.
+   *
+   * `policy` for the limits it states: the screen reported the compile-time
+   * constants, so it agreed with the code while both disagreed with the
+   * setting an operator had changed. -> #588
    */
-  health: ['config', 'evidence', 'archive', 'db', 'domain'],
+  health: ['config', 'db', 'domain', 'policy'],
   spa: ['config'],
   test: ['db', 'config'],
 }

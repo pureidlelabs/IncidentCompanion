@@ -21,9 +21,8 @@ alone. That makes the agreement asserted here the only thing standing between
 the two.
 
 **Read off the source rather than executed**, because the two live in separate
-workspaces and neither suite can import the other -- the same limit
-`test_dedup_keys_agree.py` records, and the same remedy: what has no home but
-this file is that the two constants are the same constant.
+workspaces and neither suite can import the other. What has no home but this
+file is that the two constants are the same constant.
 """
 
 from __future__ import annotations

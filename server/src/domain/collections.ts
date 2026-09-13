@@ -28,7 +28,7 @@ import { networkIndicatorSchema } from './entities/network-indicator.js'
 import { systemSchema } from './entities/system.js'
 import { reportBlockSchema } from './entities/report.js'
 import { actionWriteSchema, eventWriteSchema } from './entities/timeline.js'
-import { referenceFieldsOf } from './references.js'
+import { referenceFieldsOf, type ReferenceField } from './references.js'
 
 export interface CollectionDef {
   /**
@@ -159,12 +159,41 @@ export const TIMELINE_WRITE_SCHEMAS = {
  * `report_blocks` through `schemaFor`. Read this, not that, when the question
  * is where a reference can be declared.
  */
+const SUPPLIED_ELSEWHERE: Readonly<Record<string, readonly z.ZodObject[]>> = {
+  timeline: [eventWriteSchema, actionWriteSchema],
+  report_blocks: [reportBlockSchema],
+}
+
 export const REFERENCING_SCHEMAS: readonly z.ZodObject[] = [
   ...Object.values(COLLECTION_SCHEMAS),
-  eventWriteSchema,
-  actionWriteSchema,
-  reportBlockSchema,
+  ...Object.values(SUPPLIED_ELSEWHERE).flat(),
 ]
+
+/**
+ * Every reference field of one collection, whichever way it publishes a schema.
+ *
+ * **`COLLECTION_SCHEMAS` is the wrong question and answers quietly.** It omits
+ * the timeline, which has more reference fields than anything else -- so a
+ * caller reading it got an empty list and treated the collection as holding no
+ * references at all, rather than being told it could not see them.
+ *
+ * The timeline's two write schemas are a union here: a row is an event or an
+ * activity, and an export writes the columns the table has rather than the
+ * ones one kind uses.
+ */
+export function referencesOf(collection: string): ReferenceField[] {
+  const schemas = Object.hasOwn(SUPPLIED_ELSEWHERE, collection)
+    ? SUPPLIED_ELSEWHERE[collection]!
+    : COLLECTION_SCHEMAS[collection]
+      ? [COLLECTION_SCHEMAS[collection]]
+      : []
+
+  const found = new Map<string, ReferenceField>()
+  for (const schema of schemas) {
+    for (const one of referenceFieldsOf(schema)) found.set(one.field, one)
+  }
+  return [...found.values()]
+}
 
 /**
  * Every field name that carries a reference, across every collection.

@@ -29,7 +29,7 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { identitiesOf } from './identity.js'
+import { identitiesOf } from '../domain/identity.js'
 import { CollectionService } from './collection.service.js'
 import { DEFINITION as TIMELINE } from './timeline.controller.js'
 import { cases, timeline, user } from '../db/schema/index.js'

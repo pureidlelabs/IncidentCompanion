@@ -31,6 +31,17 @@ import { ReportRenderService } from './render.service.js'
 import { english } from './document/packs.js'
 import { openTestPool } from '../../test/database.js'
 import type { FigureNode } from './document/model.js'
+import { defaultPolicy } from '../policy/read.js'
+
+/**
+ * The install's bounds, as the doors read them.
+ *
+ * **A stub, because these cases are not about the bounds.** Every door reads
+ * them per act now, so a fixture that cannot answer fails to compile rather
+ * than falling back to a constant -- which is the state #588 was about.
+ */
+const POLICY_DEFAULTS = defaultPolicy()
+const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 const URL_ = process.env.DATABASE_URL
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -63,7 +74,7 @@ describe.skipIf(!db)('placing a figure', () => {
   beforeAll(async () => {
     store = new EvidenceStore({
       get: () => root,
-    } as unknown as ConstructorParameters<typeof EvidenceStore>[0])
+    } as unknown as ConstructorParameters<typeof EvidenceStore>[0], policy)
 
     const now = new Date()
     actorId = crypto.randomUUID()

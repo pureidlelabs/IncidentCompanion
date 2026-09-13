@@ -84,7 +84,21 @@ export const RUN_WINDOW_CEILING_MINUTES = 60
 export const ATTACHMENT_MEGABYTES = 256
 export const ARCHIVE_MEGABYTES = 512
 export const EVIDENCE_FLOOR_MEGABYTES = 1
-export const EVIDENCE_CEILING_MEGABYTES = 8 * 1024
+
+/**
+ * **What the shipped edge will carry, and therefore the most an operator may
+ * ask for.** `compose.yaml` gives the app no `ports:` -- nginx is the only door
+ * -- so an upload crosses `client_max_body_size` before the app sees a byte.
+ * Offering more than that is a bound refused somewhere the offer cannot see,
+ * which is #588 one layer out. `tests/repo/test_upload_ceilings_agree.py` holds
+ * the two together.
+ *
+ * **Lowered rather than raising nginx**: a request carrying gigabytes through
+ * Node holds a connection open long enough to look like a hang, and
+ * `evidence/store.ts` already says an artefact that large belongs in a locker
+ * with its path in `location`. Raising it is an edge decision and starts there.
+ */
+export const EVIDENCE_CEILING_MEGABYTES = 512
 
 export const PASSPHRASE_CHARS = 12
 export const PASSPHRASE_FLOOR = 8

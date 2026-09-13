@@ -24,14 +24,17 @@ import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 import { eq, getTableColumns } from 'drizzle-orm'
 
 import { toCsv } from './csv.js'
-import { collect, toCsvRows, toStixBundle, INDICATOR_CSV_COLUMNS, TLP_NAMES } from './indicators.js'
+import { collect, toCsvRows, toStixBundle, INDICATOR_CSV_COLUMNS } from './indicators.js'
+import { TLP_NAMES } from '../domain/tlp.lists.js'
 import { MAX_CSV_BYTES } from './csv-import.js'
 import { ImportService, type ImportResult } from './import.service.js'
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { columnOf } from '../db/column-access.js'
 import { withCase } from '../db/scope.js'
-import { BULK_TARGETS, TABLES, type BulkTarget } from '../collections/registry.js'
+import { BULK_TARGETS, REFERENCE_TABLES, TABLES, type BulkTarget } from '../collections/registry.js'
+import { referencesOf } from '../domain/collections.js'
+import { nameOf } from '../domain/reference-key.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
@@ -65,6 +68,16 @@ export const importedSchema = z.object({
       'Replacements another analyst had already changed or was holding open. ' +
         'Their values are in a merge review; nothing was overwritten.',
     ),
+  unlinked: z
+    .number()
+    .int()
+    .describe(
+      'References the destination case could not resolve. The rows were written ' +
+        'without them; nothing was refused for this.',
+    ),
+  unlinkedBy: z
+    .record(z.string(), z.number().int())
+    .describe('What could not be carried, keyed by the collection it pointed at.'),
 })
 
 class ImportedDto extends createZodDto(importedSchema) {}
@@ -105,10 +118,77 @@ export class ExportsController {
       ([property, column]) => [property, (column as { name: string }).name] as const,
     )
 
+    const named = await this.namesIn(collection, caseId)
+
     return toCsv(
-      rows.map((row) => Object.fromEntries(columns.map(([property, name]) => [name, row[property]]))),
+      rows.map((row) =>
+        Object.fromEntries(
+          columns.map(([property, name]) => [name, named(property, row[property])]),
+        ),
+      ),
       columns.map(([, name]) => name),
     )
+  }
+
+  /**
+   * How to write each reference column: what it points at, never where it was kept.
+   *
+   * **A row id means nothing outside the case that produced it.** Exporting one
+   * makes the file unusable the moment it crosses a case boundary, which is the
+   * ordinary use of a file rather than an edge case -- and it would be a way to
+   * name a row in a case the importing analyst may not reach.
+   * -> `openspec/specs/data-exchange/spec.md`
+   *
+   * Answers a function rather than a map so a column that is not a reference
+   * costs nothing, which is most of them.
+   */
+  private async namesIn(
+    collection: string,
+    caseId: string,
+  ): Promise<(property: string, value: unknown) => unknown> {
+    // **`referencesOf`, not `COLLECTION_SCHEMAS`.** The timeline publishes no
+    // single schema and has more reference fields than anything else, so the
+    // narrower lookup answered "no references" and wrote every one of them as
+    // a row id. -> `domain/collections.ts`
+    const references = referencesOf(collection)
+    if (references.length === 0) return (_property, value) => value
+
+    // **Two maps, because one held two kinds of key.** The cache is by target
+    // and the lookup is by field, and a field named like a target would have
+    // read the wrong entry. No such pair exists today -- every field is
+    // `*Id`/`*Ids` -- which is exactly when it is cheap to separate them.
+    const byTarget = new Map<string, Map<string, string>>()
+    const byField = new Map<string, Map<string, string>>()
+    for (const { field, target } of references) {
+      const table = REFERENCE_TABLES[target]
+      if (!table) continue
+      if (!byTarget.has(target)) {
+        const held = await this.caseRows(table, caseId)
+        byTarget.set(
+          target,
+          new Map(
+            held.flatMap((row) => {
+              const name = nameOf(target, row)
+              return name === null ? [] : [[row['id'] as string, name] as const]
+            }),
+          ),
+        )
+      }
+      // One target can be pointed at by two fields of one row -- the
+      // timeline's source and destination host -- so the lookup is by field.
+      byField.set(field, byTarget.get(target)!)
+    }
+
+    const of = (field: string, id: unknown): unknown => {
+      if (typeof id !== 'string' || id === '') return id
+      // **A row this case does not hold stays as it was**, which the import
+      // then reports as a reference it could not carry. Writing a blank would
+      // lose the fact that the file meant to point somewhere.
+      return byField.get(field)?.get(id) ?? id
+    }
+
+    return (property, value) =>
+      Array.isArray(value) ? value.map((one) => of(property, one)) : of(property, value)
   }
 
   /**

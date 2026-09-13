@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, within } from 'storybook/test'
 
+import { reportBlockKinds } from '@/fixtures/reportBlockKinds'
+
 import { ReportAddSectionMenu } from './report-add-section-menu'
 
 /**
@@ -13,7 +15,9 @@ const meta = {
   title: 'Blocks/Report/Add section menu',
   component: ReportAddSectionMenu,
   parameters: { layout: 'centered' },
-  args: { onAddSection: () => undefined },
+  // The component takes its kinds rather than defaulting to them, so the
+  // example content is named here. -> #237
+  args: { onAddSection: () => undefined, groups: reportBlockKinds },
 } satisfies Meta<typeof ReportAddSectionMenu>
 
 export default meta

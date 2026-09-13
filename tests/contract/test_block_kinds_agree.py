@@ -2,9 +2,9 @@
 
 `GET /api/report-block-kinds` answers every section a report can hold, grouped
 as the menu draws them, and the client ships its own copy of the same list as a
-fixture. Both are live: `report-add-section-menu.tsx` takes the fixture as the
-default for `groups`, so it is what an analyst is offered whenever the served
-list has not arrived.
+fixture. The menu itself draws whatever `groups` it is given and defaults to
+nothing, so the fixture is what every story and test of that menu offers -- a
+list that has drifted from the served one documents a menu nobody ships.
 
 Nothing holds the two together. A kind added to the server's `GROUPS` and not to
 the fixture is a section the analyst cannot insert although the install can
@@ -12,9 +12,8 @@ render it; one added the other way is a menu entry that inserts a kind the
 server does not know, and the failure arrives at the write rather than at the
 menu.
 
-**Read off the source rather than executed**, for `test_dedup_keys_agree.py`'s
-reason: the two live in different workspaces and neither suite can import the
-other. So this compares the *declarations* -- the headings and the kinds under
+**Read off the source rather than executed**, because the two live in
+different workspaces and neither suite can import the other. So this compares the *declarations* -- the headings and the kinds under
 each -- and not the labels, which the server takes from the English pack and the
 fixture spells out. A label drifting is visible on screen; a kind drifting is
 not.

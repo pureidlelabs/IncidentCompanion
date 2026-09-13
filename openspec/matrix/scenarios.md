@@ -4,11 +4,11 @@
 
 | | |
 | --- | --- |
-| Scenarios | 459 |
-| Demonstrated | 351 |
+| Scenarios | 474 |
+| Demonstrated | 369 |
 | Undemonstrable | 1 |
-| Unbuilt | 95 |
-| Undemonstrated | 12 |
+| Unbuilt | 91 |
+| Undemonstrated | 13 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -58,6 +58,8 @@
 | Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | demonstrated | server/test/account-lockout.test.ts |
 | Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | demonstrated | server/test/account-lockout.test.ts |
 | Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/password-hold-clears.test.ts |
+| Authentication resists guessing, and says so to the auditor | The install raises its password minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts |
+| Authentication resists guessing, and says so to the auditor | An account holds a password shorter than a raised minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts |
 | A second factor is available, and enforcing it is the install's policy | The policy is off | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | An analyst enrols anyway | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | The policy is turned on | unbuilt | Not built: no second factor. Kept normative. -> #59 |
@@ -186,7 +188,7 @@
 | A reference points inside its own case, and the store alone cannot enforce it | A referenced row is removed | demonstrated | server/src/collections/method-references.test.ts |
 | Only some collections have an identity, and the rest are events | The same host is imported twice | demonstrated | server/src/exports/import.service.test.ts |
 | Only some collections have an identity, and the rest are events | The same timeline entry is imported twice | demonstrated | server/src/collections/an-event-is-never-the-same-as-another.test.ts |
-| Only some collections have an identity, and the rest are events | A second way of creating rows is added | demonstrated | server/src/collections/identity.test.ts |
+| Only some collections have an identity, and the rest are events | A second way of creating rows is added | demonstrated | server/src/domain/identity.test.ts |
 | Doing something to many rows obeys every rule that governs one | Some rows in a bulk write have moved | demonstrated | server/src/collections/bulk.test.ts |
 | Doing something to many rows obeys every rule that governs one | A bulk write crosses the case boundary | demonstrated | server/src/collections/bulk.test.ts |
 | Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | demonstrated | server/src/collections/order-survives.test.ts |
@@ -199,6 +201,9 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
+| A figure the case records is one it can read back | A figure larger than the install can carry | demonstrated | server/src/customers/a-figure-larger-than-two-billion.test.ts |
+| A figure the case records is one it can read back | The largest figure the install can carry | demonstrated | server/src/customers/a-figure-larger-than-two-billion.test.ts |
+| A figure the case records is one it can read back | A figure arriving by a route that does not validate | undemonstrated | |
 | The answer has three values, and not knowing is one of them | A case records nothing yet | demonstrated | server/src/compliance/lenses.test.ts |
 | The answer has three values, and not knowing is one of them | A fact is recorded that settles it | demonstrated | server/src/compliance/lenses.test.ts |
 | The answer has three values, and not knowing is one of them | A fact is recorded that does not settle it | demonstrated | server/src/compliance/lenses.test.ts |
@@ -249,11 +254,11 @@
 | What the application writes, it can read back | A blank value | demonstrated | server/src/exports/a-blank-cell-is-not-a-value.test.ts |
 | An import is all of it or none of it | One row in a file is invalid | demonstrated | server/src/exports/import.service.test.ts |
 | An import is all of it or none of it | An import succeeds | demonstrated | server/src/exports/import.service.test.ts |
-| A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | unbuilt | Not built: a reference travels as an id, not as an identity. -> #51 |
-| A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | unbuilt | Not built: a reference travels as an id, not as an identity. -> #51 |
-| A reference travels as what it points at, not as where it was kept | A file names where a row was kept | unbuilt | Not built: a reference travels as an id, not as an identity. -> #51 |
-| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | server/src/exports/import.service.test.ts |
-| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | server/src/exports/import.service.test.ts |
+| A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | demonstrated | server/src/exports/import.service.test.ts |
+| A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | demonstrated | server/src/exports/import.service.test.ts |
+| A reference travels as what it points at, not as where it was kept | A file names where a row was kept | demonstrated | server/src/exports/import.service.test.ts |
+| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | ui/src/screens/an-import-says-what-it-could-not-carry.test.tsx |
+| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | ui/src/screens/an-import-says-what-it-could-not-carry.test.tsx |
 | An import says what to do about something already there | The analyst does not say what to do | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | A row was changed by somebody else | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | An unrecognised instruction | demonstrated | server/src/exports/exports.controller.test.ts |
@@ -265,6 +270,10 @@
 | An indicator feed is what a defender can act on | A disposition the application does not recognise | demonstrated | server/src/exports/indicators.test.ts |
 | An indicator feed is what a defender can act on | A feed is published for sharing | demonstrated | server/src/exports/indicators.test.ts |
 | An indicator feed is what a defender can act on | A restriction is named for a form that cannot carry one | demonstrated | server/src/exports/exports.controller.test.ts |
+| An indicator feed is what a defender can act on | A level two versions of the vocabulary spell alike | demonstrated | server/src/domain/tlp.lists.test.ts |
+| A row says which door it came through, and the install decides that | A row read out of a file | demonstrated | server/src/exports/import.service.test.ts |
+| A row says which door it came through, and the install decides that | A file claims an origin of its own | demonstrated | server/src/exports/import.service.test.ts |
+| A row says which door it came through, and the install decides that | A collection that records no origin | demonstrated | server/src/exports/import.service.test.ts |
 
 ## deployment
 
@@ -315,6 +324,8 @@
 | Nothing is written until an analyst has approved it | An analyst declines part of an import | demonstrated | server/src/incident-import/only-what-was-approved-is-written.test.ts |
 | Nothing is written until an analyst has approved it | An analyst corrects a value before it is written | demonstrated | server/src/incident-import/edits.test.ts |
 | Nothing is written until an analyst has approved it | A correction the description would refuse | demonstrated | server/src/incident-import/edits.test.ts |
+| Nothing is written until an analyst has approved it | An approval the import cannot account for | demonstrated | server/src/incident-import/a-stale-review-is-refused.test.ts |
+| Nothing is written until an analyst has approved it | A correction the import cannot account for | demonstrated | server/src/incident-import/a-stale-review-is-refused.test.ts |
 | An import is matched against what the case already holds | An imported thing is already in the case | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | The case changed while the import was reviewed | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | An event is imported twice | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
@@ -326,7 +337,7 @@
 | A failed import never leaves a case behind | An import asked to create a case fails | demonstrated | server/test/an-import-that-opens-a-case-fills-the-one-it-opened.test.ts |
 | A failed import never leaves a case behind | An import asked to create a case succeeds | demonstrated | server/test/an-import-that-opens-a-case-fills-the-one-it-opened.test.ts |
 | An import that failed partway can be run again without doing it twice | An import fails partway and is run again | demonstrated | server/src/incident-import/a-partly-written-import-is-run-again.test.ts |
-| An import that failed partway can be run again without doing it twice | A partly written import is reported | unbuilt | Not built: a partial write throws rather than reporting. -> #170 |
+| An import that failed partway can be run again without doing it twice | A partly written import is reported | demonstrated | server/src/incident-import/a-partly-written-import-is-run-again.test.ts |
 | An analyst can start a case from an incident | An analyst starts a case from an incident | demonstrated | server/e2e/incident-import.spec.ts |
 | An analyst can start a case from an incident | The analyst names the case at the review | demonstrated | ui/src/screens/import-sentinel-starts-a-case.test.tsx |
 | An analyst can start a case from an incident | An analyst leaves the wizard | demonstrated | ui/src/screens/import-sentinel-starts-a-case.test.tsx |
@@ -359,7 +370,11 @@
 | A line says who, what, and to what, and never says what was written | A caller invents a route | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | demonstrated | server/src/install-activity/record.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One failure and a run of them | demonstrated | server/src/install-audit/read.test.ts |
+| Refusals are recorded, and a run of them is louder than one | One caller, a different account each time | demonstrated | server/src/install-audit/read.test.ts |
+| Refusals are recorded, and a run of them is louder than one | What the caller supplied is still recorded | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
 | Refusals are recorded, and a run of them is louder than one | A stored seriousness is not lowered | demonstrated | server/src/install-audit/read.test.ts |
+| Refusals are recorded, and a run of them is louder than one | A run whose lines recorded different things | demonstrated | server/src/install-audit/read.test.ts |
+| Refusals are recorded, and a run of them is louder than one | A run whose lines recorded the same thing | demonstrated | server/src/install-audit/read.test.ts |
 | Changing what the audit keeps is itself audited, and loudly | The retention window is shortened | demonstrated | server/src/install-activity/setting-severity.test.ts |
 | Reading the audit is an act the audit records | An administrator reads the audit | demonstrated | server/src/install-audit/read.test.ts |
 | Reading the audit is an act the audit records | An analyst who is not an administrator | demonstrated | server/test/analyst-privilege.test.ts |

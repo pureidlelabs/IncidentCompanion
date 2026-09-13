@@ -50,6 +50,24 @@ describe('the add door', () => {
       label: 'Add asset',
       title: 'Add asset',
     },
+    /**
+     * **The two mass nouns, because they are the whole of #16.** `Assets` and
+     * `Accounts` read the same whether the label is derived from the title or
+     * read from the collection's noun, so a case on those alone leaves the
+     * defect reinstatable with every test green.
+     */
+    {
+      name: 'entities, scoped to a mass noun',
+      draw: () => <EntitiesScreen kase={campaignCase} specs={specsFixture} scope="network" />,
+      label: 'Add network indicator',
+      title: 'Add network indicator',
+    },
+    {
+      name: 'entities, scoped to the other mass noun',
+      draw: () => <EntitiesScreen kase={campaignCase} specs={specsFixture} scope="malware" />,
+      label: 'Add malware sample',
+      title: 'Add malware sample',
+    },
   ])('$name opens its creation dialog', async ({ draw, label, title }) => {
     const user = userEvent.setup()
     render(draw())
@@ -67,10 +85,20 @@ describe('the add door', () => {
     const user = userEvent.setup()
     render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope="all" />)
 
-    // **The menu half of the split, not the button half.** The button adds the
-    // first kind in one press; the kinds are behind the trigger beside it.
+    // **The button half, which nothing read.** It adds the first kind in one
+    // press and is the fourth site that named the thing by stripping an `s`;
+    // counting the menu's rows leaves its own label asserted by nobody.
+    expect(screen.getByRole('button', { name: 'Add asset' })).toBeInTheDocument()
+
+    // **The menu half of the split.** The kinds are behind the trigger beside
+    // the button, and each row names what pressing it makes -- the same word
+    // the dialog it opens is titled with.
     await user.click(screen.getByRole('button', { name: 'Add another kind' }))
     expect(screen.getAllByRole('menuitem').length).toBeGreaterThan(1)
+    expect(
+      screen.getByRole('menuitem', { name: 'Network indicator' }),
+      'a menu row names the section rather than the thing it makes',
+    ).toBeInTheDocument()
   })
 })
 

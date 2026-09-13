@@ -8,16 +8,21 @@ import type { CollectionName } from './model'
 /**
  * What the import route answers with.
  *
- * **Four counts, and `refused` is one of them.** The screen's own
- * `ImportResult` carries `refused` as a list of rows with reasons, which this
- * route does not serve -- a container mapping one to the other can fill the
- * count and never the list.
+ * **`refused` is a count here and a list on the screen.** The screen's own
+ * `ImportResult` carries rows with reasons, which this route does not serve --
+ * a container mapping one to the other can fill the count and never the list.
+ *
+ * **`unlinked` is not a refusal.** The row landed and the link did not, so it
+ * asks a different thing of the analyst: a refused row is one to fix and send
+ * again, a lost reference is a thing to bring across. -> #51
  */
 export interface Imported {
   added: number
   skipped: number
   replaced: number
   refused: number
+  unlinked: number
+  unlinkedBy: Readonly<Record<string, number>>
 }
 
 /** One table's worth of rows, and what to do with a row that is already there. */

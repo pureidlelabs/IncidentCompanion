@@ -60,8 +60,8 @@ describe.skipIf(!(await bootable()))('a caller asking faster than the install pe
    *
    * The header is `retry-after-burst` rather than `Retry-After`:
    * `@nestjs/throttler` 6.5.0 suffixes the name of every tier that is not
-   * called `default` (`throttler.guard.js:117`), and all three of ours are
-   * named. Matched by prefix so that naming a fourth tier does not fail this,
+   * called `default` (`throttler.guard.js:117`), and both of ours are named.
+   * Matched by prefix so that naming a third tier does not fail this,
    * and the value is asserted as a number of seconds because that is the part
    * a caller acts on.
    */
@@ -79,5 +79,29 @@ describe.skipIf(!(await bootable()))('a caller asking faster than the install pe
       expect(Number(value), `${value} is not a number of seconds`).toBeGreaterThan(0)
       expect(Number(value)).toBeLessThanOrEqual(BURST.ttl / 1000)
     }
+  })
+
+  /**
+   * **The spelling a stock retry library reads, which is what makes the answer
+   * act rather than merely be present.**
+   *
+   * `@nestjs/throttler` suffixes the header with each tier's name, so the case
+   * above passes on `retry-after-burst` alone -- which no off-the-shelf client
+   * looks for. `Retry-After` is the registered field (RFC 9110 s10.2.3), and a
+   * caller that cannot find it falls back to polling, which is the behaviour
+   * the limit exists to prevent.
+   *
+   * Asserted by exact name rather than by prefix, because the prefix match is
+   * what let the standard spelling be missing without anybody noticing.
+   */
+  it('names the wait under the header a standard client reads', async () => {
+    const answers = await rush(BURST.limit * 3)
+    const refused = answers.find((one) => one.status === 429)
+    expect(refused, 'nothing was refused, so there is no refusal to read').toBeDefined()
+
+    const wait = refused!.headers.get('retry-after')
+    expect(wait, 'refused with no `Retry-After`, so a stock client polls instead').not.toBeNull()
+    expect(Number(wait), `${String(wait)} is not a number of seconds`).toBeGreaterThan(0)
+    expect(Number(wait)).toBeLessThanOrEqual(BURST.ttl / 1000)
   })
 })

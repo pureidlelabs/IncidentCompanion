@@ -18,6 +18,35 @@ export const MAX_CSV_BYTES = 10 * 1024 * 1024
 export const MAX_CSV_ROWS = 50_000
 
 /**
+ * A list cell's items, honouring the escape `csv.ts` writes.
+ *
+ * A bare `;` separates; `\;` is one the item itself holds, and `\\` is a
+ * literal backslash. Written as a walk rather than a regular expression
+ * because the two are a contract and a lookbehind reads as though it were a
+ * detail of this side. -> `csv.ts`, `SEPARATOR`
+ */
+export function splitList(value: string): string[] {
+  const items: string[] = []
+  let item = ''
+  for (let at = 0; at < value.length; at += 1) {
+    const here = value[at]
+    if (here === '\\' && at + 1 < value.length) {
+      item += value[at + 1]
+      at += 1
+      continue
+    }
+    if (here === ';') {
+      items.push(item)
+      item = ''
+      continue
+    }
+    item += here
+  }
+  items.push(item)
+  return items
+}
+
+/**
  * Columns a reference picker writes for a human and the app never reads.
  *
  * A header of `systems_display` beside `systems` is dropped rather than refused
@@ -110,7 +139,7 @@ export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>
       bom: true,
     })
   } catch (error) {
-    throw new CsvInvalid(`CSV is invalid: ${(error as Error).message}`)
+    throw new CsvInvalid(`This file does not read as a CSV: ${(error as Error).message}`)
   }
 
   if (parsed.length > MAX_CSV_ROWS) {
@@ -153,17 +182,16 @@ export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>
       if (value === undefined) throw new CsvInvalid(`CSV row ${line} is missing a value.`)
 
       if (shape.lists.has(name)) {
-        row[name] = value
-          .split(';')
-          .map((item) => unquote(item.trim()))
-          .filter((item) => item.length > 0)
+        row[name] = splitList(value).map((item) => unquote(item.trim())).filter(
+          (item) => item.length > 0,
+        )
         continue
       }
       if (shape.booleans.has(name)) {
         const flag = value.trim().toLowerCase()
         if (TRUE.has(flag)) row[name] = true
         else if (FALSE.has(flag)) row[name] = false
-        else throw new CsvInvalid(`CSV row ${line} has an invalid boolean in ${name}.`)
+        else throw new CsvInvalid(`CSV row ${line}: "${value}" in ${name} is not a yes/no value.`)
         continue
       }
       row[name] = unquote(value)

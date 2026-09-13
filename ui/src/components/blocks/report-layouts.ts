@@ -1,6 +1,5 @@
 import type { Report } from '@/api/model'
 import { BLANK_LAYOUT, type LayoutBlock, type ReportLayout } from '@/api/reportLayouts'
-import { reportBlockLabels } from '@/fixtures/reportBlockKinds'
 
 /**
  * The report shapes an install offers, as `GET /api/report-layouts` serves
@@ -41,6 +40,7 @@ export const HEADING_LABELS: Readonly<Record<string, string>> = {
   'heading.evidence': 'Evidence',
   'heading.actions': 'Response actions',
   'heading.impact': 'Impact',
+  'heading.methods': 'Methods',
   'heading.indicators': 'Indicators of compromise',
   'heading.exec_summary': 'Executive summary',
   'heading.analysis': 'Analysis',
@@ -201,12 +201,36 @@ const SHIPPED: readonly LayoutSeed[] = [
   },
 ]
 
+/**
+ * What a kind with no heading key of its own is called.
+ *
+ * Only the written block: it is untitled until the analyst titles it, so its
+ * stored heading is the empty string by design and the pack resolves no key
+ * for it. The install's menu names it the same way, for the same reason.
+ * -> `server/src/report/block-kinds.ts`
+ */
+const UNKEYED_LABELS: Readonly<Record<string, string>> = {
+  written: 'Written section',
+}
+
+/**
+ * The words a kind is drawn under, where the block itself supplies none.
+ *
+ * The heading key is the real answer and arrives with the report, so this is
+ * reached only by a block that carries none. The words are English and the
+ * install's own, taken from the same pack rather than invented here; a kind
+ * neither map names falls through to the kind itself.
+ */
+export function labelForKind(kind: string): string {
+  return UNKEYED_LABELS[kind] ?? HEADING_LABELS[`heading.${kind}`] ?? kind
+}
+
 /** What a chip says: the heading key resolved, or the key itself. */
 function chipLabel(seed: Seed): string {
   if (seed.headingKey !== undefined) {
     return HEADING_LABELS[seed.headingKey] ?? seed.headingKey
   }
-  return reportBlockLabels[seed.kind] ?? seed.kind
+  return labelForKind(seed.kind)
 }
 
 function resolve(seed: LayoutSeed): ReportLayout {

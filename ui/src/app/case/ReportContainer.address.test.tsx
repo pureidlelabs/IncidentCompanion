@@ -20,7 +20,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EntityCardProvider } from '@/components/blocks/entity-card'
 import { CaseFrame } from '@/components/blocks/case-frame'
 import { DEMO_LAYOUTS, DEMO_TLP } from '@/components/blocks/report-layouts'
-import { DEMO_BLOCKS, DEMO_REPORTS, demoReport } from '@/components/blocks/report-shape'
+import { DEMO_BLOCKS, DEMO_REPORTS, demoReport } from '@/fixtures/report-demo'
 import { AriaRouter } from '@/components/ui/aria-router'
 import { campaignCase } from '@/fixtures/campaign'
 
