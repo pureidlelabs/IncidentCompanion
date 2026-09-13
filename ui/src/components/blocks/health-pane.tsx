@@ -64,8 +64,11 @@ export function HealthPane({
       <div className="flex max-w-[900px] flex-col gap-6">
         <Frame>
           <FrameHeader>
-            <FrameTitle className="text-2xs font-medium uppercase tracking-micro text-ink-muted">
+            <FrameTitle className="flex items-baseline gap-2 text-2xs font-medium uppercase tracking-micro text-ink-muted">
               Serving
+              <span className="text-2xs normal-case tracking-normal">
+                checked from this server
+              </span>
             </FrameTitle>
           </FrameHeader>
           <FramePanel className="flex flex-col gap-3">
