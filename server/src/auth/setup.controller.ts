@@ -32,6 +32,7 @@ import type { Database } from '../db/client.js'
 import { sameAddress } from './same-address.js'
 import { user } from '../db/schema/auth.js'
 import { ADMIN_ROLE, type Auth } from './auth.config.js'
+import { releaseTheClaim, takeTheClaim } from './claim.js'
 import { matchesToken, mintToken } from './setup.token.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from './password-policy.js'
 
@@ -145,6 +146,21 @@ export class SetupController {
     }
 
     /**
+     * **The database decides who claims it, not the count above.** That count
+     * and the sign-up below are two statements with a window between them, and
+     * the caller controls the timing: two claims for different usernames that
+     * both pass it both sign up, and each promotes its own row by its own
+     * `where`. -> `auth/claim.ts`
+     *
+     * The count stays because it is what answers an already-claimed install
+     * with the message an operator can act on, and because the requirement
+     * asks for it in as many words.
+     */
+    if (!(await takeTheClaim(this.db))) {
+      throw new ForbiddenException('This install already has an account.')
+    }
+
+    /**
      * **In process, never over the loopback.** A POST to this server's own
      * `/api/auth/sign-up/email` has to satisfy the origin check and, behind
      * TLS, a certificate `fetch` will not accept - for something the library
@@ -155,6 +171,10 @@ export class SetupController {
       asResponse: true,
     })
     if (!signedUp.ok) {
+      // **The install goes back to being claimable.** The password this
+      // install's own policy refuses is the ordinary way here, and an install
+      // nobody can ever claim is worse than the race this replaces.
+      await releaseTheClaim(this.db)
       throw new BadRequestException(`The account could not be created: ${await signedUp.text()}`)
     }
 

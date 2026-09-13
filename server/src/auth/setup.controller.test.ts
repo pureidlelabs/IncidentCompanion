@@ -24,8 +24,34 @@ import { mintToken } from './setup.token.js'
 
 const recordingDb = () => {
   const updates: { set: unknown; where: unknown }[] = []
+  /**
+   * Whether the claim row is already there, so a second `claim` on one stub
+   * is refused the way the database refuses it.
+   */
+  let taken = false
   const db = {
     select: () => ({ from: async () => [{ how: 0 }] }),
+    /**
+     * **Takes the install once**, which is what the controller now asks the
+     * database to decide. Answering every caller a row would make this stub
+     * assert the race rather than the fix.
+     */
+    insert: () => ({
+      values: () => ({
+        onConflictDoNothing: () => ({
+          returning: async () => {
+            if (taken) return []
+            taken = true
+            return [{ key: 'install.claimedAt' }]
+          },
+        }),
+      }),
+    }),
+    delete: () => ({
+      where: async () => {
+        taken = false
+      },
+    }),
     update: () => ({
       set: (values: unknown) => {
         const call = { set: values, where: undefined as unknown }
