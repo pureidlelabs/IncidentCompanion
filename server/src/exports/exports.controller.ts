@@ -156,7 +156,7 @@ export class ExportsController {
       const table = REFERENCE_TABLES[target]
       if (!table) continue
       if (!names.has(target)) {
-        const held = (await this.caseRows(table, caseId)) as Record<string, unknown>[]
+        const held = await this.caseRows(table, caseId)
         names.set(
           target,
           new Map(

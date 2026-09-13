@@ -392,6 +392,8 @@ export class ImportService {
  * and a bad thing to do without being asked.
  */
 
+export type OnDuplicate = 'skip' | 'replace'
+
 /**
  * The two shapes of the same fact, from the resolution and the write guard.
  *
@@ -407,8 +409,6 @@ function carried(
   const named = Object.values(lost).reduce((all, one) => all + one, 0)
   return { unlinked: named + dropped, unlinkedBy: lost }
 }
-
-export type OnDuplicate = 'skip' | 'replace'
 
 export interface ImportResult {
   added: number

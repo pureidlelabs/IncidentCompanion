@@ -35,7 +35,7 @@ describe('an import that lost references', () => {
       />,
     )
 
-    const said = document.body.textContent ?? ''
+    const said = document.body.textContent
     expect(said, 'the count of lost references is on no screen').toContain('3')
     // **The screen's own words for a collection**, so the analyst reads the
     // name on the rail rather than the one in the schema.
@@ -53,10 +53,9 @@ describe('an import that lost references', () => {
   it('says plainly that an import carried everything', () => {
     render(<ImportDataScreen kase={campaignCase} specs={specsFixture} result={carried} />)
 
-    expect(
-      document.body.textContent ?? '',
-      'an import that lost nothing does not say so',
-    ).toMatch(/every reference/i)
+    expect(document.body.textContent, 'an import that lost nothing does not say so').toMatch(
+      /every reference/i,
+    )
   })
 
   /**

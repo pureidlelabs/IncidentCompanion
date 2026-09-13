@@ -42,6 +42,16 @@ This is the distinction the whole reference design rests on, and the two look al
 
 Collapsing them would import the deduplication argument into a place it does not apply, and conclude that a reference to a method cannot travel. It can; it just must not merge anything on arrival.
 
+## A reference key is one field, and resolution refuses to guess
+
+A deduplication identity qualifies: an account is the pair, so `admin@corp.local` never merges into `admin@partner.local`. A reference key does not, and it does not need to, because resolving is not merging. It is the value a row is named by — a hostname, an account name, a method's name, a binary's digest — and where a row can be named more than one way it carries more than one, so a binary answers to its digest or to its filename.
+
+**A name resolves only where exactly one row in the destination answers to it.** Two methods called *Mailbox audit* make a reference to that name unanswerable, and picking either would attach the row to whichever the scan reached first — a guess wearing a link's clothes. Nothing is written, and the analyst is told, which is the same answer as a destination that holds nothing of that name and is honest for the same reason.
+
+The cost is real and is the right way round: a case whose rows are named ambiguously carries fewer references across than one whose rows are not. Widening the key to make more of them resolve would be the deduplication argument arriving where it does not belong.
+
+**No file names a row by where it was kept.** That falls out of the above rather than needing a rule: a stored id is not a hostname, so it answers to no row in the destination and is reported like any other name the case does not hold.
+
 ## Where a reference resolves, and what happens when it does not
 
 Resolution happens against the destination case. Importing back into the case a file came from resolves to the same rows; importing into a case that holds the same host resolves to that case's host, which is the point.

@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 472 |
-| Demonstrated | 363 |
+| Demonstrated | 366 |
 | Undemonstrable | 1 |
-| Unbuilt | 95 |
+| Unbuilt | 92 |
 | Undemonstrated | 13 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
@@ -252,11 +252,11 @@
 | What the application writes, it can read back | A blank value | demonstrated | server/src/exports/a-blank-cell-is-not-a-value.test.ts |
 | An import is all of it or none of it | One row in a file is invalid | demonstrated | server/src/exports/import.service.test.ts |
 | An import is all of it or none of it | An import succeeds | demonstrated | server/src/exports/import.service.test.ts |
-| A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | unbuilt | Not built: a reference travels as an id, not as an identity. -> #51 |
-| A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | unbuilt | Not built: a reference travels as an id, not as an identity. -> #51 |
-| A reference travels as what it points at, not as where it was kept | A file names where a row was kept | unbuilt | Not built: a reference travels as an id, not as an identity. -> #51 |
-| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | server/src/exports/import.service.test.ts |
-| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | server/src/exports/import.service.test.ts |
+| A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | demonstrated | server/src/exports/import.service.test.ts |
+| A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | demonstrated | server/src/exports/import.service.test.ts |
+| A reference travels as what it points at, not as where it was kept | A file names where a row was kept | demonstrated | server/src/exports/import.service.test.ts |
+| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | ui/src/screens/an-import-says-what-it-could-not-carry.test.tsx |
+| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | ui/src/screens/an-import-says-what-it-could-not-carry.test.tsx |
 | An import says what to do about something already there | The analyst does not say what to do | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | A row was changed by somebody else | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | An unrecognised instruction | demonstrated | server/src/exports/exports.controller.test.ts |
