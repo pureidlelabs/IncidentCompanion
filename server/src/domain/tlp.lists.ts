@@ -12,33 +12,18 @@
  * and MISP drops a non-conforming object silently -- so the symptom is an
  * empty import rather than an error.
  *
- * **The two TLP versions do not travel the same way, which is why they are
- * two tables.** STIX 2.1 predefines TLP 1.0's four markings and forbids any
- * other instance of them, so a reference alone is complete. TLP 2.0's are
- * property-extension objects no consumer has by default, so a bundle that
- * only references one is dangling.
+ * **The vocabulary is TLP 2.0 throughout, and the older ids are not reachable.**
+ * STIX 2.1 predefines TLP 1.0's four markings, which makes them the cheaper
+ * thing to reference -- they need no object carried. They also mean something
+ * else. RED is the level that shows it: 1.0 admits everyone in "the specific
+ * exchange, meeting, or conversation", where 2.0 is "the eyes and ears of
+ * individual recipients only". An analyst choosing the strictest level and
+ * getting the older id has shared it with a room.
  *
- * The vocabulary spans both on purpose: `white` is TLP 1.0 and `clear` its
- * TLP 2.0 successor, so a bundle can be marked for a consumer speaking either.
+ * So a level resolves to its 2.0 marking, which is a property-extension object
+ * no consumer has by default and therefore travels with the bundle.
+ * -> <https://www.first.org/tlp/> and <https://www.first.org/tlp/v1/>
  */
-
-/** TLP 1.0, predefined by STIX 2.1 s7.2.1.4 and referenced without carrying. */
-const TLP_1_MARKINGS: ReadonlyMap<string, string> = new Map(
-  Object.entries({
-    white: 'marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9',
-    green: 'marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da',
-    amber: 'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82',
-    red: 'marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed',
-  }),
-)
-
-/**
- * The ids a bundle may reference without carrying an object for them.
- *
- * A marking outside this set has to travel with the bundle, which is what
- * `tlpMarkingObjects` answers.
- */
-export const PREDEFINED_TLP_1_MARKINGS: ReadonlySet<string> = new Set(TLP_1_MARKINGS.values())
 
 /** The extension every TLP 2.0 marking declares itself through. */
 const TLP_2_EXTENSION = 'extension-definition--60a3c5c5-0d10-413e-aab3-9e08dde9e88d'
@@ -53,25 +38,29 @@ const TLP_2_CREATED = '2022-10-01T00:00:00.000Z'
 const TLP_2_MARKINGS: ReadonlyMap<string, { id: string; name: string }> = new Map(
   Object.entries({
     clear: { id: 'marking-definition--94868c89-83c2-464b-929b-a1a8aa3c8487', name: 'TLP:CLEAR' },
+    green: { id: 'marking-definition--bab4a63c-aed9-4cf5-a766-dfca5abac2bb', name: 'TLP:GREEN' },
+    amber: { id: 'marking-definition--55d920b0-5e8b-4f79-9ee9-91f868d9b421', name: 'TLP:AMBER' },
     'amber+strict': {
       id: 'marking-definition--939a9414-2ddd-4d32-a0cd-375ea402b003',
       name: 'TLP:AMBER+STRICT',
     },
+    red: { id: 'marking-definition--e828b379-4e03-4974-9ac4-e53a884c97c1', name: 'TLP:RED' },
   }),
 )
 
 /**
  * The vocabulary, in the order the level tightens.
  *
- * `white` sits beside `clear` rather than in sequence, being the same level
- * under the older version.
+ * The same five the report side offers, and for the same reason: a report
+ * marked at a level and a feed of its indicators marked at another is one
+ * case saying two things about who may hold it.
+ * -> `domain/entities/report.ts`
  */
-export const TLP_NAMES = ['clear', 'white', 'green', 'amber', 'amber+strict', 'red']
+export const TLP_NAMES = ['clear', 'green', 'amber', 'amber+strict', 'red']
 
 /** The id to reference, or a throw for a level nothing defines. */
 export function tlpMarking(tlp: string): string {
-  const level = tlp.toLowerCase()
-  const marking = TLP_1_MARKINGS.get(level) ?? TLP_2_MARKINGS.get(level)?.id
+  const marking = TLP_2_MARKINGS.get(tlp.toLowerCase())?.id
   if (!marking) throw new Error(`No TLP marking ${tlp}.`)
   return marking
 }
@@ -79,11 +68,11 @@ export function tlpMarking(tlp: string): string {
 /**
  * The objects a bundle has to carry so the marking it references resolves.
  *
- * Empty for a TLP 1.0 level, because those are predefined. For a TLP 2.0 one
- * it is the marking itself, reproduced as published rather than built from a
- * clock. The `extension-definition` it names is deliberately not carried:
- * STIX 2.1 s7.3 leaves that to the producer, and OASIS's own TLP 2.0 examples
- * carry neither.
+ * Every level carries one: a TLP 2.0 marking is a property-extension object
+ * that no consumer has by default, so a reference with nothing behind it is
+ * dangling. Reproduced as published rather than built from a clock. The
+ * `extension-definition` it names is deliberately not carried: STIX 2.1 s7.3
+ * leaves that to the producer, and OASIS's own TLP 2.0 examples carry neither.
  */
 export function tlpMarkingObjects(tlp: string): Record<string, unknown>[] {
   const level = tlp.toLowerCase()
