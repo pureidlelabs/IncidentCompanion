@@ -16,6 +16,7 @@ import { CustomersService } from './customers.service.js'
 import { ReachService } from '../access/reach.service.js'
 import { cases, customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
+import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -34,7 +35,7 @@ afterAll(async () => {
     await seed.delete(groupMembers)
     await seed.delete(groupCustomers)
     await seed.delete(groups)
-    await seed.delete(customers)
+    await clearCustomers(seed)
   }
   await pool?.end()
 })
@@ -52,7 +53,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
     await seed!.delete(groupMembers)
     await seed!.delete(groupCustomers)
     await seed!.delete(groups)
-    await seed!.delete(customers)
+    await clearCustomers(seed!)
 
     const now = new Date()
     await seed!

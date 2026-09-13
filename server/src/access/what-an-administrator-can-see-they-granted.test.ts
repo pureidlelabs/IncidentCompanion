@@ -21,11 +21,12 @@
  * wait on federation rather than on this.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { ReachService } from './reach.service.js'
 import { GroupsService } from './groups.service.js'
+import { CustomersService } from '../customers/customers.service.js'
 import { customers } from '../db/schema/customer.js'
 import { groups, groupCustomers, groupMembers } from '../db/schema/groups.js'
 import { user } from '../db/schema/auth.js'
@@ -43,12 +44,15 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
   let acme = ''
   let fallback = ''
   let dayShift = ''
+  /** The customers this file made, which are the only ones it may remove. */
+  const mine: string[] = []
 
   beforeEach(async () => {
     await db!.delete(groupMembers)
     await db!.delete(groupCustomers)
     await db!.delete(groups)
-    await db!.delete(customers)
+    if (mine.length > 0) await db!.delete(customers).where(inArray(customers.id, mine))
+    mine.length = 0
 
     const now = new Date()
     for (const [id, name] of [
@@ -68,13 +72,18 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
         .onConflictDoNothing()
     }
 
-    const [made] = await db!
-      .insert(customers)
-      .values({ name: 'Unattributed', isDefault: true })
-      .returning()
-    fallback = made!.id
+    /**
+     * **The install's own default, not one this file mints.**
+     *
+     * Sweeping `customers` and inserting a fresh default took out state the
+     * whole install shares -- every case is opened under that row, and the
+     * module recreates it at every boot. The foreign key from `cases` is what
+     * made the sweep visible, by refusing it; it was already wrong.
+     */
+    fallback = (await new CustomersService(db!).ensureDefault()).id
     const [one] = await db!.insert(customers).values({ name: 'Acme NV' }).returning()
     acme = one!.id
+    mine.push(acme)
 
     const [group] = await db!.insert(groups).values({ name: 'Day shift' }).returning()
     dayShift = group!.id
@@ -88,7 +97,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
     await db!.delete(groupMembers)
     await db!.delete(groupCustomers)
     await db!.delete(groups)
-    await db!.delete(customers)
+    if (mine.length > 0) await db!.delete(customers).where(inArray(customers.id, mine))
     await db!.delete(user).where(eq(user.id, ALEX))
     await db!.delete(user).where(eq(user.id, SAM))
     await pool?.end()

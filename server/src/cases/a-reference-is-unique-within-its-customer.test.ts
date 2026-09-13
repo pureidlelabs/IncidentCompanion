@@ -21,8 +21,9 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CasesService } from './cases.service.js'
-import { attributeUnattributedCases } from '../customers/customers.service.js'
+import { attributeUnattributedCases, defaultCustomer } from '../customers/customers.service.js'
 import { openTestPool } from '../../test/database.js'
+import { clearCustomers } from '../../test/customers.js'
 import { cases, customers, user } from '../db/schema/index.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -63,17 +64,13 @@ describe.skipIf(!db)('a reference within its customer', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await seed!.delete(customers)
+    await clearCustomers(seed!)
     /**
      * **The install always holds a default customer**, ensured on every boot by
      * `CustomersModule`. A case is opened under it, so a fixture without one is
      * an install this product does not have.
      */
-    const [made] = await seed!
-      .insert(customers)
-      .values({ name: 'Unattributed', isDefault: true })
-      .returning()
-    fallback = made!.id
+    fallback = (await defaultCustomer(seed!)).id
     const [one] = await seed!.insert(customers).values({ name: 'Acme NV' }).returning()
     const [two] = await seed!.insert(customers).values({ name: 'Other NV' }).returning()
     acme = one!.id
@@ -82,7 +79,7 @@ describe.skipIf(!db)('a reference within its customer', () => {
 
   afterAll(async () => {
     await seed!.delete(cases)
-    await seed!.delete(customers)
+    await clearCustomers(seed!)
     await seed!.delete(user).where(eq(user.id, ANALYST))
     await pool?.end()
   })
