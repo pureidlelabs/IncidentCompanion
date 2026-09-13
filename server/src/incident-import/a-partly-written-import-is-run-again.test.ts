@@ -100,8 +100,11 @@ describe('an import that failed partway', () => {
       )
     }
 
+    // The refusal is this app's, not the store's: the entities landed, so the
+    // caller is told that rather than handed the write error. The store's own
+    // words are on `detail`. -> the case below, #170
     await expect(run(), 'the first run was supposed to fail partway').rejects.toThrow(
-      'the timeline write failed',
+      /partly wrote/i,
     )
 
     expect(
@@ -122,5 +125,55 @@ describe('an import that failed partway', () => {
       'the retry did not write what was missing, so the import cannot be finished by ' +
         'running it again',
     ).toHaveLength(1)
+  })
+
+  /**
+   * **The belt to the retry's braces**, and the half of the requirement the
+   * retry does not cover: an analyst who does not immediately run it again
+   * goes to look at the case, and cannot tell whether what is in it arrived
+   * from this import or was already there.
+   *
+   * The store's own error says nothing about the rows that landed a moment
+   * earlier, so it is the one thing the caller must not be handed unchanged.
+   * -> #170
+   */
+  it('says what reached the case, rather than handing on the store error', async () => {
+    const rig = flaky()
+    const service = new ImportService(rig.service as never)
+    const incidents = [incident()]
+    const plan = await service.preview('case-1', incidents, defs())
+
+    const failure = await service
+      .commit(
+        'case-1',
+        'analyst',
+        incidents,
+        [...plan.entities.map((one) => one.id), ...plan.timeline.map((one) => one.id)],
+        [],
+        defs(),
+      )
+      .then(
+        () => undefined,
+        (why: unknown) => why,
+      )
+
+    expect(failure, 'the run was supposed to fail partway').toBeDefined()
+
+    const body = (failure as { response?: unknown }).response as
+      | { message?: unknown; wrote?: unknown }
+      | undefined
+
+    expect(
+      body?.message,
+      'the caller is told a write failed and not that part of it landed',
+    ).toMatch(/partly/i)
+    // **The counts, because "partly" alone is not what reached the case.** A
+    // failure that wrote five rows and one that wrote none read identically
+    // without them.
+    expect(body?.wrote, 'the failure does not say what reached the case').toEqual({
+      entities: 1,
+      skippedExisting: 0,
+      timeline: 0,
+    })
   })
 })

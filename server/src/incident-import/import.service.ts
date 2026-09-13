@@ -255,9 +255,42 @@ export class ImportService {
         ...IMPORTED_STAMP,
       }))
 
-    const timeline = rows.length
-      ? await this.collections.createMany(defs.timeline, caseId, rows, actorId, 'refuse', on)
-      : { ids: [] as string[] }
+    /**
+     * **A failure here has already written the entities**, and the store's own
+     * error says nothing about them -- so a caller could not tell a run that
+     * wrote five rows from one that wrote none, and an analyst who does not
+     * immediately retry goes to the case unable to tell what arrived from this
+     * import and what was already there.
+     *
+     * **The retry is the requirement's own answer and this is beside it**, not
+     * instead of it: `commit` re-runs `preview`, so a second run matches
+     * against the store and finishes the job. This is for the analyst who does
+     * not run it again. -> #170
+     *
+     * **Rethrown, never swallowed.** The first half of the requirement is that
+     * a partly written import does not report success, and returning a count
+     * here would report exactly that.
+     */
+    let timeline: { ids: string[] }
+    try {
+      timeline = rows.length
+        ? await this.collections.createMany(defs.timeline, caseId, rows, actorId, 'refuse', on)
+        : { ids: [] as string[] }
+    } catch (why) {
+      throw new UnprocessableEntityException({
+        message:
+          'The import partly wrote: the entities landed and the timeline did not. ' +
+          'Run it again to finish it - what is already there is matched rather than doubled.',
+        wrote: {
+          entities: Object.values(written.ids).reduce((all, ids) => all + ids.length, 0),
+          skippedExisting,
+          timeline: 0,
+        },
+        // The store's own words, for whoever is reading a log rather than the
+        // screen: the sentence above says what to do, this says what happened.
+        detail: why instanceof Error ? why.message : String(why),
+      })
+    }
 
     return {
       entities: Object.values(written.ids).reduce((count, ids) => count + ids.length, 0),
