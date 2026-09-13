@@ -12,6 +12,16 @@ export const PASSWORD_TOO_SHORT = `A password needs at least ${String(
 )} characters.`
 
 /**
+ * What a caller who may not know the install's minimum is told.
+ *
+ * **No number.** The bound is refused before the endpoint checks a session or
+ * a reset token, so this message reaches an anonymous caller, and the setting
+ * is otherwise readable only through an administrator's route.
+ * -> `auth.config.ts`, `PASSWORD_WRITES`
+ */
+export const PASSWORD_REFUSED = 'That password is too short for this install.'
+
+/**
  * Why a password is too short for *this install*, or null.
  *
  * **Two bounds, and only one of them is in a schema.** Every door declares

@@ -266,6 +266,10 @@ Sign-in MUST resist repeated guessing. A local account MUST lock after a number 
 
 Local passwords MUST meet a policy the install sets. Where a password must be changed, the holder MUST be unable to reach anything else until they change it.
 
+A policy the install sets MUST govern every door that writes a password, including any the authentication library serves itself, and MUST take effect without a restart. A bound read when the process started is one an administrator cannot raise, and a control that records a change it does not apply is worse than one that was never offered.
+
+The policy MUST govern what may be written and never what may be offered. Raising the minimum MUST NOT refuse a password already in use, or the change locks out every account holding a shorter one.
+
 These controls exist to answer OWASP ASVS 5.0 Level 2, which the constitution names as the grounding.
 
 #### Scenario: Repeated failures lock an account
@@ -286,6 +290,19 @@ These controls exist to answer OWASP ASVS 5.0 Level 2, which the constitution na
 - GIVEN an account marked as needing a new password
 - WHEN its holder requests anything other than changing it
 - THEN they are refused
+
+#### Scenario: The install raises its password minimum
+
+- GIVEN an install that has raised the minimum length a password may be
+- WHEN a password shorter than it is set, at any door that sets one
+- THEN it is refused
+- AND a password meeting the minimum is accepted
+
+#### Scenario: An account holds a password shorter than a raised minimum
+
+- GIVEN an account whose password was set before the minimum was raised
+- WHEN its holder signs in with it
+- THEN they are signed in
 
 ### Requirement: A second factor is available, and enforcing it is the install's policy
 
