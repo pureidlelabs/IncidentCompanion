@@ -22,7 +22,7 @@ import { randomUUID } from 'node:crypto'
 import { Algorithm, hash as argonHash, verify as argonVerify } from '@node-rs/argon2'
 import type { Database } from '../db/client.js'
 import * as schema from '../db/schema/index.js'
-import { MINIMUM_PASSWORD_LENGTH } from './password-policy.js'
+import { MINIMUM_PASSWORD_LENGTH, refusePassword } from './password-policy.js'
 import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
 import { sameAddress } from './same-address.js'
 import { readPolicy } from '../policy/read.js'
@@ -36,6 +36,22 @@ import { sessionEnded } from './session-ended.js'
  * identifiers they tried. The identifier itself is in `detail`.
  */
 export const SIGN_IN = 'sign-in'
+
+/**
+ * The endpoints that write a password, and the body field each carries it in.
+ *
+ * Two are the library's own and reach no controller of ours; two are reached
+ * in process by `setup.controller.ts` and `accounts.controller.ts`, which
+ * `disabledPaths` does not intercept. -> #374
+ */
+const PASSWORD_WRITES: Readonly<Record<string, string>> = {
+  '/sign-up/email': 'password',
+  '/admin/create-user': 'password',
+  '/change-password': 'newPassword',
+  '/reset-password': 'newPassword',
+  '/set-password': 'newPassword',
+  '/admin/set-user-password': 'newPassword',
+}
 
 const ARGON2ID = {
   algorithm: Algorithm.Argon2id,
@@ -441,6 +457,33 @@ export function authOptions(
      */
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        /**
+         * **Every door that writes a password, in one place.** The install's
+         * minimum is a stored number and `minPasswordLength` is fixed when
+         * these options are built, so the library's own `/change-password` and
+         * `/reset-password` -- neither of which is in `disabledPaths` -- would
+         * go on taking whatever was set at boot. A check in a controller
+         * reaches neither of them.
+         *
+         * **Read now, like every other bound here.** A minimum cached at boot
+         * is one an administrator cannot raise without a restart, which for a
+         * security control is the same as not settable.
+         *
+         * **Sign-in is not on this list and must never be.** The bound governs
+         * what may be *written*; applying it to what is *offered* would lock
+         * every account holding a password shorter than a raised minimum out
+         * of the install, which is the opposite of the control.
+         */
+        const writes = PASSWORD_WRITES[ctx.path]
+        if (writes) {
+          const supplied = (ctx.body as Record<string, unknown> | undefined)?.[writes]
+          if (typeof supplied === 'string') {
+            const stored = await readPolicy(db)
+            const refusal = refusePassword(supplied, stored['auth.minPasswordLength'])
+            if (refusal) throw new APIError('UNPROCESSABLE_ENTITY', { message: refusal })
+          }
+        }
+
         /**
          * **A shut account is refused before the password is checked**, so a
          * lockout costs an attacker the guess rather than merely the answer -

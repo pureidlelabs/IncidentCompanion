@@ -22,6 +22,7 @@ import {
 import { AuthService, Session, type UserSession } from '@thallesp/nestjs-better-auth'
 import { fromNodeHeaders } from 'better-auth/node'
 import type { IncomingHttpHeaders } from 'node:http'
+import { APIError } from 'better-auth/api'
 import { z } from 'zod'
 
 import { PasswordHoldService } from './password-hold.service.js'
@@ -87,7 +88,20 @@ export class ChangePasswordController {
         },
         headers: fromNodeHeaders(request.headers),
       })
-    } catch {
+    } catch (why) {
+      /**
+       * **The install's own minimum is answered as itself.** It is refused by
+       * the `before` hook rather than by the schema above, because the number
+       * is stored and a schema is built once -- so without this the analyst is
+       * told their current password is wrong when what was wrong is the new
+       * one, and no amount of retyping the right thing gets them through.
+       * -> `auth.config.ts`, `PASSWORD_WRITES`
+       */
+      if (why instanceof APIError && why.status === 'UNPROCESSABLE_ENTITY') {
+        throw new UnprocessableEntityException({
+          message: (why.body as { message?: unknown } | undefined)?.message ?? PASSWORD_TOO_SHORT,
+        })
+      }
       // Better Auth reports a wrong current password as a refusal; anything
       // else here is the same answer to the caller, who may not learn which
       // half failed.
