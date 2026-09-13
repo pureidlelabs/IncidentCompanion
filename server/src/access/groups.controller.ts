@@ -39,6 +39,20 @@ const madeSchema = z.object({ id: z.uuid() })
 class GroupListDto extends createZodDto(listSchema) {}
 class GroupMadeDto extends createZodDto(madeSchema) {}
 
+
+const membershipSchema = z.object({
+  members: z.array(
+    z.object({
+      userId: z.string(),
+      username: z.string(),
+      displayName: z.string(),
+      level: z.enum(LEVELS),
+    }),
+  ),
+  customers: z.array(z.object({ customerId: z.uuid(), customerName: z.string() })),
+})
+class MembershipDto extends createZodDto(membershipSchema) {}
+
 const DONE = { done: true } as const
 
 @AdminOnly()
@@ -81,6 +95,25 @@ export class GroupsController {
   @ZodResponse({ status: 200, type: GroupListDto, description: 'Every group this install holds.' })
   async list(): Promise<z.infer<typeof listSchema>> {
     return { groups: await this.groups.all() }
+  }
+
+  /**
+   * What this group contains.
+   *
+   * **The read the six writes had no counterpart for.** An administrator could
+   * grant and revoke membership and never see what a group holds, which is the
+   * question they are answering when they open it. -> #208
+   */
+  @Get(':groupId')
+  @ZodResponse({
+    status: 200,
+    type: MembershipDto,
+    description: 'Who is in this group, and which customers it holds.',
+  })
+  async membership(
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+  ): Promise<z.infer<typeof membershipSchema>> {
+    return this.groups.membership(groupId)
   }
 
   @Post()

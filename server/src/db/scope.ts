@@ -24,8 +24,18 @@ import type { Database, Transaction } from './client.js'
  */
 export type Executor = Database | Transaction
 
-/** A pool carries its client; a transaction is a handle on one already taken. */
-function nested(db: Executor): db is Transaction {
+/**
+ * Whether this handle is a transaction already open, rather than a pool.
+ *
+ * A pool carries its client; a transaction is a handle on one already taken.
+ *
+ * **Exported because "is this composed?" is asked outside this module too**, and
+ * the other way to ask it -- comparing against the caller's own handle -- is
+ * wrong for the second pool this install has: a write handed `SEED_DATABASE`
+ * opens and commits its own transaction and is not composed, while an identity
+ * check says it is.
+ */
+export function nested(db: Executor): db is Transaction {
   return !('$client' in db)
 }
 

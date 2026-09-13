@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 474 |
-| Demonstrated | 369 |
+| Demonstrated | 372 |
 | Undemonstrable | 1 |
-| Unbuilt | 91 |
+| Unbuilt | 88 |
 | Undemonstrated | 13 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
@@ -89,11 +89,11 @@
 | A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | unbuilt | Not built: a session has an idle window and no absolute cap. -> #203 |
 | A session belongs to its holder and ends when it should | An analyst reviews their own sessions | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
 | A session belongs to its holder and ends when it should | Every session is ended at once | unbuilt | Not built: no route ends another analyst's session. -> #204 |
-| An administrator can see who reaches what, and why | An administrator reviews access | unbuilt | Not built: no surface answers who reaches what. -> #208 |
-| An administrator can see who reaches what, and why | An administrator asks why | unbuilt | Not built: no surface answers who reaches what. -> #208 |
-| An administrator can see who reaches what, and why | An administrator asks from the customer's side | unbuilt | Not built: no surface answers who reaches what. -> #208 |
-| An administrator can see who reaches what, and why | Somebody who has never signed in | unbuilt | Not built: no surface answers who reaches what. -> #208 |
-| An administrator can see who reaches what, and why | An account has never been used | unbuilt | Not built: no surface answers who reaches what. -> #208 |
+| An administrator can see who reaches what, and why | An administrator reviews access | unbuilt | Not built: whether an account is local or the provider's, and its second factor. -> #59 |
+| An administrator can see who reaches what, and why | An administrator asks why | demonstrated | server/src/access/what-an-administrator-can-see-they-granted.test.ts |
+| An administrator can see who reaches what, and why | An administrator asks from the customer's side | demonstrated | server/src/access/what-an-administrator-can-see-they-granted.test.ts |
+| An administrator can see who reaches what, and why | Somebody who has never signed in | unbuilt | Not built: a mapped provider group admitting people the install has never met. -> #59 |
+| An administrator can see who reaches what, and why | An account has never been used | unbuilt | Not built: the last sign-in is stored and no surface carries it. -> #208 |
 | Administrative events are logged | Somebody is given reach | demonstrated | server/src/access/a-grant-is-recorded-with-what-it-granted.test.ts |
 | Administrative events are logged | Somebody signs in | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
 | Administrative events are logged | Somebody is refused a customer | demonstrated | server/test/a-refused-reach-says-what-was-refused.test.ts |
@@ -266,9 +266,9 @@
 | What leaves the application cannot execute in what opens it | A file that has already been through a spreadsheet | demonstrated | server/src/exports/a-file-round-tripped-through-a-spreadsheet.test.ts |
 | Content that hides what it says is refused before it is stored | A value carries characters that cannot be seen | demonstrated | server/src/exports/method-cells.test.ts |
 | A file has a size the application will accept, and says so when it will not | A file is too large | demonstrated | server/src/exports/csv-import.test.ts |
-| An indicator feed is what a defender can act on | An indicator is recorded as harmless | demonstrated | server/src/exports/indicators.test.ts |
-| An indicator feed is what a defender can act on | A disposition the application does not recognise | demonstrated | server/src/exports/indicators.test.ts |
-| An indicator feed is what a defender can act on | A feed is published for sharing | demonstrated | server/src/exports/indicators.test.ts |
+| An indicator feed is what a defender can act on | An indicator is recorded as harmless | demonstrated | server/src/domain/indicators.lists.test.ts |
+| An indicator feed is what a defender can act on | A disposition the application does not recognise | demonstrated | server/src/domain/indicators.lists.test.ts |
+| An indicator feed is what a defender can act on | A feed is published for sharing | demonstrated | server/src/domain/indicators.lists.test.ts |
 | An indicator feed is what a defender can act on | A restriction is named for a form that cannot carry one | demonstrated | server/src/exports/exports.controller.test.ts |
 | An indicator feed is what a defender can act on | A level two versions of the vocabulary spell alike | demonstrated | server/src/domain/tlp.lists.test.ts |
 | A row says which door it came through, and the install decides that | A row read out of a file | demonstrated | server/src/exports/import.service.test.ts |
@@ -297,7 +297,7 @@
 | An install can say whether it is well, and what is wrong | A component has started but cannot answer | demonstrated | server/src/health/dependencies.health.test.ts |
 | An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | server/src/health/dependencies.health.test.ts |
 | The application runs with no more than it needs | The application attempts something outside its work | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
-| The application runs with no more than it needs | A part is examined for what it can do | unbuilt | Not built: every container keeps the default capability set. -> #185 |
+| The application runs with no more than it needs | A part is examined for what it can do | demonstrated | tests/docker/test_container_config.py |
 
 ## evaluation
 

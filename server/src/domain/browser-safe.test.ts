@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -37,6 +37,9 @@ const HERE = dirname(fileURLToPath(import.meta.url))
  */
 const ALLOWED_PACKAGES = new Set(['zod'])
 
+/** A `.lists` module, which is a source file rather than its test. */
+const isListModule = (name: string) => name.endsWith('.lists.ts') && !name.endsWith('.test.ts')
+
 /**
  * Every door the client value-imports through, which is what `ui/eslint.config.js`
  * permits by name.
@@ -45,7 +48,28 @@ const ALLOWED_PACKAGES = new Set(['zod'])
  * refusing the import and nothing walks what it drags in, so the check reads as
  * covering a surface it has never opened.
  */
-const ENTRIES = ['collections.ts', 'identity.ts', 'indicator-shape.ts', 'malware-shape.ts']
+const ENTRIES = [
+  'collections.ts',
+  'identity.ts',
+  'indicator-shape.ts',
+  'malware-shape.ts',
+  /**
+   * **Every `.lists` module the client value-imports, named one at a time.**
+   * `ui/eslint.config.js` permits them by the glob `!@contract/*.lists`, and a
+   * glob cannot be walked -- so the closure check reaches them only by being
+   * told. They were leaves until `indicators.lists.ts` needed three of its
+   * siblings, which is what ended the shortcut the sibling test describes.
+   */
+  'colours.lists.ts',
+  'hashes.lists.ts',
+  'indicators.lists.ts',
+  'invisible.lists.ts',
+  'naming.lists.ts',
+  'scopes.lists.ts',
+  'spreadsheet.lists.ts',
+  'tlp.lists.ts',
+  'vocabularies.lists.ts',
+]
 
 function importsOf(source: string): string[] {
   const specs: string[] = []
@@ -123,11 +147,22 @@ describe('what the client bundles to validate a draft', () => {
   /** Every door the lint names is walked, so neither list can grow alone. */
   it('starts from every entry the client is allowed to value-import', () => {
     const config = readFileSync(resolve(HERE, '../../../ui/eslint.config.js'), 'utf8')
-    const permitted = [...config.matchAll(/'!@contract\/([\w.-]+)'/g)].map((match) => match[1]!)
+    // **`*` is in the character class, and leaving it out was the whole gap.**
+    // The glob never matched, so the filter that claimed to set it aside was
+    // dead and this test compared four written-out doors against four.
+    const permitted = [...config.matchAll(/'!@contract\/([\w.*-]+)'/g)].map((match) => match[1]!)
 
-    // `*.lists` is a glob over the modules that import nothing, and
-    // `vocabularies.lists.test.ts` is what holds them to it.
-    const doors = permitted.filter((one) => one !== '*.lists')
+    /**
+     * **The glob is expanded against the directory, not excused.** `*.lists`
+     * used to stand for the modules that import nothing, which made walking
+     * them unnecessary; `indicators.lists.ts` imports three siblings, so the
+     * glob now covers doors whose closure has to be walked like any other.
+     * Expanding it here is what stops a new `.lists` module being reachable
+     * from the browser and walked by nothing.
+     */
+    const doors = permitted.flatMap((one) =>
+      one === '*.lists' ? readdirSync(HERE).filter(isListModule).map((name) => name.slice(0, -3)) : [one],
+    )
 
     expect(doors.map((one) => `${one}.ts`).sort()).toEqual([...ENTRIES].sort())
   })
