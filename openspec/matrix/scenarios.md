@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 474 |
-| Demonstrated | 369 |
+| Demonstrated | 371 |
 | Undemonstrable | 1 |
-| Unbuilt | 91 |
+| Unbuilt | 89 |
 | Undemonstrated | 13 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
@@ -89,11 +89,11 @@
 | A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | unbuilt | Not built: a session has an idle window and no absolute cap. -> #203 |
 | A session belongs to its holder and ends when it should | An analyst reviews their own sessions | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
 | A session belongs to its holder and ends when it should | Every session is ended at once | unbuilt | Not built: no route ends another analyst's session. -> #204 |
-| An administrator can see who reaches what, and why | An administrator reviews access | unbuilt | Not built: no surface answers who reaches what. -> #208 |
-| An administrator can see who reaches what, and why | An administrator asks why | unbuilt | Not built: no surface answers who reaches what. -> #208 |
-| An administrator can see who reaches what, and why | An administrator asks from the customer's side | unbuilt | Not built: no surface answers who reaches what. -> #208 |
-| An administrator can see who reaches what, and why | Somebody who has never signed in | unbuilt | Not built: no surface answers who reaches what. -> #208 |
-| An administrator can see who reaches what, and why | An account has never been used | unbuilt | Not built: no surface answers who reaches what. -> #208 |
+| An administrator can see who reaches what, and why | An administrator reviews access | unbuilt | Not built: whether an account is local or the provider's, and its second factor. -> #59 |
+| An administrator can see who reaches what, and why | An administrator asks why | demonstrated | server/src/access/what-an-administrator-can-see-they-granted.test.ts |
+| An administrator can see who reaches what, and why | An administrator asks from the customer's side | demonstrated | server/src/access/what-an-administrator-can-see-they-granted.test.ts |
+| An administrator can see who reaches what, and why | Somebody who has never signed in | unbuilt | Not built: a mapped provider group admitting people the install has never met. -> #59 |
+| An administrator can see who reaches what, and why | An account has never been used | unbuilt | Not built: the last sign-in is stored and no surface carries it. -> #208 |
 | Administrative events are logged | Somebody is given reach | demonstrated | server/src/access/a-grant-is-recorded-with-what-it-granted.test.ts |
 | Administrative events are logged | Somebody signs in | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
 | Administrative events are logged | Somebody is refused a customer | demonstrated | server/test/a-refused-reach-says-what-was-refused.test.ts |
