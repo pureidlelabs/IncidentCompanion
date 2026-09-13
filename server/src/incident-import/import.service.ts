@@ -30,6 +30,21 @@ function candidateId(incident: string, identity: string): string {
 }
 
 /**
+ * What an index already holds for a row, trying its identities strongest first.
+ *
+ * **Strongest first, then weaker.** A stored row is keyed on the columns its
+ * table has, which can be less than the provider gives -- so an incoming host
+ * carrying a domain has to try the domain-less form or it imports a second copy
+ * of a host already here. -> `domain/identity.ts`
+ */
+function knownBy(
+  index: ReadonlyMap<string, string>,
+  identities: readonly string[],
+): string | undefined {
+  return identities.map((one) => index.get(one)).find((id) => id !== undefined)
+}
+
+/**
  * Refuses a commit naming rows the freshly built plan does not hold.
  *
  * Throws `UnprocessableEntityException` naming how many were not found.
@@ -119,6 +134,9 @@ export class ImportService {
    * The verdict for every candidate comes from the rows in this case now, so
    * an entity another analyst added a minute ago is `existing` here rather
    * than a duplicate written a minute later.
+   *
+   * **The plan is indexed against itself as well**, so several incidents
+   * naming one thing propose it once, attributed to the first of them.
    */
   async preview(
     caseId: string | null,
@@ -130,6 +148,8 @@ export class ImportService {
     const entities: Candidate[] = []
     const timeline: TimelineCandidate[] = []
     const seen = new Map<string, Candidate>()
+    /** An identity to the candidate already proposing it, from any incident. */
+    const planned = new Map<string, string>()
     const existing = caseId
       ? await this.existingByIdentity(caseId, defs, on)
       : new Map<string, string>()
@@ -150,16 +170,21 @@ export class ImportService {
           continue
         }
 
+        // **The plan indexes its own rows as it goes, not only the case's.**
+        // `candidateId` carries the incident key, so two incidents naming one
+        // host are two ids that never collide and both get written. The later
+        // entity points at the candidate the first proposed, which is what
+        // keeps its own alert linked to the row rather than to nothing.
+        const already = knownBy(planned, mapped.identities)
+        if (already !== undefined) {
+          byRef.set(parsed.ref, already)
+          continue
+        }
+
         const id = candidateId(incident.key, mapped.identity)
         byRef.set(parsed.ref, id)
-        if (seen.has(id)) continue
 
-        // **Strongest first, then weaker.** A stored row is keyed on the
-        // columns its table has, which can be less than the provider gives --
-        // so an incoming host carrying a domain has to try the domain-less form
-        // or it imports a second copy of a host already here.
-        const match =
-          mapped.identities.map((one) => existing.get(one)).find((id) => id !== undefined) ?? null
+        const match = knownBy(existing, mapped.identities) ?? null
         const candidate: Candidate = {
           id,
           incident: incident.key,
@@ -172,6 +197,7 @@ export class ImportService {
           checked: !match && startsChecked(mapped),
         }
         seen.set(id, candidate)
+        for (const one of mapped.identities) planned.set(one, id)
         entities.push(candidate)
       }
 
