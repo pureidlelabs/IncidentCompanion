@@ -289,7 +289,7 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
     # edge then answers `Host: evil.test` with 200 and forwards that hostname
     # verbatim to the app. It is the protection that replaced the loopback
     # `Host` guard when the certificate left the server.
-    assert re.search(r"listen\s+443\s+ssl\s+default_server\s*;", conf), (
+    assert re.search(r"listen\s+8443\s+ssl\s+default_server\s*;", conf), (
         "no default_server block, so an unrecognised hostname is served by "
         "whichever server block happens to be first")
     assert re.search(r"return\s+444\s*;", conf), (
@@ -348,11 +348,15 @@ def test_the_only_published_port_belongs_to_the_tls_edge():
         f"the host's only door is {edge!r}, not the TLS edge -- a plaintext "
         f"server published to the host is what this whole move removes")
 
+    # **8443 is the container's own port, and the host still answers on 443.**
+    # The edge listens high so that nothing has to be permitted to bind a low
+    # port -- a capability granted for one bind is present for every other.
+    # What this asserts is unchanged: the door reaches the TLS listener.
     targets = {entry.split(":")[-1] for entry in published}
-    assert targets == {"443"}, (
+    assert targets == {"8443"}, (
         f"the published service {edge!r} forwards to container port(s) "
-        f"{sorted(targets)}; the host's only door must reach 443, or what is "
-        f"exposed is not the TLS edge")
+        f"{sorted(targets)}; the host's only door must reach the TLS listener, "
+        f"or what is exposed is not the edge")
 
 
 @pytest.mark.parametrize("path", [COMPOSE, DOCKERFILE])
@@ -1605,6 +1609,73 @@ def test_a_psql_one_shot_stops_on_the_first_error():
         "printed and the one-shot still exits 0 -- which satisfies "
         "`service_completed_successfully` and lets the application serve against a "
         "database its preparation never finished"
+    )
+
+
+#: What a service may ask back, and why. A capability not named here is one
+#: nobody has justified, and the sweep refuses it rather than reading whatever
+#: the file happens to say as an allowance.
+JUSTIFIED_CAPABILITIES: dict[str, set[str]] = {
+    # nginx's master starts as root to prepare its cache directories and drop
+    # its workers to the `nginx` user. It listens high, so it needs nothing to
+    # bind. Each of the three was measured by removing it and watching the
+    # container refuse to start.
+    "nginx": {"CHOWN", "SETGID", "SETUID"},
+    # Postgres prepares its data and socket directories as root, then drops to
+    # the `postgres` user. Without CHOWN and FOWNER its entrypoint refuses with
+    # `chown`/`chmod: Operation not permitted`.
+    "postgres": {"CHOWN", "FOWNER", "SETGID", "SETUID"},
+}
+
+
+def test_every_service_drops_the_capabilities_it_does_not_use():
+    """Each part runs with no capability it does not use.
+
+    **The allowance is stated here rather than read back from the file**, which
+    is what makes this a check rather than a mirror: a sweep asserting whatever
+    `cap_add` happens to say passes on any set at all.
+
+    `CAP_NET_RAW` is the one that matters most. It permits raw sockets, so a
+    compromised process could forge and sniff traffic on the network Postgres
+    and Redis are on, and nothing here opens one.
+    """
+    spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
+    services = spec.get("services", {})
+    assert services, "compose.yaml declares no services"
+
+    kept = [name for name, service in services.items() if service.get("cap_drop") != ["ALL"]]
+    assert not kept, (
+        f"{sorted(kept)} keep Docker's default capabilities, so each runs with CAP_NET_RAW, "
+        f"CAP_SETUID, CAP_MKNOD and the rest while using none of them"
+    )
+
+    for name, service in sorted(services.items()):
+        asked = {str(one).upper() for one in service.get("cap_add", [])}
+        allowed = JUSTIFIED_CAPABILITIES.get(name, set())
+        assert asked <= allowed, (
+            f"{name} asks for {sorted(asked - allowed)}, which nothing here justifies"
+        )
+
+
+def test_no_service_can_gain_privileges_through_a_setuid_binary():
+    """A part cannot become more than it was started as.
+
+    Dropping a capability is undone by any `setuid` binary left in the image,
+    so the two belong together: without this the process regains through
+    `execve` what `cap_drop` took.
+    """
+    spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
+    services = spec.get("services", {})
+    assert services, "compose.yaml declares no services"
+
+    without = [
+        name
+        for name, service in sorted(services.items())
+        if "no-new-privileges:true" not in [str(one) for one in service.get("security_opt", [])]
+    ]
+    assert not without, (
+        f"{sorted(without)} may gain privileges through a setuid binary, which is how a "
+        f"dropped capability comes back"
     )
 
 
