@@ -71,6 +71,13 @@ export type Attachments = 'included' | 'omitted'
 export interface Manifest {
   version: number
   attachments: Attachments
+  /**
+   * What the case recorded and the install could not find, by name.
+   *
+   * Absent on an archive written before the field existed, which reads as none.
+   * -> `openspec/specs/case-archive/design.md`
+   */
+  missing?: string[]
   files: Record<string, string>
 }
 
@@ -98,6 +105,8 @@ function safeMemberName(name: string): void {
 export async function pack(
   members: Record<string, Uint8Array>,
   attachments: Attachments,
+  /** What was recorded and could not be found, by name. -> `Manifest.missing` */
+  missing: readonly string[] = [],
 ): Promise<Buffer> {
   const files: Record<string, string> = {}
   for (const [name, bytes] of Object.entries(members)) {
@@ -112,6 +121,9 @@ export async function pack(
   const manifest: Manifest = {
     version: ARCHIVE_VERSION,
     attachments,
+    // Sorted for the same reason `files` is: two exports of one case produce
+    // the same bytes, so a difference between them is a difference in the case.
+    missing: [...missing].sort((a, b) => a.localeCompare(b)),
     files: Object.fromEntries(Object.entries(files).sort(([a], [b]) => a.localeCompare(b))),
   }
   const all: Record<string, Uint8Array> = {
@@ -229,10 +241,14 @@ export async function readArchive(
 ): Promise<{
   members: Record<string, Uint8Array>
   attachments: Attachments
+  /** What the archive says was recorded and could not be found. */
+  missing: string[]
 }> {
   const members = await unpack(archive, limits)
   const manifest = JSON.parse(
     Buffer.from(members[MANIFEST_NAME]!).toString('utf8'),
   ) as Manifest
-  return { members, attachments: manifest.attachments }
+  // **Absent reads as none**, which is what an archive written before the
+  // field existed meant. -> `Manifest.missing`
+  return { members, attachments: manifest.attachments, missing: manifest.missing ?? [] }
 }
