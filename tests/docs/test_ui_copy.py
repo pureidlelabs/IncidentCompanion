@@ -94,14 +94,31 @@ TEMPLATE_PROP = re.compile(
 SENTENCE = re.compile(
     r"(?<![\w`])'([A-Z][^'\\]{8,200}?)'"
     r'|(?<![\w`])"([A-Z][^"\\]{8,200}?)"'
-    # A toast is a call argument, not a prop, so `TEMPLATE_PROP` never
-    # reaches it -- which leaves every toast in the app uncovered by the
-    # `ErrorTone` rules written for them.
-    r"|(?<![\w`])`([A-Z][^`\\]{8,200}?)`"
-    # **A template whose first thing is the value.** ` ${n} row(s) were already
-    # in the case.` is a sentence an analyst reads, and requiring a capital
-    # first would leave it, and every count worded that way, to nothing.
-    r"|(?<![\w`])`(\s*\$\{[^`\\]{8,200}?)`"
+)
+
+#: A template literal, which is its own pass rather than another alternative.
+#
+# **`finditer` does not overlap, and a template contains the quotes.** In one
+# alternation with the forms above, a backtick match consumes the span they
+# would have scanned -- so copy chosen inside a template's own ternary, which
+# is the most common way this interface picks copy, stops being seen at all.
+# Two passes over the same text see both.
+#
+# A toast is a call argument, not a prop, so `TEMPLATE_PROP` never reaches it
+# -- which leaves every toast in the app uncovered by the `ErrorTone` rules
+# written for them.
+#
+# **The second form is a template whose first thing is the value.**
+# ` ${n} row(s) were already in the case.` is a sentence an analyst reads, and
+# requiring a capital first would leave it, and every count worded that way, to
+# nothing.
+#
+# The escape-aware class, rather than a bare negation: a template carrying an
+# escaped backtick -- `openapi.prose.ts` has several -- otherwise ends at the
+# escape and matches nothing.
+TEMPLATE = re.compile(
+    r"(?<![\w`])`([A-Z](?:[^`\\]|\\.){8,200}?)`"
+    r"|(?<![\w`])`(\s*\$\{(?:[^`\\]|\\.){8,200}?)`"
 )
 #: A line that declares a module or opens a test block, not one that holds copy.
 #
@@ -188,6 +205,19 @@ def without_interpolations(value: str) -> str:
 
 
 COMMENT_LINE = re.compile(r"^\s*(\*|//|/\*)")
+
+#: One unspaced token carrying punctuation prose does not: an id, a path, a
+#: filename, a CSS unit, a class name.
+#
+# **Unspaced *and* punctuated, because either alone is wrong.** 630 of the
+# values this sweep reaches have no space in them and 578 are ordinary copy --
+# `Assets`, `Accounts`, `Evidence` -- so dropping every unspaced value
+# unlinted more than it cleaned. The 52 that remain all carry a slash, a
+# colon, an underscore, a digit or a dotted extension.
+#
+# They reach the content rules only to fail one on a later edit: `via-ink/10`
+# is a Tailwind gradient and `via` is a banned word.
+NOT_PROSE = re.compile(r"^\S*[/:_0-9]\S*$|^\S*\.\w+$")
 #: Nest exceptions reach the browser as the message the analyst is shown.
 SERVER_THROWN = re.compile(r"\w+Exception\(\s*['\"]([^'\"]{4,200})")
 
@@ -217,12 +247,13 @@ def screen_strings() -> tuple[tuple[str, int, str], ...]:
             # components: `api/backendHealth.ts` holds the banner an analyst
             # reads when Postgres or Redis is down.
             patterns.append(SENTENCE)
+            patterns.append(TEMPLATE)
             lines = text.split("\n")
             for pattern in patterns:
                 for match in pattern.finditer(text):
-                    # `SENTENCE` has three alternatives, so take whichever caught.
+                    # Each pattern has more than one alternative; take whichever caught.
                     value = next((g for g in match.groups() if g), "").strip()
-                    if not value or value.startswith(("http", "/", "#", "{")):
+                    if not value:
                         continue
                     # **The literal halves are copy and the expression is not.**
                     # Dropping a value that names anything left every count,
@@ -230,6 +261,14 @@ def screen_strings() -> tuple[tuple[str, int, str], ...]:
                     # neither instrument -- Vale reads a source file as code,
                     # so a string value is invisible to it as well. -> #412
                     value = without_interpolations(value)
+                    # **Tested after the substitution, not before.** A value
+                    # whose first segment is interpolated begins `$`, so a
+                    # prefix test on the raw text answers about the expression
+                    # rather than about the copy.
+                    if value.startswith(("http", "/", "#", "{", "0/")):
+                        continue
+                    if NOT_PROSE.match(value.strip()):
+                        continue
                     if not re.search(r"[a-z]{2}", value):
                         continue
                     line = text[: match.start()].count("\n") + 1
@@ -261,7 +300,7 @@ def test_the_extractor_still_finds_the_interface_s_copy() -> None:
     from copy that is already perfect.
     """
     found = screen_strings()
-    assert len(found) > 700, (
+    assert len(found) > 2_800, (
         f"only {len(found)} strings found; the extractor has stopped matching "
         "how this interface declares its copy."
     )
@@ -370,7 +409,10 @@ def heading_strings() -> tuple[tuple[str, int, str], ...]:
         for pattern in HEADING:
             for match in pattern.finditer(text):
                 value = " ".join((match.group(1) or "").split())
-                if not value or "${" in value or not re.search(r"[a-z]{2}", value):
+                # The same substitution the copy sweep makes, for the same
+                # reason: a heading naming a count is still a heading.
+                value = without_interpolations(value)
+                if not value or not re.search(r"[a-z]{2}", value):
                     continue
                 line = text[: match.start()].count("\n") + 1
                 if COMMENT_LINE.match(lines[line - 1]):
