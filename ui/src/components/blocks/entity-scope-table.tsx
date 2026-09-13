@@ -33,7 +33,6 @@ import { TableToolbar } from '@/components/blocks/table-toolbar'
 import { AddAction, AddSplitAction, CountMeta } from '@/components/blocks/section-head'
 import { SECTIONS } from '@/components/blocks/case-sections'
 
-/** `Assets` names the tab; `Add asset` names the row it makes. */
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
 import { MenuItem } from '@/components/ui/menu'
@@ -51,6 +50,7 @@ import {
   entityNames,
   entityRows,
   isNarrowed,
+  nounOf,
   kindFor,
   referenceOptions,
   searchEntities,
@@ -389,7 +389,7 @@ export function EntityScopeTable({
                       {Icon ? <Icon aria-hidden /> : null}
                       {/* Title case: a menu row is a name, where the button's
                           `Add asset` is a sentence. */}
-                      {entry.title.replace(/s$/, '')}
+                      {nounOf(entry)}
                     </MenuItem>
                   )
                 })}

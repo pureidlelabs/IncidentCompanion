@@ -108,6 +108,19 @@ export function addLabel(kind: EntityKind): string {
   return `Add ${NOUNS[kind.collection] ?? kind.title.toLowerCase()}`
 }
 
+/**
+ * The kind's noun as a name, for a menu row rather than a sentence.
+ *
+ * **The same word the button uses.** The rows of the add menu named the thing
+ * by stripping an `s` off the section title, so pressing `Network` opened a
+ * dialog titled `Add network indicator` -- the second vocabulary the button's
+ * own fix was against, twenty lines below it. -> #16
+ */
+export function nounOf(kind: EntityKind): string {
+  const noun = NOUNS[kind.collection] ?? kind.title
+  return `${noun.slice(0, 1).toUpperCase()}${noun.slice(1)}`
+}
+
 /** The same word, for the door that changes a row rather than making one. */
 export function editLabel(kind: EntityKind): string {
   return `Edit ${NOUNS[kind.collection] ?? kind.title.toLowerCase()}`
