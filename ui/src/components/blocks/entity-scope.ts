@@ -1,3 +1,5 @@
+import { NOUNS } from '@contract/collections'
+
 import type { Case, CollectionName } from '@/api/model'
 import type { FieldToneSpec, Specs } from '@/api/specs'
 import type { ReferenceOptions } from '@/components/blocks/entity-dialog'
@@ -88,6 +90,40 @@ export function entityNames(kase: Case): EntityNames {
     system: new Map(kase.systems.map((row) => [row.id, row.hostname])),
     account: new Map(kase.accounts.map((row) => [row.id, row.accountName])),
   }
+}
+
+/**
+ * What an add or edit door is called for a kind.
+ *
+ * **The application's own noun, never one derived from the scope's title.** The
+ * title is a section heading and a trailing `s` on it is not a plural:
+ * stripping one gave *Add network* and *Add malware*, which name the section
+ * an analyst is standing in rather than the address or the file they are
+ * about to write. -> #16
+ *
+ * Falls back to the title where a collection publishes no noun, which is a
+ * worse label and not a missing one.
+ */
+export function addLabel(kind: EntityKind): string {
+  return `Add ${NOUNS[kind.collection] ?? kind.title.toLowerCase()}`
+}
+
+/**
+ * The kind's noun as a name, for a menu row rather than a sentence.
+ *
+ * **The same word the button uses.** The rows of the add menu named the thing
+ * by stripping an `s` off the section title, so pressing `Network` opened a
+ * dialog titled `Add network indicator` -- the second vocabulary the button's
+ * own fix was against, twenty lines below it. -> #16
+ */
+export function nounOf(kind: EntityKind): string {
+  const noun = NOUNS[kind.collection] ?? kind.title
+  return `${noun.slice(0, 1).toUpperCase()}${noun.slice(1)}`
+}
+
+/** The same word, for the door that changes a row rather than making one. */
+export function editLabel(kind: EntityKind): string {
+  return `Edit ${NOUNS[kind.collection] ?? kind.title.toLowerCase()}`
 }
 
 /**

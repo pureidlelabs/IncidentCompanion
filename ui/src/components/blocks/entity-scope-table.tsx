@@ -33,8 +33,6 @@ import { TableToolbar } from '@/components/blocks/table-toolbar'
 import { AddAction, AddSplitAction, CountMeta } from '@/components/blocks/section-head'
 import { SECTIONS } from '@/components/blocks/case-sections'
 
-/** `Assets` names the tab; `Add asset` names the row it makes. */
-const singular = (title: string) => title.replace(/s$/, '').toLowerCase()
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
 import { MenuItem } from '@/components/ui/menu'
@@ -45,11 +43,14 @@ import { localId, useRowEditor } from './row-editing'
 import {
   ENTITY_KINDS,
   NO_FILTER,
+  addLabel,
   applyEntityFilter,
   attentionCounts,
+  editLabel,
   entityNames,
   entityRows,
   isNarrowed,
+  nounOf,
   kindFor,
   referenceOptions,
   searchEntities,
@@ -361,13 +362,13 @@ export function EntityScopeTable({
             : { meta: <CountMeta shown={visible.length} total={scopeRows.length} noun="row" /> })}
           actions={
             kind ? (
-              <AddAction label={`Add ${singular(kind.title)}`} onPress={editor.add} />
+              <AddAction label={addLabel(kind)} onPress={editor.add} />
             ) : (
               <AddSplitAction
                 // The first kind is the one the button adds. `ENTITY_KINDS` is
                 // in rail order, which puts assets first, and reordering it
                 // moves this with it rather than leaving a second opinion here.
-                label={`Add ${singular(ENTITY_KINDS[0]?.title ?? 'entity')}`}
+                label={ENTITY_KINDS[0] ? addLabel(ENTITY_KINDS[0]) : 'Add entity'}
                 menuLabel="Add another kind"
                 onPress={() => {
                   const first = ENTITY_KINDS[0]
@@ -388,7 +389,7 @@ export function EntityScopeTable({
                       {Icon ? <Icon aria-hidden /> : null}
                       {/* Title case: a menu row is a name, where the button's
                           `Add asset` is a sentence. */}
-                      {entry.title.replace(/s$/, '')}
+                      {nounOf(entry)}
                     </MenuItem>
                   )
                 })}
@@ -487,7 +488,7 @@ export function EntityScopeTable({
             editor.close()
             setAddKind(null)
           }}
-          title={`Add ${creatingKind.title.replace(/s$/, '').toLowerCase()}`}
+          title={addLabel(creatingKind)}
           collection={creatingKind.collection}
           form={formSpec(specs, creatingKind.form)}
           references={references}
@@ -504,7 +505,7 @@ export function EntityScopeTable({
           key={String(editor.editing.entry.id)}
           open
           onOpenChange={editor.close}
-          title={`Edit ${editor.editing.kind.title.replace(/s$/, '').toLowerCase()}`}
+          title={editLabel(editor.editing.kind)}
           collection={editor.editing.kind.collection}
           form={formSpec(specs, editor.editing.kind.form)}
           references={references}
