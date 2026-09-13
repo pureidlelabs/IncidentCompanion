@@ -6,20 +6,10 @@
  * A default here must be a value its own vocabulary still offers, and the
  * pessimistic end of it.
  */
-import {
-  bigint,
-  boolean,
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 import { cases } from './case.js'
-import { rowVersioning } from './columns.js'
+import { figure, figuresWithinReach, rowVersioning } from './columns.js'
 import { caseScoped } from './scoped.js'
 
 const owner = () => ({
@@ -156,15 +146,15 @@ export const impact = pgTable(
      * `bigint` for the reason `volume_bytes` gives, applied to the count
      * rather than the size. -> `openspec/specs/compliance/design.md`
      */
-    subjectCount: bigint('subject_count', { mode: 'number' }),
-    recordCount: bigint('record_count', { mode: 'number' }),
+    subjectCount: figure('subject_count'),
+    recordCount: figure('record_count'),
     /**
      * **`bigint` because 4GB fits in a mailbox export.** `integer` tops out at
      * 2.1e9, which is under three gigabytes - reachable by an ordinary
      * archive, and the overflow is a write error rather than a wrong number.
      * Read as a JS number: `Number.MAX_SAFE_INTEGER` is 9PB.
      */
-    volumeBytes: bigint('volume_bytes', { mode: 'number' }),
+    volumeBytes: figure('volume_bytes'),
 
     systemId: uuid('system_id').references(() => systems.id, { onDelete: 'set null' }),
     accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'set null' }),
@@ -181,7 +171,7 @@ export const impact = pgTable(
     tags: text('tags').notNull().default(''),
     ...rowVersioning,
   },
-  (t) => [index('impact_case_idx').on(t.caseId), ...caseScoped(t.caseId)],
+  (t) => [index('impact_case_idx').on(t.caseId), ...caseScoped(t.caseId), figuresWithinReach('impact_figures_within_reach', [t.subjectCount, t.recordCount, t.volumeBytes])],
 )
 
 /**

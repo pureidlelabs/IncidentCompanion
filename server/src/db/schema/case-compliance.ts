@@ -9,10 +9,10 @@
  * are snapshotted here rather than linked, so a `.iccase` carries them between
  * installs. Several-of answers are `jsonb`, never a column each.
  */
-import { bigint, boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 import { cases } from './case.js'
-import { rowVersioning } from './columns.js'
+import { figure, figuresWithinReach, rowVersioning } from './columns.js'
 import { caseScoped } from './scoped.js'
 
 export const caseCompliance = pgTable(
@@ -58,14 +58,14 @@ export const caseCompliance = pgTable(
      * reads them as JavaScript numbers.
      * -> `openspec/specs/compliance/design.md`
      */
-    usersAffectedCount: bigint('users_affected_count', { mode: 'number' }),
-    usersTotalCount: bigint('users_total_count', { mode: 'number' }),
+    usersAffectedCount: figure('users_affected_count'),
+    usersTotalCount: figure('users_total_count'),
     serviceDowntimeMinutes: integer('service_downtime_minutes'),
     serviceDowntimeComplete: boolean('service_downtime_complete').notNull().default(false),
     financialImpact: text('financial_impact').notNull().default(''),
     /** The same ceiling in euros, and `customer.ts` holds the turnover twin. */
-    financialLossEur: bigint('financial_loss_eur', { mode: 'number' }),
-    annualTurnoverEur: bigint('annual_turnover_eur', { mode: 'number' }),
+    financialLossEur: figure('financial_loss_eur'),
+    annualTurnoverEur: figure('annual_turnover_eur'),
     recurringIncident: text('recurring_incident'),
     recurringEarlierCases: text('recurring_earlier_cases').notNull().default(''),
 
@@ -102,7 +102,7 @@ export const caseCompliance = pgTable(
     doraReputationalImpact: text('dora_reputational_impact'),
     doraDataAdverseImpact: text('dora_data_adverse_impact'),
     doraDurationMinutes: integer('dora_duration_minutes'),
-    doraCostsEur: bigint('dora_costs_eur', { mode: 'number' }),
+    doraCostsEur: figure('dora_costs_eur'),
 
     /**
      * The organisation facts this case answered itself rather than copied.
@@ -120,5 +120,5 @@ export const caseCompliance = pgTable(
 
     ...rowVersioning,
   },
-  (t) => [...caseScoped(t.caseId)],
+  (t) => [...caseScoped(t.caseId), figuresWithinReach('case_compliance_figures_within_reach', [t.usersAffectedCount, t.usersTotalCount, t.financialLossEur, t.annualTurnoverEur, t.doraCostsEur])],
 )
