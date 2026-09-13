@@ -9,7 +9,7 @@
  * Why the derivation is here rather than in the browser, and why nothing is
  * parked between the two, is `openspec/specs/incident-import/design.md`.
  */
-import { Injectable } from '@nestjs/common'
+import { HttpException, Injectable, Logger } from '@nestjs/common'
 import { UnprocessableEntityException } from '@nestjs/common'
 
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
@@ -81,8 +81,35 @@ function timelineSchemaFor(row: Record<string, unknown>) {
   return row['kind'] === 'action' ? actionWriteSchema : eventWriteSchema
 }
 
+/**
+ * What a failed import tells the analyst it left behind.
+ *
+ * Three states and they read differently: rows that are in the case and want
+ * finishing, a run that wrote nothing because the case already held it all,
+ * and a run whose caller took the whole act back.
+ */
+function partlyWrote(entities: number, matched: number, kept: boolean): string {
+  if (!kept) {
+    return (
+      'The import wrote nothing: it failed at the timeline and the whole of it was taken ' +
+      'back, the case included. Run it again.'
+    )
+  }
+  if (entities === 0) {
+    const already = matched > 0 ? ' Everything it would have added was already in the case.' : ''
+    return `The import wrote nothing: it failed at the timeline.${already} Run it again.`
+  }
+  return (
+    `The import partly wrote: ${String(entities)} ` +
+    `${entities === 1 ? 'entity' : 'entities'} landed and the timeline did not. ` +
+    'Run it again to finish it - what is already there is matched rather than doubled.'
+  )
+}
+
 @Injectable()
 export class ImportService {
+  private readonly log = new Logger(ImportService.name)
+
   constructor(private readonly collections: CollectionService) {}
 
   /**
@@ -186,7 +213,9 @@ export class ImportService {
     defs: ImportDefinitions,
     /**
      * A caller's transaction. Every read and both writes go on it, so a failure
-     * at any of them takes the rest. Left unset, each opens its own.
+     * at any of them takes the rest -- which is what a failure at the timeline
+     * reports, rather than naming rows the rollback removed. Left unset, each
+     * opens its own and the entities survive.
      */
     on?: Executor,
   ): Promise<{ entities: number; timeline: number; skippedExisting: number }> {
@@ -278,34 +307,54 @@ export class ImportService {
         : { ids: [] as string[] }
     } catch (why) {
       /**
-       * **Whether the entities survive is the caller's transaction to decide.**
-       * Left unset, each write opened its own and the entities are in the case;
-       * handed one -- which `POST /imports/case` does, because the case itself
-       * is being created in the same act -- the failure takes everything back
-       * and reporting rows that landed would name rows nobody can find.
+       * **This app's own refusal passes through unchanged.** The timeline
+       * write runs the case-boundary reference check, and its refusal is
+       * deterministic and names the row -- so wrapping it turned a permanent
+       * "this file points outside the case, at row 12" into a transient
+       * "partly wrote, run it again", which is advice that can only fail and
+       * loses the row number to `detail`.
        */
-      const landed = on === undefined
+      if (why instanceof HttpException) throw why
+
+      /**
+       * **Whether the entities survive is the caller's transaction to decide.**
+       * Left unset, each write opened its own and they are in the case; handed
+       * one -- which `POST /imports/case` does, because the case itself is
+       * being created in the same act -- the failure takes everything back,
+       * and naming rows that landed would send an analyst looking for rows
+       * nobody can find.
+       */
+      const kept = on === undefined
+      const entities = kept
+        ? Object.values(written.ids).reduce((all, ids) => all + ids.length, 0)
+        : 0
+      const matched = kept ? skippedExisting : 0
+
+      /**
+       * **The store's own words are logged, never served.** They carry
+       * constraint names, table names and row values, and the refusal shape
+       * this route documents says the cause is in the server log only.
+       * -> `wire/refusals.ts`, `openapi.prose.ts`
+       */
+      this.log.error(
+        `An import of case ${caseId} failed at the timeline: ${
+          why instanceof Error ? why.message : String(why)
+        }`,
+      )
+
       throw new UnprocessableEntityException({
-        message: landed
-          ? 'The import partly wrote: the entities landed and the timeline did not. ' +
-            'Run it again to finish it - what is already there is matched rather than doubled.'
-          : 'The import wrote nothing: it failed at the timeline and the whole of it was ' +
-            'taken back. Run it again.',
-        wrote: {
-          entities: landed
-            ? Object.values(written.ids).reduce((all, ids) => all + ids.length, 0)
-            : 0,
-          // **Not written, and counted apart from what was.** These are rows
-          // the case already held and the analyst approved anyway; they are
-          // here because "what reached the case" is a different question from
-          // "what this import added", and an analyst looking at the case sees
-          // both.
-          skippedExisting: landed ? skippedExisting : 0,
-          timeline: 0,
-        },
-        // The store's own words, for whoever is reading a log rather than the
-        // screen: the sentence above says what to do, this says what happened.
-        detail: why instanceof Error ? why.message : String(why),
+        /**
+         * **Read off the counts rather than asserted beside them.** The first
+         * draft said "the entities landed" whatever the numbers were, so a
+         * retry -- where every entity matches a row already there and nothing
+         * is written -- reported a partial write forever, its own `wrote`
+         * saying zero three lines below.
+         *
+         * The sentence is what an analyst sees: `import-sentinel.tsx` puts
+         * `error.message` on the screen and reads no other field.
+         */
+        message: partlyWrote(entities, matched, kept),
+        wrote: { entities, skippedExisting: matched, timeline: 0 },
       })
     }
 
