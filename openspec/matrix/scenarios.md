@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 474 |
-| Demonstrated | 369 |
+| Demonstrated | 370 |
 | Undemonstrable | 1 |
-| Unbuilt | 91 |
+| Unbuilt | 90 |
 | Undemonstrated | 13 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
