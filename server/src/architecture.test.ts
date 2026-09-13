@@ -66,7 +66,9 @@ const MAY_IMPORT: Record<string, string[]> = {
   domain: [],
   db: ['config'],
   config: [],
-  demos: ['db', 'domain', 'config'],
+  // `customers` for the same reason `cases` has it: a demo raises cases, and a
+  // case is opened under a customer.
+  demos: ['db', 'domain', 'config', 'customers'],
   /**
    * `wire` for the one decision three folders share: whether the caller's
    * claimed address may be believed. It is a leaf, so the edge cannot become
@@ -74,7 +76,20 @@ const MAY_IMPORT: Record<string, string[]> = {
    * itself - which is the defect it replaces. -> `wire/caller-address.ts`
    */
   auth: ['db', 'config', 'install-activity', 'policy', 'wire'],
-  cases: ['db', 'domain', 'demos', 'library', 'config', 'access', 'live', 'install-activity'],
+  // `customers` because a case is opened *under* one: the door that raises a
+  // case has to know which, and a reference is unique within it. The reverse
+  // edge stays absent -- a customer knows nothing about cases.
+  cases: [
+    'db',
+    'domain',
+    'demos',
+    'library',
+    'config',
+    'access',
+    'live',
+    'install-activity',
+    'customers',
+  ],
   collections: ['db', 'domain', 'config', 'live', 'access', 'evidence', 'report'],
   /** No `cases`: one row per case, scoped by the `caseId` in the URL alone. */
   // `customers` for the organisation facts alone: a case copies them when
@@ -157,7 +172,18 @@ const MAY_IMPORT: Record<string, string[]> = {
    * constants of their own until #588, which is how the settings came to be
    * offered and read by nothing.
    */
-  'case-archive': ['db', 'archive', 'cases', 'evidence', 'access', 'domain', 'policy'],
+  // `customers` for the same reason `cases` has it: reading an archive opens a
+  // case, and a case is opened under a customer.
+  'case-archive': [
+    'db',
+    'archive',
+    'cases',
+    'evidence',
+    'access',
+    'domain',
+    'policy',
+    'customers',
+  ],
   brand: [],
   /** Bytes on disk. It knows where they go and nothing about a case. */
   evidence: ['config', 'policy'],

@@ -6,9 +6,16 @@
  * imported it. Evidence rows keep their digests, so a handover archive
  * imports rows whose files are absent.
  */
-import { Inject, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common'
-import { getTableColumns, sql } from 'drizzle-orm'
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  UnprocessableEntityException,
+} from '@nestjs/common'
+import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
+import { defaultCustomer } from '../customers/customers.service.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { EvidenceStore } from '../evidence/store.js'
@@ -167,11 +174,47 @@ export class ArchiveImportService {
     }
 
     return this.db.transaction(async (tx) => {
+      // **Trimmed, as the three HTTP doors trim.** `createCaseSchema` and the
+      // patch schema both `.trim()`, so an archive carrying ` INC-9 ` would
+      // otherwise store a padded reference that collides with nothing and is
+      // collided with by nothing -- one ticket, two cases, no refusal.
+      const reference = typeof record.reference === 'string' ? record.reference.trim() : ''
+      /**
+       * **An import is a second case for one ticket, and is refused like a
+       * create.** A reference is unique within its customer, so reading an
+       * archive of a case this install still holds has to say which case
+       * holds it rather than fail as a query -- the operator's way out is to
+       * free the reference on one of them, and they cannot do that without
+       * being told which.
+       *
+       * **Under the install's default customer, as `CasesService.create`
+       * opens one.** The archive carries the free-text customer and nothing
+       * resolves it to a record, so a read lands unattributed -- and the group
+       * it is unique within has to be the same group the other door uses, or
+       * one door admits what the other refuses.
+       */
+      const customerId = (await defaultCustomer(tx)).id
+      if (reference) {
+        const [held] = await tx
+          .select({ title: cases.title })
+          .from(cases)
+          .where(and(eq(cases.reference, reference), eq(cases.customerId, customerId)))
+          .limit(1)
+        if (held) {
+          throw new ConflictException({
+            message:
+              `"${held.title}" already carries ${reference}. ` +
+              'Free that reference before reading this archive.',
+          })
+        }
+      }
+
       const [made] = await tx
         .insert(cases)
         .values({
           title: String(record.title),
-          reference: typeof record.reference === 'string' ? record.reference : '',
+          reference,
+          customerId,
           customer: typeof record.customer === 'string' ? record.customer : '',
           summary: typeof record.summary === 'string' ? record.summary : '',
           createdBy: actorId,
