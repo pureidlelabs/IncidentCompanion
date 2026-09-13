@@ -30,7 +30,19 @@ export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0]
  */
 export function createPool(url: string): Pool {
   const max = Number(process.env.PG_POOL_MAX)
-  const pool = new Pool({ connectionString: url, ...(max > 0 ? { max } : {}) })
+  const pool = new Pool({
+    connectionString: url,
+    ...(max > 0 ? { max } : {}),
+    /**
+     * **A deadline, because the wait that needs one is unexplainable without
+     * it.** A read issued against the pool from inside an open transaction
+     * holds one connection while asking for another; with no timeout `pg`
+     * waits for ever, and the request, the suite and the tier all hang with
+     * nothing said. This does not prevent the mistake -- `db/scope.ts` and
+     * `db/act.ts` are what make it hard to make -- it stops it being silent.
+     */
+    connectionTimeoutMillis: 10_000,
+  })
 
   /**
    * **`PG_ADOPT_ROLE_FROM_URL` is off in normal use and must stay off** - a
