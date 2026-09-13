@@ -11,6 +11,7 @@
 import { ApiBody } from '@nestjs/swagger'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import {
+  Inject,
   UnprocessableEntityException,
   Body,
   Controller,
@@ -27,7 +28,10 @@ import { z } from 'zod'
 
 import { PasswordHoldService } from './password-hold.service.js'
 import type { Auth } from './auth.config.js'
-import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from './password-policy.js'
+import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT, refusePassword } from './password-policy.js'
+import { readPolicy } from '../policy/read.js'
+import { DATABASE } from '../db/db.module.js'
+import type { Database } from '../db/client.js'
 
 /**
  * **`repeat` is checked here and not only in the browser.** A client that
@@ -54,6 +58,7 @@ export class ChangePasswordController {
   constructor(
     private readonly auth: AuthService<Auth>,
     private readonly holds: PasswordHoldService,
+    @Inject(DATABASE) private readonly db: Database,
   ) {}
 
   @Post('change-password')
@@ -98,8 +103,19 @@ export class ChangePasswordController {
        * -> `auth.config.ts`, `PASSWORD_WRITES`
        */
       if (why instanceof APIError && why.status === 'UNPROCESSABLE_ENTITY') {
+        /**
+         * **The number is composed here and not in the hook**, because this
+         * route is behind a session and the hook is not: it runs ahead of
+         * every endpoint's own checks, which is what makes it cover the
+         * library's routes and also what would hand the install's minimum to
+         * anybody who asked. An analyst changing their own password is owed
+         * the number; an anonymous caller is not.
+         */
+        const stored = await readPolicy(this.db)
         throw new UnprocessableEntityException({
-          message: (why.body as { message?: unknown } | undefined)?.message ?? PASSWORD_TOO_SHORT,
+          message:
+            refusePassword(parsed.data.password, stored['auth.minPasswordLength']) ??
+            PASSWORD_TOO_SHORT,
         })
       }
       // Better Auth reports a wrong current password as a refusal; anything

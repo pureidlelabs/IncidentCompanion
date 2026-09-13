@@ -41,10 +41,24 @@ const db = pool ? drizzle({ client: pool }) : null
  * `SHORT` is exactly `MIN_PASSWORD_LENGTH`, so every static `.min()` accepts
  * it: what refuses it can only be the stored value.
  */
-const RAISED = 24
+const RAISED = 16
 const SHORT = 'x'.repeat(MIN_PASSWORD_LENGTH)
 const LONG = 'y'.repeat(RAISED)
-const ISSUED = 'issued-for-the-minimum-door-test'
+
+/**
+ * What every account here is issued, and it is deliberately under the raise.
+ *
+ * **A longer one made the sign-in case assert nothing.** That case exists to
+ * catch the guard being extended to `/sign-in`, which would lock out every
+ * account holding a password set before the raise -- and an account holding
+ * one *above* the raise is not such an account. Adding `/sign-in/email` to
+ * `PASSWORD_WRITES` left all six green.
+ *
+ * **`RAISED` stays under the harness's own password** for the same class of
+ * reason: a raise that leaked out of this file would otherwise fail the next
+ * file at account creation, reading as that file's defect.
+ */
+const ISSUED = SHORT
 
 describe.skipIf(!RUNNABLE || !db)('a raised password minimum', () => {
   let harness: Harness
@@ -88,7 +102,11 @@ describe.skipIf(!RUNNABLE || !db)('a raised password minimum', () => {
     // **Restored, because the setting is the install's and the database is
     // shared.** A file that leaves the minimum raised fails the next one at
     // whichever password it issues, in a way that reads as that file's defect.
-    await minimumIs(MIN_PASSWORD_LENGTH).catch(() => undefined)
+    // Said rather than swallowed: a restore that failed leaves the install's
+    // minimum raised for every file after this one.
+    await minimumIs(MIN_PASSWORD_LENGTH).catch((why: unknown) => {
+      process.stdout.write(`  ! the password minimum was not restored: ${String(why)}\n`)
+    })
     await harness.close()
     await pool?.end()
   })
@@ -177,6 +195,39 @@ describe.skipIf(!RUNNABLE || !db)('a raised password minimum', () => {
       )
 
       expect(answered.ok, 'an account was reset to a password the install refuses').toBe(false)
+    } finally {
+      await minimumIs(MIN_PASSWORD_LENGTH)
+    }
+  })
+
+  /**
+   * **`/reset-password`, which is the route the design is argued from.**
+   *
+   * It is served by the library, is not in `disabledPaths`, and reaches no
+   * controller of ours -- so a check written in a controller would leave it
+   * taking the boot-time number. Asserted on the status rather than on a
+   * successful reset: the guard runs ahead of the token check, so a bogus
+   * token answers 422 where the minimum refuses and 400 where it does not,
+   * and that difference is the whole claim.
+   */
+  it("refuses one at the library's reset route, which reaches no controller", async () => {
+    await minimumIs(RAISED)
+    try {
+      const short = await fetch(`${harness.base}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ newPassword: SHORT, token: 'not-a-real-token' }),
+      })
+      expect(short.status, 'the reset route took a password the install refuses').toBe(422)
+
+      // **What it refused for.** An invalid token answers 400, so a 422 is the
+      // minimum and nothing else -- without this the case passes on any refusal.
+      const long = await fetch(`${harness.base}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ newPassword: LONG, token: 'not-a-real-token' }),
+      })
+      expect(long.status, 'a long enough password was refused for its length').toBe(400)
     } finally {
       await minimumIs(MIN_PASSWORD_LENGTH)
     }

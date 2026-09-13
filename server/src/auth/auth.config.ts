@@ -22,7 +22,7 @@ import { randomUUID } from 'node:crypto'
 import { Algorithm, hash as argonHash, verify as argonVerify } from '@node-rs/argon2'
 import type { Database } from '../db/client.js'
 import * as schema from '../db/schema/index.js'
-import { MINIMUM_PASSWORD_LENGTH, refusePassword } from './password-policy.js'
+import { MINIMUM_PASSWORD_LENGTH, PASSWORD_REFUSED, refusePassword } from './password-policy.js'
 import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
 import { sameAddress } from './same-address.js'
 import { readPolicy } from '../policy/read.js'
@@ -40,16 +40,21 @@ export const SIGN_IN = 'sign-in'
 /**
  * The endpoints that write a password, and the body field each carries it in.
  *
- * Two are the library's own and reach no controller of ours; two are reached
+ * Two are the library's own and reach no controller of ours; three are reached
  * in process by `setup.controller.ts` and `accounts.controller.ts`, which
  * `disabledPaths` does not intercept. -> #374
+ *
+ * **A path is what this can match, so a server-only endpoint is not here.**
+ * `setPassword` is `createAuthEndpoint.serverOnly` and has no URL at all, so
+ * `'/set-password'` matched nothing and read as coverage. Nothing calls it;
+ * anything that did would take the boot-time minimum, and would need guarding
+ * where it is called rather than here.
  */
 const PASSWORD_WRITES: Readonly<Record<string, string>> = {
   '/sign-up/email': 'password',
   '/admin/create-user': 'password',
   '/change-password': 'newPassword',
   '/reset-password': 'newPassword',
-  '/set-password': 'newPassword',
   '/admin/set-user-password': 'newPassword',
 }
 
@@ -479,8 +484,22 @@ export function authOptions(
           const supplied = (ctx.body as Record<string, unknown> | undefined)?.[writes]
           if (typeof supplied === 'string') {
             const stored = await readPolicy(db)
-            const refusal = refusePassword(supplied, stored['auth.minPasswordLength'])
-            if (refusal) throw new APIError('UNPROCESSABLE_ENTITY', { message: refusal })
+            /**
+             * **The refusal says no and not how short.** This runs ahead of
+             * the endpoint's own session and token checks -- that is what
+             * makes it cover the library's routes -- so its message reaches an
+             * anonymous caller, and the minimum is otherwise readable only
+             * through an `@AdminOnly` route. `change-password.controller.ts`
+             * is behind a session and composes the number for the analyst it
+             * belongs to.
+             *
+             * A caller can still learn that some password was too short, which
+             * is a narrower thing to know than the number and is the cost of
+             * refusing before the endpoint runs at all.
+             */
+            if (refusePassword(supplied, stored['auth.minPasswordLength'])) {
+              throw new APIError('UNPROCESSABLE_ENTITY', { message: PASSWORD_REFUSED })
+            }
           }
         }
 
