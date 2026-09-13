@@ -37,7 +37,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { parseCsv } from './csv-import.js'
-import { neutralise, toCsv } from './csv.js'
+import { neutralise } from '../domain/spreadsheet.lists.js'
+import { toCsv } from './csv.js'
 
 const shape = {
   allowed: new Set(['hostname']),

@@ -16,6 +16,8 @@ import { Inject, Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
+import { user } from '../db/schema/auth.js'
+import { customers } from '../db/schema/customer.js'
 import type { Database } from '../db/client.js'
 import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
 import { reachChanged } from './reach-changed.js'
@@ -27,6 +29,37 @@ export class GroupsService {
 
   async all(): Promise<{ id: string; name: string }[]> {
     return this.db.select({ id: groups.id, name: groups.name }).from(groups).orderBy(groups.name)
+  }
+
+  /**
+   * Who is in this group, and which customers it holds.
+   *
+   * **The read the six write routes had no counterpart for.** An administrator
+   * could grant and revoke membership and never see what a group contains,
+   * which is the question they are answering when they look. -> #208
+   */
+  async membership(groupId: string): Promise<{
+    members: { userId: string; username: string; displayName: string; level: Level }[]
+    customers: { customerId: string; customerName: string }[]
+  }> {
+    const members = await this.db
+      .select({
+        userId: groupMembers.userId,
+        username: user.email,
+        displayName: user.name,
+        level: groupMembers.level,
+      })
+      .from(groupMembers)
+      .innerJoin(user, eq(user.id, groupMembers.userId))
+      .where(eq(groupMembers.groupId, groupId))
+
+    const held = await this.db
+      .select({ customerId: groupCustomers.customerId, customerName: customers.name })
+      .from(groupCustomers)
+      .innerJoin(customers, eq(customers.id, groupCustomers.customerId))
+      .where(eq(groupCustomers.groupId, groupId))
+
+    return { members, customers: held }
   }
 
   /**

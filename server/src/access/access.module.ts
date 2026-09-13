@@ -11,12 +11,13 @@
 import { Global, Module } from '@nestjs/common'
 
 import { GroupsController } from './groups.controller.js'
+import { ReachController } from './reach.controller.js'
 import { GroupsService } from './groups.service.js'
 import { ReachService } from './reach.service.js'
 
 @Global()
 @Module({
-  controllers: [GroupsController],
+  controllers: [GroupsController, ReachController],
   providers: [ReachService, GroupsService],
   exports: [ReachService, GroupsService],
 })

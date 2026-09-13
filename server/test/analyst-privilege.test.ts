@@ -52,6 +52,11 @@ const REFUSED_TO_AN_ANALYST: readonly string[] = [
   // Making a group is the same decision one step earlier: an analyst who
   // could make one could then put themselves in it.
   'GET /api/groups',
+  // Reading the reach model: who reaches what, and why. An analyst may not ask
+  // it -- the answer is the shape of everybody's access. -> #208
+  'GET /api/groups/{groupId}',
+  'GET /api/reach/account/{userId}',
+  'GET /api/reach/customer/{customerId}',
   'POST /api/groups',
   // **Granting reach is managing the install, and this line is the decision.**
   // An analyst who could put themselves in a group would reach every

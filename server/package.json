@@ -55,7 +55,7 @@
     "@tiptap/y-tiptap": "^3.0.8",
     "@zip.js/zip.js": "^2.8.48",
     "age-encryption": "^0.3.0",
-    "better-auth": "1.7.3",
+    "better-auth": "1.7.4",
     "compression": "^1.8.1",
     "csv-parse": "7.0.2",
     "csv-stringify": "6.8.3",
@@ -86,7 +86,7 @@
     "@nestjs/schematics": "12.0.0",
     "@nestjs/testing": "12.0.1",
     "@playwright/test": "1.63.0",
-    "@redocly/openapi-core": "2.51.2",
+    "@redocly/openapi-core": "2.52.0",
     "@swc/cli": "0.8.1",
     "@swc/core": "1.16.2",
     "@types/compression": "1.8.1",
@@ -112,7 +112,7 @@
   "overrides": {
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
     "@thallesp/nestjs-better-auth": {
-      "better-auth": "1.7.3"
+      "better-auth": "1.7.4"
     }
   }
 }

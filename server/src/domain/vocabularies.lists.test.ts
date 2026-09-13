@@ -10,7 +10,7 @@ const LIST_MODULES = readdirSync(HERE).filter(
 )
 
 describe('the zod-free vocabulary lists', () => {
-  it.each(LIST_MODULES)('%s imports nothing, so the client can value-import it', (name) => {
+  it.each(LIST_MODULES)('%s reaches for no package, so the client can value-import it', (name) => {
     // **The whole point of the file.** `vocabularies.ts` imports zod, and a
     // client value-import of it puts zod and every schema in
     // `server/src/domain` into the browser bundle - which
@@ -23,7 +23,16 @@ describe('the zod-free vocabulary lists', () => {
     // import with no bound name still runs, and would be invisible here
     // otherwise.
     const source = readFileSync(HERE + name, 'utf8')
-    expect(source).not.toMatch(/^\s*import\b/m)
+    // **A sibling in this directory is allowed and a package is not.** These
+    // were leaves, and "imports nothing" was the cheap way to say the stronger
+    // thing: nothing a browser cannot run. `indicators.lists.ts` ended that --
+    // it holds the export rules both doors share, and they are built out of
+    // three siblings -- so the shortcut is gone and the transitive property is
+    // `browser-safe.test.ts`'s to walk. This still refuses the one step that
+    // cannot be walked back from: a bare specifier.
+    for (const spec of source.matchAll(/^\s*import\b[^'"]*?['"]([^'"]+)['"]/gm)) {
+      expect(spec[1], `${name} reaches outside this directory`).toMatch(/^\.\/[^/]+\.js$/)
+    }
     expect(source).not.toMatch(/\brequire\(/)
     // **`export * from` is an import**, and the two checks above cannot see
     // it -- `vocabularies.ts` two files over uses exactly that syntax. Proved

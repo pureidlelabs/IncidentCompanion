@@ -1606,3 +1606,67 @@ def test_a_psql_one_shot_stops_on_the_first_error():
         "`service_completed_successfully` and lets the application serve against a "
         "database its preparation never finished"
     )
+
+
+def test_the_edge_says_hsts_at_a_name_and_never_at_loopback():
+    """The edge tells a browser to refuse the unprotected spelling of a name.
+
+    *Where an install is reached at a name of its own, it MUST tell the browser
+    to refuse the unprotected spelling of that name from then on. An install
+    reached at a loopback address MUST NOT say this. The instruction MUST NOT
+    be extended to names below the one the install is reached at.*
+
+    **Keyed on the host the request arrived at**, so the edge's answer cannot
+    drift from where the install is actually reached, and so it matches what
+    the app answers from `AUTH_BASE_URL`.
+
+    The shipped `server_name` is loopback only, so the header cannot be emitted
+    by this configuration as it stands -- what this holds is that the decision
+    is right the moment an operator gives the edge a name, which is the one
+    edit that would otherwise make the two layers disagree.
+    """
+    conf = NGINX_CONF.read_text(encoding="utf-8")
+
+    assert re.search(r"map\s+\$host\s+\$ic_hsts\s*{", conf), (
+        "the edge decides HSTS from something other than the host it was reached at, "
+        "or not at all"
+    )
+    assert re.search(
+        r"add_header\s+Strict-Transport-Security\s+\$ic_hsts\s+always\s*;", conf
+    ), "the edge sends no HSTS, or sends it only on a success"
+
+    block = conf[conf.index("map $host $ic_hsts"):]
+    block = block[: block.index("}")]
+
+    # **Read as pairs, so every entry naming a loopback spelling is checked.**
+    # Searching the block for "a loopback host next to an empty value" is
+    # satisfied by the regex entry while the exact one hands out a max-age --
+    # proved by mutation, which is why this parses rather than greps.
+    pairs = re.findall(r'"?([^"\s]+)"?\s+"([^"]*)"\s*;', block)
+    assert pairs, "the map hands out nothing, so this asserts on an empty set"
+
+    loopback = [(key, value) for key, value in pairs if re.search(r"localhost|127\.0\.0\.1|::1", key)]
+    assert len(loopback) >= 3, (
+        f"only {len(loopback)} loopback spellings are answered; each of localhost, "
+        f"127.0.0.1 and [::1] has to be, with and without a port"
+    )
+    for key, value in loopback:
+        assert value == "", (
+            f"{key} is answered {value!r}, so the edge would tell a browser to refuse "
+            f"http for every application on that machine"
+        )
+
+    assert 'default' in block and 'max-age=' in block, (
+        "no max-age for a named install, so the requirement's first paragraph is unmet"
+    )
+    # **Read from the values the map hands out, not from the file.** The prose
+    # above the map names both of these to say why they are absent, and a
+    # substring check over the whole config fails on its own explanation.
+    values = "".join(re.findall(r'"[^"]*max-age[^"]*"', block))
+    assert "includeSubDomains" not in values, (
+        "the instruction is extended to names below the install, which the requirement "
+        "forbids in as many words"
+    )
+    assert "preload" not in values, (
+        "preload submits the install to a browser list it cannot withdraw from"
+    )
