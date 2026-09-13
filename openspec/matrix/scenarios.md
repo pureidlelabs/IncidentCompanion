@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 468 |
-| Demonstrated | 359 |
+| Scenarios | 470 |
+| Demonstrated | 361 |
 | Undemonstrable | 1 |
 | Unbuilt | 95 |
 | Undemonstrated | 13 |
@@ -368,6 +368,8 @@
 | A line says who, what, and to what, and never says what was written | A caller invents a route | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | demonstrated | server/src/install-activity/record.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One failure and a run of them | demonstrated | server/src/install-audit/read.test.ts |
+| Refusals are recorded, and a run of them is louder than one | One caller, a different account each time | demonstrated | server/src/install-audit/read.test.ts |
+| Refusals are recorded, and a run of them is louder than one | What the caller supplied is still recorded | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
 | Refusals are recorded, and a run of them is louder than one | A stored seriousness is not lowered | demonstrated | server/src/install-audit/read.test.ts |
 | Changing what the audit keeps is itself audited, and loudly | The retention window is shortened | demonstrated | server/src/install-activity/setting-severity.test.ts |
 | Reading the audit is an act the audit records | An administrator reads the audit | demonstrated | server/src/install-audit/read.test.ts |
