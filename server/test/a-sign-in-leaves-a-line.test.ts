@@ -48,7 +48,11 @@ describe.skipIf(!RUNNABLE || !db)('signing in leaves a line', () => {
       .orderBy(desc(installActivity.at))
       .limit(20)
       .then((rows) =>
-        rows.filter((one) => one.actorId === userId || one.targetLabel === email),
+        rows.filter(
+          (one) =>
+            one.actorId === userId ||
+            (one.detail as { account?: unknown } | null)?.account === email,
+        ),
       )
     return row
   }
@@ -122,10 +126,17 @@ describe.skipIf(!RUNNABLE || !db)('signing in leaves a line', () => {
    * Two claims about one refusal, deliberately not two refusals.
    *
    * **The line names what was attempted**, or it answers nothing a reviewer
-   * can act on. And **the attempted password is not in it**: a refusal has to
-   * record what was tried, and the obvious way to write that is to record the
-   * body -- which puts a password, usually a real one from another system,
-   * into a table whose whole point is that it cannot be edited or deleted.
+   * can act on -- and it names it in `detail` rather than in `target`, which
+   * partitions the run window. A caller who picks the target picks whether
+   * their own attempts are counted together, so an attacker trying one
+   * password each at a hundred accounts held every run at 1 and every line at
+   * `Low`. That is password spraying, and it is what these events exist to
+   * find. -> #541
+   *
+   * And **the attempted password is not in it**: a refusal has to record what
+   * was tried, and the obvious way to write that is to record the body --
+   * which puts a password, usually a real one from another system, into a
+   * table whose whole point is that it cannot be edited or deleted.
    * `record.ts` says the only guard this ever had was a grep for the word
    * `password`; this is that grep, aimed at the value rather than the key.
    *
@@ -147,7 +158,14 @@ describe.skipIf(!RUNNABLE || !db)('signing in leaves a line', () => {
 
     const line = await newest('sign_in_failed', since)
     expect(line, 'a sign-in was refused and left no line').toBeDefined()
-    expect(line!.targetLabel).toBe(email)
+    expect(
+      line!.targetLabel,
+      'the caller chose the partition, so each account they try is its own run',
+    ).not.toBe(email)
+    expect(
+      line!.detail,
+      'the line does not say which account was attempted',
+    ).toMatchObject({ account: email })
     expect(line!.channel).toBe('authentication')
 
     // **The whole row, not the columns a password was expected in.** The id is

@@ -29,6 +29,14 @@ import { readPolicy } from '../policy/read.js'
 import { SESSION_LIFETIME_CEILING_MINUTES } from '../policy/keys.js'
 import { sessionEnded } from './session-ended.js'
 
+/**
+ * What a failed sign-in is recorded against.
+ *
+ * A constant, so every failure from one caller falls in one run however many
+ * identifiers they tried. The identifier itself is in `detail`.
+ */
+const SIGN_IN = 'sign-in'
+
 const ARGON2ID = {
   algorithm: Algorithm.Argon2id,
   memoryCost: 19456,
@@ -549,10 +557,22 @@ export function authOptions(
         // place a sign-in's outcome is visible: a refusal writes no row, so
         // there is nothing else to read afterwards.
         const attempted = (ctx.body as { email?: unknown } | undefined)?.email
+        /**
+         * **The target is ours, and the identifier they typed is not.**
+         * `target_label` partitions the run window, so a caller who chooses it
+         * chooses whether their own attempts are counted together -- and one
+         * attempt each at a hundred accounts is password spraying, held at a
+         * run of one and `Low` for ever. The account travels in `detail`,
+         * which does not partition, exactly as a refused socket carries the
+         * case it asked for. -> #541
+         */
         await recordInstallActivity(db, {
           event: 'sign_in_failed',
-          target: typeof attempted === 'string' ? attempted : null,
-          detail: { path: ctx.path },
+          target: SIGN_IN,
+          detail: {
+            path: ctx.path,
+            ...(typeof attempted === 'string' && attempted !== '' ? { account: attempted } : {}),
+          },
           headers,
         })
         if (typeof attempted === 'string' && attempted !== '') {
