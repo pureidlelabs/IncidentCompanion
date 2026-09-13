@@ -34,13 +34,7 @@ export interface AuditRow {
   source: string | null
   /** What the line's writer recorded about it. Empty when it recorded none. */
   attributes: Readonly<Record<string, string>>
-  /**
-   * Whether the run this row stands for held more than one `attributes`.
-   *
-   * The page reports a run's head, so without saying this the head's detail
-   * reads as every line's -- and for a run of refusals naming different
-   * accounts that is one account standing in for all of them.
-   */
+  /** Whether the run this row stands for held more than one `attributes`. */
   detailsVary: boolean
   /** How many identical lines this one stands for. */
   runLength: number
@@ -62,6 +56,26 @@ export const LOG_LABEL: Readonly<Record<AuditRow['channel'], string>> = {
  */
 export function matchesActivity(row: AuditRow, query: string): boolean {
   return matchesWords(row.activity, query)
+}
+
+/**
+ * What the Detail column says for a line, or `null` when it has nothing to say.
+ *
+ * **A run whose lines disagree says so rather than naming one of them.** The
+ * page reports the head of a run, so a value drawn from it reads as every
+ * line's -- and a run collapses lines that already agree on everything a
+ * reader can filter by, which leaves what was recorded as the thing they can
+ * differ on. Where they did, the values are on the API and with a collector.
+ *
+ * **Said of the run, never of a field.** `detailsVary` is one flag over the
+ * whole record, so naming a key beside it would claim about that key what was
+ * only established about the record.
+ */
+export function detailSummary(row: Pick<AuditRow, 'attributes' | 'detailsVary'>): string | null {
+  if (row.detailsVary) return 'varies'
+
+  const pairs = Object.entries(row.attributes)
+  return pairs.length === 0 ? null : pairs.map(([key, value]) => `${key}: ${value}`).join(', ')
 }
 
 /**
@@ -346,9 +360,9 @@ export function ActivityLog({ audit, now }: ActivityLogProps) {
 /**
  * The log's columns.
  *
- * **Three columns carry no width**, so `table-fixed` splits the remainder
- * between the person, what they acted on and where from - the three that vary
- * most in length and are read as a sentence.
+ * **Four columns carry no width**, so `table-fixed` splits the remainder
+ * between the person, what they acted on, what was recorded and where from -
+ * the four that vary most in length and are read as a sentence.
  */
 function auditColumns(): EntityColumn<AuditRow>[] {
   return [
@@ -444,19 +458,16 @@ function auditColumns(): EntityColumn<AuditRow>[] {
       id: 'detail',
       header: 'Detail',
       cell: ({ row: one }) => {
-        const pairs = Object.entries(one.original.attributes)
-        if (pairs.length === 0) return <span className="text-ink-muted">&ndash;</span>
-        // **A run that held more than one value names the field, not a
-        // value.** The page reports the run's head, so a specimen drawn here
-        // is one line's and reads as every line's -- and for a run of
-        // refusals naming different accounts the specimen is the one account
-        // that was not the whole story. What the reader can act on is that the
-        // field differed; the values are on the API and with a collector.
-        const text = one.original.detailsVary
-          ? pairs.map(([key]) => `${key}: varies`).join(', ')
-          : pairs.map(([key, value]) => `${key}: ${value}`).join(', ')
-
-        return <span className="block truncate">{text}</span>
+        const summary = detailSummary(one.original)
+        return summary === null ? (
+          <span className="text-ink-muted">&ndash;</span>
+        ) : (
+          // The column is narrow and the values are long, so the whole of it
+          // is on the element a pointer rests on.
+          <span className="block truncate" title={summary}>
+            {summary}
+          </span>
+        )
       },
     },
     {

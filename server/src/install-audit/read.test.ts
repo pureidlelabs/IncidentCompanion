@@ -33,12 +33,16 @@ const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 /**
- * A target the caller did not choose, which is what a refusal records.
+ * A target no other case in this file writes to.
  *
- * Written out rather than imported from the writer: what these cases drive is
- * the window's behaviour for rows sharing a target, whatever that target is.
+ * **One per case, because the target is a partition column.** Two cases
+ * sharing a literal write into one run, and the first to declare then passes
+ * on a partition the second has not polluted yet -- green in this order and
+ * red in any other. Every other case here marks its own target the same way.
  */
-const ONE_TARGET = 'sign-in'
+function ownTarget(what: string): string {
+  return `${what}-${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
+}
 
 const READER = 'test-audit-reader'
 const session = {
@@ -134,17 +138,18 @@ describe.skipIf(!db)('reading the audit', () => {
    *
    * The page reports the head of each run, so one line's `detail` survives and
    * the rest do not. Drawn without qualification that reads as though the
-   * head's value were every value -- which for a spray across accounts is the
-   * opposite of true, one account standing in for the several that were tried.
+   * head's value were every value.
    *
-   * `detail` is not a partition column, so it is the one field of a run that
-   * can differ across it. -> #544
+   * `detail` is not a partition column. Neither are `userAgent`, `at` and
+   * `actorLabel`, so it is not the only field a run can differ on -- it is the
+   * one the page draws. -> #544
    */
   it('says a run holds one detail when it does', async () => {
+    const target = ownTarget('agreeing')
     for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
       await recordInstallActivity(db!, {
         event: 'sign_in_failed',
-        target: ONE_TARGET,
+        target,
         detail: { account: 'one@example.test' },
       })
     }
@@ -159,10 +164,11 @@ describe.skipIf(!db)('reading the audit', () => {
   })
 
   it('says a run holds more than one detail when it does', async () => {
+    const target = ownTarget('disagreeing')
     for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
       await recordInstallActivity(db!, {
         event: 'sign_in_failed',
-        target: ONE_TARGET,
+        target,
         detail: { account: `sprayed-${String(i)}@example.test` },
       })
     }

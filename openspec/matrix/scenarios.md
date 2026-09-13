@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 467 |
-| Demonstrated | 358 |
+| Scenarios | 469 |
+| Demonstrated | 360 |
 | Undemonstrable | 1 |
 | Unbuilt | 95 |
 | Undemonstrated | 13 |
@@ -368,6 +368,8 @@
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | demonstrated | server/src/install-activity/record.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One failure and a run of them | demonstrated | server/src/install-audit/read.test.ts |
 | Refusals are recorded, and a run of them is louder than one | A stored seriousness is not lowered | demonstrated | server/src/install-audit/read.test.ts |
+| Refusals are recorded, and a run of them is louder than one | A run whose lines recorded different things | demonstrated | server/src/install-audit/read.test.ts |
+| Refusals are recorded, and a run of them is louder than one | A run whose lines recorded the same thing | demonstrated | server/src/install-audit/read.test.ts |
 | Changing what the audit keeps is itself audited, and loudly | The retention window is shortened | demonstrated | server/src/install-activity/setting-severity.test.ts |
 | Reading the audit is an act the audit records | An administrator reads the audit | demonstrated | server/src/install-audit/read.test.ts |
 | Reading the audit is an act the audit records | An analyst who is not an administrator | demonstrated | server/test/analyst-privilege.test.ts |

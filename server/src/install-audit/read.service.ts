@@ -172,16 +172,11 @@ export class InstallActivityReadService {
         raisedSeverityId: raisedSeverity(window).as('raised_severity_id'),
         runHead: sql<string>`max(${installActivity.seq}) over (${window})`.as('run_head'),
         /**
-         * **Whether the run hides a detail the head does not show.**
-         *
-         * `detail` is the one field a run can differ on -- every other is a
-         * partition column -- and the page reports the head, so a value drawn
-         * without this reads as though it were every value. For a spray across
-         * accounts that is the opposite of true.
+         * Whether the run's lines carried more than one `detail` between them.
          *
          * `min`/`max` over the text rather than a distinct count, which
-         * Postgres does not offer as a window function. Two values that differ
-         * anywhere give a different min and max; equal ones cannot.
+         * Postgres does not offer as a window function: two values that differ
+         * anywhere give a different min and max, and equal ones cannot.
          */
         detailsVary: sql<boolean>`(min(${installActivity.detail}::text) over (${window}))
           is distinct from (max(${installActivity.detail}::text) over (${window}))`.as(
