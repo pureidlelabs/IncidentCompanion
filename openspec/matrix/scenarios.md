@@ -4,11 +4,11 @@
 
 | | |
 | --- | --- |
-| Scenarios | 464 |
-| Demonstrated | 356 |
+| Scenarios | 466 |
+| Demonstrated | 357 |
 | Undemonstrable | 1 |
 | Unbuilt | 95 |
-| Undemonstrated | 12 |
+| Undemonstrated | 13 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -265,6 +265,8 @@
 | An indicator feed is what a defender can act on | A disposition the application does not recognise | demonstrated | server/src/exports/indicators.test.ts |
 | An indicator feed is what a defender can act on | A feed is published for sharing | demonstrated | server/src/exports/indicators.test.ts |
 | An indicator feed is what a defender can act on | A restriction is named for a form that cannot carry one | demonstrated | server/src/exports/exports.controller.test.ts |
+| An indicator feed is what a defender can act on | A level two versions of the vocabulary spell alike | demonstrated | server/src/domain/tlp.lists.test.ts |
+| An indicator feed is what a defender can act on | A level belonging to an older version | undemonstrated | |
 | A row says which door it came through, and the install decides that | A row read out of a file | demonstrated | server/src/exports/import.service.test.ts |
 | A row says which door it came through, and the install decides that | A file claims an origin of its own | demonstrated | server/src/exports/import.service.test.ts |
 | A row says which door it came through, and the install decides that | A collection that records no origin | demonstrated | server/src/exports/import.service.test.ts |
