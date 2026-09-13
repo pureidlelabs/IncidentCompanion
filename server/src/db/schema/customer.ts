@@ -73,7 +73,9 @@ export const customers = pgTable(
      * forgotten call site away from two, and the install would then have a
      * default that half the code disagreed about.
      */
-    uniqueIndex('customers_one_default').on(t.isDefault).where(sql`${t.isDefault}`),
-    figuresWithinReach('customer_figures_within_reach', [t.usersTotalCount, t.annualTurnoverEur]),
+    uniqueIndex('customers_one_default')
+      .on(t.isDefault)
+      .where(sql`${t.isDefault}`),
+    figuresWithinReach('customer_figures_within_reach', t),
   ],
 )

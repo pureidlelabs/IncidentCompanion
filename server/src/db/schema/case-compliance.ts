@@ -90,7 +90,10 @@ export const caseCompliance = pgTable(
      * through -- and the screen looks correct until somebody picks two.
      */
     doraRootCauseHigh: jsonb('dora_root_cause_high').$type<string[]>().notNull().default([]),
-    doraRootCauseDetailed: jsonb('dora_root_cause_detailed').$type<string[]>().notNull().default([]),
+    doraRootCauseDetailed: jsonb('dora_root_cause_detailed')
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     doraRootCauseAdditional: jsonb('dora_root_cause_additional')
       .$type<string[]>()
       .notNull()
@@ -120,5 +123,5 @@ export const caseCompliance = pgTable(
 
     ...rowVersioning,
   },
-  (t) => [...caseScoped(t.caseId), figuresWithinReach('case_compliance_figures_within_reach', [t.usersAffectedCount, t.usersTotalCount, t.financialLossEur, t.annualTurnoverEur, t.doraCostsEur])],
+  (t) => [...caseScoped(t.caseId), figuresWithinReach('case_compliance_figures_within_reach', t)],
 )

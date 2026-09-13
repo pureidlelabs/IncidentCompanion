@@ -73,18 +73,34 @@ export function figure(name: string) {
 }
 
 /**
- * A table's check that every `figure()` column on it is one the read can answer.
+ * What drizzle calls a `bigint` read as a JavaScript number.
  *
- * Takes the columns rather than deriving them, because a column added to a
- * table and not to its check is the case this exists to prevent -- and there is
- * nothing in a table's own type that says which of its columns are figures.
+ * The discriminator the check is derived from: it is exactly the set of
+ * columns `figure()` builds, and it is carried by the column itself rather
+ * than by a list beside it.
+ */
+const FIGURE_COLUMN = 'PgBigInt53'
+
+/**
+ * A table's check that every figure on it is one the read can answer.
+ *
+ * **Derived from the table, never listed.** A column added to a table and left
+ * out of its check is the case this exists to prevent, and a hand-written list
+ * relocates that mistake rather than removing it -- so the columns come from
+ * the table's own types. Give it the table's columns; it finds the figures.
+ *
+ * Refuses a table holding no figure at all, which is a check declared where
+ * there is nothing to check rather than a table that happens to be empty.
  * -> `db/every-figure-is-within-reach.test.ts`
  */
-export function figuresWithinReach(name: string, columns: readonly AnyPgColumn[]) {
+export function figuresWithinReach(name: string, columns: Record<string, AnyPgColumn>) {
+  const figures = Object.values(columns).filter((one) => one.columnType === FIGURE_COLUMN)
+  if (figures.length === 0) throw new Error(`${name} covers no figure column`)
+
   return check(
     name,
     sql.join(
-      columns.map(
+      figures.map(
         (column) =>
           sql`(${column} is null or ${column} between 0 and ${sql.raw(String(FIGURE_CEILING))})`,
       ),

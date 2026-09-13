@@ -19,7 +19,7 @@
  * Columns whose answers cannot reach the ceiling are asserted nowhere, and the
  * schema is where each says so.
  */
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
@@ -37,6 +37,9 @@ const seedPool = process.env.SEED_DATABASE_URL
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const THREE_BILLION = 3_000_000_000
+
+/** One past what a JavaScript number carries exactly. */
+const PAST_WHAT_A_NUMBER_HOLDS = '9007199254740992'
 
 afterAll(async () => {
   if (seed) {
@@ -64,15 +67,53 @@ describe.skipIf(!db)('a figure larger than two billion', () => {
 
   it('is held by the case that copied it', async () => {
     const [row] = await seed!.insert(cases).values({ title: 'A large entity' }).returning()
-    await seed!
-      .insert(caseCompliance)
-      .values({ caseId: row!.id, annualTurnoverEur: THREE_BILLION })
+    await seed!.insert(caseCompliance).values({ caseId: row!.id, annualTurnoverEur: THREE_BILLION })
 
     const [read] = await seed!
       .select()
       .from(caseCompliance)
       .where(eq(caseCompliance.caseId, row!.id))
     expect(read!.annualTurnoverEur).toBe(THREE_BILLION)
+  })
+
+  /**
+   * **The other end of the same rule, and the reason it is not simply "wider".**
+   *
+   * A column is read as a JavaScript number, so a figure past
+   * `Number.MAX_SAFE_INTEGER` is rounded on the way out and then refused by the
+   * read schema -- the row becomes unreadable over a value that is already not
+   * the one stored. The column refuses it instead.
+   *
+   * Driven through `sql` rather than the ORM: passing the number through
+   * JavaScript would round it before Postgres ever saw it, which is the defect
+   * rather than a way to reproduce it. `23514` is a check violation.
+   */
+  it('refuses a figure past what the read can carry, at the column', async () => {
+    const [row] = await seed!.insert(cases).values({ title: 'A figure too far' }).returning()
+
+    const refused = seed!.execute(
+      sql`insert into impact (case_id, label, subject_count)
+          values (${row!.id}, 'Too many', ${sql.raw(PAST_WHAT_A_NUMBER_HOLDS)})`,
+    )
+
+    await expect(
+      refused,
+      'the column took a figure the read cannot answer, so the row is unreadable',
+    ).rejects.toMatchObject({ cause: { code: '23514' } })
+  })
+
+  /**
+   * The ceiling itself is stored, so the bound is the one intended rather than
+   * one short of it -- the half a refusal case cannot show on its own.
+   */
+  it('holds the largest figure the read can carry', async () => {
+    const [row] = await seed!.insert(cases).values({ title: 'A figure at the line' }).returning()
+    await seed!
+      .insert(impact)
+      .values({ caseId: row!.id, label: 'At the line', subjectCount: Number.MAX_SAFE_INTEGER })
+
+    const [read] = await seed!.select().from(impact).where(eq(impact.caseId, row!.id))
+    expect(read!.subjectCount, 'the ceiling itself is refused').toBe(Number.MAX_SAFE_INTEGER)
   })
 
   /**

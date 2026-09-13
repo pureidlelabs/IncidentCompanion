@@ -171,7 +171,11 @@ export const impact = pgTable(
     tags: text('tags').notNull().default(''),
     ...rowVersioning,
   },
-  (t) => [index('impact_case_idx').on(t.caseId), ...caseScoped(t.caseId), figuresWithinReach('impact_figures_within_reach', [t.subjectCount, t.recordCount, t.volumeBytes])],
+  (t) => [
+    index('impact_case_idx').on(t.caseId),
+    ...caseScoped(t.caseId),
+    figuresWithinReach('impact_figures_within_reach', t),
+  ],
 )
 
 /**

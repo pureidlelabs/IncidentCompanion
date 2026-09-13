@@ -13,8 +13,14 @@
  * only in the TypeScript is one a restored backup or a direct `insert` walks
  * past, which is exactly how such a row arrives.
  *
- * What no case here covers is the write path, which refuses these figures at
- * the schema long before the column sees them. This is the floor under it.
+ * What no case here covers is a refusal -- these read the constraints back and
+ * say which columns each covers. That one refuses is
+ * `customers/a-figure-larger-than-two-billion.test.ts`.
+ *
+ * The screens are not the reason this is at the column. They validate against
+ * the same schemas and a figure never reaches the store; an archive brought
+ * into the install copies its rows in unvalidated, which is the door the
+ * column is here to hold.
  */
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -59,18 +65,19 @@ describe.skipIf(!db)('a figure held past what the read can carry', () => {
     return rows[0]?.text ?? ''
   }
 
-  it.each(['case_compliance_figures_within_reach', 'customer_figures_within_reach', 'impact_figures_within_reach'])(
-    '%s is on the database, not only in the schema module',
-    async (constraint) => {
-      const text = await definitionOf(constraint)
-      expect(text, `${constraint} is declared and was never pushed`).not.toBe('')
-      expect(text, 'the ceiling is not the one a JavaScript number carries').toContain(
-        String(FIGURE_CEILING),
-      )
-    },
-  )
+  it.each([
+    'case_compliance_figures_within_reach',
+    'customer_figures_within_reach',
+    'impact_figures_within_reach',
+  ])('%s is on the database, not only in the schema module', async (constraint) => {
+    const text = await definitionOf(constraint)
+    expect(text, `${constraint} is declared and was never pushed`).not.toBe('')
+    expect(text, 'the ceiling is not the one a JavaScript number carries').toContain(
+      String(FIGURE_CEILING),
+    )
+  })
 
-  it.each(FIGURES)('%s.%s is covered by its table\'s constraint', async (table, column) => {
+  it.each(FIGURES)("%s.%s is covered by its table's constraint", async (table, column) => {
     const constraint =
       table === 'customers'
         ? 'customer_figures_within_reach'
@@ -82,20 +89,5 @@ describe.skipIf(!db)('a figure held past what the read can carry', () => {
       await definitionOf(constraint),
       `${column} can hold a figure the read cannot answer`,
     ).toContain(column)
-  })
-
-  /**
-   * The ceiling is the point, so it is driven at the boundary rather than at
-   * some comfortable value: one below is stored and one above is refused.
-   */
-  it('refuses one past the ceiling and accepts the ceiling itself', async () => {
-    const check = async (value: string) =>
-      db!.execute(sql`select ${sql.raw(value)}::bigint where ${sql.raw(value)}::bigint between 0 and ${sql.raw(String(FIGURE_CEILING))}`)
-
-    const held = (await check(String(FIGURE_CEILING))) as unknown as { rows: unknown[] }
-    expect(held.rows, 'the ceiling itself is refused, so the bound is off by one').toHaveLength(1)
-
-    const past = (await check('9007199254740992')) as unknown as { rows: unknown[] }
-    expect(past.rows, 'a figure past the ceiling satisfies the bound').toHaveLength(0)
   })
 })
