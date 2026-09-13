@@ -32,16 +32,40 @@ function candidateId(incident: string, identity: string): string {
 /**
  * What an index already holds for a row, trying its identities strongest first.
  *
- * **Strongest first, then weaker.** A stored row is keyed on the columns its
- * table has, which can be less than the provider gives -- so an incoming host
- * carrying a domain has to try the domain-less form or it imports a second copy
- * of a host already here. -> `domain/identity.ts`
+ * **Strongest first, then weaker.** A row is recognised by less than it was
+ * named with: a cloud app arriving with its instance has to try the bare name
+ * too, or it is a second copy of one already there. It has an effect only where
+ * a collection's identity has rungs -- `cloud_apps` and a scope-bearing network
+ * indicator. A host does not: `systems` is keyed on the hostname alone, one
+ * rung, whatever else the provider sends with it. -> `domain/identity.ts`
  */
 function knownBy(
   index: ReadonlyMap<string, string>,
   identities: readonly string[],
 ): string | undefined {
   return identities.map((one) => index.get(one)).find((id) => id !== undefined)
+}
+
+const stated = (value: unknown): boolean => value !== undefined && value !== null && value !== ''
+
+/**
+ * Fill a candidate's blanks from another incident's naming of the same thing.
+ *
+ * **Blanks only, so the row does not depend on which incident came first.** A
+ * cloud app named with its instance by one incident and without by the other is
+ * one row either way, and it carries the instance either way. A field both
+ * namings state, and state differently, keeps the first proposer's value.
+ */
+function enrich(candidate: Candidate, mapped: { fields: Record<string, unknown>; label: string }) {
+  let widened = false
+  for (const [field, value] of Object.entries(mapped.fields)) {
+    if (!stated(value) || stated(candidate.fields[field])) continue
+    candidate.fields[field] = value
+    widened = true
+  }
+  // The label is derived from the fields, so a naming that widened them
+  // describes the widened row better than the one that did not.
+  if (widened && mapped.label) candidate.label = mapped.label
 }
 
 /**
@@ -178,6 +202,12 @@ export class ImportService {
         const already = knownBy(planned, mapped.identities)
         if (already !== undefined) {
           byRef.set(parsed.ref, already)
+          const first = seen.get(already)
+          // **Widened rather than discarded.** The later naming can carry a
+          // field the first left blank -- an app's instance, an address's
+          // scope -- and dropping it would lose material the import was given
+          // and count nothing, where two rows at least carried both.
+          if (first) enrich(first, mapped)
           continue
         }
 

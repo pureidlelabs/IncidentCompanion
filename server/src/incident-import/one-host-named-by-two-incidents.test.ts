@@ -71,6 +71,24 @@ function incidentNaming(key: string, entityId: string, hostname: string) {
   }
 }
 
+/** An incident naming one cloud app, with or without the instance qualifier. */
+function app(key: string, entityId: string, instance?: string) {
+  return {
+    key,
+    title: key,
+    severity: '',
+    alerts: [],
+    entities: [
+      {
+        kind: 'CloudApplication',
+        id: entityId,
+        name: entityId,
+        properties: { appName: 'Dropbox', ...(instance ? { instanceName: instance } : {}) },
+      },
+    ],
+  }
+}
+
 /** The two incidents each carry their own entity id for the one host. */
 const SHARED = [
   incidentNaming('inc-1', 'e-first', 'SHARED-1'),
@@ -156,35 +174,34 @@ describe('one host named by two incidents', () => {
    * the app twice the moment one incident named the instance and the other did
    * not -- and every case above passes on that, because a host has one rung.
    */
-  it('is one candidate when one incident names it more precisely', async () => {
+  it.each([
+    ['the qualified naming first', 'tenant-a', undefined],
+    ['the bare naming first', undefined, 'tenant-a'],
+  ])('is one candidate with %s', async (_case, firstInstance, secondInstance) => {
     const service = new ImportService(recorder().service as never)
-    const app = (key: string, entityId: string, instance?: string) => ({
-      key,
-      title: key,
-      severity: '',
-      alerts: [],
-      entities: [
-        {
-          kind: 'CloudApplication',
-          id: entityId,
-          name: entityId,
-          properties: { appName: 'Dropbox', ...(instance ? { instanceName: instance } : {}) },
-        },
-      ],
-    })
 
     const plan = await service.preview(
       'case-1',
-      [app('inc-1', 'e-first', 'tenant-a'), app('inc-2', 'e-second')],
+      [app('inc-1', 'e-first', firstInstance), app('inc-2', 'e-second', secondInstance)],
       defs(),
     )
+    const apps = plan.entities.filter((one) => one.collection === 'cloud_apps')
 
     expect(
-      plan.entities
-        .filter((one) => one.collection === 'cloud_apps')
-        .map((one) => one.fields['appName']),
-      'the bare naming was offered as a second app, so approving both writes Dropbox twice',
+      apps.map((one) => one.fields['appName']),
+      'the two namings were offered as two apps, so approving both writes Dropbox twice',
     ).toEqual(['Dropbox'])
+
+    // **Whichever order, the row carries the instance.** Keeping only the
+    // first proposer's fields loses it in one of the two orders and reports
+    // nothing, which is a quieter loss than the duplicate row.
+    expect(
+      apps[0]?.fields['instance'],
+      'the instance the other incident supplied was dropped',
+    ).toBe('tenant-a')
+    expect(apps[0]?.label, 'the label still names a row it no longer describes').toBe(
+      'Dropbox (tenant-a)',
+    )
   })
 
   /**
