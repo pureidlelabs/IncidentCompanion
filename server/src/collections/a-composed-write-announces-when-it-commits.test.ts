@@ -28,11 +28,10 @@ import { TABLES } from './registry.js'
 import { cases, user } from '../db/schema/index.js'
 import { asOneAct } from '../db/act.js'
 import { openTestPool } from '../../test/database.js'
-import type { Database } from '../db/client.js'
 
 const URL_ = process.env['DATABASE_URL'] ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
-const db = pool ? (drizzle({ client: pool }) as unknown as Database) : null
+const db = pool ? drizzle({ client: pool }) : null
 
 /** The handle a fixture arranges a case through: an unscoped write. */
 const seedPool = process.env['SEED_DATABASE_URL']
