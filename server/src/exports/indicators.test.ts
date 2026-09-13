@@ -20,7 +20,7 @@ import {
   toCsvRows,
   INDICATOR_CSV_COLUMNS,
 } from './indicators.js'
-import { PREDEFINED_TLP_1_MARKINGS, TLP_NAMES, tlpMarking } from '../domain/tlp.lists.js'
+import { TLP_NAMES, tlpMarking } from '../domain/tlp.lists.js'
 
 const NOW = new Date('2026-03-04T05:06:07.000Z')
 const ids = () => '11111111-2222-3333-4444-555555555555'
@@ -218,12 +218,11 @@ describe('the STIX bundle', () => {
    * because the defect it replaces was one level behaving unlike its
    * neighbours and nothing comparing them.
    *
-   * The two TLP versions travel differently, and that is the whole subject.
-   * TLP 1.0's four markings are predefined in STIX 2.1, so a reference with
-   * no object is complete. TLP 2.0's are property-extension objects that no
-   * consumer has by default, so a reference with no object is dangling -- and
+   * Every level is TLP 2.0, and those are property-extension objects that no
+   * consumer has by default -- so a reference with no object is dangling, and
    * MISP drops a non-conforming object silently, which makes the symptom an
-   * empty import rather than an error.
+   * empty import rather than an error. Nothing is exempt from being carried,
+   * which is what the STIX 2.1 predefined set used to buy and no longer does.
    */
   it.each(TLP_NAMES)('marks a bundle %s with a marking its reader can resolve', (level) => {
     const bundle = toStixBundle(indicators, { now: NOW, ids, tlp: level })
@@ -236,10 +235,9 @@ describe('the STIX bundle', () => {
     expect(referenced, 'the level was asked for and nothing is marked').not.toEqual([])
 
     for (const ref of referenced) {
-      if (PREDEFINED_TLP_1_MARKINGS.has(ref)) continue
       expect(
         carried.has(ref),
-        `${level} references ${ref}, which STIX 2.1 does not predefine and the bundle does not carry`,
+        `${level} references ${ref}, which no consumer has by default and the bundle does not carry`,
       ).toBe(true)
     }
   })

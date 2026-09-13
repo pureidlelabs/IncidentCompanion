@@ -13,18 +13,25 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { PREDEFINED_TLP_1_MARKINGS, TLP_NAMES, tlpMarking, tlpMarkingObjects } from './tlp.lists.js'
+import { TLP_NAMES, tlpMarking, tlpMarkingObjects } from './tlp.lists.js'
 
 const TLP_2_EXTENSION = 'extension-definition--60a3c5c5-0d10-413e-aab3-9e08dde9e88d'
+
+/** The four STIX 2.1 predefines, which are TLP 1.0's and mean something else. */
+const TLP_1_IDS = [
+  'marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9',
+  'marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da',
+  'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82',
+  'marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed',
+]
 
 describe('the identifiers a marking is published under', () => {
   it.each([
     ['clear', 'marking-definition--94868c89-83c2-464b-929b-a1a8aa3c8487'],
-    ['amber+strict', 'marking-definition--939a9414-2ddd-4d32-a0cd-375ea402b003'],
     ['green', 'marking-definition--bab4a63c-aed9-4cf5-a766-dfca5abac2bb'],
     ['amber', 'marking-definition--55d920b0-5e8b-4f79-9ee9-91f868d9b421'],
+    ['amber+strict', 'marking-definition--939a9414-2ddd-4d32-a0cd-375ea402b003'],
     ['red', 'marking-definition--e828b379-4e03-4974-9ac4-e53a884c97c1'],
-    ['white', 'marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9'],
   ])('references the published id for %s', (level, id) => {
     expect(tlpMarking(level), 'a marking id that is not the published one').toBe(id)
   })
@@ -50,59 +57,61 @@ describe('the identifiers a marking is published under', () => {
   })
 
   /**
-   * **A TLP 1.0 id travels by reference and must not be carried.** STIX 2.1
-   * predefines those and forbids any other instance, so emitting an object for
-   * one is creating a second definition of it. `white` is the only level the
-   * vocabulary still resolves to one.
-   */
-  it.each(['white'])('carries no object for %s', (level) => {
-    expect(tlpMarkingObjects(level)).toEqual([])
-    expect(PREDEFINED_TLP_1_MARKINGS.has(tlpMarking(level))).toBe(true)
-  })
-
-  it.each(['clear', 'green', 'amber', 'amber+strict', 'red'])(
-    'does not call %s predefined',
-    (level) => {
-      expect(
-        PREDEFINED_TLP_1_MARKINGS.has(tlpMarking(level)),
-        'a TLP 2.0 marking exempted from being carried is a dangling reference',
-      ).toBe(false)
-    },
-  )
-
-  /**
-   * The vocabulary and the tables are one fact: a level the picker offers and
-   * nothing resolves is a 500, and one the tables hold and the vocabulary
-   * omits is refused by the route that validates against it.
-   */
-  it('resolves every level it offers, and offers every level it resolves', () => {
-    for (const level of TLP_NAMES) expect(() => tlpMarking(level), level).not.toThrow()
-    expect(TLP_NAMES).toEqual(['clear', 'white', 'green', 'amber', 'amber+strict', 'red'])
-  })
-
-  /**
    * **The version a level means, which is the half an id alone does not show.**
    *
-   * TLP 1.0's AMBER admits the recipient's organisation *and its clients*;
-   * 2.0's is the organisation alone. Both are spelled `TLP:AMBER`, so a bundle
-   * marked under the older one grants a wider audience than the analyst chose
-   * and nothing on either end says so.
+   * STIX 2.1 predefines TLP 1.0's markings, so referencing one is the cheaper
+   * thing to do -- nothing has to travel with the bundle. They also mean
+   * something else, and RED is where it costs most: TLP 1.0's admits everyone
+   * in "the specific exchange, meeting, or conversation", TLP 2.0's is "the
+   * eyes and ears of individual recipients only". An analyst picking the
+   * strictest level and shipping the older id has handed it to a room.
    *
    * Asserted through the carried object rather than the id, because the object
    * names its own version: a wrong id cannot satisfy `tlp_2_0: <level>`.
+   * -> <https://www.first.org/tlp/v1/>
    */
-  it.each(['green', 'amber', 'red'])('marks %s under the version the product means', (level) => {
+  it.each(TLP_NAMES)('marks %s under the version the product means', (level) => {
     expect(
-      PREDEFINED_TLP_1_MARKINGS.has(tlpMarking(level)),
-      'marked under TLP 1.0, whose AMBER admits the recipient organisation clients as well',
-    ).toBe(false)
+      TLP_1_IDS,
+      'marked under TLP 1.0, whose RED admits everyone the disclosure was made to',
+    ).not.toContain(tlpMarking(level))
 
     expect(tlpMarkingObjects(level)[0]).toMatchObject({
       extensions: { [TLP_2_EXTENSION]: { tlp_2_0: level } },
     })
   })
 
+  /**
+   * Every level travels with its own object, so a reference is never bare. The
+   * exemption that let four of them travel alone went with the levels that
+   * used it.
+   */
+  it.each(TLP_NAMES)('carries the marking it references for %s', (level) => {
+    const carried = tlpMarkingObjects(level)
+    expect(carried, 'a reference with nothing behind it is dangling').toHaveLength(1)
+    expect(carried[0]?.['id']).toBe(tlpMarking(level))
+  })
+
+  /**
+   * The vocabulary and the table are one fact: a level the picker offers and
+   * nothing resolves is a 500, and one the table holds and the vocabulary
+   * omits is refused by the route that validates against it.
+   */
+  it('resolves every level it offers, and offers every level it resolves', () => {
+    for (const level of TLP_NAMES) expect(() => tlpMarking(level), level).not.toThrow()
+    expect(TLP_NAMES).toEqual(['clear', 'green', 'amber', 'amber+strict', 'red'])
+  })
+
   it('refuses a level nothing defines', () => {
     expect(() => tlpMarking('taupe')).toThrow(/No TLP marking/)
+  })
+
+  /**
+   * `white` is `clear` under the older version -- "distributed without
+   * restriction" against "no limit on disclosure" -- so the vocabulary offers
+   * one of them rather than both.
+   */
+  it('refuses the level the older version called white', () => {
+    expect(() => tlpMarking('white')).toThrow(/No TLP marking/)
   })
 })

@@ -10,7 +10,7 @@ A feed intended for action MUST carry only indicators an analyst would act on. A
 
 A feed MUST carry the handling restriction under which it is shared, because an indicator feed leaves the install and the restriction is what tells the receiver what they may do with it.
 
-The restriction a feed carries MUST mean to its receiver what it meant to the analyst who chose it. Where the vocabulary has versions that spell a level alike and define it differently, the feed MUST be marked under the version the application offers, and a level belonging to another version MUST say so where it is chosen. A restriction that reads the same to both ends and permits more to one of them is a disclosure the analyst did not make.
+The restriction a feed carries MUST mean to its receiver what it meant to the analyst who chose it. Where the vocabulary has versions that spell a level alike and define it differently, the application MUST offer one of those versions and mark every feed under it. A restriction that reads the same to both ends and permits more to one of them is a disclosure the analyst did not make.
 
 #### Scenario: An indicator is recorded as harmless
 
@@ -46,8 +46,3 @@ The restriction a feed carries MUST mean to its receiver what it meant to the an
 - THEN the feed carries the version the application offers
 - AND a receiver reading it is permitted no wider an audience than the analyst chose
 
-#### Scenario: A level belonging to an older version
-
-- GIVEN the vocabulary offers a level that belongs to an older version
-- WHEN an analyst chooses a restriction
-- THEN that level says which version it belongs to
