@@ -14,7 +14,7 @@
  * stubbed: what is under test is which value reaches which prop, and each
  * hook's own tests own what it does with a response.
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { HealthPaneView } from './panes'
@@ -108,23 +108,29 @@ describe('the Health pane reports every read it makes', () => {
   })
 
   /**
-   * **A health screen is consulted when somebody is deciding whether the
-   * platform is the problem**, so it may not report more than it checked.
-   * Behind a load balancer or with a read replica these verdicts describe the
-   * one app server that answered and the dependencies that server reached --
-   * not the deployment. Reporting green while a second app server is down is
-   * worse than admitting it cannot tell.
+   * The scope is asserted inside the header that carries the verdicts, not
+   * anywhere on the pane: the same words in the blurb or under Postgres would
+   * qualify a different set of rows and pass a check written against the page.
    *
-   * Asserted on the section that carries the verdicts. The gauges already say
-   * `this container` and `this machine`, and the figures are read from the
-   * database and really are install-wide.
+   * Driven with real dependency verdicts, because the section renders one row
+   * per entry in `details` -- the shared fixture carries none, so a check on
+   * the default would describe a section holding nothing but `Server`.
+   *
+   * What no case here covers is whether the words sit beside the title or
+   * under it. jsdom lays nothing out, and the two read differently: stacked,
+   * at the title's own size, it reads as a second title.
    */
-  it('says the serving verdicts are what this instance can see', () => {
+  it('says what the serving verdicts were polled from, in their own header', () => {
+    probe.mockReturnValue(
+      answered({ ok: true, checks: [], details: { postgres: 'up', redis: 'up' } }),
+    )
     render(<HealthPaneView onPane={vi.fn()} userMenu={null} onAbout={vi.fn()} />)
 
+    const header = screen.getByText('Serving').closest('[data-part="frame-header"]')
+    expect(header, 'no Serving header, so this asserts nothing').not.toBeNull()
     expect(
-      screen.getByText(/this instance/i),
-      'the verdicts are reported without saying what was polled',
-    ).toBeInTheDocument()
+      within(header as HTMLElement).getByText(/this server/i),
+      'the verdicts are stated without saying what was polled',
+    ).toBeVisible()
   })
 })

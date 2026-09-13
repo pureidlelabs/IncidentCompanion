@@ -271,7 +271,7 @@ export const PICKER_TABLES: readonly TableRow[] = [
   { name: 'account', approximateRows: 5, bytes: 32_768 },
 ]
 
-export const PICKER_UPTIME = 'up 3d 4h'
+export const PICKER_UPTIME = 'this server, up 3d 4h'
 
 /** One setting on the administration pane, and the choices it offers. */
 export interface BoundRow {
