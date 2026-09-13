@@ -297,7 +297,7 @@
 | An install can say whether it is well, and what is wrong | A component has started but cannot answer | demonstrated | server/src/health/dependencies.health.test.ts |
 | An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | server/src/health/dependencies.health.test.ts |
 | The application runs with no more than it needs | The application attempts something outside its work | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
-| The application runs with no more than it needs | A part is examined for what it can do | unbuilt | Not built: every container keeps the default capability set. -> #185 |
+| The application runs with no more than it needs | A part is examined for what it can do | demonstrated | tests/docker/test_container_config.py |
 
 ## evaluation
 
