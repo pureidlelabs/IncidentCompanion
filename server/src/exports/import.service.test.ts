@@ -100,7 +100,7 @@ describe.skipIf(!db)('importing a CSV', () => {
 
     const after = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
     expect(after).toHaveLength(before.length)
-    expect(result).toEqual({ added: 0, skipped: before.length, replaced: 0, refused: 0, unlinked: 0 })
+    expect(result).toEqual({ added: 0, skipped: before.length, replaced: 0, refused: 0, unlinked: 0, unlinkedBy: {} })
   })
 
   it('attributes the imported rows to the caller', async () => {
@@ -189,6 +189,7 @@ describe.skipIf(!db)('importing a CSV', () => {
       replaced: 0,
       refused: 0,
       unlinked: 0,
+      unlinkedBy: {},
     })
   })
 
@@ -205,6 +206,7 @@ describe.skipIf(!db)('importing a CSV', () => {
       replaced: 0,
       refused: 0,
       unlinked: 0,
+      unlinkedBy: {},
     })
     expect(await service.fromCsv('systems', emptyCaseId, csv, ME)).toEqual({
       added: 0,
@@ -212,6 +214,7 @@ describe.skipIf(!db)('importing a CSV', () => {
       replaced: 0,
       refused: 0,
       unlinked: 0,
+      unlinkedBy: {},
     })
   })
 
@@ -221,7 +224,7 @@ describe.skipIf(!db)('importing a CSV', () => {
     await service.fromCsv('systems', emptyCaseId, 'hostname,system_type\nWKS-A,laptop\n', ME)
     expect(
       await service.fromCsv('systems', emptyCaseId, 'hostname,system_type\nWKS-A,server\n', ME),
-    ).toEqual({ added: 0, skipped: 1, replaced: 0, refused: 0, unlinked: 0 })
+    ).toEqual({ added: 0, skipped: 1, replaced: 0, refused: 0, unlinked: 0, unlinkedBy: {} })
   })
 
   it('does not merge two rows that differ in what identity is made of', async () => {
@@ -233,13 +236,14 @@ describe.skipIf(!db)('importing a CSV', () => {
       replaced: 0,
       refused: 0,
       unlinked: 0,
+      unlinkedBy: {},
     })
   })
 
   it('does not import one file twice against itself', async () => {
     expect(
       await service.fromCsv('systems', emptyCaseId, 'hostname\nWKS-DUP\nwks-dup\n', ME),
-    ).toEqual({ added: 1, skipped: 1, replaced: 0, refused: 0, unlinked: 0 })
+    ).toEqual({ added: 1, skipped: 1, replaced: 0, refused: 0, unlinked: 0, unlinkedBy: {} })
   })
 
   /*
@@ -260,7 +264,7 @@ describe.skipIf(!db)('importing a CSV', () => {
         ME,
         'replace',
       ),
-    ).toEqual({ added: 0, skipped: 0, replaced: 1, refused: 0, unlinked: 0 })
+    ).toEqual({ added: 0, skipped: 0, replaced: 1, refused: 0, unlinked: 0, unlinkedBy: {} })
   })
 
   /**
@@ -289,7 +293,7 @@ describe.skipIf(!db)('importing a CSV', () => {
       ME,
       'replace',
     )
-    expect(result).toEqual({ added: 0, skipped: 0, replaced: 0, refused: 1, unlinked: 0 })
+    expect(result).toEqual({ added: 0, skipped: 0, replaced: 0, refused: 1, unlinked: 0, unlinkedBy: {} })
 
     const rows = await seed!.select().from(systems).where(eq(systems.caseId, emptyCaseId))
     expect(rows.map((row) => row.systemType)).not.toContain('server')
@@ -356,6 +360,7 @@ describe.skipIf(!db)('importing a CSV', () => {
       replaced: 0,
       refused: 0,
       unlinked: 0,
+      unlinkedBy: {},
     })
   })
 
@@ -392,23 +397,132 @@ describe.skipIf(!db)('importing a CSV', () => {
    * *and* die on a not-null violation, taking the whole import with it --
    * worse than a flat refusal.
    */
-  it('keeps the resolvable half of a list reference and drops only the foreign ids', async () => {
+  it('keeps the resolvable half of a list reference and reports only the rest', async () => {
     const [mine] = await seed!
       .insert(evidence)
       .values({ caseId: emptyCaseId, name: 'Local exhibit', createdBy: ME, updatedBy: ME })
       .returning()
-    const [theirs] = await seed!.select().from(evidence).where(eq(evidence.caseId, caseId))
 
     const csv =
-      'label,category,evidence_ids\n' +
-      `Mixed,credentials,${theirs!.id};${mine!.id}\n`
+      'label,category,evidence_ids\n' + 'Mixed,credentials,Local exhibit;Never heard of it\n'
 
     const result = await service.fromCsv('impact', emptyCaseId, csv, ME)
 
     expect(result.added).toBe(1)
     expect(result.unlinked).toBe(1)
+    expect(result.unlinkedBy).toEqual({ evidence: 1 })
 
     const [landed] = await seed!.select().from(impact).where(eq(impact.caseId, emptyCaseId))
     expect(landed!.evidenceIds).toEqual([mine!.id])
+  })
+
+  /**
+   * **A file naming where a row was kept reaches nothing**, which is the half
+   * of the reference design that is a security property rather than a
+   * convenience: an id is unique across the install, so a file that could name
+   * one would be a way to point at a case the importing analyst may not open.
+   *
+   * It needs no rule of its own. A uuid is not a hostname, so it answers to no
+   * row in the destination and is reported like any other name the case does
+   * not hold.
+   */
+  it('resolves nothing from a file that names where a row was kept', async () => {
+    const [theirs] = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
+
+    const csv = 'label,category,system_id\n' + `Named by id,credentials,${theirs!.id}\n`
+    const result = await service.fromCsv('impact', emptyCaseId, csv, ME)
+
+    expect(result.added).toBe(1)
+    expect(result.unlinked).toBe(1)
+    expect(result.unlinkedBy).toEqual({ systems: 1 })
+
+    const [landed] = await seed!.select().from(impact).where(eq(impact.caseId, emptyCaseId))
+    expect(landed!.systemId, 'a file named a row by its id and was believed').toBeNull()
+  })
+
+  /**
+   * **The case a reference exists for**: a file taken out of one case and
+   * imported into another that holds the same host keeps the link, against
+   * that case's own row.
+   */
+  it('resolves a reference against the destination case', async () => {
+    const [theirs] = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
+    const [mine] = await seed!
+      .insert(systems)
+      .values({
+        caseId: emptyCaseId,
+        hostname: theirs!.hostname,
+        createdBy: ME,
+        updatedBy: ME,
+      })
+      .returning()
+
+    const csv = 'label,category,system_id\n' + `Moved with a link,credentials,${theirs!.hostname}\n`
+    const result = await service.fromCsv('impact', emptyCaseId, csv, ME)
+
+    expect(result.added).toBe(1)
+    expect(result.unlinked, 'a host the destination holds was reported as lost').toBe(0)
+
+    const [landed] = await seed!.select().from(impact).where(eq(impact.caseId, emptyCaseId))
+    expect(landed!.systemId, 'the reference did not reach the destination own host').toBe(mine!.id)
+  })
+
+  /**
+   * **Export, then import into the case it came from.** The headline case for
+   * references, and the one that cannot be faked: a hand-written file proves
+   * the parser and a hand-written row proves the writer, while the two go on
+   * disagreeing about what a reference column holds.
+   *
+   * `impact` carries `systemId`, a real foreign key, and the demo case has
+   * both halves already linked.
+   */
+  it('points at the same row after a round trip through its own case', async () => {
+    const before = await seed!.select().from(impact).where(eq(impact.caseId, caseId))
+    const linked = before.find((row) => row.systemId !== null)
+    expect(linked, 'the demo case holds no linked impact row to round-trip').toBeDefined()
+
+    const csv = await exports_.collectionCsv(caseId, 'impact')
+
+    // **The file says what the host is called, not where it was kept.**
+    const [host] = await seed!
+      .select()
+      .from(systems)
+      .where(eq(systems.id, linked!.systemId!))
+    expect(csv, 'the export wrote a row id into a reference column').not.toContain(linked!.systemId!)
+    expect(csv).toContain(host!.hostname)
+
+    // Imported back with every row already there, so nothing is added and the
+    // question is only what the references resolved to.
+    const result = await service.fromCsv('impact', caseId, csv, ME, 'replace')
+
+    expect(result.unlinked, 'a case could not resolve a reference to its own row').toBe(0)
+
+    const after = await seed!.select().from(impact).where(eq(impact.caseId, caseId))
+    const same = after.find((row) => row.id === linked!.id)
+    expect(same!.systemId, 'a round trip through its own case moved the reference').toBe(
+      linked!.systemId,
+    )
+  })
+
+  /**
+   * **A name is not an identity.** Two rows answering to one name make the
+   * reference unanswerable: picking either would attach the row to whichever
+   * the scan reached first, which is a guess dressed as a link.
+   */
+  it('resolves nothing where two rows answer to the name', async () => {
+    for (const _ of [0, 1]) {
+      await seed!
+        .insert(systems)
+        .values({ caseId: emptyCaseId, hostname: 'WKS-TWICE', createdBy: ME, updatedBy: ME })
+    }
+
+    const csv = 'label,category,system_id\nAmbiguous,credentials,WKS-TWICE\n'
+    const result = await service.fromCsv('impact', emptyCaseId, csv, ME)
+
+    expect(result.added).toBe(1)
+    expect(result.unlinkedBy).toEqual({ systems: 1 })
+
+    const [landed] = await seed!.select().from(impact).where(eq(impact.caseId, emptyCaseId))
+    expect(landed!.systemId, 'a reference was attached to one of two equal candidates').toBeNull()
   })
 })

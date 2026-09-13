@@ -32,7 +32,10 @@ import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { columnOf } from '../db/column-access.js'
 import { withCase } from '../db/scope.js'
-import { BULK_TARGETS, TABLES, type BulkTarget } from '../collections/registry.js'
+import { BULK_TARGETS, REFERENCE_TABLES, TABLES, type BulkTarget } from '../collections/registry.js'
+import { COLLECTION_SCHEMAS } from '../domain/collections.js'
+import { nameOf } from '../domain/reference-key.js'
+import { referenceFieldsOf } from '../domain/references.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
@@ -106,10 +109,69 @@ export class ExportsController {
       ([property, column]) => [property, (column as { name: string }).name] as const,
     )
 
+    const named = await this.namesIn(collection, caseId)
+
     return toCsv(
-      rows.map((row) => Object.fromEntries(columns.map(([property, name]) => [name, row[property]]))),
+      rows.map((row) =>
+        Object.fromEntries(
+          columns.map(([property, name]) => [name, named(property, row[property])]),
+        ),
+      ),
       columns.map(([, name]) => name),
     )
+  }
+
+  /**
+   * How to write each reference column: what it points at, never where it was kept.
+   *
+   * **A row id means nothing outside the case that produced it.** Exporting one
+   * makes the file unusable the moment it crosses a case boundary, which is the
+   * ordinary use of a file rather than an edge case -- and it would be a way to
+   * name a row in a case the importing analyst may not reach.
+   * -> `openspec/specs/data-exchange/spec.md`
+   *
+   * Answers a function rather than a map so a column that is not a reference
+   * costs nothing, which is most of them.
+   */
+  private async namesIn(
+    collection: string,
+    caseId: string,
+  ): Promise<(property: string, value: unknown) => unknown> {
+    const schema = COLLECTION_SCHEMAS[collection]
+    const references = schema ? referenceFieldsOf(schema) : []
+    if (references.length === 0) return (_property, value) => value
+
+    const names = new Map<string, Map<string, string>>()
+    for (const { field, target } of references) {
+      const table = REFERENCE_TABLES[target]
+      if (!table) continue
+      if (!names.has(target)) {
+        const held = (await this.caseRows(table, caseId)) as Record<string, unknown>[]
+        names.set(
+          target,
+          new Map(
+            held.flatMap((row) => {
+              const name = nameOf(target, row)
+              return name === null ? [] : [[row['id'] as string, name] as const]
+            }),
+          ),
+        )
+      }
+      // One target can be pointed at by two fields of one row -- the timeline's
+      // source and destination host -- so the field is what is keyed.
+      names.set(field, names.get(target)!)
+    }
+
+    const of = (field: string, id: unknown): unknown => {
+      if (typeof id !== 'string' || id === '') return id
+      // **A row this case does not hold stays as it was**, which the import
+      // then reports as a reference it could not carry. Writing a blank would
+      // lose the fact that the file meant to point somewhere.
+      return names.get(field)?.get(id) ?? id
+    }
+
+    return (property, value) =>
+      Array.isArray(value) ? value.map((one) => of(property, one)) : of(property, value)
   }
 
   /**
