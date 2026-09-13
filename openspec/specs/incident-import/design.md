@@ -22,7 +22,7 @@ So the ending is chosen by whether a create call was supplied. A door that start
 
 **That is composition rather than compensation, and the difference is the failure nobody sees.** Deleting the case after a failed write is the obvious alternative and cannot cover a process that dies between the two, which is the case an operator would never be able to explain.
 
-**A write composed into somebody else's act obeys two rules that a write opening its own transaction does not.** It reads on the handle it was given -- a read reaching the pool from inside an open transaction holds one connection while asking for another, which is a deadlock rather than a slow query. And it announces nothing: the write has not committed when the call returns, so a subscriber told to re-read would read what is not there yet, or what a rollback is about to remove. The act that opened the transaction owns the announcement.
+**A write composed into somebody else's act reads on the handle it was given.** A read reaching the pool from inside an open transaction holds one connection while asking for another, which is a deadlock rather than a slow query. When it announces is the act's to decide rather than this capability's, and `openspec/specs/collections/design.md` decides it.
 
 ## The credential never reaches the install
 

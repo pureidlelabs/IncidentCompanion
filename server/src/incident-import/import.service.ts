@@ -15,6 +15,7 @@ import { UnprocessableEntityException } from '@nestjs/common'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { actionWriteSchema, eventWriteSchema } from '../domain/entities/timeline.js'
 import { CollectionService, type CollectionDefinition } from '../collections/collection.service.js'
+import { ComposedWithoutAnAct } from '../db/act.js'
 import type { Executor } from '../db/scope.js'
 import type { Candidate, PreviewResult, RawIncident, TimelineCandidate } from '../domain/incident-import.js'
 import { parseEntity } from './providers/sentinel/entities.js'
@@ -371,6 +372,15 @@ export class ImportService {
        * loses the row number to `detail`.
        */
       if (why instanceof HttpException) throw why
+
+      /**
+       * **A composition fault is not a partly written import.** `whenCommitted`
+       * refuses a write composed into a transaction no act declared, and
+       * dressing that as *the import partly wrote, run it again* sends an
+       * analyst to look at rows for a defect in how the call was wired.
+       * -> `db/act.ts`
+       */
+      if (why instanceof ComposedWithoutAnAct) throw why
 
       /**
        * **Whether the entities survive is the caller's transaction to decide.**
