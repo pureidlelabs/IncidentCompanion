@@ -184,4 +184,49 @@ describe('a thing the case already holds', () => {
         'one already recorded -- two occurrences of the same thing are two events',
     ).toHaveLength(2)
   })
+
+  /**
+   * **Recognised by a weaker naming than the one it arrived with.** A provider
+   * gives more than a table keeps -- a cloud app arrives with an instance the
+   * stored row does not carry -- so an incoming row keyed on everything it
+   * knows never matches, and the import writes a second copy of a thing the
+   * case already holds.
+   *
+   * **Written because nothing asserted it.** Narrowing the match to the
+   * strongest identity alone left all 164 cases in this folder green.
+   */
+  it('is recognised when the incident names it more precisely than the case does', async () => {
+    const service = new ImportService({
+      list: (def: { name: string }) =>
+        Promise.resolve(def.name === 'cloud_apps' ? [{ id: 'row-dropbox', appName: 'Dropbox' }] : []),
+    } as never)
+
+    const plan = await service.preview(
+      'case-1',
+      [
+        {
+          key: 'inc-1',
+          title: 'One app',
+          severity: '',
+          alerts: [],
+          entities: [
+            {
+              kind: 'CloudApplication',
+              id: 'e-app',
+              name: 'e-app',
+              properties: { appName: 'Dropbox', instanceName: 'tenant-a' },
+            },
+          ],
+        },
+      ],
+      defs(),
+    )
+
+    const app = plan.entities.find((one) => one.collection === 'cloud_apps')
+    expect(app, 'the preview proposed no app, so there is nothing to recognise').toBeDefined()
+    expect(
+      app?.existing,
+      'the qualified naming matched nothing, so the import offers a second Dropbox as new',
+    ).toBe('row-dropbox')
+  })
 })

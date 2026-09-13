@@ -15,7 +15,7 @@ import type { RequestHandler } from 'express'
  * deliberate decision rather than a default. What `Lax` does *not* cover is a
  * state change behind a `GET`, which is why no route may write on one.
  */
-export function securityHeaders(): RequestHandler {
+export function securityHeaders(baseURL: string): RequestHandler {
   return helmet({
     contentSecurityPolicy: {
       useDefaults: false,
@@ -68,13 +68,10 @@ export function securityHeaders(): RequestHandler {
         formAction: ["'self'"],
       },
     },
-    /**
-     * **No HSTS.** The app binds loopback and mints its own certificate; an
-     * HSTS header would pin a browser to https for `127.0.0.1` across every
-     * other project on the machine, which is somebody else's problem to
-     * discover.
-     */
-    strictTransportSecurity: false,
+    /** Only at a name of its own, and never below it. -> `transport/design.md` */
+    strictTransportSecurity: tellsTheBrowserToRefuseHttp(baseURL)
+      ? { maxAge: HSTS_SECONDS, includeSubDomains: false, preload: false }
+      : false,
     /**
      * **`same-origin` rather than the default `no-referrer`.** The SPA's own
      * navigations are same-origin and benefit from carrying a referrer;
@@ -83,6 +80,45 @@ export function securityHeaders(): RequestHandler {
     referrerPolicy: { policy: 'same-origin' },
     crossOriginEmbedderPolicy: false,
   })
+}
+
+/**
+ * A year, which is how long a browser is being asked to remember.
+ *
+ * A short window expires between an analyst's visits and so protects the
+ * request that matters least.
+ */
+const HSTS_SECONDS = 31_536_000
+
+/**
+ * **`URL.hostname` keeps the brackets on an IPv6 literal.** Measured:
+ * `new URL('https://[::1]:8443').hostname` is `"[::1]"`, so the bare `::1`
+ * spelling matches nothing and the loopback case silently starts sending the
+ * header. Both are here because either may be written in a base URL.
+ */
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
+
+/**
+ * Whether this install may tell a browser to refuse its unprotected spelling.
+ *
+ * True only where the install is reached over https at a name of its own. A
+ * loopback address is every application on that machine, so the instruction
+ * would reach past the install giving it and cannot be withdrawn by it; an
+ * install not reached over https at all is one a browser ignores this from.
+ *
+ * **The same question the edge answers**, so a deployment terminating TLS at
+ * nginx and one that does not cannot disagree.
+ * -> `openspec/specs/transport/spec.md`
+ */
+export function tellsTheBrowserToRefuseHttp(baseURL: string): boolean {
+  let url: URL
+  try {
+    url = new URL(baseURL)
+  } catch {
+    return false
+  }
+  if (url.protocol !== 'https:') return false
+  return !LOOPBACK_HOSTS.has(url.hostname)
 }
 
 /**

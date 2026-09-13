@@ -7,28 +7,31 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { INDICATOR_TYPE } from '../domain/vocabularies.lists.js'
+import { INDICATOR_TYPE } from './vocabularies.lists.js'
 
 import { PROTOTYPE_KEYS } from '../../test/prototype-keys.js'
 
-import { hashTypeOf } from '../domain/hashes.lists.js'
-import { toCsv } from './csv.js'
+import { hashTypeOf } from './hashes.lists.js'
+import { toCsv } from '../exports/csv.js'
 import {
   actionable,
   collect,
   toStixBundle,
   toCsvRows,
   INDICATOR_CSV_COLUMNS,
-} from './indicators.js'
-import { TLP_NAMES, tlpMarking } from '../domain/tlp.lists.js'
+} from './indicators.lists.js'
+import { TLP_NAMES, tlpMarking } from './tlp.lists.js'
 
 const NOW = new Date('2026-03-04T05:06:07.000Z')
 const ids = () => '11111111-2222-3333-4444-555555555555'
 
 const empty = { networkIndicators: [], malware: [], cloudApps: [] }
 
-/** Provenance neither `actionable` nor the bundle reads. The CSV is where it matters. */
-const unsourced = { source: '', caseId: '' }
+/**
+ * What neither `actionable` nor the bundle reads: the CSV is where provenance
+ * matters, and a bundle mints its own identifiers rather than reusing `id`.
+ */
+const unsourced = { id: '', source: '', caseId: '' }
 
 describe('the STIX pattern vocabulary', () => {
   /**
@@ -153,6 +156,43 @@ describe('the STIX bundle', () => {
 
     expect(patterns).toContain("[ipv4-addr:value = '10.0.0.1']")
     expect(patterns.join(' ')).not.toContain('10.0.0.9')
+  })
+
+  /**
+   * **The three STIX 2.1 requires on an Indicator, and the two identifiers.**
+   * All five could be deleted with both suites green: the only id assertion
+   * anywhere matched `/^indicator--/`, which the case row's own primary key
+   * satisfies just as well as a minted one.
+   *
+   * A database key reused as a STIX id travels to whoever consumes the bundle
+   * and repeats across exports of one row, which is what makes minting the
+   * behaviour rather than the detail.
+   */
+  it('gives every indicator the properties STIX requires, and a minted id', () => {
+    const bundle = toStixBundle(indicators, { now: NOW, ids })
+    const objects = (bundle['objects'] as Record<string, unknown>[]).filter(
+      (one) => one['type'] === 'indicator',
+    )
+
+    expect(objects.length, 'no indicator survived, so this asserts nothing').toBeGreaterThan(0)
+    for (const one of objects) {
+      expect(one['created'], 'a required property is missing').toBe(NOW.toISOString())
+      expect(one['modified'], 'a required property is missing').toBe(NOW.toISOString())
+      expect(one['valid_from'], 'a required property is missing').toBe(NOW.toISOString())
+      expect(one['spec_version']).toBe('2.1')
+      expect(one['id'], 'the id is not minted from the identifier source').toBe(
+        `indicator--${ids()}`,
+      )
+    }
+  })
+
+  it('identifies the bundle itself, rather than naming it', () => {
+    const bundle = toStixBundle(indicators, { now: NOW, ids })
+
+    expect(
+      bundle['id'],
+      'the bundle id is assembled from text, which is not a STIX identifier',
+    ).toBe(`bundle--${ids()}`)
   })
 
   it("writes a file hash pattern with STIX's own hash name", () => {
@@ -329,6 +369,6 @@ describe('the CSV says where an indicator came from', () => {
     const csv = await toCsv(toCsvRows(found), [...INDICATOR_CSV_COLUMNS])
 
     expect(csv.split('\n')[0]).toBe('type,value,disposition,context,source,blocked,case_id')
-    expect(csv.split('\n')[1]).toBe('ipv4,198.51.100.7,malicious,beacon,sentinel,1,c-1')
+    expect(csv.split('\n')[1]).toBe('ipv4,198.51.100.7,malicious,beacon,sentinel,true,c-1')
   })
 })

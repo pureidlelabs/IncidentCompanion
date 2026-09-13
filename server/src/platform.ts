@@ -7,6 +7,7 @@
  * Anything needing a real listener stays out - the API reference is built
  * after `listen`, from the routes the adapter actually mounted.
  */
+import { ConfigService } from '@nestjs/config'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 
 import { LiveGateway } from './live/live.gateway.js'
@@ -33,7 +34,13 @@ export function applyPlatform(
    */
   app.use(compression({ threshold: 1024 }))
 
-  app.use(securityHeaders())
+  /**
+   * **Where the install is reached, read from the one value that decides it.**
+   * `AUTH_BASE_URL` is what `trustedOrigins` derives the CSRF allowlist from,
+   * so the address HSTS is judged against cannot drift from the address the
+   * application believes it is at.
+   */
+  app.use(securityHeaders(app.get(ConfigService).get<string>('AUTH_BASE_URL') ?? ''))
   app.use(noStoreOnTheApi())
   app.use(retryAfterOnEveryRefusal())
 
