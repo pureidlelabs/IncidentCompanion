@@ -97,7 +97,11 @@ SENTENCE = re.compile(
     # A toast is a call argument, not a prop, so `TEMPLATE_PROP` never
     # reaches it -- which leaves every toast in the app uncovered by the
     # `ErrorTone` rules written for them.
-    r"|(?<![\w`])`([A-Z][^`${]{8,200}?)`"
+    r"|(?<![\w`])`([A-Z][^`\\]{8,200}?)`"
+    # **A template whose first thing is the value.** ` ${n} row(s) were already
+    # in the case.` is a sentence an analyst reads, and requiring a capital
+    # first would leave it, and every count worded that way, to nothing.
+    r"|(?<![\w`])`(\s*\$\{[^`\\]{8,200}?)`"
 )
 #: A line that declares a module or opens a test block, not one that holds copy.
 #
@@ -142,6 +146,47 @@ NOT_COPY = re.compile(
 # React Router's *"Unexpected Application Error!"* in a docstring, to say what
 # the app replaced -- and an exclamation mark inside an explanation of somebody
 # else's exclamation mark is not a violation of anything.
+#: What an interpolation is read as. A digit, because the value one stands in
+#: for is almost always a count, and because no content rule scores it.
+PLACEHOLDER = "0"
+
+
+def without_interpolations(value: str) -> str:
+    """`value` with each `${...}` replaced by `PLACEHOLDER`.
+
+    **Substituted rather than dropped**, for two reasons. A banned word either
+    side of the value is still a banned word, and that is the whole class this
+    exists to reach. And cutting the expression would join the words it sits
+    between into a third that is in the copy nowhere.
+
+    Brace-counted rather than matched by regex: a template may nest another
+    inside its own expression, and `[^}]*` stops at the inner one.
+    """
+    out: list[str] = []
+    at = 0
+    while True:
+        start = value.find("${", at)
+        if start == -1:
+            out.append(value[at:])
+            return "".join(out)
+        out.append(value[at:start])
+        depth = 0
+        end = start + 1
+        while end < len(value):
+            if value[end] == "{":
+                depth += 1
+            elif value[end] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            end += 1
+        out.append(PLACEHOLDER)
+        # An unclosed `${` is not valid TypeScript, so the tree cannot hold
+        # one; landing here means the rest is the expression and carries no
+        # copy.
+        at = end + 1 if end < len(value) else len(value)
+
+
 COMMENT_LINE = re.compile(r"^\s*(\*|//|/\*)")
 #: Nest exceptions reach the browser as the message the analyst is shown.
 SERVER_THROWN = re.compile(r"\w+Exception\(\s*['\"]([^'\"]{4,200})")
@@ -179,7 +224,13 @@ def screen_strings() -> tuple[tuple[str, int, str], ...]:
                     value = next((g for g in match.groups() if g), "").strip()
                     if not value or value.startswith(("http", "/", "#", "{")):
                         continue
-                    if "${" in value or not re.search(r"[a-z]{2}", value):
+                    # **The literal halves are copy and the expression is not.**
+                    # Dropping a value that names anything left every count,
+                    # empty state and confirmation carrying a number linted by
+                    # neither instrument -- Vale reads a source file as code,
+                    # so a string value is invisible to it as well. -> #412
+                    value = without_interpolations(value)
+                    if not re.search(r"[a-z]{2}", value):
                         continue
                     line = text[: match.start()].count("\n") + 1
                     source_line = lines[line - 1]
@@ -216,6 +267,36 @@ def test_the_extractor_still_finds_the_interface_s_copy() -> None:
     )
     values = {v for _, _, v in found}
     assert "Back to your cases" in values, "a known button label is no longer extracted"
+
+
+def test_copy_around_an_interpolation_is_extracted() -> None:
+    """A sentence naming a number is still a sentence.
+
+    The values most likely to be met in an unusual state -- nothing found, one
+    row, six already there -- are the ones carrying an interpolation, and
+    dropping them left the whole class linted by neither instrument: Vale reads
+    source files as code, so a string value is invisible to it too.
+
+    Asserted on a live line rather than a fixture, because what is being
+    claimed is that the extractor reaches the tree's own copy.
+    """
+    values = {v for _, _, v in screen_strings()}
+    assert any("row(s) were already in the case" in v for v in values), (
+        "a status line naming a count is not extracted, so nothing lints the "
+        "words on either side of the number"
+    )
+
+
+def test_an_interpolation_is_not_read_as_prose() -> None:
+    """The expression is a placeholder, so its identifiers score no rule.
+
+    Substituting rather than cutting, so a banned word is still caught when it
+    sits either side of the value -- and so two words a template joins are not
+    run together into a third.
+    """
+    assert without_interpolations("Keep ${utilize} it") == "Keep 0 it"
+    assert without_interpolations("${a ? `${b}` : c} rows") == "0 rows"
+    assert without_interpolations("no interpolation here") == "no interpolation here"
 
 
 @pytest.mark.parametrize("style,rule", RULES, ids=lambda v: v)

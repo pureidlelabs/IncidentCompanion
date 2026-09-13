@@ -110,7 +110,7 @@ export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>
       bom: true,
     })
   } catch (error) {
-    throw new CsvInvalid(`CSV is invalid: ${(error as Error).message}`)
+    throw new CsvInvalid(`The file could not be read as a CSV: ${(error as Error).message}`)
   }
 
   if (parsed.length > MAX_CSV_ROWS) {
@@ -163,7 +163,7 @@ export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>
         const flag = value.trim().toLowerCase()
         if (TRUE.has(flag)) row[name] = true
         else if (FALSE.has(flag)) row[name] = false
-        else throw new CsvInvalid(`CSV row ${line} has an invalid boolean in ${name}.`)
+        else throw new CsvInvalid(`CSV row ${line}: ${name} is not a yes/no value.`)
         continue
       }
       row[name] = unquote(value)
