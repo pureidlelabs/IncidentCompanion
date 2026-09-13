@@ -49,7 +49,7 @@ export const Default: Story = {
       )
     })
     await step('each tile opens the form it names, and not the other', async () => {
-      await userEvent.click(canvas.getByText('Import incidents'))
+      await userEvent.click(canvas.getByText('Import from a file'))
       await expect(args.onImport).toHaveBeenCalledTimes(1)
       await expect(args.onBlank).not.toHaveBeenCalled()
     })
@@ -69,11 +69,11 @@ export const NoImporter: Story = {
   args: { onBlank: fn() },
   play: async ({ args, canvas, step }) => {
     await step('the tile is still there, saying the feature exists', async () => {
-      await expect(canvas.getByText('Import incidents')).toBeVisible()
+      await expect(canvas.getByText('Import from a file')).toBeVisible()
     })
     await step('but it is refused rather than silently dead', async () => {
       const tiles = canvas.getAllByRole('button')
-      const importer = tiles.find((one) => one.textContent.includes('Import incidents'))
+      const importer = tiles.find((one) => one.textContent.includes('Import from a file'))
       await expect(importer).toBeDisabled()
     })
     await step('and the door that is wired still works', async () => {
