@@ -42,8 +42,19 @@ const claimOnce = (work?: () => Promise<void>) =>
   })
 
 describe.skipIf(!db)('claiming an install', () => {
+  /**
+   * **The clear is checked, not assumed.** Every case here starts from an
+   * unclaimed install, and a delete that removed nothing leaves the first
+   * caller refused -- which surfaces as *the first caller did not win*, a
+   * sentence about the claim rather than about the state it started from.
+   */
   beforeEach(async () => {
     await db!.delete(installClaim).where(eq(installClaim.what, ONLY_CLAIM))
+
+    expect(
+      await db!.select().from(installClaim).where(eq(installClaim.what, ONLY_CLAIM)),
+      'the install is still claimed, so these cases are not starting from an unclaimed one',
+    ).toHaveLength(0)
   })
 
   afterAll(async () => {
@@ -107,11 +118,32 @@ describe.skipIf(!db)('claiming an install', () => {
       }
     })
 
-    const first = claimOnce(() => held)
-    // **Started, not awaited.** The second contends for the same row, so it
-    // blocks until the first commits -- awaiting it here would hang this test
-    // rather than answer it, which is itself the proof that nothing takes the
-    // claim from a caller still holding it.
+    let arrived = () => undefined as void
+    const inFlight = new Promise<void>((resolve) => {
+      arrived = () => {
+        resolve()
+      }
+    })
+
+    const first = claimOnce(() => {
+      arrived()
+      return held
+    })
+
+    /**
+     * **The second starts once the first is provably inside the claim.**
+     * Starting both together and trusting the order they reach the database
+     * makes the winner a matter of scheduling rather than of the claim, and
+     * the test then asserts which caller won -- which is not the property.
+     * Measured: green on every local run and red on CI, reporting the second
+     * caller as the winner.
+     *
+     * **Started, not awaited.** It contends for the same row, so it blocks
+     * until the first commits -- awaiting it here would hang this test rather
+     * than answer it, which is itself the proof that nothing takes the claim
+     * from a caller still holding it.
+     */
+    await inFlight
     const second = claimOnce()
 
     // Long enough that any timeout short enough to be useful would have fired.
