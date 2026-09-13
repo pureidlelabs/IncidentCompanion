@@ -176,4 +176,44 @@ describe('an import that failed partway', () => {
       timeline: 0,
     })
   })
+
+  /**
+   * **On a caller's transaction nothing survives, so nothing is claimed.**
+   * `POST /imports/case` creates the case and imports into it in one act and
+   * hands `commit` that transaction -- a timeline failure there takes the
+   * entities *and* the case back, and a refusal naming rows that landed would
+   * send an analyst looking for rows nobody can find. -> #170
+   */
+  it('claims nothing landed when the caller owns the transaction', async () => {
+    const rig = flaky()
+    const service = new ImportService(rig.service as never)
+    const incidents = [incident()]
+    const plan = await service.preview('case-1', incidents, defs())
+
+    const failure = await service
+      .commit(
+        'case-1',
+        'analyst',
+        incidents,
+        [...plan.entities.map((one) => one.id), ...plan.timeline.map((one) => one.id)],
+        [],
+        defs(),
+        // Any executor: what this asks is whether `commit` was handed one, not
+        // what it does with it.
+        {} as never,
+      )
+      .then(
+        () => undefined,
+        (why: unknown) => why,
+      )
+
+    const body = (failure as { response?: unknown }).response as
+      | { message?: unknown; wrote?: unknown }
+      | undefined
+
+    expect(body?.message, 'the caller is told rows landed that were taken back').toMatch(
+      /wrote nothing/i,
+    )
+    expect(body?.wrote).toEqual({ entities: 0, skippedExisting: 0, timeline: 0 })
+  })
 })

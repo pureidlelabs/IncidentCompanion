@@ -277,13 +277,30 @@ export class ImportService {
         ? await this.collections.createMany(defs.timeline, caseId, rows, actorId, 'refuse', on)
         : { ids: [] as string[] }
     } catch (why) {
+      /**
+       * **Whether the entities survive is the caller's transaction to decide.**
+       * Left unset, each write opened its own and the entities are in the case;
+       * handed one -- which `POST /imports/case` does, because the case itself
+       * is being created in the same act -- the failure takes everything back
+       * and reporting rows that landed would name rows nobody can find.
+       */
+      const landed = on === undefined
       throw new UnprocessableEntityException({
-        message:
-          'The import partly wrote: the entities landed and the timeline did not. ' +
-          'Run it again to finish it - what is already there is matched rather than doubled.',
+        message: landed
+          ? 'The import partly wrote: the entities landed and the timeline did not. ' +
+            'Run it again to finish it - what is already there is matched rather than doubled.'
+          : 'The import wrote nothing: it failed at the timeline and the whole of it was ' +
+            'taken back. Run it again.',
         wrote: {
-          entities: Object.values(written.ids).reduce((all, ids) => all + ids.length, 0),
-          skippedExisting,
+          entities: landed
+            ? Object.values(written.ids).reduce((all, ids) => all + ids.length, 0)
+            : 0,
+          // **Not written, and counted apart from what was.** These are rows
+          // the case already held and the analyst approved anyway; they are
+          // here because "what reached the case" is a different question from
+          // "what this import added", and an analyst looking at the case sees
+          // both.
+          skippedExisting: landed ? skippedExisting : 0,
           timeline: 0,
         },
         // The store's own words, for whoever is reading a log rather than the
