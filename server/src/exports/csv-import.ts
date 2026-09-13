@@ -14,6 +14,9 @@
 import { parse } from 'csv-parse/sync'
 
 /** A 10MB file is already far past what anyone pastes in; past it is a mistake. */
+export const MAX_CSV_BYTES = 10 * 1024 * 1024
+export const MAX_CSV_ROWS = 50_000
+
 /**
  * A list cell's items, honouring the escape `csv.ts` writes.
  *
@@ -42,9 +45,6 @@ export function splitList(value: string): string[] {
   items.push(item)
   return items
 }
-
-export const MAX_CSV_BYTES = 10 * 1024 * 1024
-export const MAX_CSV_ROWS = 50_000
 
 /**
  * Columns a reference picker writes for a human and the app never reads.

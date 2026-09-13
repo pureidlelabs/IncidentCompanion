@@ -117,6 +117,26 @@ function lostReferences(by: Readonly<Record<string, number>>): string {
     .join(', ')
 }
 
+/**
+ * What an import carried, said either way.
+ *
+ * **Silence would mean both "nothing was lost" and "nobody looked".** A case
+ * quietly less connected than the file that made it is found later by somebody
+ * who cannot tell which. -> `openspec/specs/data-exchange/spec.md`
+ *
+ * A lost reference is not a refusal and is never called one: the row landed,
+ * the link did not. A refused row is one to fix and send again; a lost
+ * reference is a thing to bring across.
+ */
+function carriage(result: ImportResult): string {
+  if (result.unlinked === 0) return 'Every reference was carried.'
+
+  const many = result.unlinked === 1 ? 'reference' : 'references'
+  return `${String(result.unlinked)} ${many} could not be carried: ${lostReferences(
+    result.unlinkedBy,
+  )}. The rows landed without them.`
+}
+
 /** One row of the screen: a table, its count, and the columns a template holds. */
 interface ImportRow {
   collection: CollectionName
@@ -182,11 +202,7 @@ export function ImportDataScreen({
                   lost" and "nobody looked", and a case quietly less connected
                   than its file is found later by somebody who cannot tell
                   which. -> `openspec/specs/data-exchange/spec.md` */}
-              <p className="mb-1">
-                {result.unlinked === 0
-                  ? 'Every reference was carried.'
-                  : `${String(result.unlinked)} references could not be carried: ${lostReferences(result.unlinkedBy)}. The rows landed without them.`}
-              </p>
+              <p className="mb-1">{carriage(result)}</p>
               <Button
                 variant="link"
                 size="xs"
@@ -212,11 +228,7 @@ export function ImportDataScreen({
             <AlertTitle>
               {`${String(result.written)} rows imported, ${String(result.refused)} refused`}
             </AlertTitle>
-            {result.unlinked > 0 && (
-              <AlertDescription>
-                {`${String(result.unlinked)} references could not be carried: ${lostReferences(result.unlinkedBy)}.`}
-              </AlertDescription>
-            )}
+            <AlertDescription>{carriage(result)}</AlertDescription>
             {/* The lines where the caller has them. The count above is what
                 the route answers, and it is the half that has to be said: a
                 partial import reported as whole is the one reading an analyst

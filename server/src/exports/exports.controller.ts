@@ -77,7 +77,7 @@ export const importedSchema = z.object({
     ),
   unlinkedBy: z
     .record(z.string(), z.number().int())
-    .describe('The same total, keyed by the collection the lost references pointed at.'),
+    .describe('What could not be carried, keyed by the collection it pointed at.'),
 })
 
 class ImportedDto extends createZodDto(importedSchema) {}
@@ -153,13 +153,18 @@ export class ExportsController {
     const references = referencesOf(collection)
     if (references.length === 0) return (_property, value) => value
 
-    const names = new Map<string, Map<string, string>>()
+    // **Two maps, because one held two kinds of key.** The cache is by target
+    // and the lookup is by field, and a field named like a target would have
+    // read the wrong entry. No such pair exists today -- every field is
+    // `*Id`/`*Ids` -- which is exactly when it is cheap to separate them.
+    const byTarget = new Map<string, Map<string, string>>()
+    const byField = new Map<string, Map<string, string>>()
     for (const { field, target } of references) {
       const table = REFERENCE_TABLES[target]
       if (!table) continue
-      if (!names.has(target)) {
+      if (!byTarget.has(target)) {
         const held = await this.caseRows(table, caseId)
-        names.set(
+        byTarget.set(
           target,
           new Map(
             held.flatMap((row) => {
@@ -169,9 +174,9 @@ export class ExportsController {
           ),
         )
       }
-      // One target can be pointed at by two fields of one row -- the timeline's
-      // source and destination host -- so the field is what is keyed.
-      names.set(field, names.get(target)!)
+      // One target can be pointed at by two fields of one row -- the
+      // timeline's source and destination host -- so the lookup is by field.
+      byField.set(field, byTarget.get(target)!)
     }
 
     const of = (field: string, id: unknown): unknown => {
@@ -179,7 +184,7 @@ export class ExportsController {
       // **A row this case does not hold stays as it was**, which the import
       // then reports as a reference it could not carry. Writing a blank would
       // lose the fact that the file meant to point somewhere.
-      return names.get(field)?.get(id) ?? id
+      return byField.get(field)?.get(id) ?? id
     }
 
     return (property, value) =>

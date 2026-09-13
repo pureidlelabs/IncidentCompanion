@@ -14,11 +14,10 @@ import { CollectionService } from '../collections/collection.service.js'
 import type { CollectionName } from '../domain/wire.js'
 import { ConflictsService } from '../collections/conflicts.service.js'
 import { REFERENCE_TABLES, TABLES, type BulkTarget } from '../collections/registry.js'
-import { COLLECTION_SCHEMAS, IMPORTABLE } from '../domain/collections.js'
+import { COLLECTION_SCHEMAS, IMPORTABLE, referencesOf } from '../domain/collections.js'
 import { camelKeys } from '../wire/naming.js'
 import { hasIdentity, indexOf, keyOf, type Known } from '../domain/identity.js'
-import { answersTo } from '../domain/reference-key.js'
-import { referenceFieldsOf } from '../domain/references.js'
+import { namesOf } from '../domain/reference-key.js'
 
 /**
  * Which door a row came through, for one read out of a file.
@@ -65,12 +64,17 @@ export class ImportService {
     collection: BulkTarget,
     caseId: string,
     rows: Record<string, unknown>[],
-  ): Promise<Record<string, number>> {
-    const references = referenceFieldsOf(COLLECTION_SCHEMAS[collection]!)
-    if (references.length === 0) return {}
+  ): Promise<Record<string, number>[]> {
+    // The same lookup the export reads, so the two halves cannot disagree
+    // about which fields are references. -> `domain/collections.ts`
+    const references = referencesOf(collection)
+    if (references.length === 0) return rows.map(() => ({}))
 
-    const lost: Record<string, number> = {}
-    const held = new Map<string, Record<string, unknown>[]>()
+    // **Per row, because a row that is skipped never landed.** A total counted
+    // over the parsed file told an analyst a reference could not be carried on
+    // a re-import that wrote nothing at all.
+    const lost: Record<string, number>[] = rows.map(() => ({}))
+    const held = new Map<string, Map<string, string | null>>()
 
     for (const { field, target } of references) {
       const table = REFERENCE_TABLES[target]
@@ -79,28 +83,55 @@ export class ImportService {
       if (!table) throw new Error(`no table for reference target ${target}`)
 
       if (!held.has(target)) {
-        held.set(
-          target,
-          (await this.collections.list(
-            // **`refTarget` is spelled as the collection route**, which is
-            // what `CollectionName` is: `registry.ts` says so, and says what
-            // it cost to learn.
-            { name: target as CollectionName, table, orderBy: 'createdAt' },
-            caseId,
-          )) as Record<string, unknown>[],
-        )
+        const rows_ = (await this.collections.list(
+          // **`refTarget` is spelled as the collection route**, which is what
+          // `CollectionName` is: `registry.ts` says so, and says what it cost
+          // to learn.
+          { name: target as CollectionName, table, orderBy: 'createdAt' },
+          caseId,
+        )) as Record<string, unknown>[]
+
+        /**
+         * **An index rather than a scan per cell.** A filter over every
+         * candidate for every reference cell is O(rows x candidates), and the
+         * import is capped at 50,000 rows: 20,000 impact rows against 5,000
+         * hosts spent 12s of the 13.6s total inside resolution. Built once per
+         * target, it is O(rows + candidates) and keeps the rule exactly.
+         *
+         * **`null` is ambiguous, and is not the same as absent.** Two rows
+         * answering to one name resolve to nothing; a row answering to two
+         * names is not ambiguous with itself, which is why the id is compared
+         * rather than the presence of the key.
+         */
+        const answers = new Map<string, string | null>()
+        for (const one of rows_) {
+          const id = one['id'] as string
+          for (const name of namesOf(target, one)) {
+            const key = name.toLowerCase()
+            const seen = answers.get(key)
+            if (seen === undefined) answers.set(key, id)
+            else if (seen !== id) answers.set(key, null)
+          }
+        }
+        held.set(target, answers)
       }
-      const candidates = held.get(target)!
+      const answering = held.get(target)!
 
       /** The one row of the destination answering to this name, or null. */
-      const resolve = (name: string): string | null => {
-        const matched = candidates.filter((row) => answersTo(target, row, name))
-        return matched.length === 1 ? (matched[0]!['id'] as string) : null
-      }
+      const resolve = (name: string): string | null =>
+        answering.get(name.trim().toLowerCase()) ?? null
 
-      for (const row of rows) {
+      for (const [at, row] of rows.entries()) {
+        const mine = lost[at]!
         const given = row[field]
-        if (given === undefined || given === null || given === '') continue
+        if (given === undefined || given === null) continue
+        // **A cell of spaces is one nobody filled in.** Counting it as a
+        // reference the case could not resolve reports a loss for a link the
+        // file never asked for.
+        if (typeof given === 'string' && given.trim() === '') {
+          delete row[field]
+          continue
+        }
 
         // **A list keeps the half that resolves.** `evidenceIds` is `NOT NULL`
         // with a `[]` default, so emptying it for one unresolvable name would
@@ -111,7 +142,7 @@ export class ImportService {
             if (typeof one !== 'string' || one === '') continue
             const id = resolve(one)
             if (id) kept.push(id)
-            else lost[target] = (lost[target] ?? 0) + 1
+            else mine[target] = (mine[target] ?? 0) + 1
           }
           row[field] = kept
           continue
@@ -122,7 +153,7 @@ export class ImportService {
         if (id) row[field] = id
         else {
           delete row[field]
-          lost[target] = (lost[target] ?? 0) + 1
+          mine[target] = (mine[target] ?? 0) + 1
         }
       }
     }
@@ -269,7 +300,6 @@ export class ImportService {
         ...carried(lost, written.unlinked),
       }
     }
-
     /**
      * **Decided before the insert, not caught on conflict.** `createMany` is
      * one transaction so a file's 400th row failing leaves the case untouched -
@@ -284,18 +314,23 @@ export class ImportService {
     >[])
 
     const fresh: Record<string, unknown>[] = []
-    const collisions: { known: Known; row: Record<string, unknown> }[] = []
-    for (const row of rows) {
+    const freshLost: Record<string, number>[] = []
+    const collisions: { known: Known; row: Record<string, unknown>; lost: Record<string, number> }[] =
+      []
+    for (const [at, row] of rows.entries()) {
+      const mine = lost[at] ?? {}
       const key = keyOf(collection, row)
       // **A row with no key is always fresh.** An empty hostname is an absent
       // identity rather than an identity of "", so two blank rows are two rows.
       if (key === null) {
         fresh.push(row)
+        freshLost.push(mine)
         continue
       }
       const already = seen.get(key)
       if (already === undefined) {
         fresh.push(row)
+        freshLost.push(mine)
         // **Added as we go, or a file listing one host twice imports it
         // twice** - the same defect through the file rather than the case.
         // **The empty id marks it as minted here rather than found**, and a
@@ -306,7 +341,7 @@ export class ImportService {
         seen.set(key, { id: '', version: 0 })
         continue
       }
-      collisions.push({ known: already, row })
+      collisions.push({ known: already, row, lost: mine })
     }
 
     const written = await this.collections.createMany(def, caseId, fresh, actorId, 'drop')
@@ -317,7 +352,7 @@ export class ImportService {
         skipped: collisions.length,
         replaced: 0,
         refused: 0,
-        ...carried(lost, written.unlinked),
+        ...carried(freshLost, written.unlinked),
       }
     }
 
@@ -333,7 +368,8 @@ export class ImportService {
      */
     let replaced = 0
     let refused = 0
-    for (const { known, row } of collisions) {
+    const landed = [...freshLost]
+    for (const { known, row, lost: mine } of collisions) {
       if (!known.id) continue
       /**
        * Passes the version it read, so the check still applies and a
@@ -354,6 +390,7 @@ export class ImportService {
 
       if (result?.ok) {
         replaced += 1
+        landed.push(mine)
         continue
       }
 
@@ -378,7 +415,7 @@ export class ImportService {
       skipped: collisions.length - replaced - refused,
       replaced,
       refused,
-      ...carried(lost, written.unlinked),
+      ...carried(landed, written.unlinked),
     }
   }
 }
@@ -395,19 +432,25 @@ export class ImportService {
 export type OnDuplicate = 'skip' | 'replace'
 
 /**
- * The two shapes of the same fact, from the resolution and the write guard.
+ * What the rows that landed could not carry, totalled and split by target.
  *
- * `dropForeignReferences` should find nothing once resolution has run -- every
- * id left in a row was resolved inside the destination case -- so its count is
- * added rather than ignored: if it ever fires, a reference was lost and the
- * analyst is owed it either way.
+ * **`dropForeignReferences`' count is added and cannot say to what.** It
+ * answers 1 per row rather than 1 per reference and names no collection, so it
+ * moves the total without moving the split. It should never fire now -- every
+ * id left in a row was resolved inside the destination case -- and it is added
+ * rather than ignored because if it ever does, a reference was lost and the
+ * analyst is owed it.
  */
 function carried(
-  lost: Record<string, number>,
+  lost: readonly Record<string, number>[],
   dropped: number,
 ): { unlinked: number; unlinkedBy: Readonly<Record<string, number>> } {
-  const named = Object.values(lost).reduce((all, one) => all + one, 0)
-  return { unlinked: named + dropped, unlinkedBy: lost }
+  const by: Record<string, number> = {}
+  for (const row of lost) {
+    for (const [target, count] of Object.entries(row)) by[target] = (by[target] ?? 0) + count
+  }
+  const named = Object.values(by).reduce((all, one) => all + one, 0)
+  return { unlinked: named + dropped, unlinkedBy: by }
 }
 
 export interface ImportResult {
@@ -422,8 +465,7 @@ export interface ImportResult {
    */
   refused: number
   /**
-   * Rows that landed with a reference nulled, because it named a row in
-   * another case.
+   * References the destination case could not resolve, on rows that landed.
    *
    * **Its own number for the same reason `refused` is.** The row is in the
    * case and the link is not, which is neither "added and fine" nor "not
@@ -432,7 +474,7 @@ export interface ImportResult {
    */
   unlinked: number
   /**
-   * The same total, split by the kind of thing the lost references pointed at.
+   * What could not be carried, by the kind of thing it pointed at.
    *
    * **Because a number alone does not tell an analyst what to go and look
    * for.** *Four references could not be carried* leaves them reading the

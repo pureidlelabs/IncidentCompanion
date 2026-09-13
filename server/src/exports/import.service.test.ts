@@ -505,6 +505,29 @@ describe.skipIf(!db)('importing a CSV', () => {
   })
 
   /**
+   * **A row that was skipped never landed, so nothing was lost carrying it.**
+   *
+   * Resolution runs over the whole parsed file, before the duplicate pass
+   * decides what to write -- so a total counted there told an analyst a
+   * reference could not be carried on a re-import that wrote nothing at all,
+   * under a screen saying "the rows landed without them". -> #51
+   */
+  it('reports no lost reference for a row it skipped', async () => {
+    const csv = 'hostname,method_id\nWKS-SKIPPED,Never heard of it\n'
+
+    const first = await service.fromCsv('systems', emptyCaseId, csv, ME)
+    expect(first.added, 'the first import did not write the row').toBe(1)
+    expect(first.unlinked, 'the first import carried a reference it could not have').toBe(1)
+
+    const again = await service.fromCsv('systems', emptyCaseId, csv, ME)
+
+    expect(again.added).toBe(0)
+    expect(again.skipped).toBe(1)
+    expect(again.unlinked, 'an import that wrote nothing reported a reference lost').toBe(0)
+    expect(again.unlinkedBy).toEqual({})
+  })
+
+  /**
    * **The timeline, which carries more references than anything else.**
    *
    * It publishes no single write schema, so a lookup through

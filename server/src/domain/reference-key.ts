@@ -117,6 +117,22 @@ export function nameOf(collection: string, row: Record<string, unknown>): string
 }
 
 /**
+ * Every name this row answers to, in naming order.
+ *
+ * **For building an index, where `nameOf` is for writing a file.** A binary
+ * answers to its digest and to its filename; a resolver that holds only the
+ * first cannot match a file that used the second.
+ */
+export function namesOf(collection: string, row: Record<string, unknown>): string[] {
+  const found: string[] = []
+  for (const naming of namingOf(collection) ?? []) {
+    const named = naming(row)
+    if (named !== null) found.push(named)
+  }
+  return found
+}
+
+/**
  * Whether a stored row answers to the name a file used.
  *
  * **Compared the way the name was written, case-folded.** A hostname in a file

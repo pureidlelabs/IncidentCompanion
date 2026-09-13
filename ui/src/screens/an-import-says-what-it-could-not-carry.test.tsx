@@ -10,7 +10,7 @@
  * *four references could not be carried* leaves an analyst reading the whole
  * import, where *four to Assets* names what to bring across first.
  */
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { ImportDataScreen } from './import-data'
@@ -36,13 +36,31 @@ describe('an import that lost references', () => {
     )
 
     const said = document.body.textContent
-    expect(said, 'the count of lost references is on no screen').toContain('3')
+    // **The whole phrase, not the digit.** `toContain('3')` matched a stray
+    // `3` elsewhere on the screen, so the headline count -- which is the whole
+    // of #51 -- was asserted by nothing.
+    expect(said, 'the count of lost references is on no screen').toContain(
+      '3 references could not be carried',
+    )
     // **The screen's own words for a collection**, so the analyst reads the
     // name on the rail rather than the one in the schema.
     expect(said, 'the analyst is not told what the lost references pointed at').toContain(
       '2 to Assets',
     )
     expect(said).toContain('1 to Methods')
+  })
+
+  /** One is not `1 references`. */
+  it('agrees with itself about one', () => {
+    render(
+      <ImportDataScreen
+        kase={campaignCase}
+        specs={specsFixture}
+        result={{ ...carried, unlinked: 1, unlinkedBy: { systems: 1 } }}
+      />,
+    )
+
+    expect(document.body.textContent).toContain('1 reference could not be carried')
   })
 
   /**
@@ -63,15 +81,22 @@ describe('an import that lost references', () => {
    * apart because they ask different things of the analyst -- a refusal is a
    * row to fix and re-import, a lost reference is a thing to bring across.
    */
-  it('does not report a lost reference as a refused row', () => {
+  it('says what it could not carry on an import that also refused rows', () => {
     render(
       <ImportDataScreen
         kase={campaignCase}
         specs={specsFixture}
-        result={{ ...carried, unlinked: 2, unlinkedBy: { systems: 2 } }}
+        result={{ ...carried, refused: 2, unlinked: 2, unlinkedBy: { systems: 2 } }}
       />,
     )
 
-    expect(screen.queryByText(/refused/i), 'a carried row was reported as refused').toBeNull()
+    const said = document.body.textContent
+    // The refused branch is a different alert from the success one, and the
+    // reassurance the specification asks for was only on the success branch.
+    expect(said, 'a partly refused import says nothing about what it carried').toContain(
+      '2 references could not be carried',
+    )
+    // And the two are still told apart: a lost reference is not a refused row.
+    expect(said).toContain('2 refused')
   })
 })
