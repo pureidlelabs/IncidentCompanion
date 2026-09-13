@@ -28,6 +28,19 @@ import { EvidenceStore } from '../evidence/store.js'
 import { toPdf, pageRuler } from './document/pdf.js'
 import { toWord } from './document/word.js'
 import type { Document, Images, Node } from './document/model.js'
+import { POLICY_SETTINGS } from '../policy/keys.js'
+
+/**
+ * The install's bounds, as the doors read them.
+ *
+ * **A stub, because these cases are not about the bounds.** Every door reads
+ * them per act now, so a fixture that cannot answer fails with a type error
+ * rather than falling back to a constant -- which is the state #588 was about.
+ */
+const POLICY_DEFAULTS = Object.fromEntries(
+  Object.entries(POLICY_SETTINGS).map(([key, one]) => [key, one.fallback]),
+) as never
+const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 const HASH = 'a'.repeat(64)
 
@@ -36,7 +49,7 @@ afterAll(() => rmSync(root, { recursive: true, force: true }))
 
 const store = new EvidenceStore({
   get: () => root,
-} as unknown as ConstructorParameters<typeof EvidenceStore>[0])
+} as unknown as ConstructorParameters<typeof EvidenceStore>[0], policy)
 
 /** The formats the picker offers, plus two it does not and the API allows. */
 const FORMATS = ['png', 'jpeg', 'webp', 'gif', 'tiff'] as const

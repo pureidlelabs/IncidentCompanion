@@ -22,6 +22,7 @@ import {
   type Attachments,
 } from '../archive/format.js'
 import { seal } from '../archive/envelope.js'
+import { PolicyService } from '../policy/policy.service.js'
 
 export interface ExportRequest {
   caseId: string
@@ -51,6 +52,7 @@ export class ArchiveExportService {
   constructor(
     private readonly cases: CasesService,
     @Inject(EvidenceStore) private readonly store: EvidenceStore,
+    private readonly policy: PolicyService,
   ) {}
 
   async build(request: ExportRequest): Promise<ExportedArchive> {
@@ -102,7 +104,12 @@ export class ArchiveExportService {
     }
 
     const zip = await pack(members, attachments)
-    const bytes = request.passphrase ? await seal(zip, request.passphrase) : zip
+    // **Read now, like every other bound.** A minimum cached at boot is one
+    // an administrator cannot raise without a restart. -> `policy/read.ts`
+    const stored = await this.policy.read()
+    const bytes = request.passphrase
+      ? await seal(zip, request.passphrase, stored['evidence.passphraseChars'])
+      : zip
 
     return {
       bytes,

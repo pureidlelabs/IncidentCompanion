@@ -34,12 +34,23 @@ export const EVIDENCE_PREFIX = 'evidence/'
 export const ARCHIVE_VERSION = 1
 
 /**
- * A ceiling on what one member may expand to, and on the whole. `unpack`
+ * What an archive may hold, as the door that read the install states it.
+ *
+ * A ceiling on what one member may expand to, and on the whole: `unpack`
  * inflates into memory, so both are read off the central directory and refused
  * before a byte is inflated.
+ *
+ * **No ceiling of its own.** `archive/` is a pure transformation of bytes and
+ * reaches nothing, so a number here is a second answer to a question the
+ * install already answers -- which is how a 256MB member cap and an attachment
+ * setting of the same name came to disagree the moment an operator moved one.
+ * -> #588, `policy/keys.ts`
  */
-export const MAX_MEMBER_BYTES = 256 * 1024 * 1024
-export const MAX_TOTAL_BYTES = 512 * 1024 * 1024
+export interface ArchiveLimits {
+  memberBytes: number
+  totalBytes: number
+}
+
 export const MAX_MEMBERS = 10_000
 
 export class BadArchive extends Error {}
@@ -124,7 +135,10 @@ export async function pack(
  * difference between "not shipped" and "removed in transit" is exactly what the
  * manifest exists to state.
  */
-export async function unpack(archive: Buffer): Promise<Record<string, Uint8Array>> {
+export async function unpack(
+  archive: Buffer,
+  limits: ArchiveLimits,
+): Promise<Record<string, Uint8Array>> {
   const members: Record<string, Uint8Array> = {}
   const reader = new ZipReader(new Uint8ArrayReader(archive))
 
@@ -147,11 +161,11 @@ export async function unpack(archive: Buffer): Promise<Record<string, Uint8Array
     for (const entry of entries) {
       safeMemberName(entry.filename)
       const size = entry.uncompressedSize
-      if (size > MAX_MEMBER_BYTES) {
+      if (size > limits.memberBytes) {
         throw new BadArchive(`${entry.filename} is larger than an archive member may be`)
       }
       total += size
-      if (total > MAX_TOTAL_BYTES) {
+      if (total > limits.totalBytes) {
         throw new BadArchive('this archive expands to more than the import ceiling')
       }
     }
@@ -209,11 +223,14 @@ export async function unpack(archive: Buffer): Promise<Record<string, Uint8Array
   return members
 }
 
-export async function readArchive(archive: Buffer): Promise<{
+export async function readArchive(
+  archive: Buffer,
+  limits: ArchiveLimits,
+): Promise<{
   members: Record<string, Uint8Array>
   attachments: Attachments
 }> {
-  const members = await unpack(archive)
+  const members = await unpack(archive, limits)
   const manifest = JSON.parse(
     Buffer.from(members[MANIFEST_NAME]!).toString('utf8'),
   ) as Manifest

@@ -21,6 +21,7 @@ import { Inject, Injectable, Logger, PayloadTooLargeException } from '@nestjs/co
 import { ConfigService } from '@nestjs/config'
 
 import type { Env } from '../config/env.js'
+import { PolicyService } from '../policy/policy.service.js'
 
 /**
  * The default attachment ceiling. The live one is `evidence.attachmentMegabytes`.
@@ -50,7 +51,10 @@ export class EvidenceStore {
   private readonly log = new Logger(EvidenceStore.name)
   private readonly root: string
 
-  constructor(@Inject(ConfigService) config: ConfigService<Env, true>) {
+  constructor(
+    @Inject(ConfigService) config: ConfigService<Env, true>,
+    private readonly policy: PolicyService,
+  ) {
     this.root = config.get('EVIDENCE_DIR', { infer: true }) ?? '.evidence'
   }
 
@@ -64,16 +68,24 @@ export class EvidenceStore {
   async put(source: AsyncIterable<Buffer>, name?: string): Promise<StoredArtefact> {
     await mkdir(this.root, { recursive: true })
 
+    /**
+     * **Read before the stream, because the cap fires while reading it**, and
+     * read per upload rather than at boot: the ceiling is a setting an
+     * operator can raise, and a constant here is what let them raise it and
+     * still meet a refusal quoting the old number. -> #588, `policy/read.ts`
+     */
+    const ceiling = (await this.policy.read())['evidence.attachmentMegabytes'] * 1024 * 1024
+
     const digest = createHash('sha256')
     const chunks: Buffer[] = []
     let size = 0
 
     for await (const chunk of source) {
       size += chunk.length
-      if (size > MAX_ATTACHMENT_BYTES) {
+      if (size > ceiling) {
         throw new PayloadTooLargeException({
           message:
-            `An attachment is at most ${MAX_ATTACHMENT_BYTES / 1024 / 1024}MB. ` +
+            `An attachment is at most ${String(ceiling / 1024 / 1024)}MB. ` +
             'Record where a larger artefact is held instead of attaching it.',
         })
       }

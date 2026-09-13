@@ -14,9 +14,6 @@
  */
 import { Decrypter, Encrypter } from 'age-encryption'
 
-/** Under this, the passphrase is not one. Enforced here, not only on screen. */
-export const MIN_PASSPHRASE_CHARS = 12
-
 /**
  * **What this build writes, and therefore the ceiling it will open.** At
  * `2^16` the cost of an import is the cost of an export, and neither is
@@ -60,9 +57,21 @@ function assertWorkFactor(sealed: Buffer): void {
 export const isSealed = (bytes: Buffer): boolean =>
   bytes.subarray(0, AGE_MAGIC.length).toString('latin1') === AGE_MAGIC
 
-export async function seal(plain: Buffer, passphrase: string): Promise<Buffer> {
-  if (passphrase.length < MIN_PASSPHRASE_CHARS) {
-    throw new WeakPassphrase(`A passphrase is at least ${MIN_PASSPHRASE_CHARS} characters.`)
+/**
+ * Seal an archive, refusing a passphrase shorter than the install allows.
+ *
+ * **The minimum is passed in, not read here.** It is an install setting an
+ * operator can raise, and this module has no database -- a constant of its own
+ * is what let the setting be offered, bounded and audited while the refusal
+ * went on quoting 12. -> #588
+ */
+export async function seal(
+  plain: Buffer,
+  passphrase: string,
+  minimumChars: number,
+): Promise<Buffer> {
+  if (passphrase.length < minimumChars) {
+    throw new WeakPassphrase(`A passphrase is at least ${String(minimumChars)} characters.`)
   }
   const encrypter = new Encrypter()
   encrypter.setScryptWorkFactor(WORK_FACTOR)

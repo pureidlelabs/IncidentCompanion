@@ -8,6 +8,19 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from '@zip.js/zip.js'
 
 import { EvidenceStore, MAX_ATTACHMENT_BYTES, isDigest } from './store.js'
+import { POLICY_SETTINGS } from '../policy/keys.js'
+
+/**
+ * The install's bounds, as the doors read them.
+ *
+ * **A stub, because these cases are not about the bounds.** Every door reads
+ * them per act now, so a fixture that cannot answer fails with a type error
+ * rather than falling back to a constant -- which is the state #588 was about.
+ */
+const POLICY_DEFAULTS = Object.fromEntries(
+  Object.entries(POLICY_SETTINGS).map(([key, one]) => [key, one.fallback]),
+) as never
+const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 let root = ''
 let store: EvidenceStore
@@ -19,7 +32,7 @@ const bytesOf = (text: string) => Readable.from([Buffer.from(text)]) as AsyncIte
 
 beforeAll(async () => {
   root = await mkdtemp(join(tmpdir(), 'evidence-store-'))
-  store = new EvidenceStore(configFor(root))
+  store = new EvidenceStore(configFor(root), policy)
 })
 
 afterAll(async () => {

@@ -9,6 +9,19 @@
 import { describe, expect, it } from 'vitest'
 
 import { InstallSettingsController, whereItPoints } from './install.controller.js'
+import { POLICY_SETTINGS } from '../policy/keys.js'
+
+/**
+ * The install's bounds, as the doors read them.
+ *
+ * **A stub, because these cases are not about the bounds.** Every door reads
+ * them per act now, so a fixture that cannot answer fails with a type error
+ * rather than falling back to a constant -- which is the state #588 was about.
+ */
+const POLICY_DEFAULTS = Object.fromEntries(
+  Object.entries(POLICY_SETTINGS).map(([key, one]) => [key, one.fallback]),
+) as never
+const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 /** A config holding the shapes a real deployment has. */
 function configOf(over: Record<string, unknown> = {}) {
@@ -24,7 +37,7 @@ function configOf(over: Record<string, unknown> = {}) {
 }
 
 const settingsOf = (over?: Record<string, unknown>) =>
-  new InstallSettingsController(configOf(over)).read()
+  new InstallSettingsController(configOf(over), policy).read()
 
 describe('redacting a connection string', () => {
   it('keeps where it points and drops the credential', () => {
@@ -47,14 +60,14 @@ describe('redacting a connection string', () => {
     expect(out).not.toContain('sslpassword')
   })
 
-  it('says nothing rather than guessing when the value will not parse', () => {
+  it('says nothing rather than guessing when the value will not parse', async () => {
     expect(whereItPoints('this is not a url with a secret in it')).toBe('not readable')
   })
 })
 
 describe('the install settings document', () => {
-  it('carries no credential from any connection string', () => {
-    const flat = JSON.stringify(settingsOf())
+  it('carries no credential from any connection string', async () => {
+    const flat = JSON.stringify(await settingsOf())
     for (const secret of [
       's3cr3t-passw0rd',
       'another-secret',
@@ -65,47 +78,47 @@ describe('the install settings document', () => {
     }
   })
 
-  it('still says where the database and cache are', () => {
+  it('still says where the database and cache are', async () => {
     // Redacting to nothing would make the pane useless: an operator reads this
     // to know which stack they are looking at.
-    const settings = settingsOf()
+    const settings = await settingsOf()
     expect(settings.storage.database).toContain('db.internal')
     expect(settings.storage.redis).toContain('cache.internal')
   })
 
-  it('states the transport as a fact, not as a setting', () => {
+  it('states the transport as a fact, not as a setting', async () => {
     // There is no plaintext port, no --no-tls and no bypass. Offering a scheme
     // would describe a choice this app does not have.
-    const settings = settingsOf()
+    const settings = await settingsOf()
     expect(settings.transport.scheme).toBe('https')
     expect(settings.transport.port).toBe(8443)
   })
 
-  it('offers nothing that looks like a control', () => {
+  it('offers nothing that looks like a control', async () => {
     // The pane states; it does not edit. A field named like an option - an
     // `enabled`, a list of choices - is how a read-only surface grows a form.
-    const flat = JSON.stringify(settingsOf())
+    const flat = JSON.stringify(await settingsOf())
     for (const shape of ['Options', 'enabled', 'locked', 'mode']) {
       expect(flat).not.toContain(shape)
     }
   })
 
-  it('names where the writable settings live rather than copying them', () => {
+  it('names where the writable settings live rather than copying them', async () => {
     // A read-only copy of a switch that is writable elsewhere is a second
     // answer that can disagree with the first.
-    const settings = settingsOf()
+    const settings = await settingsOf()
     expect(settings.elsewhere.map((one) => one.where)).toContain('Compliance')
   })
 
-  it('reports the caps a refusal will quote at the analyst', () => {
-    const settings = settingsOf()
+  it('reports the caps a refusal will quote at the analyst', async () => {
+    const settings = await settingsOf()
     expect(settings.limits.attachmentBytes).toBeGreaterThan(0)
     expect(settings.limits.archiveBytes).toBeGreaterThan(0)
     expect(settings.limits.passphraseChars).toBeGreaterThan(0)
   })
 
-  it('falls back to the default evidence directory rather than saying nothing', () => {
-    expect(settingsOf({ EVIDENCE_DIR: undefined }).storage.evidence).toBe('.evidence')
+  it('falls back to the default evidence directory rather than saying nothing', async () => {
+    expect((await settingsOf({ EVIDENCE_DIR: undefined })).storage.evidence).toBe('.evidence')
   })
 })
 
@@ -120,8 +133,8 @@ describe('what the install says about the wrapping', () => {
    * sealed" and withheld the word would leave an operator to assume the seal
    * is a lock, which is the reading the requirement exists to prevent.
    */
-  it('names the password rather than describing the artefacts as protected', () => {
-    const note = settingsOf().storage.evidenceNote
+  it('names the password rather than describing the artefacts as protected', async () => {
+    const note = (await settingsOf()).storage.evidenceNote
 
     expect(note, 'the note does not name the password, so a reader may take it for a secret').toMatch(
       /infected/i,
@@ -137,8 +150,8 @@ describe('what the install says about the wrapping', () => {
    * Asserted as two properties rather than as the sentence, so rewording the
    * note is free and dropping half of it is not.
    */
-  it('says both why it is wrapped and what that costs', () => {
-    const note = settingsOf().storage.evidenceNote
+  it('says both why it is wrapped and what that costs', async () => {
+    const note = (await settingsOf()).storage.evidenceNote
 
     expect(note, 'the note does not say the wrapping stops quarantine').toMatch(
       /quarantine|antivirus/i,

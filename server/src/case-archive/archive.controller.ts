@@ -15,6 +15,7 @@ import {
   Body,
   Controller,
   HttpCode,
+  Inject,
   Param,
   ParseUUIDPipe,
   Post,
@@ -35,8 +36,9 @@ import {
   importResultSchema,
   type ImportResult,
 } from './import.service.js'
-import { BadArchive, MAX_TOTAL_BYTES } from '../archive/format.js'
-import { MIN_PASSPHRASE_CHARS, WeakPassphrase } from '../archive/envelope.js'
+import { BadArchive } from '../archive/format.js'
+import { PolicyService } from '../policy/policy.service.js'
+import { WeakPassphrase } from '../archive/envelope.js'
 
 const exportSchema = z
   .object({
@@ -58,6 +60,7 @@ export class ArchiveController {
   constructor(
     private readonly exports: ArchiveExportService,
     private readonly imports: ArchiveImportService,
+    private readonly policy: PolicyService,
   ) {}
 
   @UseGuards(CaseAccessGuard)
@@ -76,14 +79,15 @@ export class ArchiveController {
       })
     }
     const { passphrase, includeFiles } = parsed.data
-    if (passphrase && passphrase.length < MIN_PASSPHRASE_CHARS) {
-      // Answered here as well as in `seal`, so the analyst gets the specific
-      // refusal rather than a generic failure from inside the envelope.
-      throw new UnprocessableEntityException({
-        message: `A passphrase needs at least ${String(MIN_PASSPHRASE_CHARS)} characters.`,
-      })
-    }
 
+    /**
+     * **One check, in `seal`.** This door used to refuse first, so the
+     * analyst got a specific message rather than a generic failure from inside
+     * the envelope -- but `WeakPassphrase` is caught below and surfaced with
+     * its own words and the same status, so the second check bought nothing
+     * and was a second place for the number to be wrong. It was: both read a
+     * constant while the setting beside them moved. -> #588
+     */
     let built
     try {
       built = await this.exports.build({ caseId, passphrase, includeFiles })
@@ -125,13 +129,18 @@ export class ArchiveController {
     @Req() request: Request,
     @Session() session: UserSession,
   ): Promise<ImportResult> {
+    // **Read before the body, because the cap fires while reading it.** A
+    // ceiling consulted after the upload has already been held in memory is
+    // not a ceiling. -> `exports/csv-import.ts`, which caps the same way
+    const ceiling = (await this.policy.read())['evidence.archiveMegabytes'] * 1024 * 1024
+
     const chunks: Buffer[] = []
     let size = 0
     for await (const chunk of request as AsyncIterable<Buffer>) {
       size += chunk.length
-      if (size > MAX_TOTAL_BYTES) {
+      if (size > ceiling) {
         throw new UnprocessableEntityException({
-          message: `An archive is at most ${String(MAX_TOTAL_BYTES / 1024 / 1024)}MB.`,
+          message: `An archive is at most ${String(ceiling / 1024 / 1024)}MB.`,
         })
       }
       chunks.push(chunk)

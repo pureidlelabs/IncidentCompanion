@@ -8,6 +8,7 @@
  * longer exists, and an archive exported without its files importing as though
  * it were damaged.
  */
+import { POLICY_SETTINGS } from '../policy/keys.js'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -117,13 +118,13 @@ describe.skipIf(!db)('a case, out and back', () => {
     }
 
     root = await mkdtemp(join(tmpdir(), 'ic-archive-'))
-    store = new EvidenceStore({ get: () => root } as never)
+    store = new EvidenceStore({ get: () => root } as never, policy)
     cases_ = new CasesService(
       db!,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
-    exporter = new ArchiveExportService(cases_, store)
-    importer = new ArchiveImportService(db!, store)
+    exporter = new ArchiveExportService(cases_, store, policy)
+    importer = new ArchiveImportService(db!, store, policy)
   })
 
   afterAll(async () => {
@@ -245,7 +246,7 @@ describe.skipIf(!db)('a case, out and back', () => {
     // the document leaves a byte-search version of this green.
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
-    const { members } = await readArchive(built.bytes)
+    const { members } = await readArchive(built.bytes, ARCHIVE_LIMITS)
     const record = JSON.parse(Buffer.from(members['case.json']!).toString('utf8')) as {
       reports: Record<string, unknown>[]
     }
@@ -259,7 +260,24 @@ describe.skipIf(!db)('a case, out and back', () => {
     expect(Object.keys(members)).toContain(`prose/${made.reportId}.ydoc`)
   })
 
-  describe('a handover, exported without its files', () => {
+  /** What an archive may hold; `archive/` states none of its own. -> #588 */
+const ARCHIVE_LIMITS = { memberBytes: 256 * 1024 * 1024, totalBytes: 512 * 1024 * 1024 }
+
+/**
+ * The install's bounds, as the doors read them.
+ *
+ * **A stub, because these cases are not about the bounds.** Every door reads
+ * them per act now, so a fixture that cannot answer fails with a type error
+ * rather than silently falling back to a constant -- which is the state #588
+ * was about.
+ */
+const POLICY_DEFAULTS = Object.fromEntries(
+  Object.entries(POLICY_SETTINGS).map(([key, one]) => [key, one.fallback]),
+) as never
+
+const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
+
+describe('a handover, exported without its files', () => {
     it('says so rather than looking damaged', async () => {
       const made = await furnished()
       const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
@@ -285,7 +303,7 @@ describe.skipIf(!db)('a case, out and back', () => {
       // it finds nothing either way and the assertion would be inert.
       const made = await furnished()
       const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
-      const { members } = await readArchive(built.bytes)
+      const { members } = await readArchive(built.bytes, ARCHIVE_LIMITS)
       expect(Object.keys(members).filter((one) => one.startsWith('evidence/'))).toEqual([])
     })
   })

@@ -23,6 +23,19 @@ import { cases, library, reportBlocks, reports, timeline, user } from '../db/sch
 import { openTestPool } from '../../test/database.js'
 import { english } from './document/packs.js'
 import { EvidenceStore } from '../evidence/store.js'
+import { POLICY_SETTINGS } from '../policy/keys.js'
+
+/**
+ * The install's bounds, as the doors read them.
+ *
+ * **A stub, because these cases are not about the bounds.** Every door reads
+ * them per act now, so a fixture that cannot answer fails with a type error
+ * rather than falling back to a constant -- which is the state #588 was about.
+ */
+const POLICY_DEFAULTS = Object.fromEntries(
+  Object.entries(POLICY_SETTINGS).map(([key, one]) => [key, one.fallback]),
+) as never
+const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 /**
  * A store no test here reads through.
@@ -34,7 +47,7 @@ import { EvidenceStore } from '../evidence/store.js'
  * rather than a surprise at run time.
  */
 const noFigures = (): EvidenceStore =>
-  new EvidenceStore({ get: () => undefined } as unknown as ConstructorParameters<typeof EvidenceStore>[0])
+  new EvidenceStore({ get: () => undefined } as unknown as ConstructorParameters<typeof EvidenceStore>[0], policy)
 
 // The packs live in the database; this suite asserts lifecycle, so it renders
 // in English and never reads a row.
