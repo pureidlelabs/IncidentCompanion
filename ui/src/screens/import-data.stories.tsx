@@ -59,12 +59,52 @@ export const EmptyCase: Story = {
 /** An import that landed whole. */
 export const Imported: Story = {
   name: 'An import that landed',
-  args: { result: { collection: 'systems', written: 30, refused: 0 } },
+  args: {
+    result: { collection: 'systems', written: 30, refused: 0, unlinked: 0, unlinkedBy: {} },
+  },
   play: async ({ canvas, step }) => {
     await step('it says how many landed and where', async () => {
       await expect(canvas.getByText(/30 rows imported into/)).toBeVisible()
     })
     await step('and nothing is reported refused', async () => {
+      await expect(canvas.queryByText(/refused/)).toBeNull()
+    })
+    await step('and it says plainly that the references came with it', async () => {
+      await expect(canvas.getByText(/Every reference was carried/)).toBeVisible()
+    })
+  },
+}
+
+/**
+ * An import that landed whole and arrived less connected than its file.
+ *
+ * **The state the silence hid.** A reference travels as what it points at, and
+ * the destination case may not hold that thing -- so the row lands without the
+ * link. Nothing is refused and nothing is wrong with the file; what an analyst
+ * needs is the count and the kind, so they know what to bring across next.
+ * -> #51
+ */
+export const ReferencesLost: Story = {
+  name: 'An import whose references did not all resolve',
+  args: {
+    result: {
+      collection: 'impact',
+      written: 18,
+      refused: 0,
+      unlinked: 5,
+      unlinkedBy: { systems: 3, methods: 2 },
+    },
+  },
+  play: async ({ canvas, step }) => {
+    await step('it still reports the rows as landed', async () => {
+      await expect(canvas.getByText(/18 rows imported into/)).toBeVisible()
+    })
+    await step('it names how many references were lost, and to what', async () => {
+      await expect(canvas.getByText(/5 references could not be carried/)).toBeVisible()
+      await expect(canvas.getByText(/3 to Assets/)).toBeVisible()
+      await expect(canvas.getByText(/2 to Methods/)).toBeVisible()
+    })
+    await step('and calls none of it a refusal', async () => {
       await expect(canvas.queryByText(/refused/)).toBeNull()
     })
   },
@@ -84,6 +124,8 @@ export const RowsRefused: Story = {
       collection: 'network_indicators',
       written: 14,
       refused: 3,
+      unlinked: 0,
+      unlinkedBy: {},
       refusals: [
         { row: 4, detail: 'value is not an address, a domain or a URL' },
         { row: 9, detail: 'disposition is not one of benign, suspicious, malicious' },
@@ -111,7 +153,7 @@ export const RowsRefused: Story = {
  * What the route actually answers: a count of refusals and no line numbers.
  *
  * **The shape the container can fill.** `POST /cases/{id}/{collection}.csv`
- * returns `{ added, skipped, replaced, refused, unlinked }`, all counts, so a
+ * returns `{ added, skipped, replaced, refused, unlinked, unlinkedBy }`, so a
  * screen that can only report refusals it has line numbers for reports none
  * -- and the analyst reads an unqualified success over a file the server took
  * in part. The count is what has to be true; the lines are detail this route
@@ -120,7 +162,13 @@ export const RowsRefused: Story = {
 export const RefusedWithoutDetail: Story = {
   name: 'Rows refused, with only a count to say so',
   args: {
-    result: { collection: 'network_indicators', written: 14, refused: 3 },
+    result: {
+      collection: 'network_indicators',
+      written: 14,
+      refused: 3,
+      unlinked: 0,
+      unlinkedBy: {},
+    },
   },
   play: async ({ canvas, step }) => {
     await step('it still says how many were refused', async () => {
@@ -174,6 +222,8 @@ export const Overlong: Story = {
   args: {
     result: {
       collection: 'timeline',
+      unlinked: 0,
+      unlinkedBy: {},
       written: 0,
       refused: 1,
       refusals: [
