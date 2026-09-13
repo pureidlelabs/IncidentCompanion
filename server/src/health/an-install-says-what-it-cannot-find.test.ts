@@ -1,0 +1,306 @@
+/**
+ * **An install restored without its artefacts says so at start.**
+ *
+ * *A copy of the database MUST name which artefacts it expects to find beside
+ * it, so that a restore can say what is missing rather than discovering it
+ * when somebody opens a case.* An operator who restored the database and
+ * forgot the artefact directory had an install that read as entirely well
+ * until an analyst opened a case with evidence on it, which is the discovery
+ * route the requirement names and rules out. -> #179
+ *
+ * **Existence, never content.** `state` is explicit that nothing may expand,
+ * execute or interpret an artefact to decide what it is, and whether a file is
+ * there is all this needs. The census reads names, never bytes.
+ *
+ * **What this does not cover:** what a case does when it opens an artefact
+ * that is not there, which is `report/render.service.ts`'s and is already
+ * demonstrated; and that the artefacts put back afterwards make the evidence
+ * whole, which is
+ * `evidence/artefacts-put-back-make-the-evidence-whole.test.ts`.
+ */
+import { drizzle } from 'drizzle-orm/node-postgres'
+import { eq, inArray } from 'drizzle-orm'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { Logger } from '@nestjs/common'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { ArtefactCensus, saysAtStart, type Census } from './artefact-census.service.js'
+import { HealthModule } from './health.module.js'
+import { cases, evidence, user } from '../db/schema/index.js'
+import { openTestPool } from '../../test/database.js'
+
+/**
+ * **The seed handle, because a fixture here writes across cases.** Row-level
+ * security refuses an unscoped write on the app role, so a fixture on it fails
+ * before the case it was arranging ever runs.
+ */
+const SEED = process.env['SEED_DATABASE_URL'] ?? process.env['DATABASE_URL'] ?? ''
+const pool = SEED ? openTestPool(SEED, 'ic_seed') : null
+const db = pool ? drizzle({ client: pool }) : null
+
+/**
+ * **The role the server actually runs as**, which is the whole of the second
+ * case below. `ic_seed` reads across every case by policy, so a census
+ * measured only on the seed handle certifies a query that answers nothing on
+ * a real install -- and answering nothing is indistinguishable from an install
+ * that holds every artefact it expects.
+ */
+const APP = process.env['DATABASE_URL'] ?? ''
+const appPool = APP ? openTestPool(APP, 'ic_app') : null
+const appDb = appPool ? drizzle({ client: appPool }) : null
+
+const ANALYST = 'census-analyst'
+const hashFor = (what: string) => what.padEnd(64, '0')
+
+describe.skipIf(!db)('what an install can find beside it', () => {
+  let root = ''
+  let caseId = ''
+  // Every case made here, because `beforeEach` makes one per test and this
+  // suite shares its database with every other file.
+  const made: string[] = []
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), 'ic-census-'))
+    const now = new Date()
+    await db!
+      .insert(user)
+      .values({
+        id: ANALYST,
+        name: 'Census Analyst',
+        email: `${ANALYST}@example.test`,
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoNothing()
+    const [one] = await db!.insert(cases).values({ title: 'Restored' }).returning()
+    caseId = one!.id
+    made.push(caseId)
+  })
+
+  afterAll(async () => {
+    await rm(root, { recursive: true, force: true })
+    await db!.delete(cases).where(inArray(cases.id, made))
+    await db!.delete(user).where(eq(user.id, ANALYST))
+    await pool?.end()
+    await appPool?.end()
+  })
+
+  const record = async (hash: string) => {
+    await db!.insert(evidence).values({
+      caseId,
+      name: `artefact ${hash.slice(0, 4)}`,
+      hash,
+      createdBy: ANALYST,
+      updatedBy: ANALYST,
+    })
+  }
+
+  const census = () => new ArtefactCensus(db!, { get: () => root } as never)
+
+  /**
+   * What this test added, against what the install already held.
+   *
+   * **The census answers for the whole install, and this suite shares a
+   * database with every other file.** Asserting absolutes here would be a
+   * claim about rows somebody else wrote, and would go red the day they wrote
+   * one more. The baseline is taken against this test's own empty directory,
+   * so every pre-existing artefact counts as missing in both readings and
+   * cancels.
+   */
+  const since = async (before: { expected: number; missing: number }) => {
+    const now = await census().take()
+    return { expected: now.expected - before.expected, missing: now.missing - before.missing }
+  }
+
+  it('says how many it expects and cannot find', async () => {
+    const before = await census().take()
+    await record(hashFor('a'))
+    await record(hashFor('b'))
+    await writeFile(join(root, hashFor('a')), 'here')
+
+    const held = await since(before)
+
+    expect(held.expected, 'the rows that name an artefact were not counted').toBe(2)
+    expect(held.missing, 'an install that lost an artefact reports none missing').toBe(1)
+  })
+
+  /**
+   * **By digest, because that is how they are stored.** Two rows naming one
+   * artefact are one file; counting rows would report an install short of
+   * something it holds.
+   */
+  it('counts one artefact named by two rows once', async () => {
+    const before = await census().take()
+    await record(hashFor('c'))
+    await record(hashFor('c'))
+
+    const held = await since(before)
+
+    expect(held.expected, 'one artefact named twice was counted twice').toBe(1)
+    expect(held.missing).toBe(1)
+  })
+
+  /**
+   * **A row with no hash names no artefact.** Evidence can be recorded before
+   * the file is attached, and counting those would report every install as
+   * incomplete for ever.
+   */
+  it('ignores a row that names no artefact', async () => {
+    const before = await census().take()
+    await record('')
+    await record(hashFor('d'))
+    await writeFile(join(root, hashFor('d')), 'here')
+
+    const held = await since(before)
+
+    expect(held.expected).toBe(1)
+    expect(held.missing, 'a row with no artefact was counted as one that is missing').toBe(0)
+  })
+
+  it('says nothing is missing on an install that holds them all', async () => {
+    const before = await census().take()
+    await record(hashFor('e'))
+    await writeFile(join(root, hashFor('e')), 'here')
+
+    expect((await since(before)).missing).toBe(0)
+  })
+
+  /**
+   * **The artefacts put back afterwards make it whole again**, which is the
+   * sibling scenario: an operator has no way to confirm a restore finished
+   * unless something reconciles at start.
+   */
+  it('reports whole again once the artefacts are put back', async () => {
+    const before = await census().take()
+    await record(hashFor('f'))
+    expect((await since(before)).missing).toBe(1)
+
+    await writeFile(join(root, hashFor('f')), 'restored')
+
+    expect(
+      (await since(before)).missing,
+      'the artefacts came back and it still says one is gone',
+    ).toBe(0)
+  })
+
+  /**
+   * **Read through the role the server actually runs as.**
+   *
+   * Every case above measures on `ic_seed`, which reads across cases by
+   * policy. `ic_app` does not: `evidence` is case-scoped, and row-level
+   * security answers an unscoped query with an empty table rather than an
+   * error. So a census that works on the seed handle can report *nothing
+   * expected, nothing missing* on every real install -- which is the same
+   * answer a healthy install gives, and the exact silence #179 is about.
+   */
+  it.skipIf(!appDb)('counts what the install holds when the application asks', async () => {
+    const asApp = () => new ArtefactCensus(appDb!, { get: () => root } as never)
+    const before = await asApp().take()
+    await record(hashFor('g'))
+
+    const now = await asApp().take()
+
+    expect(
+      now.expected - before.expected,
+      'the application sees no artefact it expects, so an install short of them cannot say so',
+    ).toBe(1)
+  })
+
+  /**
+   * **An install with no evidence at all is not a broken one**, which is the
+   * state a fresh install is in: answering anything but zero there would
+   * report every new install as damaged.
+   *
+   * **The rows are stubbed for this one case, and only this one.** Emptying
+   * the table would answer it honestly and take every other file's evidence
+   * with it -- these run in one process against one database. What is being
+   * asserted is arithmetic over an empty answer, and the database is not the
+   * part under test.
+   */
+  it('reports nothing expected on an install holding no evidence', async () => {
+    const empty = { select: () => ({ from: () => Promise.resolve([]) }) }
+
+    const held = await new ArtefactCensus(empty as never, { get: () => root } as never).take()
+
+    expect(held).toEqual({ expected: 0, missing: 0 })
+  })
+})
+
+/**
+ * **What an operator is told in the first minute.**
+ *
+ * A count is only half of what the requirement asks for -- *so that a restore
+ * can say what is missing* puts the burden on the install to speak rather than
+ * on somebody to go looking. Asserted as properties of the line rather than as
+ * the sentence, so rewording it is free and dropping the numbers or the
+ * severity is not.
+ */
+describe('what an install says at start', () => {
+  it('says nothing at all when it expects no artefacts', () => {
+    // The state a fresh install is in. A line here would have every new
+    // install report on a restore that never happened.
+    expect(saysAtStart({ expected: 0, missing: 0 })).toBeNull()
+  })
+
+  it('warns with both numbers when it cannot find some of them', () => {
+    const said = saysAtStart({ expected: 9, missing: 4 })
+
+    expect(said?.level, 'an install short of its evidence reports at the ordinary level').toBe(
+      'warn',
+    )
+    expect(said?.message, 'the line does not say how many are gone').toContain('4')
+    expect(said?.message, 'the line does not say how many were expected').toContain('9')
+  })
+
+  it('confirms rather than staying silent when it holds them all', () => {
+    // Silence cannot be told from a check that did not run, which is the
+    // reading an operator who has just put a directory back needs to rule out.
+    const said = saysAtStart({ expected: 9, missing: 0 })
+
+    expect(said?.level).toBe('log')
+    expect(said?.message).toContain('9')
+  })
+})
+
+/**
+ * **That start is when it is said, rather than when somebody asks.**
+ *
+ * A census nothing calls answers the requirement on paper and not at all in
+ * the product -- *does not wait for somebody to open a case to discover it* is
+ * a claim about the call, so the call is what these assert.
+ */
+describe('the install saying it at start', () => {
+  const censusOf = (held: Census | Error) =>
+    ({
+      take: () => (held instanceof Error ? Promise.reject(held) : Promise.resolve(held)),
+    }) as never
+
+  it('reports what the census counted when the application comes up', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+
+    await new HealthModule(censusOf({ expected: 9, missing: 4 })).onApplicationBootstrap()
+
+    expect(warn, 'nothing was said at start, so the census answers only when asked').toHaveBeenCalledOnce()
+    expect(warn.mock.calls[0]?.[0]).toContain('4')
+    warn.mockRestore()
+  })
+
+  /**
+   * **A census that cannot be taken is not a reason to refuse the install.**
+   * It holds every case and every record either way, and the directory being
+   * absent is the very state this exists to report.
+   */
+  it('comes up anyway when the census throws', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+
+    await expect(
+      new HealthModule(censusOf(new Error('no such directory'))).onApplicationBootstrap(),
+    ).resolves.toBeUndefined()
+
+    expect(warn, 'the install swallowed a census it could not take').toHaveBeenCalledOnce()
+    warn.mockRestore()
+  })
+})
