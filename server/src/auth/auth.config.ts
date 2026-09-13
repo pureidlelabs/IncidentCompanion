@@ -22,7 +22,7 @@ import { randomUUID } from 'node:crypto'
 import { Algorithm, hash as argonHash, verify as argonVerify } from '@node-rs/argon2'
 import type { Database } from '../db/client.js'
 import * as schema from '../db/schema/index.js'
-import { MINIMUM_PASSWORD_LENGTH } from './password-policy.js'
+import { MINIMUM_PASSWORD_LENGTH, PASSWORD_REFUSED, refusePassword } from './password-policy.js'
 import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
 import { sameAddress } from './same-address.js'
 import { readPolicy } from '../policy/read.js'
@@ -36,6 +36,27 @@ import { sessionEnded } from './session-ended.js'
  * identifiers they tried. The identifier itself is in `detail`.
  */
 export const SIGN_IN = 'sign-in'
+
+/**
+ * The endpoints that write a password, and the body field each carries it in.
+ *
+ * Two are the library's own and reach no controller of ours; three are reached
+ * in process by `setup.controller.ts` and `accounts.controller.ts`, which
+ * `disabledPaths` does not intercept. -> #374
+ *
+ * **A path is what this can match, so a server-only endpoint is not here.**
+ * `setPassword` is `createAuthEndpoint.serverOnly` and has no URL at all, so
+ * `'/set-password'` matched nothing and read as coverage. Nothing calls it;
+ * anything that did would take the boot-time minimum, and would need guarding
+ * where it is called rather than here.
+ */
+const PASSWORD_WRITES: Readonly<Record<string, string>> = {
+  '/sign-up/email': 'password',
+  '/admin/create-user': 'password',
+  '/change-password': 'newPassword',
+  '/reset-password': 'newPassword',
+  '/admin/set-user-password': 'newPassword',
+}
 
 const ARGON2ID = {
   algorithm: Algorithm.Argon2id,
@@ -441,6 +462,47 @@ export function authOptions(
      */
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        /**
+         * **Every door that writes a password, in one place.** The install's
+         * minimum is a stored number and `minPasswordLength` is fixed when
+         * these options are built, so the library's own `/change-password` and
+         * `/reset-password` -- neither of which is in `disabledPaths` -- would
+         * go on taking whatever was set at boot. A check in a controller
+         * reaches neither of them.
+         *
+         * **Read now, like every other bound here.** A minimum cached at boot
+         * is one an administrator cannot raise without a restart, which for a
+         * security control is the same as not settable.
+         *
+         * **Sign-in is not on this list and must never be.** The bound governs
+         * what may be *written*; applying it to what is *offered* would lock
+         * every account holding a password shorter than a raised minimum out
+         * of the install, which is the opposite of the control.
+         */
+        const writes = PASSWORD_WRITES[ctx.path]
+        if (writes) {
+          const supplied = (ctx.body as Record<string, unknown> | undefined)?.[writes]
+          if (typeof supplied === 'string') {
+            const stored = await readPolicy(db)
+            /**
+             * **The refusal says no and not how short.** This runs ahead of
+             * the endpoint's own session and token checks -- that is what
+             * makes it cover the library's routes -- so its message reaches an
+             * anonymous caller, and the minimum is otherwise readable only
+             * through an `@AdminOnly` route. `change-password.controller.ts`
+             * is behind a session and composes the number for the analyst it
+             * belongs to.
+             *
+             * A caller can still learn that some password was too short, which
+             * is a narrower thing to know than the number and is the cost of
+             * refusing before the endpoint runs at all.
+             */
+            if (refusePassword(supplied, stored['auth.minPasswordLength'])) {
+              throw new APIError('UNPROCESSABLE_ENTITY', { message: PASSWORD_REFUSED })
+            }
+          }
+        }
+
         /**
          * **A shut account is refused before the password is checked**, so a
          * lockout costs an attacker the guess rather than merely the answer -

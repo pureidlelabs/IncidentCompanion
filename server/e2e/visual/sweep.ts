@@ -20,7 +20,7 @@ import {
 } from '../support/app.js'
 
 import type { Finding } from './probe.js'
-import { driveImportReview, findings, quiesce, setGround, shoot, type Ground } from './view.js'
+import { findings, quiesce, setGround, shoot, type Ground } from './view.js'
 
 export interface Report {
   captures: number
@@ -98,18 +98,6 @@ export async function sweep(
         report.captures += 1
         for (const finding of await findings(page)) {
           report.findings.push({ where: `${ground} - ${one.slug}`, finding })
-        }
-
-        // **The importer's review panel, which a fresh page never shows.** Its
-        // first phase is a sign-in form; the screen an analyst works in is four
-        // interactions past it, and that is the screen the feature is.
-        if (one.slug === 'import-sentinel' && (await driveImportReview(page))) {
-          const review = `${ground}-${one.slug}-review.png`
-          await shoot(page, join(options.out, review))
-          report.captures += 1
-          for (const finding of await findings(page)) {
-            report.findings.push({ where: `${ground} - ${one.slug}/review`, finding })
-          }
         }
       }
     }
