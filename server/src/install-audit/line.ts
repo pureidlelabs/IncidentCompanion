@@ -12,11 +12,15 @@ import type { ActivityLine } from './activity.controller.js'
 /**
  * `severityId` is passed rather than read from the row because a reader may
  * raise it over a run; `runLength` is 1 for a line taken alone.
+ *
+ * `detailsVary` says whether the run this line stands for held more than one
+ * `attributes`. False for a line taken alone, there being nothing it hides.
  */
 export function lineOf(
   row: Omit<InstallActivityRow, 'retentionClass' | 'actorId'>,
   severityId: number,
   runLength: number,
+  detailsVary = false,
 ): ActivityLine {
   return {
     seq: String(row.seq),
@@ -41,5 +45,6 @@ export function lineOf(
     ipAddress: row.ipAddress,
     userAgent: row.userAgent,
     runLength,
+    detailsVary,
   }
 }

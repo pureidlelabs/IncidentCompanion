@@ -62,6 +62,8 @@ export interface AuditLine {
   userAgent: string | null
   /** How many of this event, from this origin, sit in the same short window. */
   runLength: number
+  /** Whether the run this line stands for held more than one `attributes`. */
+  detailsVary: boolean
 }
 
 export interface AuditPage {

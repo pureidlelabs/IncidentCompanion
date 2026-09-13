@@ -74,6 +74,16 @@ This is an application whose users already run security monitoring. A private vo
 
 **A run never spans a version.** The reader collapses repeated events to one line, so a run holding rows from either side of an upgrade would report one version for all of them. The version partitions the run, which costs an extra line across an upgrade and states no line's version wrongly.
 
+## A run answers for the lines it hides
+
+The reader collapses repeated events to one line and reports the head of each run, so any value drawn from that head reads as every line's. For the fields a run partitions on that is true by construction. For what the line recorded it is not: those lines can carry different values and still collapse into one, and the head's value then stands in for the several that were written.
+
+So a run says whether its lines agreed, and where they did not it reports none of them. A specimen and a consensus are indistinguishable to a reader, and the specimen is the reading that misleads.
+
+**Said of the run, not of a field.** What is computed is one flag over the whole record rather than one per key, so a rendering that named a key beside it would assert about that key what was only established about the record — a run where one field varied and two did not would report all three as varying. Per-key would be better information and costs a query per run on the page; one flag is what the collapse already affords.
+
+**`detail` is not the only field a run can differ on.** Neither `userAgent`, `at` nor `actorLabel` partitions a run either. It is the one the page draws, so it is the one where the specimen is read as the consensus.
+
 ## Reading the audit is audited, at a rate that does not drown it
 
 The read is recorded, because who has been through the record is part of the record. It is recorded at most once per administrator per window, so working through the audit does not fill it with the fact that somebody was working through it.

@@ -363,6 +363,8 @@ function auditRows(lines: readonly AuditLine[] | undefined): AuditRow[] {
     actor: line.actorLabel,
     target: line.targetLabel,
     source: line.ipAddress,
+    attributes: line.attributes,
+    detailsVary: line.detailsVary,
     // How many of this event sit in the same short window: the table draws a
     // multiplier rather than repeating the row, so it has to travel.
     runLength: line.runLength,
