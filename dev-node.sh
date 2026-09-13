@@ -56,6 +56,13 @@ API_URL="http://127.0.0.1:$API_PORT"
 export AUTH_SECRET="${AUTH_SECRET:-dev-only-secret-0123456789abcdefghij}"
 export AUTH_BASE_URL="$API_URL"
 export PORT="$API_PORT"
+# **Set here, because the app requires it and nothing else in a shell does.**
+# `env.ts` takes no default for this: what a wrong one costs is an install
+# trusting a proxy header it should not, or refusing one it should, and a
+# default is how that happens without anybody choosing it. Vitest sets `test`
+# for the suites, so this is the value every other way of running the app on a
+# workstation gets. Overridable, for driving the production paths by hand.
+export NODE_ENV="${NODE_ENV:-development}"
 
 SEED=1
 KEEP_DATA=0
