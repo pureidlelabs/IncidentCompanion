@@ -13,8 +13,9 @@ import {
   Logger,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
+import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
+import { defaultCustomer } from '../customers/customers.service.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { EvidenceStore } from '../evidence/store.js'
@@ -182,15 +183,18 @@ export class ArchiveImportService {
        * free the reference on one of them, and they cannot do that without
        * being told which.
        *
-       * Grouped by a null `customer_id`, which is what an imported case has:
-       * the archive carries the free-text customer and nothing resolves it to
-       * a record. -> `cases/cases.service.ts`
+       * **Under the install's default customer, as `CasesService.create`
+       * opens one.** The archive carries the free-text customer and nothing
+       * resolves it to a record, so a read lands unattributed -- and the group
+       * it is unique within has to be the same group the other door uses, or
+       * one door admits what the other refuses.
        */
+      const customerId = (await defaultCustomer(tx)).id
       if (reference) {
         const [held] = await tx
           .select({ title: cases.title })
           .from(cases)
-          .where(and(eq(cases.reference, reference), isNull(cases.customerId)))
+          .where(and(eq(cases.reference, reference), eq(cases.customerId, customerId)))
           .limit(1)
         if (held) {
           throw new ConflictException({
@@ -206,6 +210,7 @@ export class ArchiveImportService {
         .values({
           title: String(record.title),
           reference,
+          customerId,
           customer: typeof record.customer === 'string' ? record.customer : '',
           summary: typeof record.summary === 'string' ? record.summary : '',
           createdBy: actorId,

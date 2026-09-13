@@ -37,6 +37,7 @@ const ANALYST = 'reference-unique-analyst'
 
 describe.skipIf(!db)('a reference within its customer', () => {
   let service: CasesService
+  let fallback: string
   let acme: string
   let other: string
 
@@ -62,6 +63,16 @@ describe.skipIf(!db)('a reference within its customer', () => {
   beforeEach(async () => {
     await seed!.delete(cases)
     await seed!.delete(customers)
+    /**
+     * **The install always holds a default customer**, ensured on every boot by
+     * `CustomersModule`. A case is opened under it, so a fixture without one is
+     * an install this product does not have.
+     */
+    const [made] = await seed!
+      .insert(customers)
+      .values({ name: 'Unattributed', isDefault: true })
+      .returning()
+    fallback = made!.id
     const [one] = await seed!.insert(customers).values({ name: 'Acme NV' }).returning()
     const [two] = await seed!.insert(customers).values({ name: 'Other NV' }).returning()
     acme = one!.id
@@ -118,16 +129,38 @@ describe.skipIf(!db)('a reference within its customer', () => {
    * rather than this rule's; asserted against the table so the rule is known
    * to be per-customer and not global the day a case can name one.
    */
-  it('allows one reference across two customers, which are two records', async () => {
-    await seed!
-      .insert(cases)
-      .values({ title: 'Acme side', reference: 'TICKET-4', customerId: acme })
-    const [second] = await seed!
-      .insert(cases)
-      .values({ title: 'Other side', reference: 'TICKET-4', customerId: other })
-      .returning()
+  it('allows one reference across two customers, driven through the write path', async () => {
+    // **Through `create` and `attribute`, not two inserts.** A fixture that
+    // states both `customer_id`s itself certifies a boundary the shipping path
+    // never reaches -- which is how this rule was believed covered while the
+    // door that introduces collisions checked nothing.
+    const first = await make({ title: 'Acme side', reference: 'TICKET-4' })
+    await service.attribute(first.id, acme, ANALYST)
 
-    expect(second!.reference).toBe('TICKET-4')
+    const second = await make({ title: 'Other side', reference: 'TICKET-4' })
+    await service.attribute(second.id, other, ANALYST)
+
+    const rows = await seed!.select().from(cases).orderBy(cases.title)
+    expect(
+      rows.map((one) => [one.title, one.customerId]),
+      'one ticket number for two customers was refused, or landed in one group',
+    ).toEqual([
+      ['Acme side', acme],
+      ['Other side', other],
+    ])
+  })
+
+  /**
+   * **A case is opened under the install's default customer**, which the
+   * schema said of itself and nothing made true: `create` wrote the free-text
+   * column and left the foreign key null, so every case resolved to the
+   * default only when it was read and the index could not tell two customers
+   * apart.
+   */
+  it('opens a case under the default customer', async () => {
+    const made = await make({ title: 'Unattributed' })
+
+    expect(made.customerId, 'a created case carries no customer').toBe(fallback)
   })
 
   /**

@@ -4,17 +4,17 @@
  * *THEN the case is created against the install's default customer, AND every
  * analyst may reach it.*
  *
- * **What is asserted is the reach, not the column.** `cases.customerId` is
- * nullable and `CasesService.create` does not fill it in, so the case is stored
- * carrying no customer; `CaseAccessGuard` resolves `row.customerId ??
- * defaultCustomerId` and the case therefore *behaves* as the default's. The
- * scenario is about who may reach it, and that is what this holds.
+ * **The reach is what the scenario is about, and the column is settled now.**
+ * A case is stamped with the install's default customer when it is opened,
+ * rather than carrying nothing and resolving to whichever customer is default
+ * when it is read.
  *
- * The difference is not nothing and is deliberately left alone here: a case
- * with a null customer follows whichever customer is default, where a case
- * stamped with the default would not. Which of the two the specification means
- * is a question for whoever owns the customer directory, and this test does not
- * settle it by asserting either.
+ * **Because a reference is unique within its customer, and a group that moves
+ * is not a group.** Cases that follow the default are re-grouped the moment an
+ * operator makes a different record the default -- which can make two cases
+ * collide on a reference neither has changed, or free a collision nobody
+ * resolved. A rule the database enforces has to be asked of a value the row
+ * holds. -> #220
  *
  * **The analyst is in no group**, which is what makes *every analyst* the
  * claim rather than *the analyst who happened to be granted something*.
@@ -25,6 +25,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAdmin, signIn, type Harness, type Persona } from './app-harness.js'
 import { cases } from '../src/db/schema/case.js'
+import { customers } from '../src/db/schema/customer.js'
 import { groupMembers } from '../src/db/schema/groups.js'
 import { openTestPool } from './database.js'
 
@@ -88,19 +89,23 @@ describe.skipIf(!(await bootable()))('a case opened before its customer is known
     await harness?.close()
   })
 
-  it('belongs to nobody in the customer directory', async () => {
+  it('is stamped with the install default, not left to follow it', async () => {
     const db = drizzle({ client: pool! })
     const [row] = await db
       .select({ customerId: cases.customerId })
       .from(cases)
       .where(eq(cases.id, caseId))
+    const [fallback] = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.isDefault, true))
 
     expect(row, 'the case was not created at all').toBeDefined()
+    expect(fallback, 'the install holds no default customer').toBeDefined()
     expect(
       row!.customerId,
-      'the case was stamped with a customer, so what the guard resolves is no longer what ' +
-        'this file is about -- read the docstring before changing the assertion',
-    ).toBeNull()
+      'the case carries no customer, so the reference rule has no group to be unique within',
+    ).toBe(fallback!.id)
   })
 
   it('is in no group, so reaching it cannot be a grant', async () => {

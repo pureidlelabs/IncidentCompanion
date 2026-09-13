@@ -21,6 +21,7 @@ import { and, eq, inArray, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import type { Executor } from '../db/scope.js'
 import { customers } from '../db/schema/customer.js'
 import { cases } from '../db/schema/case.js'
 import { groupCustomers } from '../db/schema/groups.js'
@@ -323,26 +324,39 @@ export class CustomersService {
    * once -- the loser's insert is refused and it reads the winner's row.
    */
   async ensureDefault(): Promise<{ id: string; name: string }> {
-    const [existing] = await this.db
-      .select({ id: customers.id, name: customers.name })
-      .from(customers)
-      .where(eq(customers.isDefault, true))
-      .limit(1)
-    if (existing) return existing
-
-    const [made] = await this.db
-      .insert(customers)
-      .values({ name: DEFAULT_CUSTOMER_NAME, isDefault: true })
-      .onConflictDoNothing()
-      .returning({ id: customers.id, name: customers.name })
-    if (made) return made
-
-    const [theirs] = await this.db
-      .select({ id: customers.id, name: customers.name })
-      .from(customers)
-      .where(eq(customers.isDefault, true))
-      .limit(1)
-    if (!theirs) throw new Error('the install has no default customer and one could not be made')
-    return theirs
+    return defaultCustomer(this.db)
   }
+}
+
+/**
+ * The default customer, made if the install has none.
+ *
+ * Safe to call on every boot: the insert is conditional on the read, and the
+ * unique index is what settles a race between two processes doing it at once
+ * -- the loser's insert is refused and it reads the winner's row.
+ *
+ * **Takes the handle rather than reaching for the pool**, because opening a
+ * case asks this from inside that case's transaction, and a read reaching the
+ * pool from inside an open transaction holds one connection while asking for
+ * another. -> `db/scope.ts`
+ *
+ * **A function rather than a second method**, so the door that opens a case
+ * and the hook that runs at boot ask the same question of the same code.
+ */
+export async function defaultCustomer(on: Executor): Promise<{ id: string; name: string }> {
+  const held = { id: customers.id, name: customers.name }
+
+  const [existing] = await on.select(held).from(customers).where(eq(customers.isDefault, true)).limit(1)
+  if (existing) return existing
+
+  const [made] = await on
+    .insert(customers)
+    .values({ name: DEFAULT_CUSTOMER_NAME, isDefault: true })
+    .onConflictDoNothing()
+    .returning(held)
+  if (made) return made
+
+  const [theirs] = await on.select(held).from(customers).where(eq(customers.isDefault, true)).limit(1)
+  if (!theirs) throw new Error('the install has no default customer and one could not be made')
+  return theirs
 }

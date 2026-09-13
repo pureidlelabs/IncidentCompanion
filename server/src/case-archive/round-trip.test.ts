@@ -189,6 +189,12 @@ describe.skipIf(!db)('a case, out and back', () => {
 
     // And the same bytes go in where the install allows them, so the refusal
     // above is the ceiling rather than the archive being unreadable.
+    //
+    // **The original's reference is freed first.** A reference is unique within
+    // its customer, so an archive of a case the install still holds is refused
+    // on that ground -- which would answer this control with a rejection that
+    // says nothing about the ceiling. -> #220
+    await db!.update(cases).set({ reference: '' }).where(eq(cases.id, made.caseId))
     const result = await importer.load(built.bytes, '', other)
     expect(result.id).toBeDefined()
   })

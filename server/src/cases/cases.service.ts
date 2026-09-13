@@ -15,9 +15,10 @@ import {
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, asc, desc, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
+import { defaultCustomer } from '../customers/customers.service.js'
 import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { CaseChannel } from '../live/case-channel.service.js'
@@ -303,13 +304,16 @@ export class CasesService {
    * simultaneous creates; the index alone would say only that something
    * collided.
    *
-   * **Grouped by a null `customer_id`, because that is what a created case
-   * has.** `create` writes the free-text `customer` column being retired and
-   * cannot reach the foreign key, so every case it makes belongs to the
-   * default customer -- which the specification calls a customer like any
-   * other. The index groups the same way, by `coalesce`. -> #218
+   * **Asked of the customer the case belongs to.** A case that carried no
+   * customer and resolved to the default only when it was read leaves this
+   * with one group to ask about -- and refusing a reference on that basis
+   * refuses two genuinely different customers the same ticket number.
    */
-  private async referenceIsFree(tx: Executor, reference?: string): Promise<void> {
+  private async referenceIsFree(
+    tx: Executor,
+    customerId: string,
+    reference?: string,
+  ): Promise<void> {
     // The absence of a reference is not a value and never collides, which is
     // also why the index is partial.
     if (!reference) return
@@ -317,13 +321,28 @@ export class CasesService {
     const [held] = await tx
       .select({ title: cases.title })
       .from(cases)
-      .where(and(eq(cases.reference, reference), isNull(cases.customerId)))
+      .where(and(eq(cases.reference, reference), eq(cases.customerId, customerId)))
       .limit(1)
     if (!held) return
 
     throw new ConflictException({
       message: `"${held.title}" already carries ${reference}. Give this case a different reference.`,
     })
+  }
+
+  /**
+   * The customer a case is opened under.
+   *
+   * **Read on the handle passed in.** `create` may be one half of a larger
+   * act, and a read reaching the pool from inside an open transaction holds
+   * one connection while asking for another. -> `db/scope.ts`
+   *
+   * **The same question the boot hook asks**, so an install that has lost its
+   * default gets one here rather than refusing to open a case -- and two
+   * doors cannot disagree about which record it is.
+   */
+  private async openedUnder(tx: Executor): Promise<string> {
+    return (await defaultCustomer(tx)).id
   }
 
   /**
@@ -355,10 +374,11 @@ export class CasesService {
     on: Executor = this.db,
   ): Promise<CaseRow> {
     return on.transaction(async (tx) => {
-      await this.referenceIsFree(tx, input.reference)
+      const customerId = await this.openedUnder(tx)
+      await this.referenceIsFree(tx, customerId, input.reference)
       const [row] = await tx
         .insert(cases)
-        .values({ ...input, createdBy: actorId, updatedBy: actorId })
+        .values({ ...input, customerId, createdBy: actorId, updatedBy: actorId })
         .returning()
 
       // Scoped here rather than by `withCase`: this transaction learns its
