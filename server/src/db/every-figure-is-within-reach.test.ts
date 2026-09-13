@@ -43,6 +43,7 @@ const FIGURES: readonly (readonly [string, string])[] = [
   ['impact', 'subject_count'],
   ['impact', 'record_count'],
   ['impact', 'volume_bytes'],
+  ['evidence', 'size_bytes'],
 ]
 
 describe.skipIf(!db)('a figure held past what the read can carry', () => {
@@ -59,7 +60,12 @@ describe.skipIf(!db)('a figure held past what the read can carry', () => {
     return rows[0]?.text ?? ''
   }
 
-  it.each(['case_compliance_figures_within_reach', 'customer_figures_within_reach', 'impact_figures_within_reach'])(
+  it.each([
+    'case_compliance_figures_within_reach',
+    'customer_figures_within_reach',
+    'impact_figures_within_reach',
+    'evidence_figures_within_reach',
+  ])(
     '%s is on the database, not only in the schema module',
     async (constraint) => {
       const text = await definitionOf(constraint)
@@ -72,11 +78,9 @@ describe.skipIf(!db)('a figure held past what the read can carry', () => {
 
   it.each(FIGURES)('%s.%s is covered by its table\'s constraint', async (table, column) => {
     const constraint =
-      table === 'customers'
-        ? 'customer_figures_within_reach'
-        : table === 'impact'
-          ? 'impact_figures_within_reach'
-          : 'case_compliance_figures_within_reach'
+      table === 'case_compliance'
+        ? 'case_compliance_figures_within_reach'
+        : `${table === 'customers' ? 'customer' : table}_figures_within_reach`
 
     expect(
       await definitionOf(constraint),

@@ -238,7 +238,13 @@ export const evidence = pgTable(
      * artefacts are attached.
      */
     storedAt: timestamp('stored_at', { withTimezone: true }),
-    sizeBytes: integer('size_bytes'),
+    /**
+     * **`bigint`, for the same reason `volume_bytes` is.** An operator may set
+     * the attachment ceiling as high as `EVIDENCE_CEILING_MEGABYTES`, which is
+     * four times what `integer` holds -- so an install that raised it took the
+     * upload, wrote the bytes, and failed at the insert.
+     */
+    sizeBytes: figure('size_bytes'),
     contentType: text('content_type'),
     originalFilename: text('original_filename').notNull().default(''),
     systemId: uuid('system_id').references(() => systems.id, { onDelete: 'set null' }),
@@ -247,7 +253,7 @@ export const evidence = pgTable(
     tags: text('tags').notNull().default(''),
     ...rowVersioning,
   },
-  (t) => [index('evidence_case_idx').on(t.caseId), ...caseScoped(t.caseId)],
+  (t) => [index('evidence_case_idx').on(t.caseId), ...caseScoped(t.caseId), figuresWithinReach('evidence_figures_within_reach', [t.sizeBytes])],
 )
 
 /**
