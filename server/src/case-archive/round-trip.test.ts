@@ -8,6 +8,7 @@
  * longer exists, and an archive exported without its files importing as though
  * it were damaged.
  */
+import { defaultPolicy } from '../policy/read.js'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -117,18 +118,57 @@ describe.skipIf(!db)('a case, out and back', () => {
     }
 
     root = await mkdtemp(join(tmpdir(), 'ic-archive-'))
-    store = new EvidenceStore({ get: () => root } as never)
+    store = new EvidenceStore({ get: () => root } as never, policy)
     cases_ = new CasesService(
       db!,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
-    exporter = new ArchiveExportService(cases_, store)
-    importer = new ArchiveImportService(db!, store)
+    exporter = new ArchiveExportService(cases_, store, policy)
+    importer = new ArchiveImportService(db!, store, policy)
   })
 
   afterAll(async () => {
     await seed!.delete(cases)
     await rm(root, { recursive: true, force: true })
+  })
+
+  /**
+   * That the ceiling an archive is read against is the install's, not a constant.
+   *
+   * **Every read site of `evidence.archiveMegabytes` reverted to a constant in
+   * one run with the whole suite still green** -- the setting was registered,
+   * bounded, offered and audited, and asserted by nothing anywhere. -> #588
+   *
+   * **At the service rather than the route.** The route's own cap fires while
+   * the body is still being read, so it aborts the connection instead of
+   * answering and there is no status to assert on.
+   */
+  it('reads an archive against the ceiling the install states', async () => {
+    const made = await furnished()
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+
+    /** The same importer, on an install that allows almost nothing. */
+    // **Below the floor a route would accept, deliberately.** What this asks
+    // is whether the stored value is read and used, and the archive a case
+    // fixture builds is smaller than the smallest an operator may set.
+    const mean = new ArchiveImportService(db!, store, {
+      read: () =>
+        Promise.resolve({
+          ...POLICY_DEFAULTS,
+          'evidence.archiveMegabytes': 0,
+          'evidence.attachmentMegabytes': 0,
+        }),
+    } as never)
+
+    await expect(
+      mean.load(built.bytes, '', other),
+      'an archive over the install ceiling was read',
+    ).rejects.toThrow()
+
+    // And the same bytes go in where the install allows them, so the refusal
+    // above is the ceiling rather than the archive being unreadable.
+    const result = await importer.load(built.bytes, '', other)
+    expect(result.id).toBeDefined()
   })
 
   it('brings the case back as a new case, not over the old one', async () => {
@@ -245,7 +285,7 @@ describe.skipIf(!db)('a case, out and back', () => {
     // the document leaves a byte-search version of this green.
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
-    const { members } = await readArchive(built.bytes)
+    const { members } = await readArchive(built.bytes, ARCHIVE_LIMITS)
     const record = JSON.parse(Buffer.from(members['case.json']!).toString('utf8')) as {
       reports: Record<string, unknown>[]
     }
@@ -259,7 +299,20 @@ describe.skipIf(!db)('a case, out and back', () => {
     expect(Object.keys(members)).toContain(`prose/${made.reportId}.ydoc`)
   })
 
-  describe('a handover, exported without its files', () => {
+  /** What an archive may hold; `archive/` states none of its own. -> #588 */
+const ARCHIVE_LIMITS = { memberBytes: 256 * 1024 * 1024, totalBytes: 512 * 1024 * 1024 }
+
+/**
+ * The install's bounds, as the doors read them.
+ *
+ * **A stub, because these cases are not about the bounds.** Every door reads
+ * them per act now, so a fixture that cannot answer fails to compile rather
+ * than falling back to a constant -- which is the state #588 was about.
+ */
+const POLICY_DEFAULTS = defaultPolicy()
+const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
+
+describe('a handover, exported without its files', () => {
     it('says so rather than looking damaged', async () => {
       const made = await furnished()
       const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
@@ -285,7 +338,7 @@ describe.skipIf(!db)('a case, out and back', () => {
       // it finds nothing either way and the assertion would be inert.
       const made = await furnished()
       const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
-      const { members } = await readArchive(built.bytes)
+      const { members } = await readArchive(built.bytes, ARCHIVE_LIMITS)
       expect(Object.keys(members).filter((one) => one.startsWith('evidence/'))).toEqual([])
     })
   })

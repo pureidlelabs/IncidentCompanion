@@ -46,6 +46,17 @@ import { EvidenceStore } from './store.js'
 import { cases } from '../db/schema/case.js'
 import { evidence } from '../db/schema/entities.js'
 import { openTestPool } from '../../test/database.js'
+import { defaultPolicy } from '../policy/read.js'
+
+/**
+ * The install's bounds, as the doors read them.
+ *
+ * **A stub, because these cases are not about the bounds.** Every door reads
+ * them per act now, so a fixture that cannot answer fails to compile rather
+ * than falling back to a constant -- which is the state #588 was about.
+ */
+const POLICY_DEFAULTS = defaultPolicy()
+const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 /** The store reads one key off a ConfigService and nothing else. */
 const configFor = (dir: string) => ({ get: () => dir }) as never
@@ -74,7 +85,7 @@ describe.skipIf(!db)('an install restored without its artefacts', () => {
   beforeAll(async () => {
     root = await mkdtemp(join(tmpdir(), 'evidence-restored-'))
     aside = await mkdtemp(join(tmpdir(), 'evidence-elsewhere-'))
-    store = new EvidenceStore(configFor(root))
+    store = new EvidenceStore(configFor(root), policy)
 
     const stored = await store.put(bytesOf(ARTEFACT), 'proxy.log')
     hash = stored.hash

@@ -7,6 +7,7 @@
  * that never had bytes, a row whose bytes have gone, a digest the caller
  * supplied rather than the server computing, and a row in another case.
  */
+import { defaultPolicy } from '../policy/read.js'
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from '@zip.js/zip.js'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -93,6 +94,16 @@ function recorder() {
 }
 
 /**
+ * The install's bounds, as the doors read them.
+ *
+ * **A stub, because these cases are not about the bounds.** Every door reads
+ * them per act now, so a fixture that cannot answer fails to compile rather
+ * than falling back to a constant -- which is the state #588 was about.
+ */
+const POLICY_DEFAULTS = defaultPolicy()
+const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
+
+/**
  * **The algorithm names the digest, so it is the upload's to write.** Both
  * halves are computed by `attach`; leaving this one in `evidenceSchema` made
  * it the only reachable half, and a row reading `md5` beside a SHA-256 digest
@@ -103,6 +114,7 @@ function recorder() {
  * skipping it where no database is configured would leave the collection whose
  * point is integrity covered only when Postgres happens to be up.
  */
+
 describe('the digest algorithm', () => {
   it('is refused in a create body and in a patch', () => {
     expect(evidenceSchema.strict().safeParse({ name: 'x', hashAlgorithm: 'md5' }).success).toBe(
@@ -152,7 +164,7 @@ describe.skipIf(!db)('an evidence attachment', () => {
     // store from config lands in this directory rather than in `.evidence` -
     // without which the retention tests below cannot see such a change at all.
     process.env.EVIDENCE_DIR = root
-    store = new EvidenceStore({ get: () => root } as never)
+    store = new EvidenceStore({ get: () => root } as never, policy)
     cases_ = new CasesService(
       db!,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,

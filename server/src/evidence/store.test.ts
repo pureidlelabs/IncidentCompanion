@@ -8,6 +8,17 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from '@zip.js/zip.js'
 
 import { EvidenceStore, MAX_ATTACHMENT_BYTES, isDigest } from './store.js'
+import { defaultPolicy } from '../policy/read.js'
+
+/**
+ * The install's bounds, as the doors read them.
+ *
+ * **A stub, because these cases are not about the bounds.** Every door reads
+ * them per act now, so a fixture that cannot answer fails to compile rather
+ * than falling back to a constant -- which is the state #588 was about.
+ */
+const POLICY_DEFAULTS = defaultPolicy()
+const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 let root = ''
 let store: EvidenceStore
@@ -19,7 +30,7 @@ const bytesOf = (text: string) => Readable.from([Buffer.from(text)]) as AsyncIte
 
 beforeAll(async () => {
   root = await mkdtemp(join(tmpdir(), 'evidence-store-'))
-  store = new EvidenceStore(configFor(root))
+  store = new EvidenceStore(configFor(root), policy)
 })
 
 afterAll(async () => {
@@ -167,5 +178,46 @@ describe('the seal at rest', () => {
 
     await expect(store.read(stored.hash)).rejects.toThrow()
     expect(await store.verify(stored.hash)).toBe(false)
+  })
+})
+
+/**
+ * That the ceiling the store caps against is the install's, not a constant.
+ *
+ * **The defect this is written against left the whole suite green.** Reverting
+ * `put` to `MAX_ATTACHMENT_BYTES` -- the state before #588 -- changed nothing
+ * any test could see, because the only case that mentioned a ceiling asserted
+ * against that same constant and the policy stub answers with the same
+ * default. A ceiling the operator moved is the only thing that tells them
+ * apart. -> #588
+ *
+ * **Here rather than over HTTP.** The cap fires while the body is still being
+ * read, so the route aborts the connection instead of answering -- there is no
+ * status to assert on, and the reset surfaces later as an unhandled socket
+ * error against whichever case happens to be running.
+ */
+describe('the ceiling an artefact is capped against', () => {
+  /** A store whose install allows `megabytes`, and nothing else different. */
+  const cappedAt = (megabytes: number) =>
+    new EvidenceStore(configFor(root), {
+      read: () =>
+        Promise.resolve({ ...POLICY_DEFAULTS, 'evidence.attachmentMegabytes': megabytes }),
+    } as never)
+
+  const megabyte = () => Readable.from([Buffer.alloc(1024 * 1024, 7)]) as AsyncIterable<Buffer>
+
+  it('refuses what the install refuses, at the number the install states', async () => {
+    await expect(
+      cappedAt(1).put(Readable.from([Buffer.alloc(2 * 1024 * 1024, 7)]) as AsyncIterable<Buffer>),
+      'a 2MB artefact was stored under a 1MB ceiling',
+    ).rejects.toThrow(/at most 1MB/)
+  })
+
+  it('takes what the install allows, at a ceiling the constant would refuse', async () => {
+    // **Under the compile-time default and over a lowered one**, so the two
+    // cannot both be right: this is the direction the constant cannot express.
+    const stored = await cappedAt(2).put(megabyte())
+
+    expect(stored.sizeBytes).toBe(1024 * 1024)
   })
 })
