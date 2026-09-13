@@ -15,7 +15,6 @@ import {
   Body,
   Controller,
   HttpCode,
-  Inject,
   Param,
   ParseUUIDPipe,
   Post,
