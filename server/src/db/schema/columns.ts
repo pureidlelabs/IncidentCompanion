@@ -54,6 +54,10 @@ export const bytea = customType<{ data: Buffer; notNull: false; default: false }
  * Not the column type's ceiling, which is `int8`'s and three orders of
  * magnitude higher. This is the largest integer a JavaScript number carries
  * exactly, and the read is a JavaScript number.
+ *
+ * The floor is zero, which every schema above these columns already requires
+ * -- `min(0)` or `nonnegative()` on each. Stated here as well so the column
+ * holds a row arriving by a route that does not run them.
  */
 export const FIGURE_CEILING = Number.MAX_SAFE_INTEGER
 
@@ -62,11 +66,14 @@ export const FIGURE_CEILING = Number.MAX_SAFE_INTEGER
  *
  * **The column type alone is not the whole statement**, which is why this is a
  * pair rather than one helper. `mode: 'number'` hands the driver's string to
- * `Number` -- `drizzle-orm/node-postgres/codecs.cjs`, `bigint:number` --
- * so a stored figure past `FIGURE_CEILING` is rounded before anything can
- * refuse it, and the read schema then refuses the rounded value: neither what
- * was written nor a fault the analyst can act on. `figuresWithinReach` is what
- * stops such a figure being stored.
+ * `Number` -- `drizzle-orm/node-postgres/codecs.cjs`, `bigint:number` -- so a
+ * stored figure past `FIGURE_CEILING` is rounded before anything can refuse
+ * it. What happens next depends on how the row is read, and both answers are
+ * wrong: a compliance record is parsed and refuses the rounded value, so the
+ * case stops answering; a collection row travels through a loose envelope and
+ * the rounded figure is drawn as though it were the one stored.
+ *
+ * `figuresWithinReach` is what stops such a figure being stored at all.
  */
 export function figure(name: string) {
   return bigint(name, { mode: 'number' })

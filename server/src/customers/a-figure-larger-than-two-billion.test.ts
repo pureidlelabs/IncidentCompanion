@@ -80,9 +80,11 @@ describe.skipIf(!db)('a figure larger than two billion', () => {
    * **The other end of the same rule, and the reason it is not simply "wider".**
    *
    * A column is read as a JavaScript number, so a figure past
-   * `Number.MAX_SAFE_INTEGER` is rounded on the way out and then refused by the
-   * read schema -- the row becomes unreadable over a value that is already not
-   * the one stored. The column refuses it instead.
+   * `Number.MAX_SAFE_INTEGER` is rounded on the way out. Driven on `impact`,
+   * where a collection row travels through a loose envelope and nothing
+   * refuses the rounded value -- so the figure is simply drawn wrong, which is
+   * the quieter of the two harms and the reason the column is where this is
+   * caught.
    *
    * Driven through `sql` rather than the ORM: passing the number through
    * JavaScript would round it before Postgres ever saw it, which is the defect

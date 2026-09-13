@@ -4,9 +4,10 @@
  * `bigint` holds three orders of magnitude more than a JavaScript number
  * carries exactly, and `mode: 'number'` maps the driver's string through
  * `Number` -- so a stored figure past `FIGURE_CEILING` is rounded before
- * anything can refuse it, and the read schema then refuses the rounded value.
- * The row becomes unreadable over a number that is already not the one that
- * was written, and the remedy is a database edit.
+ * anything can refuse it. A compliance record is then parsed, refuses the
+ * rounded value and stops answering; a collection row is not, and draws the
+ * rounded figure as the one that was stored. Either way the remedy is a
+ * database edit.
  *
  * Asserted against the database rather than against the schema module, because
  * what is being claimed is that the *column* refuses it: a check that lives
