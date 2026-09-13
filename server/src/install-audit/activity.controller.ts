@@ -71,6 +71,14 @@ export const activityLineSchema = z.object({
    * `1` for a lone event, and what turns a failed sign-in into a finding.
    */
   runLength: z.number().int().min(1),
+  /**
+   * Whether the run this line stands for held more than one `attributes`.
+   *
+   * The page reports a run's head, so without this a reader takes the head's
+   * detail for the whole run's -- and for a run of refusals naming different
+   * accounts that is one account standing in for every one that was tried.
+   */
+  detailsVary: z.boolean(),
 })
 
 export const activityPageSchema = z.object({

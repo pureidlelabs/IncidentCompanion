@@ -23,6 +23,8 @@ const line: AuditRow = {
   target: 'svc-backup',
   source: '198.51.100.7',
   runLength: 1,
+  attributes: { account: 'svc-backup@example.test' },
+  detailsVary: false,
 }
 
 describe('the activity log search reads the Activity column', () => {
@@ -34,6 +36,9 @@ describe('the activity log search reads the Activity column', () => {
     ['Initiated by', 'okonkwo'],
     ['Target', 'svc-backup'],
     ['Source', '198.51.100.7'],
+    // The Detail column is drawn and not searched, for the reason the three
+    // above are not: the field is labelled for the Activity column alone.
+    ['Detail', 'svc-backup@example.test'],
   ])('refuses a value that is only in %s', (_column, term) => {
     expect(matchesActivity(line, term)).toBe(false)
   })

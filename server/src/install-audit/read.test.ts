@@ -32,6 +32,14 @@ const db = pool ? drizzle({ client: pool }) : null
 const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/**
+ * A target the caller did not choose, which is what a refusal records.
+ *
+ * Written out rather than imported from the writer: what these cases drive is
+ * the window's behaviour for rows sharing a target, whatever that target is.
+ */
+const ONE_TARGET = 'sign-in'
+
 const READER = 'test-audit-reader'
 const session = {
   user: { id: READER, name: 'Audit Reader', email: `${READER}@example.test` },
@@ -119,6 +127,53 @@ describe.skipIf(!db)('reading the audit', () => {
     expect(line?.runLength).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
     // Which is what makes it High. A lone failure is Low.
     expect(line?.severity).toBe('High')
+  })
+
+  /**
+   * **A collapsed run says whether the detail it hides is the detail it shows.**
+   *
+   * The page reports the head of each run, so one line's `detail` survives and
+   * the rest do not. Drawn without qualification that reads as though the
+   * head's value were every value -- which for a spray across accounts is the
+   * opposite of true, one account standing in for the several that were tried.
+   *
+   * `detail` is not a partition column, so it is the one field of a run that
+   * can differ across it. -> #544
+   */
+  it('says a run holds one detail when it does', async () => {
+    for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
+      await recordInstallActivity(db!, {
+        event: 'sign_in_failed',
+        target: ONE_TARGET,
+        detail: { account: 'one@example.test' },
+      })
+    }
+
+    const page = await reads.page({ channel: 'authentication', limit: 1 }, session, {})
+
+    expect(page.events[0]?.runLength).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
+    expect(
+      page.events[0]?.detailsVary,
+      'a run whose lines agree is reported as though they might not',
+    ).toBe(false)
+  })
+
+  it('says a run holds more than one detail when it does', async () => {
+    for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
+      await recordInstallActivity(db!, {
+        event: 'sign_in_failed',
+        target: ONE_TARGET,
+        detail: { account: `sprayed-${String(i)}@example.test` },
+      })
+    }
+
+    const page = await reads.page({ channel: 'authentication', limit: 1 }, session, {})
+
+    expect(page.events[0]?.runLength).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
+    expect(
+      page.events[0]?.detailsVary,
+      'the head account is reported as though it were the only one tried',
+    ).toBe(true)
   })
 
   /**

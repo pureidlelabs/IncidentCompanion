@@ -171,6 +171,22 @@ export class InstallActivityReadService {
         runLength: sql<number>`count(*) over (${window})::int`.as('run_length'),
         raisedSeverityId: raisedSeverity(window).as('raised_severity_id'),
         runHead: sql<string>`max(${installActivity.seq}) over (${window})`.as('run_head'),
+        /**
+         * **Whether the run hides a detail the head does not show.**
+         *
+         * `detail` is the one field a run can differ on -- every other is a
+         * partition column -- and the page reports the head, so a value drawn
+         * without this reads as though it were every value. For a spray across
+         * accounts that is the opposite of true.
+         *
+         * `min`/`max` over the text rather than a distinct count, which
+         * Postgres does not offer as a window function. Two values that differ
+         * anywhere give a different min and max; equal ones cannot.
+         */
+        detailsVary: sql<boolean>`(min(${installActivity.detail}::text) over (${window}))
+          is distinct from (max(${installActivity.detail}::text) over (${window}))`.as(
+          'details_vary',
+        ),
       })
       .from(installActivity)
       .where(where.length ? and(...where) : undefined)
@@ -195,6 +211,7 @@ export class InstallActivityReadService {
         ipAddress: runs.ipAddress,
         userAgent: runs.userAgent,
         runLength: runs.runLength,
+        detailsVary: runs.detailsVary,
       })
       .from(runs)
       .where(
@@ -263,7 +280,7 @@ export class InstallActivityReadService {
        * Already raised by `raisedSeverity` in the query, so that the number
        * `minSeverity` filtered on is the number this column shows.
        */
-      events: page.map((row) => lineOf(row, row.severityId, row.runLength)),
+      events: page.map((row) => lineOf(row, row.severityId, row.runLength, row.detailsVary)),
       nextCursor: more ? String(page.at(-1)?.seq ?? '') : null,
       counts: Object.fromEntries(tallies.map((one) => [one.channel, one.n])),
       outcomes: Object.fromEntries(

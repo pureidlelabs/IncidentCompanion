@@ -32,6 +32,16 @@ export interface AuditRow {
   actor: string | null
   target: string | null
   source: string | null
+  /** What the line's writer recorded about it. Empty when it recorded none. */
+  attributes: Readonly<Record<string, string>>
+  /**
+   * Whether the run this row stands for held more than one `attributes`.
+   *
+   * The page reports a run's head, so without saying this the head's detail
+   * reads as every line's -- and for a run of refusals naming different
+   * accounts that is one account standing in for all of them.
+   */
+  detailsVary: boolean
   /** How many identical lines this one stands for. */
   runLength: number
 }
@@ -429,6 +439,25 @@ function auditColumns(): EntityColumn<AuditRow>[] {
         ) : (
           <span className="block truncate">{one.original.target}</span>
         ),
+    },
+    {
+      id: 'detail',
+      header: 'Detail',
+      cell: ({ row: one }) => {
+        const pairs = Object.entries(one.original.attributes)
+        if (pairs.length === 0) return <span className="text-ink-muted">&ndash;</span>
+        // **A run that held more than one value names the field, not a
+        // value.** The page reports the run's head, so a specimen drawn here
+        // is one line's and reads as every line's -- and for a run of
+        // refusals naming different accounts the specimen is the one account
+        // that was not the whole story. What the reader can act on is that the
+        // field differed; the values are on the API and with a collector.
+        const text = one.original.detailsVary
+          ? pairs.map(([key]) => `${key}: varies`).join(', ')
+          : pairs.map(([key, value]) => `${key}: ${value}`).join(', ')
+
+        return <span className="block truncate">{text}</span>
+      },
     },
     {
       accessorKey: 'source',
