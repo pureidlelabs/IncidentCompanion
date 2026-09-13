@@ -29,6 +29,42 @@ function candidateId(incident: string, identity: string): string {
   return `${incident}${SEPARATOR}${identity}`
 }
 
+/**
+ * Refuses a commit naming rows the freshly built plan does not hold.
+ *
+ * Throws `UnprocessableEntityException` naming how many were not found.
+ *
+ * **A candidate's id is derived from the payload, not minted and kept**, so
+ * anything that changes a row's identity between the preview and the commit
+ * changes its id -- a change to the identity rules, to the separator, or to the
+ * incident key, and a preview held across any of them. Selection by set
+ * membership answers "not selected" to an id nobody recognises, which writes a
+ * strict subset of what was approved and reports it as a success.
+ *
+ * **Both lists, because they name rows the same way.** A correction addressed
+ * to an id no candidate carries is dropped just as quietly, and the row is then
+ * written with the value the analyst edited away.
+ */
+function refuseAStaleReview(
+  plan: { entities: readonly { id: string }[]; timeline: readonly { id: string }[] },
+  approved: readonly string[],
+  edits: readonly { id: string }[],
+): void {
+  const offered = new Set([...plan.entities, ...plan.timeline].map((one) => one.id))
+  const named = new Set([...approved, ...edits.map((one) => one.id)])
+  const missing = [...named].filter((id) => !offered.has(id))
+  if (missing.length === 0) return
+
+  const gone =
+    named.size === 1
+      ? 'the row it names is'
+      : `${String(missing.length)} of the ${String(named.size)} rows it names ` +
+        (missing.length === 1 ? 'is' : 'are')
+  throw new UnprocessableEntityException(
+    `This review is out of date: ${gone} no longer in the import. Run the review again.`,
+  )
+}
+
 export interface ImportDefinitions {
   byName: Record<string, CollectionDefinition>
   timeline: CollectionDefinition
@@ -155,6 +191,7 @@ export class ImportService {
     on?: Executor,
   ): Promise<{ entities: number; timeline: number; skippedExisting: number }> {
     const plan = await this.preview(caseId, incidents, defs, on)
+    refuseAStaleReview(plan, approved, edits)
     const wanted = new Set(approved)
     const editsById = new Map<string, { field: string; value: unknown }[]>()
     for (const edit of edits) {

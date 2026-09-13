@@ -10,15 +10,20 @@ import type {
 
 /** The served health reads, projected into the rows `HealthPane` draws. */
 
-/** How long the server has been up, worded rather than counted. */
+/**
+ * How long the server has been up, worded rather than counted.
+ *
+ * **It names its subject**, because it renders above every frame on the pane
+ * and `process.uptime()` is the one that answered rather than the install.
+ */
 export function uptimeLine(seconds: number | undefined): string | undefined {
   if (seconds === undefined) return undefined
   const days = Math.floor(seconds / 86_400)
   const hours = Math.floor((seconds % 86_400) / 3_600)
   const minutes = Math.floor((seconds % 3_600) / 60)
-  if (days > 0) return `up ${String(days)}d ${String(hours)}h`
-  if (hours > 0) return `up ${String(hours)}h ${String(minutes)}m`
-  return `up ${String(minutes)}m`
+  if (days > 0) return `this server, up ${String(days)}d ${String(hours)}h`
+  if (hours > 0) return `this server, up ${String(hours)}h ${String(minutes)}m`
+  return `this server, up ${String(minutes)}m`
 }
 
 /**

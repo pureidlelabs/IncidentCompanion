@@ -74,7 +74,7 @@ export const Empty: Story = {
   args: {
     cases: [],
     onNewCase: () => undefined,
-    onImportIncidents: () => undefined,
+    onImportFile: () => undefined,
     onImportArchive: () => undefined,
     onDemoCases: () => undefined,
   },
@@ -84,7 +84,7 @@ export const Empty: Story = {
       await expect(canvas.queryByRole('searchbox')).toBeNull()
     })
     await step('and all four ways in are offered', async () => {
-      for (const way of ['New case', 'Import incidents', 'Import archive', 'Demo cases']) {
+      for (const way of ['New case', 'Import from a file', 'Import archive', 'Demo cases']) {
         await expect(canvas.getByText(way)).toBeVisible()
       }
     })

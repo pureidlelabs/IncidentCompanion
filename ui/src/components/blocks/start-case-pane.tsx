@@ -1,5 +1,6 @@
-import { CloudDownload, FilePlus2, Radio } from 'lucide-react'
+import { FilePlus2 } from 'lucide-react'
 
+import { DOOR_LABELS, SECTIONS } from '@/components/blocks/case-sections'
 import { ChoiceRows } from '@/components/blocks/choice-row'
 import { Section } from '@/components/blocks/section'
 
@@ -41,15 +42,18 @@ export function StartCasePane({ onBlank, onImport, onLiveSource }: StartCasePane
             ...(onBlank ? { onSelect: onBlank } : {}),
           },
           {
-            title: 'Import incidents',
-            detail: 'Import incidents into a new case.',
-            icon: CloudDownload,
+            title: DOOR_LABELS.import,
+            detail: 'Start a case and bring rows in from a CSV.',
+            // **The glyph the section it opens draws.** A door wearing another
+            // section's glyph says it goes somewhere it does not, and the rail
+            // draws that glyph again on the row that owns it.
+            icon: SECTIONS.import?.icon ?? FilePlus2,
             ...(onImport ? { onSelect: onImport } : {}),
           },
           {
-            title: 'Start from a live source',
+            title: DOOR_LABELS['import-sentinel'],
             detail: 'Pull an incident from Sentinel. The case is made at the end, not the start.',
-            icon: Radio,
+            icon: SECTIONS['import-sentinel']?.icon ?? FilePlus2,
             ...(onLiveSource ? { onSelect: onLiveSource } : {}),
           },
         ]}
