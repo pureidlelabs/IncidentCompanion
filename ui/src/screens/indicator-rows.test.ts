@@ -8,6 +8,7 @@ import {
   collectIndicators,
   pushable,
   matchesIndicator,
+  indicatorsCsv,
   indicatorsStix,
   nothingToPush,
   type Indicator,
@@ -287,5 +288,98 @@ describe('the STIX bundle cannot be broken out of', () => {
   // A trailing backslash escapes the closing quote instead of itself.
   it('escapes a backslash', () => {
     expect(patternOf('evil\\')).toBe("[domain-name:value = 'evil\\\\']")
+  })
+})
+
+/**
+ * **What the screen's file actually carries, cell by cell.**
+ *
+ * The only assertions this door had were a line count and a substring, so the
+ * browser could drop a column, stop defusing a formula, or write a boolean the
+ * route spells differently, and nothing here noticed. Each of those is one
+ * mutation away from a file that opens and is wrong. -> #569, #600
+ */
+describe('the CSV the screen hands over', () => {
+  const lines = (rows: Indicator[]) => indicatorsCsv(rows).trim().split('\n')
+
+  it('heads the file with the columns both doors share', () => {
+    expect(lines([row({})])[0]).toBe('type,value,disposition,context,source,blocked,case_id')
+  })
+
+  it('writes one cell per column, in that order', () => {
+    const written = lines([
+      row({
+        caseId: 'case-7',
+        type: 'ipv4',
+        value: '198.51.100.7',
+        disposition: 'malicious',
+        context: 'beacon',
+        source: 'sentinel',
+        blocked: true,
+      }),
+    ])[1]
+
+    expect(
+      written,
+      'a column was dropped, reordered, or a boolean spelled differently from the route',
+    ).toBe('"ipv4","198.51.100.7","malicious","beacon","sentinel","true","case-7"')
+  })
+
+  /**
+   * **The reason the formula guard was moved somewhere both doors reach.** The
+   * route has defused these since #51; the browser joined its own cells and did
+   * not, so an analyst's own note reached a spreadsheet as a formula through
+   * one door and not the other.
+   */
+  it.each([['=1+1'], ['+1'], ['-1'], ['@SUM(A1)']])(
+    'defuses %j, which a spreadsheet would run',
+    (context) => {
+      const cell = lines([row({ context })])[1]?.split(',')[3]
+
+      expect(cell, 'a cell a spreadsheet executes went out undefused').toBe(`"'${context}"`)
+    },
+  )
+
+  it('carries no handling restriction, which this form cannot hold', () => {
+    expect(indicatorsCsv([row({})])).not.toContain('TLP:')
+  })
+})
+
+describe('the bundle the screen hands over', () => {
+  const objectsOf = (rows: Indicator[]) =>
+    (JSON.parse(indicatorsStix(rows, '')) as { objects: { name?: string }[] }).objects
+
+  /**
+   * **The defect this branch was opened for.** The screen filtered on whether
+   * a row had a pattern and not on whether an analyst would act on it, so a
+   * cleared address left the install in a feed meant for blocking.
+   * -> `openspec/specs/data-exchange/spec.md`
+   */
+  it('leaves out an indicator somebody cleared', () => {
+    const objects = objectsOf([
+      row({ value: '9.9.9.9', type: 'ipv4', disposition: 'benign' }),
+      row({ value: 'evil.example', type: 'domain', disposition: 'malicious' }),
+    ])
+
+    expect(
+      objects.map((one) => one.name),
+      'a harmless indicator is in a feed meant for action',
+    ).toEqual(['evil.example'])
+  })
+
+  it('carries the properties STIX requires, and identifies itself', () => {
+    const bundle = JSON.parse(indicatorsStix([row({})], '')) as {
+      id: string
+      objects: ({ id: string } & Record<string, unknown>)[]
+    }
+
+    expect(bundle.id, 'the bundle id is not an identifier').toMatch(/^bundle--[0-9a-f-]{36}$/)
+    const first = bundle.objects[0]!
+    expect(first.id, 'the indicator id is not minted').toMatch(/^indicator--[0-9a-f-]{36}$/)
+    for (const property of ['created', 'modified', 'valid_from']) {
+      expect(first[property], `${property} is required on an indicator`).toEqual(
+        expect.any(String),
+      )
+    }
   })
 })

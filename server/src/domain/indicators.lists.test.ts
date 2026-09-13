@@ -158,6 +158,43 @@ describe('the STIX bundle', () => {
     expect(patterns.join(' ')).not.toContain('10.0.0.9')
   })
 
+  /**
+   * **The three STIX 2.1 requires on an Indicator, and the two identifiers.**
+   * All five could be deleted with both suites green: the only id assertion
+   * anywhere matched `/^indicator--/`, which the case row's own primary key
+   * satisfies just as well as a minted one.
+   *
+   * A database key reused as a STIX id travels to whoever consumes the bundle
+   * and repeats across exports of one row, which is what makes minting the
+   * behaviour rather than the detail.
+   */
+  it('gives every indicator the properties STIX requires, and a minted id', () => {
+    const bundle = toStixBundle(indicators, { now: NOW, ids })
+    const objects = (bundle['objects'] as Record<string, unknown>[]).filter(
+      (one) => one['type'] === 'indicator',
+    )
+
+    expect(objects.length, 'no indicator survived, so this asserts nothing').toBeGreaterThan(0)
+    for (const one of objects) {
+      expect(one['created'], 'a required property is missing').toBe(NOW.toISOString())
+      expect(one['modified'], 'a required property is missing').toBe(NOW.toISOString())
+      expect(one['valid_from'], 'a required property is missing').toBe(NOW.toISOString())
+      expect(one['spec_version']).toBe('2.1')
+      expect(one['id'], 'the id is not minted from the identifier source').toBe(
+        `indicator--${ids()}`,
+      )
+    }
+  })
+
+  it('identifies the bundle itself, rather than naming it', () => {
+    const bundle = toStixBundle(indicators, { now: NOW, ids })
+
+    expect(
+      bundle['id'],
+      'the bundle id is assembled from text, which is not a STIX identifier',
+    ).toBe(`bundle--${ids()}`)
+  })
+
   it("writes a file hash pattern with STIX's own hash name", () => {
     const bundle = toStixBundle(indicators, { now: NOW, ids })
     const patterns = (bundle['objects'] as { pattern: string }[]).map((one) => one.pattern)
@@ -332,6 +369,6 @@ describe('the CSV says where an indicator came from', () => {
     const csv = await toCsv(toCsvRows(found), [...INDICATOR_CSV_COLUMNS])
 
     expect(csv.split('\n')[0]).toBe('type,value,disposition,context,source,blocked,case_id')
-    expect(csv.split('\n')[1]).toBe('ipv4,198.51.100.7,malicious,beacon,sentinel,1,c-1')
+    expect(csv.split('\n')[1]).toBe('ipv4,198.51.100.7,malicious,beacon,sentinel,true,c-1')
   })
 })

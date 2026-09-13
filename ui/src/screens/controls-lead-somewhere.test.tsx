@@ -134,7 +134,7 @@ describe("the indicators screen's exports", () => {
       expect.objectContaining({ type: 'marking-definition', name: 'TLP:AMBER' }),
     )
 
-    await user.click(screen.getByRole('button', { name: /Marking/ }))
+    await user.click(screen.getByRole('button', { name: /marking/i }))
     await user.click(screen.getByRole('option', { name: 'TLP:RED' }))
 
     expect(bundle().objects, 'the chosen marking did not reach the bundle').toContainEqual(

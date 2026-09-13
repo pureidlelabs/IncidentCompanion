@@ -150,14 +150,21 @@ export const INDICATOR_CSV_COLUMNS = [
  * `case_id` - the same rule the per-table export follows by heading with the
  * database's column names rather than Drizzle's properties.
  */
-export function toCsvRows(indicators: readonly Indicator[]): Record<string, unknown>[] {
+export function toCsvRows(indicators: readonly Indicator[]): Record<string, string>[] {
   return indicators.map((one) => ({
     type: one.type,
     value: one.value,
     disposition: one.disposition,
     context: one.context,
     source: one.source,
-    blocked: one.blocked,
+    /**
+     * **Rendered here, because the two doors write the file with different
+     * writers.** `csv-stringify` casts a boolean to `1` and the empty string;
+     * the browser joins cells itself and wrote `true` and `false`. So one
+     * door's `blocked` column disagreed with the other's, and its `false` was
+     * indistinguishable from a cell nobody filled in.
+     */
+    blocked: one.blocked ? 'true' : 'false',
     case_id: one.caseId,
   }))
 }
@@ -174,8 +181,8 @@ const STIX_HASH_NAME: Record<string, string> = {
  * **A cloud app is not expressible as a STIX pattern**, so it is left out of a
  * bundle rather than emitted as an Indicator matching nothing. Everything else
  * reaching here is a kind this switch has not been taught, which is
- * indistinguishable from that deliberate skip, so `indicators.test.ts` holds
- * the switch against `INDICATOR_TYPE`.
+ * indistinguishable from that deliberate skip, so `indicators.lists.test.ts`
+ * holds the switch against `INDICATOR_TYPE`.
  */
 export function patternFor(indicator: Indicator): string | null {
   const escaped = indicator.value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
@@ -215,7 +222,11 @@ export function pushable(indicator: Indicator): boolean {
  * `now` and `ids` are injected rather than read from the clock and the random
  * source, because a bundle nobody can reproduce cannot be asserted on.
  *
- * Throws where `tlp` names a level the vocabulary does not hold.
+ * Throws where `tlp` names a level the vocabulary does not hold **and at least
+ * one indicator survives the filter** -- the marking is read per surviving
+ * object, so a bundle with none comes back unmarked rather than refused. Both
+ * doors validate the level before calling, so this is the shape of the guard
+ * rather than a state either can reach.
  */
 export function toStixBundle(
   indicators: readonly Indicator[],
