@@ -6,7 +6,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import {
   actionableCount,
   collectIndicators,
-  isActionable,
+  pushable,
   matchesIndicator,
   indicatorsStix,
   nothingToPush,
@@ -26,6 +26,7 @@ import {
 
 const row = (fields: Partial<Indicator>): Indicator => ({
   id: 'row',
+  caseId: 'case-1',
   type: 'ipv4',
   value: '203.0.113.1',
   disposition: 'malicious',
@@ -37,28 +38,43 @@ const row = (fields: Partial<Indicator>): Indicator => ({
 
 describe('what is worth pushing', () => {
   it('pushes a row somebody classified as a threat', () => {
-    expect(isActionable(row({ disposition: 'malicious' }))).toBe(true)
-    expect(isActionable(row({ disposition: 'suspicious' }))).toBe(true)
+    expect(pushable(row({ disposition: 'malicious' }))).toBe(true)
+    expect(pushable(row({ disposition: 'suspicious' }))).toBe(true)
   })
 
   it('refuses a row somebody classified as harmless', () => {
-    expect(isActionable(row({ disposition: 'benign' }))).toBe(false)
-    expect(isActionable(row({ disposition: 'clean' }))).toBe(false)
-    expect(isActionable(row({ disposition: '  Benign  ' }))).toBe(false)
+    expect(pushable(row({ disposition: 'benign' }))).toBe(false)
+    expect(pushable(row({ disposition: 'clean' }))).toBe(false)
+    expect(pushable(row({ disposition: '  Benign  ' }))).toBe(false)
   })
 
   /**
-   * A row nobody has classified is not a row somebody decided to act on. Cloud
-   * apps are collected with no disposition at all, so reading `''` as
-   * actionable made every case carrying one report every indicator pushable.
+   * **A row nobody has classified is in the feed, and that is the requirement
+   * rather than a preference:** *where a disposition is not one the application
+   * recognises as harmless, the indicator MUST be treated as actionable, so
+   * that a new disposition fails towards being seen rather than towards being
+   * silently withheld.* -> `openspec/specs/data-exchange/spec.md`
+   *
+   * This screen used to read a blank as harmless, which failed that sentence.
+   * The symptom it was written against -- every case holding a cloud app
+   * reporting every indicator as pushable -- was the other half of `pushable`:
+   * a cloud app has no STIX pattern, so it can never be in a bundle whatever
+   * its disposition. The case below holds that half.
    */
-  it('refuses a row nobody has classified', () => {
-    expect(isActionable(row({ disposition: '' }))).toBe(false)
-    expect(isActionable(row({ disposition: '   ' }))).toBe(false)
+  it('pushes a row nobody has classified', () => {
+    expect(pushable(row({ disposition: '' }))).toBe(true)
+    expect(pushable(row({ disposition: '   ' }))).toBe(true)
+  })
+
+  it('refuses a row no pattern can express, however it is classified', () => {
+    expect(pushable(row({ type: 'cloud-app', value: 'Dropbox', disposition: '' }))).toBe(false)
+    expect(pushable(row({ type: 'cloud-app', value: 'Dropbox', disposition: 'malicious' }))).toBe(
+      false,
+    )
   })
 
   it('counts an unfamiliar word as actionable, since the list excludes rather than admits', () => {
-    expect(isActionable(row({ disposition: 'newly-invented-verdict' }))).toBe(true)
+    expect(pushable(row({ disposition: 'newly-invented-verdict' }))).toBe(true)
   })
 })
 
@@ -169,6 +185,7 @@ describe('the indicators search reads the Value column', () => {
   /** A row carrying a distinct value in each of the five fields. */
   const row: Indicator = {
     id: 'i1',
+    caseId: 'case-1',
     type: 'domain',
     value: 'meridian-leaks.onion',
     disposition: 'malicious',

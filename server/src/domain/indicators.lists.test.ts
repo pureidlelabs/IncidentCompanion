@@ -7,28 +7,31 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { INDICATOR_TYPE } from '../domain/vocabularies.lists.js'
+import { INDICATOR_TYPE } from './vocabularies.lists.js'
 
 import { PROTOTYPE_KEYS } from '../../test/prototype-keys.js'
 
-import { hashTypeOf } from '../domain/hashes.lists.js'
-import { toCsv } from './csv.js'
+import { hashTypeOf } from './hashes.lists.js'
+import { toCsv } from '../exports/csv.js'
 import {
   actionable,
   collect,
   toStixBundle,
   toCsvRows,
   INDICATOR_CSV_COLUMNS,
-} from './indicators.js'
-import { TLP_NAMES, tlpMarking } from '../domain/tlp.lists.js'
+} from './indicators.lists.js'
+import { TLP_NAMES, tlpMarking } from './tlp.lists.js'
 
 const NOW = new Date('2026-03-04T05:06:07.000Z')
 const ids = () => '11111111-2222-3333-4444-555555555555'
 
 const empty = { networkIndicators: [], malware: [], cloudApps: [] }
 
-/** Provenance neither `actionable` nor the bundle reads. The CSV is where it matters. */
-const unsourced = { source: '', caseId: '' }
+/**
+ * What neither `actionable` nor the bundle reads: the CSV is where provenance
+ * matters, and a bundle mints its own identifiers rather than reusing `id`.
+ */
+const unsourced = { id: '', source: '', caseId: '' }
 
 describe('the STIX pattern vocabulary', () => {
   /**

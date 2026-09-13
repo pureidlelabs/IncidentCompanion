@@ -80,6 +80,15 @@ describe("the indicators screen's exports", () => {
     return decodeURIComponent(href.replace(/^data:text\/csv;charset=utf-8,/, ''))
   }
 
+  /** The STIX bundle the export link would hand over, decoded. */
+  function bundle(): { objects: Record<string, unknown>[] } {
+    const link = screen.getByRole('link', { name: /STIX bundle/ })
+    const href = link.getAttribute('href') ?? ''
+    return JSON.parse(
+      decodeURIComponent(href.replace(/^data:application\/json;charset=utf-8,/, '')),
+    ) as { objects: Record<string, unknown>[] }
+  }
+
   /** The data rows the table is drawing, header excluded. */
   function shownRows(): number {
     return screen.getAllByRole('row').length - 1
@@ -87,9 +96,9 @@ describe("the indicators screen's exports", () => {
 
   it('hands over the rows that are on screen', () => {
     render(<IndicatorsScreen kase={campaignCase} specs={specsFixture} />)
-    // The marking line, the header line, and one line per visible row: an
-    // export built from the unfiltered case would be longer than the table.
-    expect(csv().trim().split('\n')).toHaveLength(shownRows() + 2)
+    // The header line and one line per visible row: an export built from the
+    // unfiltered case would be longer than the table.
+    expect(csv().trim().split('\n')).toHaveLength(shownRows() + 1)
   })
 
   it('shortens when the search does', async () => {
@@ -105,18 +114,33 @@ describe("the indicators screen's exports", () => {
     await user.type(screen.getByRole('textbox', { name: /^Value / }), value)
 
     const narrowed = csv().trim().split('\n')
-    expect(narrowed).toHaveLength(shownRows() + 2)
+    expect(narrowed).toHaveLength(shownRows() + 1)
     expect(narrowed.length).toBeLessThan(whole)
   })
 
-  it('marks the file with the marking that is chosen', async () => {
+  /**
+   * **The marking reaches the bundle and not the CSV**, which is the split the
+   * requirement draws: a restriction named for a form that carries none is
+   * refused, and the export route answers 400 to exactly that. A `# TLP:`
+   * comment line is a claim the product says a CSV does not make.
+   * -> `openspec/specs/data-exchange/spec.md`
+   */
+  it('marks the bundle with the marking that is chosen, and never the CSV', async () => {
     const user = userEvent.setup()
     render(<IndicatorsScreen kase={campaignCase} specs={specsFixture} />)
-    expect(csv().startsWith('# TLP:AMBER')).toBe(true)
+
+    expect(csv(), 'the CSV carries a marking it cannot carry').not.toContain('TLP:')
+    expect(bundle().objects, 'no marking reached the bundle').toContainEqual(
+      expect.objectContaining({ type: 'marking-definition', name: 'TLP:AMBER' }),
+    )
 
     await user.click(screen.getByRole('button', { name: /Marking/ }))
     await user.click(screen.getByRole('option', { name: 'TLP:RED' }))
-    expect(csv().startsWith('# TLP:RED')).toBe(true)
+
+    expect(bundle().objects, 'the chosen marking did not reach the bundle').toContainEqual(
+      expect.objectContaining({ type: 'marking-definition', name: 'TLP:RED' }),
+    )
+    expect(csv(), 'the CSV carries a marking it cannot carry').not.toContain('TLP:')
   })
 
   /**

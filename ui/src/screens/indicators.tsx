@@ -19,7 +19,7 @@ import { cn } from '@/lib/cn'
 import {
   actionableCount,
   collectIndicators,
-  isActionable,
+  pushable,
   indicatorsCsv,
   indicatorsStix,
   matchesIndicator,
@@ -111,7 +111,7 @@ export function IndicatorsScreen({
       rows.filter((row) => {
         if (!matchesIndicator(row, query)) return false
         if (types.length && !types.includes(row.type)) return false
-        if (actionableOnly && !isActionable(row)) return false
+        if (actionableOnly && !pushable(row)) return false
         return true
       }),
     [rows, query, types, actionableOnly],
@@ -134,10 +134,12 @@ export function IndicatorsScreen({
    * observe starting.
    */
   const csvHref = useMemo(
-    () => `data:text/csv;charset=utf-8,${encodeURIComponent(indicatorsCsv(visible, tlp))}`,
-    [visible, tlp],
+    () => `data:text/csv;charset=utf-8,${encodeURIComponent(indicatorsCsv(visible))}`,
+    [visible],
   )
-  const csvName = `indicators${tlp ? `-tlp-${tlp}` : ''}.csv`
+  // **No marking in the name either.** A CSV carries no handling
+  // restriction, so naming one claims something the file does not say.
+  const csvName = 'indicators.csv'
   const stixHref = useMemo(
     () => `data:application/json;charset=utf-8,${encodeURIComponent(indicatorsStix(visible, tlp))}`,
     [visible, tlp],
