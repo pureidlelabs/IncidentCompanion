@@ -10,6 +10,7 @@
 #   ./dev-node.sh --no-storybook ...without the kit's Storybook beside Vite
 #   ./dev-node.sh --repl         an interactive shell with the app's container
 #   ./dev-node.sh --down         stop the containers and exit
+#   ./dev-node.sh --export      print the environment it would use, and exit
 #
 #   VITE_HOST=0.0.0.0 ./dev-node.sh --ui-only
 #                                ...serving where a browser outside the
@@ -56,6 +57,15 @@ API_URL="http://127.0.0.1:$API_PORT"
 export AUTH_SECRET="${AUTH_SECRET:-dev-only-secret-0123456789abcdefghij}"
 export AUTH_BASE_URL="$API_URL"
 export PORT="$API_PORT"
+# **Set here, because the app requires it and nothing else in a shell does.**
+# `env.ts` takes no default for this: what a wrong one costs is an install
+# trusting a proxy header it should not, or refusing one it should, and a
+# default is how that happens without anybody choosing it. Vitest sets `test`
+# for the suites, so this is the value every other way of running the app on a
+# workstation gets. `NODE_ENV=production ./dev-node.sh` drives the production
+# paths, and reaches Nest as well as the seeder because `server`'s `dev` script
+# defers to an inherited value rather than pinning one.
+export NODE_ENV="${NODE_ENV:-development}"
 
 SEED=1
 KEEP_DATA=0
@@ -77,6 +87,15 @@ for arg in "$@"; do
     --repl) WANT_API=0; WANT_UI=0; WANT_REPL=1 ;;
     --down)
       compose down
+      exit 0
+      ;;
+    # **The environment this hands the app, printed instead of used.** Every
+    # export above has run by here and none runs after, so what this prints is
+    # what the seeder and Nest are given -- which is what lets a test hold the
+    # launcher to `env.ts` by parsing the schema against it rather than by
+    # reading this file for the shape of an assignment. -> #593
+    --export)
+      export -p
       exit 0
       ;;
     *) echo "unknown option: $arg" >&2; exit 2 ;;

@@ -80,10 +80,10 @@ describe('the address a limit counts against, in the dev loop', () => {
 /**
  * The mode this decision reads, asked for the value nobody set.
  *
- * **`env.ts` resolves an unset `NODE_ENV` to `production`**, because that is
- * the closed setting for the trusted-origin list. It is the open one here, so
- * this must not share it: an install that names no mode has no proxy this app
- * knows of.
+ * **`env.ts` resolves an unset `NODE_ENV` to nothing**, because it refuses to
+ * start without one. So this module's own fallback is the floor rather than a
+ * reachable state, and the floor is the closed reading: an install that names
+ * no mode has no proxy this app knows of.
  */
 describe('when a header may be believed at all', () => {
   afterEach(() => {

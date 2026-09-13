@@ -32,12 +32,13 @@ export const TRUSTED_ADDRESS_HEADER = 'x-real-ip'
 /**
  * The mode this decision reads, which is not the one `env.ts` resolves.
  *
- * **Unset means untrusted here, where `env.ts` defaults `NODE_ENV` to
- * `production`.** That default is the closed setting for the trusted-origin
- * list and the open one for this: `production` is what makes the header
- * believable, so a deployment that says nothing must not be taken to have a
- * proxy in front of it. The shipped image sets the variable; so does the dev
- * script. Unset is neither of them.
+ * **Unset means untrusted here, and `env.ts` has no default to fall back on.**
+ * `production` is what makes the header believable, so a deployment that says
+ * nothing must not be taken to have a proxy in front of it -- which is why the
+ * schema refuses to start rather than choosing for the operator. The fallback
+ * below is for the readers that have not been through that check, and it falls
+ * the safe way. The shipped image sets the variable; so does the dev script.
+ * Unset is neither of them.
  */
 export function addressMode(): string {
   return process.env['NODE_ENV'] ?? 'development'

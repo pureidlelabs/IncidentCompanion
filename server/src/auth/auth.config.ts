@@ -697,10 +697,10 @@ export function authOptions(
      * believable. -> `wire/caller-address.ts`
      *
      * **It resolves the process mode rather than taking this function's
-     * `mode`, and that is the point.** `mode` comes from `env.ts`, which
-     * defaults `NODE_ENV` to `production` because that is the closed setting
-     * for the trusted-origin list - and it is the open one here. An install
-     * that names no mode would otherwise believe a header no proxy set.
+     * `mode`, and that is the point.** The two disagree about what an absent
+     * mode means: `env.ts` refuses to start without one, while this decision
+     * keeps a fallback of its own and closes on it. An install that names no
+     * mode would otherwise believe a header no proxy set.
      *
      * Never set `disableIpTracking`: the limiter returns early on it and
      * applies no rule at all.
