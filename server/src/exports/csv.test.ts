@@ -7,7 +7,8 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { neutralise, toCsv } from './csv.js'
+import { neutralise } from '../domain/spreadsheet.lists.js'
+import { toCsv } from './csv.js'
 
 describe('escaping a cell against a spreadsheet formula', () => {
   it.each([

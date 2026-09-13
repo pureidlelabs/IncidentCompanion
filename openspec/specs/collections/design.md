@@ -30,6 +30,12 @@ A write landing without attribution is a change nobody can defend. Without the v
 
 Acting on many rows carries all of it, per row.
 
+**Composed into a larger act, the announcement waits for that act to commit.** A write inside somebody else's transaction has not landed when it returns -- its own commit is a released savepoint -- so announcing there sends a subscriber to read what a rollback may still remove. Announcing nothing instead is the other way to break the same rule, and it is the quieter one: the act commits and every screen already open stays as it was.
+
+So the act collects what its writes would have said and says it once, after the commit that made it true. A write that opened its own transaction announces directly, as before.
+
+**A transaction that is not declared an act refuses the write composed into it.** The alternative is a composed write silently choosing one of the two failures above, which is what made this a rule nobody could see being broken. The boundary: composition is an explicit act rather than any open transaction.
+
 ## A reference stays inside its case, checked twice over
 
 A row referring to another row refers to one in the same case. The store's own referential integrity cannot express this: a key constraint is satisfied by a row in another case, which meets no policy and lands.

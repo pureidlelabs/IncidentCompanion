@@ -1,7 +1,7 @@
 /**
  * The published TLP identifiers, pinned against literals.
  *
- * **The invariant in `exports/indicators.test.ts` cannot catch a wrong id.**
+ * **The invariant in `indicators.lists.test.ts` cannot catch a wrong id.**
  * Both the reference and the carried object read the same table entry, so a
  * typo agrees with itself and the bundle is internally consistent while
  * meaning nothing to a consumer. These are the only assertions that compare

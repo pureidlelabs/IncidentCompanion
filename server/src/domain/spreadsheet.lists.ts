@@ -1,0 +1,37 @@
+/**
+ * What a spreadsheet would execute, and how a cell is defused.
+ *
+ * **Its own module because two doors write CSV.** The export route writes the
+ * whole case through `exports/csv.ts`, and the Indicators screen builds its
+ * file in the browser; a guard living beside one of them is a guard the other
+ * does not have, which is how the screen's file came to carry formulas the
+ * route's could not.
+ *
+ * Reachable from the browser through `@contract/spreadsheet.lists`.
+ */
+
+/** Trimmed by a spreadsheet before it decides whether a cell is a formula. */
+const TRIMMED = ' \t\r\n\u0000'
+
+const FORMULA_LEADS = ['=', '+', '-', '@']
+
+/**
+ * Defuse a cell a spreadsheet would execute - a leading `=`, `+`, `-` or `@`
+ * is a formula in Excel and Sheets, and these values come from an incident.
+ *
+ * Whitespace is trimmed before the test, because the spreadsheet trims first
+ * and `" =1+1"` is otherwise missed. An already-quoted formula is prefixed
+ * again, since some importers strip one quote back off.
+ */
+export function neutralise<T>(value: T): T | string {
+  if (typeof value !== 'string') return value
+
+  const bare = value.replace(new RegExp(`^[${TRIMMED}]+`), '')
+  if (FORMULA_LEADS.some((lead) => bare.startsWith(lead))) return `'${value}`
+
+  if (bare.startsWith("'")) {
+    const behind = bare.slice(1).replace(new RegExp(`^[${TRIMMED}]+`), '')
+    if (FORMULA_LEADS.some((lead) => behind.startsWith(lead))) return `'${value}`
+  }
+  return value
+}

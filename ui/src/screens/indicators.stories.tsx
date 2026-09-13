@@ -41,26 +41,31 @@ type Story = StoryObj<typeof meta>
 export const Populated: Story = {
   name: 'Derived from the case',
   // The two numbers the badge exists to contrast. They read identically while
-  // a blank disposition counted as actionable, which is every case holding a
+  // a blank disposition counted as harmless, which is every case holding a
   // cloud app.
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const badge = await canvas.findByText(/derived, .* actionable/)
-    const [derived, actionable] = badge.textContent.match(/\d+/g) ?? []
-    await expect(Number(derived)).toBeGreaterThan(Number(actionable))
+    const badge = await canvas.findByText(/derived, .* in the bundle/)
+    const [derived, carried] = badge.textContent.match(/\d+/g) ?? []
+    await expect(Number(derived)).toBeGreaterThan(Number(carried))
     // Every digest in the demo is a real sha256, so the malware rows are here.
     await expect(await canvas.findAllByText('sha256')).not.toHaveLength(0)
   },
 }
 
 /**
- * Every indicator benign, which is the one case worth warning about.
+ * Nothing the bundle could carry, which is the one case worth warning about.
  *
  * The bundle would leave with no objects in it. A case with no indicators at
  * all draws no warning, because it has nothing to warn about either way.
+ *
+ * **The notice says what is true of every row rather than naming one reason.**
+ * The cloud apps here are not benign -- they carry a consent type -- and no
+ * STIX pattern describes them, so a notice saying every indicator is benign was
+ * false on exactly the case it fires for.
  */
 export const NothingToPush: Story = {
-  name: 'Nothing actionable',
+  name: 'Nothing the bundle can carry',
   args: {
     kase: {
       ...campaignCase,
@@ -76,7 +81,7 @@ export const NothingToPush: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(
-      await canvas.findByText('Every indicator in this case is benign'),
+      await canvas.findByText('Nothing in this case would reach the bundle'),
     ).toBeVisible()
   },
 }
@@ -120,7 +125,7 @@ export const Dense: Story = {
   // the campaign fixture holds on its own.
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const badge = await canvas.findByText(/\d+ derived, \d+ actionable/)
+    const badge = await canvas.findByText(/\d+ derived, \d+ in the bundle/)
     const [derived] = badge.textContent.match(/\d+/g) ?? []
     await expect(Number(derived)).toBeGreaterThan(50)
   },

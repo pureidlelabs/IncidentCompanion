@@ -28,11 +28,12 @@ import { isScope } from '../domain/scopes.lists.js'
 import type { CollectionName, Scope } from '../domain/wire.js'
 
 import { columnOf } from '../db/column-access.js'
+import { whenCommitted } from '../db/act.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { changeFeed } from '../db/schema/index.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
-import { withCase, type Executor } from '../db/scope.js'
+import { nested, withCase, type Executor } from '../db/scope.js'
 import { TABLES, type BulkTarget } from './registry.js'
 import {
   coerceTimes,
@@ -129,15 +130,23 @@ export class CollectionService {
   ) {}
 
   /**
-   * **Only where this opened the transaction.** Composed into a caller's
-   * handle, the write has not committed when the call returns -- `withCase`
-   * returning is a released savepoint -- and `case-channel.service.ts` requires
-   * that it has: a subscriber told to re-read would read what is not there yet,
-   * or what a rollback is about to remove. A caller that composes owns the
-   * announcement, after its own commit.
+   * Tell the case's subscribers, once what they are being told is true.
+   *
+   * **Composed into a caller's act, this waits for that act's commit.**
+   * `withCase` returning is a released savepoint rather than a commit, and
+   * `case-channel.service.ts` requires that the write has landed: a subscriber
+   * told here would read what is not there yet, or what a rollback is about to
+   * remove. Announcing nothing instead was the older remedy and it made the
+   * opposite failure -- an act that committed and told nobody. -> `db/act.ts`
    */
-  private announce(caseId: string, scopes: readonly Scope[], by: string): void {
-    this.channel?.announce(caseId, scopes, by)
+  private announce(caseId: string, scopes: readonly Scope[], by: string, on?: Executor): void {
+    const tell = () => this.channel?.announce(caseId, scopes, by)
+    // **Asked of the handle, not compared against ours.** `Executor` also holds
+    // the seed pool, which is a second `Database`: a write on it opens and
+    // commits its own transaction and is not composed, where an identity check
+    // would call it composed and queue its announcement onto somebody's act.
+    if (on === undefined || !nested(on)) tell()
+    else whenCommitted(tell)
   }
 
   /**
@@ -356,7 +365,7 @@ export class CollectionService {
       return written.ids
     })
 
-    if (on === this.db) this.announce(caseId, [def.name], actorId)
+    this.announce(caseId, [def.name], actorId, on)
     return { ids, unlinked }
   }
 
@@ -460,8 +469,8 @@ export class CollectionService {
       return written
     })
 
-    if (on === this.db) {
-      this.announce(caseId, wanted.map((group) => group.def.name), actorId)
+    {
+      this.announce(caseId, wanted.map((group) => group.def.name), actorId, on)
     }
     return { ids, unlinked }
   }
