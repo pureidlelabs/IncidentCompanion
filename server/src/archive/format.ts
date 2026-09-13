@@ -59,6 +59,22 @@ export const sha256 = (bytes: Uint8Array): string =>
   createHash('sha256').update(bytes).digest('hex')
 
 /**
+ * A total order over names, which `localeCompare` alone is not.
+ *
+ * It answers 0 for distinct strings that differ only by Unicode normalisation,
+ * and `Array.prototype.sort` is stable -- so two exports of one case ordered
+ * by it alone follow their input order and produce different manifests. The
+ * code-unit comparison breaks that tie and never reports two distinct strings
+ * as equal.
+ */
+const byName = (a: string, b: string): number =>
+  a.localeCompare(b) || (a < b ? -1 : a > b ? 1 : 0)
+
+/** Whether an untrusted value is the list of names it is declared to be. */
+const namesList = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((one) => typeof one === 'string')
+
+/**
  * **Whether the attachments travelled, stated rather than inferred.**
  * An archive is two different things - a backup, which loses nothing on
  * re-import, and a handover to a customer or a regulator, which should not
@@ -123,8 +139,8 @@ export async function pack(
     attachments,
     // Sorted for the same reason `files` is: two exports of one case produce
     // the same bytes, so a difference between them is a difference in the case.
-    missing: [...missing].sort((a, b) => a.localeCompare(b)),
-    files: Object.fromEntries(Object.entries(files).sort(([a], [b]) => a.localeCompare(b))),
+    missing: [...missing].sort(byName),
+    files: Object.fromEntries(Object.entries(files).sort(([a], [b]) => byName(a, b))),
   }
   const all: Record<string, Uint8Array> = {
     ...members,
@@ -212,6 +228,12 @@ export async function unpack(
   }
   if (manifest.attachments !== 'included' && manifest.attachments !== 'omitted') {
     throw new BadArchive("this archive's manifest does not say whether its files travelled")
+  }
+  // Absent is a statement an older archive could not make; present and not a
+  // list of names is one somebody edited, and `readArchive` hands it out
+  // declared `string[]` to callers that will treat it as one.
+  if (manifest.missing !== undefined && !namesList(manifest.missing)) {
+    throw new BadArchive("this archive's manifest does not say what it could not find")
   }
 
   for (const [name, digest] of Object.entries(manifest.files)) {
