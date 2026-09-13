@@ -22,16 +22,21 @@ import * as schema from './schema/index.js'
 /** What drizzle calls a `bigint` read as a JavaScript number. */
 const FIGURE_COLUMN = 'PgBigInt53'
 
-/** Every exported table, by the name it is exported under. */
-const TABLES: readonly (readonly [string, PgTable])[] = Object.entries(schema).filter(
-  (entry): entry is [string, PgTable] => {
-    const [, value] = entry
-    if (typeof value !== 'object' || value === null) return false
+/**
+ * Every exported table, by the name it is exported under.
+ *
+ * Recognised by `getTableConfig` answering rather than by a type: the module
+ * exports enums and constants beside the tables, and asking drizzle is the
+ * only thing that stays true when it gains another kind of export.
+ */
+const TABLES: readonly (readonly [string, PgTable])[] = Object.entries(schema).flatMap(
+  ([name, value]) => {
+    if (typeof value !== 'object' || value === null) return []
     try {
       getTableConfig(value as PgTable)
-      return true
+      return [[name, value as PgTable] as const]
     } catch {
-      return false
+      return []
     }
   },
 )
