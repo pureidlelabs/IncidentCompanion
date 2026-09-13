@@ -32,7 +32,7 @@ import type { Database } from '../db/client.js'
 import { sameAddress } from './same-address.js'
 import { user } from '../db/schema/auth.js'
 import { ADMIN_ROLE, type Auth } from './auth.config.js'
-import { releaseTheClaim, takeTheClaim } from './claim.js'
+import { takeTheClaim } from './claim.js'
 import { matchesToken, mintToken } from './setup.token.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from './password-policy.js'
 
@@ -145,20 +145,6 @@ export class SetupController {
       throw new ForbiddenException('That is not this install\u2019s setup token.')
     }
 
-    /**
-     * **The database decides who claims it, not the count above.** That count
-     * and the sign-up below are two statements with a window between them, and
-     * the caller controls the timing: two claims for different usernames that
-     * both pass it both sign up, and each promotes its own row by its own
-     * `where`. -> `auth/claim.ts`
-     *
-     * The count stays because it is what answers an already-claimed install
-     * with the message an operator can act on, and because the requirement
-     * asks for it in as many words.
-     */
-    if (!(await takeTheClaim(this.db))) {
-      throw new ForbiddenException('This install already has an account.')
-    }
 
     /**
      * **In process, never over the loopback.** A POST to this server's own
@@ -171,10 +157,6 @@ export class SetupController {
       asResponse: true,
     })
     if (!signedUp.ok) {
-      // **The install goes back to being claimable.** The password this
-      // install's own policy refuses is the ordinary way here, and an install
-      // nobody can ever claim is worse than the race this replaces.
-      await releaseTheClaim(this.db)
       throw new BadRequestException(`The account could not be created: ${await signedUp.text()}`)
     }
 
@@ -188,10 +170,33 @@ export class SetupController {
      * session to call and this is the bootstrap that produces the first one.
      *
      * **The `where` is load-bearing.** Without it this promotes every row -
-     * harmless only while the install genuinely had no accounts, and a
-     * privilege escalation the moment two callers race the check above.
+     * harmless only while the install genuinely had no accounts.
+     *
+     * **The claim and the promotion are one act, and the database settles it.**
+     * The count above and the sign-up are two statements with a window between
+     * them, and the caller controls the timing -- two claims for different
+     * usernames that both pass the count both reach here. Taking the row in
+     * this transaction means exactly one of them promotes.
+     * -> `auth/claim.ts`
      */
-    await this.db.update(user).set({ role: ADMIN_ROLE }).where(sameAddress(body.username))
+    const won = await this.db.transaction(async (tx) => {
+      if (!(await takeTheClaim(tx))) return false
+      await tx.update(user).set({ role: ADMIN_ROLE }).where(sameAddress(body.username))
+      return true
+    })
+
+    if (!won) {
+      /**
+       * **The losing caller's account is taken back.** It was created a moment
+       * ago by this request and nothing else has touched it, so leaving it
+       * would hand a fresh install an account nobody asked for -- and the
+       * requirement's own words are that an install must not let somebody
+       * create their own.
+       */
+      await this.db.delete(user).where(sameAddress(body.username))
+      throw new ForbiddenException('This install already has an administrator.')
+    }
+
     this.token = null
     this.log.log('This install has been claimed; the setup token is now void.')
     return { claimed: true }

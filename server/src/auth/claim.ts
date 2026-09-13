@@ -8,83 +8,38 @@
  * install's whole access model begins at that account, so the second one is a
  * privilege escalation rather than a tidiness problem.
  *
- * **A row only one caller can insert is the whole mechanism.** `key` is the
- * primary key of the install's own key-value store, so `on conflict do nothing`
- * returns a row to exactly one caller however many arrive together -- decided
- * inside one statement, by the database, with no lock held across the account
- * creation that follows.
+ * **Taken in the transaction that promotes, not around the whole claim.** The
+ * account is created by the authentication library on its own connection, so
+ * nothing here can hold a transaction across it -- and a claim held across it
+ * would need a timeout to survive a process that died, which is a window of
+ * its own: a claim still in flight when the timeout passed would be taken over,
+ * and both callers would promote. Holding it only across the promote removes
+ * the window rather than shortening it, and a failure rolls the row back rather
+ * than needing it handed back.
+ *
+ * **So a losing caller has created an account.** It is refused and the account
+ * is taken back, which leaves exactly one administrator either way -- the
+ * property the requirement asks for.
  *
  * **Not a unique index on the administrator role**, which would also settle it
  * and would forbid a second administrator for ever. That is a decision about
  * what an install may look like rather than a fix for a race.
  */
-import { and, eq, lt, sql } from 'drizzle-orm'
-
-import type { Database, Transaction } from '../db/client.js'
-import { installPreferences } from '../db/schema/preferences.js'
-
-/** The install's own record that somebody has claimed it. */
-export const CLAIMED_KEY = 'install.claimedAt'
+import type { Transaction } from '../db/client.js'
+import { installClaim, ONLY_CLAIM } from '../db/schema/install-claim.js'
 
 /**
- * Take the install, or answer false because somebody else has it.
+ * Take the install, or answer false because somebody else just did.
  *
- * The caller that gets `true` owns the claim and must either finish it or hand
- * it back with `releaseTheClaim`.
+ * **Call inside the transaction that acts on winning.** The row is held for
+ * that transaction, so a caller that wins and then fails rolls it back and the
+ * install stays claimable with nothing to clean up.
  */
-export async function takeTheClaim(on: Database | Transaction): Promise<boolean> {
-  const now = new Date()
-  const taken = await on
-    .insert(installPreferences)
-    .values({ key: CLAIMED_KEY, value: { at: now.toISOString() } })
+export async function takeTheClaim(tx: Transaction): Promise<boolean> {
+  const taken = await tx
+    .insert(installClaim)
+    .values({ what: ONLY_CLAIM })
     .onConflictDoNothing()
-    .returning({ key: installPreferences.key })
-  if (taken.length > 0) return true
-
-  /**
-   * **A claim nobody finished is taken over, or an install can be stranded
-   * unclaimable by a process that died.** `releaseTheClaim` covers the refusal
-   * the account creation can answer with; it cannot cover the machine losing
-   * power between taking this and creating anything.
-   *
-   * **Still one statement, so it is still the database deciding.** The `where`
-   * carries the age, so of several callers finding the same stale row exactly
-   * one update matches it and the rest match nothing.
-   *
-   * The window only has to outlast a claim in flight, which is one account
-   * creation. An operator who waits it out and retries is the intended user of
-   * this branch; a second caller racing the first is not, and cannot reach it.
-   */
-  const stale = new Date(now.getTime() - STALE_AFTER_MS).toISOString()
-  const inherited = await on
-    .update(installPreferences)
-    .set({ value: { at: now.toISOString() } })
-    .where(
-      and(
-        eq(installPreferences.key, CLAIMED_KEY),
-        lt(sql`${installPreferences.value}->>'at'`, stale),
-      ),
-    )
-    .returning({ key: installPreferences.key })
-  return inherited.length > 0
-}
-
-/**
- * How long a claim may sit unfinished before another may take it over.
- *
- * Long enough to outlast creating one account, short enough that an operator
- * whose first attempt died is not locked out for a working day.
- */
-const STALE_AFTER_MS = 60_000
-
-/**
- * Hand the install back, because the claim it was taken for did not finish.
- *
- * **An install that can never be claimed again is worse than the race this
- * replaces.** Creating the account can refuse -- a password the install's own
- * policy will not accept is the ordinary way -- and the operator's next attempt
- * has to be able to succeed.
- */
-export async function releaseTheClaim(on: Database | Transaction): Promise<void> {
-  await on.delete(installPreferences).where(eq(installPreferences.key, CLAIMED_KEY))
+    .returning({ what: installClaim.what })
+  return taken.length > 0
 }
