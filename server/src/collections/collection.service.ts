@@ -33,7 +33,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { changeFeed } from '../db/schema/index.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
-import { withCase, type Executor } from '../db/scope.js'
+import { nested, withCase, type Executor } from '../db/scope.js'
 import { TABLES, type BulkTarget } from './registry.js'
 import {
   coerceTimes,
@@ -141,7 +141,11 @@ export class CollectionService {
    */
   private announce(caseId: string, scopes: readonly Scope[], by: string, on?: Executor): void {
     const tell = () => this.channel?.announce(caseId, scopes, by)
-    if (on === undefined || on === this.db) tell()
+    // **Asked of the handle, not compared against ours.** `Executor` also holds
+    // the seed pool, which is a second `Database`: a write on it opens and
+    // commits its own transaction and is not composed, where an identity check
+    // would call it composed and queue its announcement onto somebody's act.
+    if (on === undefined || !nested(on)) tell()
     else whenCommitted(tell)
   }
 

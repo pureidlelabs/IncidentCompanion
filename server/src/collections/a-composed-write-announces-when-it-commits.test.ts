@@ -20,13 +20,14 @@
  * whether a subscriber acts on what it is told.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { eq } from 'drizzle-orm'
+import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
 import { ordered } from './entities.controller.js'
 import { TABLES } from './registry.js'
 import { cases, user } from '../db/schema/index.js'
-import { asOneAct } from '../db/act.js'
+import { asOneAct, ComposedWithoutAnAct, whenCommitted } from '../db/act.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env['DATABASE_URL'] ?? ''
@@ -56,6 +57,17 @@ function recorder() {
 describe.skipIf(!db)('a write composed into a larger act', () => {
   let caseId: string
 
+  const made: string[] = []
+
+  afterAll(async () => {
+    // The file it replaced closed both pools. An open pg client keeps the
+    // worker's event loop alive past the file, and under the embedded engine
+    // holds the one connection for the rest of the run.
+    for (const id of made) await seed!.delete(cases).where(eq(cases.id, id))
+    await pool?.end()
+    if (seedPool !== pool) await seedPool?.end()
+  })
+
   beforeEach(async () => {
     const now = new Date()
     await seed!
@@ -71,6 +83,7 @@ describe.skipIf(!db)('a write composed into a larger act', () => {
       .onConflictDoNothing()
     const [row] = await seed!.insert(cases).values({ title: 'Composed' }).returning()
     caseId = row!.id
+    made.push(caseId)
   })
 
   it('announces once the act it was composed into has committed', async () => {
@@ -166,5 +179,65 @@ describe.skipIf(!db)('a write composed into a larger act', () => {
     ).rejects.toThrow(/asOneAct/)
 
     expect(channel.told, 'the refused act announced anyway').toEqual([])
+  })
+
+  /**
+   * **The door an import writes its entities through.** Reverting its call site
+   * to announce without the executor restores the premature announcement for
+   * every composed import, and a case about `createMany` says nothing about it.
+   */
+  it('announces across collections when the act commits, and not before', async () => {
+    const channel = recorder()
+    const collections = new CollectionService(db!, channel as never)
+
+    await asOneAct(db!, async (tx) => {
+      await collections.createAcross(
+        caseId,
+        ANALYST,
+        [{ def: DEFINITION(), rows: [{ hostname: 'ACROSS-1' }] }],
+        'refuse',
+        tx,
+      )
+      expect(channel.told, 'the announcement went out before the act committed').toEqual([])
+    })
+
+    expect(
+      channel.told.map((one) => one.scopes),
+      'the act committed and nobody was told about the entities it wrote',
+    ).toEqual([['systems']])
+  })
+
+  /**
+   * **An act cannot contain an act.** `asOneAct` opens on the pool, so nesting
+   * one opens a second top-level transaction rather than a savepoint: two acts
+   * committing separately under one name, and a self deadlock wherever the pool
+   * holds a single connection.
+   */
+  it('refuses an act opened inside an act', async () => {
+    await expect(
+      asOneAct(db!, async () => {
+        await asOneAct(db!, () => Promise.resolve())
+      }),
+      'a second act opened on the pool inside the first',
+    ).rejects.toThrow(ComposedWithoutAnAct)
+  })
+
+  /**
+   * **An announcement registered after the act has spoken is refused.** Work
+   * started inside an act and not awaited can still reach `whenCommitted`, and
+   * queueing onto a list nothing reads again loses it in silence -- the same
+   * failure as announcing nothing, in the shape nothing else could find.
+   */
+  it('refuses an announcement registered after the act has spoken', async () => {
+    let late: (() => void) | undefined
+    await asOneAct(db!, () => {
+      late = () => {
+        whenCommitted(() => undefined)
+      }
+      return Promise.resolve()
+    })
+
+    expect(late, 'the act never ran its work').toBeDefined()
+    expect(late).toThrow(ComposedWithoutAnAct)
   })
 })
