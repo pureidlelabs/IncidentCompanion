@@ -9,7 +9,7 @@ import { useEntityTable, type EntityColumn } from '@/components/blocks/data-tabl
 import { useFilters } from '@/components/blocks/filter-set'
 import { FieldToneBadge } from '@/components/blocks/severity-badge'
 import { TlpChip } from '@/components/blocks/tlp-chip'
-import { TLP_NAMES } from '@contract/tlp.lists'
+import { TLP_NAMES, isOlderTlpVersion } from '@contract/tlp.lists'
 import { ButtonLink } from '@/components/ui/button'
 import { Link } from '@/components/ui/link'
 import { ListBoxItem } from '@/components/ui/list-box'
@@ -191,8 +191,24 @@ export function IndicatorsScreen({
                 screen-reader name from a row drawn as an element. */}
             <ListBoxItem id="">No marking</ListBoxItem>
             {TLP_LEVELS.map((level) => (
-              <ListBoxItem key={level} id={level} textValue={`TLP:${level.toUpperCase()}`}>
-                <TlpChip tlp={`TLP:${level.toUpperCase()}`} />
+              <ListBoxItem
+                key={level}
+                id={level}
+                textValue={
+                  isOlderTlpVersion(level)
+                    ? `TLP:${level.toUpperCase()} (TLP 1.0)`
+                    : `TLP:${level.toUpperCase()}`
+                }
+              >
+                <span className="flex items-baseline gap-2">
+                  <TlpChip tlp={`TLP:${level.toUpperCase()}`} />
+                  {/* The one level of the older version, which spells three of
+                      its levels the same as this one and means something else
+                      by AMBER. Said on the row, the chip carrying no version. */}
+                  {isOlderTlpVersion(level) && (
+                    <span className="text-2xs text-ink-muted">TLP 1.0</span>
+                  )}
+                </span>
               </ListBoxItem>
             ))}
           </Select>

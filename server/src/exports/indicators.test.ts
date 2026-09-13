@@ -201,9 +201,14 @@ describe('the STIX bundle', () => {
    */
   it('uses the specification id for a TLP marking', () => {
     const bundle = toStixBundle(indicators, { now: NOW, ids, tlp: 'amber' })
-    const first = (bundle['objects'] as Record<string, unknown>[])[0]!
-    expect(first['object_marking_refs']).toEqual([
-      'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82',
+    const objects = bundle['objects'] as Record<string, unknown>[]
+    // Found rather than indexed: a level that carries its own marking puts
+    // that object in the bundle too, and which comes first is not the subject.
+    const marked = objects.find((one) => one['type'] === 'indicator')
+
+    expect(marked, 'no indicator in the bundle, so nothing was marked').toBeDefined()
+    expect(marked!['object_marking_refs']).toEqual([
+      'marking-definition--55d920b0-5e8b-4f79-9ee9-91f868d9b421',
     ])
   })
 

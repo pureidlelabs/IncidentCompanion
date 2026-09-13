@@ -18,17 +18,25 @@
  * property-extension objects no consumer has by default, so a bundle that
  * only references one is dangling.
  *
- * The vocabulary spans both on purpose: `white` is TLP 1.0 and `clear` its
- * TLP 2.0 successor, so a bundle can be marked for a consumer speaking either.
+ * **The vocabulary is TLP 2.0, and `white` is the one exception.** The two
+ * versions define AMBER differently -- 1.0 admits the recipient's organisation
+ * and its clients, 2.0 the organisation alone, which is what `AMBER+STRICT`
+ * was added to distinguish. Both are spelled `TLP:AMBER`, so resolving a level
+ * to the older id grants a wider audience than the analyst picked and neither
+ * end says so. `white` has no 2.0 successor, being the level `clear` replaced,
+ * so it stays as the way to mark a bundle for a consumer speaking 1.0.
  */
 
-/** TLP 1.0, predefined by STIX 2.1 s7.2.1.4 and referenced without carrying. */
+/**
+ * TLP 1.0, predefined by STIX 2.1 s7.2.1.4 and referenced without carrying.
+ *
+ * One level, because one is all the vocabulary offers. The other three are
+ * spelled the same as their 2.0 successors and mean something else, so the
+ * ids stay out of reach of a level an analyst can pick.
+ */
 const TLP_1_MARKINGS: ReadonlyMap<string, string> = new Map(
   Object.entries({
     white: 'marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9',
-    green: 'marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da',
-    amber: 'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82',
-    red: 'marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed',
   }),
 )
 
@@ -53,10 +61,13 @@ const TLP_2_CREATED = '2022-10-01T00:00:00.000Z'
 const TLP_2_MARKINGS: ReadonlyMap<string, { id: string; name: string }> = new Map(
   Object.entries({
     clear: { id: 'marking-definition--94868c89-83c2-464b-929b-a1a8aa3c8487', name: 'TLP:CLEAR' },
+    green: { id: 'marking-definition--bab4a63c-aed9-4cf5-a766-dfca5abac2bb', name: 'TLP:GREEN' },
+    amber: { id: 'marking-definition--55d920b0-5e8b-4f79-9ee9-91f868d9b421', name: 'TLP:AMBER' },
     'amber+strict': {
       id: 'marking-definition--939a9414-2ddd-4d32-a0cd-375ea402b003',
       name: 'TLP:AMBER+STRICT',
     },
+    red: { id: 'marking-definition--e828b379-4e03-4974-9ac4-e53a884c97c1', name: 'TLP:RED' },
   }),
 )
 
@@ -64,9 +75,19 @@ const TLP_2_MARKINGS: ReadonlyMap<string, { id: string; name: string }> = new Ma
  * The vocabulary, in the order the level tightens.
  *
  * `white` sits beside `clear` rather than in sequence, being the same level
- * under the older version.
+ * under the older version -- and the only one of these that is not TLP 2.0.
  */
 export const TLP_NAMES = ['clear', 'white', 'green', 'amber', 'amber+strict', 'red']
+
+/**
+ * Whether a level is marked under TLP 1.0 rather than 2.0.
+ *
+ * Read by the picker, which otherwise offers `TLP:WHITE` beside five 2.0
+ * levels with nothing to say it means something under a different version.
+ */
+export function isOlderTlpVersion(tlp: string): boolean {
+  return TLP_1_MARKINGS.has(tlp.toLowerCase())
+}
 
 /** The id to reference, or a throw for a level nothing defines. */
 export function tlpMarking(tlp: string): string {
@@ -79,9 +100,9 @@ export function tlpMarking(tlp: string): string {
 /**
  * The objects a bundle has to carry so the marking it references resolves.
  *
- * Empty for a TLP 1.0 level, because those are predefined. For a TLP 2.0 one
- * it is the marking itself, reproduced as published rather than built from a
- * clock. The `extension-definition` it names is deliberately not carried:
+ * Empty for `white`, TLP 1.0's markings being predefined. For every other
+ * level it is the marking itself, reproduced as published rather than built
+ * from a clock. The `extension-definition` it names is deliberately not carried:
  * STIX 2.1 s7.3 leaves that to the producer, and OASIS's own TLP 2.0 examples
  * carry neither.
  */
