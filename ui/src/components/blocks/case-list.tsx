@@ -2,6 +2,7 @@ import { FolderOpen, PlayCircle, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import type { CaseSummary } from '@/api/case'
+import { DOOR_LABELS, SECTIONS } from './case-sections'
 import { casePath } from './case-paths'
 import { matchesCase } from './picker-rows'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
@@ -77,8 +78,8 @@ export interface CaseListProps {
   onTogglePin?: ((caseId: string, pinned: boolean) => void) | undefined
   /** The first way into an empty install. */
   onNewCase?: (() => void) | undefined
-  /** Starts a case and pulls incidents into it. */
-  onImportIncidents?: (() => void) | undefined
+  /** Starts a case and lands in the file importer. */
+  onImportFile?: (() => void) | undefined
   /** Reads a case exported earlier. */
   onImportArchive?: (() => void) | undefined
   /** Leaves for the worked examples. */
@@ -110,7 +111,7 @@ const OVERVIEW = (kase: CaseSummary): string => casePath(kase.id, 'overview')
  */
 function waysIn(doors: {
   onNewCase?: (() => void) | undefined
-  onImportIncidents?: (() => void) | undefined
+  onImportFile?: (() => void) | undefined
   onImportArchive?: (() => void) | undefined
   onDemoCases?: (() => void) | undefined
 }): readonly EmptyOffer[] {
@@ -122,10 +123,10 @@ function waysIn(doors: {
       onSelect: doors.onNewCase,
     },
     {
-      label: 'Import incidents',
-      icon: Upload,
-      hint: 'Start a case and pull incidents in',
-      onSelect: doors.onImportIncidents,
+      label: DOOR_LABELS.import,
+      icon: SECTIONS.import?.icon ?? Upload,
+      hint: 'Start a case and bring rows in from a CSV',
+      onSelect: doors.onImportFile,
     },
     {
       label: 'Import archive',
@@ -154,7 +155,7 @@ export function CaseList({
   onDelete,
   onTogglePin,
   onNewCase,
-  onImportIncidents,
+  onImportFile,
   onImportArchive,
   onDemoCases,
 }: CaseListProps) {
@@ -279,7 +280,7 @@ export function CaseList({
             // shape is for two or three.
             offerShape="stack"
             bounded
-            offers={waysIn({ onNewCase, onImportIncidents, onImportArchive, onDemoCases })}
+            offers={waysIn({ onNewCase, onImportFile, onImportArchive, onDemoCases })}
           />
         ) : (
           <DataTable

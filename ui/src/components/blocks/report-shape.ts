@@ -1,7 +1,6 @@
 import type { Case, Report, ReportBlock } from '@/api/model'
-import { reportBlockLabels } from '@/fixtures/reportBlockKinds'
 
-import { HEADING_LABELS } from './report-layouts'
+import { HEADING_LABELS, labelForKind } from './report-layouts'
 
 /**
  * What the three report screens agree about a report before any of them draws
@@ -64,7 +63,7 @@ export function blocksOf(
 export function headingOf(block: ReportBlock): string {
   if (block.heading) return block.heading
   if (block.headingKey) return HEADING_LABELS[block.headingKey] ?? block.headingKey
-  return reportBlockLabels[block.kind] ?? block.kind
+  return labelForKind(block.kind)
 }
 
 /** Whether the pack answered, or the key stood in for itself. */

@@ -145,6 +145,17 @@ describe('what a section is called', () => {
     expect(headingOf(one)).toBe('Timeline of events')
     expect(headingIsFinal(one)).toBe(true)
   })
+
+  /**
+   * **A written section has no heading key at all**, so it is the one kind
+   * whose label cannot come from the pack. It is also the common path: an
+   * analyst inserts one and does not title it.
+   */
+  it('names an untitled written section rather than drawing its slug', () => {
+    const one = block({ heading: '', headingKey: '', kind: 'written' })
+    expect(headingOf(one)).toBe('Written section')
+    expect(headingIsFinal(one)).toBe(true)
+  })
 })
 
 describe('a report date', () => {
