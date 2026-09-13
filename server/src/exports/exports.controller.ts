@@ -260,7 +260,7 @@ export class ExportsController {
   /**
    * The case's indicators as a feed, in one of two shapes: `csv` is the
    * inventory and `stix` the actionable subset, which are different sets and
-   * not two encodings of one. -> `indicators.ts`
+   * not two encodings of one. -> `../domain/indicators.lists.ts`
    *
    * `tlp` is refused on a format that cannot carry it, rather than ignored.
    */

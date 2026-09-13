@@ -34,11 +34,7 @@ export { pushable }
 /** The case's indicators, in table order. */
 export function collectIndicators(kase: Case): Indicator[] {
   return collect(
-    {
-      networkIndicators: kase.networkIndicators as unknown as Record<string, unknown>[],
-      malware: kase.malware as unknown as Record<string, unknown>[],
-      cloudApps: kase.cloudApps as unknown as Record<string, unknown>[],
-    },
+    { networkIndicators: kase.networkIndicators, malware: kase.malware, cloudApps: kase.cloudApps },
     kase.id,
   )
 }

@@ -266,9 +266,9 @@
 | What leaves the application cannot execute in what opens it | A file that has already been through a spreadsheet | demonstrated | server/src/exports/a-file-round-tripped-through-a-spreadsheet.test.ts |
 | Content that hides what it says is refused before it is stored | A value carries characters that cannot be seen | demonstrated | server/src/exports/method-cells.test.ts |
 | A file has a size the application will accept, and says so when it will not | A file is too large | demonstrated | server/src/exports/csv-import.test.ts |
-| An indicator feed is what a defender can act on | An indicator is recorded as harmless | demonstrated | server/src/exports/indicators.test.ts |
-| An indicator feed is what a defender can act on | A disposition the application does not recognise | demonstrated | server/src/exports/indicators.test.ts |
-| An indicator feed is what a defender can act on | A feed is published for sharing | demonstrated | server/src/exports/indicators.test.ts |
+| An indicator feed is what a defender can act on | An indicator is recorded as harmless | demonstrated | server/src/domain/indicators.lists.test.ts |
+| An indicator feed is what a defender can act on | A disposition the application does not recognise | demonstrated | server/src/domain/indicators.lists.test.ts |
+| An indicator feed is what a defender can act on | A feed is published for sharing | demonstrated | server/src/domain/indicators.lists.test.ts |
 | An indicator feed is what a defender can act on | A restriction is named for a form that cannot carry one | demonstrated | server/src/exports/exports.controller.test.ts |
 | An indicator feed is what a defender can act on | A level two versions of the vocabulary spell alike | demonstrated | server/src/domain/tlp.lists.test.ts |
 | A row says which door it came through, and the install decides that | A row read out of a file | demonstrated | server/src/exports/import.service.test.ts |
