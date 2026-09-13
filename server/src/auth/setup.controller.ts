@@ -32,6 +32,7 @@ import type { Database } from '../db/client.js'
 import { sameAddress } from './same-address.js'
 import { user } from '../db/schema/auth.js'
 import { ADMIN_ROLE, type Auth } from './auth.config.js'
+import { takeTheClaim } from './claim.js'
 import { matchesToken, mintToken } from './setup.token.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from './password-policy.js'
 
@@ -144,6 +145,7 @@ export class SetupController {
       throw new ForbiddenException('That is not this install\u2019s setup token.')
     }
 
+
     /**
      * **In process, never over the loopback.** A POST to this server's own
      * `/api/auth/sign-up/email` has to satisfy the origin check and, behind
@@ -168,10 +170,33 @@ export class SetupController {
      * session to call and this is the bootstrap that produces the first one.
      *
      * **The `where` is load-bearing.** Without it this promotes every row -
-     * harmless only while the install genuinely had no accounts, and a
-     * privilege escalation the moment two callers race the check above.
+     * harmless only while the install genuinely had no accounts.
+     *
+     * **The claim and the promotion are one act, and the database settles it.**
+     * The count above and the sign-up are two statements with a window between
+     * them, and the caller controls the timing -- two claims for different
+     * usernames that both pass the count both reach here. Taking the row in
+     * this transaction means exactly one of them promotes.
+     * -> `auth/claim.ts`
      */
-    await this.db.update(user).set({ role: ADMIN_ROLE }).where(sameAddress(body.username))
+    const won = await this.db.transaction(async (tx) => {
+      if (!(await takeTheClaim(tx))) return false
+      await tx.update(user).set({ role: ADMIN_ROLE }).where(sameAddress(body.username))
+      return true
+    })
+
+    if (!won) {
+      /**
+       * **The losing caller's account is taken back.** It was created a moment
+       * ago by this request and nothing else has touched it, so leaving it
+       * would hand a fresh install an account nobody asked for -- and the
+       * requirement's own words are that an install must not let somebody
+       * create their own.
+       */
+      await this.db.delete(user).where(sameAddress(body.username))
+      throw new ForbiddenException('This install already has an administrator.')
+    }
+
     this.token = null
     this.log.log('This install has been claimed; the setup token is now void.')
     return { claimed: true }

@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 474 |
-| Demonstrated | 371 |
+| Demonstrated | 372 |
 | Undemonstrable | 1 |
-| Unbuilt | 89 |
+| Unbuilt | 88 |
 | Undemonstrated | 13 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
@@ -297,7 +297,7 @@
 | An install can say whether it is well, and what is wrong | A component has started but cannot answer | demonstrated | server/src/health/dependencies.health.test.ts |
 | An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | server/src/health/dependencies.health.test.ts |
 | The application runs with no more than it needs | The application attempts something outside its work | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
-| The application runs with no more than it needs | A part is examined for what it can do | unbuilt | Not built: every container keeps the default capability set. -> #185 |
+| The application runs with no more than it needs | A part is examined for what it can do | demonstrated | tests/docker/test_container_config.py |
 
 ## evaluation
 
