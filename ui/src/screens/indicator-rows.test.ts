@@ -219,22 +219,35 @@ describe('the marking the download carries', () => {
   it.each([
     ['clear', 'marking-definition--94868c89-83c2-464b-929b-a1a8aa3c8487'],
     ['amber+strict', 'marking-definition--939a9414-2ddd-4d32-a0cd-375ea402b003'],
-    ['amber', 'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82'],
+    ['amber', 'marking-definition--55d920b0-5e8b-4f79-9ee9-91f868d9b421'],
   ])('references the published id for %s', (tlp, id) => {
     const referenced = bundle(tlp).objects.flatMap((one) => one.object_marking_refs ?? [])
     expect(referenced, 'the download marked nothing').not.toEqual([])
     expect(referenced, 'a minted marking id, which no consumer resolves').toEqual([id])
   })
 
-  /** A TLP 2.0 marking travels with the bundle; a TLP 1.0 one is predefined. */
+  /**
+   * Every level is TLP 2.0, so every one travels with its own marking object:
+   * a consumer has none of them by default and a bare reference is dangling.
+   */
   it.each([
-    ['amber+strict', 1],
     ['clear', 1],
-    ['amber', 0],
-    ['red', 0],
-  ] as const)('carries %i marking object for %s', (tlp, carried) => {
+    ['green', 1],
+    ['amber', 1],
+    ['amber+strict', 1],
+    ['red', 1],
+  ] as const)('carries %s with %i marking object of its own', (tlp, carried) => {
     const markings = bundle(tlp).objects.filter((one) => one.type === 'marking-definition')
     expect(markings).toHaveLength(carried)
+  })
+
+  /**
+   * `white` is `clear` under the older version of the vocabulary, and the
+   * vocabulary offers one of them. The screen picks from `TLP_NAMES`, so this
+   * is reachable only by a caller composing the query itself.
+   */
+  it('refuses the level the older version called white', () => {
+    expect(() => bundle('white')).toThrow(/No TLP marking/)
   })
 
   it('marks nothing when no level was chosen', () => {

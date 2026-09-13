@@ -16,10 +16,10 @@
  * what was true when it was written. The copy is taken once, when the
  * compliance row is raised. -> `compliance/compliance.service.ts`
  */
-import { bigint, boolean, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
-import { rowVersioning } from './columns.js'
+import { figure, figuresWithinReach, rowVersioning } from './columns.js'
 
 export const customers = pgTable(
   'customers',
@@ -57,8 +57,8 @@ export const customers = pgTable(
      * are asked of are the ones above that line.
      * -> `openspec/specs/compliance/design.md`
      */
-    usersTotalCount: bigint('users_total_count', { mode: 'number' }),
-    annualTurnoverEur: bigint('annual_turnover_eur', { mode: 'number' }),
+    usersTotalCount: figure('users_total_count'),
+    annualTurnoverEur: figure('annual_turnover_eur'),
 
     doraCriticalFunctions: text('dora_critical_functions'),
     doraSupervisedServices: text('dora_supervised_services'),
@@ -73,6 +73,9 @@ export const customers = pgTable(
      * forgotten call site away from two, and the install would then have a
      * default that half the code disagreed about.
      */
-    uniqueIndex('customers_one_default').on(t.isDefault).where(sql`${t.isDefault}`),
+    uniqueIndex('customers_one_default')
+      .on(t.isDefault)
+      .where(sql`${t.isDefault}`),
+    figuresWithinReach('customer_figures_within_reach', t),
   ],
 )
