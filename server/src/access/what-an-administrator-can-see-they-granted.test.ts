@@ -123,6 +123,44 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
       })
     })
 
+
+    /**
+     * **A group that grants no more than the floor did not grant the reach.**
+     *
+     * Every analyst reaches the default customer at `write` by role. A group
+     * that holds the default and grants `write` changes nothing -- so naming
+     * it sends an administrator to revoke a grant, watch the reach stay
+     * exactly as it was, and conclude the screen is lying to them. The grant
+     * is named only where it raises the level above the floor.
+     */
+    it('names the floor, not a group granting no more than the floor', async () => {
+      const [also] = await db!.insert(groups).values({ name: 'Everyone' }).returning()
+      await db!.insert(groupCustomers).values({ groupId: also!.id, customerId: fallback })
+      await db!.insert(groupMembers).values({ groupId: also!.id, userId: SAM, level: 'write' })
+
+      const row = (await reach.reachOf(SAM)).find((one) => one.customerId === fallback)
+
+      expect(row?.level, 'the level changed, so this is not the case it says it is').toBe('write')
+      expect(
+        row?.granted,
+        'a group that grants no more than the floor is named as what grants the reach',
+      ).toEqual({ by: 'default' })
+    })
+
+    it('names the group where it raises the level above the floor', async () => {
+      const [also] = await db!.insert(groups).values({ name: 'Responders' }).returning()
+      await db!.insert(groupCustomers).values({ groupId: also!.id, customerId: fallback })
+      await db!.insert(groupMembers).values({ groupId: also!.id, userId: SAM, level: 'delete' })
+
+      const row = (await reach.reachOf(SAM)).find((one) => one.customerId === fallback)
+
+      expect(row?.level).toBe('delete')
+      expect(row?.granted, 'the grant that raised the level is not the one named').toMatchObject({
+        by: 'group',
+        groupName: 'Responders',
+      })
+    })
+
     it('reports the strongest level where two groups grant one customer', async () => {
       const [second] = await db!.insert(groups).values({ name: 'Night shift' }).returning()
       await db!.insert(groupCustomers).values({ groupId: second!.id, customerId: acme })
@@ -170,6 +208,25 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
         mine.every((one) => one.granted.by === 'default'),
         'the floor is attributed to a group nobody made',
       ).toBe(true)
+    })
+
+    /**
+     * The same question from the other end: a group granting no more than the
+     * floor is not what grants the reach.
+     */
+    it('names the floor from the customer side too', async () => {
+      const [also] = await db!.insert(groups).values({ name: 'Everyone' }).returning()
+      await db!.insert(groupCustomers).values({ groupId: also!.id, customerId: fallback })
+      await db!.insert(groupMembers).values({ groupId: also!.id, userId: SAM, level: 'write' })
+
+      const held = await reach.reachTo(fallback)
+      const mine = held.find((one) => one.userId === SAM)
+
+      expect(mine?.level).toBe('write')
+      expect(
+        mine?.granted,
+        'a group granting no more than the floor is named as what grants the reach',
+      ).toEqual({ by: 'default' })
     })
   })
 

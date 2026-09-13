@@ -86,7 +86,17 @@ export interface ReachingAnalyst {
 function decidedBy(
   rows: readonly { level: Level; groupId: string; groupName: string }[],
   level: Level,
+  /**
+   * What the role alone already grants here, where anything does.
+   *
+   * **A group granting no more than the floor did not grant the reach.**
+   * Naming it sends an administrator to revoke a grant, watch the reach stay
+   * exactly as it was, and conclude the screen is lying to them. Only a group
+   * that raises the level above the floor is what to revoke.
+   */
+  floor?: Level,
 ): Granted {
+  if (floor !== undefined && strongest([floor, level]) === floor) return { by: 'default' }
   const winner = rows.find((row) => row.level === level)
   return winner
     ? { by: 'group', groupId: winner.groupId, groupName: winner.groupName }
@@ -170,14 +180,17 @@ export class ReachService {
     const byCustomer = new Map<string, ReachedCustomer>()
     for (const row of rows) {
       const forThis = rows.filter((one) => one.customerId === row.customerId)
-      const floor = row.customerId === fallback ? [overTheDefault(account?.role ?? null)] : []
-      const level = strongest([...floor, ...forThis.map((one) => one.level)])
+      const floor = row.customerId === fallback ? overTheDefault(account?.role ?? null) : undefined
+      const level = strongest([
+        ...(floor ? [floor] : []),
+        ...forThis.map((one) => one.level),
+      ])
       if (!level) continue
       byCustomer.set(row.customerId, {
         customerId: row.customerId,
         customerName: row.customerName,
         level,
-        granted: decidedBy(forThis, level),
+        granted: decidedBy(forThis, level, floor),
       })
     }
 
@@ -245,18 +258,15 @@ export class ReachService {
 
     for (const row of rows) {
       const forThem = rows.filter((one) => one.userId === row.userId)
-      const floor = byUser.get(row.userId)
-      const level = strongest([
-        ...(floor ? [floor.level] : []),
-        ...forThem.map((one) => one.level),
-      ])
+      const floor = byUser.get(row.userId)?.level
+      const level = strongest([...(floor ? [floor] : []), ...forThem.map((one) => one.level)])
       if (!level) continue
       byUser.set(row.userId, {
         userId: row.userId,
         username: row.username,
         displayName: row.displayName,
         level,
-        granted: decidedBy(forThem, level),
+        granted: decidedBy(forThem, level, floor),
       })
     }
 
