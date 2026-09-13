@@ -69,6 +69,16 @@ export const importedSchema = z.object({
       'Replacements another analyst had already changed or was holding open. ' +
         'Their values are in a merge review; nothing was overwritten.',
     ),
+  unlinked: z
+    .number()
+    .int()
+    .describe(
+      'References the destination case could not resolve. The rows were written ' +
+        'without them; nothing was refused for this.',
+    ),
+  unlinkedBy: z
+    .record(z.string(), z.number().int())
+    .describe('The same total, keyed by the collection the lost references pointed at.'),
 })
 
 class ImportedDto extends createZodDto(importedSchema) {}

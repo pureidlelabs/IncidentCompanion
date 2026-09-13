@@ -44,7 +44,13 @@ export function ImportDataContainer() {
             // `{ added, skipped, replaced, refused }`; passing `refused: []`
             // puts every partial import through the screen's success branch,
             // so a file the server took in part reads as one it took whole.
-            setResult({ collection, written: written.added, refused: written.refused })
+            setResult({
+              collection,
+              written: written.added,
+              refused: written.refused,
+              unlinked: written.unlinked,
+              unlinkedBy: written.unlinkedBy,
+            })
           },
         )
       }}
