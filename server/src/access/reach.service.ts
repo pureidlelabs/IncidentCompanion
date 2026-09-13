@@ -19,7 +19,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { user } from '../db/schema/auth.js'
 import { customers } from '../db/schema/customer.js'
-import { groupCustomers, groupMembers } from '../db/schema/groups.js'
+import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
 
 export type Level = 'read' | 'write' | 'delete'
 
@@ -49,6 +49,59 @@ const strongest = (levels: readonly Level[]): Level | null =>
  */
 const overTheDefault = (role: string | null): Level =>
   role === ADMIN_ROLE ? 'delete' : 'write'
+
+
+/**
+ * Why somebody reaches a customer: a group that holds it, or the floor.
+ *
+ * **The floor is not a grant.** Every analyst reaches the default customer by
+ * role, so attributing it to a group would send an administrator looking for
+ * one to revoke that nobody made.
+ */
+export type Granted = { by: 'group'; groupId: string; groupName: string } | { by: 'default' }
+
+/** One customer an account reaches, and why. */
+export interface ReachedCustomer {
+  customerId: string
+  customerName: string
+  level: Level
+  granted: Granted
+}
+
+/** One analyst who reaches a customer, and why. */
+export interface ReachingAnalyst {
+  userId: string
+  username: string
+  displayName: string
+  level: Level
+  granted: Granted
+}
+
+/**
+ * The grant that decided a level, from the rows that produced it.
+ *
+ * **The strongest one, because that is the level.** Naming any other grant
+ * tells an administrator to revoke something that would change nothing.
+ */
+function decidedBy(
+  rows: readonly { level: Level; groupId: string; groupName: string }[],
+  level: Level,
+  /**
+   * What the role alone already grants here, where anything does.
+   *
+   * **A group granting no more than the floor did not grant the reach.**
+   * Naming it sends an administrator to revoke a grant, watch the reach stay
+   * exactly as it was, and conclude the screen is lying to them. Only a group
+   * that raises the level above the floor is what to revoke.
+   */
+  floor?: Level,
+): Granted {
+  if (floor !== undefined && strongest([floor, level]) === floor) return { by: 'default' }
+  const winner = rows.find((row) => row.level === level)
+  return winner
+    ? { by: 'group', groupId: winner.groupId, groupName: winner.groupName }
+    : { by: 'default' }
+}
 
 @Injectable()
 export class ReachService {
@@ -92,6 +145,132 @@ export class ReachService {
       .from(user)
       .where(eq(user.id, userId))
     return strongest([overTheDefault(account?.role ?? null), ...granted])
+  }
+
+
+  /**
+   * Every customer this account reaches, with the level and what granted it.
+   *
+   * **The question an administrator asks after granting**, which the reach
+   * model could answer and nothing exposed. Resolved here rather than in a
+   * controller so it obeys the same *most permissive applies* rule every other
+   * reader does.
+   */
+  async reachOf(userId: string): Promise<ReachedCustomer[]> {
+    const rows = await this.db
+      .select({
+        customerId: groupCustomers.customerId,
+        customerName: customers.name,
+        level: groupMembers.level,
+        groupId: groups.id,
+        groupName: groups.name,
+      })
+      .from(groupMembers)
+      .innerJoin(groupCustomers, eq(groupCustomers.groupId, groupMembers.groupId))
+      .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+      .innerJoin(customers, eq(customers.id, groupCustomers.customerId))
+      .where(eq(groupMembers.userId, userId))
+
+    const [account] = await this.db
+      .select({ role: user.role })
+      .from(user)
+      .where(eq(user.id, userId))
+    const fallback = await this.defaultCustomerId()
+
+    const byCustomer = new Map<string, ReachedCustomer>()
+    for (const row of rows) {
+      const forThis = rows.filter((one) => one.customerId === row.customerId)
+      const floor = row.customerId === fallback ? overTheDefault(account?.role ?? null) : undefined
+      const level = strongest([
+        ...(floor ? [floor] : []),
+        ...forThis.map((one) => one.level),
+      ])
+      if (!level) continue
+      byCustomer.set(row.customerId, {
+        customerId: row.customerId,
+        customerName: row.customerName,
+        level,
+        granted: decidedBy(forThis, level, floor),
+      })
+    }
+
+    // **The default is reached whether or not a group names it.** An analyst in
+    // no group reaches it and nothing else, which is the answer an
+    // administrator needs when they ask why somebody sees an unattributed case.
+    if (fallback && !byCustomer.has(fallback)) {
+      const [row] = await this.db
+        .select({ name: customers.name })
+        .from(customers)
+        .where(eq(customers.id, fallback))
+      byCustomer.set(fallback, {
+        customerId: fallback,
+        customerName: row?.name ?? '',
+        level: overTheDefault(account?.role ?? null),
+        granted: { by: 'default' },
+      })
+    }
+
+    return [...byCustomer.values()]
+  }
+
+  /**
+   * Every analyst who reaches this customer, with the level and what granted it.
+   *
+   * The same question from the other end, which the requirement asks for by
+   * name: *the same MUST be answerable from the other end -- for a customer,
+   * who reaches it and how*.
+   */
+  async reachTo(customerId: string): Promise<ReachingAnalyst[]> {
+    const rows = await this.db
+      .select({
+        userId: groupMembers.userId,
+        username: user.email,
+        displayName: user.name,
+        level: groupMembers.level,
+        groupId: groups.id,
+        groupName: groups.name,
+      })
+      .from(groupMembers)
+      .innerJoin(groupCustomers, eq(groupCustomers.groupId, groupMembers.groupId))
+      .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+      .innerJoin(user, eq(user.id, groupMembers.userId))
+      .where(eq(groupCustomers.customerId, customerId))
+
+    const fallback = await this.defaultCustomerId()
+    const byUser = new Map<string, ReachingAnalyst>()
+
+    if (customerId === fallback) {
+      // Every account reaches the default, so the answer starts from the roster
+      // rather than from the groups.
+      const everybody = await this.db
+        .select({ userId: user.id, username: user.email, displayName: user.name, role: user.role })
+        .from(user)
+      for (const who of everybody) {
+        byUser.set(who.userId, {
+          userId: who.userId,
+          username: who.username,
+          displayName: who.displayName,
+          level: overTheDefault(who.role),
+          granted: { by: 'default' },
+        })
+      }
+    }
+
+    for (const row of rows) {
+      const forThem = rows.filter((one) => one.userId === row.userId)
+      const floor = byUser.get(row.userId)?.level
+      const level = strongest([...(floor ? [floor] : []), ...forThem.map((one) => one.level)])
+      if (!level) continue
+      byUser.set(row.userId, {
+        userId: row.userId,
+        username: row.username,
+        displayName: row.displayName,
+        level,
+        granted: decidedBy(forThem, level, floor),
+      })
+    }
+
+    return [...byUser.values()]
   }
 
   /**

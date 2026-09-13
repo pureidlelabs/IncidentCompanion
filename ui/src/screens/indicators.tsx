@@ -19,7 +19,7 @@ import { cn } from '@/lib/cn'
 import {
   actionableCount,
   collectIndicators,
-  isActionable,
+  pushable,
   indicatorsCsv,
   indicatorsStix,
   matchesIndicator,
@@ -35,13 +35,15 @@ import {
  * preview of the export rather than an editable surface. The export row is the
  * section's footer, so it stays pinned while a long list scrolls under it.
  *
- * **CSV leaves from here; the bundle does not.** The rows are derived in the
- * browser, so the file is built in the browser and handed over on a real
- * `<a download>` - the marking and the filters both reach it, because it is
- * built from what is on screen. A STIX bundle is assembled by the export
- * route, which this tier has none of, so that control is drawn disabled and
- * says so rather than producing a file that would not be the one the app
- * ships.
+ * **Both files leave from here.** The rows are derived in the browser, so both
+ * are built in the browser and handed over on a real `<a download>`; the
+ * filters reach both, because each is built from what is on screen. What they
+ * carry is `@contract/indicators.lists`, which the export route reads too, so
+ * the two doors cannot drift apart again.
+ *
+ * **The marking governs the bundle alone.** A CSV carries no handling
+ * restriction -- the route refuses the parameter on that form -- so the
+ * control says which file it marks rather than appearing to mark both.
  */
 export interface IndicatorsScreenProps {
   kase: Case | undefined
@@ -86,7 +88,7 @@ export function IndicatorsScreen({
 
   const rows = useMemo(() => (kase ? collectIndicators(kase) : []), [kase])
   const kinds = useMemo(() => [...new Set(rows.map((row) => row.type))].sort(), [rows])
-  const actionable = actionableCount(rows)
+  const inTheBundle = actionableCount(rows)
 
   const filters = useFilters([
     {
@@ -100,7 +102,7 @@ export function IndicatorsScreen({
     {
       key: 'push',
       label: 'Push',
-      options: [{ value: 'actionable', label: 'Actionable only', count: actionable }],
+      options: [{ value: 'actionable', label: 'In the bundle', count: inTheBundle }],
     },
   ])
   const types = filters.chosen('type')
@@ -111,7 +113,7 @@ export function IndicatorsScreen({
       rows.filter((row) => {
         if (!matchesIndicator(row, query)) return false
         if (types.length && !types.includes(row.type)) return false
-        if (actionableOnly && !isActionable(row)) return false
+        if (actionableOnly && !pushable(row)) return false
         return true
       }),
     [rows, query, types, actionableOnly],
@@ -134,10 +136,12 @@ export function IndicatorsScreen({
    * observe starting.
    */
   const csvHref = useMemo(
-    () => `data:text/csv;charset=utf-8,${encodeURIComponent(indicatorsCsv(visible, tlp))}`,
-    [visible, tlp],
+    () => `data:text/csv;charset=utf-8,${encodeURIComponent(indicatorsCsv(visible))}`,
+    [visible],
   )
-  const csvName = `indicators${tlp ? `-tlp-${tlp}` : ''}.csv`
+  // **No marking in the name either.** A CSV carries no handling
+  // restriction, so naming one claims something the file does not say.
+  const csvName = 'indicators.csv'
   const stixHref = useMemo(
     () => `data:application/json;charset=utf-8,${encodeURIComponent(indicatorsStix(visible, tlp))}`,
     [visible, tlp],
@@ -147,7 +151,7 @@ export function IndicatorsScreen({
   return (
     <Collection
       title="Indicators"
-      meta={`${String(rows.length)} derived, ${String(actionable)} actionable`}
+      meta={`${String(rows.length)} derived, ${String(inTheBundle)} in the bundle`}
       actions={kase ? <SourceLinks caseId={kase.id} /> : null}
       read={{
         isPending: busy,
@@ -165,9 +169,11 @@ export function IndicatorsScreen({
       {...(bundleWouldBeEmpty
         ? {
             notice: {
-              title: 'Every indicator in this case is benign',
+              title: 'Nothing in this case would reach the bundle',
               detail:
-                'The bundle would leave with no objects in it. Set a disposition on the rows worth pushing first.',
+                'A bundle carries the indicators worth acting on, and only the kinds a STIX ' +
+                'pattern can express. Every row here is either cleared or a kind no pattern ' +
+                'describes.',
             },
           }
         : {})}
@@ -179,8 +185,8 @@ export function IndicatorsScreen({
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
           <Select
-            label="Marking"
-            aria-label="TLP marking"
+            label="Bundle marking"
+            aria-label="TLP marking for the STIX bundle"
             selectedKey={tlp}
             className="w-48"
             onSelectionChange={(key) => {

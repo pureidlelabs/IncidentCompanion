@@ -40,6 +40,16 @@ It comes from the address the install is reached at rather than from its own con
 
 **An address that cannot be parsed yields nothing.** Failing to an empty set means the install refuses its own requests and somebody notices. Failing open means it accepts everybody's and nobody does.
 
+## Refusing the unprotected spelling is conditional on where the install is
+
+An install reached at a name of its own tells the browser to refuse the unprotected spelling of that name. One reached at a loopback address does not: a loopback address is every application on that machine rather than this one, so the instruction reaches far past the install giving it and cannot be withdrawn by it.
+
+The decision is made from where the install is actually reached, which is the value the trusted set is already derived from. Two layers answer it -- the edge from the host a request arrived at, the application from its own base URL -- and they answer it the same way, so a deployment that terminates TLS at the edge and one that does not cannot disagree.
+
+**The instruction is never extended below the name it was given at, and never submitted to a browser's preload list.** The first would speak for names the install does not serve; the second is a list no install can withdraw itself from, which makes a reversible decision permanent.
+
+The boundary: an install reached over plain http is told nothing, because a browser is required to ignore this instruction when it does not arrive protected.
+
 ## The page is served last, and never under the interface
 
 Any path that is not the interface is answered with the application's page, so reloading the browser on a case does not lose it.

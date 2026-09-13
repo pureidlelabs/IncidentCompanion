@@ -30,7 +30,22 @@ export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0]
  */
 export function createPool(url: string): Pool {
   const max = Number(process.env.PG_POOL_MAX)
-  const pool = new Pool({ connectionString: url, ...(max > 0 ? { max } : {}) })
+  const pool = new Pool({
+    connectionString: url,
+    ...(max > 0 ? { max } : {}),
+    /**
+     * **A deadline, because the wait that needs one is unexplainable without
+     * it.** A read issued against the pool from inside an open transaction
+     * holds one connection while asking for another; a full pool queues the
+     * second ask, and with no deadline it queues it with no bound -- so the
+     * request, the suite and the tier all stop with nothing said.
+     *
+     * This does not prevent the mistake. `db/scope.ts` is what says a read goes
+     * on the handle it was given; this makes breaking that rule reportable.
+     * -> `a-pool-with-none-left-says-so.test.ts`, which measures it
+     */
+    connectionTimeoutMillis: 10_000,
+  })
 
   /**
    * **`PG_ADOPT_ROLE_FROM_URL` is off in normal use and must stay off** - a

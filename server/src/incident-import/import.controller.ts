@@ -28,6 +28,7 @@ import { z } from 'zod'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { CasesService } from '../cases/cases.service.js'
+import { asOneAct } from '../db/act.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import {
@@ -163,7 +164,7 @@ export class StartImportController {
     description: 'The case that was created, and what the incident put in it.',
   })
   async start(@Body() body: StartBodyDto, @Session() session: UserSession) {
-    return this.db.transaction(async (tx) => {
+    return asOneAct(this.db, async (tx) => {
       const created = await this.cases.create(
         {
           title: body.title,
