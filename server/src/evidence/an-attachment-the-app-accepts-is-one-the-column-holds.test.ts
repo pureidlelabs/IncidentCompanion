@@ -25,7 +25,7 @@ import { EVIDENCE_CEILING_MEGABYTES } from '../policy/keys.js'
 /** What an operator may set the attachment ceiling to, in bytes. */
 const MOST_AN_OPERATOR_MAY_ALLOW = EVIDENCE_CEILING_MEGABYTES * 1024 * 1024
 
-/** `int4`, which is what the column used to be. */
+/** The narrower of the two type ceilings, and the one being ruled out. */
 const INT4_CEILING = 2_147_483_647
 
 describe('the column that records an attachment size', () => {
