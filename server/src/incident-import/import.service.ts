@@ -30,6 +30,45 @@ function candidateId(incident: string, identity: string): string {
 }
 
 /**
+ * What an index already holds for a row, trying its identities strongest first.
+ *
+ * **Strongest first, then weaker.** A row is recognised by less than it was
+ * named with: a cloud app arriving with its instance has to try the bare name
+ * too, or it is a second copy of one already there. It has an effect only where
+ * a collection's identity has rungs -- `cloud_apps` and a scope-bearing network
+ * indicator. A host does not: `systems` is keyed on the hostname alone, one
+ * rung, whatever else the provider sends with it. -> `domain/identity.ts`
+ */
+function knownBy(
+  index: ReadonlyMap<string, string>,
+  identities: readonly string[],
+): string | undefined {
+  return identities.map((one) => index.get(one)).find((id) => id !== undefined)
+}
+
+const stated = (value: unknown): boolean => value !== undefined && value !== null && value !== ''
+
+/**
+ * Fill a candidate's blanks from another incident's naming of the same thing.
+ *
+ * **Blanks only, so the row does not depend on which incident came first.** A
+ * cloud app named with its instance by one incident and without by the other is
+ * one row either way, and it carries the instance either way. A field both
+ * namings state, and state differently, keeps the first proposer's value.
+ */
+function enrich(candidate: Candidate, mapped: { fields: Record<string, unknown>; label: string }) {
+  let widened = false
+  for (const [field, value] of Object.entries(mapped.fields)) {
+    if (!stated(value) || stated(candidate.fields[field])) continue
+    candidate.fields[field] = value
+    widened = true
+  }
+  // The label is derived from the fields, so a naming that widened them
+  // describes the widened row better than the one that did not.
+  if (widened && mapped.label) candidate.label = mapped.label
+}
+
+/**
  * Refuses a commit naming rows the freshly built plan does not hold.
  *
  * Throws `UnprocessableEntityException` naming how many were not found.
@@ -119,6 +158,9 @@ export class ImportService {
    * The verdict for every candidate comes from the rows in this case now, so
    * an entity another analyst added a minute ago is `existing` here rather
    * than a duplicate written a minute later.
+   *
+   * **The plan is indexed against itself as well**, so several incidents
+   * naming one thing propose it once, attributed to the first of them.
    */
   async preview(
     caseId: string | null,
@@ -130,6 +172,8 @@ export class ImportService {
     const entities: Candidate[] = []
     const timeline: TimelineCandidate[] = []
     const seen = new Map<string, Candidate>()
+    /** An identity to the candidate already proposing it, from any incident. */
+    const planned = new Map<string, string>()
     const existing = caseId
       ? await this.existingByIdentity(caseId, defs, on)
       : new Map<string, string>()
@@ -150,16 +194,27 @@ export class ImportService {
           continue
         }
 
+        // **The plan indexes its own rows as it goes, not only the case's.**
+        // `candidateId` carries the incident key, so two incidents naming one
+        // host are two ids that never collide and both get written. The later
+        // entity points at the candidate the first proposed, which is what
+        // keeps its own alert linked to the row rather than to nothing.
+        const already = knownBy(planned, mapped.identities)
+        if (already !== undefined) {
+          byRef.set(parsed.ref, already)
+          const first = seen.get(already)
+          // **Widened rather than discarded.** The later naming can carry a
+          // field the first left blank -- an app's instance, an address's
+          // scope -- and dropping it would lose material the import was given
+          // and count nothing, where two rows at least carried both.
+          if (first) enrich(first, mapped)
+          continue
+        }
+
         const id = candidateId(incident.key, mapped.identity)
         byRef.set(parsed.ref, id)
-        if (seen.has(id)) continue
 
-        // **Strongest first, then weaker.** A stored row is keyed on the
-        // columns its table has, which can be less than the provider gives --
-        // so an incoming host carrying a domain has to try the domain-less form
-        // or it imports a second copy of a host already here.
-        const match =
-          mapped.identities.map((one) => existing.get(one)).find((id) => id !== undefined) ?? null
+        const match = knownBy(existing, mapped.identities) ?? null
         const candidate: Candidate = {
           id,
           incident: incident.key,
@@ -172,6 +227,7 @@ export class ImportService {
           checked: !match && startsChecked(mapped),
         }
         seen.set(id, candidate)
+        for (const one of mapped.identities) planned.set(one, id)
         entities.push(candidate)
       }
 

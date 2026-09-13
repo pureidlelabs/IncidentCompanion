@@ -42,6 +42,20 @@ The alternative is holding the proposed rows server-side between the two, which 
 
 **Matching is done against the store, not against what the browser was told.** The preview a browser holds is a snapshot, and a case is not. Deciding what is a duplicate against the snapshot would duplicate anything another analyst added while the import was being read.
 
+## The plan is an index of its own rows, as well as of the case's
+
+Two things are matched against: the rows the case holds, and the rows the plan has already proposed. The second index is built as the plan is derived — a row that matches nothing is added to it before the next row is judged — and both are asked with the same walk down a row's identities, strongest naming first. One index and one rule, because two indexes answering the same question by different rules diverge a field at a time, and the symptom is a table that doubles.
+
+Without it, each proposed row is judged only against a case that does not hold it yet, so several incidents naming one thing each propose it and each write it.
+
+**A candidate names one incident, and that decides which proposal survives.** The preview is grouped by incident and a row has to be attributable to the one that proposed it, so the first proposal keeps the row and later ones point their events at it. The boundary: a row does not record the other incidents that named it, and an analyst reading the preview sees it under the first alone.
+
+**The surviving row is widened by the namings that followed, never only the first.** A later naming can state a field the first left blank, and keeping the first alone would make the row depend on which incident the import happened to list first — losing a qualifier in one order and keeping it in the other, with nothing counting the difference. Blanks are filled; a field two namings both state, and state differently, keeps the first proposer's value, which the analyst corrects in the preview like any other. That second case is the boundary: it is a choice between two stated values rather than material nobody was going to see.
+
+**Two namings match only where the identity rules say they do, and for some collections they do not.** An identity may be exclusive — a thing named with a digest is known by the digest and by nothing weaker — so the same binary arriving once with a hash and once with only a filename is two things to these rules, in either order. That is `domain/identity.ts`'s position and its own record says the position is wrong; it is not this arrangement's to correct, and the collapse described here reaches exactly as far as the identities do.
+
+**The collapse is at the point of naming, never at the point of writing.** A preview that offers rows the write then merges is one that does not describe the act it is previewing.
+
 ## A correction goes through the ordinary write path
 
 An analyst's correction is validated by the same description that governs the collection, and the write goes through the same path as any other. An import is a source of proposed values, never a second way into the store, so the case-boundary check and the attribution come along without being re-implemented.
