@@ -6,6 +6,8 @@
  * Columns come from the Drizzle table through `getTableColumns`, never a
  * hand-written list, so a new column exports with nothing to remember.
  */
+import { randomUUID } from 'node:crypto'
+
 import {
   BadRequestException,
   NotFoundException,
@@ -24,7 +26,12 @@ import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 import { eq, getTableColumns } from 'drizzle-orm'
 
 import { toCsv } from './csv.js'
-import { collect, toCsvRows, toStixBundle, INDICATOR_CSV_COLUMNS } from './indicators.js'
+import {
+  collect,
+  toCsvRows,
+  toStixBundle,
+  INDICATOR_CSV_COLUMNS,
+} from '../domain/indicators.lists.js'
 import { TLP_NAMES } from '../domain/tlp.lists.js'
 import { MAX_CSV_BYTES } from './csv-import.js'
 import { ImportService, type ImportResult } from './import.service.js'
@@ -253,7 +260,7 @@ export class ExportsController {
   /**
    * The case's indicators as a feed, in one of two shapes: `csv` is the
    * inventory and `stix` the actionable subset, which are different sets and
-   * not two encodings of one. -> `indicators.ts`
+   * not two encodings of one. -> `../domain/indicators.lists.ts`
    *
    * `tlp` is refused on a format that cannot carry it, rather than ignored.
    */
@@ -295,7 +302,7 @@ export class ExportsController {
      */
     if (fmt === 'stix') {
       response.type('application/json')
-      return JSON.stringify(toStixBundle(found, { now: new Date(), tlp }), null, 2)
+      return JSON.stringify(toStixBundle(found, { now: new Date(), tlp, ids: randomUUID }), null, 2)
     }
     response.type('text/csv')
     return toCsv(toCsvRows(found), [...INDICATOR_CSV_COLUMNS])
