@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint .",
     "check": "npm run typecheck && vitest run",
-    "dev": "NODE_ENV=development nest start --watch",
+    "dev": "NODE_ENV=\"${NODE_ENV:-development}\" nest start --watch",
     "repl": "nest start --entryFile repl",
     "start": "node dist/src/main.js",
     "seed": "node dist/src/seed.js",

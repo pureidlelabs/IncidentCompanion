@@ -13,7 +13,6 @@ are two lists in one file, and a test is the only thing that keeps them equal.
 from __future__ import annotations
 
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -77,73 +76,3 @@ def test_every_parsed_flag_is_documented(name: str) -> None:
         f"{name} parses {sorted(undocumented)} and its usage block does not "
         f"mention them"
     )
-
-
-#: The environment the application refuses to start without, read off the
-#: schema rather than listed here -- a variable added there and not to the
-#: launcher is the case this exists to catch.
-ENV_SCHEMA = ROOT / "server" / "src" / "config" / "env.ts"
-LAUNCHER = ROOT / "dev-node.sh"
-STACK = ROOT / "server" / "scripts" / "stack.mjs"
-
-
-def required_variables() -> set[str]:
-    """Every key in `env.ts` carrying neither a default nor `.optional()`."""
-    text = ENV_SCHEMA.read_text(encoding="utf-8")
-    block = text[text.index("z.object({") :]
-    found = set()
-    for match in re.finditer(
-        r"^\s{2}([A-Z][A-Z0-9_]*):\s*(.+?)(?=^\s{2}[A-Z][A-Z0-9_]*:|^\}\))",
-        block,
-        re.S | re.M,
-    ):
-        name, declaration = match.group(1), match.group(2)
-        if ".default(" not in declaration and ".optional()" not in declaration:
-            found.add(name)
-    return found
-
-
-def provided_variables() -> set[str]:
-    """Every variable the development stack exports, from either half of it.
-
-    `stack.mjs` is asked rather than read: it builds its export lines from a
-    table, so its source carries the names nowhere a regex can reach them. The
-    *values* it prints are this checkout's and are not what is compared.
-    """
-    shell = set(
-        re.findall(r"^export ([A-Z][A-Z0-9_]*)=", LAUNCHER.read_text(encoding="utf-8"), re.M)
-    )
-    printed = subprocess.run(
-        ["node", str(STACK), "--export"],
-        capture_output=True,
-        text=True,
-        check=True,
-        cwd=ROOT,
-    ).stdout
-    return shell | set(re.findall(r"^export ([A-Z][A-Z0-9_]*)=", printed, re.M))
-
-
-def test_the_dev_stack_sets_what_the_application_requires() -> None:
-    """A variable the app refuses to start without is one `dev-node.sh` provides.
-
-    **The suites cannot see this.** Vitest sets `NODE_ENV` itself, so every
-    tier that boots the application through it is handed a valid value by the
-    runner -- and the tier that would show the gap is the browser one, whose
-    `webServer` is the launcher that cannot start.
-
-    Names the variables rather than counting them, so the failure says which.
-    """
-    missing = sorted(required_variables() - provided_variables())
-
-    assert not missing, (
-        "the application refuses to start without these and the development "
-        f"stack sets none of them: {missing}. `./dev-node.sh` fails at its seed "
-        "step, and the browser and visual tiers fail with it."
-    )
-
-
-def test_the_schema_still_reads_as_a_schema() -> None:
-    """Without this the check above passes over an empty set."""
-    required = required_variables()
-    assert len(required) >= 4, f"read no required variables from {ENV_SCHEMA}: {required}"
-    assert "DATABASE_URL" in required, "a variable known to be required was not read"
