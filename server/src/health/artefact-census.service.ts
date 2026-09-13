@@ -1,31 +1,13 @@
 /**
  * What this install expects to find beside it, and what it cannot.
  *
- * **A database copy names its artefacts implicitly** -- every evidence row
- * carries the digest of the file it stands for -- and nothing read that at
- * start. So an operator who restored the database and forgot the artefact
- * directory had an install that looked entirely well until an analyst opened
- * a case with evidence on it, which is the discovery route the requirement
- * rules out in those words. -> `openspec/specs/state/spec.md`
- *
- * **Existence, never content.** Nothing here opens, expands or interprets an
- * artefact; whether a name is present in the directory is the whole question.
- *
- * **One directory listing, not a `stat` per row.** The answer is a set
- * difference, and an install holds as many artefacts as it has evidence -- a
- * `stat` apiece is a cost that grows with the case load for an answer one read
- * already contains.
- *
- * **Case by case, because the question is install-wide and the table is not.**
- * `evidence` is case-scoped, and row-level security answers an unscoped read
- * with an empty table rather than with an error -- so the obvious single query
- * reports *nothing expected* on every install, which is the same answer a
- * healthy one gives. Scoping to each case in turn asks only what the
- * application may already ask, and costs a transaction per case once per
- * census. -> `db/schema/scoped.ts`, `db/case-scope.test.ts`
+ * Counts the artefacts the evidence rows say this install holds against the
+ * names in `EVIDENCE_DIR`. Reads names, never bytes, and never throws for an
+ * absent directory. -> `openspec/specs/state/design.md`
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { isNotNull } from 'drizzle-orm'
 import { readdir } from 'node:fs/promises'
 
 import { DATABASE } from '../db/db.module.js'
@@ -42,13 +24,7 @@ export interface Census {
   missing: number
 }
 
-/**
- * The line this install says at start, or null when it has nothing to say.
- *
- * **Never a refusal to start.** An install short of an artefact still holds
- * every case and every record, so failing here would take the whole product
- * away to report a gap in part of it.
- */
+/** The line this install says at start, or null when it has nothing to say. */
 export function saysAtStart(held: Census): { level: 'log' | 'warn'; message: string } | null {
   if (held.expected === 0) return null
   if (held.missing === 0) {
@@ -74,7 +50,7 @@ export class ArtefactCensus {
   ) {}
 
   /**
-   * Count what the rows name against what is on disk.
+   * Count what this install holds against what is on disk.
    *
    * A directory that is not there is read as holding nothing, which is the
    * state this exists to report rather than an error to raise: an install
@@ -83,15 +59,15 @@ export class ArtefactCensus {
   async take(): Promise<Census> {
     const open = await this.db.select({ id: cases.id }).from(cases)
 
-    // **Deduplicated once, here.** Two rows naming one artefact are one file,
-    // and so are two cases holding the same one; a second pass anywhere else
-    // would be a copy of that claim that nothing can tell apart from this one
-    // when either breaks.
+    // Deduplicated once, here: two rows naming one artefact are one file, and
+    // so are two cases holding the same one.
     const wanted = new Set<string>()
     for (const one of open) {
       const named = await withCase(this.db, one.id, (tx) =>
-        tx.select({ hash: evidence.hash }).from(evidence),
+        tx.select({ hash: evidence.hash }).from(evidence).where(isNotNull(evidence.storedAt)),
       )
+      // A row cannot be stored without the digest it is stored under; the
+      // check is what narrows the column's type, not a second filter.
       for (const row of named) if (row.hash) wanted.add(row.hash)
     }
     if (wanted.size === 0) return { expected: 0, missing: 0 }

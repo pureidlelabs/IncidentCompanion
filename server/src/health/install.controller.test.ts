@@ -139,10 +139,16 @@ describe('the install settings document', () => {
     expect(storage.artefacts.missing, 'an install short of its evidence reports none gone').toBe(3)
   })
 
-  it('reports nothing missing on an install that holds them all', async () => {
+  /**
+   * **Both numbers, so the case is not answered by the one above it.** An
+   * assertion on `missing` alone passes against a field pinned to zeroes,
+   * which is exactly the mistake the other case catches -- two tests failing
+   * only together are one test.
+   */
+  it('still says what it expects on an install that holds them all', async () => {
     const storage = (await settingsOf(undefined, { expected: 12, missing: 0 })).storage
 
-    expect(storage.artefacts.missing).toBe(0)
+    expect(storage.artefacts).toEqual({ expected: 12, missing: 0 })
   })
 })
 

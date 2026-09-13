@@ -3,14 +3,7 @@
  *
  * *A copy of the database MUST name which artefacts it expects to find beside
  * it, so that a restore can say what is missing rather than discovering it
- * when somebody opens a case.* An operator who restored the database and
- * forgot the artefact directory had an install that read as entirely well
- * until an analyst opened a case with evidence on it, which is the discovery
- * route the requirement names and rules out. -> #179
- *
- * **Existence, never content.** `state` is explicit that nothing may expand,
- * execute or interpret an artefact to decide what it is, and whether a file is
- * there is all this needs. The census reads names, never bytes.
+ * when somebody opens a case.* -> #179, `openspec/specs/state/design.md`
  *
  * **What this does not cover:** what a case does when it opens an artefact
  * that is not there, which is `report/render.service.ts`'s and is already
@@ -41,11 +34,15 @@ const pool = SEED ? openTestPool(SEED, 'ic_seed') : null
 const db = pool ? drizzle({ client: pool }) : null
 
 /**
- * **The role the server actually runs as**, which is the whole of the second
- * case below. `ic_seed` reads across every case by policy, so a census
- * measured only on the seed handle certifies a query that answers nothing on
- * a real install -- and answering nothing is indistinguishable from an install
- * that holds every artefact it expects.
+ * **The role the server actually runs as.** `ic_seed` reads across every case
+ * by policy, so a census measured only on the seed handle certifies a query
+ * that answers nothing on a real install -- and answering nothing is
+ * indistinguishable from an install that holds every artefact it expects.
+ *
+ * **The whole file skips together rather than this one case alone.** It is the
+ * only guard on that defect, so a run with `SEED_DATABASE_URL` set and
+ * `DATABASE_URL` unset would drop it while the rest of the file reported a
+ * clean pass -- the silent-partial-skip shape, on the case that matters most.
  */
 const APP = process.env['DATABASE_URL'] ?? ''
 const appPool = APP ? openTestPool(APP, 'ic_app') : null
@@ -54,15 +51,19 @@ const appDb = appPool ? drizzle({ client: appPool }) : null
 const ANALYST = 'census-analyst'
 const hashFor = (what: string) => what.padEnd(64, '0')
 
-describe.skipIf(!db)('what an install can find beside it', () => {
+describe.skipIf(!db || !appDb)('what an install can find beside it', () => {
   let root = ''
   let caseId = ''
-  // Every case made here, because `beforeEach` makes one per test and this
-  // suite shares its database with every other file.
+  // Every case and every directory made here, because `beforeEach` makes one
+  // of each per test: this suite shares its database with every other file,
+  // and removing only the last directory leaks one per case into `$TMPDIR` on
+  // every run, CI included.
   const made: string[] = []
+  const roots: string[] = []
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ic-census-'))
+    roots.push(root)
     const now = new Date()
     await db!
       .insert(user)
@@ -81,18 +82,38 @@ describe.skipIf(!db)('what an install can find beside it', () => {
   })
 
   afterAll(async () => {
-    await rm(root, { recursive: true, force: true })
+    for (const one of roots) await rm(one, { recursive: true, force: true })
     await db!.delete(cases).where(inArray(cases.id, made))
     await db!.delete(user).where(eq(user.id, ANALYST))
     await pool?.end()
     await appPool?.end()
   })
 
+  /**
+   * An artefact this install holds the bytes of.
+   *
+   * **`storedAt` is what says so, and it is the point of the fixture.** A row
+   * carrying only a digest is evidence held somewhere else, which this install
+   * is not short of and must not report. -> `db/schema/entities.ts`
+   */
   const record = async (hash: string) => {
     await db!.insert(evidence).values({
       caseId,
       name: `artefact ${hash.slice(0, 4)}`,
       hash,
+      storedAt: new Date(),
+      createdBy: ANALYST,
+      updatedBy: ANALYST,
+    })
+  }
+
+  /** Evidence the case records and an evidence locker holds. */
+  const recordedElsewhere = async (hash: string) => {
+    await db!.insert(evidence).values({
+      caseId,
+      name: `locker ${hash.slice(0, 4)}`,
+      hash,
+      location: 'the evidence locker, shelf 4',
       createdBy: ANALYST,
       updatedBy: ANALYST,
     })
@@ -160,6 +181,31 @@ describe.skipIf(!db)('what an install can find beside it', () => {
     expect(held.missing, 'a row with no artefact was counted as one that is missing').toBe(0)
   })
 
+  /**
+   * **Evidence held in a locker is not evidence this install has lost.**
+   *
+   * A row carries a digest whether or not this app holds the bytes; only
+   * `storedAt` says it does, and null is the ordinary case -- most evidence
+   * lives elsewhere and the row records where. The archive importer writes
+   * exactly this row for every artefact an export left behind, so counting
+   * digests would have a handover install report the same absence at every
+   * boot for ever, with nothing an operator could do to clear it. A standing
+   * false alarm is how the line stops being read, which is the discovery
+   * failure this exists to prevent.
+   */
+  it('does not count evidence the case says is held somewhere else', async () => {
+    const before = await census().take()
+    await recordedElsewhere(hashFor('h'))
+
+    const held = await since(before)
+
+    expect(
+      held.expected,
+      'evidence recorded as held elsewhere is counted as an artefact this install expects',
+    ).toBe(0)
+    expect(held.missing, 'an install that never held those bytes is told it has lost them').toBe(0)
+  })
+
   it('says nothing is missing on an install that holds them all', async () => {
     const before = await census().take()
     await record(hashFor('e'))
@@ -196,7 +242,7 @@ describe.skipIf(!db)('what an install can find beside it', () => {
    * expected, nothing missing* on every real install -- which is the same
    * answer a healthy install gives, and the exact silence #179 is about.
    */
-  it.skipIf(!appDb)('counts what the install holds when the application asks', async () => {
+  it('counts what the install holds when the application asks', async () => {
     const asApp = () => new ArtefactCensus(appDb!, { get: () => root } as never)
     const before = await asApp().take()
     await record(hashFor('g'))

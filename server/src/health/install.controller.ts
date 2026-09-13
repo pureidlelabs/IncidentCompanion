@@ -60,11 +60,8 @@ export const installSettingsSchema = z.object({
      */
     evidenceNote: z.string(),
     /**
-     * **What this install expects to find beside it, and what it cannot.** A
-     * database copy names its artefacts implicitly -- every evidence row
-     * carries the digest of the file it stands for -- so an operator who
-     * restored the database and forgot the artefact directory has an install
-     * that reads as well until an analyst opens a case with evidence on it.
+     * How many artefacts this install holds the bytes of, and how many of
+     * those it cannot find beside it.
      */
     artefacts: z.object({
       expected: z.number().int(),
