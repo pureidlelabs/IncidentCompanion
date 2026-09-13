@@ -22,10 +22,30 @@ import { ADMIN_ROLE } from './auth.config.js'
 import { SetupController, type ClaimDto } from './setup.controller.js'
 import { mintToken } from './setup.token.js'
 
-const recordingDb = () => {
+const recordingDb = (claimIsFree = true) => {
   const updates: { set: unknown; where: unknown }[] = []
-  const db = {
+  const deletes: unknown[] = []
+  /** Whether this stub has already handed the install to somebody. */
+  let free = claimIsFree
+
+  const handle = {
     select: () => ({ from: async () => [{ how: 0 }] }),
+    /**
+     * **Hands the install over once**, which is what the controller asks the
+     * database to decide. A stub answering every caller a row would assert the
+     * race rather than the fix.
+     */
+    insert: () => ({
+      values: () => ({
+        onConflictDoNothing: () => ({
+          returning: async () => {
+            if (!free) return []
+            free = false
+            return [{ what: 'install' }]
+          },
+        }),
+      }),
+    }),
     update: () => ({
       set: (values: unknown) => {
         const call = { set: values, where: undefined as unknown }
@@ -40,8 +60,18 @@ const recordingDb = () => {
         })
       },
     }),
+    delete: () => ({
+      where: (clause: unknown) => {
+        deletes.push(clause)
+        return Promise.resolve()
+      },
+    }),
   }
-  return { db, updates }
+
+  // The promote runs inside a transaction, and the stub hands the same handle
+  // to it -- so what the transaction does is recorded here like anything else.
+  const db = { ...handle, transaction: async (work: (tx: unknown) => Promise<unknown>) => work(handle) }
+  return { db, updates, deletes }
 }
 
 const signsUpFine = {
@@ -76,5 +106,61 @@ describe('claiming an unclaimed install', () => {
     expect(updates).toHaveLength(1)
     expect(updates[0]?.set).toEqual({ role: ADMIN_ROLE })
     expect(updates[0]?.where, 'an unscoped promotion makes every account an admin').toBeDefined()
+  })
+
+  /**
+   * **The controller asks the database before it promotes anybody.**
+   *
+   * Asserted here because the shipping path had nothing on it: the mutex could
+   * be deleted from `claim()` and every test stayed green -- the integration
+   * files only ever POST to an already-claimed install, refused at the account
+   * count before they reach it. -> #600
+   */
+  it('promotes nobody when another claim took the install first', async () => {
+    const { db, updates } = recordingDb(false)
+    const controller = new SetupController(db as never, signsUpFine as never)
+    await controller.mintIfUnclaimed()
+    const token = mintToken()
+    ;(controller as unknown as { token: string }).token = token
+
+    await expect(
+      controller.claim(claim(token), response),
+      'a caller that lost the claim was not refused',
+    ).rejects.toMatchObject({ status: 403 })
+
+    expect(updates, 'a losing caller promoted an administrator').toEqual([])
+  })
+
+  /**
+   * **The losing caller's account is taken back.** It was created a moment ago
+   * by this request and nothing else has touched it, and the requirement's own
+   * words are that an install must not let somebody create their own account.
+   */
+  it('takes back the account a losing claim created', async () => {
+    const { db, deletes } = recordingDb(false)
+    const controller = new SetupController(db as never, signsUpFine as never)
+    await controller.mintIfUnclaimed()
+    const token = mintToken()
+    ;(controller as unknown as { token: string }).token = token
+
+    await expect(controller.claim(claim(token), response)).rejects.toMatchObject({ status: 403 })
+
+    expect(deletes, 'a fresh install is left holding an account nobody asked for').toHaveLength(1)
+  })
+
+  /**
+   * **The refusal says what is true.** Reusing *this install already has an
+   * account* describes a state where none exists, and `GET /api/setup` answers
+   * `{unclaimed: true}` at the same moment -- so the losing operator is told
+   * the install is claimed while the first-run screen offers to claim it.
+   */
+  it('says an administrator exists, not an account', async () => {
+    const { db } = recordingDb(false)
+    const controller = new SetupController(db as never, signsUpFine as never)
+    await controller.mintIfUnclaimed()
+    const token = mintToken()
+    ;(controller as unknown as { token: string }).token = token
+
+    await expect(controller.claim(claim(token), response)).rejects.toThrow(/administrator/)
   })
 })
