@@ -86,6 +86,55 @@ export interface ImportResult {
   refused: number
   /** Which lines, and why, where the caller knows. */
   refusals?: readonly { row: number; detail: string }[]
+  /**
+   * How many references the destination could not resolve.
+   *
+   * **Not a refusal.** The row landed; the link did not, because this case
+   * does not hold what the file pointed at. They ask different things of an
+   * analyst -- a refused row is one to fix and send again, a lost reference is
+   * a thing to bring across -- so they are drawn apart.
+   */
+  unlinked: number
+  /** The same total, by the kind of thing the lost references pointed at. */
+  unlinkedBy: Readonly<Record<string, number>>
+}
+
+/**
+ * What was lost, in the analyst's own words: *2 to hosts, 1 to methods*.
+ *
+ * Ordered by how many, because the biggest gap is the one worth closing first.
+ */
+function lostReferences(by: Readonly<Record<string, number>>): string {
+  return Object.entries(by)
+    .sort(([, mine], [, theirs]) => theirs - mine)
+    .map(([collection, count]) => {
+      // **The collection's own name, or its key.** The server answers with
+      // whatever a reference points at, and a target the screen has no label
+      // for is still worth naming badly rather than dropping.
+      const label = (COLLECTION_LABELS as Record<string, string | undefined>)[collection]
+      return `${String(count)} to ${label ?? collection}`
+    })
+    .join(', ')
+}
+
+/**
+ * What an import carried, said either way.
+ *
+ * **Silence would mean both "nothing was lost" and "nobody looked".** A case
+ * quietly less connected than the file that made it is found later by somebody
+ * who cannot tell which. -> `openspec/specs/data-exchange/spec.md`
+ *
+ * A lost reference is not a refusal and is never called one: the row landed,
+ * the link did not. A refused row is one to fix and send again; a lost
+ * reference is a thing to bring across.
+ */
+function carriage(result: ImportResult): string {
+  if (result.unlinked === 0) return 'Every reference was carried.'
+
+  const many = result.unlinked === 1 ? 'reference' : 'references'
+  return `${String(result.unlinked)} ${many} could not be carried: ${lostReferences(
+    result.unlinkedBy,
+  )}. The rows landed without them.`
 }
 
 /** One row of the screen: a table, its count, and the columns a template holds. */
@@ -149,6 +198,11 @@ export function ImportDataScreen({
           <Alert variant="success">
             <AlertTitle>{`${String(result.written)} rows imported into ${COLLECTION_LABELS[result.collection]}`}</AlertTitle>
             <AlertDescription>
+              {/* **Said either way.** Silence would mean both "nothing was
+                  lost" and "nobody looked", and a case quietly less connected
+                  than its file is found later by somebody who cannot tell
+                  which. -> `openspec/specs/data-exchange/spec.md` */}
+              <p className="mb-1">{carriage(result)}</p>
               <Button
                 variant="link"
                 size="xs"
@@ -174,6 +228,7 @@ export function ImportDataScreen({
             <AlertTitle>
               {`${String(result.written)} rows imported, ${String(result.refused)} refused`}
             </AlertTitle>
+            <AlertDescription>{carriage(result)}</AlertDescription>
             {/* The lines where the caller has them. The count above is what
                 the route answers, and it is the half that has to be said: a
                 partial import reported as whole is the one reading an analyst
