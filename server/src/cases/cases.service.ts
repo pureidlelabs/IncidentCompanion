@@ -15,7 +15,7 @@ import {
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import { defaultCustomer } from '../customers/customers.service.js'
@@ -313,6 +313,14 @@ export class CasesService {
     tx: Executor,
     customerId: string,
     reference?: string,
+    /**
+     * The case being written, where there is one.
+     *
+     * **Or an edit that leaves the reference alone refuses itself.** The
+     * Overview form resends every field, so patching a summary asks whether
+     * this case's own number is taken -- and it is, by this case.
+     */
+    except?: string,
   ): Promise<void> {
     // The absence of a reference is not a value and never collides, which is
     // also why the index is partial.
@@ -321,7 +329,13 @@ export class CasesService {
     const [held] = await tx
       .select({ title: cases.title })
       .from(cases)
-      .where(and(eq(cases.reference, reference), eq(cases.customerId, customerId)))
+      .where(
+        and(
+          eq(cases.reference, reference),
+          eq(cases.customerId, customerId),
+          ...(except ? [ne(cases.id, except)] : []),
+        ),
+      )
       .limit(1)
     if (!held) return
 
@@ -462,6 +476,23 @@ export class CasesService {
     values: Record<string, unknown>,
     actorId: string,
   ): Promise<WriteResult<CaseRow>> {
+    /**
+     * **The door an analyst edits a reference through, so the door a
+     * collision arrives at.** Without this the unique index refuses the write
+     * and the driver's error reaches the analyst as a 500 naming nothing,
+     * where every other writer names the case that holds the number.
+     */
+    if (typeof values['reference'] === 'string') {
+      const [row] = await this.db
+        .select({ customerId: cases.customerId })
+        .from(cases)
+        .where(eq(cases.id, id))
+        .limit(1)
+      if (row?.customerId) {
+        await this.referenceIsFree(this.db, row.customerId, values['reference'], id)
+      }
+    }
+
     const result = await updateVersioned<CaseRow>(this.db, {
       table: cases,
       entity: 'cases',

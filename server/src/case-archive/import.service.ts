@@ -174,7 +174,11 @@ export class ArchiveImportService {
     }
 
     return this.db.transaction(async (tx) => {
-      const reference = typeof record.reference === 'string' ? record.reference : ''
+      // **Trimmed, as the three HTTP doors trim.** `createCaseSchema` and the
+      // patch schema both `.trim()`, so an archive carrying ` INC-9 ` would
+      // otherwise store a padded reference that collides with nothing and is
+      // collided with by nothing -- one ticket, two cases, no refusal.
+      const reference = typeof record.reference === 'string' ? record.reference.trim() : ''
       /**
        * **An import is a second case for one ticket, and is refused like a
        * create.** A reference is unique within its customer, so reading an

@@ -5,8 +5,9 @@
  * **The id is generated and never shown**, because a human-supplied primary
  * key lets two analysts race for the same one and cannot be corrected after a
  * typo. What analysts quote is `reference`, the customer's own ITSM ticket -
- * nullable and not unique on purpose, since a case often exists before the
- * ticket and two customers' numbers can collide.
+ * nullable on purpose, since a case often exists before the ticket, and unique
+ * within its customer rather than across the install, since two customers'
+ * numbers legitimately collide.
  */
 import { boolean, index, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'

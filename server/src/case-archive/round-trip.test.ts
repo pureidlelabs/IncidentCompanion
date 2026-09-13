@@ -22,7 +22,7 @@ import { ArchiveExportService } from './export.service.js'
 import { ArchiveImportService } from './import.service.js'
 import { isSealed } from '../archive/envelope.js'
 import { readArchive } from '../archive/format.js'
-import { cases, evidence, reports, systems, timeline, user } from '../db/schema/index.js'
+import { cases, customers, evidence, reports, systems, timeline, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -353,6 +353,52 @@ describe.skipIf(!db)('a case, out and back', () => {
       importer.load(built.bytes, '', other),
       'a second case took a reference the first still holds',
     ).rejects.toThrow(/already carries INC-9/)
+  })
+
+
+  /**
+   * **An imported case is opened under a customer like any other.** The
+   * importer writes the case row itself rather than going through
+   * `CasesService.create`, so without this an archive lands in a group the
+   * application reads as the default's and the index keys separately -- and
+   * the reference rule then holds for cases raised one way and not the other.
+   */
+  it('opens the case it reads under the install default', async () => {
+    const made = await furnished()
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
+    await db!.update(cases).set({ reference: '' }).where(eq(cases.id, made.caseId))
+
+    const result = await importer.load(built.bytes, '', other)
+
+    const [row] = await db!.select().from(cases).where(eq(cases.id, result.id))
+    const [fallback] = await db!
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.isDefault, true))
+    expect(fallback, 'the install holds no default customer').toBeDefined()
+    expect(row!.customerId, 'the imported case carries no customer').toBe(fallback!.id)
+  })
+
+  /**
+   * **The reference an archive carries is trimmed, as every other door trims
+   * it.** `createCaseSchema` and the patch schema both do, so an archive
+   * carrying a padded number would otherwise store one that collides with
+   * nothing -- one ticket in two cases, refused by neither.
+   */
+  it('refuses an archive whose reference the install holds with different spacing', async () => {
+    const made = await furnished()
+    // **The archive carries the padded spelling**, which is reachable: a
+    // hand-built `.iccase` states whatever it likes, and no door trims what an
+    // archive already holds.
+    await db!.update(cases).set({ reference: '  INC-PAD  ' }).where(eq(cases.id, made.caseId))
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
+
+    // The install holds the trimmed one, which is what every other door writes.
+    await db!.update(cases).set({ reference: 'INC-PAD' }).where(eq(cases.id, made.caseId))
+    await expect(
+      importer.load(built.bytes, '', other),
+      'an archive took a reference the install already holds',
+    ).rejects.toThrow(/already carries INC-PAD/)
   })
 
   /** What an archive may hold; `archive/` states none of its own. -> #588 */

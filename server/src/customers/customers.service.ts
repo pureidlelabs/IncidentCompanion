@@ -17,7 +17,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, eq, inArray, ne, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -326,6 +326,36 @@ export class CustomersService {
   async ensureDefault(): Promise<{ id: string; name: string }> {
     return defaultCustomer(this.db)
   }
+
+  /** Put every case carrying no customer under the default. */
+  async attributeUnattributed(): Promise<number> {
+    return attributeUnattributedCases(this.db)
+  }
+}
+
+/**
+ * Put every case that carries no customer under the default, and answer how
+ * many moved.
+ *
+ * **Idempotent, and it is what makes the reference rule hold on an install
+ * that predates it.** A case opened before cases carried a customer has
+ * `customer_id IS NULL`, and the application reads that as the default while
+ * the unique index keys it separately -- so two cases the product treats as
+ * one customer's could both hold one ticket number, which is exactly the state
+ * the rule forbids.
+ *
+ * **A step at boot rather than a migration**, because this schema is pushed
+ * rather than migrated: there is no file for a backfill to live in, and the
+ * boot hook beside it already ensures the row this points at.
+ */
+export async function attributeUnattributedCases(on: Executor): Promise<number> {
+  const fallback = await defaultCustomer(on)
+  const moved = await on
+    .update(cases)
+    .set({ customerId: fallback.id })
+    .where(isNull(cases.customerId))
+    .returning({ id: cases.id })
+  return moved.length
 }
 
 /**
@@ -360,3 +390,5 @@ export async function defaultCustomer(on: Executor): Promise<{ id: string; name:
   if (!theirs) throw new Error('the install has no default customer and one could not be made')
   return theirs
 }
+
+

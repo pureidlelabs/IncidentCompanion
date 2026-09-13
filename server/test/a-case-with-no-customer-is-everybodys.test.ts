@@ -104,7 +104,7 @@ describe.skipIf(!(await bootable()))('a case opened before its customer is known
     expect(fallback, 'the install holds no default customer').toBeDefined()
     expect(
       row!.customerId,
-      'the case carries no customer, so the reference rule has no group to be unique within',
+      'the case was not stamped, so what the guard resolves is what decides its group',
     ).toBe(fallback!.id)
   })
 

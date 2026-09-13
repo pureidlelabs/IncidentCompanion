@@ -21,6 +21,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CasesService } from './cases.service.js'
+import { attributeUnattributedCases } from '../customers/customers.service.js'
 import { openTestPool } from '../../test/database.js'
 import { cases, customers, user } from '../db/schema/index.js'
 
@@ -93,7 +94,7 @@ describe.skipIf(!db)('a reference within its customer', () => {
    * The measurement on the issue, which is the case a bare
    * `unique (customer_id, reference)` would still allow.
    */
-  it('refuses a second case with that reference and no customer named', async () => {
+  it('refuses a second case taking a reference another under the default holds', async () => {
     await make({ title: 'First case', reference: 'TICKET-1' })
 
     await expect(
@@ -102,13 +103,28 @@ describe.skipIf(!db)('a reference within its customer', () => {
     ).rejects.toThrow(/already carries TICKET-1/)
   })
 
-  it('refuses a second case with that reference for one customer', async () => {
-    await make({ title: 'First for Acme', reference: 'TICKET-2' })
+  /**
+   * **The same refusal once a case has been attributed**, which is a different
+   * group from the one above: those two sit under the default, these two under
+   * Acme. A rule asked of the wrong column passes one and fails the other.
+   */
+  it('refuses a second case taking a reference an attributed case holds', async () => {
+    const first = await make({ title: 'First for Acme', reference: 'TICKET-2' })
+    await service.attribute(first.id, acme, ANALYST)
+
+    const second = await make({ title: 'Second for Acme' })
 
     await expect(
-      make({ title: 'Second for Acme', reference: 'TICKET-2' }),
-      'one customer took one reference twice',
-    ).rejects.toThrow(/already carries TICKET-2/)
+      service.patch(second.id, second.version, { reference: 'TICKET-2' }, ANALYST),
+      'a reference was free for a case in the default group and taken in Acme',
+    ).resolves.toMatchObject({ ok: true })
+
+    await service.attribute(second.id, acme, ANALYST).catch(() => undefined)
+    const rows = await seed!.select().from(cases).where(eq(cases.reference, 'TICKET-2'))
+    expect(
+      rows.filter((row) => row.customerId === acme),
+      'two cases under Acme carry one reference',
+    ).toHaveLength(1)
   })
 
   /** *The analyst is told which case already holds it*, not merely refused. */
@@ -127,7 +143,12 @@ describe.skipIf(!db)('a reference within its customer', () => {
    * `customer_id` and belongs to the default customer. This scenario is
    * therefore unreachable through the write path today, which is #218's gap
    * rather than this rule's; asserted against the table so the rule is known
-   * to be per-customer and not global the day a case can name one.
+   * to be per-customer and not global.
+   *
+   * **Driven through `create` and `attribute`.** Arranging both `customer_id`s
+   * by direct insert certifies a boundary the shipping path never reaches,
+   * which is how this rule came to be believed covered while the door that
+   * introduces collisions checked nothing.
    */
   it('allows one reference across two customers, driven through the write path', async () => {
     // **Through `create` and `attribute`, not two inserts.** A fixture that
@@ -161,6 +182,89 @@ describe.skipIf(!db)('a reference within its customer', () => {
     const made = await make({ title: 'Unattributed' })
 
     expect(made.customerId, 'a created case carries no customer').toBe(fallback)
+  })
+
+
+  /**
+   * **The door an analyst actually edits a reference through.** `reference` is
+   * on the Overview form, so this is where a collision is introduced by
+   * somebody typing -- and with an index and no check the database's own
+   * refusal reaches the analyst as a 500 saying nothing about which case holds
+   * the number.
+   *
+   * `create`, `attribute` and the archive importer all name the holder. This
+   * is the one that did not.
+   */
+  it('refuses a patch onto a reference the customer already uses, and names the case', async () => {
+    const holder = await make({ title: 'Holder', reference: 'TICKET-P1' })
+    const mover = await make({ title: 'Mover' })
+
+    await expect(
+      service.patch(mover.id, mover.version, { reference: 'TICKET-P1' }, ANALYST),
+      'a patch onto a taken reference was not refused as a conflict',
+    ).rejects.toMatchObject({ status: 409 })
+
+    await expect(
+      service.patch(mover.id, mover.version, { reference: 'TICKET-P1' }, ANALYST),
+    ).rejects.toThrow(new RegExp(holder.title))
+  })
+
+  /**
+   * **Patching a case to the reference it already carries is not a
+   * collision.** A guard that only asks "is this reference taken" refuses the
+   * ordinary case of an analyst editing the summary on a form that resends
+   * every field.
+   */
+  it('allows a patch that leaves the reference where it was', async () => {
+    const one = await make({ title: 'Unchanged', reference: 'TICKET-P2' })
+
+    const result = await service.patch(
+      one.id,
+      one.version,
+      { reference: 'TICKET-P2', summary: 'edited' },
+      ANALYST,
+    )
+
+    expect(result.ok, 'a case was refused its own reference').toBe(true)
+  })
+
+
+  /**
+   * **A case opened before cases carried a customer.** The application reads
+   * a null customer as the default's, and the index keys it separately -- so
+   * two cases the product treats as one customer's could both hold one ticket
+   * number, which is the state this rule forbids. An install that predates
+   * the rule is the only way to reach it, and there are no migration files
+   * for a backfill to live in, so it is a step at boot.
+   */
+  it('puts a case that carries no customer under the default', async () => {
+    const [legacy] = await seed!
+      .insert(cases)
+      .values({ title: 'Opened before', reference: 'LEGACY-1' })
+      .returning()
+    expect(legacy!.customerId, 'the fixture did not make the state this is about').toBeNull()
+
+    const moved = await attributeUnattributedCases(seed!)
+
+    const [after] = await seed!.select().from(cases).where(eq(cases.id, legacy!.id))
+    expect(moved, 'nothing was moved').toBe(1)
+    expect(after!.customerId, 'the case still carries no customer').toBe(fallback)
+  })
+
+  it('refuses a new case the reference a backfilled one holds', async () => {
+    await seed!.insert(cases).values({ title: 'Opened before', reference: 'LEGACY-2' })
+    await attributeUnattributedCases(seed!)
+
+    await expect(
+      make({ title: 'Opened after', reference: 'LEGACY-2' }),
+      'a legacy case and a new one held one reference under one customer',
+    ).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('moves nothing on an install whose cases all carry one', async () => {
+    await make({ title: 'Already attributed', reference: 'FRESH-1' })
+
+    expect(await attributeUnattributedCases(seed!), 'a second run moved rows again').toBe(0)
   })
 
   /**

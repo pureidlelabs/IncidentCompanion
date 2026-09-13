@@ -66,7 +66,9 @@ const MAY_IMPORT: Record<string, string[]> = {
   domain: [],
   db: ['config'],
   config: [],
-  demos: ['db', 'domain', 'config'],
+  // `customers` for the same reason `cases` has it: a demo raises cases, and a
+  // case is opened under a customer.
+  demos: ['db', 'domain', 'config', 'customers'],
   /**
    * `wire` for the one decision three folders share: whether the caller's
    * claimed address may be believed. It is a leaf, so the edge cannot become
