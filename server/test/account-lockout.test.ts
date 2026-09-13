@@ -22,7 +22,7 @@
  * other file signs in with would fail those files rather than this one, and
  * the failure would land wherever the suite happened to be.
  */
-import { and, eq } from 'drizzle-orm'
+import { and, eq, or, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { DATABASE } from '../src/db/db.module.js'
@@ -85,18 +85,27 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     await db.update(user).set({ failedSignIns: 0, lockedUntil: null }).where(eq(user.email, target))
   }
 
+  /**
+   * Which account a line is about.
+   *
+   * **`target_label` answers this for a lock and not for a failure.** A
+   * failure's target is the install's own, so that a caller trying a hundred
+   * accounts cannot split their own run; the account they tried is in
+   * `detail`. -> #541
+   */
+  const aboutThisAccount = () =>
+    or(
+      eq(installActivity.targetLabel, target),
+      sql`${installActivity.detail}->>'account' = ${target}`,
+    )
+
   /** Lines naming a failed sign-in at this address, however it failed. */
   const failedLinesSoFar = async () =>
     (
       await db
         .select({ id: installActivity.id })
         .from(installActivity)
-        .where(
-          and(
-            eq(installActivity.event, 'sign_in_failed'),
-            eq(installActivity.targetLabel, target),
-          ),
-        )
+        .where(and(eq(installActivity.event, 'sign_in_failed'), aboutThisAccount()))
     ).length
 
   const lockLinesSoFar = async () =>
@@ -109,10 +118,7 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
 
   const locksSoFar = async () =>
     (
-      await db
-        .select({ id: installActivity.id })
-        .from(installActivity)
-        .where(eq(installActivity.targetLabel, target))
+      await db.select({ id: installActivity.id }).from(installActivity).where(aboutThisAccount())
     ).length
 
   /**

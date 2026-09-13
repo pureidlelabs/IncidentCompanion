@@ -21,6 +21,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { InstallActivityReadService, READ_IS_ONE_VISIT_FOR_MINUTES } from './read.service.js'
 import { recordInstallActivity } from '../install-activity/record.js'
+import { SIGN_IN } from '../auth/auth.config.js'
 import { RUN_IS_AN_ATTACK, SEVERITY_ID } from '../install-activity/severity.js'
 import { installActivity, user } from '../db/schema/index.js'
 import { asRole, openTestPool } from '../../test/database.js'
@@ -134,15 +135,55 @@ describe.skipIf(!db)('reading the audit', () => {
   })
 
   /**
+  /**
+   * **A spray across accounts is one run**, which is what the target being the
+   * install's own buys.
+   *
+   * `target_label` partitions this window, so while a failed sign-in recorded
+   * the address that was typed, one password each at a hundred accounts was a
+   * hundred runs of one and every line `Low` -- the shape of password spraying
+   * and the detection these events exist for. The account moved to `detail`,
+   * which does not partition.
+   *
+   * Written through `recordInstallActivity` rather than the endpoint, so this
+   * asserts what the window does with rows shaped that way; that the endpoint
+   * shapes them that way is
+   * `test/a-sign-in-leaves-a-line.test.ts`. -> #541
+   */
+  it('counts failures at different accounts as one run', async () => {
+    for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
+      await recordInstallActivity(db!, {
+        event: 'sign_in_failed',
+        target: SIGN_IN,
+        detail: { account: `sprayed-${String(i)}@example.test` },
+      })
+    }
+
+    const page = await reads.page({ channel: 'authentication', limit: 1 }, session, {})
+    const line = page.events[0]
+
+    expect(line?.event).toBe('sign_in_failed')
+    expect(
+      line?.runLength,
+      'each account is its own run, so a spray reads as unrelated single failures',
+    ).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
+    expect(line?.severity, 'a spray is reported at the severity of one typo').toBe('High')
+  })
+
+  /**
    * **A collapsed run says whether the detail it hides is the detail it shows.**
    *
    * The page reports the head of each run, so one line's `detail` survives and
    * the rest do not. Drawn without qualification that reads as though the
-   * head's value were every value.
+   * head's value were every value -- and since #541 a spray across accounts is
+   * exactly that shape, one account standing in for the hundred tried.
    *
    * `detail` is not a partition column. Neither are `userAgent`, `at` and
    * `actorLabel`, so it is not the only field a run can differ on -- it is the
    * one the page draws. -> #544
+   *
+   * **Each case reads its own run rather than the newest.** These share a
+   * channel with the case above, so `events[0]` is whichever wrote last.
    */
   it('says a run holds one detail when it does', async () => {
     const target = ownTarget('agreeing')
@@ -154,11 +195,12 @@ describe.skipIf(!db)('reading the audit', () => {
       })
     }
 
-    const page = await reads.page({ channel: 'authentication', limit: 1 }, session, {})
+    const page = await reads.page({ channel: 'authentication', limit: 50 }, session, {})
+    const ours = page.events.find((one) => one.targetLabel === target)
 
-    expect(page.events[0]?.runLength).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
+    expect(ours?.runLength).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
     expect(
-      page.events[0]?.detailsVary,
+      ours?.detailsVary,
       'a run whose lines agree is reported as though they might not',
     ).toBe(false)
   })
@@ -173,11 +215,12 @@ describe.skipIf(!db)('reading the audit', () => {
       })
     }
 
-    const page = await reads.page({ channel: 'authentication', limit: 1 }, session, {})
+    const page = await reads.page({ channel: 'authentication', limit: 50 }, session, {})
+    const ours = page.events.find((one) => one.targetLabel === target)
 
-    expect(page.events[0]?.runLength).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
+    expect(ours?.runLength).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
     expect(
-      page.events[0]?.detailsVary,
+      ours?.detailsVary,
       'the head account is reported as though it were the only one tried',
     ).toBe(true)
   })
