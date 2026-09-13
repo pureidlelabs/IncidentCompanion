@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 472 |
-| Demonstrated | 363 |
+| Scenarios | 474 |
+| Demonstrated | 365 |
 | Undemonstrable | 1 |
 | Unbuilt | 95 |
 | Undemonstrated | 13 |
