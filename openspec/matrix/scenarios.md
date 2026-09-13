@@ -373,6 +373,8 @@
 | Refusals are recorded, and a run of them is louder than one | One caller, a different account each time | demonstrated | server/src/install-audit/read.test.ts |
 | Refusals are recorded, and a run of them is louder than one | What the caller supplied is still recorded | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
 | Refusals are recorded, and a run of them is louder than one | A stored seriousness is not lowered | demonstrated | server/src/install-audit/read.test.ts |
+| Refusals are recorded, and a run of them is louder than one | A run whose lines recorded different things | demonstrated | server/src/install-audit/read.test.ts |
+| Refusals are recorded, and a run of them is louder than one | A run whose lines recorded the same thing | demonstrated | server/src/install-audit/read.test.ts |
 | Changing what the audit keeps is itself audited, and loudly | The retention window is shortened | demonstrated | server/src/install-activity/setting-severity.test.ts |
 | Reading the audit is an act the audit records | An administrator reads the audit | demonstrated | server/src/install-audit/read.test.ts |
 | Reading the audit is an act the audit records | An analyst who is not an administrator | demonstrated | server/test/analyst-privilege.test.ts |

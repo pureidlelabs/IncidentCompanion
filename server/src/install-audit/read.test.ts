@@ -33,6 +33,18 @@ const db = pool ? drizzle({ client: pool }) : null
 const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/**
+ * A target no other case in this file writes to.
+ *
+ * **One per case, because the target is a partition column.** Two cases
+ * sharing a literal write into one run, and the first to declare then passes
+ * on a partition the second has not polluted yet -- green in this order and
+ * red in any other. Every other case here marks its own target the same way.
+ */
+function ownTarget(what: string): string {
+  return `${what}-${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
+}
+
 const READER = 'test-audit-reader'
 const session = {
   user: { id: READER, name: 'Audit Reader', email: `${READER}@example.test` },
@@ -123,6 +135,7 @@ describe.skipIf(!db)('reading the audit', () => {
   })
 
   /**
+  /**
    * **A spray across accounts is one run**, which is what the target being the
    * install's own buys.
    *
@@ -155,6 +168,61 @@ describe.skipIf(!db)('reading the audit', () => {
       'each account is its own run, so a spray reads as unrelated single failures',
     ).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
     expect(line?.severity, 'a spray is reported at the severity of one typo').toBe('High')
+  })
+
+  /**
+   * **A collapsed run says whether the detail it hides is the detail it shows.**
+   *
+   * The page reports the head of each run, so one line's `detail` survives and
+   * the rest do not. Drawn without qualification that reads as though the
+   * head's value were every value -- and since #541 a spray across accounts is
+   * exactly that shape, one account standing in for the hundred tried.
+   *
+   * `detail` is not a partition column. Neither are `userAgent`, `at` and
+   * `actorLabel`, so it is not the only field a run can differ on -- it is the
+   * one the page draws. -> #544
+   *
+   * **Each case reads its own run rather than the newest.** These share a
+   * channel with the case above, so `events[0]` is whichever wrote last.
+   */
+  it('says a run holds one detail when it does', async () => {
+    const target = ownTarget('agreeing')
+    for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
+      await recordInstallActivity(db!, {
+        event: 'sign_in_failed',
+        target,
+        detail: { account: 'one@example.test' },
+      })
+    }
+
+    const page = await reads.page({ channel: 'authentication', limit: 50 }, session, {})
+    const ours = page.events.find((one) => one.targetLabel === target)
+
+    expect(ours?.runLength).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
+    expect(
+      ours?.detailsVary,
+      'a run whose lines agree is reported as though they might not',
+    ).toBe(false)
+  })
+
+  it('says a run holds more than one detail when it does', async () => {
+    const target = ownTarget('disagreeing')
+    for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
+      await recordInstallActivity(db!, {
+        event: 'sign_in_failed',
+        target,
+        detail: { account: `sprayed-${String(i)}@example.test` },
+      })
+    }
+
+    const page = await reads.page({ channel: 'authentication', limit: 50 }, session, {})
+    const ours = page.events.find((one) => one.targetLabel === target)
+
+    expect(ours?.runLength).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
+    expect(
+      ours?.detailsVary,
+      'the head account is reported as though it were the only one tried',
+    ).toBe(true)
   })
 
   /**

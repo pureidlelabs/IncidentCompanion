@@ -196,3 +196,19 @@ describe('an empty install reaches the rail from the case pane', () => {
     expect(went).toEqual([pane])
   })
 })
+
+/**
+ * **The Detail column, rendered, which is the half `detailSummary` cannot
+ * claim on its own.** A helper with a test beside it is still wired to
+ * nothing: removing the column leaves that test green, and the screen is
+ * where the two meet.
+ *
+ * The negative is the assertion that matters. Drawing the head's account for
+ * a run of six is the defect -> #544.
+ */
+it('draws a run whose lines disagree as varying, and names none of them', () => {
+  render(<PickerActivityScreen {...RAIL} />)
+
+  expect(screen.getAllByText('varies').length).toBeGreaterThan(0)
+  expect(screen.queryByText(/m\.delacroix@meridian\.example/)).toBeNull()
+})

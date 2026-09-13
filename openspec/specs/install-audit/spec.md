@@ -178,6 +178,8 @@ A run of the same failure MUST be able to read as more serious than one of them,
 
 What makes two refusals the same refusal MUST NOT be anything the caller chooses. A caller who can vary it decides whether their own attempts are counted together, and one attempt each at a hundred accounts is the attack a run is meant to reveal. Where a refusal names what was asked for, that name MUST be the install's own; what the caller supplied is recorded where it cannot separate one run into many.
 
+Where a run stands for lines that did not all record the same thing, the reading MUST say so rather than presenting one line's record as the run's. A specimen drawn from a run reads as every line in it, and a reader cannot tell the two apart.
+
 #### Scenario: A sign-in fails
 
 - GIVEN a failed sign-in
@@ -209,6 +211,18 @@ What makes two refusals the same refusal MUST NOT be anything the caller chooses
 - WHEN it is recorded
 - THEN what they supplied is in the line
 - AND it is not what decides which run the line belongs to
+
+#### Scenario: A run whose lines recorded different things
+
+- GIVEN a run of the same failure whose lines recorded different values
+- WHEN the audit is read
+- THEN the run says its lines disagreed, and reports none of them as the run's
+
+#### Scenario: A run whose lines recorded the same thing
+
+- GIVEN a run of the same failure whose lines all recorded the same value
+- WHEN the audit is read
+- THEN the run reports that value
 
 ### Requirement: Changing what the audit keeps is itself audited, and loudly
 
