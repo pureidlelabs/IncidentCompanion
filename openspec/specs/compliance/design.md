@@ -44,4 +44,4 @@ That ceiling falls inside the answers these instruments ask for. It is below the
 
 Whether the ceiling is reachable is what decides the width, not whether a regime asks for the figure. A duration in minutes is asked for by the same instruments and cannot approach it, so it is not stored wide; the same question asked about a count of people or a sum of money can.
 
-The validation above the column carries no upper bound of its own, so the column is the only ceiling. Where a figure is stored wider than the validation's own integer range, what the read schema accepts and what the column can hold stop agreeing, and the read is where that disagreement surfaces. -> #564
+A figure is held to what the install can read back, and the column is where that is enforced: the validation above it is reached by the screens and not by an archive coming in, and a figure the column accepts and the read cannot answer leaves the case unreadable rather than wrong in one field. The ceiling is the largest integer the read carries exactly, which is narrower than the column type and is stated once.
