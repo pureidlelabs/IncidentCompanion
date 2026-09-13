@@ -73,12 +73,12 @@ const log = new Logger('InstallActivity')
 /**
  * One line's worth of an untrusted value, safe to interpolate into a log line.
  *
- * **The value is attacker-supplied on the event most likely to fail.** A
- * failed sign-in records the address that was typed, so a newline in it forges
- * however many lines the attacker likes in the operator's log - and the line
- * announcing the attack is the one they get to write. CWE-117; the OWASP
- * Logging Cheat Sheet asks for CR, LF and delimiters to be sanitized on all
- * event data.
+ * **The value is attacker-supplied wherever a refusal names what was asked
+ * for.** A refused request records the method the caller sent, so a newline in
+ * it forges however many lines the attacker likes in the operator's log - and
+ * the line announcing the attack is the one they get to write. CWE-117; the
+ * OWASP Logging Cheat Sheet asks for CR, LF and delimiters to be sanitized on
+ * all event data.
  *
  * **Escaped rather than stripped**, because which account was attacked is the
  * reason the field is recorded, and length-capped because a log line is not

@@ -24,6 +24,7 @@ import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { boot, bootable, sharedAdmin, signIn, type Harness } from './app-harness.js'
 import { openTestPool } from './database.js'
 import { installActivity } from '../src/db/schema/install-activity.js'
+import { SIGN_IN } from '../src/auth/auth.config.js'
 
 const RUNNABLE = await bootable()
 
@@ -161,7 +162,7 @@ describe.skipIf(!RUNNABLE || !db)('signing in leaves a line', () => {
     expect(
       line!.targetLabel,
       'the caller chose the partition, so each account they try is its own run',
-    ).not.toBe(email)
+    ).toBe(SIGN_IN)
     expect(
       line!.detail,
       'the line does not say which account was attempted',

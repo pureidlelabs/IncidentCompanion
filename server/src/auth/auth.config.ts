@@ -35,7 +35,7 @@ import { sessionEnded } from './session-ended.js'
  * A constant, so every failure from one caller falls in one run however many
  * identifiers they tried. The identifier itself is in `detail`.
  */
-const SIGN_IN = 'sign-in'
+export const SIGN_IN = 'sign-in'
 
 const ARGON2ID = {
   algorithm: Algorithm.Argon2id,
@@ -525,9 +525,10 @@ export function authOptions(
        * **A sign-out deletes the session**, so the end of an access period is
        * recoverable only from here. ISO names log-on *and* log-off.
        *
-       * The attempted address is recorded and the password never is: the
-       * address is what makes a run of failures legible as one attack rather
-       * than as five unrelated typos, and this column is read by every admin.
+       * The attempted address is recorded and the password never is. It is
+       * recorded in `detail` rather than as the target, the target being a
+       * partition of the run window and therefore not the caller's to pick.
+       * -> #541
        */
       after: createAuthMiddleware(async (ctx) => {
         const headers = Object.fromEntries(ctx.headers?.entries() ?? [])
@@ -564,7 +565,13 @@ export function authOptions(
          * attempt each at a hundred accounts is password spraying, held at a
          * run of one and `Low` for ever. The account travels in `detail`,
          * which does not partition, exactly as a refused socket carries the
-         * case it asked for. -> #541
+         * case it asked for.
+         *
+         * **What that costs, and it is not nothing.** The activity pane draws
+         * no attributes, so on the screen the account is gone until it does --
+         * and a collapsed run of three different accounts could not show one
+         * of them honestly anyway. A collector receives `detail` whole.
+         * -> #541, #544
          */
         await recordInstallActivity(db, {
           event: 'sign_in_failed',

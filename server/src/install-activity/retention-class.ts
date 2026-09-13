@@ -37,9 +37,10 @@ export type RetentionClass = (typeof RETENTION_CLASSES)[number]
  *   than a year later - the sign-in failures it accompanies are `audit`.
  * - `install_started` is a restart.
  *
- * **A refusal that names an account is not here.** `sign_in_failed`,
- * `access_denied`, `live_refused` and `account_locked` all answer *who tried
- * to reach what*, which is the question asked longest after the fact.
+ * **A refusal is not here.** `sign_in_failed`, `access_denied`, `live_refused`
+ * and `account_locked` all answer *who tried to reach what* -- the account in
+ * the line's own detail where naming it as the target would let a caller split
+ * their own run -- which is the question asked longest after the fact.
  */
 const OPERATIONAL: ReadonlySet<string> = new Set<string>([
   'install_started',

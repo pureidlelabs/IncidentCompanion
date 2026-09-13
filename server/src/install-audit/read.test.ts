@@ -21,6 +21,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { InstallActivityReadService, READ_IS_ONE_VISIT_FOR_MINUTES } from './read.service.js'
 import { recordInstallActivity } from '../install-activity/record.js'
+import { SIGN_IN } from '../auth/auth.config.js'
 import { RUN_IS_AN_ATTACK, SEVERITY_ID } from '../install-activity/severity.js'
 import { installActivity, user } from '../db/schema/index.js'
 import { asRole, openTestPool } from '../../test/database.js'
@@ -119,6 +120,41 @@ describe.skipIf(!db)('reading the audit', () => {
     expect(line?.runLength).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
     // Which is what makes it High. A lone failure is Low.
     expect(line?.severity).toBe('High')
+  })
+
+  /**
+   * **A spray across accounts is one run**, which is what the target being the
+   * install's own buys.
+   *
+   * `target_label` partitions this window, so while a failed sign-in recorded
+   * the address that was typed, one password each at a hundred accounts was a
+   * hundred runs of one and every line `Low` -- the shape of password spraying
+   * and the detection these events exist for. The account moved to `detail`,
+   * which does not partition.
+   *
+   * Written through `recordInstallActivity` rather than the endpoint, so this
+   * asserts what the window does with rows shaped that way; that the endpoint
+   * shapes them that way is
+   * `test/a-sign-in-leaves-a-line.test.ts`. -> #541
+   */
+  it('counts failures at different accounts as one run', async () => {
+    for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
+      await recordInstallActivity(db!, {
+        event: 'sign_in_failed',
+        target: SIGN_IN,
+        detail: { account: `sprayed-${String(i)}@example.test` },
+      })
+    }
+
+    const page = await reads.page({ channel: 'authentication', limit: 1 }, session, {})
+    const line = page.events[0]
+
+    expect(line?.event).toBe('sign_in_failed')
+    expect(
+      line?.runLength,
+      'each account is its own run, so a spray reads as unrelated single failures',
+    ).toBeGreaterThanOrEqual(RUN_IS_AN_ATTACK)
+    expect(line?.severity, 'a spray is reported at the severity of one typo').toBe('High')
   })
 
   /**
