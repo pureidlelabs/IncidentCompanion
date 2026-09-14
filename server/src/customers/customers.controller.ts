@@ -104,13 +104,14 @@ const mergeSchema = z
 const customerSchema = z.object({ id: z.uuid(), name: z.string(), isDefault: z.boolean() })
 const listSchema = z.object({ customers: z.array(customerSchema) })
 const madeSchema = z.object({ id: z.uuid() })
-const doneSchema = z.object({ done: z.literal(true) })
 
 class CustomerListDto extends createZodDto(listSchema) {}
 class CustomerMadeDto extends createZodDto(madeSchema) {}
-class DoneDto extends createZodDto(doneSchema) {}
 
 const DONE = { done: true } as const
+
+const doneSchema = z.object({ done: z.literal(true) })
+class CustomerDoneDto extends createZodDto(doneSchema) {}
 
 @AdminOnly()
 @Controller('api/customers')
@@ -161,7 +162,7 @@ export class CustomersController {
    * the pipe does.
    */
   @Patch(':id')
-  @ZodResponse({ status: 200, type: DoneDto, description: 'The customer was changed.' })
+  @ZodResponse({ status: 200, type: CustomerDoneDto, description: 'The customer was changed.' })
   async change(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: unknown,
@@ -177,7 +178,7 @@ export class CustomersController {
   }
 
   @Delete(':id')
-  @ZodResponse({ status: 200, type: DoneDto, description: 'The customer was removed.' })
+  @ZodResponse({ status: 200, type: CustomerDoneDto, description: 'The customer was removed.' })
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
     @Session() session: UserSession,
@@ -195,7 +196,7 @@ export class CustomersController {
    */
   @Post(':id/merge')
   @HttpCode(200)
-  @ZodResponse({ status: 200, type: DoneDto, description: 'The two records are one.' })
+  @ZodResponse({ status: 200, type: CustomerDoneDto, description: 'The two records are one.' })
   async merge(
     @Param('id', ParseUUIDPipe) surviving: string,
     @Body() body: unknown,

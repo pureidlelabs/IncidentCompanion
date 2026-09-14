@@ -44,7 +44,7 @@ import { definitions } from './targets.js'
 class PreviewBodyDto extends createZodDto(previewBodySchema) {}
 class PreviewResultDto extends createZodDto(previewResultSchema) {}
 class CommitBodyDto extends createZodDto(commitBodySchema) {}
-class ImportedDto extends createZodDto(importedSchema) {}
+class IncidentImportedDto extends createZodDto(importedSchema) {}
 
 /**
  * The start door's body: an import, plus what the case is called.
@@ -104,7 +104,7 @@ export class CaseImportController {
   @Post()
   @ZodResponse({
     status: 201,
-    type: ImportedDto,
+    type: IncidentImportedDto,
     description: 'What was written, and what was already in the case.',
   })
   async commit(

@@ -11,6 +11,7 @@
  * The timeline keeps its own file because it genuinely differs - a
  * discriminated union, and per-kind patch validation.
  */
+import { CreatedIdsDto, DeletedDto } from '../domain/acknowledged.js'
 import {
   Inject,
   UnprocessableEntityException,
@@ -99,7 +100,6 @@ const entityRowSchema = caseOwnedRowSchema
 
 class EntityRowDto extends createZodDto(entityRowSchema) {}
 class EntityRowsDto extends createZodDto(z.array(entityRowSchema)) {}
-class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {}
 
 /**
  * What a reorder takes: every id in the scope, once each, in the order wanted.
@@ -119,7 +119,6 @@ class UpdatedManyDto extends createZodDto(
     refused: z.array(z.uuid()),
   }),
 ) {}
-class DeletedDto extends createZodDto(z.object({ deleted: z.literal(true) })) {}
 
 /**
  * A row out of the generic service, as the wire declares it.

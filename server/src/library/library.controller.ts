@@ -50,7 +50,7 @@ import { LibraryService } from './library.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { libraryRowSchema } from './library.service.js'
-import { writtenSchema, type Written } from '../domain/written.js'
+import { WrittenDto, writtenSchema, type Written } from '../domain/written.js'
 import { AdminOnly } from '../auth/admin-only.js'
 
 /**
@@ -145,7 +145,6 @@ export const libraryListingSchema = z.object({
 
 class LibraryListingDto extends createZodDto(libraryListingSchema) {}
 
-class WrittenDto extends createZodDto(writtenSchema) {}
 
 class EditorDocumentDto extends createZodDto(editorDocumentSchema) {}
 

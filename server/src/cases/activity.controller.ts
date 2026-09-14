@@ -61,7 +61,7 @@ const activitySchema = z.object({
 
 type ActivityRecord = z.infer<typeof activitySchema>
 
-class ActivityDto extends createZodDto(z.object({ rows: z.array(activitySchema) })) {}
+class CaseActivityDto extends createZodDto(z.object({ rows: z.array(activitySchema) })) {}
 
 @UseGuards(CaseAccessGuard)
 @Controller('api/cases/:caseId/activity')
@@ -70,7 +70,7 @@ export class ActivityController {
 
   @ZodResponse({
     status: 200,
-    type: ActivityDto,
+    type: CaseActivityDto,
     description: 'Recent writes on the case, newest first, with the analyst who made each.',
   })
   @Get()

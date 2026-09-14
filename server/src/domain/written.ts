@@ -11,6 +11,7 @@
  * control. A schema failure carries the validation tree instead - see
  * `wire/refusals.ts` for which status means which.
  */
+import { createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
 /**
@@ -31,3 +32,10 @@ export const writtenSchema = z.object({
 })
 
 export type Written = z.infer<typeof writtenSchema>
+
+/**
+ * **Declared here rather than per controller**, because the published document
+ * is keyed by the class name: two controllers declaring `WrittenDto` share one
+ * entry, and the second registration describes the first's route. -> #649
+ */
+export class WrittenDto extends createZodDto(writtenSchema) {}

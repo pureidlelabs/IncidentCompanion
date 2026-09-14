@@ -61,7 +61,7 @@ export const activitySchema = z.object({
 
 export type Activity = z.infer<typeof activitySchema>
 
-export class ActivityDto extends createZodDto(activitySchema) {}
+export class HealthActivityDto extends createZodDto(activitySchema) {}
 
 /** `count(*)` comes back as a string from `pg`; every number here is parsed. */
 function count(value: unknown): number {
@@ -79,7 +79,7 @@ export class ActivityController {
   @Get('activity')
   @ZodResponse({
     status: 200,
-    type: ActivityDto,
+    type: HealthActivityDto,
     description: 'What this install holds. Reported, never judged.',
   })
   async read(): Promise<Activity> {

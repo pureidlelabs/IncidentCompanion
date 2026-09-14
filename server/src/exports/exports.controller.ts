@@ -87,7 +87,7 @@ export const importedSchema = z.object({
     .describe('What could not be carried, keyed by the collection it pointed at.'),
 })
 
-class ImportedDto extends createZodDto(importedSchema) {}
+class CsvImportedDto extends createZodDto(importedSchema) {}
 
 @UseGuards(CaseAccessGuard)
 @Controller('api/cases/:caseId')
@@ -205,7 +205,7 @@ export class ExportsController {
    */
   @ZodResponse({
     status: 201,
-    type: ImportedDto,
+    type: CsvImportedDto,
     description: 'How many rows the file added.',
   })
   @Post(':collection.csv')
