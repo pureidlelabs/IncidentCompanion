@@ -18,6 +18,7 @@ import { createAuth, observesTheWindow } from './auth.config.js'
 import { SetupController } from './setup.controller.js'
 import { ChangePasswordController } from './change-password.controller.js'
 import { MustChangePasswordInterceptor } from './must-change-password.interceptor.js'
+import { AccountLookupService } from './account-lookup.service.js'
 import { PasswordHoldService } from './password-hold.service.js'
 import { LockoutClearService } from './lockout-clear.service.js'
 import { DATABASE } from '../db/db.module.js'
@@ -89,11 +90,12 @@ import { AuthRedis } from './redis.js'
      * Interceptors run after every guard. -> `must-change-password.interceptor.ts`
      */
     { provide: APP_INTERCEPTOR, useClass: MustChangePasswordInterceptor },
+    AccountLookupService,
     PasswordHoldService,
     LockoutClearService,
   ],
-  // Exported so `accounts/` can hold an account, or clear its lockout,
-  // without reaching `db/` itself.
-  exports: [PasswordHoldService, LockoutClearService],
+  // Exported so `accounts/` can find an account, hold it, or clear its
+  // lockout, without reaching `db/` itself.
+  exports: [AccountLookupService, PasswordHoldService, LockoutClearService],
 })
 export class AuthModule {}

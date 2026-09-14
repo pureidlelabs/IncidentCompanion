@@ -9,7 +9,8 @@
  * The property names are the contract and the column names are not: the
  * adapter looks up `user.emailVerified` as a key on this object.
  */
-import { boolean, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { boolean, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
@@ -63,7 +64,25 @@ export const user = pgTable('user', {
    */
   failedSignIns: integer('failed_sign_ins').notNull().default(0),
   lockedUntil: timestamp('locked_until', { withTimezone: true }),
-})
+}, (t) => [
+  /**
+   * **One account per address, folded the way every read folds it.**
+   *
+   * `unique()` on the column is case-sensitive, so it admits a second row whose
+   * address differs only in case - and then every query written through
+   * `sameAddress` matches both. The lockout clear is the sharpest of those: it
+   * updates by that predicate with no limit, so clearing one account's counter
+   * clears the other's.
+   *
+   * **The row that reaches this is one Better Auth did not write.** Its own
+   * paths fold the address, which `test/casefolded-account-writes.test.ts`
+   * holds them to; `sameAddress` folds on the column precisely because a row
+   * written any other way is the row with no lockout and no hold. This makes
+   * that row impossible rather than merely unaddressed.
+   * -> `auth/same-address.ts`
+   */
+  uniqueIndex('user_email_folded').on(sql`lower(${t.email})`),
+])
 
 export const session = pgTable('session', {
   id: text('id').primaryKey(),

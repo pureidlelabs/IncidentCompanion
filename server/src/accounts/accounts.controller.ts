@@ -33,8 +33,9 @@ import { z } from 'zod'
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES, type Auth } from '../auth/auth.config.js'
 import { PasswordHoldService } from '../auth/password-hold.service.js'
 import { LockoutClearService } from '../auth/lockout-clear.service.js'
-import { duplicateEmail, rowFor, type Analyst } from './rules.js'
-import { stranding } from '../auth/last-admin.js'
+import { duplicateEmail, rowFor } from './rules.js'
+import { AccountLookupService } from '../auth/account-lookup.service.js'
+import { stranding, type Analyst } from '../auth/last-admin.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '../auth/password-policy.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 
@@ -131,6 +132,7 @@ export class InstallAccountsController {
    */
   constructor(
     private readonly auth: AuthService<Auth>,
+    private readonly accounts: AccountLookupService,
     private readonly holds: PasswordHoldService,
     private readonly lockouts: LockoutClearService,
     private readonly activity: InstallActivityService,
@@ -173,16 +175,13 @@ export class InstallAccountsController {
     }
     const { username, displayName, password, role } = parsed.data
 
-    if ((await this.users(request)).some((one) => one.email === username)) {
-      refuse(`There is already an account for ${username}.`)
-    }
-
     /**
-     * **The read above has a gap under it, and this is what closes it.** Two
+     * **No read in front of this, because a read cannot answer it.** Two
      * admins pressing Create at the same moment both see no such account, and
-     * the second reaches the unique constraint on `user.email` - which surfaced
-     * as `500 Internal server error`. Checking harder cannot fix a
-     * check-then-write; treating the constraint's complaint as the answer can.
+     * the second is refused by the database - which surfaced as `500 Internal
+     * server error` before the catch below existed. A reader here would also
+     * have to fold case to be right about it, which is a second place to get
+     * that wrong. -> `db/schema/auth.ts`
      */
     try {
       await this.auth.api.createUser({
@@ -215,7 +214,7 @@ export class InstallAccountsController {
     if (!parsed.success) {
       refuse(...parsed.error.issues.map((one) => one.message))
     }
-    const target = (await this.users(request)).find((one) => one.email === username)
+    const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
 
     await this.auth.api.setUserPassword({
@@ -233,7 +232,14 @@ export class InstallAccountsController {
     await this.lockouts.clear(username)
     // **The password is not on the line, and neither is its hash.** This
     // column is read by every admin and outlives the account it describes.
-    await this.activity.passwordReset({ session, headers: request.headers, request }, username)
+    // **The account, not the keystrokes.** `target_label` is a copied address
+    // and the table is append-only, so a line naming a spelling no row holds
+    // cannot be corrected and an auditor filtering for that account never sees
+    // it. -> `db/schema/install-activity.ts`
+    await this.activity.passwordReset(
+      { session, headers: request.headers, request },
+      target.email,
+    )
     return done(`${username} will set their own password at the next sign-in.`)
   }
 
@@ -250,10 +256,17 @@ export class InstallAccountsController {
     @Param('username') username: string,
     @Session() session: UserSession,
   ): Promise<Written> {
-    const everyone = await this.users(request)
-    const target = everyone.find((one) => one.email === username)
+    // **Administrators rather than a page of everybody.** `stranding` decides
+    // by counting within what it is handed, and `listUsers` caps at 500 - so a
+    // roster page that happened to exclude the target answered that no
+    // administrator remains. -> `auth/account-lookup.service.ts`
+    const everyone = await this.accounts.administrators()
+    const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
-    if (target.email === session.user.email) {
+    // Compared by id, because that is what identifies an account. An address
+    // is how one is reached, and a comparison of two of them is a lookup
+    // wearing the shape of an identity check.
+    if (target.id === session.user.id) {
       refuse('You cannot disable the account you are signed in with.')
     }
     // `null` is a disable: a demotion to nobody, asking the same question the
@@ -269,7 +282,10 @@ export class InstallAccountsController {
       body: { userId: target.id, banReason: 'Disabled from the Accounts pane.' },
       headers: this.headersOf(request),
     })
-    await this.activity.accountDisabled({ session, headers: request.headers, request }, username)
+    await this.activity.accountDisabled(
+      { session, headers: request.headers, request },
+      target.email,
+    )
     return done(`${username} can no longer sign in.`)
   }
 
@@ -281,14 +297,17 @@ export class InstallAccountsController {
     @Param('username') username: string,
     @Session() session: UserSession,
   ): Promise<Written> {
-    const target = (await this.users(request)).find((one) => one.email === username)
+    const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
 
     await this.auth.api.unbanUser({
       body: { userId: target.id },
       headers: this.headersOf(request),
     })
-    await this.activity.accountEnabled({ session, headers: request.headers, request }, username)
+    await this.activity.accountEnabled(
+      { session, headers: request.headers, request },
+      target.email,
+    )
     return done(`${username} can sign in again.`)
   }
 
@@ -312,8 +331,12 @@ export class InstallAccountsController {
       refuse(...parsed.error.issues.map((one) => one.message))
     }
 
-    const everyone = await this.users(request)
-    const target = everyone.find((one) => one.email === username)
+    // **Administrators rather than a page of everybody.** `stranding` decides
+    // by counting within what it is handed, and `listUsers` caps at 500 - so a
+    // roster page that happened to exclude the target answered that no
+    // administrator remains. -> `auth/account-lookup.service.ts`
+    const everyone = await this.accounts.administrators()
+    const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
 
     if (stranding(everyone, target, parsed.data.role)) {
@@ -333,7 +356,7 @@ export class InstallAccountsController {
     })
     await this.activity.roleChanged(
       { session, headers: request.headers, request },
-      username,
+      target.email,
       from,
       parsed.data.role,
     )

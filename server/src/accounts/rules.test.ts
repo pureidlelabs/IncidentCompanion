@@ -7,7 +7,8 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { rowFor, type Analyst } from './rules.js'
+import { rowFor } from './rules.js'
+import type { Analyst } from '../auth/last-admin.js'
 
 function analyst(over: Partial<Analyst> = {}): Analyst {
   return { id: 'u-1', email: 'a@example.test', name: 'A', role: 'analyst', ...over }

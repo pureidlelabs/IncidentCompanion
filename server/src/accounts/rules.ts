@@ -7,15 +7,7 @@
  * called once and its answer passed on.
  */
 import { DEFAULT_ROLE, ROLES } from '../auth/auth.config.js'
-
-/** A user as the admin plugin lists them, narrowed to what is read here. */
-export interface Analyst {
-  id: string
-  email: string
-  name: string
-  role?: string | null
-  banned?: boolean | null
-}
+import type { Analyst } from '../auth/last-admin.js'
 
 type Role = (typeof ROLES)[number]
 
