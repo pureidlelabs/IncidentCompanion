@@ -92,7 +92,22 @@ function checked(collection: string, row: Record<string, unknown>): Record<strin
     throw new BadArchive(`this archive's ${collection} rows are not ones this install can read`)
   }
   const seen = schema.safeParse(row)
-  if (seen.success) return seen.data
+  if (seen.success) {
+    /**
+     * **Only what the archive stated.** `.partial()` makes a field optional
+     * and does not suppress its `.default()`, so parsing a row that omits a
+     * column returns the *schema's* default for it -- which the loop would
+     * then write as an explicit value, overriding the column's own. A cloud
+     * app omitting `verifiedPublisher` would be stored `unknown` where the
+     * column says `unverified`: nothing known, in place of a stated negative
+     * finding, on exactly the other-build archive this is meant to serve.
+     */
+    const stated: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(seen.data)) {
+      if (Object.hasOwn(row, key)) stated[key] = value
+    }
+    return stated
+  }
 
   const first = seen.error.issues[0]
   const field = first?.path.join('.') ?? ''
@@ -327,7 +342,12 @@ export class ArchiveImportService {
               .insert(table)
               .values(values as never)
               .returning()) as { id?: string }[]
-          } catch {
+          } catch (error) {
+            // **Logged, because the refusal names the archive and the store
+            // may not be why.** A connection drop, a statement timeout or a
+            // serialization failure reaches here too, and an operator told
+            // their file is bad has nothing to act on and nothing to send on.
+            this.log.warn(`${name} row refused by the store: ${String(error)}`)
             throw new BadArchive(
               `this archive states a value in ${name} that this install cannot write`,
             )

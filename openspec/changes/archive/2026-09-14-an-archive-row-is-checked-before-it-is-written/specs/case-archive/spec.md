@@ -6,7 +6,9 @@
 
 An archive matching its own statement MUST NOT be read as though its rows were sound. A statement covers what the file carries; it says nothing about whether the rows inside are ones this install can mean.
 
-Every row MUST be checked against the shape its collection declares, before any row is written. A value the collection cannot mean — a term no vocabulary defines, a value of a shape the field does not take — MUST be refused rather than stored.
+Every row MUST be checked against the shape its collection declares, before any row is written. A value of a shape the field does not take MUST be refused rather than stored, and where a field's terms are fixed, a term outside them MUST be refused too.
+
+What the check can refuse is what the collection states. A field whose terms are published as guidance rather than fixed in its shape is open at every door, and an archive is not the place to close it.
 
 An archive carrying a row this install cannot hold MUST be refused whole, and MUST leave nothing of that archive behind. A case written in part is worse than no case: it looks sound, and the operator has no way to tell which rows were reached.
 
@@ -14,10 +16,10 @@ The refusal MUST name the collection it stopped at, in the words the application
 
 A field this install does not know MUST be dropped rather than refused, so that an archive written by another build of this application still reads for what the two have in common.
 
-#### Scenario: An archive states a term no vocabulary defines
+#### Scenario: An archive states a term outside a fixed set
 
 - GIVEN an archive whose statement is sound
-- AND a row in it carrying a term the collection's vocabulary does not define
+- AND a row in it carrying a term outside the fixed set its field declares
 - WHEN it is read
 - THEN it is refused
 - AND the term is not stored
@@ -50,3 +52,10 @@ A field this install does not know MUST be dropped rather than refused, so that 
 - WHEN it is read
 - THEN the field is dropped
 - AND the rest of the row is read
+
+#### Scenario: An archive leaves a column out
+
+- GIVEN an archive that states nothing for a column this install has
+- WHEN it is read
+- THEN the column keeps the value the install would give it
+- AND the row does not gain a value the archive never stated

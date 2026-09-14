@@ -30,7 +30,7 @@ import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
 import { ArchiveImportService } from './import.service.js'
 import { CASE_NAME, MANIFEST_NAME, pack, readArchive } from '../archive/format.js'
-import { cases, systems, user } from '../db/schema/index.js'
+import { cases, cloudApps, systems, timeline, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -83,7 +83,13 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
     await rm(root, { recursive: true, force: true })
   })
 
-  /** A case with one system, exported, so there is a real record to tamper with. */
+  /**
+   * A case with one system and one timeline action, exported.
+   *
+   * **Furnished, because an empty case proves nothing.** The control below
+   * imports what this builds; with no collection rows in it, a check that
+   * refused every row would still pass. -> the review of #625
+   */
   async function exported() {
     minted += 1
     const made = await db!
@@ -96,6 +102,27 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
       })
       .returning()
     const row = made[0]!
+    await seed!.insert(systems).values({
+      caseId: row.id,
+      hostname: `HOST-${String(minted)}`,
+      // **Provenance, which the write schema does not carry.** A round trip
+      // that never states it cannot see `CARRIED` dropping it.
+      source: 'sentinel',
+      createdBy: actorId,
+      updatedBy: actorId,
+    })
+    await seed!.insert(timeline).values({
+      caseId: row.id,
+      // **An action, not an event.** The kind dispatch chooses the schema, and
+      // no archive in this repository carried an action row -- so returning the
+      // event schema for both left the whole dispatch untested.
+      kind: 'action',
+      actionType: 'contain',
+      description: 'Host isolated',
+      time: new Date(),
+      createdBy: actorId,
+      updatedBy: actorId,
+    })
     const built = await exporter.build({ caseId: row.id, includeFiles: false })
     // The original's reference is freed, so a refusal below is about the row
     // rather than about the install already holding the reference. -> #220
@@ -258,5 +285,55 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
     const result = await importer.load(built, '', actorId)
 
     expect(result.id).toBeDefined()
+    expect(result.rows, 'the control imported an archive of no rows').toBeGreaterThan(1)
+  })
+
+  /**
+   * **A timeline row's shape comes from its own kind.** An action and an event
+   * take different fields, and no archive in this repository carried an action
+   * -- so returning the event schema for both refused every legitimate action
+   * row and no test could see it.
+   */
+  it('reads a timeline action, not only an event', async () => {
+    const built = await exported()
+    const result = await importer.load(built, '', actorId)
+
+    const [row] = await seed!.select().from(timeline).where(eq(timeline.caseId, result.id))
+    expect(row?.kind).toBe('action')
+    expect(row?.actionType, 'the action arm was not the schema the row was judged by').toBe(
+      'contain',
+    )
+  })
+
+  /**
+   * **A column the write schema does not carry still travels.** `source` says
+   * where a row came from, and dropping it silently rewrites an imported row's
+   * provenance to `manual` -- a claim about the analyst's own work.
+   */
+  it('carries a column no analyst writes', async () => {
+    const built = await exported()
+    const result = await importer.load(built, '', actorId)
+
+    const [row] = await seed!.select().from(systems).where(eq(systems.caseId, result.id))
+    expect(row?.source).toBe('sentinel')
+  })
+
+  /**
+   * **A column the archive does not state keeps the column's own default.**
+   * `.partial()` leaves a schema `.default()` firing, so parsing a row that
+   * omits a column returns the schema's answer for it -- written as an
+   * explicit value over the column's. `verifiedPublisher` is the live case:
+   * `unverified` is a stated negative finding and `unknown` is nothing known.
+   */
+  it('does not answer for a column the archive left out', async () => {
+    const built = await exported()
+    const hostile = await tamperedWith(built, 'cloudApps', [{ id: 'app-1', appName: 'Dropbox' }])
+    const result = await importer.load(hostile, '', actorId)
+
+    const [row] = await seed!.select().from(cloudApps).where(eq(cloudApps.caseId, result.id))
+    expect(
+      row?.verifiedPublisher,
+      'the parse answered for a column the archive never stated, overriding the column',
+    ).toBe('unverified')
   })
 })

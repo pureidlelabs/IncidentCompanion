@@ -11,9 +11,9 @@ Measured against the shipping importer, an archive naming one system:
 | a size no column can hold | a database driver error naming column names |
 | an object where a hostname goes | stored, as the text `{"not":"a string"}` |
 | a list where a hostname goes | stored, as the text `{"a","b"}` |
-| a vocabulary value no schema defines | stored, and drawn on every screen that reads the field |
+| a term outside a field's fixed set | stored, and drawn on every screen that reads the field |
 
-The refusal is the reported half and the smaller one. Five of six hostile rows were written, so what an analyst gets is not an error but a case that looks sound and holds values the application cannot mean. The vocabulary case is the worst of them: nothing downstream re-checks a stored value, so it reaches screens and reports.
+The refusal is the reported half and the smaller one. Four of five hostile rows were written, so what an analyst gets is not an error but a case that looks sound and holds values the application cannot mean. The vocabulary case is the worst of them: nothing downstream re-checks a stored value, so it reaches screens and reports.
 
 The requirement this fails is not the envelope's. An archive that states what it holds, and holds it, can still state rows this build cannot write. What is missing is a property about the rows.
 
