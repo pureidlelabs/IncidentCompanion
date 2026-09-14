@@ -252,6 +252,46 @@ export const RefusedDelete: Story = {
   },
 }
 
+/**
+ * The reference refusal, through the write path an analyst actually presses.
+ *
+ * **`writes.remove`, not `refuseDelete`.** That prop is an escape hatch the
+ * story above uses to reach the dialog without a write, so it says nothing
+ * about whether the table hands the dialog the refusal -- and the table used
+ * to discard the call and return `undefined`, which closed the dialog on a
+ * delete that had not happened. -> #665
+ */
+export const RefusedForReferences: Story = {
+  name: 'A delete refused because rows are still referenced',
+  args: {
+    writes: {
+      save: () => Promise.resolve({}),
+      remove: () =>
+        Promise.reject(
+          new ApiError(409, 'Some of those are still referenced.', {
+            references: { one: 2, two: 1 },
+          }),
+        ),
+    },
+  },
+  play: async ({ canvasElement, step }) => {
+    const canvas = within(canvasElement)
+
+    await step('an analyst asks for a row to go', async () => {
+      const bins = await canvas.findAllByRole('button', { name: /delete/i })
+      await userEvent.click(bins[0]!)
+    })
+
+    await step('and the dialog stays open, counting what is still named', async () => {
+      const confirm = await screen.findByRole('button', { name: /^delete$/i })
+      await userEvent.click(confirm)
+      await expect(
+        await screen.findByText(/of the selected rows (is|are) still referenced/),
+      ).toBeVisible()
+    })
+  },
+}
+
 /** A write another analyst got in first with, reported above the table. */
 export const RefusedWrite: Story = {
   name: 'A refused write',

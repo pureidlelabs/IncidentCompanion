@@ -5,6 +5,8 @@ import { useSpecs } from '@/api/specs'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryDelete } from '@/api/useEntryDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
+import { useBulkDelete } from '@/api/useBulkDelete'
+import { reportBulkMissing } from '@/components/blocks/notify'
 import { useCaseId } from '@/app/useCaseId'
 import { kindFor } from '@/components/blocks/entity-scope'
 import { EntitiesScreen } from '@/screens/entities'
@@ -79,6 +81,8 @@ export function EntitiesContainer() {
     },
   } as Record<CollectionName, never>
 
+  const bulkDelete = useBulkDelete(caseId)
+
   const writes: EntityWrites = {
     save: (collection, entry, fields) => {
       const hooks = rows[collection]
@@ -96,15 +100,27 @@ export function EntitiesContainer() {
     },
 
     remove: async (doomed) => {
-      // One at a time: the version check is per row, and a refusal names
-      // which row it was.
+      /**
+       * **One request, because order would otherwise decide the outcome.**
+       * Malware names a system, so a loop deleting the asset first is refused
+       * and one deleting the malware first is not. The route counts references
+       * against what survives the call, which no loop here can express -- and
+       * a loop also half-deletes, stopping at the first refusal with the rest
+       * already gone. -> `api/useBulkDelete.ts`, #665
+       */
+      const targets: Partial<Record<CollectionName, string[]>> = {}
       for (const row of doomed) {
-        const hooks = rows[row.collection]
-        if (!hooks) continue
-        await announcing('the entity', () =>
-          hooks.remove.mutateAsync({ entryId: row.id, version: row.version }),
-        )
+        ;(targets[row.collection] ??= []).push(row.id)
       }
+      if (Object.keys(targets).length === 0) return
+      const written = await announcing('the entities', () => bulkDelete.mutateAsync({ targets }))
+      // **Told, not discarded.** A row another analyst had already deleted
+      // comes back under `missing`, and an analyst who selected six and lost
+      // two of them silently has no way to know which case they are looking at.
+      reportBulkMissing(
+        written.missing.map((row) => row.id),
+        'entities',
+      )
     },
   }
 

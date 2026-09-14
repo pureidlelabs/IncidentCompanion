@@ -269,7 +269,7 @@ export function EntityScopeTable({
     [chooseScope],
   )
 
-  const remove = (ids: readonly string[]) => {
+  const remove = async (ids: readonly string[]) => {
     // The kind is resolved before the rows go, since `findRow` reads `source`.
     const doomed = ids
       .map((id) => findRow(id))
@@ -279,8 +279,17 @@ export function EntityScopeTable({
         id: String(found.entry.id),
         version: (found.entry as { version?: number }).version ?? 0,
       }))
+    if (!writes || doomed.length === 0) return
+
+    /**
+     * **Nothing leaves the screen until the write returns.** The server
+     * refuses the whole selection when a row that is staying still names one
+     * of them, so there is no partial outcome to reconcile -- and a table that
+     * dropped the rows first shows them gone while the case still holds them.
+     * -> `api/useBulkDelete.ts`
+     */
+    await writes.remove(doomed)
     setSource((current) => (current ? withoutRows(current, new Set(ids)) : current))
-    if (writes && doomed.length > 0) void writes.remove(doomed)
   }
 
   /** The row behind an id, with the kind that says which form describes it. */
@@ -525,8 +534,11 @@ export function EntityScopeTable({
         }}
         onConfirm={() => {
           if (refuseDelete) return refuseDelete()
-          remove(deleting ?? [])
-          return undefined
+          // **Returned, never discarded.** The dialog reads the refusal off a
+          // rejected promise; handed `undefined` it takes its synchronous
+          // branch, closes, and reports a delete that did not happen -- which
+          // `report-index.test.ts` names in its own docstring.
+          return remove(deleting ?? [])
         }}
         title={(count) =>
           count === 1 ? 'Delete this entity?' : `Delete ${String(count)} entities?`

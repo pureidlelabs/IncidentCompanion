@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { entityNames, referenceOptions } from '@/components/blocks/entity-scope'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
 import { useInFlight } from '@/lib/useInFlight'
+import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
 import {
   OPTIONAL_COLUMNS,
   matchesData,
@@ -66,8 +67,6 @@ export interface ImpactWrites {
 export interface ImpactScreenProps {
   kase: Case | undefined
   specs: Specs | undefined
-  /** What the search box opens with. */
-  search?: string
   /**
    * The collection is still being read.
    *
@@ -77,6 +76,8 @@ export interface ImpactScreenProps {
    * either.
    */
   busy?: boolean
+  /** What the search box opens with. Stories draw a screen already filtered. */
+  search?: string
   /** Why the read failed, if it did. */
   problem?: unknown
   /** Asked again when *Try again* is pressed. */
@@ -130,7 +131,7 @@ export function ImpactScreen({
   writes,
 }: ImpactScreenProps) {
   const [query, setQuery] = useState(search)
-  const [rows, setRows] = useState(kase?.impact ?? [])
+  const [rows, setRows] = useCaseRows(kase, (one) => one.impact)
   const [deleting, setDeleting] = useState<string[] | null>(null)
   const editor = useRowEditor<ImpactEntry>()
 
@@ -192,13 +193,14 @@ export function ImpactScreen({
   const dispositions = filters.chosen('disposition')
   const categories = filters.chosen('category')
 
-  const [given, setGiven] = useState(kase)
-  if (given !== kase) {
-    setGiven(kase)
-    setRows(kase?.impact ?? [])
-    setQuery(search)
+  // **The analyst's place in this case, put back when they leave it.** After
+  // the filters, because a screen's filter options are counted off its rows.
+  useResetOnCase(kase, () => {
+    setQuery('')
     filters.clear()
-  }
+  })
+
+
 
   const visible = useMemo(
     () =>
