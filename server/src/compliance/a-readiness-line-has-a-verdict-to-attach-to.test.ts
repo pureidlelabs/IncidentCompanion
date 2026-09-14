@@ -55,7 +55,7 @@ const ROWS: [string, ComplianceRow][] = [
   ['a case just opened, nothing recorded', record()],
   ['an essential NIS2 entity', record({ nis2EntityClass: 'essential' })],
   ['an important NIS2 entity', record({ nis2EntityClass: 'important' })],
-  ['an entity out of NIS2 scope', record({ nis2EntityClass: 'out-of-scope' } as Partial<ComplianceRow>)],
+  ['an entity out of NIS2 scope', record({ nis2EntityClass: 'out-of-scope' })],
   ['personal data involved', record({ personalDataInvolved: 'yes' })],
   ['personal data ruled out', record({ personalDataInvolved: 'no' })],
   [
@@ -75,6 +75,29 @@ describe('the regimes a case is in play for', () => {
       [...withLines].sort(),
       'a regime is told it is short of facts while showing no verdict for that row to attach to',
     ).toEqual([...withVerdicts].sort())
+  })
+
+  /**
+   * **The gate itself, because agreement alone is not correctness.** Once both
+   * dispatchers read one table they agree by construction, so the cases above
+   * can only catch a second list growing back. What they cannot see is the
+   * table holding the wrong condition -- replacing DORA's gate with `() => true`
+   * leaves every one of them green. This is the case that goes red.
+   */
+  it('holds DORA out until its criticality gate has an answer', () => {
+    const unanswered = record()
+    expect(
+      complianceBreakdown(unanswered, ALL_ON, POLICY).map((one) => one.regime),
+      'a case that has answered nothing is given a DORA verdict reading undetermined',
+    ).toEqual([])
+    expect(readiness(unanswered, ALL_ON, POLICY)).toEqual([])
+
+    const answered = record({ doraCriticalFunctions: 'yes' })
+    expect(
+      complianceBreakdown(answered, ALL_ON, POLICY).map((one) => one.regime),
+      'the Article 6 gate is answered and DORA still shows nothing',
+    ).toEqual(['DORA'])
+    expect(readiness(answered, ALL_ON, POLICY).map((one) => one.regime)).toEqual(['dora'])
   })
 
   /** A regime switched off is in play for neither, whatever the row says. */
