@@ -21,6 +21,7 @@ import { InstallPreferencesService } from '../preferences/install.service.js'
 import { cases, customers, user } from '../db/schema/index.js'
 import { ORGANISATION_FACTS } from './organisation-facts.js'
 import { openTestPool } from '../../test/database.js'
+import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -35,7 +36,7 @@ const ANALYST = 'answering-analyst'
 
 afterAll(async () => {
   if (seed) await seed.delete(cases)
-  if (seed) await seed.delete(customers)
+  if (seed) await clearCustomers(seed)
   await pool?.end()
 })
 
@@ -45,7 +46,7 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await seed!.delete(customers)
+    await clearCustomers(seed!)
 
     const now = new Date()
     await seed!
@@ -62,9 +63,11 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
 
     const [customer] = await seed!
       .insert(customers)
+      // **An ordinary customer, not the install's default.** What these cases
+      // need is one holding none of the facts; being *the* default is a
+      // property of the install and there is exactly one of it.
       .values({
         name: 'Not yet attributed',
-        isDefault: true,
         homeMemberState: null,
         competentAuthority: '',
       })

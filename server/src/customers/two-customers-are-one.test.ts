@@ -23,6 +23,7 @@ import { ComplianceService } from '../compliance/compliance.service.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
 import { cases, customers, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
+import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -46,7 +47,7 @@ const SETTLED = { competentAuthority: 'AP' }
 
 afterAll(async () => {
   if (seed) await seed.delete(cases)
-  if (seed) await seed.delete(customers)
+  if (seed) await clearCustomers(seed)
   await pool?.end()
 })
 
@@ -59,7 +60,7 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await seed!.delete(customers)
+    await clearCustomers(seed!)
 
     const now = new Date()
     await seed!

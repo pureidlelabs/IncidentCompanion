@@ -31,6 +31,16 @@ export class CustomersModule implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     const { name } = await this.customers.ensureDefault()
-    new Logger('Customers').log(`Default customer: ${name}`)
+    const log = new Logger('Customers')
+    log.log(`Default customer: ${name}`)
+
+    /**
+     * **Cases opened before a case carried a customer.** They read as the
+     * default's and key separately in the index, so the reference rule would
+     * not hold across them. Silent when there are none, which is every boot
+     * after the first.
+     */
+    const moved = await this.customers.attributeUnattributed()
+    if (moved > 0) log.log(`Put ${String(moved)} case(s) with no customer under ${name}`)
   }
 }

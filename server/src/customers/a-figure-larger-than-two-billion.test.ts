@@ -26,6 +26,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { caseCompliance } from '../db/schema/case-compliance.js'
 import { cases, customers, impact } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
+import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -44,7 +45,7 @@ const PAST_WHAT_A_NUMBER_HOLDS = '9007199254740992'
 afterAll(async () => {
   if (seed) {
     await seed.delete(cases)
-    await seed.delete(customers)
+    await clearCustomers(seed)
   }
   await pool?.end()
 })
@@ -52,7 +53,7 @@ afterAll(async () => {
 describe.skipIf(!db)('a figure larger than two billion', () => {
   beforeEach(async () => {
     await seed!.delete(cases)
-    await seed!.delete(customers)
+    await clearCustomers(seed!)
   })
 
   it('is held by the customer that answered it', async () => {

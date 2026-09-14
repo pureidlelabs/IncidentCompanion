@@ -24,7 +24,6 @@ import { GroupsController } from './groups.controller.js'
 import { GroupsService } from './groups.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
-import { customers } from '../db/schema/customer.js'
 import { installActivity } from '../db/schema/install-activity.js'
 import { user } from '../db/schema/auth.js'
 import { openTestPool } from '../../test/database.js'
@@ -93,11 +92,17 @@ describe.skipIf(!db)('an analyst being given reach', () => {
     sector = made!.id
   })
 
+  /**
+   * **The default customer is not this file's to remove.** `ensureDefault` is
+   * idempotent and install-wide, every case is opened under it, and the
+   * foreign key from `cases` refuses the delete rather than orphaning them --
+   * so a teardown that swept the table took out shared state and failed while
+   * doing it. The groups this file made are its own and still go.
+   */
   afterAll(async () => {
     await seed!.delete(groupMembers)
     await seed!.delete(groupCustomers)
     await seed!.delete(groups)
-    await seed!.delete(customers)
     await pool!.end()
   })
 

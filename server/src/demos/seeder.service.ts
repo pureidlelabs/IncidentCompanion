@@ -6,6 +6,7 @@
  * serving process starts reseeds.
  */
 import { Injectable, Logger, Inject } from '@nestjs/common'
+import { defaultCustomer } from '../customers/customers.service.js'
 import { eq } from 'drizzle-orm'
 
 import { DATABASE, SEED_DATABASE, seedRoleMissing } from '../db/db.module.js'
@@ -107,6 +108,15 @@ export class DemoSeederService {
       // a case that no longer exists, and a picker replaying them would show
       // activity on nothing.
       await tx.delete(cases).where(eq(cases.isDemo, true))
+      /**
+       * **A demo case is opened under a customer like any other.** This writes
+       * the row itself rather than going through `CasesService.create`, so
+       * without this every demo lands carrying no customer -- in a group the
+       * application treats as the default's but the index keys separately, and
+       * a demo reference then collides with nothing and is collided with by
+       * nothing.
+       */
+      const openedUnder = (await defaultCustomer(tx)).id
       const rows = await tx
         .insert(cases)
         .values(
@@ -116,6 +126,7 @@ export class DemoSeederService {
           // quietly define what a case is by what a demo happens to hold.
           DEMO_CASES.map((demo) => ({
             reference: demo.reference,
+            customerId: openedUnder,
             customer: demo.customer,
             title: demo.title,
             summary: demo.summary,

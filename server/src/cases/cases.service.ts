@@ -15,9 +15,10 @@ import {
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
+import { defaultCustomer } from '../customers/customers.service.js'
 import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { CaseChannel } from '../live/case-channel.service.js'
@@ -294,12 +295,78 @@ export class CasesService {
   }
 
   /**
+   * Refuses a reference the customer is already using, naming the case.
+   *
+   * **The refusal is here and the guarantee is the index**, which is the split
+   * the merge path does not need: `cases_customer_reference_idx` cannot be
+   * bypassed, and this is what turns its violation into an answer an analyst
+   * can act on rather than a failed query. A lookup alone would race two
+   * simultaneous creates; the index alone would say only that something
+   * collided.
+   *
+   * **Asked of the customer the case belongs to.** A case that carried no
+   * customer and resolved to the default only when it was read leaves this
+   * with one group to ask about -- and refusing a reference on that basis
+   * refuses two genuinely different customers the same ticket number.
+   */
+  private async referenceIsFree(
+    tx: Executor,
+    customerId: string,
+    reference?: string,
+    /**
+     * The case being written, where there is one.
+     *
+     * **Or an edit that leaves the reference alone refuses itself.** The
+     * Overview form resends every field, so patching a summary asks whether
+     * this case's own number is taken -- and it is, by this case.
+     */
+    except?: string,
+  ): Promise<void> {
+    // The absence of a reference is not a value and never collides, which is
+    // also why the index is partial.
+    if (!reference) return
+
+    const [held] = await tx
+      .select({ title: cases.title })
+      .from(cases)
+      .where(
+        and(
+          eq(cases.reference, reference),
+          eq(cases.customerId, customerId),
+          ...(except ? [ne(cases.id, except)] : []),
+        ),
+      )
+      .limit(1)
+    if (!held) return
+
+    throw new ConflictException({
+      message: `"${held.title}" already carries ${reference}. Give this case a different reference.`,
+    })
+  }
+
+  /**
+   * The customer a case is opened under.
+   *
+   * **Read on the handle passed in.** `create` may be one half of a larger
+   * act, and a read reaching the pool from inside an open transaction holds
+   * one connection while asking for another. -> `db/scope.ts`
+   *
+   * **The same question the boot hook asks**, so an install that has lost its
+   * default gets one here rather than refusing to open a case -- and two
+   * doors cannot disagree about which record it is.
+   */
+  private async openedUnder(tx: Executor): Promise<string> {
+    return (await defaultCustomer(tx)).id
+  }
+
+  /**
    * Raise a case, optionally seeded from a template.
    *
    * The insert, its change-feed row and the seed are one transaction: a case
    * that exists and was never announced is invisible to every picker already
    * open, and one holding half a checklist looks started.
    */
+
   async create(
     /**
      * **What a case may be minted with.** `severity` and `detectedAt` are here
@@ -321,9 +388,11 @@ export class CasesService {
     on: Executor = this.db,
   ): Promise<CaseRow> {
     return on.transaction(async (tx) => {
+      const customerId = await this.openedUnder(tx)
+      await this.referenceIsFree(tx, customerId, input.reference)
       const [row] = await tx
         .insert(cases)
-        .values({ ...input, createdBy: actorId, updatedBy: actorId })
+        .values({ ...input, customerId, createdBy: actorId, updatedBy: actorId })
         .returning()
 
       // Scoped here rather than by `withCase`: this transaction learns its
@@ -407,6 +476,23 @@ export class CasesService {
     values: Record<string, unknown>,
     actorId: string,
   ): Promise<WriteResult<CaseRow>> {
+    /**
+     * **The door an analyst edits a reference through, so the door a
+     * collision arrives at.** Without this the unique index refuses the write
+     * and the driver's error reaches the analyst as a 500 naming nothing,
+     * where every other writer names the case that holds the number.
+     */
+    if (typeof values['reference'] === 'string') {
+      const [row] = await this.db
+        .select({ customerId: cases.customerId })
+        .from(cases)
+        .where(eq(cases.id, id))
+        .limit(1)
+      if (row?.customerId) {
+        await this.referenceIsFree(this.db, row.customerId, values['reference'], id)
+      }
+    }
+
     const result = await updateVersioned<CaseRow>(this.db, {
       table: cases,
       entity: 'cases',

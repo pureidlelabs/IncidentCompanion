@@ -16,6 +16,7 @@ import { CasesService } from './cases.service.js'
 import { CustomersService } from '../customers/customers.service.js'
 import { cases, customers } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
+import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -31,7 +32,7 @@ type Line = { kind: string; subject: string; detail: Record<string, string> }
 afterAll(async () => {
   if (seed) {
     await seed.delete(cases)
-    await seed.delete(customers)
+    await clearCustomers(seed)
   }
   await pool?.end()
   if (seedPool !== pool) await seedPool?.end()
@@ -53,7 +54,7 @@ describe.skipIf(!db)('giving a case its customer', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await seed!.delete(customers)
+    await clearCustomers(seed!)
 
     await new CustomersService(db!).ensureDefault()
     northwind = await onboard('Northwind BV')

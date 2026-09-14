@@ -17,10 +17,11 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, eq, inArray, ne, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import type { Executor } from '../db/scope.js'
 import { customers } from '../db/schema/customer.js'
 import { cases } from '../db/schema/case.js'
 import { groupCustomers } from '../db/schema/groups.js'
@@ -323,26 +324,71 @@ export class CustomersService {
    * once -- the loser's insert is refused and it reads the winner's row.
    */
   async ensureDefault(): Promise<{ id: string; name: string }> {
-    const [existing] = await this.db
-      .select({ id: customers.id, name: customers.name })
-      .from(customers)
-      .where(eq(customers.isDefault, true))
-      .limit(1)
-    if (existing) return existing
+    return defaultCustomer(this.db)
+  }
 
-    const [made] = await this.db
-      .insert(customers)
-      .values({ name: DEFAULT_CUSTOMER_NAME, isDefault: true })
-      .onConflictDoNothing()
-      .returning({ id: customers.id, name: customers.name })
-    if (made) return made
-
-    const [theirs] = await this.db
-      .select({ id: customers.id, name: customers.name })
-      .from(customers)
-      .where(eq(customers.isDefault, true))
-      .limit(1)
-    if (!theirs) throw new Error('the install has no default customer and one could not be made')
-    return theirs
+  /** Put every case carrying no customer under the default. */
+  async attributeUnattributed(): Promise<number> {
+    return attributeUnattributedCases(this.db)
   }
 }
+
+/**
+ * Put every case that carries no customer under the default, and answer how
+ * many moved.
+ *
+ * **Idempotent, and it is what makes the reference rule hold on an install
+ * that predates it.** A case opened before cases carried a customer has
+ * `customer_id IS NULL`, and the application reads that as the default while
+ * the unique index keys it separately -- so two cases the product treats as
+ * one customer's could both hold one ticket number, which is exactly the state
+ * the rule forbids.
+ *
+ * **A step at boot rather than a migration**, because this schema is pushed
+ * rather than migrated: there is no file for a backfill to live in, and the
+ * boot hook beside it already ensures the row this points at.
+ */
+export async function attributeUnattributedCases(on: Executor): Promise<number> {
+  const fallback = await defaultCustomer(on)
+  const moved = await on
+    .update(cases)
+    .set({ customerId: fallback.id })
+    .where(isNull(cases.customerId))
+    .returning({ id: cases.id })
+  return moved.length
+}
+
+/**
+ * The default customer, made if the install has none.
+ *
+ * Safe to call on every boot: the insert is conditional on the read, and the
+ * unique index is what settles a race between two processes doing it at once
+ * -- the loser's insert is refused and it reads the winner's row.
+ *
+ * **Takes the handle rather than reaching for the pool**, because opening a
+ * case asks this from inside that case's transaction, and a read reaching the
+ * pool from inside an open transaction holds one connection while asking for
+ * another. -> `db/scope.ts`
+ *
+ * **A function rather than a second method**, so the door that opens a case
+ * and the hook that runs at boot ask the same question of the same code.
+ */
+export async function defaultCustomer(on: Executor): Promise<{ id: string; name: string }> {
+  const held = { id: customers.id, name: customers.name }
+
+  const [existing] = await on.select(held).from(customers).where(eq(customers.isDefault, true)).limit(1)
+  if (existing) return existing
+
+  const [made] = await on
+    .insert(customers)
+    .values({ name: DEFAULT_CUSTOMER_NAME, isDefault: true })
+    .onConflictDoNothing()
+    .returning(held)
+  if (made) return made
+
+  const [theirs] = await on.select(held).from(customers).where(eq(customers.isDefault, true)).limit(1)
+  if (!theirs) throw new Error('the install has no default customer and one could not be made')
+  return theirs
+}
+
+
