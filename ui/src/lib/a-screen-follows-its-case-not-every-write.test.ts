@@ -137,9 +137,12 @@ describe('a screen drawing one case', () => {
    */
   it('clears once when one case is replaced by another through nothing', () => {
     const cleared = vi.fn()
+    // Declared rather than asserted: `initialProps` infers `Case` from the
+    // first value, and the rerenders below hand it `undefined`.
+    const first: { kase: Case | undefined } = { kase: kaseWith('case-a', ['one']) }
     const { rerender } = renderHook(
       ({ kase }: { kase: Case | undefined }) => useBoth(kase, cleared),
-      { initialProps: { kase: kaseWith('case-a', ['one']) } },
+      { initialProps: first },
     )
 
     rerender({ kase: undefined })
