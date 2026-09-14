@@ -76,11 +76,6 @@ export const COLLECTIONS = {
   impact: { schema: impactSchema, bulk: true },
   cloud_apps: { schema: cloudAppSchema, bulk: true, screenKey: 'cloud_app', noun: 'cloud app' },
   evidence: { schema: evidenceSchema, bulk: true, screenKey: 'evidence', noun: 'evidence' },
-  /**
-   * A method row describes an act and holds no bytes, so a batch door here
-   * mints nothing claiming a file nobody uploaded. `evidence` carries the same
-   * flag and does not have that property -- #362.
-   */
   methods: { schema: methodSchema, bulk: true, screenKey: 'method', noun: 'method' },
   /**
    * **No schema, on purpose.** A timeline row's patchable fields depend on its

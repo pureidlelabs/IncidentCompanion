@@ -5,10 +5,8 @@
  *
  * `evidenceSchema` names neither `hash` nor `filePath` and the route parses it
  * `strict()`, so a record made here can never claim a file it does not have.
+ * The batch door writes through the same schema and the same parse.
  * -> `server/src/domain/entities/evidence.ts`
- *
- * `evidence` is out of `BATCH_CREATABLE_COLLECTION_NAMES` for the same reason:
- * neither door carries bytes.
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
