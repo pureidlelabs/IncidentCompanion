@@ -33,7 +33,7 @@ const draw = (over: Partial<Parameters<typeof LanguagesPane>[0]> = {}) => {
   render(
     <LanguagesPane
       languages={HELD}
-      keyCount={412}
+      keyCount={139}
       onRemove={onRemove}
       onUpload={onUpload}
       {...over}
@@ -48,11 +48,17 @@ const chooseRemove = async (label: string) => {
   await userEvent.click(await screen.findByRole('menuitem', { name: /remove/i }))
 }
 
+/** Choose the removal and answer the question it asks. */
+const confirmRemove = async (label: string) => {
+  await chooseRemove(label)
+  await userEvent.click(await screen.findByRole('button', { name: /^delete$/i }))
+}
+
 describe('the language packs pane', () => {
   it('asks the install to remove a pack rather than hiding the row', async () => {
     const { onRemove } = draw()
 
-    await chooseRemove('Nederlands')
+    await confirmRemove('Nederlands')
 
     await waitFor(() => {
       expect(
@@ -70,8 +76,42 @@ describe('the language packs pane', () => {
   it('keeps the row on screen until the list is read again', async () => {
     draw()
 
+    await confirmRemove('Nederlands')
+
+    expect(screen.getByText('Nederlands')).toBeDefined()
+  })
+
+  /**
+   * **Asked before it goes.** Removing a pack is an install-wide write no route
+   * can undo -- there is no export to put one back from -- so the menu item's
+   * own ellipsis promises a further step, and this is that step existing.
+   */
+  it('asks before removing, naming the pack and what stops being possible', async () => {
+    const { onRemove } = draw()
+
     await chooseRemove('Nederlands')
 
+    const asking = await screen.findByRole('alertdialog')
+    expect(asking.textContent).toContain('Nederlands')
+    expect(
+      asking.textContent,
+      'the question does not say what removal costs, so it asks for a decision it withheld ' +
+        'the grounds for',
+    ).toMatch(/falls back to English/i)
+    expect(
+      onRemove,
+      'the pack went without being asked about, and there is nothing to put it back',
+    ).not.toHaveBeenCalled()
+  })
+
+  /** Backing out of the question leaves the install alone. */
+  it('does not remove a pack when the question is dismissed', async () => {
+    const { onRemove } = draw()
+
+    await chooseRemove('Nederlands')
+    await userEvent.click(await screen.findByRole('button', { name: /^cancel$/i }))
+
+    expect(onRemove).not.toHaveBeenCalled()
     expect(screen.getByText('Nederlands')).toBeDefined()
   })
 

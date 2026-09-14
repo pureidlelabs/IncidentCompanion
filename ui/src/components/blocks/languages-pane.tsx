@@ -1,5 +1,5 @@
 import { Languages } from 'lucide-react'
-import { useMemo, useRef } from 'react'
+import { useMemo, useState } from 'react'
 
 import {
   actionsColumn,
@@ -7,9 +7,11 @@ import {
   useEntityTable,
   type EntityColumn,
 } from '@/components/blocks/data-table'
+import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { EmptyState } from '@/components/blocks/empty-state'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { FileTrigger } from '@/components/ui/drop-zone'
 
 import { coveragePercent, type LanguageRow } from './picker-rows'
 import { Section } from './section'
@@ -29,14 +31,27 @@ export function LanguagesPane({
   /** Taking a pack the analyst chose. Absent draws the control disabled. */
   onUpload?: (file: File) => void
 }) {
-  const rows = useMemo(() => [...languages], [languages])
   /**
    * **The row stays until the list is read again.** Filtering it out here told
    * an analyst a pack was gone while the install still held it, and the next
    * fetch brought it back -- the write's own invalidation is what removes it.
    * -> #664
    */
-  const columns = useMemo(() => languageColumns(onRemove), [onRemove])
+  const rows = useMemo(() => [...languages], [languages])
+  /**
+   * The pack the analyst has asked to remove, until they confirm it.
+   *
+   * **Asked before it goes, like every other destructive row action here.**
+   * Removing a pack is an install-wide write that no route can undo -- there
+   * is no export -- and the menu item's own ellipsis promises a further step.
+   * -> #664
+   */
+  const [removing, setRemoving] = useState<string | null>(null)
+  const columns = useMemo(
+    () => languageColumns(onRemove ? (id) => setRemoving(id) : undefined),
+    [onRemove],
+  )
+  const doomed = rows.find((one) => one.id === removing)
   const table = useEntityTable<LanguageRow>({
     data: rows,
     columns,
@@ -62,53 +77,44 @@ export function LanguagesPane({
             />
           }
         />
-        <p className="text-micro text-ink-muted">
-          A complete pack carries {keyCount} strings.
-        </p>
+        <p className="text-micro text-ink-muted">A complete pack carries {keyCount} strings.</p>
       </div>
+
+      {onRemove && (
+        <ConfirmDeleteDialog
+          ids={removing === null ? null : [removing]}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setRemoving(null)
+          }}
+          // Returned, so a refusal keeps the dialog open and says why rather
+          // than closing over a removal that did not happen.
+          onConfirm={() => (removing === null ? undefined : onRemove(removing))}
+          title={() => `Remove ${doomed?.label ?? 'this pack'}?`}
+          consequence="A document already exported in it is unaffected. Exporting one again, and every new report, falls back to English until a pack is uploaded again."
+        />
+      )}
     </Section>
   )
 }
 
 /**
- * The control that takes a pack off the analyst's machine.
- *
- * **A hidden file input behind the button**, because a file cannot be chosen
- * without one and a styled `<input type="file">` is the control this kit does
- * not have. The button is the accessible name; the input is what the browser
- * opens.
+ * The control that takes a pack off the analyst machine.
  *
  * Disabled only where nothing is listening, which is the gallery. -> #664
  */
 function UploadPack({ onUpload }: { onUpload?: (file: File) => void }) {
-  const input = useRef<HTMLInputElement>(null)
-
   return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        {...(onUpload ? {} : { isDisabled: true })}
-        onPress={() => input.current?.click()}
-      >
+    <FileTrigger
+      acceptedFileTypes={['application/json', '.json']}
+      onSelect={(files) => {
+        const first = files?.item(0)
+        if (first && onUpload) onUpload(first)
+      }}
+    >
+      <Button variant="outline" size="sm" {...(onUpload ? {} : { isDisabled: true })}>
         Upload a pack
       </Button>
-      <input
-        ref={input}
-        type="file"
-        accept="application/json,.json"
-        className="hidden"
-        aria-hidden
-        tabIndex={-1}
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          // Cleared, so choosing the same file twice is two uploads rather
-          // than one and then silence.
-          event.target.value = ''
-          if (file && onUpload) onUpload(file)
-        }}
-      />
-    </>
+    </FileTrigger>
   )
 }
 

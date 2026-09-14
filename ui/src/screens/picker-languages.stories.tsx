@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
-import { LANGUAGE_KEY_COUNT, PICKER_LANGUAGES } from '@/components/blocks/picker-rows'
+import { SOME_KEY_COUNT, PICKER_LANGUAGES } from '@/components/blocks/picker-rows'
 import { sessionRows } from '@/fixtures/railMenus'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -9,12 +9,9 @@ import { PickerLanguagesScreen } from './picker-languages'
 /**
  * The picker, on Report languages.
  *
- * The pane holds its own roster so a removal is visible without a server, and
- * takes the screen's list over its held copy whenever that list changes. What
- * this screen adds is the list itself and nothing else.
- *
- * The floored coverage, the built-in that cannot be removed and the empty
- * install all belong to `Languages`.
+ * What this screen adds to the pane is the rail around it, so the removal
+ * confirmation, the floored coverage, the built-in that cannot be removed and
+ * the empty install all belong to `Languages`.
  */
 const meta = {
   title: 'Screens/System/Picker languages',
@@ -29,11 +26,17 @@ const meta = {
       </MemoryRouter>
     ),
   ],
-  args: { keyCount: LANGUAGE_KEY_COUNT,
+  // **The doors, because a control with none is not drawn.** The gallery has
+  // no container, so without these the pane offers no removal and a disabled
+  // upload -- a state the app never renders. -> #664
+  args: {
+    keyCount: SOME_KEY_COUNT,
     analyst: 'r.okonkwo',
     languages: PICKER_LANGUAGES,
     userMenu: sessionRows,
     onAbout: fn(),
+    onRemove: fn(),
+    onUpload: fn(),
   },
 } satisfies Meta<typeof PickerLanguagesScreen>
 

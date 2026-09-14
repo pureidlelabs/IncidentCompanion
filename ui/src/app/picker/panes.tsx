@@ -6,18 +6,17 @@ import { useImportCase } from '@/api/useImportCase'
 import { useAccounts, useAccountWrite } from '@/api/accounts'
 import { useInstallActivity, type AuditLine } from '@/api/installActivity'
 import { announced } from '@/app/case/entryWrites'
-import {
-  useLanguageRemove,
-  useLanguageUpload,
-  useLanguages,
-  type PackUpload,
-} from '@/api/languages'
+import { packFromFile, useLanguageRemove, useLanguageUpload, useLanguages } from '@/api/languages'
 import { useLibrary } from '@/api/library'
 import { useDemos } from '@/api/useDemos'
 import { useSession } from '@/api/useSession'
 import { useBackendHealth } from '@/api/useBackendHealth'
 import { useActivity, useResources } from '@/api/useInstallHealth'
-import { reportImportedCase, reportWriteFailure } from '@/components/blocks/notify'
+import {
+  reportImportedCase,
+  reportUploadedPack,
+  reportWriteFailure,
+} from '@/components/blocks/notify'
 import {
   connectionGauge,
   figureRows,
@@ -343,14 +342,8 @@ export function LanguagesPaneView({ onPane, onImportArchive, userMenu, onAbout }
       }}
       onUpload={(file) => {
         void announced('the language pack', async () => {
-          /**
-           * **Read here, not on the server.** The route takes a pack as JSON
-           * rather than a multipart upload, so the file is parsed where it was
-           * chosen -- and a file that is not a pack is refused before a
-           * request is made rather than as a 422 about a body.
-           */
-          const pack = JSON.parse(await file.text()) as PackUpload
-          return upload.mutateAsync(pack)
+          const taken = await upload.mutateAsync(await packFromFile(file))
+          reportUploadedPack({ label: taken.language.label, ignored: taken.ignored })
         })
       }}
       busy={languages.isPending}

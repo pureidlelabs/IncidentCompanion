@@ -8,7 +8,7 @@ import {
   PICKER_AUDIT,
   PICKER_AUDIT_NOW,
   PICKER_CASES,
-  LANGUAGE_KEY_COUNT,
+  SOME_KEY_COUNT,
   PICKER_LANGUAGES,
   PICKER_TEMPLATES,
 } from '@/components/blocks/picker-rows'
@@ -48,7 +48,7 @@ const RAIL = {
   languages: PICKER_LANGUAGES,
   // The languages pane says how many strings a complete pack carries, and the
   // number is the install's rather than one in the bundle. -> #664
-  keyCount: LANGUAGE_KEY_COUNT,
+  keyCount: SOME_KEY_COUNT,
   // Two panes carry an action of their own; a screen that takes neither
   // ignores them, and the map stays one shape.
   roles: [] as readonly string[],

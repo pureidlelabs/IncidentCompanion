@@ -2,14 +2,14 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor } from 'storybook/test'
 
 import { LanguagesPane } from '@/components/blocks/languages-pane'
-import { LANGUAGE_KEY_COUNT, PICKER_LANGUAGES } from '@/components/blocks/picker-rows'
+import { SOME_KEY_COUNT, PICKER_LANGUAGES } from '@/components/blocks/picker-rows'
 
 /**
  * What a report may be written in: the language table, floored coverage, and
  * how many strings a complete pack carries.
  *
- * The pane holds its rows in state so a removal is visible without a server, so
- * the stories below are whole panes driven from the one prop the screen passes.
+ * The rows are the caller's: the pane maps the list it is handed and holds no
+ * copy, so nothing here goes stale against an install that was written to.
  */
 const meta = {
   title: 'Blocks/System/Languages',
@@ -20,7 +20,7 @@ const meta = {
   // upload. -> #664
   args: {
     languages: PICKER_LANGUAGES,
-    keyCount: LANGUAGE_KEY_COUNT,
+    keyCount: SOME_KEY_COUNT,
     onRemove: fn(),
     onUpload: fn(),
   },
@@ -59,7 +59,7 @@ export const Roster: Story = {
     })
     await step('the pane states what a complete pack carries', async () => {
       await expect(
-        canvas.getByText(`A complete pack carries ${String(LANGUAGE_KEY_COUNT)} strings.`),
+        canvas.getByText(`A complete pack carries ${String(SOME_KEY_COUNT)} strings.`),
       ).toBeVisible()
     })
   },
@@ -89,7 +89,7 @@ export const NearlyComplete: Story = {
 }
 
 /**
- * Removing an uploaded pack.
+ * Removing an uploaded pack, which is asked about first.
  *
  * **The row stays until the list is read again.** The pane asks the install
  * and the install answers by invalidating the list; a pane that hid the row
@@ -102,12 +102,20 @@ export const Removing: Story = {
     await step('the pack is listed', async () => {
       await expect(canvas.getByText('Portugu\u00eas (Brasil)')).toBeVisible()
     })
-    await step('its menu offers the removal', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: 'More for Portugu\u00eas (Brasil)' }))
+    await step('its menu offers the removal, which asks rather than acts', async () => {
+      await userEvent.click(
+        canvas.getByRole('button', { name: 'More for Portugu\u00eas (Brasil)' }),
+      )
       await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove\u2026' }))
+      const asking = await screen.findByRole('alertdialog')
+      await expect(asking).toHaveTextContent('Portugu\u00eas (Brasil)')
+      await expect(args.onRemove).not.toHaveBeenCalled()
     })
-    await step('and the install is asked, by the pack\u2019s own code', async () => {
-      await expect(args.onRemove).toHaveBeenCalledWith('pt-BR')
+    await step('and on confirming, the install is asked by the pack\u2019s own code', async () => {
+      await userEvent.click(await screen.findByRole('button', { name: /^Delete$/ }))
+      await waitFor(async () => {
+        await expect(args.onRemove).toHaveBeenCalledWith('pt-BR')
+      })
     })
     await step('while the row stays, the list not having been read again', async () => {
       await expect(canvas.getByText('Portugu\u00eas (Brasil)')).toBeVisible()
