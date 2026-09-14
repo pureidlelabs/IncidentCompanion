@@ -27,6 +27,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { openTestPool } from '../../test/database.js'
 import { user } from '../db/schema/auth.js'
+import { LockoutClearService } from './lockout-clear.service.js'
 import { sameAddress } from './same-address.js'
 
 const seedUrl = process.env['SEED_DATABASE_URL'] ?? process.env['DATABASE_URL'] ?? ''
@@ -35,6 +36,8 @@ const db = pool ? drizzle({ client: pool }) : null
 
 const LOWER = 'case.folded@example.invalid'
 const UPPER = 'Case.Folded@Example.Invalid'
+/** A different account entirely, to catch a write that reaches too far. */
+const OTHER = 'somebody.else@example.invalid'
 
 /** A row in whatever spelling the caller gives, with everything else fixed. */
 const rowFor = (id: string, email: string) => ({
@@ -52,6 +55,7 @@ describe.skipIf(!db)('an address', () => {
   })
 
   afterAll(async () => {
+    await db!.delete(user).where(sameAddress(OTHER))
     await db!.delete(user).where(sameAddress(LOWER))
     await pool?.end()
   })
@@ -70,6 +74,40 @@ describe.skipIf(!db)('an address', () => {
       'the install took a second account differing only in case, so every query that folds ' +
         'case now matches two rows where it means one',
     ).rejects.toThrow()
+  })
+
+  /**
+   * **The write itself, not a count of what it would match.** A lockout is a
+   * brute-force control, the clear updates by the folded predicate with no
+   * limit, and clearing one an administrator did not name is silent.
+   */
+  it('is cleared for the account named and for no other', async () => {
+    const LOCKED = { failedSignIns: 9, lockedUntil: new Date(Date.now() + 3_600_000) }
+    await db!.delete(user).where(sameAddress(OTHER))
+    await db!.insert(user).values([
+      { ...rowFor('case-folded-lower', LOWER), ...LOCKED },
+      { ...rowFor('case-folded-other', OTHER), ...LOCKED },
+    ])
+
+    await new LockoutClearService(db!).clear(UPPER)
+
+    const [named] = await db!
+      .select({ failed: user.failedSignIns })
+      .from(user)
+      .where(sameAddress(LOWER))
+    const [untouched] = await db!
+      .select({ failed: user.failedSignIns, until: user.lockedUntil })
+      .from(user)
+      .where(sameAddress(OTHER))
+
+    expect(named?.failed, 'the account named by the address was not cleared').toBe(0)
+    expect(
+      untouched?.failed,
+      'an account nobody named had its lockout cleared, which is the control removed',
+    ).toBe(9)
+    expect(untouched?.until).not.toBeNull()
+
+    await db!.delete(user).where(sameAddress(OTHER))
   })
 
   /**

@@ -6,11 +6,11 @@
  * an error: a password hold addressed by the typed spelling applies to nothing,
  * so the password the administrator chose is permanent and no screen says so.
  *
- * **The address is not folded on the way in.** Better Auth 1.7.4 lowercases in
- * its organization plugin and nowhere this install is wired, so a stored
- * address is whatever was typed.
- * `user_email_folded` is what makes one address one row; the fold on the column
- * is what finds it. -> `db/schema/auth.ts`
+ * **Better Auth folds the address on the paths that write one** -
+ * `internalAdapter.createUser`, the admin plugin's create route and sign-in all
+ * lower-case it. The fold is on the column for the row written by anything
+ * else, and `user_email_folded` is what keeps that row from being a second
+ * account. -> `db/schema/auth.ts`
  *
  * **A ratchet, not an audit.** It cannot find a bypass that predates it; it
  * stops the next one.

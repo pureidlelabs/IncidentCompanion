@@ -2,8 +2,8 @@
  * The rule that keeps an install administrable, for every route that can end
  * that.
  *
- * Asked by two routes: the disable route in `accounts`, and Better Auth's
- * `/api/auth/admin/set-role`, intercepted in `auth.config.ts`.
+ * Asked by the disable and role routes in `accounts`, each of which resolves
+ * the account first so the rule is asked about a value the method holds.
  */
 import { ADMIN_ROLE, DEFAULT_ROLE } from './auth.config.js'
 

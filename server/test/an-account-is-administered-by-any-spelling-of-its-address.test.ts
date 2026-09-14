@@ -102,6 +102,117 @@ describe.skipIf(!runnable)('an account named by a differently cased address', ()
     expect(roled.status, await roled.text()).toBe(200)
   })
 
+  /**
+   * **The audit records the account, not the keystrokes.** `target_label` is a
+   * copied address rather than a join, and the table is append-only -- so a
+   * line naming a spelling no row holds cannot be corrected, and an auditor
+   * filtering for that account never sees it. Nothing else guarantees it: the
+   * route is reached by whatever spelling the address bar carries.
+   */
+  it('names the account in the audit by the address the install holds', async () => {
+    const db = await pool()
+    try {
+      const { rows } = await db.query<{ target_label: string }>(
+        `select target_label from install_activity
+           where lower(target_label) = lower($1) order by at asc`,
+        [TYPED],
+      )
+
+      expect(rows.length, 'the four acts above wrote no audit line at all').toBeGreaterThan(0)
+      expect(
+        rows.map((one) => one.target_label).filter((one) => one !== STORED),
+        'an audit line names a spelling no account holds, and the table cannot be corrected',
+      ).toEqual([])
+    } finally {
+      await db.end()
+    }
+  })
+
+  /**
+   * **The refusal the create route no longer reads for.** It holds no
+   * duplicate check of its own: two administrators pressing Create at the same
+   * moment both see no such account, so the database's complaint is the
+   * answer, and `duplicateEmail` turns it into a sentence. Nothing exercised
+   * that path, so it asserted a chain through three library internals.
+   */
+  it('refuses a second account for an address already held, in either spelling', async () => {
+    const again = async (spelling: string) =>
+      fetch(`${harness.base}/api/accounts`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: admin.cookie },
+        body: JSON.stringify({
+          username: spelling,
+          displayName: 'Mixed Case Again',
+          password: ISSUED,
+          role: 'analyst',
+        }),
+      })
+
+    const same = await again(STORED)
+    expect(same.status, 'a duplicate was created rather than refused').toBe(422)
+    expect(await same.text()).toContain('already an account')
+
+    const capitalised = await again(TYPED)
+    expect(
+      capitalised.status,
+      'a second spelling of a held address was created, so one address named two accounts',
+    ).toBe(422)
+  })
+
+  /**
+   * **The race the create route is designed around**, rather than the
+   * sequential duplicate above. Both requests read no such account and both
+   * proceed; only the database can decide between them, and what the loser is
+   * told has to be the refusal rather than a 500.
+   */
+  it('produces one account when two administrators create it at the same moment', async () => {
+    const racing = `Raced.${String(Date.now())}@Example.Invalid`
+    const create = () =>
+      fetch(`${harness.base}/api/accounts`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: admin.cookie },
+        body: JSON.stringify({
+          username: racing,
+          displayName: 'Raced',
+          password: ISSUED,
+          role: 'analyst',
+        }),
+      })
+
+    const [first, second] = await Promise.all([create(), create()])
+    const statuses = [first.status, second.status].sort()
+
+    const db = await pool()
+    try {
+      const { rows } = await db.query<{ n: string }>(
+        'select count(*) as n from "user" where lower(email) = lower($1)',
+        [racing],
+      )
+      expect(rows[0]?.n, 'the race left more than one account for one address').toBe('1')
+    } finally {
+      const cleanup = await pool()
+      try {
+        await cleanup.query(
+          'delete from "session" where user_id in (select id from "user" where lower(email) = lower($1))',
+          [racing],
+        )
+        await cleanup.query(
+          'delete from "account" where user_id in (select id from "user" where lower(email) = lower($1))',
+          [racing],
+        )
+        await cleanup.query('delete from "user" where lower(email) = lower($1)', [racing])
+      } finally {
+        await cleanup.end()
+      }
+      await db.end()
+    }
+
+    expect(
+      statuses,
+      'the loser of the race was answered with something other than the refusal',
+    ).toEqual([201, 422])
+  })
+
   /** An address no account holds is still refused, in either spelling. */
   it('is still refused where no account holds the address', async () => {
     const nobody = await fetch(

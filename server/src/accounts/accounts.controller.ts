@@ -178,10 +178,10 @@ export class InstallAccountsController {
     /**
      * **No read in front of this, because a read cannot answer it.** Two
      * admins pressing Create at the same moment both see no such account, and
-     * the second reaches `user_email_folded` - which surfaced as `500 Internal
-     * server error` before the catch below existed. The one that scanned the
-     * roster was also case-sensitive, so it missed a second spelling of an
-     * address the index refuses. -> `db/schema/auth.ts`
+     * the second is refused by the database - which surfaced as `500 Internal
+     * server error` before the catch below existed. A reader here would also
+     * have to fold case to be right about it, which is a second place to get
+     * that wrong. -> `db/schema/auth.ts`
      */
     try {
       await this.auth.api.createUser({
@@ -232,7 +232,14 @@ export class InstallAccountsController {
     await this.lockouts.clear(username)
     // **The password is not on the line, and neither is its hash.** This
     // column is read by every admin and outlives the account it describes.
-    await this.activity.passwordReset({ session, headers: request.headers, request }, username)
+    // **The account, not the keystrokes.** `target_label` is a copied address
+    // and the table is append-only, so a line naming a spelling no row holds
+    // cannot be corrected and an auditor filtering for that account never sees
+    // it. -> `db/schema/install-activity.ts`
+    await this.activity.passwordReset(
+      { session, headers: request.headers, request },
+      target.email,
+    )
     return done(`${username} will set their own password at the next sign-in.`)
   }
 
@@ -249,10 +256,11 @@ export class InstallAccountsController {
     @Param('username') username: string,
     @Session() session: UserSession,
   ): Promise<Written> {
-    const everyone = await this.users(request)
-    // The roster is here for `stranding`, which counts administrators. The
-    // target is asked for by address, so it is the same row every folded write
-    // acts on. -> `auth/account-lookup.service.ts`
+    // **Administrators rather than a page of everybody.** `stranding` decides
+    // by counting within what it is handed, and `listUsers` caps at 500 - so a
+    // roster page that happened to exclude the target answered that no
+    // administrator remains. -> `auth/account-lookup.service.ts`
+    const everyone = await this.accounts.administrators()
     const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
     // Compared by id, because that is what identifies an account. An address
@@ -274,7 +282,10 @@ export class InstallAccountsController {
       body: { userId: target.id, banReason: 'Disabled from the Accounts pane.' },
       headers: this.headersOf(request),
     })
-    await this.activity.accountDisabled({ session, headers: request.headers, request }, username)
+    await this.activity.accountDisabled(
+      { session, headers: request.headers, request },
+      target.email,
+    )
     return done(`${username} can no longer sign in.`)
   }
 
@@ -293,7 +304,10 @@ export class InstallAccountsController {
       body: { userId: target.id },
       headers: this.headersOf(request),
     })
-    await this.activity.accountEnabled({ session, headers: request.headers, request }, username)
+    await this.activity.accountEnabled(
+      { session, headers: request.headers, request },
+      target.email,
+    )
     return done(`${username} can sign in again.`)
   }
 
@@ -317,10 +331,11 @@ export class InstallAccountsController {
       refuse(...parsed.error.issues.map((one) => one.message))
     }
 
-    const everyone = await this.users(request)
-    // The roster is here for `stranding`, which counts administrators. The
-    // target is asked for by address, so it is the same row every folded write
-    // acts on. -> `auth/account-lookup.service.ts`
+    // **Administrators rather than a page of everybody.** `stranding` decides
+    // by counting within what it is handed, and `listUsers` caps at 500 - so a
+    // roster page that happened to exclude the target answered that no
+    // administrator remains. -> `auth/account-lookup.service.ts`
+    const everyone = await this.accounts.administrators()
     const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
 
@@ -341,7 +356,7 @@ export class InstallAccountsController {
     })
     await this.activity.roleChanged(
       { session, headers: request.headers, request },
-      username,
+      target.email,
       from,
       parsed.data.role,
     )
