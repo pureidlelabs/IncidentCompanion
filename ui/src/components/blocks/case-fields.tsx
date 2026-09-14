@@ -1,3 +1,4 @@
+import { spansRow } from '@/components/blocks/form-section'
 import { VocabSelect } from '@/components/blocks/vocab-select'
 import type { FieldSpec, FormSpec } from '@/api/specs'
 import { fieldOf } from '@/api/specs'
@@ -10,21 +11,17 @@ import { TextArea } from '@/components/ui/textarea'
 /**
  * Case fields, drawn from `CASE_FIELDS` rather than listed by hand.
  *
- * **Both doors that create a case render this**, because they were two
- * hand-written subsets of one schema and had already drifted: the import
- * wizard drew `severity` as a plain text box over a vocabulary the server
- * validates against, so a typo was a 422 after the analyst had walked four
- * phases and ticked rows. A control taken from the spec cannot be spelled
- * wrongly, because the spec is what the write is checked against.
+ * **A control taken from the spec cannot be spelled wrongly**, because the
+ * spec is what the write is checked against. That is the whole of why a door
+ * creating a case draws from here rather than listing controls by hand.
  *
  * **Not `entity-dialog`'s renderer**, which draws a collection row: it
  * carries reference pickers, per-field gating and a column span that a case
  * has no use for. What is shared here is the schema, not the widget.
  *
- * A caller names the fields it wants and their order, since the two doors ask
- * for different subsets -- the wizard seeds severity and a detection time from
- * the incident, and the picker offers a template the case schema knows nothing
- * about.
+ * A caller names the fields it wants and their order, since a door asks for a
+ * subset: the picker offers a template the case schema knows nothing about,
+ * and seeds nothing the incident already answered.
  */
 export interface CaseFieldsProps {
   /** `formSpec(specs, 'CASE_FIELDS')`. */
@@ -72,6 +69,11 @@ export function CaseFields({
             // A handle for the submit to focus what it refused. `Field` mints
             // no id of its own - React Aria labels the control through context.
             data-field={name}
+            // The same rule the entity renderer lifts the cap on, rather than
+            // a second reading of `fullWidth`: `Field` caps every field at
+            // `--field-max`, and a 4000-character summary in a 24rem box is
+            // what ignoring it looks like.
+            {...(spansRow(spec) ? { className: 'max-w-none' } : {})}
             {...(hint === undefined ? {} : { hint })}
             {...(required.includes(name) ? { required: true } : {})}
             {...(problems[name] === undefined ? {} : { problem: problems[name] })}
@@ -109,6 +111,7 @@ function control(
         value={value}
         onValueChange={onChange}
         options={spec.options ?? []}
+        optionLabels={spec.optionLabels}
         allowEmpty
       />
     )

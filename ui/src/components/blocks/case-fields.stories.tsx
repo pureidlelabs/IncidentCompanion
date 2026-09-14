@@ -10,9 +10,8 @@ import { CaseFields } from './case-fields'
  * The fields a case is minted from, drawn from the served schema rather than
  * listed by hand.
  *
- * Both doors that create a case render this, and each names the subset it
- * wants: a control taken from the spec cannot be spelled wrongly, because the
- * spec is what the write is checked against.
+ * A door names the subset it wants: a control taken from the spec cannot be
+ * spelled wrongly, because the spec is what the write is checked against.
  */
 const meta = {
   title: 'Blocks/Form/Case fields',
