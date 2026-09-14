@@ -30,8 +30,8 @@
  * re-reads the bytes rather than comparing a stored digest with itself.
  *
  * **What this does not cover:** that the install says at start how many
- * artefacts it expects and cannot find. Nothing counts them -- `backup.sh`
- * names no artefact and no bootstrap reads the store. -> #179
+ * artefacts it expects and cannot find, which is
+ * `health/an-install-says-what-it-cannot-find.test.ts`.
  */
 import { mkdtemp, rename, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'

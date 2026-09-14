@@ -9,7 +9,7 @@
  * `AboutController` and the install settings stay where they are - they have
  * no dependencies and answer from configuration alone.
  */
-import { Module } from '@nestjs/common'
+import { Logger, Module, type OnApplicationBootstrap } from '@nestjs/common'
 import { TerminusModule } from '@nestjs/terminus'
 
 import { HealthController } from './health.controller.js'
@@ -17,10 +17,34 @@ import { ActivityController } from './activity.controller.js'
 import { ResourcesController } from './resources.controller.js'
 import { PostgresHealth, RedisHealth } from './dependencies.health.js'
 import { healthRedisProvider } from './health.redis.js'
+import { ArtefactCensus, saysAtStart } from './artefact-census.service.js'
 
 @Module({
   imports: [TerminusModule],
   controllers: [HealthController, ResourcesController, ActivityController],
-  providers: [PostgresHealth, RedisHealth, healthRedisProvider],
+  providers: [PostgresHealth, RedisHealth, healthRedisProvider, ArtefactCensus],
+  // Exported for `InstallSettingsController`, which `AppModule` registers.
+  exports: [ArtefactCensus],
 })
-export class HealthModule {}
+export class HealthModule implements OnApplicationBootstrap {
+  constructor(private readonly census: ArtefactCensus) {}
+
+  /**
+   * Say at start what this install expects beside it and cannot find.
+   *
+   * **Caught rather than propagated.** A census that cannot be taken is a
+   * missing directory or a database that is not up yet, and neither is a
+   * reason to refuse an install that holds every case and every record.
+   */
+  async onApplicationBootstrap(): Promise<void> {
+    const log = new Logger('Evidence')
+    let said
+    try {
+      said = saysAtStart(await this.census.take())
+    } catch (why) {
+      log.warn(`Could not count the artefacts this install expects: ${String(why)}`)
+      return
+    }
+    if (said) log[said.level](said.message)
+  }
+}
