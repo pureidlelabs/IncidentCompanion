@@ -296,13 +296,52 @@ export function hasIdentity(collection: string): boolean {
 }
 
 /**
- * Index the rows already in the case, so an import can ask once per row.
+ * Every naming a row answers to, strongest first, for a collection of either
+ * shape.
  *
- * **Built from what is already there, not from what is arriving.** Two
- * incoming rows that match *each other* are handled by the caller adding to
- * this index as it accepts them - otherwise a file listing the same host twice
- * imports it twice, which is the same defect through a different door.
+ * **The one form both doors ask in.** `identitiesOf` answers for a collection
+ * with a ladder and says nothing for one with only a key; asking the two
+ * separately at each call site is how the spreadsheet door came to index by
+ * the key and match by the key while the incident door did neither. -> #604
  */
+export function namingsOf(collection: string, row: Record<string, unknown>): IdentityKey[] {
+  const ladder = identitiesOf(collection, row)
+  if (ladder.length > 0) return ladder
+  const key = keyOf(collection, row)
+  return key === null ? [] : [key]
+}
+
+/** What the case already holds for this row, matched on its strongest naming. */
+export function matchIn<T>(
+  collection: string,
+  index: ReadonlyMap<IdentityKey, T>,
+  row: Record<string, unknown>,
+): T | undefined {
+  for (const naming of namingsOf(collection, row)) {
+    const held = index.get(naming)
+    if (held !== undefined) return held
+  }
+  return undefined
+}
+
+/**
+ * Record a row an import has just accepted, under every naming it answers to.
+ *
+ * **First wins**, so a later row naming this one weakly is matched against it
+ * rather than replacing it in the index.
+ */
+export function rememberIn<T>(
+  collection: string,
+  index: Map<IdentityKey, T>,
+  row: Record<string, unknown>,
+  known: T,
+): void {
+  for (const naming of namingsOf(collection, row)) {
+    if (!index.has(naming)) index.set(naming, known)
+  }
+}
+
+/** What the case already holds for a row an import is matching against. */
 export interface Known {
   readonly id: string
   /**
@@ -314,23 +353,28 @@ export interface Known {
   readonly version: number
 }
 
+/**
+ * Index the rows already in the case, so an import can ask once per row.
+ *
+ * Every naming a row answers to, so a caller's ladder walk reaches the rung
+ * the arriving row actually states rather than only the weakest one.
+ *
+ * **Built from what is already there, not from what is arriving.** Two
+ * incoming rows that match *each other* are handled by the caller adding to
+ * this index as it accepts them - otherwise a file listing the same host twice
+ * imports it twice, which is the same defect through a different door.
+ */
 export function indexOf(
   collection: string,
   existing: readonly Record<string, unknown>[],
 ): Map<IdentityKey, Known> {
   const index = new Map<IdentityKey, Known>()
   for (const row of existing) {
-    const key = keyOf(collection, row)
-    // **First wins.** The case can already hold two rows with one key, since
-    // no column constraint enforces an identity, and an import must not pick
-    // arbitrarily between them on each run.
-    if (key !== null && !index.has(key)) {
-      // Read as the types they are rather than stringified: an `id` that is
-      // not a string is a row this has no business indexing.
-      const id = typeof row['id'] === 'string' ? row['id'] : ''
-      const version = typeof row['version'] === 'number' ? row['version'] : 0
-      index.set(key, { id, version })
-    }
+    // A row whose `id` or `version` is not the type it should be is indexed
+    // under a naming that matches nothing, rather than being skipped silently.
+    const id = typeof row['id'] === 'string' ? row['id'] : ''
+    const version = typeof row['version'] === 'number' ? row['version'] : 0
+    rememberIn(collection, index, row, { id, version })
   }
   return index
 }

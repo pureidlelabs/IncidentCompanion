@@ -20,7 +20,7 @@ import type { Executor } from '../db/scope.js'
 import type { Candidate, PreviewResult, RawIncident, TimelineCandidate } from '../domain/incident-import.js'
 import { parseEntity } from './providers/sentinel/entities.js'
 import { mapEntity, startsChecked, SEPARATOR } from './providers/sentinel/mapping.js'
-import { identitiesOf } from '../domain/identity.js'
+import { matchIn, rememberIn } from '../domain/identity.js'
 import { alertToTimeline, entityRefsOf } from './providers/sentinel/alerts.js'
 import { PLATFORM } from './providers/sentinel/platform.js'
 import { IMPORTED_STAMP } from '../collections/timeline.controller.js'
@@ -28,23 +28,6 @@ import { IMPORTED_STAMP } from '../collections/timeline.controller.js'
 /** What a candidate is keyed by, so `commit` can name what `preview` showed. */
 function candidateId(incident: string, identity: string): string {
   return `${incident}${SEPARATOR}${identity}`
-}
-
-/**
- * What an index already holds for a row, trying its identities strongest first.
- *
- * **Strongest first, then weaker.** A row is recognised by less than it was
- * named with: a cloud app arriving with its instance has to try the bare name
- * too, or it is a second copy of one already there. It has an effect only where
- * a collection's identity has rungs -- `cloud_apps` and a scope-bearing network
- * indicator. A host does not: `systems` is keyed on the hostname alone, one
- * rung, whatever else the provider sends with it. -> `domain/identity.ts`
- */
-function knownBy(
-  index: ReadonlyMap<string, string>,
-  identities: readonly string[],
-): string | undefined {
-  return identities.map((one) => index.get(one)).find((id) => id !== undefined)
 }
 
 const stated = (value: unknown): boolean => value !== undefined && value !== null && value !== ''
@@ -200,7 +183,7 @@ export class ImportService {
         // host are two ids that never collide and both get written. The later
         // entity points at the candidate the first proposed, which is what
         // keeps its own alert linked to the row rather than to nothing.
-        const already = knownBy(planned, mapped.identities)
+        const already = matchIn(mapped.collection, planned, mapped.fields)
         if (already !== undefined) {
           byRef.set(parsed.ref, already)
           const first = seen.get(already)
@@ -215,7 +198,7 @@ export class ImportService {
         const id = candidateId(incident.key, mapped.identity)
         byRef.set(parsed.ref, id)
 
-        const match = knownBy(existing, mapped.identities) ?? null
+        const match = matchIn(mapped.collection, existing, mapped.fields) ?? null
         const candidate: Candidate = {
           id,
           incident: incident.key,
@@ -228,7 +211,7 @@ export class ImportService {
           checked: !match && startsChecked(mapped),
         }
         seen.set(id, candidate)
-        for (const one of mapped.identities) planned.set(one, id)
+        rememberIn(mapped.collection, planned, mapped.fields, id)
         entities.push(candidate)
       }
 
@@ -516,7 +499,11 @@ export class ImportService {
         const record: Record<string, unknown> = { ...row }
         const id = record['id']
         if (typeof id !== 'string') continue
-        for (const identity of identitiesOf(name, record)) index.set(identity, id)
+        // **First wins**, which is `rememberIn`'s rule and so the spreadsheet
+        // door's too. Setting unconditionally kept the last row sharing a
+        // weaker naming, and the two doors then updated different records
+        // for one arriving row. -> #604
+        rememberIn(name, index, record, id)
       }
     }
     return index
