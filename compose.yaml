@@ -62,7 +62,17 @@ services:
       # `-a` here too, or the check fails closed against its own server and the
       # stack never comes up. `--no-auth-warning` keeps the password out of the
       # container's logs on every probe.
-      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$IC_REDIS_PASSWORD\" ping"]
+      #
+      # **`redis-cli` exits 0 on an error reply**, so the status alone reports a
+      # refusal as success. Redis answers `PING` with the refusal itself when a
+      # failed save has latched `stop-writes-on-bgsave-error` -- it excepts
+      # `PING` from the rejection precisely so a check can see it -- and the
+      # reply then arrives on stdout under exit 0. Reading the reply is what
+      # makes the check able to see it at all.
+      # -> `tests/docker/test_the_healthcheck_sees_a_store_refusing_writes.py`
+      test:
+        - CMD-SHELL
+        - redis-cli --no-auth-warning -a "$$IC_REDIS_PASSWORD" ping | grep -q PONG
       interval: 2s
       timeout: 3s
       retries: 30

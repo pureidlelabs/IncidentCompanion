@@ -57,7 +57,9 @@ services:
     ports:
       - "127.0.0.1:${IC_REDIS_PORT:-56379}:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # As `compose.yaml` says: the reply is read, because the exit code
+      # reports a refusal as success.
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
       interval: 2s
       timeout: 3s
       retries: 30
