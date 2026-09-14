@@ -124,6 +124,17 @@ export const COLLECTION_SCHEMAS: Readonly<Record<string, z.ZodObject>> = Object.
  */
 export { patchSchema } from './field-spec.js'
 
+/**
+ * The case's own patch schema, through the same door and for the same reason.
+ *
+ * A case is not a collection, so `COLLECTION_SCHEMAS` cannot carry it and
+ * `schema-identity.test.ts`'s sweep cannot see it -- which is how the
+ * evaluation build came to judge a case PATCH by a list of field names and no
+ * values at all. `case.ts` imports zod, `field-spec` and the vocabularies, so
+ * this opens no path to a table.
+ */
+export { patchCaseSchema } from './case.js'
+
 export const IMPORTABLE = Object.keys(COLLECTION_SCHEMAS)
 
 /**

@@ -179,14 +179,23 @@ describe('a body arrives as the client sends it', () => {
 })
 
 describe('a patch is judged, not applied', () => {
-  const patchAs = (body: Record<string, unknown>): RequestInit => ({
+  /**
+   * **With the version, because every write this client makes carries one.**
+   * A fixture that omits it cannot make the request under test, and the whole
+   * of this block passed over a handler that refused every real edit. -> #668
+   */
+  const patchAs = (body: Record<string, unknown>, version = 1): RequestInit => ({
     method: 'PATCH',
-    body: JSON.stringify(toWire(body)),
+    body: JSON.stringify({ version, ...(toWire(body) as Record<string, unknown>) }),
   })
-  const firstId = async (): Promise<string> => {
-    const rows = (await ask(`/cases/${caseId()}/timeline`)).body as unknown as { id: string }[]
-    return rows[0]?.id ?? ''
+  const firstRow = async (): Promise<{ id: string; version: number }> => {
+    const rows = (await ask(`/cases/${caseId()}/timeline`)).body as unknown as {
+      id: string
+      version: number
+    }[]
+    return rows[0] ?? { id: '', version: 1 }
   }
+  const firstId = async (): Promise<string> => (await firstRow()).id
 
   it('refuses one that empties a field the row must have', async () => {
     const answer = await ask(`/cases/${caseId()}/timeline/${await firstId()}`, patchAs({ description: '' }))
@@ -202,9 +211,10 @@ describe('a patch is judged, not applied', () => {
   })
 
   it('accepts a real edit', async () => {
+    const row = await firstRow()
     const answer = await ask(
-      `/cases/${caseId()}/timeline/${await firstId()}`,
-      patchAs({ description: 'Edited by the visitor' }),
+      `/cases/${caseId()}/timeline/${row.id}`,
+      patchAs({ description: 'Edited by the visitor' }, row.version),
     )
     expect(answer.status, JSON.stringify(answer.body)).toBe(200)
     expect(answer.body.description).toBe('Edited by the visitor')

@@ -8,8 +8,9 @@
 import { createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
-import { caseFormSchema } from '../domain/case.js'
-import { patchSchema } from '../domain/field-spec.js'
+import { patchCaseSchema } from '../domain/case.js'
+
+export { patchCaseSchema }
 
 /** Bounded because unbounded text in a list column is a rendering problem, not a storage one. */
 const title = z.string().trim().min(1, 'A case needs a title.').max(200)
@@ -45,24 +46,6 @@ export const createCaseSchema = z.object({
 
 export class CreateCaseDto extends createZodDto(createCaseSchema) {}
 
-/**
- * What a case PATCH may set - derived from `caseFormSchema`, so it cannot
- * disagree with the form the Overview screen draws from `specs.case.fields`.
- *
- * `closedAt` is added here rather than drawn from the form: it has no control,
- * and it is writable rather than stamped, because a closed case with no
- * recorded time is a distinct state. -> `db/schema/case.ts`
- *
- * **`patchSchema`, never `.partial()`**, which leaves a `.default()` intact so
- * that patching one field rewrites every defaulted sibling.
- *
- * **`rsitClass`/`rsitType` must not be added here.** They validate as a pair
- * and go in one write; a one-field-at-a-time PATCH leaves a combination the
- * validator refuses, so they get their own route.
- */
-export const patchCaseSchema = patchSchema(
-  caseFormSchema.extend({ closedAt: z.coerce.date().nullable() }),
-)
 
 /**
  * What a case looks like on the wire.
