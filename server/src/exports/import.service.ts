@@ -16,7 +16,7 @@ import { ConflictsService } from '../collections/conflicts.service.js'
 import { REFERENCE_TABLES, TABLES, type BulkTarget } from '../collections/registry.js'
 import { COLLECTION_SCHEMAS, IMPORTABLE, referencesOf } from '../domain/collections.js'
 import { camelKeys } from '../wire/naming.js'
-import { hasIdentity, indexOf, keyOf, type Known } from '../domain/identity.js'
+import { hasIdentity, indexOf, matchIn, namingsOf, rememberIn, type Known } from '../domain/identity.js'
 import { namesOf } from '../domain/reference-key.js'
 
 /**
@@ -319,15 +319,19 @@ export class ImportService {
       []
     for (const [at, row] of rows.entries()) {
       const mine = lost[at] ?? {}
-      const key = keyOf(collection, row)
-      // **A row with no key is always fresh.** An empty hostname is an absent
-      // identity rather than an identity of "", so two blank rows are two rows.
-      if (key === null) {
+      // **A row that answers to no naming is always fresh.** An empty hostname
+      // is an absent identity rather than an identity of "", so two blank rows
+      // are two rows.
+      if (namingsOf(collection, row).length === 0) {
         fresh.push(row)
         freshLost.push(mine)
         continue
       }
-      const already = seen.get(key)
+      // **Matched on the strongest naming the row gives**, which is what the
+      // incident door does. Asking by the key alone found whichever row shared
+      // the weakest rung, so a file naming `Dropbox / tenant-b` replaced the
+      // `tenant-a` row. -> #604
+      const already = matchIn(collection, seen, row)
       if (already === undefined) {
         fresh.push(row)
         freshLost.push(mine)
@@ -338,7 +342,7 @@ export class ImportService {
         // wins within one file. The alternative - last wins - would make the
         // result depend on row order for no reason an analyst could see, and a
         // file is not a sequence of edits.
-        seen.set(key, { id: '', version: 0 })
+        rememberIn(collection, seen, row, { id: '', version: 0 })
         continue
       }
       collisions.push({ known: already, row, lost: mine })

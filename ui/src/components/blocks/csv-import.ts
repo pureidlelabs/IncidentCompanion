@@ -16,9 +16,10 @@
  * does either drops its reference columns or sends the file to the route that
  * resolves them. -> #51, `server/src/exports/import.service.ts`
  *
- * **A duplicate is decided by the server's own key**, imported rather than
- * restated: a collection `keyOf` gives no key has none, so it never reports a
- * duplicate. -> `@contract/identity`
+ * **A duplicate is decided by the server's own rule**, imported rather than
+ * restated: the same `matchIn` and `rememberIn` the two importers ask, so the
+ * row this offers as new is the row the server writes as new. A collection
+ * with no identity reports no duplicates. -> `@contract/identity`, #604
  *
  * **The row number a refusal names is the *submitted* array's, not the CSV's**,
  * skipped rows having already been dropped. `buildSubmission` returns `refs`,
@@ -30,7 +31,7 @@ import { toCamel } from '@/api/naming'
 import { fieldsOf, type FieldSpec, type FormSpec } from '@/api/specs'
 import type { CollectionName } from '@/api/model'
 import type { CsvTable } from '@/lib/csv'
-import { hasIdentity, keyOf } from '@contract/identity'
+import { hasIdentity, matchIn, rememberIn } from '@contract/identity'
 
 export interface ColumnMapping {
   header: string
@@ -116,11 +117,15 @@ export function buildPreview<TData extends { id: string }>(
   const fields = fieldsOf(form)
   const keyed = hasIdentity(collection)
 
-  const seen = new Set<string>()
+  // **Every naming the row answers to, asked the way the server asks it.**
+  // `keyOf` alone is not the ladder's weakest rung -- a scoped indicator with
+  // no type has a key that is not in its ladder, and a malware row with no
+  // hash has none at all -- so a preview built on it called new what the
+  // server merges. -> #604
+  const seen = new Map<string, true>()
   if (keyed) {
     for (const entry of existing) {
-      const key = keyOf(collection, entry)
-      if (key !== null) seen.add(key)
+      rememberIn(collection, seen, entry as Record<string, unknown>, true)
     }
   }
 
@@ -137,11 +142,10 @@ export function buildPreview<TData extends { id: string }>(
 
     let duplicate = false
     if (keyed) {
-      const key = keyOf(collection, values)
-      if (key !== null) {
-        duplicate = seen.has(key)
-        seen.add(key)
-      }
+      duplicate = matchIn(collection, seen, values) !== undefined
+      // Recorded whether or not it was a duplicate, so a third row of one
+      // naming is measured against the first rather than the second.
+      rememberIn(collection, seen, values, true)
     }
 
     return { csvRow: index + 1, values, problems, duplicate, skip: duplicate }

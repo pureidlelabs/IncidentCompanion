@@ -48,6 +48,10 @@ A collection describing something in the world — a system, an account — carr
 
 A collection recording something that happened carries no such rule. Two entries that look alike are two facts, and merging them loses one.
 
+An identity is a ladder rather than a single key: a row may be known by everything it states or by less, so a naming that carries a qualifier still matches a stored row that omits it. A match is taken at the strongest rung the arriving row states, because the weakest rung is shared by every row that differs only in the qualifier, and matching there updates whichever of them the index happened to reach.
+
+Where the case holds two rows answering to one naming, the first is kept. No column constraint enforces an identity, so that case is reachable, and a rule choosing between them arbitrarily makes one import differ from the next for a reason an analyst cannot see. First is not better than last; being the same answer every time, through every path that creates rows, is the whole of it.
+
 ## Order an analyst chose is data
 
 Where an analyst arranges rows, that arrangement is recorded and survives reading, filtering, another analyst's write elsewhere, and an import.

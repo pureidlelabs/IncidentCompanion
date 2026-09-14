@@ -230,16 +230,6 @@ export interface MappedEntity {
   label: string
   /** The strongest identity this entity carries. */
   identity: string
-  /**
-   * The same identity with its weaker halves, strongest first.
-   *
-   * **Because a stored row cannot always answer the strong one.** `systems` has
-   * no domain column, so a host written from an earlier import is keyed on its
-   * name alone -- and an incoming `web01` in `corp.example` would never match
-   * it, importing a second copy of a host already in the case. Matching walks
-   * this list; writing uses the first.
-   */
-  identities: string[]
 }
 
 /** The first non-empty value a mapped row holds, or `''`. */
@@ -275,8 +265,7 @@ export function mapEntity(entity: ParsedEntity): MappedEntity | null {
    * so a second copy cannot grow its own rules about IPv6 case, which field a
    * malware row keys on, or whether an account needs its domain.
    */
-  const identities = identitiesOf(mapping.collection, fields)
-  const strongest = identities[0]
+  const strongest = identitiesOf(mapping.collection, fields)[0]
   if (!strongest) return null
 
   return {
@@ -294,7 +283,6 @@ export function mapEntity(entity: ParsedEntity): MappedEntity | null {
      */
     label: mapping.label(entity.properties) || firstValue(fields),
     identity: strongest,
-    identities,
   }
 }
 
