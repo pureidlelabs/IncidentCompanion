@@ -5,10 +5,12 @@
  * **The id is generated and never shown**, because a human-supplied primary
  * key lets two analysts race for the same one and cannot be corrected after a
  * typo. What analysts quote is `reference`, the customer's own ITSM ticket -
- * nullable and not unique on purpose, since a case often exists before the
- * ticket and two customers' numbers can collide.
+ * nullable on purpose, since a case often exists before the ticket, and unique
+ * within its customer rather than across the install, since two customers'
+ * numbers legitimately collide.
  */
-import { boolean, index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, index, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 import { rowVersioning } from './columns.js'
 import { customers } from './customer.js'
@@ -112,6 +114,26 @@ export const cases = pgTable(
   (table) => [
     // The picker's list, and the only query with an order that matters.
     index('cases_updated_at_idx').on(table.updatedAt),
+    /**
+     * **A reference is unique within its customer, and the absence of one is
+     * not a value.** The service refuses a collision with a message naming the
+     * case that already holds it; this is what makes that check unbypassable.
+     *
+     * **`coalesce` rather than the bare column, because a unique index treats
+     * NULLs as distinct.** A case with no customer resolves to the default
+     * only when it is read, so two of them share no `customer_id` value to
+     * collide on and `unique (customer_id, reference)` would admit exactly the
+     * pair this forbids. Folding NULL to one group is also what keeps this
+     * correct if a case is ever stamped with the default instead: a stamped
+     * row simply stops taking the `coalesce` branch.
+     *
+     * **Partial, so unreferenced cases stay out of the index entirely** and
+     * any number of them may wait for a reference without colliding. That is
+     * the specification's own wording rather than a convenience.
+     */
+    uniqueIndex('cases_customer_reference_idx')
+      .on(sql`coalesce(${table.customerId}::text, '')`, table.reference)
+      .where(sql`${table.reference} is not null and ${table.reference} <> ''`),
   ],
 )
 

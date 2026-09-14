@@ -20,6 +20,7 @@ import { ORGANISATION_FACTS } from './organisation-facts.js'
 import { caseCompliance, cases, customers, user } from '../db/schema/index.js'
 import { rowVersioning } from '../db/schema/columns.js'
 import { openTestPool } from '../../test/database.js'
+import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -32,7 +33,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 afterAll(async () => {
   if (seed) await seed.delete(cases)
-  if (seed) await seed.delete(customers)
+  if (seed) await clearCustomers(seed)
   await pool?.end()
 })
 
@@ -44,7 +45,7 @@ describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await seed!.delete(customers)
+    await clearCustomers(seed!)
 
     const [customer] = await seed!
       .insert(customers)

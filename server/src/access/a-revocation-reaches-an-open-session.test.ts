@@ -23,6 +23,7 @@ import { onReachChanged } from './reach-changed.js'
 import { CustomersService } from '../customers/customers.service.js'
 import { customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
+import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -41,7 +42,7 @@ afterAll(async () => {
     await seed.delete(groupMembers)
     await seed.delete(groupCustomers)
     await seed.delete(groups)
-    await seed.delete(customers)
+    await clearCustomers(seed)
   }
   await pool?.end()
 })
@@ -58,7 +59,7 @@ describe.skipIf(!db)('a revocation reaches a session already open', () => {
     await seed!.delete(groupMembers)
     await seed!.delete(groupCustomers)
     await seed!.delete(groups)
-    await seed!.delete(customers)
+    await clearCustomers(seed!)
 
     const now = new Date()
     for (const [id, name, email] of [
