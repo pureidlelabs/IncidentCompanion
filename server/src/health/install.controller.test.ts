@@ -34,8 +34,15 @@ function configOf(over: Record<string, unknown> = {}) {
   return { get: (key: string) => values[key] } as never
 }
 
-const settingsOf = (over?: Record<string, unknown>) =>
-  new InstallSettingsController(configOf(over), policy).read()
+/**
+ * The census, stubbed: what it counts is `artefact-census.service.ts`'s own
+ * case, and what this file asks is whether the description carries it.
+ */
+const censusOf = (held = { expected: 0, missing: 0 }) =>
+  ({ take: () => Promise.resolve(held) }) as never
+
+const settingsOf = (over?: Record<string, unknown>, held?: { expected: number; missing: number }) =>
+  new InstallSettingsController(configOf(over), policy, censusOf(held)).read()
 
 describe('redacting a connection string', () => {
   it('keeps where it points and drops the credential', () => {
@@ -117,6 +124,31 @@ describe('the install settings document', () => {
 
   it('falls back to the default evidence directory rather than saying nothing', async () => {
     expect((await settingsOf({ EVIDENCE_DIR: undefined })).storage.evidence).toBe('.evidence')
+  })
+
+  /**
+   * **The half a log line cannot answer.** *So that a restore can say what is
+   * missing* is a question an operator comes back to once the restore is
+   * finished, by which time the boot line has scrolled away -- and the same
+   * field is what says whole again when the artefacts are put back. -> #179
+   */
+  it('says how many artefacts it expects and how many it cannot find', async () => {
+    const storage = (await settingsOf(undefined, { expected: 12, missing: 3 })).storage
+
+    expect(storage.artefacts.expected, 'the description does not say what it expects').toBe(12)
+    expect(storage.artefacts.missing, 'an install short of its evidence reports none gone').toBe(3)
+  })
+
+  /**
+   * **Both numbers, so the case is not answered by the one above it.** An
+   * assertion on `missing` alone passes against a field pinned to zeroes,
+   * which is exactly the mistake the other case catches -- two tests failing
+   * only together are one test.
+   */
+  it('still says what it expects on an install that holds them all', async () => {
+    const storage = (await settingsOf(undefined, { expected: 12, missing: 0 })).storage
+
+    expect(storage.artefacts).toEqual({ expected: 12, missing: 0 })
   })
 })
 

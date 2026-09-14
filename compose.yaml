@@ -41,6 +41,12 @@ services:
   redis:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    # **Started as the user the image already owns `/data` by**, so there is no
+    # privilege to drop and none to keep. The entrypoint would drop root itself
+    # given SETGID and SETUID, and then hold them for the life of the process;
+    # this way the bounding set is empty. Safe because the service mounts
+    # nothing -- see the note above.
+    user: redis
     # Pinned to the minor, and must match `server/compose.dev.yaml` or the
     # suite runs against an engine the stack does not ship. Bump both together.
     image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576

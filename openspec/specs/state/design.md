@@ -51,3 +51,15 @@ The wrapping is applied on the way in and is what the store holds. Nothing in th
 ## Recovery is exercised, not assumed
 
 An install can produce a copy of its durable state and return to that copy. Returning is an ordinary operator action with a stated procedure rather than something first attempted under pressure.
+
+## What an install expects beside it is counted at start, and never fatal
+
+An install reconciles the artefacts its records name against the artefacts it holds, at start and on demand, so a restore reports what it is short of instead of waiting to be found out.
+
+**Holding the bytes is the question, not naming a digest.** A record carries the digest of the file it stands for whether the bytes are here or in an evidence locker somewhere else, and evidence held elsewhere is the ordinary case rather than the exception. Counting every digest would tell an install that received a handover without its files that it has lost them, at every start, with no action that clears it -- and a standing false alarm is how the line stops being read, which is the failure the requirement exists to prevent.
+
+**The count is said twice because two moments ask it.** At start, for the operator watching a restore come up; in the install's own description, for the same operator once the restore is finished and the start-up line has scrolled away. The second is also what reports the evidence whole again when the artefacts are put back.
+
+**A shortfall never refuses the start.** An install missing an artefact still holds every case and every record, so failing to start would withdraw the whole product to report a gap in part of it. A count that cannot be taken is said and stepped over for the same reason.
+
+**The reconciliation asks case by case.** Records of evidence are reachable only within the case they belong to, and a question asked outside any case is answered with an empty set rather than a refusal -- so the direct form of the question reports every install as expecting nothing, which is indistinguishable from an install that is whole. Asking within each case in turn asks only what the application may already ask, at the cost of one act per case each time the count is taken.

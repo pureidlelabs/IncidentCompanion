@@ -152,14 +152,20 @@ def test_every_volume_is_docker_managed():
         f"things removing them was for"
     )
 
-    # The mirror of it: no service may pin a uid either, or the image's
-    # ownership of a fresh volume stops being the thing that makes it writable.
+    # The mirror of it, and **only where there is a mount point to be
+    # unwritable**: the reason is that a managed volume is created owned by the
+    # image's user, so a pinned uid cannot write it. A service that mounts
+    # nothing has no such directory, and pinning the image's own user is then
+    # the way to hold `cap_drop: [ALL]` with an empty bounding set rather than
+    # handing back SETGID and SETUID for an entrypoint to drop with. -> #620
     pinned = [
-        name for name, service in spec.get("services", {}).items() if service.get("user")
+        name
+        for name, service in spec.get("services", {}).items()
+        if service.get("user") and service.get("volumes")
     ]
     assert not pinned, (
-        f"{pinned} pin `user:`, so a managed volume owned by the image's uid is "
-        f"unwritable to them and the entrypoint dies before node starts"
+        f"{pinned} pin `user:` and mount a volume, so a managed volume owned by the image's "
+        f"uid is unwritable to them and the entrypoint dies before node starts"
     )
 
 
