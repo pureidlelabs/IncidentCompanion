@@ -116,7 +116,10 @@ export class ArchiveExportService {
       }
     }
 
-    const zip = await pack(members, attachments)
+    // **The names go into the archive, not only into the response.** The
+    // header they were reported by lasts for one download; an analyst who
+    // saved the file opens an archive that has to say this itself. -> #243
+    const zip = await pack(members, attachments, omitted)
     const bytes = request.passphrase ? await seal(zip, request.passphrase, minimumChars) : zip
 
     return {
