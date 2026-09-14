@@ -18,6 +18,9 @@ import type { EntitySchema } from '@/api/validateDraft'
 
 import type { DemoState } from './state'
 
+/** The case fields a PATCH may name, as the install publishes them. */
+const CASE_WRITABLE = new Set((specs as { case?: { writable?: string[] } }).case?.writable ?? [])
+
 /** What a screen is told when it asks for something only the server can do. */
 export const UNAVAILABLE = 'Not available in the demo - this one runs on the server.'
 
@@ -72,6 +75,41 @@ function refuseDraft(issues: readonly { path: readonly PropertyKey[]; message: s
     },
     422,
   )
+}
+
+/**
+ * A patch split into the version it was read at and the fields it changes.
+ *
+ * **`version` and `base` ride with a patch and are not part of it.** Every
+ * write this client makes carries the version, and one made from a draft
+ * carries the row it was rendered from beside it; neither is a column, so a
+ * strict patch schema refuses the whole body before a field is read. The
+ * server's own route destructures them out for the same reason.
+ * -> `collections/entities.controller.ts`, #668
+ */
+function apart(body: Record<string, unknown>): {
+  version: unknown
+  fields: Record<string, unknown>
+} {
+  const { version, base: _base, ...fields } = body
+  return { version, fields }
+}
+
+/**
+ * What a write against a moved row is answered with, or `null` to go ahead.
+ *
+ * **A version the row has passed is a conflict, not a refusal of the body.**
+ * The demo says the same thing the server does, so a screen meeting it here
+ * draws what it would draw against a real install.
+ */
+function versionProblems(version: unknown, held: unknown): Response | null {
+  if (!Number.isInteger(version)) {
+    return refuse(422, 'A patch has to name the version it read.')
+  }
+  if (typeof held === 'number' && version !== held) {
+    return refuse(409, 'Somebody else has changed this since you read it.')
+  }
+  return null
 }
 
 /**
@@ -139,10 +177,14 @@ function patch(
   const row = rows?.find((candidate) => candidate.id === id)
   if (rows === null || row === undefined) return refuse(404, 'No such entry.')
 
-  const refused = patchProblems(collection, row, body)
+  const { version, fields } = apart(body)
+  const stale = versionProblems(version, row.version)
+  if (stale !== null) return stale
+
+  const refused = patchProblems(collection, row, fields)
   if (refused !== null) return refused
 
-  Object.assign(row, body, {
+  Object.assign(row, fields, {
     updatedAt: new Date().toISOString(),
     updatedBy: DEMO_ANALYST,
     version: typeof row.version === 'number' ? row.version + 1 : 1,
@@ -205,7 +247,7 @@ function railSummary(state: DemoState): Record<string, unknown> {
     title: state.kase.title,
     reference: state.kase.reference,
     customer: state.kase.customer,
-    isDemo: false,
+    isDemo: state.kase.isDemo,
     version: state.kase.version,
     counts,
     attention: {},
@@ -338,7 +380,23 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
     if (at.length === 2 && method === 'GET') return json(state.kase)
     if (at.length === 3 && at[2] === 'summary' && method === 'GET') return json(railSummary(state))
     if (at.length === 2 && method === 'PATCH') {
-      Object.assign(state.kase, body, { updatedAt: new Date().toISOString() })
+      const { version, fields } = apart(body)
+      const stale = versionProblems(version, state.kase.version)
+      if (stale !== null) return stale
+
+      // **The served list of writable case fields, not a schema.** A case has
+      // no single write schema to be strict against, and `specs.case.writable`
+      // is what the route judges one by. A key outside it is refused rather
+      // than written, as it is on every other collection.
+      const unknown = Object.keys(fields).filter((key) => !CASE_WRITABLE.has(key))
+      if (unknown.length > 0) {
+        return refuse(422, `A case has no ${unknown[0] ?? ''}.`)
+      }
+
+      Object.assign(state.kase, fields, {
+        updatedAt: new Date().toISOString(),
+        version: typeof state.kase.version === 'number' ? state.kase.version + 1 : 1,
+      })
       return json(state.kase)
     }
 
