@@ -1,22 +1,25 @@
 /**
  * **`sameAddress` is the only way a query addresses the user row by email.**
  *
- * Better Auth folds the address on every path that writes one, so a `where`
- * comparing the column to the string a caller typed matches nothing the moment
- * one letter is capitalised - and a `where` matching nothing is not an error.
- * An account created as `Case.Folded@Example.Invalid` is stored folded, so a
- * password hold addressed by the typed spelling applies to nothing: the
- * password the administrator chose is permanent and no screen says so.
+ * A `where` comparing the column to the string a caller typed matches nothing
+ * the moment one letter is capitalised, and a `where` matching nothing is not
+ * an error: a password hold addressed by the typed spelling applies to nothing,
+ * so the password the administrator chose is permanent and no screen says so.
  *
- * **A ratchet, not an audit.** It was green the day it was written - the three
- * call sites it would have found are the three the fix moved. It cannot find a
- * bypass that predates it; it stops the fourth.
+ * **The address is not folded on the way in.** Better Auth 1.7.4 lowercases in
+ * its organization plugin and nowhere this install is wired, so a stored
+ * address is whatever was typed.
+ * `user_email_folded` is what makes one address one row; the fold on the column
+ * is what finds it. -> `db/schema/auth.ts`
  *
- * **Structural, and deliberately narrow.** It reads for `user.email` inside a
- * `drizzle-orm` comparator, which is the shape the defect had three times. A
- * caller writing raw SQL is not stopped by this and is not the failure mode:
- * the failure mode is somebody reaching for `eq` because that is what every
- * other column in this tree takes.
+ * **A ratchet, not an audit.** It cannot find a bypass that predates it; it
+ * stops the next one.
+ *
+ * **Two shapes, because the defect has had two.** A `drizzle-orm` comparator
+ * on `user.email`, and a JavaScript `===` against an address held in memory -
+ * which is what the accounts controller did to the whole roster while this
+ * rule reported compliance. A caller writing raw SQL is stopped by neither and
+ * is not the failure mode.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
@@ -31,6 +34,15 @@ const SRC = join(HERE, '..')
 const ALLOWED = ['auth/same-address.ts']
 
 const EXACT_MATCH = /\b(?:eq|ne|inArray|notInArray|like|ilike)\s*\(\s*(?:schema\.)?user\.email\b/
+
+/**
+ * An address compared in JavaScript rather than by the database.
+ *
+ * Identity is the account id, so a comparison of two addresses is either a
+ * lookup that should have been `byAddress` or an identity check that should
+ * have been on `id`.
+ */
+const TYPED_MATCH = /\.email\s*[=!]==/
 
 function sources(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -57,12 +69,18 @@ describe('the user row is addressed case-folded', () => {
     expect(EXACT_MATCH.test('  .where(eq(user.email, email))')).toBe(true)
     expect(EXACT_MATCH.test('  .where(eq(schema.user.email, attempted))')).toBe(true)
     expect(EXACT_MATCH.test('  .where(sameAddress(email))')).toBe(false)
+    // The shape the accounts controller had, six times, while this rule was green.
+    expect(TYPED_MATCH.test('  .find((one) => one.email === username)')).toBe(true)
+    expect(TYPED_MATCH.test('  if (target.id === session.user.id) {')).toBe(false)
   })
 
   it('is the only predicate matching an address', () => {
     const outside = files
       .filter((path) => !ALLOWED.includes(relative(SRC, path).split('\\').join('/')))
-      .filter((path) => EXACT_MATCH.test(readFileSync(path, 'utf8')))
+      .filter((path) => {
+        const text = readFileSync(path, 'utf8')
+        return EXACT_MATCH.test(text) || TYPED_MATCH.test(text)
+      })
       .map((path) => relative(SRC, path))
       .sort()
 

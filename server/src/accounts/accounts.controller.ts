@@ -33,8 +33,9 @@ import { z } from 'zod'
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES, type Auth } from '../auth/auth.config.js'
 import { PasswordHoldService } from '../auth/password-hold.service.js'
 import { LockoutClearService } from '../auth/lockout-clear.service.js'
-import { duplicateEmail, rowFor, type Analyst } from './rules.js'
-import { stranding } from '../auth/last-admin.js'
+import { duplicateEmail, rowFor } from './rules.js'
+import { AccountLookupService } from '../auth/account-lookup.service.js'
+import { stranding, type Analyst } from '../auth/last-admin.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '../auth/password-policy.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 
@@ -131,6 +132,7 @@ export class InstallAccountsController {
    */
   constructor(
     private readonly auth: AuthService<Auth>,
+    private readonly accounts: AccountLookupService,
     private readonly holds: PasswordHoldService,
     private readonly lockouts: LockoutClearService,
     private readonly activity: InstallActivityService,
@@ -173,16 +175,13 @@ export class InstallAccountsController {
     }
     const { username, displayName, password, role } = parsed.data
 
-    if ((await this.users(request)).some((one) => one.email === username)) {
-      refuse(`There is already an account for ${username}.`)
-    }
-
     /**
-     * **The read above has a gap under it, and this is what closes it.** Two
+     * **No read in front of this, because a read cannot answer it.** Two
      * admins pressing Create at the same moment both see no such account, and
-     * the second reaches the unique constraint on `user.email` - which surfaced
-     * as `500 Internal server error`. Checking harder cannot fix a
-     * check-then-write; treating the constraint's complaint as the answer can.
+     * the second reaches `user_email_folded` - which surfaced as `500 Internal
+     * server error` before the catch below existed. The one that scanned the
+     * roster was also case-sensitive, so it missed a second spelling of an
+     * address the index refuses. -> `db/schema/auth.ts`
      */
     try {
       await this.auth.api.createUser({
@@ -215,7 +214,7 @@ export class InstallAccountsController {
     if (!parsed.success) {
       refuse(...parsed.error.issues.map((one) => one.message))
     }
-    const target = (await this.users(request)).find((one) => one.email === username)
+    const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
 
     await this.auth.api.setUserPassword({
@@ -251,9 +250,15 @@ export class InstallAccountsController {
     @Session() session: UserSession,
   ): Promise<Written> {
     const everyone = await this.users(request)
-    const target = everyone.find((one) => one.email === username)
+    // The roster is here for `stranding`, which counts administrators. The
+    // target is asked for by address, so it is the same row every folded write
+    // acts on. -> `auth/account-lookup.service.ts`
+    const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
-    if (target.email === session.user.email) {
+    // Compared by id, because that is what identifies an account. An address
+    // is how one is reached, and a comparison of two of them is a lookup
+    // wearing the shape of an identity check.
+    if (target.id === session.user.id) {
       refuse('You cannot disable the account you are signed in with.')
     }
     // `null` is a disable: a demotion to nobody, asking the same question the
@@ -281,7 +286,7 @@ export class InstallAccountsController {
     @Param('username') username: string,
     @Session() session: UserSession,
   ): Promise<Written> {
-    const target = (await this.users(request)).find((one) => one.email === username)
+    const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
 
     await this.auth.api.unbanUser({
@@ -313,7 +318,10 @@ export class InstallAccountsController {
     }
 
     const everyone = await this.users(request)
-    const target = everyone.find((one) => one.email === username)
+    // The roster is here for `stranding`, which counts administrators. The
+    // target is asked for by address, so it is the same row every folded write
+    // acts on. -> `auth/account-lookup.service.ts`
+    const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
 
     if (stranding(everyone, target, parsed.data.role)) {
