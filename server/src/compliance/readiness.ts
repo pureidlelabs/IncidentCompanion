@@ -8,6 +8,7 @@ import { DORA_ROOT_CAUSE_ADDITIONAL } from '../domain/vocabularies/compliance.js
 import * as dora from './dora.js'
 import * as gdpr from './gdpr.js'
 import * as nis2 from './nis2.js'
+import { regimesInPlay } from './regimes.js'
 import type { Policy } from '../domain/compliance-policy.js'
 import type { ComplianceRow } from './compliance.service.js'
 
@@ -147,20 +148,20 @@ function doraReadiness(row: ComplianceRow): Readiness {
 /**
  * One line per regime that is switched on **and in play**.
  *
- * Keyed on the same conditions the verdict rows are, so a regime showing no
- * verdict shows no readiness line either - a case owing nothing under GDPR
- * should not be told it is three GDPR facts short.
+ * The same set the verdict rows are built from, so a regime showing no verdict
+ * shows no readiness line either - a case owing nothing under GDPR should not
+ * be told it is three GDPR facts short. -> `regimes.ts`
  */
+const LINE: Record<string, (row: ComplianceRow, policy: Policy) => Readiness> = {
+  nis2: (row) => nis2Readiness(row),
+  gdpr: (row, policy) => gdprReadiness(row, policy),
+  dora: (row) => doraReadiness(row),
+}
+
 export function readiness(
   row: ComplianceRow,
   enabled: Record<string, boolean>,
   policy: Policy,
 ): Readiness[] {
-  const out: Readiness[] = []
-  if (enabled.nis2 && (row.nis2EntityClass === 'essential' || row.nis2EntityClass === 'important')) {
-    out.push(nis2Readiness(row))
-  }
-  if (enabled.gdpr && row.personalDataInvolved === 'yes') out.push(gdprReadiness(row, policy))
-  if (enabled.dora) out.push(doraReadiness(row))
-  return out
+  return regimesInPlay(row, enabled).map((regime) => LINE[regime.key]!(row, policy))
 }

@@ -13,6 +13,7 @@ import * as gdpr from './gdpr.js'
 import * as nis2 from './nis2.js'
 import { deciding, type Determination } from './gates.js'
 import { readiness } from './readiness.js'
+import { regimesInPlay } from './regimes.js'
 import type { Policy } from '../domain/compliance-policy.js'
 import type { ComplianceRow } from './compliance.service.js'
 import { z } from 'zod'
@@ -63,46 +64,65 @@ const TRACK_DETAIL: Record<string, string> = {
   qualitative: 'Directive Article 23(3)',
 }
 
+/** What a regime in play puts on the case, before the readiness line is attached. */
+interface Finding {
+  article: string
+  determination: Determination
+  detail: string
+}
+
+/**
+ * **GDPR stacks orthogonally and gets two rows**, which is why a regime answers
+ * with a list rather than one finding.
+ */
+const FINDINGS: Record<string, (row: ComplianceRow, policy: Policy) => Finding[]> = {
+  nis2: (row) => [
+    {
+      article: 'Article 23',
+      determination: nis2.significance(row),
+      detail: TRACK_DETAIL[nis2.track(row)] ?? 'entity type not stated',
+    },
+  ],
+  gdpr: (row, policy) => {
+    const band = gdpr.effectiveBand(row) || 'severity not assessed'
+    return [
+      {
+        article: 'Article 33',
+        determination: gdpr.article33(row, policy),
+        detail: `supervisory authority; ${band}`,
+      },
+      {
+        article: 'Article 34',
+        determination: gdpr.article34(row, policy),
+        detail: `data subjects; ${band}`,
+      },
+    ]
+  },
+  dora: (row) => [
+    {
+      article: 'Article 19',
+      determination: dora.major(row),
+      detail: 'major ICT-related incident',
+    },
+  ],
+}
+
 export function complianceBreakdown(
   row: ComplianceRow,
   enabled: Record<string, boolean>,
   policy: Policy,
 ): Verdict[] {
   const lines = new Map(readiness(row, enabled, policy).map((one) => [one.regime, one.line]))
-  const rows: Verdict[] = []
 
-  const add = (regime: string, article: string, determination: Determination, detail: string) => {
-    rows.push({
-      regime,
-      article,
-      verdict: determination.met,
-      rule: determination.rule,
-      detail,
-      criteria: criteriaRows(determination),
-      readiness: lines.get(regime.toLowerCase()) ?? '',
-    })
-  }
-
-  if (enabled.nis2 && (row.nis2EntityClass === 'essential' || row.nis2EntityClass === 'important')) {
-    add(
-      'NIS2',
-      'Article 23',
-      nis2.significance(row),
-      TRACK_DETAIL[nis2.track(row)] ?? 'entity type not stated',
-    )
-  }
-
-  if (enabled.gdpr && row.personalDataInvolved === 'yes') {
-    const band = gdpr.effectiveBand(row) || 'severity not assessed'
-    add('GDPR', 'Article 33', gdpr.article33(row, policy), `supervisory authority; ${band}`)
-    add('GDPR', 'Article 34', gdpr.article34(row, policy), `data subjects; ${band}`)
-  }
-
-  // Shown once the criticality gate has any answer at all: before that the row
-  // says "undetermined" on every case the app opens.
-  if (enabled.dora && dora.inScope(row).met !== null) {
-    add('DORA', 'Article 19', dora.major(row), 'major ICT-related incident')
-  }
-
-  return rows
+  return regimesInPlay(row, enabled).flatMap((regime) =>
+    FINDINGS[regime.key]!(row, policy).map((finding) => ({
+      regime: regime.label,
+      article: finding.article,
+      verdict: finding.determination.met,
+      rule: finding.determination.rule,
+      detail: finding.detail,
+      criteria: criteriaRows(finding.determination),
+      readiness: lines.get(regime.key) ?? '',
+    })),
+  )
 }
