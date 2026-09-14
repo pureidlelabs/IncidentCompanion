@@ -157,11 +157,6 @@ export function MethodsScreen({
 
   const [query, setQuery] = useState(search)
 
-  // **The analyst's place in this case, put back when they leave it.** After
-  // the filters, because a screen's filter options are counted off its rows.
-  useResetOnCase(kase, () => {
-    setQuery('')
-  })
   const [deleting, setDeleting] = useState<string[] | null>(null)
   const editor = useRowEditor<MethodEntry>()
 
@@ -206,6 +201,14 @@ export function MethodsScreen({
     },
   ])
   const chosenKinds = filters.chosen('kind')
+
+  // **The analyst's place in this case, put back when they leave it.** Below
+  // the filters, because a screen's filter options are counted off its rows --
+  // so this cannot be called before they exist.
+  useResetOnCase(kase, () => {
+    setQuery('')
+    filters.clear()
+  })
   const chosenConsoles = filters.chosen('console')
 
   const visible = useMemo(

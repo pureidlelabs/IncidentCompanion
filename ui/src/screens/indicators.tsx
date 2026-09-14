@@ -15,6 +15,7 @@ import { Link } from '@/components/ui/link'
 import { ListBoxItem } from '@/components/ui/list-box'
 import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/cn'
+import { useResetOnCase } from '@/lib/case-rows'
 
 import {
   actionableCount,
@@ -107,6 +108,17 @@ export function IndicatorsScreen({
   ])
   const types = filters.chosen('type')
   const actionableOnly = filters.chosen('push').length > 0
+
+  // **The analyst's place in this case, put back when they leave it.** Below
+  // the filters, because a screen's filter options are counted off its rows --
+  // so this cannot be called before they exist. The sharing marking goes back
+  // to the install's default too: it is a decision about *this* case's
+  // indicators, not a preference that follows the analyst. -> #669
+  useResetOnCase(kase, () => {
+    setQuery('')
+    setTlp(DEFAULT_TLP)
+    filters.clear()
+  })
 
   const visible = useMemo(
     () =>

@@ -60,10 +60,18 @@ export function useCaseRows<T>(
  * does nothing else.
  */
 export function useResetOnCase(kase: Case | undefined, reset: () => void): void {
-  const [given, setGiven] = useState(kase?.id)
+  /**
+   * **The last case actually seen, not the last value of `kase`.** A screen
+   * draws before its case arrives and its toolbar is live while it does, so
+   * `undefined -> A` is the case arriving rather than the analyst moving --
+   * resetting there wipes a search typed during the load. Holding the last
+   * *defined* id also means `A -> undefined -> B` resets once, on B, rather
+   * than on the way through.
+   */
+  const [seen, setSeen] = useState(kase?.id)
 
-  if (given !== kase?.id) {
-    setGiven(kase?.id)
-    reset()
+  if (kase?.id !== undefined && seen !== kase.id) {
+    setSeen(kase.id)
+    if (seen !== undefined) reset()
   }
 }

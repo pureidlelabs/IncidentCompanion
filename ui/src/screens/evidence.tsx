@@ -175,11 +175,6 @@ export function EvidenceScreen({
 
   const [query, setQuery] = useState(search)
 
-  // **The analyst's place in this case, put back when they leave it.** After
-  // the filters, because a screen's filter options are counted off its rows.
-  useResetOnCase(kase, () => {
-    setQuery('')
-  })
   const [deleting, setDeleting] = useState<string[] | null>(null)
   const editor = useRowEditor<EvidenceEntry>()
   /**
@@ -228,6 +223,14 @@ export function EvidenceScreen({
     },
   ])
   const states = filters.chosen('state')
+
+  // **The analyst's place in this case, put back when they leave it.** Below
+  // the filters, because a screen's filter options are counted off its rows --
+  // so this cannot be called before they exist.
+  useResetOnCase(kase, () => {
+    setQuery('')
+    filters.clear()
+  })
   const types = filters.chosen('type')
 
   const visible = useMemo(

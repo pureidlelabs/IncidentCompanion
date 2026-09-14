@@ -108,8 +108,9 @@ describe('a screen drawing one case', () => {
   })
 
   /**
-   * **An absent case is not a case switch.** A screen drawing before its case
-   * loads must not be told the analyst moved.
+   * **An absent case is not a case switch.** A screen's toolbar is live while
+   * the case loads, so a search typed during the load must survive it
+   * arriving -- this docstring said so and the assertion said the opposite.
    */
   it('draws nothing before the case arrives, and clears nothing', () => {
     const cleared = vi.fn()
@@ -125,7 +126,25 @@ describe('a screen drawing one case', () => {
     expect(result.current[0]).toHaveLength(1)
     expect(
       cleared,
-      'the case arriving for the first time was read as the analyst switching away from one',
-    ).toHaveBeenCalledTimes(1)
+      'the case arriving for the first time was read as the analyst switching away from one, ' +
+        'so a search typed while it loaded is wiped the moment it lands',
+    ).not.toHaveBeenCalled()
+  })
+
+  /**
+   * **A case leaving and another arriving is one move.** `undefined` between
+   * two cases is the read in flight, not a third place the analyst went.
+   */
+  it('clears once when one case is replaced by another through nothing', () => {
+    const cleared = vi.fn()
+    const { rerender } = renderHook(
+      ({ kase }: { kase: Case | undefined }) => useBoth(kase, cleared),
+      { initialProps: { kase: kaseWith('case-a', ['one']) } },
+    )
+
+    rerender({ kase: undefined })
+    rerender({ kase: kaseWith('case-b', ['other']) })
+
+    expect(cleared).toHaveBeenCalledTimes(1)
   })
 })
