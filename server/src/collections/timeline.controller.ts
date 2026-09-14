@@ -10,6 +10,7 @@
  * which is what a merge review needs to tell the analyst what they were about
  * to write over.
  */
+import { CreatedIdsDto, DeletedDto } from './acknowledged.js'
 import {
   UnprocessableEntityException,
   Body,
@@ -102,7 +103,6 @@ const validateEntry = new RefusingPipe(timelineWriteSchema)
 const BULK_LIMIT = 1000
 
 const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
-class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {}
 
 /**
  * What the server asserts about a row it was handed by an importer.
@@ -168,7 +168,20 @@ const validatePatch = new ZodValidationPipe(versionSchema)
  */
 const TimelineRowDto = createZodDto(timelineRowSchema)
 const TimelineRowsDto = createZodDto(z.array(timelineRowSchema))
-class DeletedDto extends createZodDto(z.object({ deleted: z.literal(true) })) {}
+
+/**
+ * **Named, because `createZodDto` returns a class called `AugmentedZodDto`.**
+ * `const x = <call>` infers no name, so both of these carried that one and the
+ * document keyed both under it: whichever registered last described all four
+ * timeline routes, and the list was published as a single row.
+ *
+ * The name is set on the class rather than through `ApiSchema`, because
+ * `nestjs-zod` derives the serialised DTO's own name from it -- `Output` is
+ * built as `${this.name}_Output`, which metadata the outer class carries does
+ * not reach. -> #649
+ */
+Object.defineProperty(TimelineRowDto, 'name', { value: 'TimelineRowDto' })
+Object.defineProperty(TimelineRowsDto, 'name', { value: 'TimelineRowsDto' })
 
 /**
  * **Guarded at the class**, so a handler added later cannot forget it - the

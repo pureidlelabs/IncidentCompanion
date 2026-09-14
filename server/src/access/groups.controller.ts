@@ -26,9 +26,6 @@ import { GroupsService } from './groups.service.js'
 const grantSchema = z.object({ userId: z.string().min(1), level: z.enum(LEVELS) }).strict()
 const holdSchema = z.object({ customerId: z.uuid() }).strict()
 
-const doneSchema = z.object({ done: z.literal(true) })
-class DoneDto extends createZodDto(doneSchema) {}
-
 const createSchema = z
   .object({ name: z.string().trim().min(1, 'A group needs a name.').max(200) })
   .strict()
@@ -38,7 +35,6 @@ const listSchema = z.object({ groups: z.array(groupSchema) })
 const madeSchema = z.object({ id: z.uuid() })
 class GroupListDto extends createZodDto(listSchema) {}
 class GroupMadeDto extends createZodDto(madeSchema) {}
-
 
 const membershipSchema = z.object({
   members: z.array(
@@ -54,6 +50,9 @@ const membershipSchema = z.object({
 class MembershipDto extends createZodDto(membershipSchema) {}
 
 const DONE = { done: true } as const
+
+const doneSchema = z.object({ done: z.literal(true) })
+class GroupDoneDto extends createZodDto(doneSchema) {}
 
 @AdminOnly()
 @Controller('api/groups')
@@ -133,7 +132,7 @@ export class GroupsController {
 
   @Post(':groupId/members')
   @HttpCode(200)
-  @ZodResponse({ status: 200, type: DoneDto, description: 'The analyst is in the group at that level.' })
+  @ZodResponse({ status: 200, type: GroupDoneDto, description: 'The analyst is in the group at that level.' })
   async grant(
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() body: unknown,
@@ -150,7 +149,7 @@ export class GroupsController {
   }
 
   @Delete(':groupId/members/:userId')
-  @ZodResponse({ status: 200, type: DoneDto, description: 'The analyst is out of the group.' })
+  @ZodResponse({ status: 200, type: GroupDoneDto, description: 'The analyst is out of the group.' })
   async revoke(
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Param('userId') userId: string,
@@ -166,7 +165,7 @@ export class GroupsController {
 
   @Post(':groupId/customers')
   @HttpCode(200)
-  @ZodResponse({ status: 200, type: DoneDto, description: 'The group holds that customer.' })
+  @ZodResponse({ status: 200, type: GroupDoneDto, description: 'The group holds that customer.' })
   async hold(
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() body: unknown,
@@ -184,7 +183,7 @@ export class GroupsController {
   }
 
   @Delete(':groupId/customers/:customerId')
-  @ZodResponse({ status: 200, type: DoneDto, description: 'The group no longer holds that customer.' })
+  @ZodResponse({ status: 200, type: GroupDoneDto, description: 'The group no longer holds that customer.' })
   async release(
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Param('customerId', ParseUUIDPipe) customerId: string,
