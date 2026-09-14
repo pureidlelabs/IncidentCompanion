@@ -164,6 +164,30 @@ export function reportBulkRefused(refused: readonly string[], what: string): voi
 }
 
 /**
+ * Say which pack was taken, and which of its strings this app has no place for.
+ *
+ * **The ignored keys are the half the analyst cannot see anywhere else.** A
+ * pack translated against an older build carries keys no screen reads, and it
+ * uploads cleanly with its coverage quietly short -- the response naming them
+ * is the only moment that knows. A warning rather than an error, because the
+ * pack was taken and the rest of it works.
+ */
+export function reportUploadedPack(pack: { label: string; ignored: readonly string[] }): void {
+  const title = `${pack.label} was uploaded.`
+  if (pack.ignored.length === 0) {
+    toast.success(title)
+    return
+  }
+  const count = pack.ignored.length
+  const [noun, verb] = count === 1 ? ['string', 'has'] : ['strings', 'have']
+  toast.warning(title, {
+    description: `${String(count)} ${noun} in it ${verb} no place in this app and ${
+      count === 1 ? 'was' : 'were'
+    } not stored.`,
+  })
+}
+
+/**
  * Say what an imported archive brought, and what it named but did not carry.
  *
  * **The attachment count is the half nothing else can tell the analyst.** An

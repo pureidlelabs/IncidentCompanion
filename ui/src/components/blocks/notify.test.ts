@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   reportBulkMissing,
   reportImportedCase,
+  reportUploadedPack,
   reportWriteFailure,
   toast,
   toastQueue,
@@ -212,6 +213,39 @@ describe('reportImportedCase', () => {
     expect(raised().content.title).toBe('1 row imported.')
     expect(raised().content.description).toBe(
       '1 attachment the rows name is not in the archive.',
+    )
+  })
+})
+
+describe('reportUploadedPack', () => {
+  it('says the pack was taken when every string in it had a place', () => {
+    reportUploadedPack({ label: 'Nederlands', ignored: [] })
+
+    expect(raised().content.title).toBe('Nederlands was uploaded.')
+    expect(raised().content.tone).toBe('success')
+    expect(raised().content.description).toBeUndefined()
+  })
+
+  /**
+   * **The count the analyst cannot recover by looking.** A pack translated
+   * against an older build uploads cleanly and its coverage is quietly short;
+   * the response naming the keys is the only moment that knows.
+   */
+  it('names how many strings had no place, without refusing the pack', () => {
+    reportUploadedPack({ label: 'Deutsch', ignored: ['heading.written', 'field.gone'] })
+
+    expect(raised().content.title).toBe('Deutsch was uploaded.')
+    expect(raised().content.tone).toBe('warning')
+    expect(raised().content.description).toBe(
+      '2 strings in it have no place in this app and were not stored.',
+    )
+  })
+
+  it('counts one string as one', () => {
+    reportUploadedPack({ label: 'Deutsch', ignored: ['heading.written'] })
+
+    expect(raised().content.description).toBe(
+      '1 string in it has no place in this app and was not stored.',
     )
   })
 })

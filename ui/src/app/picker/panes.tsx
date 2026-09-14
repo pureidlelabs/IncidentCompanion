@@ -5,13 +5,18 @@ import { useCases } from '@/api/case'
 import { useImportCase } from '@/api/useImportCase'
 import { useAccounts, useAccountWrite } from '@/api/accounts'
 import { useInstallActivity, type AuditLine } from '@/api/installActivity'
-import { useLanguages } from '@/api/languages'
+import { announced } from '@/app/case/entryWrites'
+import { packFromFile, useLanguageRemove, useLanguageUpload, useLanguages } from '@/api/languages'
 import { useLibrary } from '@/api/library'
 import { useDemos } from '@/api/useDemos'
 import { useSession } from '@/api/useSession'
 import { useBackendHealth } from '@/api/useBackendHealth'
 import { useActivity, useResources } from '@/api/useInstallHealth'
-import { reportImportedCase, reportWriteFailure } from '@/components/blocks/notify'
+import {
+  reportImportedCase,
+  reportUploadedPack,
+  reportWriteFailure,
+} from '@/components/blocks/notify'
 import {
   connectionGauge,
   figureRows,
@@ -322,6 +327,8 @@ export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAb
 export function LanguagesPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const languages = useLanguages()
   const analyst = useAnalyst()
+  const remove = useLanguageRemove()
+  const upload = useLanguageUpload()
   const rows: LanguageRow[] = (languages.data?.languages ?? []).map((pack) => ({
     ...pack,
     id: pack.code,
@@ -329,6 +336,16 @@ export function LanguagesPaneView({ onPane, onImportArchive, userMenu, onAbout }
   return (
     <PickerLanguagesScreen
       languages={rows}
+      keyCount={languages.data?.keyCount ?? 0}
+      onRemove={(code) => {
+        void announced('the language pack', () => remove.mutateAsync(code))
+      }}
+      onUpload={(file) => {
+        void announced('the language pack', async () => {
+          const taken = await upload.mutateAsync(await packFromFile(file))
+          reportUploadedPack({ label: taken.language.label, ignored: taken.ignored })
+        })
+      }}
       busy={languages.isPending}
       analyst={analyst ?? ''}
       {...(languages.error === null ? {} : { problem: languages.error })}

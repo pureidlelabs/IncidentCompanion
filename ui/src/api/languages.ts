@@ -20,8 +20,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 
-import type { ApiError } from './client'
-import { request } from './client'
+import { ApiError, request } from './client'
 import { keys } from './queryKeys'
 
 export interface LanguagePack {
@@ -53,11 +52,66 @@ export interface Uploaded {
 
 const PATH = '/report/languages'
 
+/** Bytes. Two orders of magnitude above a complete pack. */
+const A_PACK_AT_MOST = 1024 * 1024
+
 export function useLanguages(): UseQueryResult<LanguagesView> {
   return useQuery({
     queryKey: keys.reportLanguages(),
     queryFn: () => request<LanguagesView>(PATH),
   })
+}
+
+/**
+ * A language pack read off a file the analyst chose.
+ *
+ * **Checked rather than cast.** The route takes JSON, so the file is read
+ * where it was picked -- but `JSON.parse(...) as PackUpload` is an assertion,
+ * not a check, and everything valid-JSON-but-not-a-pack reached the server
+ * anyway. What this refuses is refused here, in words about the file; what it
+ * passes is the server's to judge, and its refusal names the fields.
+ *
+ * @throws ApiError 422 where the bytes are not a pack this app can read.
+ */
+export async function packFromFile(file: File): Promise<PackUpload> {
+  const refuse = (why: string): never => {
+    throw new ApiError(422, why, null)
+  }
+
+  // Checked before the read, because `file.text()` pulls the whole file into
+  // the tab: a video chosen by mistake freezes the screen where a refusal
+  // belongs. The English pack is 7KB of source, so this is a wrong-file
+  // boundary rather than a limit a real pack can approach.
+  if (file.size > A_PACK_AT_MOST) {
+    return refuse('That file is too large to be a language pack.')
+  }
+
+  let read: unknown
+  try {
+    read = JSON.parse(await file.text())
+  } catch {
+    return refuse('That file is not JSON, so it is not a language pack.')
+  }
+
+  if (typeof read !== 'object' || read === null || Array.isArray(read)) {
+    return refuse('That file is not a language pack.')
+  }
+  const pack = read as Record<string, unknown>
+  if (typeof pack.code !== 'string' || pack.code === '') {
+    return refuse('That file names no language code.')
+  }
+  if (typeof pack.label !== 'string' || pack.label === '') {
+    return refuse('That file names no language.')
+  }
+  const strings = pack.strings
+  if (typeof strings !== 'object' || strings === null || Array.isArray(strings)) {
+    return refuse('That file carries no strings.')
+  }
+  if (Object.values(strings).some((one) => typeof one !== 'string')) {
+    return refuse('That file carries a string that is not text.')
+  }
+
+  return { code: pack.code, label: pack.label, strings: strings as Record<string, string> }
 }
 
 /**
