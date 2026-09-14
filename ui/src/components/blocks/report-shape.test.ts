@@ -4,6 +4,7 @@ import type { Report, ReportBlock } from '@/api/model'
 
 import { blocksOf, railSectionsOf, sectionTally, headingIsFinal, headingOf, isFrozen, outstandingIn, shortDate, stateOf } from './report-shape'
 import { DEMO_BLOCKS, DEMO_REPORTS, demoReport } from '@/fixtures/report-demo'
+import { DEMO_HEADINGS } from './report-layouts'
 
 /**
  * What the three report screens agree about a report, attacked.
@@ -117,15 +118,18 @@ describe('what a section is called', () => {
   /** A stored heading is the analyst's own and beats every derivation. */
   it('prefers the stored heading over the key and the kind', () => {
     expect(
-      headingOf(block({ heading: 'Our own words', headingKey: 'heading.analysis', kind: 'written' })),
+      headingOf(
+        block({ heading: 'Our own words', headingKey: 'heading.analysis', kind: 'written' }),
+        DEMO_HEADINGS,
+      ),
     ).toBe('Our own words')
   })
 
   /** A key the pack resolves reads as words, and is final. */
   it('resolves a key the pack knows', () => {
     const one = block({ heading: '', headingKey: 'heading.exec_summary', kind: 'written' })
-    expect(headingOf(one)).toBe('Executive summary')
-    expect(headingIsFinal(one)).toBe(true)
+    expect(headingOf(one, DEMO_HEADINGS)).toBe('Executive summary')
+    expect(headingIsFinal(one, DEMO_HEADINGS)).toBe(true)
   })
 
   /**
@@ -135,15 +139,15 @@ describe('what a section is called', () => {
    */
   it('falls back to the key and marks it not final', () => {
     const one = block({ heading: '', headingKey: 'heading.nothing_here', kind: 'written' })
-    expect(headingOf(one)).toBe('heading.nothing_here')
-    expect(headingIsFinal(one)).toBe(false)
+    expect(headingOf(one, DEMO_HEADINGS)).toBe('heading.nothing_here')
+    expect(headingIsFinal(one, DEMO_HEADINGS)).toBe(false)
   })
 
   /** With neither, the kind's served label stands in and is final. */
   it('uses the kind label when there is no heading and no key', () => {
     const one = block({ heading: '', headingKey: '', kind: 'timeline' })
-    expect(headingOf(one)).toBe('Timeline of events')
-    expect(headingIsFinal(one)).toBe(true)
+    expect(headingOf(one, DEMO_HEADINGS)).toBe('Timeline of events')
+    expect(headingIsFinal(one, DEMO_HEADINGS)).toBe(true)
   })
 
   /**
@@ -153,8 +157,8 @@ describe('what a section is called', () => {
    */
   it('names an untitled written section rather than drawing its slug', () => {
     const one = block({ heading: '', headingKey: '', kind: 'written' })
-    expect(headingOf(one)).toBe('Written section')
-    expect(headingIsFinal(one)).toBe(true)
+    expect(headingOf(one, DEMO_HEADINGS)).toBe('Written section')
+    expect(headingIsFinal(one, DEMO_HEADINGS)).toBe(true)
   })
 })
 
@@ -179,7 +183,7 @@ describe('a report date', () => {
 
 describe('the rail down the side of the document', () => {
   const report = first
-  const rows = (blocks: ReportBlock[]) => railSectionsOf(report, blocks)
+  const rows = (blocks: ReportBlock[]) => railSectionsOf(report, blocks, DEMO_HEADINGS)
 
   const written = block({ id: 'w', reportId: report.id, position: 1, kind: 'written',
     heading: 'Root cause', hasProse: true })
@@ -219,7 +223,7 @@ describe('the rail down the side of the document', () => {
   /** A frozen report owes nothing, so the rail marks nothing. */
   it('marks nothing on a report that has been sent', () => {
     const sent = withSent(report, '2026-08-19T09:00:00.000Z')
-    expect(railSectionsOf(sent, [empty]).map((row) => row.blank)).toEqual([false])
+    expect(railSectionsOf(sent, [empty], DEMO_HEADINGS).map((row) => row.blank)).toEqual([false])
   })
 
   /**

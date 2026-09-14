@@ -7,6 +7,7 @@ import { blocksOf } from '@/components/blocks/report-shape'
 import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
 
 import { ReportIndexPane } from './report-index'
+import { DEMO_HEADINGS } from './report-layouts'
 
 /**
  * The report section's landing view: four reports, and what each still owes.
@@ -24,6 +25,7 @@ const meta = {
   // they were handed, because every report on this table is deleted, copied
   // and opened by exactly the same controls and only the id tells them apart.
   args: {
+    headings: DEMO_HEADINGS,
     reports: DEMO_REPORTS,
     blocks: DEMO_BLOCKS,
     onOpen: fn(),
@@ -211,7 +213,14 @@ export const DuplicateRefused: Story = {
  */
 export const ReadOnly: Story = {
   name: 'Read-only, no delete door',
-  render: () => <ReportIndexPane reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onOpen={() => undefined} />,
+  render: () => (
+    <ReportIndexPane
+      reports={DEMO_REPORTS}
+      blocks={DEMO_BLOCKS}
+      headings={DEMO_HEADINGS}
+      onOpen={() => undefined}
+    />
+  ),
 }
 
 /** A case that has produced nothing yet. */

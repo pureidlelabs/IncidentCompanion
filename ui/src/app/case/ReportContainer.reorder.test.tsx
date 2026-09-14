@@ -24,7 +24,13 @@ const collections: string[] = []
 
 vi.mock('@/api/case', () => ({ useCase: () => ({ data: undefined, isPending: false, error: null, refetch: vi.fn() }) }))
 vi.mock('@/api/regimes', () => ({ useRegimes: () => ({ data: undefined }), regimeEnabled: () => false }))
-vi.mock('@/api/reportLayouts', () => ({ useReportLayouts: () => ({ data: undefined }) }))
+vi.mock('@/api/reportLayouts', () => ({
+  useReportLayouts: () => ({ data: undefined }),
+  // Unanswered is the state these cases draw, and its pack is empty: a key
+  // then stands in for itself, which is what the screen shows before the
+  // language pack arrives. -> #513
+  headingLabelsByKey: () => ({}),
+}))
 vi.mock('@/api/reportBlockKinds', () => ({ useReportBlockKinds: () => ({ data: undefined }) }))
 vi.mock('@/api/useEntryCreate', () => ({ useEntryCreate: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('@/api/useEntryMutation', () => ({

@@ -25,6 +25,7 @@ import { ImpactScreen } from './impact'
 import { NotesScreen } from './notes'
 import { ReportIndexPane } from '@/components/blocks/report-index'
 import { TimelineScreen } from './timeline'
+import { DEMO_HEADINGS } from '@/components/blocks/report-layouts'
 
 /** The count line the section head is drawing. */
 function countText(): string {
@@ -43,7 +44,7 @@ const SECTIONS: readonly {
   { name: 'entities', draw: () => <EntitiesScreen kase={campaignCase} specs={specsFixture} />, noun: 'row', plural: 'rows' },
   { name: 'impact', draw: () => <ImpactScreen kase={campaignCase} specs={specsFixture} />, noun: 'record', plural: 'records' },
   { name: 'notes', draw: () => <NotesScreen kase={campaignCase} specs={specsFixture} />, noun: 'note', plural: 'notes' },
-  { name: 'report index', draw: () => <ReportIndexPane reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} />, noun: 'report', plural: 'reports' },
+  { name: 'report index', draw: () => <ReportIndexPane headings={DEMO_HEADINGS} reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} />, noun: 'report', plural: 'reports' },
   { name: 'timeline', draw: () => <TimelineScreen kase={campaignCase} specs={specsFixture} />, noun: 'entry', plural: 'entries' },
 ]
 

@@ -30,6 +30,7 @@ import { campaignCompliance } from '@/fixtures/compliance'
 import { regimesFixture } from '@/fixtures/regimes'
 import { specsFixture } from '@/fixtures/specs'
 import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
+import { DEMO_HEADINGS } from '@/components/blocks/report-layouts'
 
 /**
  * **Presence rather than paint, and only here.** The overview draws its form on
@@ -131,14 +132,14 @@ describe('the report index', () => {
 
   it('says nothing when a copy goes through', async () => {
     const user = userEvent.setup()
-    render(<ReportIndexPane reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onDuplicate={() => Promise.resolve()} />)
+    render(<ReportIndexPane headings={DEMO_HEADINGS} reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onDuplicate={() => Promise.resolve()} />)
     await duplicateTheFirstReport(user)
     expect(screen.queryByText(/was not copied/)).toBeNull()
   })
 
   it('does not swallow the reason a copy was refused', async () => {
     const user = userEvent.setup()
-    render(<ReportIndexPane reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onDuplicate={refuse} />)
+    render(<ReportIndexPane headings={DEMO_HEADINGS} reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onDuplicate={refuse} />)
     await duplicateTheFirstReport(user)
     expect(
       await screen.findByText('This case is frozen; nothing new can be written to it.'),
@@ -152,7 +153,7 @@ describe('the report index', () => {
    */
   it('names which report was not copied', async () => {
     const user = userEvent.setup()
-    render(<ReportIndexPane reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onDuplicate={refuse} />)
+    render(<ReportIndexPane headings={DEMO_HEADINGS} reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onDuplicate={refuse} />)
     const title = await duplicateTheFirstReport(user)
     expect(await screen.findByText(`${title} was not copied`)).toBeVisible()
   })
@@ -168,7 +169,7 @@ describe('the report index', () => {
    */
   it('lets the refused row be tried again', async () => {
     const user = userEvent.setup()
-    render(<ReportIndexPane reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onDuplicate={refuse} />)
+    render(<ReportIndexPane headings={DEMO_HEADINGS} reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onDuplicate={refuse} />)
     await duplicateTheFirstReport(user)
     await screen.findByText(/was not copied/)
 

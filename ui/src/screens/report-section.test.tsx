@@ -9,6 +9,7 @@ import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
 
 import { ReportSectionScreen } from './report-section'
+import { DEMO_HEADINGS } from '@/components/blocks/report-layouts'
 
 /**
  * Which report the section puts in the pane, and that it draws no backbone of
@@ -46,6 +47,7 @@ function draw({
           openReport={openId}
         >
           <ReportSectionScreen
+            headings={DEMO_HEADINGS}
             reports={DEMO_REPORTS}
             blocks={DEMO_BLOCKS}
             kase={campaignCase}

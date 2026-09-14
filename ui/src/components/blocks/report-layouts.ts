@@ -16,45 +16,6 @@ import { BLANK_LAYOUT, type LayoutBlock, type ReportLayout } from '@/api/reportL
  * Article 23 stages, and TLP 2.0's markings.
  */
 
-/**
- * The heading keys the English pack resolves.
- *
- * The real answer arrives with the report. A key the map does not hold falls
- * through to the key itself, which is what marks a heading as not final -
- * inventing English words client-side is how a Dutch report grows an English
- * heading.
- */
-export const HEADING_LABELS: Readonly<Record<string, string>> = {
-  'heading.case_header': 'Case',
-  'heading.metrics': 'Response metrics',
-  'heading.timeline': 'Timeline of events',
-  'heading.entities': 'Assets, accounts and indicators',
-  'heading.glossary': 'Terms used in this report',
-  'heading.ribbon': 'Attack progression',
-  'heading.exec_card': 'Summary',
-  'heading.killchain': 'Kill chain coverage',
-  'heading.techniques': 'Techniques and sub-techniques',
-  'heading.technique_table': 'Techniques observed',
-  'heading.narrative': 'Incident narrative',
-  'heading.root_cause': 'Root cause',
-  'heading.evidence': 'Evidence',
-  'heading.actions': 'Response actions',
-  'heading.impact': 'Impact',
-  'heading.methods': 'Methods',
-  'heading.indicators': 'Indicators of compromise',
-  'heading.exec_summary': 'Executive summary',
-  'heading.analysis': 'Analysis',
-  'heading.recommendations': 'Recommendations',
-  'heading.what_happened': 'What happened',
-  'heading.what_we_did': 'What we did',
-  'heading.what_we_recommend': 'What we recommend',
-  'heading.initial_assessment': 'Initial assessment',
-  'heading.status_update': 'Status update',
-  'heading.what_is_still_open': 'What is still open',
-  'heading.cross_border_impact': 'Cross-border impact',
-  'heading.analyst_notes': 'Analyst notes',
-  'heading.figure': 'Figure',
-}
 
 /** One section a layout prescribes, before the server resolves its label. */
 interface Seed {
@@ -217,20 +178,64 @@ const UNKEYED_LABELS: Readonly<Record<string, string>> = {
  * The words a kind is drawn under, where the block itself supplies none.
  *
  * The heading key is the real answer and arrives with the report, so this is
- * reached only by a block that carries none. The words are English and the
- * install's own, taken from the same pack rather than invented here; a kind
- * neither map names falls through to the kind itself.
+ * reached only by a block that carries none. `pack` is the served map, in the
+ * report's own language; a kind it does not name falls to the one word this
+ * bundle still holds, and then to the kind itself. -> #513
  */
-export function labelForKind(kind: string): string {
-  return UNKEYED_LABELS[kind] ?? HEADING_LABELS[`heading.${kind}`] ?? kind
+export function labelForKind(kind: string, pack: Readonly<Record<string, string>>): string {
+  return pack[`heading.${kind}`] ?? UNKEYED_LABELS[kind] ?? kind
 }
 
 /** What a chip says: the heading key resolved, or the key itself. */
-function chipLabel(seed: Seed): string {
+function chipLabel(seed: Seed, pack: Readonly<Record<string, string>>): string {
   if (seed.headingKey !== undefined) {
-    return HEADING_LABELS[seed.headingKey] ?? seed.headingKey
+    return pack[seed.headingKey] ?? seed.headingKey
   }
-  return labelForKind(seed.kind)
+  return labelForKind(seed.kind, pack)
+}
+
+/**
+ * What the English pack answers, for the shipped layouts this bundle draws as
+ * a fixture.
+ *
+ * **A fixture, and reached by no production path.** `DEMO_LAYOUTS` is the
+ * client's own copy of the shipped shapes, read by stories and by nothing an
+ * analyst sees; the screen's layouts arrive from `/report-layouts` in the
+ * report's own language. A map here that a component reads is a report drawn
+ * in a language it will not be produced in, so a rule test holds this one to
+ * the fixtures.
+ * -> `a-heading-pack-in-the-bundle-is-a-fixture.rule.test.ts`, #513
+ */
+export const DEMO_HEADINGS: Readonly<Record<string, string>> = {
+  'heading.case_header': 'Case',
+  'heading.metrics': 'Response metrics',
+  'heading.timeline': 'Timeline of events',
+  'heading.entities': 'Assets, accounts and indicators',
+  'heading.glossary': 'Terms used in this report',
+  'heading.ribbon': 'Attack progression',
+  'heading.exec_card': 'Summary',
+  'heading.killchain': 'Kill chain coverage',
+  'heading.techniques': 'Techniques and sub-techniques',
+  'heading.technique_table': 'Techniques observed',
+  'heading.narrative': 'Incident narrative',
+  'heading.root_cause': 'Root cause',
+  'heading.evidence': 'Evidence',
+  'heading.actions': 'Response actions',
+  'heading.impact': 'Impact',
+  'heading.methods': 'Methods',
+  'heading.indicators': 'Indicators of compromise',
+  'heading.exec_summary': 'Executive summary',
+  'heading.analysis': 'Analysis',
+  'heading.recommendations': 'Recommendations',
+  'heading.what_happened': 'What happened',
+  'heading.what_we_did': 'What we did',
+  'heading.what_we_recommend': 'What we recommend',
+  'heading.initial_assessment': 'Initial assessment',
+  'heading.status_update': 'Status update',
+  'heading.what_is_still_open': 'What is still open',
+  'heading.cross_border_impact': 'Cross-border impact',
+  'heading.analyst_notes': 'Analyst notes',
+  'heading.figure': 'Figure',
 }
 
 function resolve(seed: LayoutSeed): ReportLayout {
@@ -239,7 +244,7 @@ function resolve(seed: LayoutSeed): ReportLayout {
     position,
     heading: '',
     headingKey: block.headingKey ?? '',
-    label: chipLabel(block),
+    label: chipLabel(block, DEMO_HEADINGS),
   }))
   return {
     name: seed.name,
