@@ -2,12 +2,18 @@
  * **An address names one account, whatever case it is spelled in.**
  *
  * Every query addressing a user row folds case, through `sameAddress`. The
- * column it folds does not, so nothing stopped two rows existing whose
- * addresses differ only in case -- and then each of those folded queries
- * matched both. `LockoutClearService.clear` updates by that predicate with no
- * limit, so clearing one account's lockout cleared the other's; `hold` takes
- * `.limit(1)` with no ordering, so it held whichever row the database happened
- * to return. -> #632
+ * column it folds does not, so two rows whose addresses differ only in case
+ * are both matched by each of those queries: `LockoutClearService.clear`
+ * updates by that predicate with no limit, so clearing one account's lockout
+ * clears the other's, and `hold` takes `.limit(1)` with no ordering, so it
+ * holds whichever row the database returns.
+ *
+ * **Written directly, because no route writes such a row.** Better Auth folds
+ * the address on the paths this install creates accounts through, which
+ * `test/casefolded-account-writes.test.ts` holds them to. `sameAddress` folds
+ * on the column for the row written any other way, and this is what keeps that
+ * row from being a second account rather than merely an unaddressed one.
+ * -> #632
  *
  * **Asserted against a real Postgres**, because this is a claim about what the
  * database refuses. A recording double answers whatever it was told to, and

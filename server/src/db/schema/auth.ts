@@ -68,12 +68,17 @@ export const user = pgTable('user', {
   /**
    * **One account per address, folded the way every read folds it.**
    *
-   * `unique()` on the column is case-sensitive, so it let a second account in
-   * whose address differed only in case - and then every query written through
-   * `sameAddress` matched both. The lockout clear is the sharpest of those: it
+   * `unique()` on the column is case-sensitive, so it admits a second row whose
+   * address differs only in case - and then every query written through
+   * `sameAddress` matches both. The lockout clear is the sharpest of those: it
    * updates by that predicate with no limit, so clearing one account's counter
-   * cleared the other's. A reader cannot close this, because two administrators
-   * pressing Create at the same moment both read no such account.
+   * clears the other's.
+   *
+   * **The row that reaches this is one Better Auth did not write.** Its own
+   * paths fold the address, which `test/casefolded-account-writes.test.ts`
+   * holds them to; `sameAddress` folds on the column precisely because a row
+   * written any other way is the row with no lockout and no hold. This makes
+   * that row impossible rather than merely unaddressed.
    * -> `auth/same-address.ts`
    */
   uniqueIndex('user_email_folded').on(sql`lower(${t.email})`),
