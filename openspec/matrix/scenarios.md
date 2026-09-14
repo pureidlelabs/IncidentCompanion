@@ -517,6 +517,8 @@
 | A report says what is missing before it is sent | A report is checked before sending | demonstrated | server/src/report/lifecycle.service.test.ts |
 | A report says what is missing before it is sent | A section was removed and is wanted back | demonstrated | server/src/report/lifecycle.service.test.ts |
 | The application's own words are in the report's language; the analyst's are the analyst's | A report is produced in a second language | demonstrated | server/src/report/document/resolve.test.ts |
+| The application's own words are in the report's language; the analyst's are the analyst's | A report is composed in a second language | demonstrated | ui/src/components/blocks/a-report-says-its-headings-in-its-own-language.test.ts |
+| The application's own words are in the report's language; the analyst's are the analyst's | The language a report is produced in is changed | demonstrated | ui/src/app/case/the-heading-pack-is-fetched-for-the-open-report.test.tsx |
 | The application's own words are in the report's language; the analyst's are the analyst's | Written prose is in another language | unbuilt | Not built: nothing reads the language of written prose. -> #229 |
 | The application's own words are in the report's language; the analyst's are the analyst's | The analyst meant it | unbuilt | Not built: nothing records what was named and sent anyway. -> #229 |
 | A report is for an audience, and the audience decides what it owes | A report is created | unbuilt | Not built: a report records no audience. -> #228 |

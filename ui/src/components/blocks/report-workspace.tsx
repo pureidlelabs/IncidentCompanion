@@ -76,6 +76,16 @@ export interface ReportWorkspaceProps {
   blocks: readonly ReportBlock[] | undefined
   /** The case the generated sections count from. */
   kase: Case | undefined
+  /**
+   * The heading keys resolved in the report's own language, as the pack served
+   * them.
+   *
+   * Empty until the query answers, which draws each key as itself. That is the
+   * unresolved state `headingIsFinal` already marks; an English word invented
+   * in the bundle is indistinguishable from a resolved one, which is what kept
+   * a Dutch report's English headings invisible. -> #513
+   */
+  headings: Readonly<Record<string, string>>
   /** Text per block id, standing in for the collaboration channel. */
   prose?: Readonly<Record<string, string>>
   /**
@@ -160,6 +170,7 @@ export function ReportWorkspace({
   onReorder,
   languages,
   onLanguage,
+  headings,
 }: ReportWorkspaceProps) {
   const blocks = blocksGiven ?? []
   const [mode, setMode] = useState<ViewMode>(view)
@@ -179,7 +190,7 @@ export function ReportWorkspace({
   const [live, setLive] = useState<Readonly<Record<string, string>>>(prose ?? {})
 
   const own = blocksOf(blocks, report.id)
-  const rail = railSectionsOf(report, blocks)
+  const rail = railSectionsOf(report, blocks, headings)
   const frozen = isFrozen(report)
   const editable = !frozen
 
@@ -212,7 +223,13 @@ export function ReportWorkspace({
 
       {mode === 'preview' ? (
         kase ? (
-          <ReportPreviewPane report={report} blocks={own} kase={kase} live={live} />
+          <ReportPreviewPane
+            report={report}
+            blocks={own}
+            kase={kase}
+            live={live}
+            headings={headings}
+          />
         ) : null
       ) : own.length === 0 ? (
         <div className="px-4 py-6">
@@ -259,6 +276,7 @@ export function ReportWorkspace({
 
             <SectionColumn
               blocks={own}
+              headings={headings}
               {...(editable && onReorder !== undefined ? { onReorder } : {})}
               section={(block) => {
                 const entry = rail.find((one) => one.id === block.id)
@@ -269,6 +287,7 @@ export function ReportWorkspace({
                     blank={entry?.blank ?? false}
                     editable={editable}
                     text={live[block.id] ?? ''}
+                    headings={headings}
                     {...(sync === undefined ? {} : { sync })}
                     onEnter={() => {
                       setHere(block.id)
@@ -282,6 +301,7 @@ export function ReportWorkspace({
                     block={block}
                     number={entry?.number ?? 0}
                     facts={kase ? factsFor(block.kind, kase) : ''}
+                    headings={headings}
                   />
                 )
               }}
@@ -289,7 +309,14 @@ export function ReportWorkspace({
           </div>
 
           {mode === 'paper' && kase && (
-            <ReportPaperPage blocks={own} live={live} kase={kase} report={report} here={here} />
+            <ReportPaperPage
+              blocks={own}
+              live={live}
+              kase={kase}
+              report={report}
+              here={here}
+              headings={headings}
+            />
           )}
         </div>
       )}
@@ -333,11 +360,14 @@ function SectionColumn({
   blocks,
   onReorder,
   section,
+  headings,
 }: {
   blocks: readonly ReportBlock[]
   /** Absent on a report nobody may rearrange. */
   onReorder?: (ids: string[]) => void
   section: (block: ReportBlock) => ReactNode
+  /** The heading keys resolved in the report's language, as served. -> #513 */
+  headings: Readonly<Record<string, string>>
 }) {
   if (onReorder === undefined) {
     return (
@@ -390,7 +420,7 @@ function SectionColumn({
           // The rail names sections by `headingOf` and so does the document;
           // React Aria names the grip from this, so a third spelling would
           // give the grip a name the screen does not use.
-          textValue={headingOf(block)}
+          textValue={headingOf(block, headings)}
           className="items-start border-t-0 px-0 py-0 hover:bg-transparent"
         >
           <div id={sectionDomId(block.id)} className="min-w-0 flex-1">
@@ -598,6 +628,7 @@ function WrittenSection({
   onEnter,
   onWrite,
   sync,
+  headings,
 }: {
   block: ReportBlock
   number: number
@@ -606,6 +637,8 @@ function WrittenSection({
   text: string
   onEnter: () => void
   onWrite: (text: string) => void
+  /** The heading keys resolved in the report's language, as served. -> #513 */
+  headings: Readonly<Record<string, string>>
   /** The report's document. Absent is the gallery's single-writer field. */
   sync?: { channel: ProseChannel | null; status: SyncStatus; settled: boolean }
 }) {
@@ -615,8 +648,10 @@ function WrittenSection({
         <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">
           {number}
         </span>
-        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{headingOf(block)}</h2>
-        {!headingIsFinal(block) && (
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">
+          {headingOf(block, headings)}
+        </h2>
+        {!headingIsFinal(block, headings) && (
           <span className="shrink-0 text-2xs text-ink-muted">heading not final</span>
         )}
         {blank && (
@@ -639,7 +674,7 @@ function WrittenSection({
            */
           <p
             className="min-h-24 motion-safe:animate-pulse text-sm text-ink-muted"
-            aria-label={headingOf(block)}
+            aria-label={headingOf(block, headings)}
             role="status"
             aria-busy="true"
           >
@@ -652,7 +687,7 @@ function WrittenSection({
            * in the same text. -> `prose-body.tsx`
            */
           <ProseBody
-            label={headingOf(block)}
+            label={headingOf(block, headings)}
             value={text}
             readOnly={!editable}
             placeholder={editable ? 'Write\u2026' : 'Nothing was written here.'}
@@ -681,15 +716,18 @@ function GeneratedSection({
   block,
   number,
   facts,
+  headings,
 }: {
   block: ReportBlock
   number: number
   facts: string
+  /** The heading keys resolved in the report's language, as served. -> #513 */
+  headings: Readonly<Record<string, string>>
 }) {
   return (
     <div className="flex items-center gap-2 rounded-md border border-dashed border-border px-3 py-2">
       <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">{number}</span>
-      <span className="min-w-0 flex-1 truncate text-sm">{headingOf(block)}</span>
+      <span className="min-w-0 flex-1 truncate text-sm">{headingOf(block, headings)}</span>
       {facts !== '' && <span className="shrink-0 text-2xs text-ink-muted">{facts}</span>}
       <Badge variant="soft" size="xs">
         generated

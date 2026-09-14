@@ -7,6 +7,7 @@ import { DEMO_BLOCKS, demoReport } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
 
 import { ReportWorkspace } from './report-workspace'
+import { DEMO_HEADINGS } from './report-layouts'
 
 /**
  * A report says which language it is in, and an analyst can change it.
@@ -30,6 +31,7 @@ const LANGUAGES = [
 function open(report = demoReport(0), onLanguage?: (code: string) => void) {
   return render(
     <ReportWorkspace
+      headings={DEMO_HEADINGS}
       report={report}
       blocks={blocksOf(DEMO_BLOCKS, report.id)}
       kase={campaignCase}
@@ -89,6 +91,7 @@ describe('the language a report is in', () => {
     // The gallery, and any caller that has not asked for the layouts yet.
     render(
       <ReportWorkspace
+        headings={DEMO_HEADINGS}
         report={demoReport(0)}
         blocks={blocksOf(DEMO_BLOCKS, demoReport(0).id)}
         kase={campaignCase}

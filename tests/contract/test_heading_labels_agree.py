@@ -1,18 +1,23 @@
-"""One set of words for a report heading, held across the two tiers that hold it.
+"""One set of words for a report heading, and the client fixture that draws them.
 
-The install resolves a heading key from its own English pack, and the client
-holds a map of the same keys so a report can be drawn before the pack arrives.
-Both name the same headings, and a key the client answers differently is a
-heading that changes wording the moment the report is exported.
+The install resolves a heading key from its own pack, in the language the
+report is produced in, and that is the only map a screen reads. What the client
+still ships is `DEMO_HEADINGS`, the fixture its stories and demo layouts draw
+chip labels from -- so a story shows words, not keys.
 
-The client's map also stands in for a block carrying no heading key at all, so
-it is the whole answer for those and not a stand-in for a served one.
+A fixture is allowed to be smaller than the pack and not allowed to disagree
+with it. Words here that no install produces are a story describing a product
+that does not exist, which is the more expensive kind of wrong: it is what
+somebody reads when they are deciding whether the screen is right.
 
 **Read off the source rather than executed**, because the two live in different
 workspaces and neither suite can import the other. This compares the entries
 they share: a key one holds and the other does not is not a disagreement, since
-the pack is the larger of the two by design and the client holds only what it
-can draw without it.
+the pack is the larger of the two by design.
+
+The last case reads the pack rather than the fixture for what the *product*
+owes, which is the property that outlived the two-map arrangement: a kind the
+install can label and the pack cannot resolve draws its slug on screen.
 """
 
 import re
@@ -39,9 +44,9 @@ def server_headings() -> dict[str, str]:
 
 
 def client_headings() -> dict[str, str]:
-    """`HEADING_LABELS` in the client: the same keys, for a report not yet served."""
+    """`DEMO_HEADINGS` in the client: the fixture the stories and demo layouts draw."""
     text = CLIENT.read_text(encoding="utf-8")
-    start = text.index("export const HEADING_LABELS")
+    start = text.index("export const DEMO_HEADINGS")
     return _entries(text[start : text.index("\n}", start)])
 
 
@@ -57,7 +62,7 @@ def test_both_maps_were_found():
 
 
 def test_the_two_tiers_word_a_heading_the_same():
-    """A key worded differently is a heading that changes when the report is exported."""
+    """A fixture worded differently shows a heading no install produces."""
     server, client = server_headings(), client_headings()
 
     differing = {
@@ -69,16 +74,16 @@ def test_the_two_tiers_word_a_heading_the_same():
 
 
 def test_the_client_invents_no_heading_the_install_does_not_have():
-    """A key only the client holds is English words no export will ever produce.
+    """A key only the fixture holds is English words no export will ever produce.
 
-    The other direction is allowed and expected: the pack carries keys for
-    things the client never draws unserved.
+    The other direction is allowed and expected: the pack is the larger of the
+    two, and the fixture carries only what a story draws.
     """
     server, client = server_headings(), client_headings()
 
     invented = set(client) - set(server)
     assert not invented, (
-        "the client answers these heading keys and the install's pack does not, "
+        "the fixture answers these heading keys and the install's pack does not, "
         f"so the words come from nowhere the install can reach: {sorted(invented)}"
     )
 
@@ -115,10 +120,10 @@ def install_label(kind: str) -> str:
 
 
 def client_label(kind: str) -> str:
-    """What `labelForKind` answers: its unkeyed name, else its heading."""
+    """What `labelForKind` answers against the fixture: its heading, else its unkeyed name."""
     text = CLIENT.read_text(encoding="utf-8")
     unkeyed = dict(BARE.findall(_block(text, "const UNKEYED_LABELS")))
-    return unkeyed.get(kind) or client_headings().get(f"heading.{kind}") or kind
+    return client_headings().get(f"heading.{kind}") or unkeyed.get(kind) or kind
 
 
 def test_the_client_can_name_every_kind_the_install_can():
@@ -127,7 +132,8 @@ def test_the_client_can_name_every_kind_the_install_can():
     This is the direction that produced the defect this file was written for: a
     kind gained a heading in the pack and the client's copy of that pack did not
     gain it, so the words matched only by both having been copied from the same
-    place at the same time.
+    place at the same time. It reaches the product now through the pack rather
+    than through this map; what it still guards is the fixture.
 
     It reads `UNKEYED_LABELS` as well, which is the client's own second map and
     the one the comparison above cannot see -- its keys carry no `heading.`

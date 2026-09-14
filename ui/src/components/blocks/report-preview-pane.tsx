@@ -27,11 +27,14 @@ export function ReportPreviewPane({
   blocks,
   kase,
   live,
+  headings,
 }: {
   report: Report
   blocks: readonly ReportBlock[]
   kase: Case
   live: Readonly<Record<string, string>>
+  /** The heading keys resolved in the report's language, as served. -> #513 */
+  headings: Readonly<Record<string, string>>
 }) {
   const frozen = isFrozen(report)
 
@@ -83,8 +86,8 @@ export function ReportPreviewPane({
               <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">
                 {at + 1}
               </span>
-              <h2 className="min-w-0 text-lg font-semibold">{headingOf(block)}</h2>
-              {!headingIsFinal(block) && (
+              <h2 className="min-w-0 text-lg font-semibold">{headingOf(block, headings)}</h2>
+              {!headingIsFinal(block, headings) && (
                 <span className="shrink-0 text-2xs font-normal text-ink-muted">
                   heading not final
                 </span>
@@ -101,7 +104,7 @@ export function ReportPreviewPane({
                 )
               ) : (
                 <p className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-ink-muted">
-                  {headingOf(block)} - built from the case when the report was sent
+                  {headingOf(block, headings)} - built from the case when the report was sent
                   {factsFor(block.kind, kase) === ''
                     ? '.'
                     : `, from ${factsFor(block.kind, kase)}.`}

@@ -9,6 +9,7 @@ import { inACase } from '@/fixtures/in-a-case'
 
 import { ReportSectionScreen } from './report-section'
 import { reportBlockKinds } from '@/fixtures/reportBlockKinds'
+import { DEMO_HEADINGS } from '@/components/blocks/report-layouts'
 
 /**
  * The report section as an analyst meets it: the case's documents on the rail,
@@ -24,6 +25,7 @@ const meta = {
   decorators: [inACase('report')],
   parameters: { layout: 'fullscreen' },
   args: {
+    headings: DEMO_HEADINGS,
     reports: DEMO_REPORTS,
     blocks: DEMO_BLOCKS,
     kase: campaignCase,

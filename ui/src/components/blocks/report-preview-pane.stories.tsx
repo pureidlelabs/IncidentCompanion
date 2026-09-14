@@ -6,6 +6,7 @@ import { DEMO_BLOCKS, DEMO_PROSE, demoReport } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
 
 import { ReportPreviewPane } from './report-preview-pane'
+import { DEMO_HEADINGS } from './report-layouts'
 
 /**
  * The document that leaves, and it is two different things: the rendered file
@@ -16,6 +17,7 @@ const meta = {
   title: 'Blocks/Report/Preview pane',
   component: ReportPreviewPane,
   parameters: { layout: 'padded' },
+  args: { headings: DEMO_HEADINGS },
 } satisfies Meta<typeof ReportPreviewPane>
 
 export default meta

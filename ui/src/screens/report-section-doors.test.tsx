@@ -11,6 +11,7 @@ import { DEMO_BLOCKS, DEMO_REPORTS, demoReport } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
 
 import { ReportSectionScreen } from './report-section'
+import { DEMO_HEADINGS } from '@/components/blocks/report-layouts'
 
 /**
  * The two doors on the open document: adding a section, and rearranging them.
@@ -32,6 +33,7 @@ function draw(props: Partial<Parameters<typeof ReportSectionScreen>[0]> = {}) {
       <EntityCardProvider caseId={campaignCase.id}>
         <CaseFrame section="report" caseName={campaignCase.id}>
           <ReportSectionScreen
+            headings={DEMO_HEADINGS}
             reports={DEMO_REPORTS}
             blocks={DEMO_BLOCKS}
             kase={campaignCase}
@@ -96,7 +98,7 @@ describe('rearranging the sections', () => {
     expect(moved).toBeDefined()
     if (moved === undefined) return
 
-    screen.getByRole('button', { name: `Drag ${headingOf(moved)}` }).focus()
+    screen.getByRole('button', { name: `Drag ${headingOf(moved, DEMO_HEADINGS)}` }).focus()
     await user.keyboard('{Enter}')
     // The gaps are registered a turn after the pickup, and an arrow key
     // arriving first is swallowed - the drop then lands where the section
