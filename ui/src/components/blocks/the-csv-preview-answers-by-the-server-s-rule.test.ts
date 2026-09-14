@@ -26,6 +26,13 @@ import { indexOf, matchIn } from '@contract/identity'
 
 import { buildPreview } from './csv-import'
 
+/** A fixture table, refused loudly rather than typed away. */
+const parsed = (text: string) => {
+  const table = parseCsvTable(text)
+  if (table === null) throw new Error(`this fixture is not a table: ${text}`)
+  return table
+}
+
 const malwareForm = formSpec<MalwareEntry>(specsFixture, 'MALWARE_FIELDS')
 const systemForm = formSpec<SystemEntry>(specsFixture, 'SYSTEM_FIELDS')
 
@@ -41,7 +48,7 @@ describe('a CSV row the case may already hold', () => {
    */
   it('is flagged for a malware row named without a hash, as the server flags it', () => {
     const held = [{ id: 'm-1', filename: 'svchost.exe', family: 'Emotet' }]
-    const table = parseCsvTable('filename,family\nsvchost.exe,Qakbot\n')
+    const table = parsed('filename,family\nsvchost.exe,Qakbot\n')
 
     const preview = buildPreview(table, malwareForm, 'malware', held as never)
 
@@ -57,7 +64,7 @@ describe('a CSV row the case may already hold', () => {
    * its own rows as it goes, and must do so by the same rule.
    */
   it('is flagged for a second malware row of one name within the file', () => {
-    const table = parseCsvTable('filename,family\nsvchost.exe,Emotet\nsvchost.exe,Qakbot\n')
+    const table = parsed('filename,family\nsvchost.exe,Emotet\nsvchost.exe,Qakbot\n')
 
     const preview = buildPreview(table, malwareForm, 'malware', [])
 
@@ -74,7 +81,7 @@ describe('a CSV row the case may already hold', () => {
    */
   it('is not flagged for a row the case does not hold', () => {
     const held = [{ id: 's-1', hostname: 'WKS-1' }]
-    const table = parseCsvTable('hostname\nWKS-2\n')
+    const table = parsed('hostname\nWKS-2\n')
 
     const preview = buildPreview(table, systemForm, 'systems', held as never)
 
@@ -84,7 +91,7 @@ describe('a CSV row the case may already hold', () => {
 
   it('is flagged for a row the case does hold', () => {
     const held = [{ id: 's-1', hostname: 'WKS-1' }]
-    const table = parseCsvTable('hostname\nWKS-1\n')
+    const table = parsed('hostname\nWKS-1\n')
 
     const preview = buildPreview(table, systemForm, 'systems', held as never)
 
