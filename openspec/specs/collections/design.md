@@ -57,3 +57,11 @@ It is never inferred from when a row was created or last changed, because editin
 ## Import and export are the same description
 
 What the application accepts is what it produces. An import states what it will do before it does it, and reports per row afterwards: taken, recognised as already present, or refused with the reason.
+
+## Every collection takes a batch write, including evidence
+
+A record of evidence and the bytes of an artefact are two things. The record says a piece of evidence exists, what it is, and where it is held; the bytes arrive on their own route, and only then does the record say this install holds them. Most evidence is held somewhere else and always will be, so a record with no bytes behind it is the ordinary case rather than an incomplete one.
+
+That is why evidence takes a batch write like every other collection. The fields that say bytes are held — the digest, the function that produced it, and the moment they were stored — are written by the upload and are not offered at any door an analyst types into, single or batch. A caller naming one is refused rather than having it dropped, because an answer of *accepted* to that request hands back a record the caller believes says something it does not.
+
+**The boundary this sets:** no door that accepts typed fields may write the fields that say an artefact is held. Adding one is how a record comes to claim a file nobody uploaded, and an install that reconciles what it holds against what is beside it then reports that artefact missing for ever.

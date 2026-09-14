@@ -227,29 +227,29 @@ export const COLLECTION_NAMES: readonly CollectionName[] = [
 ]
 
 /**
- * **`evidence` is absent, and that is the point.** An evidence row exists to
- * say a file is held, and its bytes arrive on their own route - so a batch or
- * generic create would mint records claiming files nobody uploaded.
+ * **`reports` and `report_blocks` are absent, and the server agrees**: both
+ * are `bulk: false`, because anything written into a report is reviewable and
+ * a bulk selection has never been able to name one.
  *
- * **`reports` and `report_blocks` are absent too**, and there the server
- * agrees: both are `bulk: false` in `domain/collections.ts`, because anything
- * written into a report is reviewable and a bulk selection has never been able
- * to name one. `evidence` is the one this list refuses alone -- the server
- * marks it `bulk: true`, so the door is open to anything that is not this
- * client. -> #362
+ * Every collection the server opens a door for is here, which
+ * `the-client-offers-every-batch-door-the-server-opens.test.ts` holds -- a
+ * list that quietly refuses one is a screen with no row for it and no error
+ * anywhere.
  */
 export const BATCH_CREATABLE_COLLECTION_NAMES: readonly CollectionName[] = [
   'accounts',
   'actions',
   'casenotes',
   'cloud_apps',
+  /**
+   * **A record with no digest claims no file.** It says evidence exists and
+   * `location` says where, which is the ordinary case rather than the
+   * exception; the bytes arrive on their own route and only then does
+   * `storedAt` say this install holds them. -> #362
+   */
+  'evidence',
   'impact',
   'malware',
-  /**
-   * **Batchable where `evidence` is not.** A method row describes an act and
-   * holds no bytes, so a batch door mints nothing claiming a file nobody
-   * uploaded - which is the one reason evidence is excluded.
-   */
   'methods',
   'network_indicators',
   'systems',

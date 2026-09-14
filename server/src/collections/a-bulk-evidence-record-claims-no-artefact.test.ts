@@ -1,30 +1,22 @@
 /**
  * **A batch door cannot mint an evidence record claiming an artefact.**
  *
- * `domain/collections.ts` carried a comment giving the reason `evidence` was
- * excluded from the batch doors -- *nothing about a batch door mints a record
- * claiming a file nobody uploaded* -- beside an `evidence` entry that was not
- * excluded. The question that left open is whether the flag or the comment was
- * wrong. -> #362
+ * A record with no digest and no `storedAt` claims no file: it says evidence
+ * exists and `location` says where. So a batch-created record is the same
+ * shape as a single-created one. -> #362,
+ * `openspec/specs/collections/design.md`
  *
- * **The flag is right, and these are the measurements that settle it.** A
- * record with no digest and no `storedAt` claims no file: it says evidence
- * exists and `location` says where, which the schema calls the ordinary case
- * in as many words -- *most evidence is not in this app and should not be*. So
- * a batch-created record is the same shape as a single-created one, and the
- * only way to get the claiming kind is to attach bytes, which no batch door
- * does.
+ * **Two mechanisms hold that, and only one is asserted here.**
+ * `evidenceSchema` omits the upload-owned columns, so they are never written
+ * whatever a caller sends; `this.schema.strict()` in the batch handler is what
+ * turns sending them into a refusal rather than a silent discard. These cases
+ * assert the refusal, which is the half a caller can observe.
  *
- * **Asserted rather than reasoned, because the guarantee is one word.** It is
- * `this.schema.strict()` in the batch handler. Drop `strict` and a caller
- * names its own digest; the schema is the only thing between a client and a
- * row that says this install holds an artefact it has never seen -- and an
- * install that counts what it holds against what is beside it then reports
- * that artefact missing for ever.
- *
- * **What this does not cover:** the CSV import, which reaches the same handler
- * with the same schema, and what a case does with a record whose artefact is
- * absent.
+ * **What this does not cover:** the CSV import, which does not reach this
+ * handler at all -- `ImportService.fromCsv` calls `CollectionService.createMany`
+ * directly, and what keeps those columns out there is `shapeOf` dropping the
+ * headers before Zod sees them. And what a case does with a record whose
+ * artefact is absent, which is `report/document/figure.ts`'s.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
@@ -63,6 +55,13 @@ function batchDoorFor(name: string): Bulk {
   return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!))
 }
 
+// One teardown for the file rather than one per `describe`, which is the trap
+// `bulk.test.ts` records: a per-suite `end()` closes the pool the next suite
+// still holds, and every case in it fails as though the feature were broken.
+afterAll(async () => {
+  await pool?.end()
+})
+
 describe.skipIf(!db)('creating evidence a batch at a time', () => {
   let caseId = ''
   const session = { user: { id: ANALYST } }
@@ -90,14 +89,8 @@ describe.skipIf(!db)('creating evidence a batch at a time', () => {
   afterAll(async () => {
     await seed!.delete(cases).where(eq(cases.id, caseId))
     await seed!.delete(user).where(eq(user.id, ANALYST))
-    await pool?.end()
   })
 
-  /**
-   * **The decision, pinned.** Leaving it as a flag with a comment against it
-   * is what made this a question twice; a case that names the answer is what
-   * stops it being asked a third time.
-   */
   it('is offered at all, because a record without bytes is a record of where they are', () => {
     expect(
       COLLECTIONS.evidence.bulk,
@@ -112,13 +105,13 @@ describe.skipIf(!db)('creating evidence a batch at a time', () => {
       session,
     )
 
-    // Read back before it is asked about: every assertion below is on an
-    // optional chain, so an absent row answers all three by saying nothing.
+    // The door reporting an id is not the row existing, and the assertions
+    // below read a row rather than an optional.
     expect(ids, 'the batch door reported writing no row').toHaveLength(1)
     const [row] = await seed!.select().from(evidence).where(eq(evidence.id, ids[0]!))
     expect(row, 'the row the door reported writing is not in the table').toBeDefined()
 
-    expect(row!.hash ?? '', 'a batch-created record names a digest nobody computed').toBe('')
+    expect(row!.hash, 'a batch-created record names a digest nobody computed').toBe('')
     expect(
       row!.storedAt,
       'a batch-created record says this install holds bytes it was never given',
