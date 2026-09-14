@@ -6,6 +6,7 @@ import { useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryDelete } from '@/api/useEntryDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useBulkDelete } from '@/api/useBulkDelete'
+import { reportBulkMissing } from '@/components/blocks/notify'
 import { useCaseId } from '@/app/useCaseId'
 import { kindFor } from '@/components/blocks/entity-scope'
 import { EntitiesScreen } from '@/screens/entities'
@@ -112,7 +113,14 @@ export function EntitiesContainer() {
         ;(targets[row.collection] ??= []).push(row.id)
       }
       if (Object.keys(targets).length === 0) return
-      await announcing('the entities', () => bulkDelete.mutateAsync({ targets }))
+      const written = await announcing('the entities', () => bulkDelete.mutateAsync({ targets }))
+      // **Told, not discarded.** A row another analyst had already deleted
+      // comes back under `missing`, and an analyst who selected six and lost
+      // two of them silently has no way to know which case they are looking at.
+      reportBulkMissing(
+        written.missing.map((row) => row.id),
+        'entities',
+      )
     },
   }
 
