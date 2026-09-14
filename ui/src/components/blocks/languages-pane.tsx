@@ -7,29 +7,51 @@ import {
   useEntityTable,
   type EntityColumn,
 } from '@/components/blocks/data-table'
+import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { EmptyState } from '@/components/blocks/empty-state'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { FileTrigger } from '@/components/ui/drop-zone'
 
-import { coveragePercent, LANGUAGE_KEY_COUNT, type LanguageRow } from './picker-rows'
+import { coveragePercent, type LanguageRow } from './picker-rows'
 import { Section } from './section'
 
 /** What a report may be written in. */
-export function LanguagesPane({ languages }: { languages: readonly LanguageRow[] }) {
-  const [held, setHeld] = useState(languages)
-  const [given, setGiven] = useState(languages)
-  if (given !== languages) {
-    setGiven(languages)
-    setHeld(languages)
-  }
-  const rows = useMemo(() => [...held], [held])
+export function LanguagesPane({
+  languages,
+  keyCount,
+  onRemove,
+  onUpload,
+}: {
+  languages: readonly LanguageRow[]
+  /** How many strings a complete pack carries, as the install serves it. */
+  keyCount: number
+  /** Removing one, by its code. Absent draws no bin. */
+  onRemove?: (code: string) => void
+  /** Taking a pack the analyst chose. Absent draws the control disabled. */
+  onUpload?: (file: File) => void
+}) {
+  /**
+   * **The row stays until the list is read again.** Filtering it out here told
+   * an analyst a pack was gone while the install still held it, and the next
+   * fetch brought it back -- the write's own invalidation is what removes it.
+   * -> #664
+   */
+  const rows = useMemo(() => [...languages], [languages])
+  /**
+   * The pack the analyst has asked to remove, until they confirm it.
+   *
+   * **Asked before it goes, like every other destructive row action here.**
+   * Removing a pack is an install-wide write that no route can undo -- there
+   * is no export -- and the menu item's own ellipsis promises a further step.
+   * -> #664
+   */
+  const [removing, setRemoving] = useState<string | null>(null)
   const columns = useMemo(
-    () =>
-      languageColumns((id) => {
-        setHeld((current) => current.filter((one) => one.id !== id))
-      }),
-    [],
+    () => languageColumns(onRemove ? (id) => setRemoving(id) : undefined),
+    [onRemove],
   )
+  const doomed = rows.find((one) => one.id === removing)
   const table = useEntityTable<LanguageRow>({
     data: rows,
     columns,
@@ -40,18 +62,7 @@ export function LanguagesPane({ languages }: { languages: readonly LanguageRow[]
     <Section
       title="Report languages"
       blurb="What a report may be written in."
-      actions={
-        // A pack is a file the server stores and reads back; there is no route
-        // here to put one anywhere.
-        <Button
-          variant="outline"
-          size="sm"
-          isDisabled
-          aria-label={'Upload a pack \u2014 stored by the server'}
-        >
-          Upload a pack
-        </Button>
-      }
+      actions={<UploadPack {...(onUpload ? { onUpload } : {})} />}
     >
       <div className="flex flex-col gap-4">
         <DataTable
@@ -66,11 +77,44 @@ export function LanguagesPane({ languages }: { languages: readonly LanguageRow[]
             />
           }
         />
-        <p className="text-micro text-ink-muted">
-          A complete pack carries {LANGUAGE_KEY_COUNT} strings.
-        </p>
+        <p className="text-micro text-ink-muted">A complete pack carries {keyCount} strings.</p>
       </div>
+
+      {onRemove && (
+        <ConfirmDeleteDialog
+          ids={removing === null ? null : [removing]}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setRemoving(null)
+          }}
+          // Returned, so a refusal keeps the dialog open and says why rather
+          // than closing over a removal that did not happen.
+          onConfirm={() => (removing === null ? undefined : onRemove(removing))}
+          title={() => `Remove ${doomed?.label ?? 'this pack'}?`}
+          consequence="A document already exported in it is unaffected. Exporting one again, and every new report, falls back to English until a pack is uploaded again."
+        />
+      )}
     </Section>
+  )
+}
+
+/**
+ * The control that takes a pack off the analyst machine.
+ *
+ * Disabled only where nothing is listening, which is the gallery. -> #664
+ */
+function UploadPack({ onUpload }: { onUpload?: (file: File) => void }) {
+  return (
+    <FileTrigger
+      acceptedFileTypes={['application/json', '.json']}
+      onSelect={(files) => {
+        const first = files?.item(0)
+        if (first && onUpload) onUpload(first)
+      }}
+    >
+      <Button variant="outline" size="sm" {...(onUpload ? {} : { isDisabled: true })}>
+        Upload a pack
+      </Button>
+    </FileTrigger>
   )
 }
 
@@ -81,7 +125,7 @@ export function LanguagesPane({ languages }: { languages: readonly LanguageRow[]
  * `100%` beside a report that falls back to English is the one number here that
  * would be read as a promise.
  */
-function languageColumns(onRemove: (id: string) => void): EntityColumn<LanguageRow>[] {
+function languageColumns(onRemove?: (id: string) => void): EntityColumn<LanguageRow>[] {
   return [
     {
       id: 'label',
@@ -118,7 +162,7 @@ function languageColumns(onRemove: (id: string) => void): EntityColumn<LanguageR
     actionsColumn<LanguageRow>(
       (one) => one.label,
       (one) =>
-        one.builtin
+        one.builtin || !onRemove
           ? []
           : [
               [

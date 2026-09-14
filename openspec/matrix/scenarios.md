@@ -4,11 +4,11 @@
 
 | | |
 | --- | --- |
-| Scenarios | 484 |
-| Demonstrated | 384 |
+| Scenarios | 492 |
+| Demonstrated | 390 |
 | Undemonstrable | 1 |
 | Unbuilt | 86 |
-| Undemonstrated | 13 |
+| Undemonstrated | 15 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -521,6 +521,14 @@
 | The application's own words are in the report's language; the analyst's are the analyst's | The language a report is produced in is changed | demonstrated | ui/src/app/case/the-heading-pack-is-fetched-for-the-open-report.test.tsx |
 | The application's own words are in the report's language; the analyst's are the analyst's | Written prose is in another language | unbuilt | Not built: nothing reads the language of written prose. -> #229 |
 | The application's own words are in the report's language; the analyst's are the analyst's | The analyst meant it | unbuilt | Not built: nothing records what was named and sent anyway. -> #229 |
+| Which languages an install can write reports in is the administrator's to change | A language is added | undemonstrated |  |
+| Which languages an install can write reports in is the administrator's to change | A language that ships with the application | demonstrated | ui/src/components/blocks/a-language-pack-is-removed-where-it-is-stored.test.tsx |
+| Which languages an install can write reports in is the administrator's to change | A language is removed | demonstrated | ui/src/components/blocks/a-language-pack-is-removed-where-it-is-stored.test.tsx |
+| Which languages an install can write reports in is the administrator's to change | A document exported before the language was removed | undemonstrated |  |
+| Which languages an install can write reports in is the administrator's to change | A report produced after its language was removed | demonstrated | server/src/report/document/packs.test.ts |
+| Which languages an install can write reports in is the administrator's to change | A file that is not a language | demonstrated | ui/src/api/a-file-that-is-not-a-pack-is-refused-before-the-route.test.ts |
+| Which languages an install can write reports in is the administrator's to change | A language carrying words the application has no place for | demonstrated | ui/src/components/blocks/notify.test.ts |
+| Which languages an install can write reports in is the administrator's to change | An incomplete language is managed | demonstrated | ui/src/components/blocks/languages-pane.stories.tsx |
 | A report is for an audience, and the audience decides what it owes | A report is created | unbuilt | Not built: a report records no audience. -> #228 |
 | A report is for an audience, and the audience decides what it owes | A layout omits something the audience requires | unbuilt | Not built: what a report owes is read from its layout, not its audience. -> #228 |
 | A report never carries another customer's data | A report carries a row from another customer | unbuilt | Not built: the boundary is held at the write, and no export refuses. -> #227 |

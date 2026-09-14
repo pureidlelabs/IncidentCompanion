@@ -13,7 +13,12 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { PICKER_CASES, PICKER_LANGUAGES, PICKER_TEMPLATES } from '@/components/blocks/picker-rows'
+import {
+  SOME_KEY_COUNT,
+  PICKER_CASES,
+  PICKER_LANGUAGES,
+  PICKER_TEMPLATES,
+} from '@/components/blocks/picker-rows'
 
 import { campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
@@ -196,24 +201,46 @@ describe('the picker', () => {
     expect(went).toEqual(['new'])
   })
 
-  it('takes a language pack out of the list', async () => {
+  /**
+   * **Asserted on the confirmation, not on the callback.** A row action that
+   * removes an install-wide pack asks first, so what the press changes is that
+   * the dialog is on screen naming the pack. That the confirmed removal reaches
+   * the route is `app/picker`'s own case, which has an install to ask.
+   *
+   * The row itself does not go here and never did: it goes when the list is
+   * read again, which is why filtering it out left packs undeleted. -> #664
+   */
+  it('asks before taking a language pack away, and names the pack', async () => {
     const user = userEvent.setup()
-    render(<PickerLanguagesScreen languages={PICKER_LANGUAGES} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} />)
+    render(
+      <PickerLanguagesScreen
+        languages={PICKER_LANGUAGES}
+        keyCount={SOME_KEY_COUNT}
+        onRemove={() => undefined}
+        analyst="r.okonkwo"
+        userMenu={null}
+        onAbout={() => undefined}
+      />,
+    )
 
-    const rows = screen.getAllByRole('row').length
-    // An uploaded pack is the only one with a menu at all: a built-in ships
-    // with the image and offers nothing, which is what the `...` being absent on
-    // those rows says.
     // Read off the table rather than named here: which packs ship with the
     // image is the fixture's business, and only an uploaded one is removable.
+    // A built-in offers no menu at all, which is what its absent `...` says.
     const uploaded = screen
       .getAllByRole('row')
       .find((row) => row.textContent.includes('Uploaded'))
     expect(uploaded, 'no uploaded pack to remove').toBeDefined()
+    const label = within(uploaded!).getAllByRole('rowheader').at(0)?.textContent ?? ''
+    expect(label, 'the row names no pack, so no dialog could name one either').not.toBe('')
+
     await user.click(within(uploaded!).getByRole('button', { name: /^More for / }))
     await user.click(screen.getByRole('menuitem', { name: /^Remove/ }))
 
-    expect(screen.getAllByRole('row')).toHaveLength(rows - 1)
+    const asking = await screen.findByRole('alertdialog')
+    expect(
+      within(asking).getByRole('heading').textContent,
+      'the dialog does not name the pack, so it asks about nothing in particular',
+    ).toContain(label)
   })
 
   it('duplicates a built-in template into the library', async () => {

@@ -133,8 +133,16 @@ export interface LanguageRow {
   builtin: boolean
 }
 
-/** How many strings a complete pack carries. */
-export const LANGUAGE_KEY_COUNT = 412
+/**
+ * A key count for a story to draw, and nothing else.
+ *
+ * **Not what a complete pack carries.** The install answers that on the same
+ * response as the packs, and it answered 139 while this said 412. A number in
+ * the bundle under that name is a claim about the product that drifts the
+ * first time a string is added; this one is a fixture value the way
+ * `PICKER_LANGUAGES` is.
+ */
+export const SOME_KEY_COUNT = 139
 
 export const PICKER_LANGUAGES: readonly LanguageRow[] = [
   { id: 'en', code: 'en', label: 'English', coverage: 1, builtin: true },
