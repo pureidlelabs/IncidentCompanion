@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 474 |
-| Demonstrated | 372 |
+| Demonstrated | 374 |
 | Undemonstrable | 1 |
-| Unbuilt | 88 |
+| Unbuilt | 86 |
 | Undemonstrated | 13 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
@@ -130,7 +130,7 @@
 | --- | --- | --- | --- |
 | An archive is one file holding the whole case | A case is archived | demonstrated | server/src/case-archive/round-trip.test.ts |
 | An archive is one file holding the whole case | An analyst archives without the attachments | demonstrated | server/src/case-archive/round-trip.test.ts |
-| An archive is one file holding the whole case | Expected material is not found | unbuilt | Not built: the archive states no count of what was not found. -> #243 |
+| An archive is one file holding the whole case | Expected material is not found | demonstrated | server/src/archive/an-archive-says-what-it-could-not-find.test.ts |
 | An archive says what it should contain, and is checked against it | An archive is read | demonstrated | server/src/archive/format.test.ts |
 | An archive says what it should contain, and is checked against it | An archive has been altered | demonstrated | server/src/archive/format.test.ts |
 | An analyst can seal an archive, and the seal is theirs to hold | An analyst seals an archive | demonstrated | server/src/archive/envelope.test.ts |
@@ -552,7 +552,7 @@
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | demonstrated | server/src/health/install.controller.test.ts |
 | What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
-| What is stored can be recovered, and the recovery is proven | Only the database was restored | unbuilt | Not built: nothing counts the artefacts an install expects. -> #179 |
+| What is stored can be recovered, and the recovery is proven | Only the database was restored | demonstrated | server/src/health/an-install-says-what-it-cannot-find.test.ts |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | demonstrated | server/src/evidence/artefacts-put-back-make-the-evidence-whole.test.ts |
 

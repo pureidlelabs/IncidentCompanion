@@ -334,6 +334,48 @@ describe.skipIf(!db)('a case, out and back', () => {
     expect(Object.keys(members)).toContain(`prose/${made.reportId}.ydoc`)
   })
 
+
+  /**
+   * **An export whose evidence could not all be found says so in the file.**
+   *
+   * *GIVEN a case whose stored evidence cannot all be found, WHEN it is
+   * archived, THEN the archive says how much was not found.* The names left in
+   * a response header, which lasts for one download -- an analyst who saved the
+   * file, or was handed it, opened one that looked complete. -> #243
+   *
+   * **Driven by taking the bytes out from under a recorded row**, which is the
+   * state the export is written for: the row says this install holds the file
+   * and it does not.
+   */
+  it('states in the archive what it recorded and could not find', async () => {
+    const made = await furnished()
+    // **A row that says this install holds a file, and it does not** -- the
+    // state the export is written for. An export names it rather than
+    // refusing, which leaves the analyst with the case.
+    await seed!.insert(evidence).values({
+      caseId: made.caseId,
+      name: 'Memory capture',
+      hash: 'f'.repeat(64),
+      hashAlgorithm: 'sha256',
+      sizeBytes: 1024,
+      storedAt: new Date(),
+      createdBy: other,
+      updatedBy: other,
+    })
+
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+
+    expect(built.omitted.length, 'nothing was reported missing, so this asserts nothing').
+      toBeGreaterThan(0)
+
+    const { missing } = await readArchive(built.bytes, ARCHIVE_LIMITS)
+    expect(
+      missing,
+      'the archive carries no statement of what it could not find, so a reader cannot tell it '
+        + 'from a complete one',
+    ).toEqual([...built.omitted].sort((a, b) => a.localeCompare(b)))
+  })
+
   /**
    * **Reading an archive of a case this install still holds is refused, and
    * the refusal names the case.** A reference is unique within its customer

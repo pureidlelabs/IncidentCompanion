@@ -13,6 +13,7 @@ import { z } from 'zod'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 
 import { PolicyService } from '../policy/policy.service.js'
+import { ArtefactCensus } from './artefact-census.service.js'
 import type { Env } from '../config/env.js'
 
 /**
@@ -58,6 +59,14 @@ export const installSettingsSchema = z.object({
      * are owed in the open rather than left to discover.
      */
     evidenceNote: z.string(),
+    /**
+     * How many artefacts this install holds the bytes of, and how many of
+     * those it cannot find beside it.
+     */
+    artefacts: z.object({
+      expected: z.number().int(),
+      missing: z.number().int(),
+    }),
   }),
   limits: z.object({
     attachmentBytes: z.number().int(),
@@ -77,6 +86,7 @@ export class InstallSettingsController {
   constructor(
     @Inject(ConfigService) private readonly config: ConfigService<Env, true>,
     private readonly policy: PolicyService,
+    private readonly census: ArtefactCensus,
   ) {}
 
   @Get('settings')
@@ -87,6 +97,7 @@ export class InstallSettingsController {
   })
   async read(): Promise<InstallSettings> {
     const stored = await this.policy.read()
+    const artefacts = await this.census.take()
     return {
       transport: {
         // **Not read from the environment.** There is no plaintext port, no
@@ -107,6 +118,7 @@ export class InstallSettingsController {
           'Attachments are stored in individual zips under the password "infected", ' +
           'so antivirus cannot quarantine your evidence. This app does not scan them, ' +
           'and your endpoint protection cannot see inside them.',
+        artefacts,
       },
       /**
        * **What the install enforces, not what it shipped with.** These were

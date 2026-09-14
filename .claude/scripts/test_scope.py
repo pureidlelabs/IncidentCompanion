@@ -151,9 +151,14 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
     #
     # The narrow half rather than `./test.sh`, which ends in `pytest tests` and
     # builds containers: what a source change owes is the sweep over source.
-    elif touches(paths, SERVER) or touches(paths, UI):
+    # `openspec/` for the same reason and it is the one that bit: `tests/docs`
+    # holds the scenario ledger's stated totals against the rows it lists, and
+    # a change moving a row touches no Python either. A branch that also edits
+    # `server/` was routed here by that; a ledger-only one was routed past the
+    # only tier that reads it. -> `tests/docs/test_scenario_ledger.py`
+    elif touches(paths, SERVER) or touches(paths, UI) or touches(paths, "openspec/"):
         out.append(("python3 -m pytest tests/repo tests/docs .claude/tests -q -n auto",
-                    "the repository checks, which sweep `server/src` and `ui/src`"))
+                    "the repository checks, which sweep `server/src`, `ui/src` and `openspec/`"))
     if touches(paths, SERVER):
         out.append(("(cd server && npm run check && npm run lint)",
                     "typecheck, the Nest suite, and the eslint config nothing used to load"))
