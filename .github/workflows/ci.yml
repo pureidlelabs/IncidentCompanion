@@ -412,7 +412,7 @@ jobs:
         image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
         ports: ['56379:6379']
         options: >-
-          --health-cmd "redis-cli ping"
+          --health-cmd "redis-cli ping | grep -q PONG"
           --health-interval 5s --health-timeout 5s --health-retries 10
 
     steps:

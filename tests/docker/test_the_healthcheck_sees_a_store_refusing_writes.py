@@ -5,20 +5,16 @@ the session tokens, so a healthcheck that passes while writes are refused
 brings the stack up and reports it well; what an operator meets is nobody able
 to sign in, minutes after a clean start, with every container green. -> #623
 
-**`PING` cannot see it, and neither can the exit code.** A refusal arrives as
-an error reply, and `redis-cli` exits 0 on one -- measured at exit 0 with the
-MISCONF text on stdout. So a check built on the command succeeding is blind
-twice over.
-
-**Read-only, and it asks Redis what it already knows.**
-`stop-writes-on-bgsave-error` is what turns a failed save into a refusal, and
-Redis reports that state itself. Writing a probe key would also detect it, at
-the cost of a write into the analyst's own store every two seconds for the
-life of the stack.
+**`PING` does see it; the exit code does not.** Redis excepts `PING` from the
+refusal so a check can reach it, and answers with the refusal itself -- which
+`redis-cli` then reports at exit 0, because it exits 0 on an error reply. So
+a check built on the command succeeding is blind to a store that is telling it
+plainly.
 
 **What this does not cover:** postgres, whose readiness has its own shape, and
-whether any other condition refuses writes without showing in these two
-fields -- `maxmemory` with `noeviction` is one, and it is not covered here.
+any condition that refuses writes without `PING` saying so -- `maxmemory` with
+`noeviction` is one, measured as answering `PONG` throughout, and only a probe
+that writes would see it.
 """
 
 from __future__ import annotations
@@ -41,11 +37,6 @@ COMPOSE = {
 
 PASSWORD = "probe-password"
 
-IMAGE = (
-    "redis:8.10-alpine@sha256:"
-    "becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576"
-)
-
 
 def docker(*argv: str) -> subprocess.CompletedProcess:
     return subprocess.run(["docker", *argv], capture_output=True, text=True, check=False)
@@ -63,8 +54,7 @@ def declared_check(path) -> list[str]:
     written here would pass against a stack running a different one. `$$` is
     compose's own escape for a literal `$`.
     """
-    service = yaml.safe_load(path.read_text(encoding="utf-8"))["services"]["redis"]
-    test = service["healthcheck"]["test"]
+    test = service_of(path)["healthcheck"]["test"]
     if test[0] == "CMD-SHELL":
         return ["sh", "-c", test[1].replace("$$", "$")]
     assert test[0] == "CMD", f"{path} declares an unknown healthcheck form: {test[0]!r}"
@@ -74,10 +64,11 @@ def declared_check(path) -> list[str]:
 class Redis:
     """A container that can be made unable to persist, and asked the check.
 
-    **The command comes from the compose file, password and all.** One file
-    declares `--requirepass` and the other declares nothing; a probe that
+    **Image, command and capabilities all come from the compose file.** One
+    file declares `--requirepass` and the other declares nothing; a probe that
     always sets a password asks the passwordless check to authenticate and
-    reads the refusal as the defect under test.
+    reads the refusal as the defect under test. The image is read for the same
+    reason, and because a digest written here would be a third place to bump.
     """
 
     def __init__(self, service: dict, *, can_persist: bool) -> None:
@@ -102,7 +93,7 @@ class Redis:
         # no capabilities is the shape that cannot, which is how #620 shipped.
         if self.can_persist:
             argv += ["--user", "redis"]
-        argv += [IMAGE, *self.command()]
+        argv += [str(self.service["image"]), *self.command()]
         docker(*argv)
         for _ in range(50):
             if self.cli("ping") == "PONG":
@@ -124,6 +115,20 @@ class Redis:
             if "rdb_last_bgsave_status:err" in self.cli("info", "persistence"):
                 return
             time.sleep(0.2)
+
+    def saves_after_one(self) -> bool:
+        """Ask for a save and wait for Redis to record that one completed.
+
+        Polled rather than slept on: a fixed wait on a loaded machine reads a
+        save still running as a save that failed.
+        """
+        self.cli("bgsave")
+        for _ in range(50):
+            status = self.cli("info", "persistence")
+            if "rdb_bgsave_in_progress:0" in status and "rdb_last_bgsave_status:ok" in status:
+                return "rdb_saves:0" not in status
+            time.sleep(0.2)
+        return False
 
     def asked(self, check: list[str]) -> subprocess.CompletedProcess:
         return docker("exec", self.name, *check)
@@ -162,10 +167,13 @@ def test_the_check_passes_a_store_that_is_well(named: str) -> None:
     check = declared_check(COMPOSE[named])
 
     with Redis(service_of(COMPOSE[named]), can_persist=True) as redis:
-        redis.cli("bgsave")
-        time.sleep(1)
+        saved = redis.saves_after_one()
         asked = redis.asked(check)
 
+    assert saved, (
+        "the save did not complete, so the case below proves less than it says -- a slow "
+        "failing save would read the same as a store that is well"
+    )
     assert asked.returncode == 0, (
         f"the healthcheck {named} declares refuses a store that is answering and saving, so "
         f"the stack would never come up.\n{asked.stdout}{asked.stderr}"
