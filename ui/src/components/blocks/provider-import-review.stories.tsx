@@ -172,20 +172,21 @@ export const AllMerges: Story = {
 }
 
 /**
- * The incidents carry nothing the case does not already hold.
+ * Every incident the analyst chose produced no row of its own.
  *
  * A successful import that writes nothing looks like a failure unless it says
- * otherwise, so the empty state names the reason rather than the absence.
+ * otherwise. What it can say is how many incidents were chosen and that none
+ * of them added anything -- not *why*, which the screen cannot know: an
+ * incident whose entities are all of an unsupported kind reaches here exactly
+ * as one whose rows the case already holds does.
  */
 export const NothingToAdd: Story = {
   name: 'Nothing to add',
-  args: { candidates: [] },
+  args: { candidates: [], chosen: 2 },
   play: async ({ canvas, step }) => {
-    await step('the empty state says why there is nothing', async () => {
+    await step('the empty state says what the import did, not why', async () => {
       await expect(canvas.getByText('Nothing to add')).toBeVisible()
-      await expect(
-        canvas.getByText('Every row these incidents carry is already in the case, unchanged.'),
-      ).toBeVisible()
+      await expect(canvas.getByText('2 incidents added nothing of their own.')).toBeVisible()
     })
     await step('and no summary is drawn, there being nothing to count', async () => {
       await expect(canvas.queryByRole('status')).toBeNull()
@@ -203,7 +204,6 @@ export const NothingToAdd: Story = {
 export const TooMany: Story = {
   name: 'Ninety-one rows from thirteen incidents',
   args: {
-    // One named row plus ninety across twelve more. -> the story name
     chosen: 13,
     candidates: [
       {

@@ -49,12 +49,8 @@ export function ProviderImportReview({
 }: {
   candidates: readonly Candidate[]
   /**
-   * How many incidents the analyst selected.
-   *
-   * **Given rather than counted off the rows.** An incident that proposed
-   * nothing is absent from `candidates`, so a count taken there is of
-   * incidents that produced a row wearing the word *incidents* -- and reading
-   * one after choosing two is what a failed load also looks like. -> #605
+   * How many incidents the analyst selected, which `candidates` cannot carry:
+   * an incident that proposed nothing is absent from it.
    */
   chosen: number
   /** The rows still ticked. Called on the first draw and on every change. */
@@ -64,12 +60,17 @@ export function ProviderImportReview({
     return (
       <EmptyState
         title="Nothing to add"
-        detail="Every row these incidents carry is already in the case, unchanged."
+        detail={chosen > 0 ? addedNothing(chosen) : 'These incidents carry no rows.'}
       />
     )
   }
 
   return <ReviewTable candidates={candidates} chosen={chosen} onApproved={onApproved} />
+}
+
+/** The clause naming incidents that produced no row of their own. */
+function addedNothing(many: number): string {
+  return `${count(many, 'incident')} added nothing of ${many === 1 ? 'its' : 'their'} own.`
 }
 
 /**
@@ -118,15 +119,13 @@ function ReviewTable({
 
   const approved = (JSON.parse(ticked) as string[]).length
   const fresh = candidates.filter((one) => one.verdict === 'new').length
-  // Said only when it happened: a clause about nothing, on every ordinary
-  // import, is noise in the line an analyst reads to confirm the selection.
   const silent = chosen - new Set(candidates.map((one) => one.incident)).size
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <p className="text-sm text-ink-muted" role="status">
         {`${count(fresh, 'new row')} and ${count(candidates.length - fresh, 'merge')}, from ${count(chosen, 'incident')}. ${count(approved, 'row')} approved.`}
-        {silent > 0 && ` ${count(silent, 'incident')} added nothing of their own.`}
+        {silent > 0 && ` ${addedNothing(silent)}`}
       </p>
 
       <DataTable table={table} label="Rows this import would write" scroll="box" />

@@ -252,11 +252,8 @@ export const DenseReview: Story = {
     selected: manyIncidents().map((one) => one.id),
   },
   /**
-   * The line above the listing is the claim, and this fixture is the case it
-   * used to get wrong: sixty incidents are selected and twenty of them produce
-   * a row, so a count taken off the rows read *from 20 incidents* after the
-   * analyst chose sixty. The forty that added nothing are said rather than
-   * subtracted in silence. -> #605
+   * Sixty incidents selected, twenty of which produce a row: the fixture that
+   * separates what the analyst chose from what the import drew.
    */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

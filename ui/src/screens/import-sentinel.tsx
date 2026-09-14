@@ -655,10 +655,10 @@ export function ImportSentinelScreen({
                 />
               )}
               <ProviderImportReview
-                  candidates={mapped}
-                  chosen={selected.length}
-                  onApproved={setApproved}
-                />
+                candidates={mapped}
+                chosen={selected.length}
+                onApproved={setApproved}
+              />
             </>
           ))}
       </Wizard>

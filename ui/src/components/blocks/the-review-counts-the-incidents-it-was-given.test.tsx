@@ -37,16 +37,17 @@ describe('the import review summary', () => {
   it('counts the incidents it was given, not the ones that produced a row', () => {
     render(
       <ProviderImportReview
-        candidates={[row('a', 'incident-1'), row('b', 'incident-1')]}
-        chosen={2}
+        candidates={[row('a', 'incident-1'), row('b', 'incident-1'), row('c', 'incident-2')]}
+        chosen={4}
         onApproved={() => undefined}
       />,
     )
 
     expect(
       said(),
-      'the second incident produced no row and the line reports it as not having been chosen',
-    ).toContain('2 incidents')
+      'the line took its count off the rows, so it reports 3 or 2 -- both of which are ' +
+        'true about something other than what the analyst chose',
+    ).toContain('from 4 incidents')
   })
 
   it('says how many of them produced nothing of their own', () => {
@@ -62,7 +63,39 @@ describe('the import review summary', () => {
       said(),
       'two chosen incidents added nothing and the line does not say so, which reads as a ' +
         'silent loss rather than a stated one',
-    ).toMatch(/2 .*(nothing|no rows|added nothing)/i)
+    ).toContain('2 incidents added nothing of their own.')
+  })
+
+  /**
+   * **The singular is the headline case, not an edge one.** #605 is written
+   * around two incidents naming one host, which leaves exactly one silent.
+   * The line is announced, so a hard-plural possessive is read out loud.
+   */
+  it('agrees with itself about one', () => {
+    render(
+      <ProviderImportReview
+        candidates={[row('a', 'incident-1')]}
+        chosen={2}
+        onApproved={() => undefined}
+      />,
+    )
+
+    expect(said()).toContain('1 incident added nothing of its own.')
+  })
+
+  /**
+   * **Every incident silent is the same defect at the count where the table
+   * disappears.** The screen then asserted a reason it cannot know -- that
+   * every row is already in the case -- where an incident carrying only
+   * unsupported kinds produces no candidate at all.
+   */
+  it('says the same thing when no incident produced a row', () => {
+    render(<ProviderImportReview candidates={[]} chosen={2} onApproved={() => undefined} />)
+
+    expect(
+      screen.getByText(/added nothing/),
+      'the empty screen names a cause of its own instead of what the import did',
+    ).toBeDefined()
   })
 
   it('says nothing extra when every incident produced a row', () => {
