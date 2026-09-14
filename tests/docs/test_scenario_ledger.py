@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pytest
 
+from tests._ledger import rows as ledger_rows
+
 ROOT = Path(__file__).resolve().parents[2]
 SPECS = sorted((ROOT / "openspec" / "specs").glob("*/spec.md"))
 LEDGER = ROOT / "openspec" / "matrix" / "scenarios.md"
@@ -28,21 +30,14 @@ STATUSES = {"demonstrated", "undemonstrated", "undemonstrable", "unbuilt"}
 #: matched as one pattern, because a requirement title may hold anything a
 #: sentence holds except the cell separator.
 def rows() -> list[tuple[str, str, str, str, str]]:
-    """Every ledger row as capability, requirement, scenario, status, evidence."""
-    found = []
-    capability = None
-    for line in LEDGER.read_text().splitlines():
-        heading = re.match(r"^## (\S+)$", line)
-        if heading:
-            capability = heading.group(1)
-            continue
-        if not line.startswith("| ") or capability is None:
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) != 4 or cells[0] in {"Requirement", "---"}:
-            continue
-        found.append((capability, cells[0], cells[1], cells[2], cells[3]))
-    return found
+    """Every ledger row as capability, requirement, scenario, status, evidence.
+
+    **The reading lives in `tests/_ledger.py`**, because the command that writes
+    the totals has to count exactly what this counts. Two copies of it is how a
+    written header and the check that reads it come to disagree with nobody
+    able to tell which is wrong.
+    """
+    return ledger_rows(LEDGER)
 
 
 def scenarios() -> list[tuple[str, str, str]]:
@@ -142,6 +137,9 @@ def test_the_stated_totals_are_the_counted_totals() -> None:
     Stated in the file rather than computed on the fly because the numbers are quoted
     outside this repository, and a number nobody can read without running a test is one
     that gets recalled instead.
+
+    **Generated rather than counted by hand**, which is what the failure message
+    below names. -> `.claude/scripts/ledger_totals.py`
     """
     counted = {status: 0 for status in STATUSES}
     for _, _, _, status, _ in rows():
@@ -158,12 +156,13 @@ def test_the_stated_totals_are_the_counted_totals() -> None:
         f"Undemonstrable, Unbuilt and Undemonstrated; found {sorted(stated)}"
     )
 
+    repair = "run .claude/scripts/ledger_totals.py --write"
     assert stated["scenarios"] == len(rows()), (
-        f"the ledger says {stated['scenarios']} scenarios and lists {len(rows())}"
+        f"the ledger says {stated['scenarios']} scenarios and lists {len(rows())} -- {repair}"
     )
     for status in ("demonstrated", "undemonstrable", "unbuilt", "undemonstrated"):
         assert stated[status] == counted[status], (
-            f"the ledger says {stated[status]} {status} and lists {counted[status]}"
+            f"the ledger says {stated[status]} {status} and lists {counted[status]} -- {repair}"
         )
 
 

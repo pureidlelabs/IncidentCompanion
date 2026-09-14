@@ -55,6 +55,23 @@ def test_the_paths_these_tests_name_still_exist(label, paths, _expected) -> None
         assert (ROOT / p).exists(), f"{label}: {p} is gone; this test proves nothing"
 
 
+def test_a_specification_change_selects_the_tier_that_reads_it() -> None:
+    """`tests/docs` reads `openspec/`, and the ledger is not Python.
+
+    A branch moving a ledger row usually edits `server/` too, which routed it
+    here for the wrong reason; one that moves only a row was routed past the
+    only check that counts the rows against the totals stated above them. The
+    rule this restores is the one the routing already states for the
+    TypeScript trees: a tier whose tests read a tree is touched by a change to
+    it. -> `tests/docs/test_scenario_ledger.py`
+    """
+    routed = only(["openspec/matrix/scenarios.md"])
+
+    assert any("tests/docs" in one for one in routed), (
+        f"a ledger-only change runs nothing that reads the ledger: {routed}"
+    )
+
+
 def test_the_corpus_routes_to_nothing() -> None:
     """`app/` is read, not run — so it owes no command at all.
 
