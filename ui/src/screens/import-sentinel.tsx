@@ -654,7 +654,11 @@ export function ImportSentinelScreen({
                   className="max-w-(--field-max)"
                 />
               )}
-              <ProviderImportReview candidates={mapped} onApproved={setApproved} />
+              <ProviderImportReview
+                  candidates={mapped}
+                  chosen={selected.length}
+                  onApproved={setApproved}
+                />
             </>
           ))}
       </Wizard>

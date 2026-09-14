@@ -29,7 +29,13 @@ const meta = {
   title: 'Blocks/Table/Provider import review',
   component: ProviderImportReview,
   parameters: { layout: 'padded' },
-  args: { candidates: CANDIDATES, onApproved: () => undefined },
+  args: {
+    candidates: CANDIDATES,
+    // As many as the fixture names, so the ordinary case carries no
+    // clause about incidents that added nothing. -> #605
+    chosen: new Set(CANDIDATES.map((one) => one.incident)).size,
+    onApproved: () => undefined,
+  },
 } satisfies Meta<typeof ProviderImportReview>
 
 export default meta
@@ -94,6 +100,7 @@ export const PartlyProposed: Story = {
     candidates: CANDIDATES.map((one) =>
       one.verdict === 'merge' ? { ...one, checked: false } : one,
     ),
+    chosen: new Set(CANDIDATES.map((one) => one.incident)).size,
   },
   play: async ({ canvas, step }) => {
     await step('the table still shows every row it found', async () => {
@@ -116,6 +123,7 @@ export const PartlyProposed: Story = {
 export const OneOfEach: Story = {
   name: 'One row from one incident',
   args: {
+    chosen: 1,
     candidates: [
       {
         id: 'c1',
@@ -148,6 +156,7 @@ export const AllMerges: Story = {
   name: 'Nothing new, three changes',
   args: {
     candidates: CANDIDATES.slice(0, 3).map((one) => ({ ...one, verdict: 'merge' as const })),
+    chosen: new Set(CANDIDATES.slice(0, 3).map((one) => one.incident)).size,
   },
   play: async ({ canvas, step }) => {
     await step('the summary reports no writes', async () => {
@@ -194,6 +203,8 @@ export const NothingToAdd: Story = {
 export const TooMany: Story = {
   name: 'Ninety-one rows from thirteen incidents',
   args: {
+    // One named row plus ninety across twelve more. -> the story name
+    chosen: 13,
     candidates: [
       {
         id: 'long',

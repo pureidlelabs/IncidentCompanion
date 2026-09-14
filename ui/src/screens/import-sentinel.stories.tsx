@@ -251,12 +251,18 @@ export const DenseReview: Story = {
     candidates: manyCandidates(),
     selected: manyIncidents().map((one) => one.id),
   },
-  // The line above the listing is the claim, and a review that counted what it
-  // drew rather than what would be written is the failure it guards.
+  /**
+   * The line above the listing is the claim, and this fixture is the case it
+   * used to get wrong: sixty incidents are selected and twenty of them produce
+   * a row, so a count taken off the rows read *from 20 incidents* after the
+   * analyst chose sixty. The forty that added nothing are said rather than
+   * subtracted in silence. -> #605
+   */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const summary = await canvas.findByRole('status')
-    await expect(summary.textContent).toMatch(/40 new rows and 20 merges, from 20 incidents/)
+    await expect(summary.textContent).toMatch(/40 new rows and 20 merges, from 60 incidents/)
+    await expect(summary.textContent).toMatch(/40 incidents added nothing of their own/)
   },
 }
 

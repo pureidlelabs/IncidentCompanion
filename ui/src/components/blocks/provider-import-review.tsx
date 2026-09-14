@@ -44,9 +44,19 @@ function count(many: number, noun: string): string {
  */
 export function ProviderImportReview({
   candidates,
+  chosen,
   onApproved,
 }: {
   candidates: readonly Candidate[]
+  /**
+   * How many incidents the analyst selected.
+   *
+   * **Given rather than counted off the rows.** An incident that proposed
+   * nothing is absent from `candidates`, so a count taken there is of
+   * incidents that produced a row wearing the word *incidents* -- and reading
+   * one after choosing two is what a failed load also looks like. -> #605
+   */
+  chosen: number
   /** The rows still ticked. Called on the first draw and on every change. */
   onApproved: (ids: readonly string[]) => void
 }) {
@@ -59,7 +69,7 @@ export function ProviderImportReview({
     )
   }
 
-  return <ReviewTable candidates={candidates} onApproved={onApproved} />
+  return <ReviewTable candidates={candidates} chosen={chosen} onApproved={onApproved} />
 }
 
 /**
@@ -72,9 +82,11 @@ export function ProviderImportReview({
  */
 function ReviewTable({
   candidates,
+  chosen,
   onApproved,
 }: {
   candidates: readonly Candidate[]
+  chosen: number
   onApproved: (ids: readonly string[]) => void
 }) {
   const columns = useMemo(() => reviewColumns(), [])
@@ -106,12 +118,15 @@ function ReviewTable({
 
   const approved = (JSON.parse(ticked) as string[]).length
   const fresh = candidates.filter((one) => one.verdict === 'new').length
-  const incidents = new Set(candidates.map((one) => one.incident)).size
+  // Said only when it happened: a clause about nothing, on every ordinary
+  // import, is noise in the line an analyst reads to confirm the selection.
+  const silent = chosen - new Set(candidates.map((one) => one.incident)).size
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <p className="text-sm text-ink-muted" role="status">
-        {`${count(fresh, 'new row')} and ${count(candidates.length - fresh, 'merge')}, from ${count(incidents, 'incident')}. ${count(approved, 'row')} approved.`}
+        {`${count(fresh, 'new row')} and ${count(candidates.length - fresh, 'merge')}, from ${count(chosen, 'incident')}. ${count(approved, 'row')} approved.`}
+        {silent > 0 && ` ${count(silent, 'incident')} added nothing of their own.`}
       </p>
 
       <DataTable table={table} label="Rows this import would write" scroll="box" />
