@@ -4,7 +4,7 @@ import { useCase } from '@/api/case'
 import { regimeEnabled, useRegimes } from '@/api/regimes'
 import { useEntryBulkCreate } from '@/api/useEntryBulkCreate'
 import { useReportBlockKinds } from '@/api/reportBlockKinds'
-import { useReportLayouts } from '@/api/reportLayouts'
+import { headingLabelsByKey, useReportLayouts } from '@/api/reportLayouts'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useEntryReorder } from '@/api/useEntryReorder'
@@ -38,8 +38,26 @@ export function ReportContainer() {
   const kase = useCase(caseId)
   const regimes = useRegimes()
 
-  // `''` asks for no `?lang`, which is the install's own default.
-  const layouts = useReportLayouts('')
+  /**
+   * **Keyed on the open report's own language, not the install's.** A report
+   * is produced in the language it carries, so the headings drawn above it are
+   * resolved in that language too -- the screen used to read a map in the
+   * bundle and disagree with the file it was previewing. `''` asks for no
+   * `?lang`, which is the install's default, and is what the index list gets.
+   * -> #513
+   */
+  const shown = kase.data?.reports.find((one) => one.id === open)
+  const layouts = useReportLayouts(shown?.language ?? '')
+  /**
+   * **The install's own, for everything that is not the open report.** The
+   * layout chips and markings in the new-report dialog describe a report that
+   * does not exist yet, and `onCreate` names no language -- so it is made in
+   * the install's. Drawing them from the open report's pack offers Dutch
+   * section names for a report that will be English. Two keys, both cached
+   * without expiry, so the second costs one request per install language.
+   * -> #513
+   */
+  const installLayouts = useReportLayouts('')
   // **The insert menu's list comes from here, not from the bundle.** The
   // client ships a copy as a fixture, and a menu drawing it offers whatever
   // that copy last said -- which is how a kind the report renders became one
@@ -68,11 +86,9 @@ export function ReportContainer() {
       onReorder={(ids) => {
         void announced('the order', () => orderBlocks.mutateAsync({ ids }))
       }}
-      {...(layouts.data ? { languages: layouts.data.languages } : {})}
+      {...(installLayouts.data ? { languages: installLayouts.data.languages } : {})}
+      headings={headingLabelsByKey(layouts.data)}
       onLanguage={(report, language) => {
-        // **What the export renders in, not what this screen draws in.** The
-        // headings on screen come from a hardcoded map; only the produced
-        // document is resolved through the report's language. -> #513
         void announced('the language', () =>
           patchReport.mutateAsync({
             entryId: report.id,
@@ -84,8 +100,8 @@ export function ReportContainer() {
       }}
       reports={kase.data?.reports}
       blocks={kase.data?.reportBlocks}
-      layouts={layouts.data?.layouts}
-      markings={layouts.data?.tlp}
+      layouts={installLayouts.data?.layouts}
+      markings={installLayouts.data?.tlp}
       {...(blockKinds.data === undefined ? {} : { blockKinds: blockKinds.data })}
       {...(regimes.data ? { nis2Enabled: regimeEnabled(regimes.data, 'nis2') } : {})}
       busy={kase.isPending}

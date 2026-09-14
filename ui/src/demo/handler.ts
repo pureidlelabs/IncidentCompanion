@@ -6,7 +6,12 @@
  * `coverage.rule.test.ts` is what makes that a decision rather than an
  * omission.
  */
-import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS, patchSchema } from '@contract/collections'
+import {
+  COLLECTION_SCHEMAS,
+  TIMELINE_WRITE_SCHEMAS,
+  patchCaseSchema,
+  patchSchema,
+} from '@contract/collections'
 
 import about from './catalogue/about.json'
 import collections from './catalogue/collections.json'
@@ -75,6 +80,52 @@ function refuseDraft(issues: readonly { path: readonly PropertyKey[]; message: s
 }
 
 /**
+ * The sentences the routes answer with, spelled as the routes spell them.
+ *
+ * A screen draws `message`, so a demo wording of its own is a demo screen of
+ * its own. -> `collections/entities.controller.ts`, `cases/cases.controller.ts`
+ */
+const NO_VERSION = 'A patch has to name the version it read.'
+const WROTE_FIRST = 'Someone else wrote this first.'
+const EMPTY_PATCH = 'A patch has to change something.'
+
+/**
+ * A patch split into the version it was read at and the fields it changes.
+ *
+ * **`version` and `base` ride with a patch and are not part of it.** Every
+ * write this client makes carries the version, and one made from a draft
+ * carries the row it was rendered from beside it; neither is a column, so a
+ * strict patch schema refuses the whole body before a field is read. The
+ * server's own route destructures them out for the same reason.
+ * -> `collections/entities.controller.ts`, #668
+ */
+function apart(body: Record<string, unknown>): {
+  version: unknown
+  fields: Record<string, unknown>
+} {
+  const { version, base: _base, ...fields } = body
+  return { version, fields }
+}
+
+/**
+ * What a write against a moved row is answered with, or `null` to go ahead.
+ *
+ * **A version the row has passed is a conflict, not a refusal of the body.**
+ * The demo says the same thing the server does, so a screen meeting it here
+ * draws what it would draw against a real install.
+ */
+function versionProblems(version: unknown, held: unknown): Response | null {
+  if (!Number.isInteger(version)) return refuse(422, NO_VERSION)
+  if (typeof held === 'number' && version !== held) {
+    // **The route's own sentence and its `currentVersion`.** A screen meeting
+    // a conflict here renders `error.message`, so a different wording is a
+    // different screen -- which is the one thing this parity is for.
+    return json({ message: WROTE_FIRST, currentVersion: held }, 409)
+  }
+  return null
+}
+
+/**
  * A patch, judged before it is applied.
  *
  * `patchSchema` is the route's own: every field optional, and strict, so a name
@@ -139,10 +190,17 @@ function patch(
   const row = rows?.find((candidate) => candidate.id === id)
   if (rows === null || row === undefined) return refuse(404, 'No such entry.')
 
-  const refused = patchProblems(collection, row, body)
-  if (refused !== null) return refused
+  const { version, fields } = apart(body)
+  const stale = versionProblems(version, row.version)
+  if (stale !== null) return stale
 
-  Object.assign(row, body, {
+  const refused = patchProblems(collection, row, fields)
+  if (refused !== null) return refused
+  // A patch of nothing advances the version and writes nothing, invalidating
+  // every open form in exchange for no change. The route refuses it.
+  if (Object.keys(fields).length === 0) return refuse(422, EMPTY_PATCH)
+
+  Object.assign(row, fields, {
     updatedAt: new Date().toISOString(),
     updatedBy: DEMO_ANALYST,
     version: typeof row.version === 'number' ? row.version + 1 : 1,
@@ -205,7 +263,7 @@ function railSummary(state: DemoState): Record<string, unknown> {
     title: state.kase.title,
     reference: state.kase.reference,
     customer: state.kase.customer,
-    isDemo: false,
+    isDemo: state.kase.isDemo,
     version: state.kase.version,
     counts,
     attention: {},
@@ -338,7 +396,18 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
     if (at.length === 2 && method === 'GET') return json(state.kase)
     if (at.length === 3 && at[2] === 'summary' && method === 'GET') return json(railSummary(state))
     if (at.length === 2 && method === 'PATCH') {
-      Object.assign(state.kase, body, { updatedAt: new Date().toISOString() })
+      const { version, fields } = apart(body)
+      const stale = versionProblems(version, state.kase.version)
+      if (stale !== null) return stale
+
+      const judged = patchCaseSchema.safeParse(fields)
+      if (!judged.success) return refuseDraft(judged.error.issues)
+      if (Object.keys(judged.data).length === 0) return refuse(422, EMPTY_PATCH)
+
+      Object.assign(state.kase, judged.data, {
+        updatedAt: new Date().toISOString(),
+        version: typeof state.kase.version === 'number' ? state.kase.version + 1 : 1,
+      })
       return json(state.kase)
     }
 

@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 480 |
-| Demonstrated | 380 |
+| Scenarios | 484 |
+| Demonstrated | 384 |
 | Undemonstrable | 1 |
 | Unbuilt | 86 |
 | Undemonstrated | 13 |
@@ -313,6 +313,8 @@
 | The application can be judged without being installed | The evaluation build is judged on the product, not on a description of it | undemonstrable | The screens are the application's own because nothing replaces them; that is a property of what is substituted rather than of any answer, and somebody opening it is what shows it |
 | What it cannot honestly do, it refuses | The analyst reaches something only an install can do | demonstrated | ui/src/demo/handler.test.ts |
 | What it cannot honestly do, it refuses | A capability is added to the application | demonstrated | ui/src/demo/coverage.rule.test.ts |
+| A draft is judged as an install would judge it | The analyst types something an install would accept | demonstrated | ui/src/demo/the-demo-takes-the-body-the-app-sends.test.ts |
+| A draft is judged as an install would judge it | A write reaches a row somebody else has moved | demonstrated | ui/src/demo/the-demo-takes-the-body-the-app-sends.test.ts |
 | A draft is judged as an install would judge it | The analyst types something an install would refuse | demonstrated | ui/src/demo/handler.test.ts |
 | A draft is judged as an install would judge it | The rules an install enforces change | demonstrated | ui/src/demo/schema-identity.test.ts |
 | The visitor's work is their own, and they can discard it | Two people open the same published build | demonstrated | ui/src/demo/one-visitor-writes-reach-no-other.test.ts |
@@ -515,6 +517,8 @@
 | A report says what is missing before it is sent | A report is checked before sending | demonstrated | server/src/report/lifecycle.service.test.ts |
 | A report says what is missing before it is sent | A section was removed and is wanted back | demonstrated | server/src/report/lifecycle.service.test.ts |
 | The application's own words are in the report's language; the analyst's are the analyst's | A report is produced in a second language | demonstrated | server/src/report/document/resolve.test.ts |
+| The application's own words are in the report's language; the analyst's are the analyst's | A report is composed in a second language | demonstrated | ui/src/components/blocks/a-report-says-its-headings-in-its-own-language.test.ts |
+| The application's own words are in the report's language; the analyst's are the analyst's | The language a report is produced in is changed | demonstrated | ui/src/app/case/the-heading-pack-is-fetched-for-the-open-report.test.tsx |
 | The application's own words are in the report's language; the analyst's are the analyst's | Written prose is in another language | unbuilt | Not built: nothing reads the language of written prose. -> #229 |
 | The application's own words are in the report's language; the analyst's are the analyst's | The analyst meant it | unbuilt | Not built: nothing records what was named and sent anyway. -> #229 |
 | A report is for an audience, and the audience decides what it owes | A report is created | unbuilt | Not built: a report records no audience. -> #228 |

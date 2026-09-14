@@ -15,7 +15,7 @@
  * written headings inside a Dutch document.
  */
 
-import { useQuery, type UseQueryResult } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query'
 
 import { request } from './client'
 import { keys } from './queryKeys'
@@ -71,6 +71,16 @@ export function useReportLayouts(language: string): UseQueryResult<ReportLayoutL
     staleTime: Infinity,
     gcTime: Infinity,
     refetchOnWindowFocus: false,
+    /**
+     * **The previous language's pack, while the next one is fetched.** The key
+     * moves when a report is opened in a language other than the install's and
+     * again when the analyst changes it; without this the data resets to
+     * `undefined` between the two, and everything drawn from it goes with it --
+     * every heading renders as its own key, the language picker the analyst
+     * just used disappears, and the new-report dialog loses its layouts. The
+     * old words for one round trip are closer to right than no words. -> #513
+     */
+    placeholderData: keepPreviousData,
   })
 }
 

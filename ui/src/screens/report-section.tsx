@@ -57,6 +57,12 @@ export interface ReportSectionScreenProps {
   layouts: readonly ReportLayout[] | undefined
   /** The sharing markings a document can carry. */
   markings: readonly string[] | undefined
+  /**
+   * The heading keys resolved in the open report's own language, as the pack
+   * served them. Empty draws each key as itself, which is the unresolved state
+   * rather than an English word invented here. -> #513
+   */
+  headings: Readonly<Record<string, string>>
   /** Which report the section opens on. `null` opens the index. */
   openId?: string | null
   /**
@@ -134,6 +140,7 @@ export function ReportSectionScreen({
   analyst,
   layouts,
   markings,
+  headings,
   openId = null,
   onOpenChange,
   nis2Enabled = true,
@@ -207,6 +214,7 @@ export function ReportSectionScreen({
             <ReportIndexPane
               reports={reports}
               blocks={blocks}
+              headings={headings}
               onOpen={go}
               onNew={() => {
                 setStarting(true)
@@ -218,6 +226,7 @@ export function ReportSectionScreen({
             report={open}
             blocks={blocks}
             kase={kase}
+            headings={headings}
             {...(languages === undefined ? {} : { languages })}
             {...(onLanguage === undefined
               ? {}
