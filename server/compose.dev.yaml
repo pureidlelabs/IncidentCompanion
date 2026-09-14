@@ -50,6 +50,9 @@ services:
   redis:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    # As `compose.yaml` says: started as the image's own user, so nothing has
+    # to be dropped and the bounding set stays empty.
+    user: redis
     image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
     ports:
       - "127.0.0.1:${IC_REDIS_PORT:-56379}:6379"
