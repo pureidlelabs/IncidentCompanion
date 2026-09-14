@@ -1,25 +1,37 @@
 /**
- * Which regimes exist, and whether a case is in play for each.
+ * Which regimes exist, what they are called, and whether a case is in play for
+ * each.
  *
- * **One list, because two lists disagree.** Whether a regime is in play decided
- * what the verdict showed and what the readiness line showed, and the two were
- * written separately: the DORA pair had already parted, so a case with DORA
- * switched on and its criticality gate unanswered was told it was short of
- * facts for a regime it showed no verdict under.
+ * **One list, because the conditions were written out per caller.** Whether a
+ * regime is in play gates both the verdict rows and the readiness lines, and
+ * each dispatcher carried its own copy: the NIS2 predicate appeared three
+ * times, and the DORA pair had parted, the verdict waiting for the Article 6
+ * gate to have an answer where the readiness line did not. Both now filter the
+ * same set, so they cannot part again.
  *
  * In play means classified in scope rather than merely not excluded, so a fresh
  * case is in play for nothing. Switched on is the operator's separate answer and
  * is asked here rather than by each caller, because a caller that asks only one
- * of the two questions is the defect this module exists to end.
+ * of the two questions is what this module exists to prevent.
  */
 import * as dora from './dora.js'
 import type { ComplianceRow } from './compliance.service.js'
 
+/**
+ * **A closed set, because a regime is law.** Typing the key rather than taking
+ * `string` is what makes a table keyed on it exhaustive: a regime added here
+ * and nowhere else fails to compile rather than answering a request with a
+ * `TypeError`.
+ */
+export type RegimeKey = 'nis2' | 'gdpr' | 'dora'
+
 export interface Regime {
-  /** What the switch, the readiness line and the policy all key on. */
-  key: string
+  /** What the switch and the readiness line key on. */
+  key: RegimeKey
   /** How a verdict names it. */
   label: string
+  /** How a readiness line names it, which cites the articles it is short of. */
+  reading: string
   /** Whether this case is in play, given the regime is switched on. */
   inPlay: (row: ComplianceRow) => boolean
 }
@@ -29,11 +41,13 @@ export const REGIMES: readonly Regime[] = [
   {
     key: 'nis2',
     label: 'NIS2',
+    reading: 'NIS2 (Article 23)',
     inPlay: (row) => row.nis2EntityClass === 'essential' || row.nis2EntityClass === 'important',
   },
   {
     key: 'gdpr',
     label: 'GDPR',
+    reading: 'GDPR (Articles 33 and 34)',
     inPlay: (row) => row.personalDataInvolved === 'yes',
   },
   {
@@ -44,6 +58,7 @@ export const REGIMES: readonly Regime[] = [
      * about nothing and a readiness line against nothing.
      */
     label: 'DORA',
+    reading: 'DORA (Articles 17 to 20)',
     inPlay: (row) => dora.inScope(row).met !== null,
   },
 ]

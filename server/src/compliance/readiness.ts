@@ -8,16 +8,9 @@ import { DORA_ROOT_CAUSE_ADDITIONAL } from '../domain/vocabularies/compliance.js
 import * as dora from './dora.js'
 import * as gdpr from './gdpr.js'
 import * as nis2 from './nis2.js'
-import { regimesInPlay } from './regimes.js'
+import { REGIMES, regimesInPlay, type RegimeKey } from './regimes.js'
 import type { Policy } from '../domain/compliance-policy.js'
 import type { ComplianceRow } from './compliance.service.js'
-
-/** Regime key to the label a screen shows. A closed set: a regime is law. */
-export const REGIMES: Record<string, string> = {
-  nis2: 'NIS2 (Article 23)',
-  gdpr: 'GDPR (Articles 33 and 34)',
-  dora: 'DORA (Articles 17 to 20)',
-}
 
 export interface Readiness {
   regime: string
@@ -47,7 +40,8 @@ function summarise(
   const line = untracked
     ? `${head}; ${untracked} more Annex II fields are filed outside this app`
     : head
-  return { regime, label: REGIMES[regime]!, gaps, tracked, untracked, ready: gaps.length === 0, line }
+  const reading = REGIMES.find((one) => one.key === regime)?.reading ?? regime
+  return { regime, label: reading, gaps, tracked, untracked, ready: gaps.length === 0, line }
 }
 
 /**
@@ -145,6 +139,13 @@ function doraReadiness(row: ComplianceRow): Readiness {
   return summarise('dora', gaps, TRACKED_ITS_FIELDS.length + 1, ANNEX_II_FIELDS - TRACKED_ITS_FIELDS.length)
 }
 
+/** What each regime counts as its own gaps. Exhaustive over `RegimeKey`. */
+const LINE: Record<RegimeKey, (row: ComplianceRow, policy: Policy) => Readiness> = {
+  nis2: (row) => nis2Readiness(row),
+  gdpr: (row, policy) => gdprReadiness(row, policy),
+  dora: (row) => doraReadiness(row),
+}
+
 /**
  * One line per regime that is switched on **and in play**.
  *
@@ -152,16 +153,10 @@ function doraReadiness(row: ComplianceRow): Readiness {
  * shows no readiness line either - a case owing nothing under GDPR should not
  * be told it is three GDPR facts short. -> `regimes.ts`
  */
-const LINE: Record<string, (row: ComplianceRow, policy: Policy) => Readiness> = {
-  nis2: (row) => nis2Readiness(row),
-  gdpr: (row, policy) => gdprReadiness(row, policy),
-  dora: (row) => doraReadiness(row),
-}
-
 export function readiness(
   row: ComplianceRow,
   enabled: Record<string, boolean>,
   policy: Policy,
 ): Readiness[] {
-  return regimesInPlay(row, enabled).map((regime) => LINE[regime.key]!(row, policy))
+  return regimesInPlay(row, enabled).map((regime) => LINE[regime.key](row, policy))
 }

@@ -13,7 +13,7 @@ import * as gdpr from './gdpr.js'
 import * as nis2 from './nis2.js'
 import { deciding, type Determination } from './gates.js'
 import { readiness } from './readiness.js'
-import { regimesInPlay } from './regimes.js'
+import { regimesInPlay, type RegimeKey } from './regimes.js'
 import type { Policy } from '../domain/compliance-policy.js'
 import type { ComplianceRow } from './compliance.service.js'
 import { z } from 'zod'
@@ -75,7 +75,7 @@ interface Finding {
  * **GDPR stacks orthogonally and gets two rows**, which is why a regime answers
  * with a list rather than one finding.
  */
-const FINDINGS: Record<string, (row: ComplianceRow, policy: Policy) => Finding[]> = {
+const FINDINGS: Record<RegimeKey, (row: ComplianceRow, policy: Policy) => Finding[]> = {
   nis2: (row) => [
     {
       article: 'Article 23',
@@ -115,7 +115,7 @@ export function complianceBreakdown(
   const lines = new Map(readiness(row, enabled, policy).map((one) => [one.regime, one.line]))
 
   return regimesInPlay(row, enabled).flatMap((regime) =>
-    FINDINGS[regime.key]!(row, policy).map((finding) => ({
+    FINDINGS[regime.key](row, policy).map((finding) => ({
       regime: regime.label,
       article: finding.article,
       verdict: finding.determination.met,
