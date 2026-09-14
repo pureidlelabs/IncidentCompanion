@@ -57,7 +57,13 @@ services:
     ports:
       - "127.0.0.1:${IC_REDIS_PORT:-56379}:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # As `compose.yaml` says: answering is not the same as accepting a write.
+      test:
+        - CMD-SHELL
+        - >-
+          redis-cli ping | grep -q PONG &&
+          ! redis-cli info persistence |
+          grep -qE 'rdb_last_bgsave_status:err|aof_last_write_status:err'
       interval: 2s
       timeout: 3s
       retries: 30
