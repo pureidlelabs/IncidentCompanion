@@ -142,6 +142,12 @@ def test_the_stated_totals_are_the_counted_totals() -> None:
     Stated in the file rather than computed on the fly because the numbers are quoted
     outside this repository, and a number nobody can read without running a test is one
     that gets recalled instead.
+
+    **Generated rather than counted by hand**, which is what the failure message
+    below names. The rows of two branches merge and this header does not, so a pair
+    that each demonstrate a scenario leaves it one out -- with no edit either author
+    could have made that would have been right at the moment it landed.
+    -> `.claude/scripts/ledger_totals.py`
     """
     counted = {status: 0 for status in STATUSES}
     for _, _, _, status, _ in rows():
@@ -158,12 +164,13 @@ def test_the_stated_totals_are_the_counted_totals() -> None:
         f"Undemonstrable, Unbuilt and Undemonstrated; found {sorted(stated)}"
     )
 
+    repair = "run .claude/scripts/ledger_totals.py --write"
     assert stated["scenarios"] == len(rows()), (
-        f"the ledger says {stated['scenarios']} scenarios and lists {len(rows())}"
+        f"the ledger says {stated['scenarios']} scenarios and lists {len(rows())} -- {repair}"
     )
     for status in ("demonstrated", "undemonstrable", "unbuilt", "undemonstrated"):
         assert stated[status] == counted[status], (
-            f"the ledger says {stated[status]} {status} and lists {counted[status]}"
+            f"the ledger says {stated[status]} {status} and lists {counted[status]} -- {repair}"
         )
 
 
