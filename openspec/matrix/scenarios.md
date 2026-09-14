@@ -130,7 +130,7 @@
 | --- | --- | --- | --- |
 | An archive is one file holding the whole case | A case is archived | demonstrated | server/src/case-archive/round-trip.test.ts |
 | An archive is one file holding the whole case | An analyst archives without the attachments | demonstrated | server/src/case-archive/round-trip.test.ts |
-| An archive is one file holding the whole case | Expected material is not found | unbuilt | Not built: the archive states no count of what was not found. -> #243 |
+| An archive is one file holding the whole case | Expected material is not found | demonstrated | server/src/archive/an-archive-says-what-it-could-not-find.test.ts |
 | An archive says what it should contain, and is checked against it | An archive is read | demonstrated | server/src/archive/format.test.ts |
 | An archive says what it should contain, and is checked against it | An archive has been altered | demonstrated | server/src/archive/format.test.ts |
 | An analyst can seal an archive, and the seal is theirs to hold | An analyst seals an archive | demonstrated | server/src/archive/envelope.test.ts |

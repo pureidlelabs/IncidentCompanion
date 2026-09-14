@@ -42,4 +42,6 @@ Taking the archive's identifiers would let a file name something the install alr
 
 Evidence is stored beside the record rather than in it, so an export can find the record and not the bytes. Refusing the whole archive would mean a case with one lost attachment cannot be moved at all.
 
-What was not found is stated on the archive, and again when it is read, so the gap travels with the file rather than being discovered by whoever opens the case.
+What was not found is stated on the archive, and again when it is read, so the gap travels with the file rather than being discovered by whoever opens the case. Stating it only in the response that carried the download is not stating it on the archive: that answer lasts for one download, and an analyst who saved the file or was handed it opens one that looks complete.
+
+**The statement is optional and the archive version does not move for it.** An archive written before it existed carries nothing and reads as reporting none, which is what it meant. Moving the version would refuse every archive an install already holds, in exchange for a statement those archives were never able to make.
