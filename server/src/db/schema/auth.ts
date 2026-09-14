@@ -9,7 +9,8 @@
  * The property names are the contract and the column names are not: the
  * adapter looks up `user.emailVerified` as a key on this object.
  */
-import { boolean, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { boolean, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
@@ -63,7 +64,20 @@ export const user = pgTable('user', {
    */
   failedSignIns: integer('failed_sign_ins').notNull().default(0),
   lockedUntil: timestamp('locked_until', { withTimezone: true }),
-})
+}, (t) => [
+  /**
+   * **One account per address, folded the way every read folds it.**
+   *
+   * `unique()` on the column is case-sensitive, so it let a second account in
+   * whose address differed only in case - and then every query written through
+   * `sameAddress` matched both. The lockout clear is the sharpest of those: it
+   * updates by that predicate with no limit, so clearing one account's counter
+   * cleared the other's. A reader cannot close this, because two administrators
+   * pressing Create at the same moment both read no such account.
+   * -> `auth/same-address.ts`
+   */
+  uniqueIndex('user_email_folded').on(sql`lower(${t.email})`),
+])
 
 export const session = pgTable('session', {
   id: text('id').primaryKey(),
