@@ -1,0 +1,6 @@
+schema: spec-driven
+# No requirement moves: `collections/spec.md` already requires one rule for
+# every path that creates a row, and the code was in violation of it. What
+# this change records is the design -- the ladder, and which of two stored
+# rows sharing a naming is kept.
+skip_specs: true

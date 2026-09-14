@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest'
 
 import { parseEntity } from './providers/sentinel/entities.js'
 import { mapEntity } from './providers/sentinel/mapping.js'
+import { identitiesOf } from '../domain/identity.js'
 
 const entity = (kind: string, properties: Record<string, unknown>) =>
   parseEntity({ kind, id: `e-${kind}`, name: `e-${kind}`, properties })
@@ -34,7 +35,7 @@ describe('an entity identity', () => {
   it('gives a Url and a DnsResolution for one host different identities', () => {
     const url = mapped('Url', { url: 'https://evil.example.com/login' })
     const dns = mapped('DnsResolution', { domainName: 'evil.example.com' })
-    expect(url?.identities).not.toContain(dns?.identities[0])
+    expect(identitiesOf('network_indicators', url!.fields)).not.toContain(identitiesOf('network_indicators', dns!.fields)[0])
   })
 
   /**
@@ -44,8 +45,9 @@ describe('an entity identity', () => {
    */
   it('builds a Url identity out of what the row actually stores', () => {
     const url = mapped('Url', { url: 'https://evil.example.com/login' })
-    expect(url?.identities.some((one) => one.includes(String(url.fields['value'])))).toBe(true)
-    expect(url?.identities.some((one) => one.includes('/login'))).toBe(true)
+    const rungs = identitiesOf('network_indicators', url!.fields)
+    expect(rungs.some((one) => one.includes(String(url!.fields['value'])))).toBe(true)
+    expect(rungs.some((one) => one.includes('/login'))).toBe(true)
   })
 
   /** Sentinel URL entities are routinely defanged or scheme-less. */

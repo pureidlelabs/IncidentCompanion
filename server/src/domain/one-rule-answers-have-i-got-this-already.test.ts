@@ -26,7 +26,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { identitiesOf, indexOf, keyOf, type Known } from './identity.js'
+import { indexOf, keyOf, matchIn } from './identity.js'
 
 /** Two apps the case already holds, alike but for the instance. */
 const STORED = [
@@ -34,11 +34,16 @@ const STORED = [
   { id: 'tenant-b-row', version: 2, appName: 'Dropbox', instance: 'tenant-b' },
 ]
 
-/** What a door finds for a row, walking the ladder strongest first. */
-const found = (collection: string, index: ReadonlyMap<string, Known>, row: Record<string, unknown>) =>
-  identitiesOf(collection, row)
-    .map((identity) => index.get(identity))
-    .find((hit) => hit !== undefined)
+/**
+ * What a door finds for a row.
+ *
+ * **`matchIn` itself, never a walk rewritten here.** A helper that re-walks the
+ * ladder tests `indexOf` and leaves the lookup untested: `matchIn` returning
+ * the *last* match rather than the first survived the whole server suite while
+ * this file re-implemented the walk. -> #604
+ */
+const found = (collection: string, index: ReadonlyMap<string, { id: string; version: number }>, row: Record<string, unknown>) =>
+  matchIn(collection, index, row)
 
 describe('which row an import decides it already holds', () => {
   it('is the one the arriving row actually names', () => {
@@ -85,6 +90,53 @@ describe('which row an import decides it already holds', () => {
     expect(
       found('accounts', index, { accountName: 'admin', domain: '' }),
       'a local account matched one in a domain, which is the merge the floor refuses',
+    ).toBeUndefined()
+  })
+
+  /**
+   * **A scoped indicator is where `keyOf` is not even in the ladder.**
+   * Measured on this tree: a `network_indicators` row with a value and a scope
+   * and no type has `keyOf` = `...value|<v>|type|` while its ladder holds only
+   * `...value|<v>|scope|<s>`. Indexing by the key alone left every such stored
+   * row unreachable, and this collection was covered by nothing.
+   */
+  it('reaches a stored indicator the key alone could never name', () => {
+    const index = indexOf('network_indicators', [
+      { id: 'scoped-row', version: 3, value: '10.0.0.1', scope: 'site-a' },
+    ])
+
+    expect(
+      found('network_indicators', index, { value: '10.0.0.1', scope: 'site-a' })?.id,
+      'the stored row was indexed under a key no arriving row asks for, so a re-import ' +
+        'writes a second copy of an indicator the case already holds',
+    ).toBe('scoped-row')
+  })
+
+  /**
+   * **A binary with no hash has no key at all**, and `filename` is the rung it
+   * answers to. `keyOf` is null there, so key-only indexing dropped every
+   * hash-less malware row out of the index silently.
+   */
+  it('reaches a stored binary that has no hash', () => {
+    const index = indexOf('malware', [{ id: 'named-row', version: 1, filename: 'svchost.exe' }])
+
+    expect(found('malware', index, { filename: 'svchost.exe' })?.id).toBe('named-row')
+  })
+
+  /**
+   * **The hash arm is exclusive, and widening the index must not break that.**
+   * A row with a hash is known by its hash and by nothing weaker, so a
+   * different binary of one name is two files rather than a duplicate.
+   */
+  it('does not match a named binary against a hashed one', () => {
+    const index = indexOf('malware', [
+      { id: 'hashed-row', version: 1, filename: 'svchost.exe', hash: 'abc123' },
+    ])
+
+    expect(
+      found('malware', index, { filename: 'svchost.exe' }),
+      'a binary named without a hash matched one stored with a different hash, which is ' +
+        'the merge the exclusive arm refuses',
     ).toBeUndefined()
   })
 
