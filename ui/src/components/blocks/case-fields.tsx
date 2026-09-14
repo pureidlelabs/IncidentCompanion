@@ -109,6 +109,10 @@ function control(
         value={value}
         onValueChange={onChange}
         options={spec.options ?? []}
+        // The words the install gave these values. Dropped here, the two doors
+        // that create a case showed the wire value where every dialog that
+        // edits one shows the label. -> #661
+        {...(spec.optionLabels ? { optionLabels: spec.optionLabels } : {})}
         allowEmpty
       />
     )
