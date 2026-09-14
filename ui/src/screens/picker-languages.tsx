@@ -8,6 +8,12 @@ import { type LanguageRow } from '@/components/blocks/picker-rows'
 export interface PickerLanguagesScreenProps {
   /** Languages a report may be written in. Absent draws an empty list. */
   languages: readonly LanguageRow[] | undefined
+  /** How many strings a complete pack carries, as the install serves it. */
+  keyCount: number
+  /** Removing a pack from the install, by its code. Inert without one. */
+  onRemove?: ((code: string) => void) | undefined
+  /** Taking a pack the analyst chose. Without one the control is disabled. */
+  onUpload?: ((file: File) => void) | undefined
   /** Who is signed in, at the rail's foot. */
   analyst: string
   /** Opens the About door from the rail's head. */
@@ -27,6 +33,9 @@ export interface PickerLanguagesScreenProps {
 }
 
 export function PickerLanguagesScreen({
+  keyCount,
+  onRemove,
+  onUpload,
   onAbout,
   languages: languagesGiven,
   analyst,
@@ -50,7 +59,12 @@ export function PickerLanguagesScreen({
       {...(onRetry ? { onRetry } : {})}
       {...(busy ? { busy } : {})}
     >
-      <LanguagesPane languages={languages} />
+      <LanguagesPane
+        languages={languages}
+        keyCount={keyCount}
+        {...(onRemove ? { onRemove } : {})}
+        {...(onUpload ? { onUpload } : {})}
+      />
     </PickerFrame>
   )
 }

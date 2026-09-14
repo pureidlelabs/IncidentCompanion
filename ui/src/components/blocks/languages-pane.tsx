@@ -1,5 +1,5 @@
 import { Languages } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef } from 'react'
 
 import {
   actionsColumn,
@@ -11,25 +11,32 @@ import { EmptyState } from '@/components/blocks/empty-state'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
-import { coveragePercent, LANGUAGE_KEY_COUNT, type LanguageRow } from './picker-rows'
+import { coveragePercent, type LanguageRow } from './picker-rows'
 import { Section } from './section'
 
 /** What a report may be written in. */
-export function LanguagesPane({ languages }: { languages: readonly LanguageRow[] }) {
-  const [held, setHeld] = useState(languages)
-  const [given, setGiven] = useState(languages)
-  if (given !== languages) {
-    setGiven(languages)
-    setHeld(languages)
-  }
-  const rows = useMemo(() => [...held], [held])
-  const columns = useMemo(
-    () =>
-      languageColumns((id) => {
-        setHeld((current) => current.filter((one) => one.id !== id))
-      }),
-    [],
-  )
+export function LanguagesPane({
+  languages,
+  keyCount,
+  onRemove,
+  onUpload,
+}: {
+  languages: readonly LanguageRow[]
+  /** How many strings a complete pack carries, as the install serves it. */
+  keyCount: number
+  /** Removing one, by its code. Absent draws no bin. */
+  onRemove?: (code: string) => void
+  /** Taking a pack the analyst chose. Absent draws the control disabled. */
+  onUpload?: (file: File) => void
+}) {
+  const rows = useMemo(() => [...languages], [languages])
+  /**
+   * **The row stays until the list is read again.** Filtering it out here told
+   * an analyst a pack was gone while the install still held it, and the next
+   * fetch brought it back -- the write's own invalidation is what removes it.
+   * -> #664
+   */
+  const columns = useMemo(() => languageColumns(onRemove), [onRemove])
   const table = useEntityTable<LanguageRow>({
     data: rows,
     columns,
@@ -40,18 +47,7 @@ export function LanguagesPane({ languages }: { languages: readonly LanguageRow[]
     <Section
       title="Report languages"
       blurb="What a report may be written in."
-      actions={
-        // A pack is a file the server stores and reads back; there is no route
-        // here to put one anywhere.
-        <Button
-          variant="outline"
-          size="sm"
-          isDisabled
-          aria-label={'Upload a pack \u2014 stored by the server'}
-        >
-          Upload a pack
-        </Button>
-      }
+      actions={<UploadPack {...(onUpload ? { onUpload } : {})} />}
     >
       <div className="flex flex-col gap-4">
         <DataTable
@@ -67,10 +63,52 @@ export function LanguagesPane({ languages }: { languages: readonly LanguageRow[]
           }
         />
         <p className="text-micro text-ink-muted">
-          A complete pack carries {LANGUAGE_KEY_COUNT} strings.
+          A complete pack carries {keyCount} strings.
         </p>
       </div>
     </Section>
+  )
+}
+
+/**
+ * The control that takes a pack off the analyst's machine.
+ *
+ * **A hidden file input behind the button**, because a file cannot be chosen
+ * without one and a styled `<input type="file">` is the control this kit does
+ * not have. The button is the accessible name; the input is what the browser
+ * opens.
+ *
+ * Disabled only where nothing is listening, which is the gallery. -> #664
+ */
+function UploadPack({ onUpload }: { onUpload?: (file: File) => void }) {
+  const input = useRef<HTMLInputElement>(null)
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        {...(onUpload ? {} : { isDisabled: true })}
+        onPress={() => input.current?.click()}
+      >
+        Upload a pack
+      </Button>
+      <input
+        ref={input}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        aria-hidden
+        tabIndex={-1}
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          // Cleared, so choosing the same file twice is two uploads rather
+          // than one and then silence.
+          event.target.value = ''
+          if (file && onUpload) onUpload(file)
+        }}
+      />
+    </>
   )
 }
 
@@ -81,7 +119,7 @@ export function LanguagesPane({ languages }: { languages: readonly LanguageRow[]
  * `100%` beside a report that falls back to English is the one number here that
  * would be read as a promise.
  */
-function languageColumns(onRemove: (id: string) => void): EntityColumn<LanguageRow>[] {
+function languageColumns(onRemove?: (id: string) => void): EntityColumn<LanguageRow>[] {
   return [
     {
       id: 'label',
@@ -118,7 +156,7 @@ function languageColumns(onRemove: (id: string) => void): EntityColumn<LanguageR
     actionsColumn<LanguageRow>(
       (one) => one.label,
       (one) =>
-        one.builtin
+        one.builtin || !onRemove
           ? []
           : [
               [

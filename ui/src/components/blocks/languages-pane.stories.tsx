@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, screen, userEvent, waitFor } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor } from 'storybook/test'
 
 import { LanguagesPane } from '@/components/blocks/languages-pane'
 import { LANGUAGE_KEY_COUNT, PICKER_LANGUAGES } from '@/components/blocks/picker-rows'
@@ -15,7 +15,15 @@ const meta = {
   title: 'Blocks/System/Languages',
   component: LanguagesPane,
   parameters: { layout: 'padded' },
-  args: { languages: PICKER_LANGUAGES },
+  // **The doors, because a control with none is not drawn.** The gallery has no
+  // container, so without these the pane offers no remove and a disabled
+  // upload. -> #664
+  args: {
+    languages: PICKER_LANGUAGES,
+    keyCount: LANGUAGE_KEY_COUNT,
+    onRemove: fn(),
+    onUpload: fn(),
+  },
 } satisfies Meta<typeof LanguagesPane>
 
 export default meta
@@ -83,13 +91,14 @@ export const NearlyComplete: Story = {
 /**
  * Removing an uploaded pack.
  *
- * The row leaves the table on the press. Nothing here asks the server, so what
- * the story shows is the pane's own answer -- the screen replaces the prop when
- * the write lands, and the pane takes that over its held copy.
+ * **The row stays until the list is read again.** The pane asks the install
+ * and the install answers by invalidating the list; a pane that hid the row
+ * itself said a pack was gone while it was still there, and the next fetch
+ * brought it back. -> #664
  */
 export const Removing: Story = {
   name: 'Removing an uploaded pack',
-  play: async ({ canvas, step }) => {
+  play: async ({ args, canvas, step }) => {
     await step('the pack is listed', async () => {
       await expect(canvas.getByText('Portugu\u00eas (Brasil)')).toBeVisible()
     })
@@ -97,9 +106,11 @@ export const Removing: Story = {
       await userEvent.click(canvas.getByRole('button', { name: 'More for Portugu\u00eas (Brasil)' }))
       await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove\u2026' }))
     })
-    await step('and the row is gone, with the rest untouched', async () => {
-      await expect(canvas.queryByText('Portugu\u00eas (Brasil)')).toBeNull()
-      await expect(canvas.getByText('Fran\u00e7ais')).toBeVisible()
+    await step('and the install is asked, by the pack\u2019s own code', async () => {
+      await expect(args.onRemove).toHaveBeenCalledWith('pt-BR')
+    })
+    await step('while the row stays, the list not having been read again', async () => {
+      await expect(canvas.getByText('Portugu\u00eas (Brasil)')).toBeVisible()
     })
   },
 }
@@ -107,10 +118,8 @@ export const Removing: Story = {
 /**
  * An install carrying no packs at all.
  *
- * The upload control is drawn and refused in every story, because a pack is a
- * file the server stores and reads back -- there is no route from this screen
- * to put one anywhere. An empty table is the one place that reads as a dead
- * end, so the empty state says what would fill it.
+ * An empty table is the one place that reads as a dead end, so the empty state
+ * says what would fill it, and the upload control beside it takes a pack.
  */
 export const Empty: Story = {
   name: 'No pack installed',
@@ -122,10 +131,8 @@ export const Empty: Story = {
         canvas.getByText('Upload one, and every report can be written in it.'),
       ).toBeVisible()
     })
-    await step('and the upload control names why it is refused', async () => {
-      await expect(
-        canvas.getByRole('button', { name: 'Upload a pack \u2014 stored by the server' }),
-      ).toBeDisabled()
+    await step('and the upload control is offered rather than refused', async () => {
+      await expect(canvas.getByRole('button', { name: 'Upload a pack' })).toBeEnabled()
     })
   },
 }

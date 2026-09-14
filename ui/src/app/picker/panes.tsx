@@ -5,7 +5,13 @@ import { useCases } from '@/api/case'
 import { useImportCase } from '@/api/useImportCase'
 import { useAccounts, useAccountWrite } from '@/api/accounts'
 import { useInstallActivity, type AuditLine } from '@/api/installActivity'
-import { useLanguages } from '@/api/languages'
+import { announced } from '@/app/case/entryWrites'
+import {
+  useLanguageRemove,
+  useLanguageUpload,
+  useLanguages,
+  type PackUpload,
+} from '@/api/languages'
 import { useLibrary } from '@/api/library'
 import { useDemos } from '@/api/useDemos'
 import { useSession } from '@/api/useSession'
@@ -322,6 +328,8 @@ export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAb
 export function LanguagesPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const languages = useLanguages()
   const analyst = useAnalyst()
+  const remove = useLanguageRemove()
+  const upload = useLanguageUpload()
   const rows: LanguageRow[] = (languages.data?.languages ?? []).map((pack) => ({
     ...pack,
     id: pack.code,
@@ -329,6 +337,22 @@ export function LanguagesPaneView({ onPane, onImportArchive, userMenu, onAbout }
   return (
     <PickerLanguagesScreen
       languages={rows}
+      keyCount={languages.data?.keyCount ?? 0}
+      onRemove={(code) => {
+        void announced('the language pack', () => remove.mutateAsync(code))
+      }}
+      onUpload={(file) => {
+        void announced('the language pack', async () => {
+          /**
+           * **Read here, not on the server.** The route takes a pack as JSON
+           * rather than a multipart upload, so the file is parsed where it was
+           * chosen -- and a file that is not a pack is refused before a
+           * request is made rather than as a 422 about a body.
+           */
+          const pack = JSON.parse(await file.text()) as PackUpload
+          return upload.mutateAsync(pack)
+        })
+      }}
       busy={languages.isPending}
       analyst={analyst ?? ''}
       {...(languages.error === null ? {} : { problem: languages.error })}

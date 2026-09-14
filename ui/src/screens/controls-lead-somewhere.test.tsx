@@ -13,7 +13,12 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { PICKER_CASES, PICKER_LANGUAGES, PICKER_TEMPLATES } from '@/components/blocks/picker-rows'
+import {
+  LANGUAGE_KEY_COUNT,
+  PICKER_CASES,
+  PICKER_LANGUAGES,
+  PICKER_TEMPLATES,
+} from '@/components/blocks/picker-rows'
 
 import { campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
@@ -196,11 +201,26 @@ describe('the picker', () => {
     expect(went).toEqual(['new'])
   })
 
-  it('takes a language pack out of the list', async () => {
+  /**
+   * **Asked of the install, not of the table.** This asserted that the row
+   * left the list, which is what the pane used to do and why nothing was ever
+   * deleted: the pack came back on the next fetch. The row goes when the list
+   * is read again. -> #664
+   */
+  it('asks the install to take a language pack away', async () => {
     const user = userEvent.setup()
-    render(<PickerLanguagesScreen languages={PICKER_LANGUAGES} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} />)
+    const asked: string[] = []
+    render(
+      <PickerLanguagesScreen
+        languages={PICKER_LANGUAGES}
+        keyCount={LANGUAGE_KEY_COUNT}
+        onRemove={(code) => asked.push(code)}
+        analyst="r.okonkwo"
+        userMenu={null}
+        onAbout={() => undefined}
+      />,
+    )
 
-    const rows = screen.getAllByRole('row').length
     // An uploaded pack is the only one with a menu at all: a built-in ships
     // with the image and offers nothing, which is what the `...` being absent on
     // those rows says.
@@ -213,7 +233,7 @@ describe('the picker', () => {
     await user.click(within(uploaded!).getByRole('button', { name: /^More for / }))
     await user.click(screen.getByRole('menuitem', { name: /^Remove/ }))
 
-    expect(screen.getAllByRole('row')).toHaveLength(rows - 1)
+    expect(asked, 'the row was hidden and the install never asked').toHaveLength(1)
   })
 
   it('duplicates a built-in template into the library', async () => {
