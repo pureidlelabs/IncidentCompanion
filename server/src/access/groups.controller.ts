@@ -26,7 +26,6 @@ import { GroupsService } from './groups.service.js'
 const grantSchema = z.object({ userId: z.string().min(1), level: z.enum(LEVELS) }).strict()
 const holdSchema = z.object({ customerId: z.uuid() }).strict()
 
-
 const createSchema = z
   .object({ name: z.string().trim().min(1, 'A group needs a name.').max(200) })
   .strict()
@@ -36,7 +35,6 @@ const listSchema = z.object({ groups: z.array(groupSchema) })
 const madeSchema = z.object({ id: z.uuid() })
 class GroupListDto extends createZodDto(listSchema) {}
 class GroupMadeDto extends createZodDto(madeSchema) {}
-
 
 const membershipSchema = z.object({
   members: z.array(

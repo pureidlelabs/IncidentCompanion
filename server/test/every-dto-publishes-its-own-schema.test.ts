@@ -1,6 +1,6 @@
 /**
- * Every DTO the server declares reaches the published document under its own
- * name.
+ * Every DTO the server declares reaches the published document under a name of
+ * its own.
  *
  * `@nestjs/swagger` keys `components.schemas` by the DTO class's own name, and
  * nothing in this tree passes `@ApiSchema({ name })` to say otherwise. So two
@@ -12,6 +12,13 @@
  * collision, and a count is exactly what a collision moves -- two classes, one
  * schema. Reading each schema's shape instead would pass the day two disjoint
  * DTOs happened to be named alike and checked out individually.
+ *
+ * **Both declaration forms, because the second is where the sharpest instance
+ * was.** `createZodDto` returns a class called `AugmentedZodDto`, so
+ * `const X = createZodDto(...)` -- the form a discriminated union is forced
+ * into, since a class cannot extend one -- infers no name and every such DTO
+ * registers under that one key. Reading only `class X extends` leaves them
+ * invisible to exactly the check they need.
  *
  * **What this does not cover:** whether a published schema is *correct* for its
  * route, which is `openapi-document.test.ts`'s lint and the route's own tests;
@@ -40,7 +47,9 @@ function declared(): { name: string; where: string }[] {
         if (entry.name !== 'node_modules' && entry.name !== 'dist') walk(full)
       } else if (/\.ts$/.test(entry.name) && !/\.test\.ts$/.test(entry.name)) {
         for (const line of readFileSync(full, 'utf8').split('\n')) {
-          const hit = /class (\w+Dto) extends createZodDto/.exec(line)
+          const hit =
+            /class (\w+Dto) extends createZodDto/.exec(line) ??
+            /(?:const|let|var) (\w+Dto) = createZodDto/.exec(line)
           if (hit?.[1]) found.push({ name: hit[1], where: relative(SRC, full) })
         }
       }
@@ -64,7 +73,7 @@ describe.skipIf(!runnable)('the DTOs the server declares', () => {
   it('finds classes to check', () => {
     // Without this the two cases below pass over an empty list, which is what a
     // moved directory or a changed declaration idiom looks like from here.
-    expect(declared().length).toBeGreaterThan(50)
+    expect(declared().length).toBeGreaterThan(85)
   })
 
   /**
@@ -91,9 +100,9 @@ describe.skipIf(!runnable)('the DTOs the server declares', () => {
 
   /**
    * **Matched on the prefix, because the key is not the class name.**
-   * `nestjs-zod` publishes `<ClassName>_Output`, and `_Input` beside it where a
-   * body's parsed and serialised shapes differ. Matching the whole key would
-   * fail on every DTO in the tree and prove nothing.
+   * `nestjs-zod` publishes a serialised DTO as `<ClassName>_Output`, built from
+   * the class's own name. Matching the whole key would fail on every DTO in the
+   * tree and prove nothing.
    */
   it('publishes a schema for every one of them', () => {
     const schemas = Object.keys(
@@ -107,6 +116,29 @@ describe.skipIf(!runnable)('the DTOs the server declares', () => {
     expect(
       missing,
       'a DTO class declares a schema the document publishes under no key of its own',
+    ).toEqual([])
+  })
+
+  /**
+   * **The reverse, which is the direction the collision hides in.** A DTO whose
+   * class has no name of its own still publishes -- under whatever name the
+   * library gave the class it built. The count above cannot see that, because
+   * the declaration it is looking for is the one that does not exist.
+   */
+  it('publishes no schema that no DTO accounts for', () => {
+    const names = new Set(declared().map((one) => one.name))
+    const schemas = Object.keys(
+      (harness.document as { components?: { schemas?: Record<string, unknown> } }).components
+        ?.schemas ?? {},
+    )
+    const orphans = schemas
+      .filter((key) => ![...names].some((name) => key === name || key.startsWith(`${name}_`)))
+      .sort()
+
+    expect(
+      orphans,
+      'the document publishes a schema under a name nothing declares, which is what a DTO ' +
+        'built by a call rather than a declaration registers as',
     ).toEqual([])
   })
 })

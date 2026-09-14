@@ -11,7 +11,7 @@
  * The timeline keeps its own file because it genuinely differs - a
  * discriminated union, and per-kind patch validation.
  */
-import { CreatedIdsDto, DeletedDto } from '../domain/acknowledged.js'
+import { CreatedIdsDto, DeletedDto } from './acknowledged.js'
 import {
   Inject,
   UnprocessableEntityException,

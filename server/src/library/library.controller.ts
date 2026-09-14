@@ -50,7 +50,7 @@ import { LibraryService } from './library.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { libraryRowSchema } from './library.service.js'
-import { WrittenDto, writtenSchema, type Written } from '../domain/written.js'
+import { writtenSchema, type Written } from '../domain/written.js'
 import { AdminOnly } from '../auth/admin-only.js'
 
 /**
@@ -145,7 +145,6 @@ export const libraryListingSchema = z.object({
 
 class LibraryListingDto extends createZodDto(libraryListingSchema) {}
 
-
 class EditorDocumentDto extends createZodDto(editorDocumentSchema) {}
 
 /**
@@ -161,6 +160,8 @@ const editorResultSchema = writtenSchema.extend({ editor: editorDocumentSchema }
 type EditorResult = z.infer<typeof editorResultSchema>
 
 class EditorResultDto extends createZodDto(editorResultSchema) {}
+
+class LibraryWrittenDto extends createZodDto(writtenSchema) {}
 
 @UseGuards(AuthGuard)
 @Controller('api/library')
@@ -314,7 +315,7 @@ export class LibraryController {
   })
   @ZodResponse({
     status: 200,
-    type: WrittenDto,
+    type: LibraryWrittenDto,
     description: 'A sentence for the analyst, and the name it was given.',
   })
   async create(@Param('slug') slug: string, @Body() body: unknown): Promise<Written> {
@@ -506,7 +507,7 @@ export class LibraryController {
   @Delete(':slug/:name')
   @ZodResponse({
     status: 200,
-    type: WrittenDto,
+    type: LibraryWrittenDto,
     description: 'A sentence confirming what was removed.',
   })
   async remove(@Param('slug') slug: string, @Param('name') name: string): Promise<Written> {
