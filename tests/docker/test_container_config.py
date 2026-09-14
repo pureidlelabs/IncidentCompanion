@@ -1625,6 +1625,13 @@ JUSTIFIED_CAPABILITIES: dict[str, set[str]] = {
     # the `postgres` user. Without CHOWN and FOWNER its entrypoint refuses with
     # `chown`/`chmod: Operation not permitted`.
     "postgres": {"CHOWN", "FOWNER", "SETGID", "SETUID"},
+    # Redis prepares `/data` as root and drops to the `redis` user the same
+    # way. **Measured by starting it rather than by watching it refuse**: with
+    # none of the three it starts, answers PING and serves from memory, and
+    # `redis-server` is still running as root with `rdb_last_bgsave_status:err`
+    # -- so the measurement that justified the other two rows cannot see this
+    # one. -> `tests/docker/test_services_can_write_where_they_must.py`, #620
+    "redis": {"CHOWN", "SETGID", "SETUID"},
 }
 
 

@@ -41,6 +41,11 @@ services:
   redis:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    # Redis prepares `/data` as root and drops to the `redis` user. Without
+    # these three it stays root, and root with no CAP_DAC_OVERRIDE cannot write
+    # a directory owned by somebody else -- so it starts, answers PING, and
+    # refuses every write once its first save fails.
+    cap_add: [CHOWN, SETGID, SETUID]
     # Pinned to the minor, and must match `server/compose.dev.yaml` or the
     # suite runs against an engine the stack does not ship. Bump both together.
     image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
