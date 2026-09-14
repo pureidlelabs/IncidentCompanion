@@ -8,6 +8,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { blocksOf, headingOf } from './report-shape'
 import { DEMO_BLOCKS, DEMO_PROSE, demoReport } from '@/fixtures/report-demo'
 import { ReportWorkspace } from './report-workspace'
+import { DEMO_HEADINGS } from './report-layouts'
 
 /**
  * Rearranging a report's sections: what leaves the screen, and what the drag
@@ -35,6 +36,7 @@ const GAPS = /^Insert (before|between|after)/
 function draw(props: Partial<Parameters<typeof ReportWorkspace>[0]> = {}) {
   return render(
     <ReportWorkspace
+      headings={DEMO_HEADINGS}
       report={FIRST}
       blocks={DEMO_BLOCKS}
       kase={campaignCase}
@@ -46,7 +48,7 @@ function draw(props: Partial<Parameters<typeof ReportWorkspace>[0]> = {}) {
 
 /** The grip of the section named, which is what a keyboard drag starts from. */
 function gripFor(block: ReportBlock): HTMLElement {
-  return screen.getByRole('button', { name: `Drag ${headingOf(block)}` })
+  return screen.getByRole('button', { name: `Drag ${headingOf(block, DEMO_HEADINGS)}` })
 }
 
 /**
@@ -208,7 +210,7 @@ describe('the keys a section owns', () => {
     expect(written).toBeDefined()
     if (written === undefined) return
 
-    const body = screen.getByRole('textbox', { name: headingOf(written) })
+    const body = screen.getByRole('textbox', { name: headingOf(written, DEMO_HEADINGS) })
     await user.click(body)
     await user.keyboard('{ArrowDown}')
     expect(document.activeElement).toBe(body)

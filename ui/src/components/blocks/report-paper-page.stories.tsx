@@ -8,6 +8,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { narrow } from '@/fixtures/viewport'
 
 import { ReportPaperPage } from './report-paper-page'
+import { DEMO_HEADINGS } from './report-layouts'
 
 /**
  * The document at print size, painted from what is being typed.
@@ -19,6 +20,7 @@ const meta = {
   title: 'Blocks/Report/Paper page',
   component: ReportPaperPage,
   parameters: { layout: 'padded' },
+  args: { headings: DEMO_HEADINGS },
 } satisfies Meta<typeof ReportPaperPage>
 
 export default meta

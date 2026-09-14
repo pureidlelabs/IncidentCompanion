@@ -26,6 +26,7 @@ import { CaseFrame } from '@/components/blocks/case-frame'
 import { EntityCardProvider } from '@/components/blocks/entity-card'
 import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
+import { DEMO_HEADINGS } from '@/components/blocks/report-layouts'
 
 /**
  * Every document the screen asked for, in order, and the case it asked in.
@@ -81,6 +82,7 @@ function draw(props: Record<string, unknown> = {}) {
       <EntityCardProvider caseId={campaignCase.id}>
         <CaseFrame section="report" caseName={campaignCase.id}>
           <ReportSectionScreen
+            headings={DEMO_HEADINGS}
             reports={DEMO_REPORTS}
             blocks={DEMO_BLOCKS}
             kase={campaignCase}

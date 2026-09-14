@@ -54,6 +54,16 @@ export interface ReportIndexPaneProps {
   reports: readonly Report[] | undefined
   /** The whole `report_blocks` table; each row takes its own. */
   blocks: readonly ReportBlock[] | undefined
+  /**
+   * The heading keys resolved, as the pack served them.
+   *
+   * **One pack, where this list can hold reports in several languages.** It is
+   * the open report's, or the install's where none is open, so a row for a
+   * report in another language draws the keys it cannot resolve as themselves.
+   * A pack per row is a query per language, and this is a list of running
+   * orders rather than the document. -> #513
+   */
+  headings: Readonly<Record<string, string>>
   /** Opening one. The rail is the other way in, and both land in the same place. */
   onOpen?: (reportId: string) => void
   onNew?: () => void
@@ -129,6 +139,7 @@ export function ReportIndexPane({
   onNew,
   onDelete,
   onDuplicate,
+  headings,
 }: ReportIndexPaneProps) {
   const blocks = blocksGiven ?? []
   const reports = reportsGiven ?? NONE
@@ -318,7 +329,7 @@ export function ReportIndexPane({
                       <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">
                         {at + 1}
                       </span>
-                      <span className="min-w-0 truncate">{headingOf(block)}</span>
+                      <span className="min-w-0 truncate">{headingOf(block, headings)}</span>
                       {empty.has(block.id) && (
                         <Badge variant="soft" size="xs">
                           empty

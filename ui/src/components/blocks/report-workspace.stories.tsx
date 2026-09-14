@@ -18,6 +18,7 @@ import { bareInACase } from '@/fixtures/in-a-case'
 import { drawn } from '@/fixtures/viewport'
 
 import { ReportWorkspace, type ReportWorkspaceProps } from './report-workspace'
+import { DEMO_HEADINGS } from './report-layouts'
 
 /**
  * One report, in the three ways there are to look at it.
@@ -41,6 +42,7 @@ const meta = {
   // route's own body -- an order that only moved on screen is the defect the
   // `Rearranged` story is about.
   args: {
+    headings: DEMO_HEADINGS,
     onAddSection: fn(),
     onReorder: fn(),
     // The component takes a report rather than defaulting to one, so the demo
@@ -208,7 +210,9 @@ export const BesideThePage: Story = {
       await expect(page).not.toBeVisible()
       return
     }
-    const body = await canvas.findByRole('textbox', { name: headingOf(firstWritten) })
+    const body = await canvas.findByRole('textbox', {
+      name: headingOf(firstWritten, DEMO_HEADINGS),
+    })
     await userEvent.click(body)
     await userEvent.type(body, ' Typed while the page was open.')
     await waitFor(async () => {
@@ -463,7 +467,9 @@ export const MidDrag: Story = {
     await expect(moved).toBeDefined()
     if (moved === undefined) return
 
-    const grip = await canvas.findByRole('button', { name: `Drag ${headingOf(moved)}` })
+    const grip = await canvas.findByRole('button', {
+      name: `Drag ${headingOf(moved, DEMO_HEADINGS)}`,
+    })
     grip.focus()
     await userEvent.keyboard('{Enter}')
 
@@ -539,7 +545,9 @@ export const Rearranged: Story = {
     // **Focused rather than clicked.** React Aria's drag button is
     // `pointer-events: none` by design - a pointer drags the row itself, and
     // the button is the keyboard and screen-reader route to the same thing.
-    ;(await canvas.findByRole('button', { name: `Drag ${headingOf(moved)}` })).focus()
+    ;(
+      await canvas.findByRole('button', { name: `Drag ${headingOf(moved, DEMO_HEADINGS)}` })
+    ).focus()
     await userEvent.keyboard('{Enter}')
     // The gaps are registered a turn after the pickup, and an arrow key
     // arriving first is swallowed: the drop then lands where the section
@@ -558,8 +566,11 @@ export const Rearranged: Story = {
     // And what the screen now shows, which is the half a spy cannot see.
     await waitFor(async () => {
       const grips = canvas.getAllByRole('button', { name: /^Drag / })
-      await expect(grips[0]).toHaveAttribute('aria-label', `Drag ${headingOf(next)}`)
-      await expect(grips[1]).toHaveAttribute('aria-label', `Drag ${headingOf(moved)}`)
+      await expect(grips[0]).toHaveAttribute('aria-label', `Drag ${headingOf(next, DEMO_HEADINGS)}`)
+      await expect(grips[1]).toHaveAttribute(
+        'aria-label',
+        `Drag ${headingOf(moved, DEMO_HEADINGS)}`,
+      )
     })
   },
 }
@@ -586,7 +597,7 @@ export const Grips: Story = {
     const grips = await canvas.findAllByRole('button', { name: /^Drag / })
     await expect(grips).toHaveLength(firstBlocks.length)
     await expect(grips.map((grip) => grip.getAttribute('aria-label'))).toEqual(
-      firstBlocks.map((block) => `Drag ${headingOf(block)}`),
+      firstBlocks.map((block) => `Drag ${headingOf(block, DEMO_HEADINGS)}`),
     )
     for (const grip of grips) await expect(grip).not.toHaveAttribute('tabindex', '-1')
   },

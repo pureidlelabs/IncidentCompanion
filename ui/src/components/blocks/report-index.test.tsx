@@ -6,6 +6,7 @@ import { ApiError } from '@/api/client'
 import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
 
 import { ReportIndexPane } from './report-index'
+import { DEMO_HEADINGS } from './report-layouts'
 
 /**
  * The report list's own control, against the target floor the rest of the row
@@ -20,6 +21,7 @@ describe('the control that opens a report', () => {
   const draw = () =>
     render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -55,7 +57,7 @@ describe('the control that opens a report', () => {
  */
 describe('deleting a report', () => {
   it('draws no actions column at all with no onDelete - not the bin, not the chevron, not the overflow', () => {
-    render(<ReportIndexPane reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onOpen={() => undefined} />)
+    render(<ReportIndexPane headings={DEMO_HEADINGS} reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onOpen={() => undefined} />)
     expect(screen.queryByRole('button', { name: /^Delete /i })).not.toBeInTheDocument()
     // The whole column, not only the bin: an unwired table gains no chevron
     // and no overflow menu either - a header naming a column that draws
@@ -81,6 +83,7 @@ describe('deleting a report', () => {
 
     render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -104,6 +107,7 @@ describe('deleting a report', () => {
 
     render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -127,6 +131,7 @@ describe('deleting a report', () => {
 
     render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -158,6 +163,7 @@ describe('deleting a report', () => {
 
     const { rerender } = render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -175,6 +181,7 @@ describe('deleting a report', () => {
     // dialog open, asking about a row that has gone.
     rerender(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS.slice(1)}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -188,6 +195,7 @@ describe('deleting a report', () => {
 
     rerender(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -206,6 +214,7 @@ describe('deleting a report', () => {
 
     const { rerender } = render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -222,6 +231,7 @@ describe('deleting a report', () => {
     // analyst is mid-way through answering.
     rerender(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -241,6 +251,7 @@ describe('deleting a report', () => {
 
     const { rerender } = render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -252,7 +263,7 @@ describe('deleting a report', () => {
     await user.click(screen.getByRole('button', { name: `Delete ${label}` }))
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
 
-    rerender(<ReportIndexPane reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onOpen={() => undefined} />)
+    rerender(<ReportIndexPane headings={DEMO_HEADINGS} reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onOpen={() => undefined} />)
     // The dialog leaves with its exit animation, as every overlay does.
     await waitFor(() => {
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
@@ -260,6 +271,7 @@ describe('deleting a report', () => {
 
     rerender(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -287,6 +299,7 @@ describe('deleting a report', () => {
 
     render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -317,6 +330,7 @@ describe('duplicating a report', () => {
     if (!first) throw new Error('fixture needs at least one report')
     render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -336,6 +350,7 @@ describe('duplicating a report', () => {
 
     render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}
@@ -371,6 +386,7 @@ describe('duplicating a report', () => {
 
     render(
       <ReportIndexPane
+      headings={DEMO_HEADINGS}
         reports={DEMO_REPORTS}
         blocks={DEMO_BLOCKS}
         onOpen={() => undefined}

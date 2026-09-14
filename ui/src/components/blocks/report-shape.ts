@@ -1,6 +1,6 @@
 import type { Case, Report, ReportBlock } from '@/api/model'
 
-import { HEADING_LABELS, labelForKind } from './report-layouts'
+import { labelForKind } from './report-layouts'
 
 /**
  * What the three report screens agree about a report before any of them draws
@@ -56,20 +56,24 @@ export function blocksOf(
  * resolves, or neither - and a written section is untitled until the analyst
  * titles it, so its stored heading is the empty string by design.
  *
- * **The key is not prettified into words here.** The pack resolves it in the
- * report's own language, and inventing an English title client-side is how a
- * Dutch report grows an English heading.
+ * **The key is not prettified into words here.** `pack` is the served map for
+ * the report's own language, and inventing an English title client-side is how
+ * a Dutch report grows an English heading -- which is what this did, from a
+ * map in the bundle, while saying so. -> #513
  */
-export function headingOf(block: ReportBlock): string {
+export function headingOf(block: ReportBlock, pack: Readonly<Record<string, string>>): string {
   if (block.heading) return block.heading
-  if (block.headingKey) return HEADING_LABELS[block.headingKey] ?? block.headingKey
-  return labelForKind(block.kind)
+  if (block.headingKey) return pack[block.headingKey] ?? block.headingKey
+  return labelForKind(block.kind, pack)
 }
 
 /** Whether the pack answered, or the key stood in for itself. */
-export function headingIsFinal(block: ReportBlock): boolean {
+export function headingIsFinal(
+  block: ReportBlock,
+  pack: Readonly<Record<string, string>>,
+): boolean {
   if (!block.headingKey) return true
-  return HEADING_LABELS[block.headingKey] !== undefined
+  return pack[block.headingKey] !== undefined
 }
 
 /** One row of the rail beside the document. */
@@ -99,13 +103,14 @@ export interface RailSection {
 export function railSectionsOf(
   report: Report,
   blocks: readonly ReportBlock[],
+  pack: Readonly<Record<string, string>>,
 ): RailSection[] {
   const own = blocksOf(blocks, report.id)
   const owed = new Set(outstandingIn(report, own).map((block) => block.id))
   return own.map((block, at) => ({
     id: block.id,
     number: at + 1,
-    heading: headingOf(block),
+    heading: headingOf(block, pack),
     written: WRITTEN_KINDS.includes(block.kind),
     blank: owed.has(block.id),
   }))

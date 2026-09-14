@@ -23,12 +23,15 @@ export function ReportPaperPage({
   kase,
   report,
   here,
+  headings,
 }: {
   blocks: readonly ReportBlock[]
   live: Readonly<Record<string, string>>
   kase: Case
   report: Report
   here: string
+  /** The heading keys resolved in the report's language, as served. -> #513 */
+  headings: Readonly<Record<string, string>>
 }) {
   const box = useRef<HTMLDivElement>(null)
 
@@ -100,7 +103,7 @@ export function ReportPaperPage({
             <div key={block.id} id={paperDomId(block.id)}>
               <h4 className="mt-5 flex items-baseline gap-2 border-b border-paper-accent pb-1 font-sans text-sm font-semibold text-paper-accent first:mt-0">
                 <span className="font-mono text-2xs">{String(at + 1).padStart(2, '0')}</span>
-                {headingOf(block)}
+                {headingOf(block, headings)}
               </h4>
               {WRITTEN_KINDS.includes(block.kind) ? (
                 <div
