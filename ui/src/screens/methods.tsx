@@ -26,6 +26,7 @@ import { CodeBlock } from '@/components/ui/code-block'
 import { matchesMethod, rowsText, windowText } from './methods-rows'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
 import { useInFlight } from '@/lib/useInFlight'
+import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
 
 /**
  * How each finding in this case was obtained: the query, where it ran, and
@@ -67,8 +68,6 @@ export interface MethodWrites {
 export interface MethodsScreenProps {
   kase: Case | undefined
   specs: Specs | undefined
-  /** What the search box opens with. */
-  search?: string
   /**
    * The collection is still being read.
    *
@@ -76,6 +75,8 @@ export interface MethodsScreenProps {
    * state is an answer, and a read that has not returned does not have one.
    */
   busy?: boolean
+  /** What the search box opens with. Stories draw a screen already filtered. */
+  search?: string
   /** Why the read failed, if it did. */
   problem?: unknown
   /** Asked again when *Try again* is pressed. */
@@ -148,19 +149,19 @@ export function MethodsScreen({
    * once on mount and refreshes only through a handle this screen keeps to
    * itself is one nothing outside can repaint.
    */
-  const [rows, setRows] = useState(kase?.methods ?? [])
-  const [given, setGiven] = useState(kase)
-  if (given !== kase) {
-    setGiven(kase)
-    setRows(kase?.methods ?? [])
-  }
-
+  const [rows, setRows] = useCaseRows(kase, (one) => one.methods)
   /** One write path. Omitted, the gallery answers for itself. */
   const write = writes ?? galleryWrites()
 
   const [writing, inFlight] = useInFlight()
 
   const [query, setQuery] = useState(search)
+
+  // **The analyst's place in this case, put back when they leave it.** After
+  // the filters, because a screen's filter options are counted off its rows.
+  useResetOnCase(kase, () => {
+    setQuery('')
+  })
   const [deleting, setDeleting] = useState<string[] | null>(null)
   const editor = useRowEditor<MethodEntry>()
 

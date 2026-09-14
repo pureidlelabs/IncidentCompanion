@@ -23,6 +23,7 @@ import { entityNames, referenceOptions } from '@/components/blocks/entity-scope'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
 import { matchesRecord } from './evidence-rows'
 import { useInFlight } from '@/lib/useInFlight'
+import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
 
 /** The evidence register: what this case has collected, and what it has only
  *  promised. */
@@ -54,8 +55,6 @@ export interface EvidenceWrites {
 export interface EvidenceScreenProps {
   kase: Case | undefined
   specs: Specs | undefined
-  /** What the search box opens with. */
-  search?: string
   /**
    * The register is still being read.
    *
@@ -63,6 +62,8 @@ export interface EvidenceScreenProps {
    * recorded" is an answer, and a read that has not returned does not have one.
    */
   busy?: boolean
+  /** What the search box opens with. Stories draw a screen already filtered. */
+  search?: string
   /** Why the read failed, if it did. */
   problem?: unknown
   /** Asked again when *Try again* is pressed. */
@@ -166,19 +167,19 @@ export function EvidenceScreen({
    * a `reload` this screen kept to itself -- so a socket-driven invalidation
    * had no way in, and a case open on two screens quietly disagreed.
    */
-  const [rows, setRows] = useState(kase?.evidence ?? [])
-  const [given, setGiven] = useState(kase)
-  if (given !== kase) {
-    setGiven(kase)
-    setRows(kase?.evidence ?? [])
-  }
-
+  const [rows, setRows] = useCaseRows(kase, (one) => one.evidence)
   /** One write path. Omitted, the gallery answers for itself. */
   const write = writes ?? galleryWrites()
 
   const [writing, inFlight] = useInFlight()
 
   const [query, setQuery] = useState(search)
+
+  // **The analyst's place in this case, put back when they leave it.** After
+  // the filters, because a screen's filter options are counted off its rows.
+  useResetOnCase(kase, () => {
+    setQuery('')
+  })
   const [deleting, setDeleting] = useState<string[] | null>(null)
   const editor = useRowEditor<EvidenceEntry>()
   /**

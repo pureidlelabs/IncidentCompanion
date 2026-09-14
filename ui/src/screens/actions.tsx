@@ -22,6 +22,7 @@ import type { FieldToneSpec } from '@/api/specs'
 import { matchesTask } from './action-rows'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
 import { useInFlight } from '@/lib/useInFlight'
+import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
 
 /**
  * The SOC's task list for this case: what is still to be done, by whom, and
@@ -60,8 +61,6 @@ export interface ActionWrites {
 export interface ActionsScreenProps {
   kase: Case | undefined
   specs: Specs | undefined
-  /** What the search box opens with. */
-  search?: string
   /**
    * The collection is still being read.
    *
@@ -71,6 +70,8 @@ export interface ActionsScreenProps {
    * either.
    */
   busy?: boolean
+  /** What the search box opens with. Stories draw a screen already filtered. */
+  search?: string
   /** Why the read failed, if it did. */
   problem?: unknown
   /** Asked again when *Try again* is pressed. */
@@ -120,14 +121,14 @@ export function ActionsScreen({
   onRetry,
   writes,
 }: ActionsScreenProps) {
-  const [rows, setRows] = useState(kase?.actions ?? [])
-  const [given, setGiven] = useState(kase)
-  if (given !== kase) {
-    setGiven(kase)
-    setRows(kase?.actions ?? [])
-  }
-
+  const [rows, setRows] = useCaseRows(kase, (one) => one.actions)
   const [query, setQuery] = useState(search)
+
+  // **The analyst's place in this case, put back when they leave it.** After
+  // the filters, because a screen's filter options are counted off its rows.
+  useResetOnCase(kase, () => {
+    setQuery('')
+  })
   const [deleting, setDeleting] = useState<string[] | null>(null)
   const editor = useRowEditor<ActionEntry>()
 
