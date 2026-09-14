@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 474 |
-| Demonstrated | 374 |
+| Scenarios | 479 |
+| Demonstrated | 379 |
 | Undemonstrable | 1 |
 | Unbuilt | 86 |
 | Undemonstrated | 13 |
@@ -141,6 +141,11 @@
 | Reading an archive creates a case; it never overwrites one | An archive is read in | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is attributed | demonstrated | server/src/case-archive/round-trip.test.ts |
+| An archive's rows are checked against what this install can hold | An archive states a term no vocabulary defines | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
+| An archive's rows are checked against what this install can hold | An archive states a value of the wrong shape | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
+| An archive's rows are checked against what this install can hold | An archive states a value the store cannot hold | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
+| An archive's rows are checked against what this install can hold | An archive is refused after some of its rows were sound | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
+| An archive's rows are checked against what this install can hold | An archive carries a field this install does not know | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
 
 ## cases
 

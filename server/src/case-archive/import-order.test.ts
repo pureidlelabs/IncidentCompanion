@@ -13,6 +13,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { TABLES } from './import.service.js'
+import { JUDGED } from './rows.js'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { referenceFieldsOf } from '../domain/references.js'
 import { reportBlockSchema } from '../domain/entities/report.js'
@@ -76,5 +77,21 @@ describe('the order the archive importer writes tables in', () => {
     }
 
     expect(violations, 'a reference resolved before its target exists is silently lost').toEqual([])
+  })
+
+  /**
+   * **A collection the importer writes and nothing can judge goes in on
+   * trust**, which is the shape of the defect rather than a symptom of it: the
+   * loop copied every collection's rows field by field, so adding a table to
+   * `TABLES` was enough to write it unchecked. -> #625
+   */
+  it('can judge a row of every collection it writes', () => {
+    const unjudged = TABLES.map(([name]) => name).filter((name) => !JUDGED.has(name))
+
+    expect(
+      unjudged,
+      'these collections are written from an archive with nothing deciding whether the ' +
+        'rows are ones this build can mean',
+    ).toEqual([])
   })
 })
