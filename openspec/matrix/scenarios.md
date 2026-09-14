@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 492 |
-| Demonstrated | 390 |
+| Scenarios | 496 |
+| Demonstrated | 394 |
 | Undemonstrable | 1 |
 | Unbuilt | 86 |
 | Undemonstrated | 15 |
@@ -33,6 +33,10 @@
 | An account is provisioned, never self-created | Two claims arrive together | undemonstrated | |
 | An account is provisioned, never self-created | The claim is attempted twice | demonstrated | server/test/a-second-claim-is-refused-and-recorded.test.ts |
 | An account is provisioned, never self-created | A new account reaches nothing | demonstrated | server/test/a-new-account-reaches-only-the-default-customer.test.ts |
+| An address names one account, whatever case it is spelled in | An account is created in a second spelling of an address already held | demonstrated | server/test/an-account-is-administered-by-any-spelling-of-its-address.test.ts |
+| An address names one account, whatever case it is spelled in | Two administrators create the same account at the same moment | demonstrated | server/test/an-account-is-administered-by-any-spelling-of-its-address.test.ts |
+| An address names one account, whatever case it is spelled in | An account is administered by a differently cased spelling | demonstrated | server/test/an-account-is-administered-by-any-spelling-of-its-address.test.ts |
+| An address names one account, whatever case it is spelled in | A lockout is cleared | demonstrated | server/src/auth/an-address-names-one-account-whatever-its-case.test.ts |
 | Managing the install and reaching case data are separate grants | An administrator has granted themselves no data access | demonstrated | server/src/access/an-administrator-reaches-no-case-by-being-one.test.ts |
 | Managing the install and reaching case data are separate grants | An analyst with wide data access administers nothing | demonstrated | server/test/wide-reach-administers-nothing.test.ts |
 | Managing the install and reaching case data are separate grants | An administrator grants themselves access | demonstrated | server/src/access/groups.controller.test.ts |
