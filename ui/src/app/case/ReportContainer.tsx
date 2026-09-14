@@ -48,6 +48,16 @@ export function ReportContainer() {
    */
   const shown = kase.data?.reports.find((one) => one.id === open)
   const layouts = useReportLayouts(shown?.language ?? '')
+  /**
+   * **The install's own, for everything that is not the open report.** The
+   * layout chips and markings in the new-report dialog describe a report that
+   * does not exist yet, and `onCreate` names no language -- so it is made in
+   * the install's. Drawing them from the open report's pack offers Dutch
+   * section names for a report that will be English. Two keys, both cached
+   * without expiry, so the second costs one request per install language.
+   * -> #513
+   */
+  const installLayouts = useReportLayouts('')
   // **The insert menu's list comes from here, not from the bundle.** The
   // client ships a copy as a fixture, and a menu drawing it offers whatever
   // that copy last said -- which is how a kind the report renders became one
@@ -76,7 +86,7 @@ export function ReportContainer() {
       onReorder={(ids) => {
         void announced('the order', () => orderBlocks.mutateAsync({ ids }))
       }}
-      {...(layouts.data ? { languages: layouts.data.languages } : {})}
+      {...(installLayouts.data ? { languages: installLayouts.data.languages } : {})}
       headings={headingLabelsByKey(layouts.data)}
       onLanguage={(report, language) => {
         void announced('the language', () =>
@@ -90,8 +100,8 @@ export function ReportContainer() {
       }}
       reports={kase.data?.reports}
       blocks={kase.data?.reportBlocks}
-      layouts={layouts.data?.layouts}
-      markings={layouts.data?.tlp}
+      layouts={installLayouts.data?.layouts}
+      markings={installLayouts.data?.tlp}
       {...(blockKinds.data === undefined ? {} : { blockKinds: blockKinds.data })}
       {...(regimes.data ? { nis2Enabled: regimeEnabled(regimes.data, 'nis2') } : {})}
       busy={kase.isPending}
