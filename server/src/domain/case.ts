@@ -28,7 +28,7 @@
  */
 import { z } from 'zod'
 
-import { envelopeSchema, field, readStamp } from './field-spec.js'
+import { envelopeSchema, field, patchSchema, readStamp } from './field-spec.js'
 import { SEVERITY } from './vocabularies.js'
 import { VERIS_ACTIONS } from './vocabularies/compliance.js'
 
@@ -205,3 +205,26 @@ export const CASE_WRITABLE: readonly string[] = [
   ...Object.keys(caseFormSchema.shape),
   'closedAt',
 ]
+
+/**
+ * What a case PATCH may set - derived from `caseFormSchema`, so it cannot
+ * disagree with the form the Overview screen draws from `specs.case.fields`.
+ *
+ * `closedAt` is added here rather than drawn from the form: it has no control,
+ * and it is writable rather than stamped, because a closed case with no
+ * recorded time is a distinct state. -> `db/schema/case.ts`
+ *
+ * **`patchSchema`, never `.partial()`**, which leaves a `.default()` intact so
+ * that patching one field rewrites every defaulted sibling.
+ *
+ * **`rsitClass`/`rsitType` must not be added here.** They validate as a pair
+ * and go in one write; a one-field-at-a-time PATCH leaves a combination the
+ * validator refuses, so they get their own route.
+ *
+ * **Here rather than in `cases.dto.ts`, because two doors ask it.** The route
+ * is one and the evaluation build is the other, and a build judging a write by
+ * a copy is the drift `evaluation/design.md` refuses.
+ */
+export const patchCaseSchema = patchSchema(
+  caseFormSchema.extend({ closedAt: z.coerce.date().nullable() }),
+)

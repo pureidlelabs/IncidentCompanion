@@ -6,7 +6,12 @@
  * `coverage.rule.test.ts` is what makes that a decision rather than an
  * omission.
  */
-import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS, patchSchema } from '@contract/collections'
+import {
+  COLLECTION_SCHEMAS,
+  TIMELINE_WRITE_SCHEMAS,
+  patchCaseSchema,
+  patchSchema,
+} from '@contract/collections'
 
 import about from './catalogue/about.json'
 import collections from './catalogue/collections.json'
@@ -17,9 +22,6 @@ import { fromWire } from '@/api/naming'
 import type { EntitySchema } from '@/api/validateDraft'
 
 import type { DemoState } from './state'
-
-/** The case fields a PATCH may name, as the install publishes them. */
-const CASE_WRITABLE = new Set((specs as { case?: { writable?: string[] } }).case?.writable ?? [])
 
 /** What a screen is told when it asks for something only the server can do. */
 export const UNAVAILABLE = 'Not available in the demo - this one runs on the server.'
@@ -78,6 +80,16 @@ function refuseDraft(issues: readonly { path: readonly PropertyKey[]; message: s
 }
 
 /**
+ * The sentences the routes answer with, spelled as the routes spell them.
+ *
+ * A screen draws `message`, so a demo wording of its own is a demo screen of
+ * its own. -> `collections/entities.controller.ts`, `cases/cases.controller.ts`
+ */
+const NO_VERSION = 'A patch has to name the version it read.'
+const WROTE_FIRST = 'Someone else wrote this first.'
+const EMPTY_PATCH = 'A patch has to change something.'
+
+/**
  * A patch split into the version it was read at and the fields it changes.
  *
  * **`version` and `base` ride with a patch and are not part of it.** Every
@@ -103,11 +115,12 @@ function apart(body: Record<string, unknown>): {
  * draws what it would draw against a real install.
  */
 function versionProblems(version: unknown, held: unknown): Response | null {
-  if (!Number.isInteger(version)) {
-    return refuse(422, 'A patch has to name the version it read.')
-  }
+  if (!Number.isInteger(version)) return refuse(422, NO_VERSION)
   if (typeof held === 'number' && version !== held) {
-    return refuse(409, 'Somebody else has changed this since you read it.')
+    // **The route's own sentence and its `currentVersion`.** A screen meeting
+    // a conflict here renders `error.message`, so a different wording is a
+    // different screen -- which is the one thing this parity is for.
+    return json({ message: WROTE_FIRST, currentVersion: held }, 409)
   }
   return null
 }
@@ -183,6 +196,9 @@ function patch(
 
   const refused = patchProblems(collection, row, fields)
   if (refused !== null) return refused
+  // A patch of nothing advances the version and writes nothing, invalidating
+  // every open form in exchange for no change. The route refuses it.
+  if (Object.keys(fields).length === 0) return refuse(422, EMPTY_PATCH)
 
   Object.assign(row, fields, {
     updatedAt: new Date().toISOString(),
@@ -384,16 +400,11 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
       const stale = versionProblems(version, state.kase.version)
       if (stale !== null) return stale
 
-      // **The served list of writable case fields, not a schema.** A case has
-      // no single write schema to be strict against, and `specs.case.writable`
-      // is what the route judges one by. A key outside it is refused rather
-      // than written, as it is on every other collection.
-      const unknown = Object.keys(fields).filter((key) => !CASE_WRITABLE.has(key))
-      if (unknown.length > 0) {
-        return refuse(422, `A case has no ${unknown[0] ?? ''}.`)
-      }
+      const judged = patchCaseSchema.safeParse(fields)
+      if (!judged.success) return refuseDraft(judged.error.issues)
+      if (Object.keys(judged.data).length === 0) return refuse(422, EMPTY_PATCH)
 
-      Object.assign(state.kase, fields, {
+      Object.assign(state.kase, judged.data, {
         updatedAt: new Date().toISOString(),
         version: typeof state.kase.version === 'number' ? state.kase.version + 1 : 1,
       })

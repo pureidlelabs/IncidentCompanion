@@ -17,6 +17,8 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { toWire } from '@/api/naming'
+
 import { handle } from './handler'
 import { freshState, type DemoState } from './state'
 
@@ -30,10 +32,18 @@ const ask = async (path: string, init: RequestInit = {}) => {
 
 const caseId = () => state.kase.id
 
-/** A PATCH as `useEntryMutation` builds one: the version first, then the fields. */
+/**
+ * A PATCH as the client builds one: the version first, then the fields, and
+ * the whole body through `toWire`.
+ *
+ * **`toWire`, because `client.ts` applies it to every body.** A fixture that
+ * skips it sends camelCase where the app sends snake_case, and this file is
+ * named for sending what the app sends -- the encoding is invisible only
+ * because every field these cases use is one word.
+ */
 const asTheAppSends = (version: number, fields: Record<string, unknown>): RequestInit => ({
   method: 'PATCH',
-  body: JSON.stringify({ version, ...fields }),
+  body: JSON.stringify(toWire({ version, ...fields })),
 })
 
 const firstRow = async (): Promise<{ id: string; version: number }> => {
@@ -132,6 +142,75 @@ describe('a row edit in the published demo', () => {
     )
 
     expect((answer.body as { version?: number }).version).toBe(row.version + 1)
+  })
+})
+
+describe('what the demo answers a refusal with', () => {
+  /**
+   * **The route's own sentence, because a screen draws `message`.** A demo
+   * wording of its own is a demo screen of its own, which is the one thing
+   * `evaluation` asks this build not to be.
+   */
+  it('is the words an install would use for a conflict', async () => {
+    const row = await firstRow()
+
+    const answer = await ask(
+      `/cases/${caseId()}/timeline/${row.id}`,
+      asTheAppSends(row.version + 5, { description: 'Stale' }),
+    )
+
+    expect(answer.body).toMatchObject({
+      message: 'Someone else wrote this first.',
+      currentVersion: row.version,
+    })
+  })
+
+  /**
+   * **A refusal names the field, because `client.ts` reads `errors[]` before
+   * `message`** -- so a refusal without it draws a generic toast where an
+   * install draws a per-field card.
+   */
+  it('names the field a case patch got wrong', async () => {
+    const before = (await ask(`/cases/${caseId()}`)).body as { version: number }
+
+    const answer = await ask(
+      `/cases/${caseId()}`,
+      asTheAppSends(before.version, { wombat: 'no such column' }),
+    )
+
+    expect(answer.status).toBe(422)
+    expect((answer.body as { errors?: unknown[] }).errors ?? []).not.toEqual([])
+  })
+
+  /**
+   * **A value an install refuses is refused here too.** Checking the field
+   * *names* against a served list and the values against nothing is the copy
+   * `schema-identity.test.ts` refuses for every collection -- and the case is
+   * not a collection, so that sweep cannot see it.
+   */
+  it('refuses a case value no install would take', async () => {
+    const before = (await ask(`/cases/${caseId()}`)).body as { version: number }
+
+    const answer = await ask(
+      `/cases/${caseId()}`,
+      asTheAppSends(before.version, { status: 'wombat-status' }),
+    )
+
+    expect(
+      answer.status,
+      'a case state no install can produce was written, and is then served and drawn',
+    ).toBe(422)
+  })
+
+  it('refuses a patch that changes nothing, on both routes', async () => {
+    const row = await firstRow()
+    const before = (await ask(`/cases/${caseId()}`)).body as { version: number }
+
+    expect(
+      (await ask(`/cases/${caseId()}/timeline/${row.id}`, asTheAppSends(row.version, {}))).status,
+      'an empty patch advanced the version and wrote nothing, invalidating every open form',
+    ).toBe(422)
+    expect((await ask(`/cases/${caseId()}`, asTheAppSends(before.version, {}))).status).toBe(422)
   })
 })
 

@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 480 |
-| Demonstrated | 380 |
+| Scenarios | 482 |
+| Demonstrated | 382 |
 | Undemonstrable | 1 |
 | Unbuilt | 86 |
 | Undemonstrated | 13 |
@@ -313,6 +313,8 @@
 | The application can be judged without being installed | The evaluation build is judged on the product, not on a description of it | undemonstrable | The screens are the application's own because nothing replaces them; that is a property of what is substituted rather than of any answer, and somebody opening it is what shows it |
 | What it cannot honestly do, it refuses | The analyst reaches something only an install can do | demonstrated | ui/src/demo/handler.test.ts |
 | What it cannot honestly do, it refuses | A capability is added to the application | demonstrated | ui/src/demo/coverage.rule.test.ts |
+| A draft is judged as an install would judge it | The analyst types something an install would accept | demonstrated | ui/src/demo/the-demo-takes-the-body-the-app-sends.test.ts |
+| A draft is judged as an install would judge it | A write reaches a row somebody else has moved | demonstrated | ui/src/demo/the-demo-takes-the-body-the-app-sends.test.ts |
 | A draft is judged as an install would judge it | The analyst types something an install would refuse | demonstrated | ui/src/demo/handler.test.ts |
 | A draft is judged as an install would judge it | The rules an install enforces change | demonstrated | ui/src/demo/schema-identity.test.ts |
 | The visitor's work is their own, and they can discard it | Two people open the same published build | demonstrated | ui/src/demo/one-visitor-writes-reach-no-other.test.ts |
