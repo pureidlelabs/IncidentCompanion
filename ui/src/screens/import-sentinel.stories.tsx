@@ -251,12 +251,15 @@ export const DenseReview: Story = {
     candidates: manyCandidates(),
     selected: manyIncidents().map((one) => one.id),
   },
-  // The line above the listing is the claim, and a review that counted what it
-  // drew rather than what would be written is the failure it guards.
+  /**
+   * Sixty incidents selected, twenty of which produce a row: the fixture that
+   * separates what the analyst chose from what the import drew.
+   */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const summary = await canvas.findByRole('status')
-    await expect(summary.textContent).toMatch(/40 new rows and 20 merges, from 20 incidents/)
+    await expect(summary.textContent).toMatch(/40 new rows and 20 merges, from 60 incidents/)
+    await expect(summary.textContent).toMatch(/40 incidents added nothing of their own/)
   },
 }
 

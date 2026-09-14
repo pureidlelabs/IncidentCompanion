@@ -29,7 +29,13 @@ const meta = {
   title: 'Blocks/Table/Provider import review',
   component: ProviderImportReview,
   parameters: { layout: 'padded' },
-  args: { candidates: CANDIDATES, onApproved: () => undefined },
+  args: {
+    candidates: CANDIDATES,
+    // As many as the fixture names, so the ordinary case carries no
+    // clause about incidents that added nothing. -> #605
+    chosen: new Set(CANDIDATES.map((one) => one.incident)).size,
+    onApproved: () => undefined,
+  },
 } satisfies Meta<typeof ProviderImportReview>
 
 export default meta
@@ -94,6 +100,7 @@ export const PartlyProposed: Story = {
     candidates: CANDIDATES.map((one) =>
       one.verdict === 'merge' ? { ...one, checked: false } : one,
     ),
+    chosen: new Set(CANDIDATES.map((one) => one.incident)).size,
   },
   play: async ({ canvas, step }) => {
     await step('the table still shows every row it found', async () => {
@@ -116,6 +123,7 @@ export const PartlyProposed: Story = {
 export const OneOfEach: Story = {
   name: 'One row from one incident',
   args: {
+    chosen: 1,
     candidates: [
       {
         id: 'c1',
@@ -148,6 +156,7 @@ export const AllMerges: Story = {
   name: 'Nothing new, three changes',
   args: {
     candidates: CANDIDATES.slice(0, 3).map((one) => ({ ...one, verdict: 'merge' as const })),
+    chosen: new Set(CANDIDATES.slice(0, 3).map((one) => one.incident)).size,
   },
   play: async ({ canvas, step }) => {
     await step('the summary reports no writes', async () => {
@@ -163,20 +172,21 @@ export const AllMerges: Story = {
 }
 
 /**
- * The incidents carry nothing the case does not already hold.
+ * Every incident the analyst chose produced no row of its own.
  *
  * A successful import that writes nothing looks like a failure unless it says
- * otherwise, so the empty state names the reason rather than the absence.
+ * otherwise. What it can say is how many incidents were chosen and that none
+ * of them added anything -- not *why*, which the screen cannot know: an
+ * incident whose entities are all of an unsupported kind reaches here exactly
+ * as one whose rows the case already holds does.
  */
 export const NothingToAdd: Story = {
   name: 'Nothing to add',
-  args: { candidates: [] },
+  args: { candidates: [], chosen: 2 },
   play: async ({ canvas, step }) => {
-    await step('the empty state says why there is nothing', async () => {
+    await step('the empty state says what the import did, not why', async () => {
       await expect(canvas.getByText('Nothing to add')).toBeVisible()
-      await expect(
-        canvas.getByText('Every row these incidents carry is already in the case, unchanged.'),
-      ).toBeVisible()
+      await expect(canvas.getByText('2 incidents added nothing of their own.')).toBeVisible()
     })
     await step('and no summary is drawn, there being nothing to count', async () => {
       await expect(canvas.queryByRole('status')).toBeNull()
@@ -194,6 +204,7 @@ export const NothingToAdd: Story = {
 export const TooMany: Story = {
   name: 'Ninety-one rows from thirteen incidents',
   args: {
+    chosen: 13,
     candidates: [
       {
         id: 'long',
