@@ -25,6 +25,16 @@ export const EN: Record<string, string> = {
   'value.none': 'None recorded',
   'value.of': 'of',
   'value.ongoing': 'ongoing',
+  /**
+   * A span, in the four shapes `duration` prints. `{d}`, `{h}` and `{m}` are
+   * whole numbers the caller substitutes; a language that orders them
+   * differently, or needs a different word at two versus one, reorders the
+   * placeholders here rather than asking for a code change.
+   */
+  'value.duration_under_minute': '< 1 min',
+  'value.duration_minutes': '{m} min',
+  'value.duration_hours': '{h} h {m} min',
+  'value.duration_days': '{d} d {h} h',
   'value.adversary': 'Adversary',
   'value.response': 'Our response',
 

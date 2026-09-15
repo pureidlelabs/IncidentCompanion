@@ -10,6 +10,7 @@
  * and the GDPR triggers are the compliance tier's determination and arrive
  * through it; deriving them again is a second answer to one question.
  */
+import type { Translate } from './packs.js'
 import type * as vocabularies from '../../domain/vocabularies.lists.js'
 import { formatTimestamp } from './labels.js'
 import type { Cell, Node } from './model.js'
@@ -83,13 +84,19 @@ export function span(from: unknown, to: unknown): number | null {
  * reads as nothing having elapsed, which on a detection figure is the opposite
  * of the truth.
  */
-export function duration(ms: number): string {
+export function duration(ms: number, t: Translate): string {
+  const fill = (key: string, parts: Record<string, number>): string =>
+    Object.entries(parts).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+      t(key),
+    )
+
   const minutes = Math.floor(ms / 60000)
-  if (minutes < 1) return '< 1 min'
-  if (minutes < 60) return `${String(minutes)} min`
+  if (minutes < 1) return t('value.duration_under_minute')
+  if (minutes < 60) return fill('value.duration_minutes', { m: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 48) return `${String(hours)} h ${String(minutes % 60)} min`
-  return `${String(Math.floor(hours / 24))} d ${String(hours % 24)} h`
+  if (hours < 48) return fill('value.duration_hours', { h: hours, m: minutes % 60 })
+  return fill('value.duration_days', { d: Math.floor(hours / 24), h: hours % 24 })
 }
 
 /**
@@ -153,8 +160,8 @@ export function responseClocks(data: CaseData): ResponseClocks {
 export function dwellText(input: ReportInput, clocks: ResponseClocks): string | null {
   if (clocks.dwell === null) return null
   return clocks.ongoing
-    ? `${duration(clocks.dwell)} (${input.t('value.ongoing')})`
-    : duration(clocks.dwell)
+    ? `${duration(clocks.dwell, input.t)} (${input.t('value.ongoing')})`
+    : duration(clocks.dwell, input.t)
 }
 
 /**
@@ -232,7 +239,7 @@ export function metrics(input: ReportInput): Node[] {
 
   const clocks = responseClocks(data)
   if (clocks.toDetect !== null) {
-    rows.push([label(input.t('metric.time_to_detect')), { text: duration(clocks.toDetect) }])
+    rows.push([label(input.t('metric.time_to_detect')), { text: duration(clocks.toDetect, input.t) }])
   }
 
   const dwell = dwellText(input, clocks)
@@ -254,7 +261,7 @@ export function metrics(input: ReportInput): Node[] {
   // whether the incident is over.
   const age = span(data.openedAt, closedStamp(data) ?? new Date())
   if (age !== null) {
-    rows.push([label(input.t('metric.case_age')), { text: duration(age) }])
+    rows.push([label(input.t('metric.case_age')), { text: duration(age, input.t) }])
   }
 
   const coverage = containmentCoverage(systems)

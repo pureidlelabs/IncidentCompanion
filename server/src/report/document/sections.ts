@@ -212,7 +212,7 @@ export function caseHeader(input: ReportInput): Node[] {
 
   const clocks = responseClocks(data)
   if (clocks.toDetect !== null) {
-    figures.push([input.t('metric.time_to_detect'), duration(clocks.toDetect)])
+    figures.push([input.t('metric.time_to_detect'), duration(clocks.toDetect, input.t)])
   }
   const dwell = dwellText(input, clocks)
   if (dwell !== null) figures.push([input.t('metric.dwell'), dwell])
