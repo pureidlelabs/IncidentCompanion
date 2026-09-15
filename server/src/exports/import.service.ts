@@ -11,6 +11,7 @@ import { getTableColumns } from 'drizzle-orm'
 
 import { CsvInvalid, parseCsv, type CsvShape } from './csv-import.js'
 import { CollectionService } from '../collections/collection.service.js'
+import { importStamp } from '../db/import-stamp.js'
 import type { CollectionName } from '../domain/wire.js'
 import { ConflictsService } from '../collections/conflicts.service.js'
 import { REFERENCE_TABLES, TABLES, type BulkTarget } from '../collections/registry.js'
@@ -236,13 +237,7 @@ export class ImportService {
     }
 
     const schema = COLLECTION_SCHEMAS[collection]
-    /**
-     * **Five of the ten importable tables have no `source` column**, and a key
-     * naming no column is dropped by the query builder without a word -- so an
-     * unconditional stamp is silent on half of them and puts a field those
-     * tables lack into the change feed's own record of what was written.
-     */
-    const stampable = 'source' in getTableColumns(TABLES[collection])
+    const stamp = importStamp(CSV_IMPORT, TABLES[collection])
 
     /**
      * An empty cell is a value nobody gave, not an empty string - a CSV has no
@@ -278,7 +273,7 @@ export class ImportService {
       // Stamped, never read from the file: the write schemas declare no
       // `source` field, so the parse above drops whatever a file claimed.
       // -> `openspec/specs/data-exchange/spec.md`
-      return stampable ? { ...result.data, source: CSV_IMPORT } : result.data
+      return { ...result.data, ...stamp }
     })
 
     const def = { name: collection, table: TABLES[collection], orderBy: 'createdAt' }
