@@ -137,10 +137,9 @@ export interface LanguageRow {
  * A key count for a story to draw, and nothing else.
  *
  * **Not what a complete pack carries.** The install answers that on the same
- * response as the packs, and it answered 139 while this said 412. A number in
- * the bundle under that name is a claim about the product that drifts the
- * first time a string is added; this one is a fixture value the way
- * `PICKER_LANGUAGES` is.
+ * response as the packs, and the two part the moment a string is added. A
+ * number in the bundle under that name is a claim about the product; this one
+ * is a fixture value the way `PICKER_LANGUAGES` is.
  */
 export const SOME_KEY_COUNT = 139
 
