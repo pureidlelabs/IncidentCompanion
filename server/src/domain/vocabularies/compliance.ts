@@ -253,7 +253,7 @@ export const DORA_ROOT_CAUSE_DETAILED = {
     'Process failure: inadequate ICT systems acquisition, development, and maintenance',
     'process failure: other (please specify)',
   ],
-  'system failure': [
+  'system failure / malfunction': [
     'system failure: hardware capacity and performance',
     'system failure: hardware maintenance',
     'system failure: hardware obsolescence/ageing',

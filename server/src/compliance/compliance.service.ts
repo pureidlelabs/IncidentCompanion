@@ -6,7 +6,13 @@
  * analyst answers an Article 23 threshold. `read` raises the row if it is
  * missing; a request naming an unknown case answers 404.
  */
-import { Inject, Injectable, NotFoundException, Optional } from '@nestjs/common'
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+  UnprocessableEntityException,
+} from '@nestjs/common'
 import { eq } from 'drizzle-orm'
 
 import { CaseChannel } from '../live/case-channel.service.js'
@@ -18,6 +24,7 @@ import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { withCase } from '../db/scope.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
+import { unofferedTerms } from '../domain/entities/case-compliance.js'
 import { cases } from '../db/schema/case.js'
 import { customers } from '../db/schema/customer.js'
 import { isMissingParent } from '../db/missing-parent.js'
@@ -205,6 +212,24 @@ export class ComplianceService {
     const answered = Object.keys(values)
       .filter((name) => ORGANISATION_FACTS.includes(name))
       .filter((name) => !sameAnswer(values[name], before[name]))
+    /**
+     * **Judged against the row the patch lands on, not against the patch.**
+     * A dependent term is only wrong beside its parent, and a patch may carry
+     * either without the other -- so the merged view is the only thing that
+     * can answer it, and this is where both are known.
+     *
+     * A refusal rather than a silent drop: the term is a regulatory answer,
+     * and a filing naming a detailed cause from a branch its high-level cause
+     * does not offer is a wrong filing rather than an untidy one.
+     */
+    const unoffered = unofferedTerms({ ...before, ...values })
+    if (unoffered.length > 0) {
+      throw new UnprocessableEntityException({
+        message: 'a term was chosen under a parent that does not offer it',
+        unoffered,
+      })
+    }
+
     const patch = { ...values }
     if (answered.length > 0) {
       const held = await this.ownFacts(caseId)
