@@ -212,6 +212,52 @@ def test_a_source_change_owes_the_checks_that_sweep_that_tree(path: str) -> None
     assert any("pytest" in c for c in got), got
 
 
+def test_no_printed_command_is_one_a_worktree_cannot_run() -> None:
+    """**`python3` is not the interpreter the suites need.**
+
+    A worktree has no `.venv`, and `CLAUDE.md` records what the bare
+    invocation answers there: `No module named pytest`. Worktrees are where
+    the rules send parallel work, and this script is what an agent reads to
+    decide what to run -- so a command it prints has to be one that runs
+    where it is read. `scripts/venv_python.sh` is the answer `verify.sh` and
+    `test.sh` already use. -> #654
+    """
+    # **No `tests/` path here.** One sets `whole_python_tier`, whose `elif`
+    # then suppresses the repo-and-contract command -- so a list carrying one
+    # checks the agent line alone, and a half-fix leaving the other on
+    # `python3` passes. #654 named both lines.
+    printed = only([".claude/hooks/some_hook.py", "ui/src/App.tsx", "server/src/main.ts"])
+    handed_to_pytest = [c for c in printed if "-m pytest" in c]
+
+    assert len(handed_to_pytest) >= 2, handed_to_pytest
+    # Positive rather than a ban on one spelling: `python -m pytest` and a
+    # bare interpreter mid-string are the same defect, and a site added later
+    # is covered without this test being edited.
+    assert all(c.startswith(scope.PYTEST) for c in handed_to_pytest), handed_to_pytest
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "ui/src/components/blocks/report-layouts.ts",
+        "server/src/report/block-kinds.ts",
+    ],
+)
+def test_a_source_change_owes_the_contract_tier_that_reads_it_by_path(path: str) -> None:
+    """**`tests/contract` reads source across both workspaces**, because
+    neither suite can import the other -- so a change to either owes it, the
+    same way the repository checks are owed for sweeping those trees.
+
+    `test_heading_labels_agree` opens the client's layouts by path, and three
+    of the five contract modules read `server/src` -- so both workspaces are
+    asserted, not the one the issue happened to name. Following this script,
+    four contract tests went red in CI on a branch whose local tiers were all
+    green. -> #677
+    """
+    got = only([path])
+    assert any("tests/contract" in c for c in got), got
+
+
 def test_a_source_change_is_not_told_to_run_the_whole_python_tier() -> None:
     """The sweep over source, not the tier that builds containers.
 
@@ -227,7 +273,7 @@ def test_a_python_change_is_told_once_rather_than_twice() -> None:
     reader running the same checks twice."""
     got = only(["tests/repo/test_source_scan.py", "ui/src/App.tsx"])
     assert any("test.sh" in c for c in got), got
-    assert not any(c.startswith("python3 -m pytest tests/repo") for c in got), got
+    assert not any(c.startswith(f"{scope.PYTEST} tests/repo") for c in got), got
 
 
 def test_a_docstring_edit_in_the_server_does_not_summon_the_browser() -> None:
