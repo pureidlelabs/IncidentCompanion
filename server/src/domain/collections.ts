@@ -202,6 +202,32 @@ export function referencesOf(collection: string): ReferenceField[] {
 }
 
 /**
+ * Every place a row of a bulk-deletable collection can be named from.
+ *
+ * **Derived, because the hand-kept version stopped covering new columns.** Two
+ * written-out lists decided whether a selection could be deleted, and between
+ * them they named no `methods` target while nine schemas declared a reference
+ * to one -- so deleting a method blanked every column pointing at it. -> #637
+ *
+ * **Holders are every collection, targets are only the selectable ones.** A
+ * report block names its evidence and cannot itself be selected, so a walk of
+ * the selectable tables alone never looks at it; a reference to a collection
+ * nothing can select needs no check, because nothing can delete the row.
+ */
+export const REFERENCE_HOLDERS: readonly {
+  collection: Collection
+  field: string
+  target: BulkTarget
+  many: boolean
+}[] = ENTRIES.flatMap(([collection]) =>
+  referencesOf(collection)
+    .filter((one): one is ReferenceField & { target: BulkTarget } =>
+      (BULK_TARGETS as readonly string[]).includes(one.target),
+    )
+    .map((one) => ({ collection, field: one.field, target: one.target, many: one.many })),
+)
+
+/**
  * Every field name that carries a reference, across every collection.
  *
  * Names only: an id is unique across the install, so a caller remapping one

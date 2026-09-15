@@ -16,47 +16,9 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { columnOf } from '../db/column-access.js'
 import type { Database } from '../db/client.js'
 import { withCase } from '../db/scope.js'
-import { TABLES, type BulkTarget } from './registry.js'
-
-/**
- * Every column that can name a row of a given collection.
- *
- * **Written out rather than read off the foreign keys**, because half of them
- * are not foreign keys: the timeline's many-sided references are jsonb arrays,
- * which Postgres does not constrain and `getTableColumns` cannot classify.
- * Deriving the scalar half and hand-writing the array half would hide that
- * split behind something that looks complete.
- */
-const SCALAR_REFS: { table: keyof typeof TABLES; column: string; target: BulkTarget }[] = [
-  { table: 'malware', column: 'systemId', target: 'systems' },
-  { table: 'malware', column: 'accountId', target: 'accounts' },
-  { table: 'network_indicators', column: 'systemId', target: 'systems' },
-  { table: 'network_indicators', column: 'malwareId', target: 'malware' },
-  { table: 'impact', column: 'systemId', target: 'systems' },
-  { table: 'impact', column: 'accountId', target: 'accounts' },
-  { table: 'cloud_apps', column: 'accountId', target: 'accounts' },
-  { table: 'evidence', column: 'systemId', target: 'systems' },
-  { table: 'evidence', column: 'accountId', target: 'accounts' },
-  { table: 'timeline', column: 'systemId', target: 'systems' },
-  { table: 'timeline', column: 'sourceSystemId', target: 'systems' },
-]
-
-/**
- * The many-sided references, which are jsonb arrays of ids.
- *
- * **Carries its table, because the timeline is not the only one.**
- * `impact.evidenceIds` is a second, and a scan hardcoded to the timeline
- * answers *zero* for it rather than failing -- the delete then succeeds and
- * leaves a row citing evidence that is gone.
- */
-const ARRAY_REFS: { table: keyof typeof TABLES; column: string; target: BulkTarget }[] = [
-  { table: 'timeline', column: 'accountIds', target: 'accounts' },
-  { table: 'timeline', column: 'malwareIds', target: 'malware' },
-  { table: 'timeline', column: 'networkIndicatorIds', target: 'network_indicators' },
-  { table: 'timeline', column: 'cloudAppIds', target: 'cloud_apps' },
-  { table: 'timeline', column: 'evidenceIds', target: 'evidence' },
-  { table: 'impact', column: 'evidenceIds', target: 'evidence' },
-]
+import { REVIEWABLE } from './registry.js'
+import { REFERENCE_HOLDERS } from '../domain/collections.js'
+import type { BulkTarget } from '../domain/collections.js'
 
 /**
  * How many surviving rows name each id in the selection.
@@ -86,47 +48,40 @@ export async function referenceCounts(
   // of them with nothing outside this case, so a reference count cannot be
   // inflated by another customer's rows. -> `db/scope.ts`
   await withCase(db, caseId, async (tx) => {
-    for (const { table, column, target } of SCALAR_REFS) {
+    for (const { collection, field, target, many } of REFERENCE_HOLDERS) {
       const ids = byTarget.get(target)
       if (!ids?.length) continue
-      const holder = TABLES[table]
-      const ref = columnOf(holder, column)
+      const holder = REVIEWABLE[collection]
+      // A collection the registry names and this install has no table for is a
+      // wiring fault, not a row with no references: answering zero would be the
+      // silent miss this whole derivation exists to end.
+      if (!holder) throw new Error(`no table for ${collection}, which declares a reference`)
       const rowId = columnOf(holder, 'id')
-      const rows = (await tx
-        .select({ ref, id: rowId })
-        .from(holder)
-        .where(and(eq(columnOf(holder, 'caseId'), caseId), inArray(ref, ids)))) as {
-        ref: string
-        id: string
-      }[]
-      for (const row of rows) {
-        if (doomed.has(`${table}:${row.id}`)) continue
-        bump(row.ref, 1)
-      }
-    }
+      const held = columnOf(holder, field)
+      const inCase = eq(columnOf(holder, 'caseId'), caseId)
 
-    for (const { table, column, target } of ARRAY_REFS) {
-      const ids = byTarget.get(target)
-      if (!ids?.length) continue
-      const holder = TABLES[table]
-      const rowId = columnOf(holder, 'id')
-      const held = columnOf(holder, column)
+      if (!many) {
+        const rows = (await tx
+          .select({ ref: held, id: rowId })
+          .from(holder)
+          .where(and(inCase, inArray(held, ids)))) as { ref: string; id: string }[]
+        for (const row of rows) {
+          if (doomed.has(`${collection}:${row.id}`)) continue
+          bump(row.ref, 1)
+        }
+        continue
+      }
+
       for (const id of ids) {
         // `jsonb_exists`, not the `?` operator: `?` is node-postgres's own
         // placeholder character and the driver rewrites it out of the query.
         const rows = (await tx
           .select({ id: rowId })
           .from(holder)
-          .where(
-            and(
-              eq(columnOf(holder, 'caseId'), caseId),
-              sql`jsonb_exists(${held}, ${id})`,
-            ),
-          )) as { id: string }[]
-        bump(id, rows.filter((row) => !doomed.has(`${table}:${row.id}`)).length)
+          .where(and(inCase, sql`jsonb_exists(${held}, ${id})`))) as { id: string }[]
+        bump(id, rows.filter((row) => !doomed.has(`${collection}:${row.id}`)).length)
       }
     }
-
   })
 
   return counts
