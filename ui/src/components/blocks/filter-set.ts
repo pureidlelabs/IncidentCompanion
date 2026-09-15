@@ -157,7 +157,21 @@ export interface FilterSet {
  */
 export function useFilters(dimensions: readonly FilterDimension[]): FilterSet {
   const [selection, setSelection] = useState<FilterSelection>({})
+  return filterSetOf(dimensions, selection, setSelection)
+}
 
+/**
+ * A set over a selection somebody else holds.
+ *
+ * For a caller whose dimensions depend on an answer its selection asked for --
+ * the activity log counts its chips from the page the selection fetched, so
+ * the two cannot be built in one step. -> #663
+ */
+export function filterSetOf(
+  dimensions: readonly FilterDimension[],
+  selection: FilterSelection,
+  setSelection: (next: FilterSelection) => void,
+): FilterSet {
   return {
     selection,
     chosen: (key) => chosenIn(selection, key),

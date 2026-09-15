@@ -8,7 +8,7 @@
 
 import type { CaseSummary } from '@/api/case'
 import type { AccountRow } from '@/components/blocks/account-table'
-import type { AuditRow } from '@/components/blocks/activity-log'
+import type { ActivityReading, AuditRow } from '@/components/blocks/activity-log'
 import type { LibraryRow } from '@/components/blocks/library-collection'
 import { matchesWords } from '@/lib/word-match'
 
@@ -483,3 +483,32 @@ export const PICKER_CASES: readonly CaseSummary[] = [
   caseRow('6a3f7c52', 'Exposed S3 bucket', 'Northwind Freight', null, 'closed', '2026-07-18T11:47:00.000Z', false),
   caseRow('0e91d4c8', 'Worked example: ransomware campaign', 'Demo Customer', 'DEMO-0001', 'open', '2026-08-13T12:16:00.000Z', true),
 ]
+
+/**
+ * A reading whose controls do nothing.
+ *
+ * The range, the chips and the page are the pane's questions, so a screen
+ * drawn without the app has nobody to ask.
+ */
+export function inertReading(total: number): ActivityReading {
+  const nothing = () => undefined
+  return {
+    range: '7d',
+    onRange: nothing,
+    filters: {
+      selection: {},
+      chosen: () => [],
+      one: () => undefined,
+      narrowed: false,
+      applied: [],
+      clear: nothing,
+      controls: { dimensions: [], selection: {}, onChange: nothing },
+    },
+    pageNumber: 1,
+    hasPrevious: false,
+    hasNext: false,
+    onPrevious: nothing,
+    onNext: nothing,
+    total,
+  }
+}

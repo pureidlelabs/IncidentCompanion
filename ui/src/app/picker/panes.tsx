@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useCases } from '@/api/case'
 import { useImportCase } from '@/api/useImportCase'
 import { useAccounts, useAccountWrite } from '@/api/accounts'
-import { useInstallActivity, type AuditLine } from '@/api/installActivity'
+import { useInstallActivity, type AuditLine, type AuditPage, type RangeKey, type Severity } from '@/api/installActivity'
 import { announced } from '@/app/case/entryWrites'
 import { packFromFile, useLanguageRemove, useLanguageUpload, useLanguages } from '@/api/languages'
 import { useLibrary } from '@/api/library'
@@ -43,8 +43,10 @@ import { PickerTemplatesScreen } from '@/screens/picker-templates'
 
 import { ENTRY_SLUG } from '@/components/blocks/case-sections'
 
+import { chosenIn, filterSetOf, type FilterDimension, type FilterSelection } from '@/components/blocks/filter-set'
+import { FLOORS, LOG_LABEL, type ActivityReading, type AuditRow } from '@/components/blocks/activity-log'
+import { useState } from 'react'
 import type { PickerPane } from '@/components/blocks/picker-panes'
-import type { AuditRow } from '@/components/blocks/activity-log'
 import type { AccountRow } from '@/components/blocks/account-table'
 import type { LibraryRow } from '@/components/blocks/library-collection'
 import type { LanguageRow } from '@/components/blocks/picker-rows'
@@ -411,13 +413,89 @@ function auditRows(lines: readonly AuditLine[] | undefined): AuditRow[] {
   }))
 }
 
+/**
+ * The chip rows, counted over the table rather than over the page.
+ *
+ * The counts come off the page the reader returns, which counts every line the
+ * other filters admit -- a chip counting the rows on screen would say how many
+ * of fifty rather than how many there are. -> #663
+ */
+function activityFilters(page: AuditPage | undefined): FilterDimension[] {
+  const counts = page?.counts ?? {}
+  const outcomes = page?.outcomes ?? {}
+  return [
+    {
+      key: 'log',
+      label: 'Log',
+      mode: 'one',
+      options: Object.entries(counts).map(([channel, n]) => ({
+        value: channel,
+        // The counts are the server's, so a channel this build has no label
+        // for is shown by its own name rather than as a blank chip.
+        label: (LOG_LABEL as Record<string, string | undefined>)[channel] ?? channel,
+        count: n,
+      })),
+    },
+    {
+      key: 'floor',
+      label: 'Severity',
+      mode: 'one',
+      options: FLOORS.map((name) => ({ value: name })),
+    },
+    {
+      key: 'outcome',
+      label: 'Outcome',
+      mode: 'one',
+      options: Object.entries(outcomes).map(([name, n]) => ({
+        value: name,
+        label: name === 'failure' ? 'Failure' : 'Success',
+        count: n,
+      })),
+    },
+  ]
+}
+
 export function ActivityPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const analyst = useAnalyst()
   const admin = useIsAdmin()
-  const activity = useInstallActivity('all', '24h')
+  const [range, setRange] = useState<RangeKey>('7d')
+  const [selection, setSelection] = useState<FilterSelection>({})
+
+  const channel = (chosenIn(selection, 'log')[0] ?? 'all') as AuditRow['channel'] | 'all'
+  const floor = chosenIn(selection, 'floor')[0] as Severity | undefined
+  const outcome = chosenIn(selection, 'outcome')[0] as 'success' | 'failure' | undefined
+
+  const activity = useInstallActivity({
+    channel,
+    range,
+    ...(floor ? { minSeverity: floor } : {}),
+    ...(outcome ? { outcome } : {}),
+  })
+
+  const reading: ActivityReading = {
+    range,
+    onRange: (next) => {
+      setRange(next)
+      activity.reset()
+    },
+    filters: filterSetOf(activityFilters(activity.page), selection, (next) => {
+      setSelection(next)
+      // A narrower question has its own first page; keeping the cursor would
+      // ask for the page after one this answer may not contain.
+      activity.reset()
+    }),
+    pageNumber: activity.pageNumber,
+    hasPrevious: activity.hasPrevious,
+    hasNext: activity.hasNext,
+    onPrevious: activity.previous,
+    onNext: activity.next,
+    total: Object.values(activity.page?.counts ?? {}).reduce((sum, one) => sum + one, 0),
+  }
+
   return (
     <PickerActivityScreen
       audit={auditRows(activity.page?.events)}
+      reading={reading}
       busy={activity.isPending}
       analyst={analyst ?? ''}
       admin={admin}

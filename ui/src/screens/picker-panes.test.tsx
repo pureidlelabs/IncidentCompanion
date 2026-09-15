@@ -11,6 +11,7 @@ import {
   SOME_KEY_COUNT,
   PICKER_LANGUAGES,
   PICKER_TEMPLATES,
+  inertReading,
 } from '@/components/blocks/picker-rows'
 
 import { PickerAccountsScreen } from './picker-accounts'
@@ -37,6 +38,7 @@ const RAIL = {
   // Every pane is owed a body, including the three only an administrator is
   // offered a row for.
   admin: true,
+  reading: inertReading(PICKER_AUDIT.length),
   userMenu: null,
   onAbout: () => undefined,
   // The rows each pane draws. A screen that takes none ignores them, and the

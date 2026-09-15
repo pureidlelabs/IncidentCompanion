@@ -1,14 +1,29 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, screen } from 'storybook/test'
+import { expect, fn, screen } from 'storybook/test'
 
-import { ActivityLog } from '@/components/blocks/activity-log'
+import { ActivityLog, type ActivityReading } from '@/components/blocks/activity-log'
 import { PICKER_AUDIT } from '@/components/blocks/picker-rows'
 
-/**
- * Fixed, and just after the newest line in the fixture, so every preset
- * resolves to the same bound on every run.
- */
-const NOW = Date.parse('2026-08-24T15:00:00.000Z')
+/** A reading whose controls do nothing, which is what a story wants. */
+const reading: ActivityReading = {
+  range: '7d',
+  onRange: fn(),
+  filters: {
+    selection: {},
+    chosen: () => [],
+    one: () => undefined,
+    narrowed: false,
+    applied: [],
+    clear: fn(),
+    controls: { dimensions: [], selection: {}, onChange: fn() },
+  },
+  pageNumber: 1,
+  hasPrevious: false,
+  hasNext: false,
+  onPrevious: fn(),
+  onNext: fn(),
+  total: PICKER_AUDIT.length,
+}
 
 /**
  * An installation's own log: a search-and-filter toolbar, the table, and a run
@@ -19,15 +34,14 @@ const NOW = Date.parse('2026-08-24T15:00:00.000Z')
  * stories below assert the half a predicate cannot: that typing in the box
  * moves the table.
  *
- * **The range is a preset or a pair of bounds**, and either way it filters:
- * a preset is `now` less its own span, and `Custom` reveals two datetime
- * inputs and takes whichever of them is filled.
+ * **The range, the chips and the page are the pane's questions**, so this block
+ * draws them and reports a press rather than filtering what it was handed.
  */
 const meta = {
   title: 'Blocks/System/Activity log',
   component: ActivityLog,
   parameters: { layout: 'padded' },
-  args: { now: NOW },
+  args: { reading },
 } satisfies Meta<typeof ActivityLog>
 
 export default meta
@@ -87,142 +101,25 @@ export const SearchNarrowsTheTable: Story = {
 }
 
 /**
- * A preset reads the log back to its own bound and no further.
- *
- * `now` is fixed at 15:00 on the 24th, so **1 hour** keeps only the two lines
- * from 14:29 and 14:32 and drops the 13:58 one immediately before them.
+ * The range is the pane's question, so pressing a preset reports it rather than
+ * filtering the rows on screen. -> #663
  */
-export const APresetNarrowsTheRange: Story = {
-  name: 'A preset reads the log back to its own bound',
+export const APresetIsReported: Story = {
+  name: 'Choosing a range asks the pane for it',
   args: { audit: PICKER_AUDIT },
-  play: async ({ canvas, step, userEvent }) => {
+  play: async ({ args, canvas, step, userEvent }) => {
+    await step('choose a wider range', async () => {
+      await userEvent.click(canvas.getByRole('button', { name: /7 days/ }))
+      await userEvent.click(await screen.findByRole('option', { name: '30 days' }))
+    })
+
+    await expect(args.reading.onRange).toHaveBeenCalledWith('30d')
+    // The rows are whatever the pane was handed; this block no longer cuts them.
     await expect(canvas.getByText('Account locked')).toBeVisible()
-    await expect(canvas.getByText('Installation started')).toBeVisible()
-
-    await step('read back only the last hour', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: /7 days/ }))
-      await userEvent.click(await screen.findByRole('option', { name: '1 hour' }))
-    })
-
-    await expect(await canvas.findByText('Sign-in failed')).toBeVisible()
-    // 13:58, half an hour outside the window, and everything older with it.
-    await expect(canvas.queryByText('Account locked')).not.toBeInTheDocument()
-    await expect(canvas.queryByText('Installation started')).not.toBeInTheDocument()
   },
 }
 
-/**
- * `All` applies no lower bound, which is the only way to reach the oldest
- * lines once a preset has been chosen.
- */
-export const EveryLine: Story = {
-  name: 'All, which applies no bound at all',
-  args: { audit: PICKER_AUDIT },
-  play: async ({ canvas, step, userEvent }) => {
-    await step('narrow to the last hour first', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: /7 days/ }))
-      await userEvent.click(await screen.findByRole('option', { name: '1 hour' }))
-    })
-    await expect(canvas.queryByText('Installation started')).not.toBeInTheDocument()
-
-    await step('then drop the bound entirely', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: /1 hour/ }))
-      await userEvent.click(await screen.findByRole('option', { name: 'All' }))
-    })
-
-    await expect(await canvas.findByText('Installation started')).toBeVisible()
-  },
-}
-
-/**
- * `Custom` reveals a pair of bounds on the toolbar's own row.
- *
- * They are drawn only under `Custom`: two datetime pairs are the widest thing
- * on the toolbar, and they mean nothing while a preset is setting the bound.
- */
-export const ACustomRange: Story = {
-  name: 'A custom range reveals its two bounds',
-  args: { audit: PICKER_AUDIT },
-  play: async ({ canvas, step, userEvent }) => {
-    // Each half names itself; the pair draws no visible label on this row.
-    await expect(canvas.queryByRole('textbox', { name: 'From date' })).not.toBeInTheDocument()
-
-    await step('reveal the pair', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: /7 days/ }))
-      await userEvent.click(await screen.findByRole('option', { name: 'Custom' }))
-    })
-
-    await expect(await canvas.findByRole('textbox', { name: 'From date' })).toBeVisible()
-    await expect(canvas.getByRole('textbox', { name: 'To date' })).toBeVisible()
-  },
-}
-
-/**
- * Both bounds together cut a window out of the middle of the log.
- *
- * The upper bound is the half a preset never sets, and it is the one an
- * analyst reaches for when the question is what happened *before* something.
- * 13:58 survives; 14:29 and 14:32 are above the ceiling and 11:04 is below the
- * floor.
- */
-export const ACustomWindow: Story = {
-  name: 'A custom range, bounded on both sides',
-  args: { audit: PICKER_AUDIT },
-  play: async ({ canvas, step, userEvent }) => {
-    await step('reveal the pair', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: /7 days/ }))
-      await userEvent.click(await screen.findByRole('option', { name: 'Custom' }))
-    })
-
-    await step('floor it at midday and cap it at two', async () => {
-      await userEvent.type(await canvas.findByRole('textbox', { name: 'From date' }), '2026-08-24')
-      await userEvent.type(canvas.getByRole('textbox', { name: 'From time' }), '12:00')
-      await userEvent.type(canvas.getByRole('textbox', { name: 'To date' }), '2026-08-24')
-      await userEvent.type(canvas.getByRole('textbox', { name: 'To time' }), '14:00')
-    })
-
-    await expect(await canvas.findByText('Account locked')).toBeVisible()
-    await expect(canvas.queryByText('Sign-in failed')).not.toBeInTheDocument()
-    await expect(canvas.queryByText('Case opened')).not.toBeInTheDocument()
-  },
-}
-
-/**
- * A range that matches nothing is a narrowing like any other, so it says which
- * empty it is and one control undoes it.
- *
- * The range was the one narrowing control this block did not count, which left
- * an emptied table claiming nothing had ever been recorded.
- */
-export const ARangeThatMatchesNothing: Story = {
-  name: 'A range with nothing in it',
-  args: { audit: PICKER_AUDIT.slice(0, 3) },
-  play: async ({ canvas, step, userEvent }) => {
-    await step('read back an hour, from a log whose newest line is older', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: /7 days/ }))
-      await userEvent.click(await screen.findByRole('option', { name: 'Custom' }))
-      await userEvent.type(await canvas.findByRole('textbox', { name: 'From date' }), '2026-08-25')
-      await userEvent.type(canvas.getByRole('textbox', { name: 'From time' }), '00:00')
-    })
-
-    await expect(await canvas.findByText('Nothing matches those filters')).toBeVisible()
-    await expect(canvas.queryByText('Nothing recorded yet')).not.toBeInTheDocument()
-
-    await step('one control undoes it, the range included', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: /clear filters/i }))
-    })
-
-    await expect(await canvas.findByText('Sign-in failed')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: /7 days/ })).toBeVisible()
-  },
-}
-
-/**
- * The page size decides how many pages there are, and the pager walks them.
- *
- * Ten lines at twenty-five a page is one page with nowhere to go in either
- * direction; the pager says so by disabling both.
- */
+/** Fewer lines than a page holds, so the pager has nowhere to go. */
 export const OnePage: Story = {
   name: 'Fewer lines than a page holds',
   args: { audit: PICKER_AUDIT },
@@ -234,57 +131,26 @@ export const OnePage: Story = {
 }
 
 /**
- * Far more of a log than anybody reads, which is the state a running install
- * is in and the one nobody looks at.
+ * A page in the middle of a walk.
  *
- * Six hundred lines at twenty-five a page is twenty-four pages. The pager
- * walks them, the size control changes how many there are, and narrowing under
- * a reader standing on a later page puts them back on one that exists.
+ * The rows are one page of many and the counts are the table's, so the pager
+ * says where the reader is and asks the pane to move. It cannot cut the rows
+ * itself: the page after this one is a request. -> #663
  */
-export const TooMuchData: Story = {
-  name: 'Six hundred lines',
+export const APageInTheMiddle: Story = {
+  name: 'One page of many',
   args: {
-    audit: Array.from({ length: 600 }, (_, i) => ({
-      ...PICKER_AUDIT[i % PICKER_AUDIT.length]!,
-      id: `bulk-${String(i)}`,
-      // Spread back through the window an hour at a time, so the range still
-      // has something to cut.
-      at: new Date(NOW - i * 3_600_000).toISOString(),
-    })),
+    audit: PICKER_AUDIT,
+    reading: { ...reading, pageNumber: 2, hasPrevious: true, hasNext: true, total: 600 },
   },
-  play: async ({ canvas, step, userEvent }) => {
-    await expect(canvas.getByText(/Page 1 \u00b7 1\u201325 of \d+/)).toBeVisible()
-    await expect(canvas.getByRole('button', { name: /previous/i })).toBeDisabled()
-
-    await step('walk to the second page', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: /next/i }))
-    })
-    // Which twenty-five, not just how many: the second page says 26-50, so a
-    // reader who looked away knows where they are.
-    await expect(await canvas.findByText(/Page 2 \u00b7 26\u201350 of \d+/)).toBeVisible()
+  play: async ({ args, canvas, step, userEvent }) => {
+    await expect(canvas.getByText(/Page 2/)).toBeVisible()
     await expect(canvas.getByRole('button', { name: /previous/i })).toBeEnabled()
 
-    await step('take a hundred at a time instead', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: /25 per page/ }))
-      await userEvent.click(await screen.findByRole('option', { name: '100 per page' }))
-    })
-
-    // The size change returns the reader to the first page rather than to a
-    // page number that means something different now.
-    await expect(await canvas.findByText(/Page 1 \u00b7 1\u2013100 of \d+/)).toBeVisible()
-
-    await step('walk out again, then narrow from under it', async () => {
+    await step('ask for the next page', async () => {
       await userEvent.click(canvas.getByRole('button', { name: /next/i }))
-      await expect(await canvas.findByText(/Page 2/)).toBeVisible()
-      await userEvent.type(canvas.getByRole('textbox', { name: 'Activity contains' }), 'installation')
     })
-
-    // Narrowing under a reader standing on page 2 puts them on a page that
-    // exists, rather than on an empty one that reads as no matches.
-    await expect(await canvas.findByText(/Page 1/)).toBeVisible()
-    // The generated log repeats the fixture, so the match is many rows rather
-    // than one; that it is on page 1 at all is the assertion.
-    await expect(canvas.getAllByText('Installation started').length).toBeGreaterThan(0)
+    await expect(args.reading.onNext).toHaveBeenCalled()
   },
 }
 

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
-import { PICKER_AUDIT } from '@/components/blocks/picker-rows'
+import { inertReading, PICKER_AUDIT } from '@/components/blocks/picker-rows'
 import { sessionRows } from '@/fixtures/railMenus'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -9,7 +9,8 @@ import { PickerActivityScreen } from './picker-activity'
 /**
  * The picker, on Activity: the installation's own log.
  *
- * **The clock is read once, on mount.** A `Date.now()` in the render body is
+ * **The range and the page are the pane's questions**, so these stories hand
+ * the log a reading whose controls do nothing. What was
  * impure, and a relative time that shifts because the pane happened to
  * re-render is a different number for no reason the analyst caused. A caller
  * that wants a fixed one passes `now`, which is what these stories do -- a log
@@ -31,6 +32,7 @@ const meta = {
     ),
   ],
   args: {
+    reading: inertReading(PICKER_AUDIT.length),
     analyst: 'r.okonkwo',
     admin: true,
     audit: PICKER_AUDIT,
@@ -44,7 +46,7 @@ type Story = StoryObj<typeof meta>
 
 /** The log, read against a fixed clock so the story says the same thing twice. */
 export const Default: Story = {
-  args: { now: Date.parse('2026-03-14T12:00:00Z') },
+  args: {},
   play: async ({ canvas, step }) => {
     await step('the rail is lit on this pane and no other', async () => {
       await expect(canvas.getByTestId('picker-row-activity')).toHaveAttribute(
@@ -71,7 +73,7 @@ export const Default: Story = {
  */
 export const Absent: Story = {
   name: 'Nothing logged yet',
-  args: { audit: undefined, now: Date.parse('2026-03-14T12:00:00Z') },
+  args: { audit: undefined },
   play: async ({ canvas, step }) => {
     await step('the pane draws rather than breaking on the absent log', async () => {
       await expect(canvas.getByTestId('picker-row-activity')).toBeVisible()
