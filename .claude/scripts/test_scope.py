@@ -19,6 +19,12 @@ against the stack `dev-node.sh` runs.
 
 `--landing` reads the branch rather than the working tree, and widens nothing:
 a `.claude`-only branch does not owe the server suite because it is landing.
+
+**Every command it prints is run from the repository root**, which is where the
+paths in them resolve -- `tests/repo`, `.claude/tests`, `./test.sh` and the
+interpreter helper alike. The script itself answers from anywhere, so nothing
+stops a reader running it in `server/` and pasting a line that cannot work
+there.
 """
 
 from __future__ import annotations
@@ -286,8 +292,10 @@ def _redis_port() -> int | None:
         except ValueError:
             return None
     try:
-        # Relative, as every git call in this file is: the script is run from
-        # the repository root and says so by failing there if it is not.
+        # Relative, as every path in this file is. Run from anywhere but the
+        # repository root this resolves to `server/server`, raises, and is
+        # caught below as "no stack" -- so the tool answers rather than
+        # complaining, and the commands it prints are root-relative too.
         out = subprocess.run(["node", "scripts/stack.mjs", "--json"],
                              cwd="server", capture_output=True, text=True, timeout=60)
         return int(json.loads(out.stdout)["redisPort"]) if out.returncode == 0 else None
