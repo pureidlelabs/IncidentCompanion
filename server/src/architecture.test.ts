@@ -212,7 +212,9 @@ const MAY_IMPORT: Record<string, string[]> = {
    * constants, so it agreed with the code while both disagreed with the
    * setting an operator had changed. -> #588
    */
-  health: ['config', 'db', 'domain', 'policy'],
+  // `auth` for `AdminOnly` on the two telemetry routes alone: what the install
+  // is made of is an operator's, and the liveness probe beside them stays open.
+  health: ['config', 'db', 'domain', 'policy', 'auth'],
   spa: ['config'],
   test: ['db', 'config'],
 }

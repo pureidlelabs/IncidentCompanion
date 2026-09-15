@@ -28,6 +28,8 @@ import { z } from 'zod'
 import { countingNumber } from '../column-bounds.js'
 import { field, readStamp } from '../field-spec.js'
 import {
+  DORA_ROOT_CAUSE_ADDITIONAL,
+  DORA_ROOT_CAUSE_DETAILED,
   DORA_ROOT_CAUSE_HIGH,
   DORA_THREAT_TECHNIQUES,
   EU_MEMBER_STATES,
@@ -56,6 +58,72 @@ const ground = () => z.enum(['yes', 'no']).nullable().default(null)
 
 const values = <T extends readonly { value: string }[]>(list: T) =>
   list.map((one) => one.value) as [string, ...string[]]
+
+/**
+ * The compliance vocabularies that are a branch of another field's answer.
+ *
+ * `offers` is keyed by a term of `parent`, so the terms `child` may hold are
+ * the ones the chosen parents open onto and nothing else.
+ *
+ * **Not derived from `enabledBy`.** That says which *checkbox* makes a field
+ * usable, which five fields here use it for; these three are a different
+ * relationship wearing the same word, and reading one as the other would put a
+ * vocabulary check on a boolean.
+ */
+const BRANCHES: readonly {
+  child: string
+  parent: string
+  offers: Readonly<Record<string, readonly string[]>>
+}[] = [
+  {
+    child: 'doraRootCauseDetailed',
+    parent: 'doraRootCauseHigh',
+    offers: DORA_ROOT_CAUSE_DETAILED,
+  },
+  {
+    child: 'doraRootCauseAdditional',
+    parent: 'doraRootCauseDetailed',
+    offers: DORA_ROOT_CAUSE_ADDITIONAL,
+  },
+]
+
+/** One term held under a parent that does not offer it. */
+export interface UnofferedTerm {
+  field: string
+  term: string
+}
+
+/**
+ * Every dependent term in this row whose parent opens onto no such branch.
+ *
+ * Takes the whole row, because a pair is the only thing that can be wrong: a
+ * field schema is handed one value and both terms are real on their own.
+ *
+ * **A parent holding nothing is skipped rather than refused.** The child is
+ * disabled on screen until the parent is answered, so an unanswered parent is
+ * an incomplete filing rather than a contradictory one -- and refusing it
+ * would make an existing row unwritable instead of telling anybody why.
+ *
+ * **Called by each write door rather than attached to `caseComplianceSchema`.**
+ * A refinement on that object is refused by `.omit()`, which `demos/catalogue`
+ * uses on it -- and it would not reach the door that matters anyway, since
+ * `patchSchema` rebuilds a fresh object from `.shape` and a patch may carry
+ * the child without the parent. The pair is only knowable once the patch is
+ * merged onto the stored row.
+ */
+export function unofferedTerms(row: Record<string, unknown>): UnofferedTerm[] {
+  const found: UnofferedTerm[] = []
+  for (const branch of BRANCHES) {
+    const held = row[branch.child]
+    const parents = row[branch.parent]
+    if (!Array.isArray(held) || !Array.isArray(parents) || parents.length === 0) continue
+    const offered = new Set(parents.flatMap((one) => branch.offers[String(one)] ?? []))
+    for (const term of held) {
+      if (!offered.has(String(term))) found.push({ field: branch.child, term: String(term) })
+    }
+  }
+  return found
+}
 
 export const caseComplianceSchema = z.object({
   /** One code. Which state's authority leads. */
