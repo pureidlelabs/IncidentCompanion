@@ -105,7 +105,9 @@ The size of what an archive claims to hold MUST be bounded before it is read, so
 
 Reading an archive MUST produce a new case. It MUST NOT be a way to write into a case that already exists, and MUST NOT be a way to replace one.
 
-Nothing carried by an archive MUST be able to decide what the new case is called internally, who is recorded as having written its rows, or what version they are at. An archive is data from outside the install, and letting it name those things would let it collide with, or impersonate, what the install already holds.
+Nothing carried by an archive MUST be able to decide what the new case is called internally, who is recorded as having written its rows, what version they are at, or where they came from. An archive is data from outside the install, and letting it name those things would let it collide with, or impersonate, what the install already holds.
+
+Where a row came from MUST be recorded as the archive, rather than as whatever the archive says a row came through on the install that wrote it. A row an analyst typed elsewhere did not arrive here by being typed, and a timeline entry somebody read elsewhere has not been read here — so an archive read in MUST leave its entries marked unreviewed, as any other import does.
 
 The analyst reading the archive in MUST be recorded as having brought it in, so a case that arrived from elsewhere is attributable to the person who put it there.
 
@@ -128,6 +130,13 @@ The analyst reading the archive in MUST be recorded as having brought it in, so 
 - GIVEN an analyst reading an archive in
 - WHEN the case is created
 - THEN they are recorded as having brought it in
+
+#### Scenario: An archive states where its rows came from
+
+- GIVEN an archive whose rows say they were found by a platform and read by an analyst
+- WHEN it is read in
+- THEN the new case's rows say they came from an archive
+- AND its timeline entries are marked unreviewed
 
 ### Requirement: An archive's rows are checked against what this install can hold
 
