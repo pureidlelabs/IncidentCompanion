@@ -32,7 +32,14 @@ import {
 } from '../db/schema/index.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { actions, caseNotes } from '../db/schema/tracker.js'
-import { BULK_TARGETS, type BulkTarget, type Collection } from '../domain/collections.js'
+import {
+  BULK_TARGETS,
+  COLLECTIONS,
+  referencesOf,
+  type BulkTarget,
+  type Collection,
+} from '../domain/collections.js'
+import type { ReferenceField } from '../domain/references.js'
 
 const TABLE_OF: Record<Collection, PgTable> = {
   systems,
@@ -79,3 +86,34 @@ export const REFERENCE_TABLES: Readonly<Record<string, PgTable>> = {
 }
 
 export { BULK_TARGETS, COLLECTIONS, type BulkTarget, type Collection } from '../domain/collections.js'
+
+/**
+ * Every place a row of a bulk-deletable collection can be named from.
+ *
+ * **Derived, because the hand-kept version stopped covering new columns.** Two
+ * written-out lists decided whether a selection could be deleted, and between
+ * them they named no `methods` target while nine schemas declared a reference
+ * to one -- so deleting a method blanked every column pointing at it. -> #637
+ *
+ * **Holders are every collection, targets are only the selectable ones.** A
+ * report block names its evidence and cannot itself be selected, so a walk of
+ * the selectable tables alone never looks at it; a reference to a collection
+ * nothing can select needs no check, because nothing can delete the row.
+ */
+export const REFERENCE_HOLDERS: readonly {
+  collection: Collection
+  field: string
+  target: BulkTarget
+  many: boolean
+}[] = Object.keys(COLLECTIONS).flatMap((collection) =>
+  referencesOf(collection)
+    .filter((one): one is ReferenceField & { target: BulkTarget } =>
+      (BULK_TARGETS as readonly string[]).includes(one.target),
+    )
+    .map((one) => ({
+      collection: collection as Collection,
+      field: one.field,
+      target: one.target,
+      many: one.many,
+    })),
+)

@@ -13,11 +13,13 @@ import type { z } from 'zod'
 import {
   BULK_TARGETS,
   COLLECTIONS,
+  REFERENCE_HOLDERS,
   REFERENCE_TABLES,
   REVIEWABLE,
   TABLES,
   type Collection,
 } from './registry.js'
+import { columnOf } from '../db/column-access.js'
 import {
   COLLECTION_SCHEMAS,
   IMPORTABLE,
@@ -104,6 +106,40 @@ describe('every map is a total slice of the registry', () => {
       (name) => !(name in COLLECTIONS),
     )
     expect(strays, 'a camelCase key here falls through to the wire spelling').toEqual([])
+  })
+})
+
+/**
+ * **`many` decides the SQL, so it is held to the column rather than trusted.**
+ *
+ * The reference check sends `inArray` at a single-valued column and
+ * `jsonb_exists` at a list one, and takes which from the schema: a field is
+ * list-valued if it accepts the empty list. That is true of every reference
+ * declared today because they are all written the same two ways, and nothing
+ * makes the next one follow. A required multi-select (`refs().min(1)`) reads
+ * as single-valued and sends `inArray` at jsonb; a scalar wrapped in
+ * `.catch(null)` reads as list-valued and sends `jsonb_exists` at a uuid.
+ * Either is a 500 on the delete path rather than a miscount, and neither is
+ * visible in the declaration.
+ */
+describe('a reference field says which shape it is', () => {
+  it('agrees with the column the query is sent at', () => {
+    const wrong = REFERENCE_HOLDERS.flatMap(({ collection, field, many }) => {
+      const column = columnOf(REVIEWABLE[collection]!, field)
+      const isJsonb = column.columnType === 'PgJsonb'
+      return many === isJsonb ? [] : [`${collection}.${field}: many=${String(many)} column=${column.columnType}`]
+    })
+
+    expect(
+      wrong,
+      'the reference check would send list SQL at a single column, or the reverse',
+    ).toEqual([])
+  })
+
+  it('finds the fields to check, so an empty walk cannot pass', () => {
+    expect(REFERENCE_HOLDERS.length).toBeGreaterThan(20)
+    expect(REFERENCE_HOLDERS.some((one) => one.many)).toBe(true)
+    expect(REFERENCE_HOLDERS.some((one) => !one.many)).toBe(true)
   })
 })
 

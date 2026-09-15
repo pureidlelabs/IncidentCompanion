@@ -19,7 +19,25 @@ export interface ReferenceField {
   readonly field: string
   /** The collection it points at, in the spelling `refTarget` uses. */
   readonly target: string
+  /**
+   * Whether it holds a list of ids rather than one.
+   *
+   * The column shape follows: a list is `jsonb` that Postgres does not
+   * constrain, a single one is a `uuid` with a foreign key. A caller asking
+   * *which rows name this id* needs different SQL for each.
+   */
+  readonly many: boolean
 }
+
+/**
+ * Asked of the schema rather than read off its internals.
+ *
+ * A list-valued field accepts the empty list and a single-valued one does not,
+ * which is a question about behaviour; `_def.innerType.type` answers the same
+ * thing by reaching into zod's private shape, and this tree's rule is that a
+ * version is looked up rather than recalled.
+ */
+const holdsMany = (schema: z.ZodType): boolean => schema.safeParse([]).success
 
 /** Every reference field on a schema, in declaration order. */
 export function referenceFieldsOf(schema: z.ZodObject): ReferenceField[] {
@@ -29,7 +47,7 @@ export function referenceFieldsOf(schema: z.ZodObject): ReferenceField[] {
     // is what left `report_blocks.reportId` unchecked.
     const meta = sub as z.ZodType
     const target = fields.get(meta)?.refTarget ?? identityReferences.get(meta)?.refTarget
-    return target ? [{ field, target }] : []
+    return target ? [{ field, target, many: holdsMany(meta) }] : []
   })
 }
 

@@ -65,6 +65,7 @@ describe('a report block', () => {
     expect(referenceFieldsOf(reportBlockSchema)).toContainEqual({
       field: 'evidenceId',
       target: 'evidence',
+      many: false,
     })
   })
 
@@ -84,6 +85,7 @@ describe('a report block', () => {
     expect(referenceFieldsOf(resolved!)).toContainEqual({
       field: 'evidenceId',
       target: 'evidence',
+      many: false,
     })
   })
 
