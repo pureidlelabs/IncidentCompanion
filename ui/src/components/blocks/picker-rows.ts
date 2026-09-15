@@ -7,17 +7,17 @@
  */
 
 import type { CaseSummary } from '@/api/case'
-import type { AccountRow } from '@/components/blocks/account-table'
+import type { AccountTableRow } from '@/components/blocks/account-table'
 import type { ActivityReading, AuditRow } from '@/components/blocks/activity-log'
 import type { LibraryRow } from '@/components/blocks/library-collection'
 import { matchesWords } from '@/lib/word-match'
 
-/** A roster carrying every state the chip has a tone for. */
-export const PICKER_ACCOUNTS: readonly AccountRow[] = [
+/** A roster carrying both states an account is served in. */
+export const PICKER_ACCOUNTS: readonly AccountTableRow[] = [
   { id: 'a1', username: 'r.okonkwo', displayName: 'Rachel Okonkwo', role: 'admin', state: 'active' },
   { id: 'a2', username: 't.brennan', displayName: 'Tomas Brennan', role: 'analyst', state: 'active' },
   { id: 'a3', username: 's.iqbal', displayName: 'Sana Iqbal', role: 'analyst', state: 'active' },
-  { id: 'a4', username: 'm.delacroix', displayName: 'Margot Delacroix', role: 'analyst', state: 'locked out' },
+  { id: 'a4', username: 'm.delacroix', displayName: 'Margot Delacroix', role: 'analyst', state: 'disabled' },
   { id: 'a5', username: 'd.novak', displayName: '', role: 'analyst', state: 'disabled' },
 ]
 

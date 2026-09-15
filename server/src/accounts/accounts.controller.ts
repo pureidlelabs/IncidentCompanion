@@ -30,7 +30,8 @@ import type { IncomingHttpHeaders } from 'node:http'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
-import { ADMIN_ROLE, DEFAULT_ROLE, ROLES, type Auth } from '../auth/auth.config.js'
+import { ACCOUNT_STATES, ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
+import { type Auth } from '../auth/auth.config.js'
 import { PasswordHoldService } from '../auth/password-hold.service.js'
 import { LockoutClearService } from '../auth/lockout-clear.service.js'
 import { duplicateEmail, rowFor } from './rules.js'
@@ -107,7 +108,7 @@ const accountRowSchema = z.object({
   username: z.string(),
   displayName: z.string(),
   role: z.enum(ROLES),
-  state: z.enum(['active', 'disabled']),
+  state: z.enum(ACCOUNT_STATES),
   tone: z.enum(['positive', 'negative']),
   disabled: z.boolean(),
 })

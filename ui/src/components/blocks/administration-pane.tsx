@@ -1,6 +1,6 @@
 import { ArrowUpRight } from 'lucide-react'
 
-import { AccountTable, type AccountRow } from '@/components/blocks/account-table'
+import { AccountTable, type AccountTableRow } from '@/components/blocks/account-table'
 import { AbsentRow, SettingsRow, SettingsSection } from '@/components/blocks/settings-section'
 import { Button } from '@/components/ui/button'
 import { ListBoxItem } from '@/components/ui/list-box'
@@ -15,9 +15,9 @@ import {
 import { Section } from './section'
 
 export interface AdministrationPaneProps {
-  accounts: readonly AccountRow[]
+  accounts: readonly AccountTableRow[]
   /** Enabling or disabling one account. The caller owns the roster. */
-  onAccountState: (id: string, state: AccountRow['state']) => void
+  onAccountState: (id: string, state: AccountTableRow['state']) => void
   /** How long each kind of record is kept. */
   audit: readonly BoundRow[] | undefined
   /** The regimes this install surfaces, and whether each is on. */

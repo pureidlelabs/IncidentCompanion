@@ -12,7 +12,7 @@ import { eq } from 'drizzle-orm'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { user } from '../db/schema/auth.js'
-import { ADMIN_ROLE } from './auth.config.js'
+import { ADMIN_ROLE } from '../domain/analyst-account.js'
 import type { Analyst } from './last-admin.js'
 import { sameAddress } from './same-address.js'
 

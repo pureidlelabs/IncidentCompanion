@@ -12,7 +12,7 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
-import { ADMIN_ROLE } from '../auth/auth.config.js'
+import { ADMIN_ROLE } from '../domain/analyst-account.js'
 import { CustomersController } from './customers.controller.js'
 import { CustomersService } from './customers.service.js'
 import { SETTABLE_FACTS } from './customers.controller.js'

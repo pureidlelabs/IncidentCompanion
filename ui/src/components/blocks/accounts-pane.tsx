@@ -1,13 +1,13 @@
-import { AccountTable, accountCountLine, type AccountRow } from '@/components/blocks/account-table'
+import { AccountTable, accountCountLine, type AccountTableRow } from '@/components/blocks/account-table'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
 
 export interface AccountsPaneProps {
-  accounts: readonly AccountRow[]
+  accounts: readonly AccountTableRow[]
   /** Opens the mint-an-account door. Required: the control is not decoration. */
   onNewAccount: () => void
   /** Enabling or disabling one account. The caller owns the roster. */
-  onState: (id: string, state: AccountRow['state']) => void
+  onState: (id: string, state: AccountTableRow['state']) => void
 }
 
 export function AccountsPane({ accounts, onNewAccount, onState }: AccountsPaneProps) {

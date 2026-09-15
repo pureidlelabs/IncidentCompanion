@@ -5,7 +5,7 @@
  * Asked by the disable and role routes in `accounts`, each of which resolves
  * the account first so the rule is asked about a value the method holds.
  */
-import { ADMIN_ROLE, DEFAULT_ROLE } from './auth.config.js'
+import { ADMIN_ROLE, DEFAULT_ROLE } from '../domain/analyst-account.js'
 
 export interface Analyst {
   id: string

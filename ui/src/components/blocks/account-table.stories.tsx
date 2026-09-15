@@ -4,7 +4,7 @@ import { expect, fn, screen, within } from 'storybook/test'
 
 import {
   AccountTable,
-  type AccountRow,
+  type AccountTableRow,
   type AccountTableProps,
 } from '@/components/blocks/account-table'
 import { PICKER_ACCOUNTS } from '@/components/blocks/picker-rows'
@@ -134,11 +134,9 @@ export const TabAndSearchCompose: Story = {
   },
 }
 
-/** One of the three states, by position, so the generated roster holds all of them. */
-function stateFor(i: number): AccountRow['state'] {
-  if (i % 3 === 1) return 'disabled'
-  if (i % 3 === 2) return 'locked out'
-  return 'active'
+/** Both states, by position, so the generated roster holds each of them. */
+function stateFor(i: number): AccountTableRow['state'] {
+  return i % 3 === 1 ? 'disabled' : 'active'
 }
 
 /**
