@@ -44,8 +44,8 @@ const TABLES = [
 ]
 const DATABASE = [{ size: '10344127', connections: '3', max: '100' }]
 const CASES = [
-  { status: 'open', is_demo: false, count: '4' },
-  { status: 'open', is_demo: true, count: '6' },
+  { status: 'respond', is_demo: false, count: '4' },
+  { status: 'recover', is_demo: true, count: '6' },
   { status: 'closed', is_demo: false, count: '2' },
 ]
 const ACCOUNTS = [
@@ -88,13 +88,14 @@ describe('what the install is holding', () => {
    */
   it.each([
     ['a fresh install, mostly demos', CASES],
-    ['no demonstration content at all', [{ status: 'open', is_demo: false, count: '9' }]],
-    ['nothing but demonstration content', [{ status: 'open', is_demo: true, count: '7' }]],
+    ['no demonstration content at all', [{ status: 'respond', is_demo: false, count: '9' }]],
+    ['nothing but demonstration content', [{ status: 'respond', is_demo: true, count: '7' }]],
     [
       'both kinds, both states',
       [
-        { status: 'open', is_demo: false, count: '3' },
-        { status: 'open', is_demo: true, count: '5' },
+        { status: 'respond', is_demo: false, count: '3' },
+        { status: 'recover', is_demo: true, count: '5' },
+        { status: 'post_incident', is_demo: false, count: '4' },
         { status: 'closed', is_demo: false, count: '11' },
         { status: 'closed', is_demo: true, count: '2' },
       ],
@@ -103,9 +104,10 @@ describe('what the install is holding', () => {
     const { db } = scripted([TABLES, DATABASE, rows, ACCOUNTS])
     const { cases } = await new ActivityController(db, CONFIG).read()
 
-    expect(cases.open + cases.closed, 'a case is neither open nor closed, or is both').toBe(
-      cases.total,
-    )
+    expect(
+      cases.live + cases.postIncident + cases.closed,
+      'a case is in none of the three buckets, or in more than one',
+    ).toBe(cases.total)
     expect(
       cases.demo,
       'more cases are demonstration content than exist, so `demo` counts a different ' +

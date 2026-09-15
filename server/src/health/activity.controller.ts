@@ -17,6 +17,7 @@ import type { Database } from '../db/client.js'
 import type { Env } from '../config/env.js'
 import { whereIs } from './where.js'
 import { AdminOnly } from '../auth/admin-only.js'
+import { LIVE_STATES, type CaseStatus } from '../domain/case.js'
 
 export const activitySchema = z.object({
   database: z.object({
@@ -48,7 +49,9 @@ export const activitySchema = z.object({
   ),
   cases: z.object({
     total: z.number().int(),
-    open: z.number().int(),
+    /** The states where the incident is still running, which excludes write-up. */
+    live: z.number().int(),
+    postIncident: z.number().int(),
     closed: z.number().int(),
     /** Counted apart: nearly every case on a fresh install is a demo. */
     demo: z.number().int(),
@@ -144,10 +147,19 @@ export class ActivityController {
         approximateRows: count(row.rows),
         bytes: count(row.bytes),
       })),
+      /**
+       * **Live is the states where the incident is still running**, which is
+       * not the same as the ones that are not closed: a case in write-up is
+       * over as an incident and outstanding as work, and counting it as live
+       * is what the state exists to stop. -> `domain/case.ts`
+       */
       cases: {
         total: caseRows.reduce((sum, row) => sum + count(row.count), 0),
-        open: caseRows
-          .filter((row) => row.status === 'open')
+        live: caseRows
+          .filter((row) => LIVE_STATES.includes(row.status as CaseStatus))
+          .reduce((sum, row) => sum + count(row.count), 0),
+        postIncident: caseRows
+          .filter((row) => row.status === 'post_incident')
           .reduce((sum, row) => sum + count(row.count), 0),
         closed: caseRows
           .filter((row) => row.status === 'closed')

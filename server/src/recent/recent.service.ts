@@ -13,7 +13,7 @@ import { and, desc, eq, isNull, notInArray, sql } from 'drizzle-orm'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { caseVisits } from '../db/schema/case-visits.js'
-import { cases } from '../db/schema/case.js'
+import { caseStatus, cases } from '../db/schema/case.js'
 import { z } from 'zod'
 
 /**
@@ -31,7 +31,10 @@ export const recentCaseSchema = z.object({
   title: z.string(),
   reference: z.string().nullable(),
   customer: z.string().nullable(),
-  status: z.enum(['open', 'closed']),
+  // **The states the column itself declares.** `recent/` may reach `db/`
+  // and not `domain/`, and a second list written here is the one that
+  // would drift. -> `architecture.test.ts`
+  status: z.enum(caseStatus.enumValues),
   section: z
     .string()
     .nullable()
