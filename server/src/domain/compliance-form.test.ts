@@ -15,6 +15,8 @@ import { describe, expect, it } from 'vitest'
 
 import { caseCompliance } from '../db/schema/case-compliance.js'
 import { COMPLIANCE, complianceFieldNames } from './compliance-form.js'
+import { caseComplianceSchema } from './entities/case-compliance.js'
+import { formSpec } from './field-spec.js'
 
 /** Python's spelling to the column's, the same conversion the client applies. */
 function toCamel(name: string): string {
@@ -70,5 +72,36 @@ describe('the compliance forms', () => {
       .filter((field) => field.computed_from !== undefined)
     expect(computed.length).toBeGreaterThan(0)
     for (const field of computed) expect(field.options).toBeUndefined()
+  })
+
+  /**
+   * The other direction, and the one that had drifted.
+   *
+   * `formSpec` projects every field declared with `field()` -- which is what
+   * "meant to be drawn" means for every other collection -- so a field the
+   * schema validates and no card draws is a control an analyst cannot reach.
+   * It validates, it stores, and no screen offers it.
+   *
+   * **The sibling above cannot see this.** It walks the served names looking
+   * for a column, so a field missing from the form is missing from its walk
+   * too, and the absence reads as nothing to check.
+   *
+   * **Counted over the forms a card names, not over `forms`.** `ALL_FIELDS`
+   * holds every field and no card reaches it, so a field sitting only there
+   * is served by this document and drawn by nothing -- which is the state
+   * being tested for, and `complianceFieldNames()` would report it as served.
+   */
+  it('draws every field the schema declares a control for', () => {
+    const drawn = new Set(
+      COMPLIANCE.cards
+        .flatMap((card) => [card.form, card.form_off])
+        .filter((form): form is string => form !== null)
+        .flatMap((form) => COMPLIANCE.forms[form]?.fields.map((one) => toCamel(one.name)) ?? []),
+    )
+    const unreachable = formSpec(caseComplianceSchema)
+      .map((field) => field.name)
+      .filter((name) => !drawn.has(name))
+
+    expect(unreachable, 'these validate and store, and no card draws them').toEqual([])
   })
 })
