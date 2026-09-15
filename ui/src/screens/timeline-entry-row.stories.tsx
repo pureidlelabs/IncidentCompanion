@@ -37,7 +37,7 @@ const ACTION: TimelineEntry = {
   time: '2026-08-24T09:30:00Z',
   timeAssumed: false,
   description: 'Isolated the host from the network',
-  actionType: 'containment',
+  actionType: 'containment action',
   systemId: 's1',
   sourceSystemId: '',
   accountIds: [],

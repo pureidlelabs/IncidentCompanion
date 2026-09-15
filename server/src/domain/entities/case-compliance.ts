@@ -39,6 +39,10 @@ import {
   NIS2_SIGNIFICANCE,
   NIS2_SUSPICION,
 } from '../vocabularies/compliance.js'
+import {
+  doraRootCauseAdditionalSchema,
+  doraRootCauseDetailedSchema,
+} from '../vocabularies.js'
 
 const text = (max: number) => z.string().trim().max(max).default('')
 const moment = () => readStamp().nullable().default(null)
@@ -319,13 +323,13 @@ export const caseComplianceSchema = z.object({
     kind: 'select',
     vocabulary: 'doraRootCauseHigh',
   }),
-  doraRootCauseDetailed: field(z.array(z.string().trim().max(200)).default([]), {
+  doraRootCauseDetailed: field(z.array(doraRootCauseDetailedSchema).default([]), {
     label: 'Root cause (detailed)',
     kind: 'multi_device_select',
     vocabulary: 'doraRootCauseDetailed',
     enabledBy: 'doraRootCauseHigh',
   }),
-  doraRootCauseAdditional: field(z.array(z.string().trim().max(200)).default([]), {
+  doraRootCauseAdditional: field(z.array(doraRootCauseAdditionalSchema).default([]), {
     label: 'Root cause (additional)',
     kind: 'multi_device_select',
     vocabulary: 'doraRootCauseAdditional',

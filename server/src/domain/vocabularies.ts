@@ -10,6 +10,7 @@ import { z } from 'zod'
 
 export * from './vocabularies.lists.js'
 import * as lists from './vocabularies.lists.js'
+import * as compliance from './vocabularies/compliance.js'
 
 export const severitySchema = z.enum(lists.SEVERITY)
 export type Severity = z.infer<typeof severitySchema>
@@ -105,3 +106,32 @@ export function optionalChoice<T extends readonly [string, ...string[]]>(values:
     )
     .default(null)
 }
+
+/**
+ * Every term a dependent vocabulary offers, across every parent that offers it.
+ *
+ * A dependent list is keyed by the value of the field that enables it, so what
+ * the child may hold is the union of the branches. **Pairing a term with the
+ * parent that offers it is a stronger check and not this one**: a schema sees
+ * one field, and the pair needs the whole object. -> #701
+ *
+ * Throws where the list is empty, because an enum of nothing refuses every
+ * write including the ones the form offers.
+ */
+function everyTerm(offered: readonly (readonly string[])[]): [string, ...string[]] {
+  const [first, ...rest] = [...new Set(offered.flat())]
+  if (first === undefined) throw new Error('a vocabulary offering no term cannot fix a field')
+  return [first, ...rest]
+}
+
+export const rsitTypeSchema = z.enum(
+  everyTerm(Object.values(compliance.RSIT_TYPES).map((types) => types.map((one) => one.value))),
+)
+
+export const doraRootCauseDetailedSchema = z.enum(
+  everyTerm(Object.values(compliance.DORA_ROOT_CAUSE_DETAILED)),
+)
+
+export const doraRootCauseAdditionalSchema = z.enum(
+  everyTerm(Object.values(compliance.DORA_ROOT_CAUSE_ADDITIONAL)),
+)

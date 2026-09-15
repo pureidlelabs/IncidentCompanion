@@ -11,39 +11,51 @@
  *
  * **Asked of the schema rather than read off the source.** The tag and the type
  * sit on one declaration, so a grep can find the pair but only parsing can say
- * whether the type fixes the list. This walks the registry `field()` writes to
+ * whether the type fixes the list. This walks every schema a write is judged by
  * and offers each tagged field a term nothing defines.
  *
  * **What this does not cover:** whether the served list and the enum hold the
- * same terms, which is `vocabularies.lists.test.ts`, and whether a field that
- * should carry a tag is missing one -- an absent tag is invisible here.
+ * same terms, which is `vocabularies.lists.test.ts`; whether a field that
+ * should carry a tag is missing one, which is invisible here; and whether a
+ * term belongs under the parent that offered it, which no single field can
+ * answer. -> #701
  */
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { FORM_SCHEMAS } from '../specs/specs.controller.js'
 import { fields } from './field-spec.js'
-import { reportSchema } from './entities/report.js'
+import { caseComplianceSchema } from './entities/case-compliance.js'
+import { caseFactsSchema } from './entities/case-facts.js'
+import { reportBlockSchema, reportSchema } from './entities/report.js'
 
 /**
- * A term no vocabulary in this tree defines.
+ * A term no vocabulary in this tree defines, offered bare and wrapped.
  *
- * **Under every tagged field's length cap**, or a field refuses it for being
- * long and the rule reads that as membership. `reports.language` is `text(16)`.
+ * **Both, because a tagged field may take a list.** A bare string offered to an
+ * array field is refused on shape, which scores it closed whatever it would
+ * store -- and three of the four fields this rule found are arrays.
+ *
+ * **Short, or a field refuses it for being long and the rule reads that as
+ * membership.** `reports.language` is `text(16)`.
  */
 const UNDEFINED_TERM = 'zzq'
 
 /**
- * Every schema a `vocabulary:` tag can be declared on.
+ * Every schema a write is judged by, and so every schema a tag can sit on.
  *
- * **`FORM_SCHEMAS` rather than `COLLECTION_SCHEMAS`**, which deliberately omits
- * the timeline's two write schemas -- and one of the two open fields is in
- * them. `reportSchema` is named beside it because a report is not a collection
- * form and appears in no form list, so a walk of the forms alone cannot see it.
+ * **Wider than `FORM_SCHEMAS`**, which is what the `/specs` route serves and
+ * omits every schema no form draws: a report and its blocks, and the case's
+ * facts and compliance answers, which are validated on their own routes rather
+ * than through `caseFormSchema`. A walk of the forms alone sees 32 of 68
+ * tagged fields and reports the rest closed by never offering them anything.
  */
 const SEARCHED: readonly { where: string; schema: z.ZodObject }[] = [
   ...Object.entries(FORM_SCHEMAS).map(([name, { schema }]) => ({ where: name, schema })),
   { where: 'reportSchema', schema: reportSchema },
+  { where: 'reportBlockSchema', schema: reportBlockSchema },
+  { where: 'caseFactsSchema', schema: caseFactsSchema },
+  { where: 'caseComplianceSchema', schema: caseComplianceSchema },
 ]
 
 /** Every tagged field, as where it lives, its schema and its vocabulary. */
@@ -76,15 +88,25 @@ function tagged(): { where: string; vocabulary: string; schema: z.ZodType }[] {
 const KNOWN_OPEN: readonly string[] = ['reportSchema.language (vocabulary: reportLanguage)']
 
 describe('a field that names a vocabulary', () => {
-  it('finds tagged fields to check', () => {
-    // Without this the case below passes over an empty list, which is what a
-    // moved registry or a renamed tag looks like from here.
-    expect(tagged().length).toBeGreaterThan(20)
+  it('walks every schema a write is judged by', () => {
+    // A floor near the true count, because the failure this guards against is
+    // the walk narrowing without saying so: a list finding 32 of 68 passes any
+    // bound loose enough to feel safe, which is the state this rule shipped in.
+    // Raise it when a schema is added rather than leaving slack.
+    expect(tagged().length).toBeGreaterThan(60)
+    expect(
+      SEARCHED.filter(({ schema }) => Object.keys(schema.shape).length === 0),
+      'an empty schema offers no field to probe and reads as a clean walk',
+    ).toEqual([])
   })
 
   it('refuses a term the vocabulary does not hold', () => {
     const open = tagged()
-      .filter((one) => one.schema.safeParse(UNDEFINED_TERM).success)
+      .filter(
+        (one) =>
+          one.schema.safeParse(UNDEFINED_TERM).success ||
+          one.schema.safeParse([UNDEFINED_TERM]).success,
+      )
       .map((one) => `${one.where} (vocabulary: ${one.vocabulary})`)
       .sort()
 
