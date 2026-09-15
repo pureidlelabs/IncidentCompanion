@@ -30,6 +30,7 @@ import { blockItems } from '@/components/blocks/prose-slash'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
 import { cn } from '@/lib/cn'
+import { coveragePercent } from './picker-rows'
 
 /**
  * One report, in the three ways there are to look at it.
@@ -105,7 +106,7 @@ export interface ReportWorkspaceProps {
    * drawn: the gallery has no listing, and neither does a caller that has not
    * asked for the layouts yet.
    */
-  languages?: readonly { code: string; label: string }[]
+  languages?: readonly LanguageChoice[]
   /**
    * Absent on a report nobody may edit, which greys the control rather than
    * removing it: the language is a fact about the document either way, and one
@@ -433,15 +434,42 @@ function SectionColumn({
 }
 
 /** The install's languages, plus whatever this report actually holds. */
-function optionsFor(held: string, languages: readonly { code: string; label: string }[]): string[] {
+function optionsFor(held: string, languages: readonly LanguageChoice[]): string[] {
   const codes = languages.map((one) => one.code)
   return codes.includes(held) ? codes : [held, ...codes]
 }
 
-/** A code read as its label, with the two a served list cannot name. */
-function labelsFor(languages: readonly { code: string; label: string }[]): Record<string, string> {
+/**
+ * A language as the picker offers it.
+ *
+ * `coverage` is what fraction of the application's words the pack carries, and
+ * is optional because a caller may not have asked for it -- a name drawn
+ * without one is a caller passing less, not a pack covering nothing.
+ */
+export interface LanguageChoice {
+  code: string
+  label: string
+  coverage?: number
+}
+
+/**
+ * A code read as its label, with the two a served list cannot name.
+ *
+ * **A partial pack says so here**, because this is the moment the choice is
+ * made: the languages pane states coverage, and an analyst setting a report's
+ * language was reading a name that looked the same at 12% and at 100%.
+ * A complete pack says nothing extra, or the number is on every row and reads
+ * as decoration. -> #688
+ */
+export function labelsFor(languages: readonly LanguageChoice[]): Record<string, string> {
   const labels: Record<string, string> = { '': 'The install\u2019s own' }
-  for (const one of languages) labels[one.code] = one.label
+  for (const one of languages) {
+    const { coverage } = one
+    labels[one.code] =
+      coverage !== undefined && coverage < 1
+        ? `${one.label} \u00b7 ${coveragePercent(coverage)}`
+        : one.label
+  }
   return labels
 }
 
@@ -465,7 +493,7 @@ function DocumentStrip({
   tally: string
   mode: ViewMode
   onMode: (mode: ViewMode) => void
-  languages?: readonly { code: string; label: string }[]
+  languages?: readonly LanguageChoice[]
   onLanguage?: (code: string) => void
   onAddSection?: (kind: string) => void
   blockKinds?: readonly BlockKindGroup[] | undefined

@@ -119,6 +119,16 @@ export interface CollectionDefinition {
    * asks `freezeGuardFor` instead. -> `report/freeze.ts`
    */
   readonly refuseIfClosed?: ClosedRowGuard
+
+  /**
+   * A term this row names that the install does not serve.
+   *
+   * Separate from `refuseIfClosed` because it is a different claim: that one
+   * asks whether the row may be written at all, this asks whether what it says
+   * is a thing. Both are questions a Zod schema cannot answer -- one needs
+   * other rows, the other needs a table the vocabulary is stored in.
+   */
+  readonly refuseUnservedTerm?: ClosedRowGuard
 }
 
 @Injectable()
@@ -361,6 +371,7 @@ export class CollectionService {
     actorId: string,
   ): Promise<unknown> {
     await def.refuseIfClosed?.(this.db, caseId, { rows: [values] })
+    await def.refuseUnservedTerm?.(this.db, caseId, { rows: [values] })
 
     const written = await withCase(this.db, caseId, async (tx) => {
       await refuseDanglingReferences(tx, def, values)
@@ -417,6 +428,7 @@ export class CollectionService {
   ): Promise<{ ids: string[]; unlinked: number }> {
     if (rows.length === 0) return { ids: [], unlinked: 0 }
     await def.refuseIfClosed?.(on, caseId, { rows })
+    await def.refuseUnservedTerm?.(on, caseId, { rows })
 
     let unlinked = 0
     const ids = await withCase(on, caseId, async (tx) => {
@@ -514,6 +526,7 @@ export class CollectionService {
     if (wanted.length === 0) return { ids: {}, unlinked: 0 }
     for (const group of wanted) {
       await group.def.refuseIfClosed?.(on, caseId, { rows: group.rows })
+      await group.def.refuseUnservedTerm?.(on, caseId, { rows: group.rows })
     }
 
     let unlinked = 0
@@ -572,6 +585,7 @@ export class CollectionService {
     const cols = columns(def)
     const order = columnOf(def.table, def.position)
     await def.refuseIfClosed?.(this.db, caseId, { ids, rows: [] })
+    await def.refuseUnservedTerm?.(this.db, caseId, { ids, rows: [] })
 
     const result = await withCase(this.db, caseId, async (tx) => {
       const scope = def.orderWithin ? columnOf(def.table, def.orderWithin) : undefined
@@ -687,6 +701,7 @@ export class CollectionService {
     if (rows.length === 0) return { updated: [], missing: [], refused: [] }
     const ids = rows.map((row) => row.id)
     await def.refuseIfClosed?.(this.db, caseId, { ids, rows: [fields] })
+    await def.refuseUnservedTerm?.(this.db, caseId, { ids, rows: [fields] })
     const cols = columns(def)
 
     const result = await withCase(this.db, caseId, async (tx) => {
@@ -780,6 +795,7 @@ export class CollectionService {
     // **The patch as well as the row.** A patch may name a *different* parent -
     // moving a block into a sent report is a write to that report.
     await def.refuseIfClosed?.(this.db, caseId, { ids: [id], rows: [patch] })
+    await def.refuseUnservedTerm?.(this.db, caseId, { ids: [id], rows: [patch] })
     await this.refuseIfHeldByAnother(caseId, def.name, id, actorId)
 
     /**
@@ -821,6 +837,7 @@ export class CollectionService {
     actorId: string,
   ): Promise<boolean> {
     await def.refuseIfClosed?.(this.db, caseId, { ids: [id] })
+    await def.refuseUnservedTerm?.(this.db, caseId, { ids: [id] })
     const cols = columns(def)
     const removed = await withCase(this.db, caseId, async (tx) => {
       const deleted = (await tx
