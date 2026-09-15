@@ -9,6 +9,7 @@ import { createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
 import { patchCaseSchema } from '../domain/case.js'
+import { rowVersion } from '../domain/column-bounds.js'
 
 export { patchCaseSchema }
 
@@ -67,7 +68,7 @@ export const caseSchema = z.object({
   openedAt: z.iso.datetime(),
   closedAt: z.iso.datetime().nullable(),
   isDemo: z.boolean(),
-  version: z.number().int(),
+  version: rowVersion(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   createdBy: z.string().nullable(),
