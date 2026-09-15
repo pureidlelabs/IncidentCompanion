@@ -8,6 +8,8 @@
  * The elapsed gap is a column rather than vertical distance, since a table row
  * is as tall as its text and the model has no two-line cell.
  */
+import { duration } from './derived.js'
+import type { Translate } from './packs.js'
 import { formatTimestamp } from './labels.js'
 import type { Cell, Node } from './model.js'
 import { BAND, INK, MEDIUM, MUTED, PHASE_SEVERITY, RESPONSE } from './palette.js'
@@ -37,15 +39,10 @@ function when(value: unknown): number | null {
  * hour, above which a reader taking the rows as continuous activity is wrong
  * and nothing else on the row says so. Under a minute prints blank, never `+0m`.
  */
-function elapsed(from: number, to: number): { text: string; long: boolean } {
+function elapsed(from: number, to: number, t: Translate): { text: string; long: boolean } {
   const ms = to - from
-  const minutes = Math.floor(ms / 60000)
-  if (minutes < 1) return { text: '', long: false }
-  let text: string
-  if (minutes < 120) text = `+${String(minutes)}m`
-  else if (minutes < 48 * 60) text = `+${String(Math.floor(minutes / 60))}h`
-  else text = `+${String(Math.floor(minutes / 1440))}d`
-  return { text, long: ms >= LONG_GAP_MS }
+  if (ms < 60_000) return { text: '', long: false }
+  return { text: duration(ms, t), long: ms >= LONG_GAP_MS }
 }
 
 export function narrative(input: ReportInput): Node[] {
@@ -84,13 +81,18 @@ export function narrative(input: ReportInput): Node[] {
       : (PHASE_SEVERITY[(first.entry.tactic ?? '').toLowerCase()] ?? MEDIUM)
 
     let gap = { text: '', long: false }
-    if (previous !== null) gap = elapsed(previous, first.at)
+    if (previous !== null) gap = elapsed(previous, first.at, input.t)
 
     /**
      * **A quiet day is a finding, and it gets a row.** The drawing gives a
      * compressed gap a labelled band because it has vertical distance to
-     * spend; a table has none. The duration alone, with no noun - a band
-     * reading "1d 2h" needs no sentence and no language pack.
+     * spend; a table has none, so the duration stands alone with no sentence
+     * around it.
+     *
+     * **It is still text the application supplies**, so it is said in the
+     * report's language like everything else on the page. The exemption this
+     * replaces was written when no span in a report could be translated at
+     * all. -> #698
      */
     if (gap.long) {
       // **The duration goes in the widest column, not the last one.** Painted
@@ -107,8 +109,12 @@ export function narrative(input: ReportInput): Node[] {
     // A run states the span it covers as a *duration* rather than an end
     // timestamp: repeating a whole date beside a start two minutes earlier is a
     // date to read for one changed digit.
-    const covered = run.length > 1 ? elapsed(first.at, last.at).text.replace('+', '') : ''
-    const meta = [run.length > 1 ? `\u00d7${String(run.length)}` : '', covered, gap.long ? '' : gap.text]
+    const covered = run.length > 1 ? elapsed(first.at, last.at, input.t).text : ''
+    // **The `+` is on the gap and not on the span.** Both are durations on one
+    // line, and what separates them is that one is time nobody accounted for
+    // and the other is time this run covers.
+    const since = gap.text === '' ? '' : `+${gap.text}`
+    const meta = [run.length > 1 ? `\u00d7${String(run.length)}` : '', covered, gap.long ? '' : since]
       .filter(Boolean)
       .join(' \u00b7 ')
 
