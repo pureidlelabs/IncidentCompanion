@@ -62,7 +62,6 @@ describe.skipIf(!db)('the language a report is written with', () => {
       code: pack,
       label: 'A pack this install holds',
       strings: {},
-      coverage: 1,
       builtin: false,
     })
 

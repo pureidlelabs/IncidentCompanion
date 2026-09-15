@@ -103,7 +103,6 @@ export class LanguageService {
         code: dutch.code,
         label: dutch.label,
         strings: dutch.strings,
-        coverage: coverageIn(dutch.strings),
         builtin: true,
       })
       .onConflictDoUpdate({
@@ -111,7 +110,6 @@ export class LanguageService {
         set: {
           label: dutch.label,
           strings: dutch.strings,
-          coverage: coverageIn(dutch.strings),
           builtin: true,
           updatedAt: new Date(),
         },
@@ -131,7 +129,7 @@ export class LanguageService {
       rows.map((row) => ({
         code: row.code,
         label: row.label,
-        coverage: row.coverage,
+        coverage: coverageIn(row.strings),
         builtin: row.builtin,
       })),
     )
@@ -150,11 +148,21 @@ export class LanguageService {
     return translatorFor({ code: row.code, label: row.label, strings: row.strings })
   }
 
-  /** What this install carried for a language, for the freeze to record. */
+  /**
+   * What this install carries for a language, for the freeze to record.
+   *
+   * **Measured here, never read back.** Coverage is a fact about the pack and
+   * the application together: the divisor is the keys the app prints, so a
+   * figure stored on the day a pack arrived is measured against a key set that
+   * has since moved. A pack uploaded whole went on claiming to be whole, and
+   * `coverageNote` -- the line telling a reader the document is part English --
+   * is gated on that number, so the case it exists for was the case it was
+   * suppressed in. -> #697
+   */
   async coverageOf(code: string): Promise<number> {
     if (code === ENGLISH.code) return 1
     const [row] = await this.db.select().from(reportLanguage).where(eq(reportLanguage.code, code))
-    return row?.coverage ?? 0
+    return row ? coverageIn(row.strings) : 0
   }
 
   async has(code: string): Promise<boolean> {
@@ -180,7 +188,6 @@ export class LanguageService {
         code: clean.code,
         label: clean.label,
         strings: clean.strings,
-        coverage,
         builtin: false,
         uploadedBy: actorId,
       })
@@ -189,7 +196,6 @@ export class LanguageService {
         set: {
           label: clean.label,
           strings: clean.strings,
-          coverage,
           uploadedBy: actorId,
           updatedAt: new Date(),
         },
