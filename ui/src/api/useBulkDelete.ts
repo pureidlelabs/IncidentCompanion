@@ -19,13 +19,33 @@ import { keys } from './queryKeys'
  * table exactly as it was.
  */
 export interface BulkDeleteVars {
-  /** Collection name to entry ids. Empty lists are allowed and write nothing. */
-  targets: Partial<Record<CollectionName, string[]>>
+  /**
+   * Collection name to the rows being removed, each with the version it was
+   * read at. Empty lists are allowed and write nothing.
+   *
+   * **The version, because a selection is a read followed by a write.** The
+   * single-row door has always demanded it; sending ids alone let a bulk
+   * delete remove a row another analyst had edited since. -> #682
+   */
+  targets: Partial<Record<CollectionName, { id: string; version: number }[]>>
 }
 
 export interface BulkDeleted {
   deleted: { collection: string; id: string }[]
   missing: { collection: string; id: string }[]
+}
+
+/**
+ * The other 409's body: the ids that moved since the selection was read.
+ *
+ * A row that moved refuses the whole call, so there is nothing to reconcile --
+ * the list is what the dialog names before the analyst tries again. -> #682
+ */
+export function refusedRows(error: ApiError): string[] {
+  const body = error.body
+  if (!body || typeof body !== 'object') return []
+  const moved = (body as { refused?: unknown }).refused
+  return Array.isArray(moved) ? moved.filter((one): one is string => typeof one === 'string') : []
 }
 
 /** The 409's body: id to the number of rows still naming it. A map rather than
@@ -58,9 +78,9 @@ export function useBulkDelete(
          * single-word collections worked. The collection travels as a value.
          */
         body: {
-          targets: Object.entries(targets).map(([collection, ids]) => ({
+          targets: Object.entries(targets).map(([collection, rows]) => ({
             collection,
-            ids,
+            rows,
           })),
         },
       }),

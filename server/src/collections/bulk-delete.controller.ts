@@ -56,7 +56,11 @@ export const bulkDeleteBodySchema = z
       .array(
         z.object({
           collection: z.enum(BULK_TARGETS),
-          ids: z.array(z.uuid()).max(1000),
+          // **Each row with the version it was read at**, so a row another
+          // analyst has edited since is refused rather than deleted. -> #682
+          rows: z
+            .array(z.object({ id: z.uuid(), version: z.number().int().min(0) }))
+            .max(1000),
         }),
       )
       .max(BULK_TARGETS.length),
@@ -70,6 +74,10 @@ export const bulkDeleteBodySchema = z
  * second one's delete finds some already gone, and refusing the whole call
  * would make a race look like a fault. Both lists are returned so the screen
  * can say what actually happened.
+ *
+ * **A row that moved is not in either list**, because it refuses the whole
+ * call: the answer is 409 with the ids that moved, and nothing is deleted.
+ * -> #682
  */
 export const bulkDeletedSchema = z.object({
   deleted: z.array(z.object({ collection: z.string(), id: z.uuid() })),
@@ -94,7 +102,8 @@ export class BulkDeleteController {
   @ZodResponse({
     status: 200,
     type: BulkDeletedDto,
-    description: 'What was deleted, and what was already gone.',
+    description:
+      'What was deleted, and what was already gone. A row that moved since it was read refuses the whole selection with 409.',
   })
   @Post()
   async remove(
@@ -103,7 +112,7 @@ export class BulkDeleteController {
     @Session() session: UserSession,
   ) {
     const targets = body.targets.flatMap((one) =>
-      one.ids.map((id) => ({ collection: one.collection, id })),
+      one.rows.map((row) => ({ collection: one.collection, id: row.id, version: row.version })),
     )
     if (targets.length === 0) return { deleted: [], missing: [] }
 

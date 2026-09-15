@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { ApiError } from '@/api/client'
 import { isThenable } from '@/lib/isThenable'
-import { referencesHolding } from '@/api/useBulkDelete'
+import { referencesHolding, refusedRows } from '@/api/useBulkDelete'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 
 export interface ConfirmDeleteDialogProps {
@@ -18,9 +18,22 @@ export interface ConfirmDeleteDialogProps {
 }
 
 
-/** Turns a refusal into one line. Counts the rows a reference check blocked, where it names them. */
+/**
+ * Turns a refusal into one line.
+ *
+ * Two 409s reach here and they send the analyst to different places: rows
+ * something else still names, and rows somebody has edited since this
+ * selection was read. Each is counted where the body names them, because a
+ * selection spanning tables cannot be corrected from a single number.
+ */
 function refusalMessage(error: unknown): string {
   if (!(error instanceof ApiError)) return 'Could not delete.'
+  const moved = refusedRows(error).length
+  if (moved > 0) {
+    return moved === 1
+      ? '1 of the selected rows changed since you read it. Nothing was deleted.'
+      : `${String(moved)} of the selected rows changed since you read them. Nothing was deleted.`
+  }
   const blocked = Object.keys(referencesHolding(error)).length
   if (blocked === 0) return error.message
   return blocked === 1

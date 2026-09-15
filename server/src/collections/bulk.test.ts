@@ -22,6 +22,7 @@ import {
   cases,
   evidence,
   impact,
+  malware,
   networkIndicators,
   systems,
   timeline,
@@ -496,7 +497,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
       .where(eq(systems.caseId, caseId))
 
     await expect(
-      controller().remove(caseId, { targets: [{ collection: 'systems', ids: [host!.id] }] }, asSession(session)),
+      controller().remove(caseId, { targets: [{ collection: 'systems', rows: [selection(host!)] }] }, asSession(session)),
     ).rejects.toMatchObject({ response: { message: 'Some of those are still referenced.' } })
 
     const [survivor] = await seed!.select().from(systems).where(eq(systems.id, host!.id))
@@ -513,7 +514,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
 
     const result = await controller().remove(
       caseId,
-      { targets: [{ collection: 'actions', ids: [task!.id] }] },
+      { targets: [{ collection: 'actions', rows: [selection(task!)] }] },
       asSession(session),
     )
 
@@ -528,7 +529,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     const expected = naming.filter((row) => row.systemId === host!.id).length
 
     const refused = await controller()
-      .remove(caseId, { targets: [{ collection: 'systems', ids: [host!.id] }] }, asSession(session))
+      .remove(caseId, { targets: [{ collection: 'systems', rows: [selection(host!)] }] }, asSession(session))
       .then(() => null)
       .catch((error: unknown) => (error as { response: { references: Record<string, number> } }).response)
 
@@ -556,7 +557,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     const [artefact] = await seed!.select().from(evidence).where(eq(evidence.caseId, caseId))
     const held = async () =>
       controller()
-        .remove(caseId, { targets: [{ collection: 'evidence', ids: [artefact!.id] }] }, asSession(session))
+        .remove(caseId, { targets: [{ collection: 'evidence', rows: [selection(artefact!)] }] }, asSession(session))
         .then(() => 0)
         .catch(
           (error: unknown) =>
@@ -579,11 +580,94 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     expect(survivor).toBeDefined()
   })
 
+  /**
+   * **A stale row refuses the whole selection, and nothing is written.**
+   *
+   * The single-row door answers a moved row with 409 and writes nothing; the
+   * specification asks that a bulk act carry every guarantee a single act
+   * carries, and that where speed and the guarantees conflict the guarantees
+   * win. So this is a refusal rather than a partial delete. -> #682
+   */
+  it('refuses the whole selection when one row has moved, and deletes none of it', async () => {
+    const tasks = await seed!.select().from(actions).where(eq(actions.caseId, caseId))
+    const stale = tasks[0]!
+    const fresh = tasks[1]!
+
+    // Somebody else writes first, so the version the selection carries is old.
+    await seed!
+      .update(actions)
+      .set({ task: 'the first writer', version: stale.version + 1 })
+      .where(eq(actions.id, stale.id))
+
+    await expect(
+      controller().remove(
+        caseId,
+        { targets: [{ collection: 'actions', rows: [selection(stale), selection(fresh)] }] },
+        asSession(session),
+      ),
+    ).rejects.toMatchObject({ response: { refused: [stale.id] } })
+
+    const after = await seed!.select().from(actions).where(eq(actions.caseId, caseId))
+    const left = new Set(after.map((row) => row.id))
+    expect(left.has(stale.id), "the other analyst's row was deleted under them").toBe(true)
+    expect(left.has(fresh.id), 'a refused selection deleted part of itself').toBe(true)
+  })
+
+  /**
+   * **The reference check waves through a row that is in the selection**, on
+   * the grounds that it is about to go -- deleting a host and the malware on
+   * it together is the ordinary case. A refusal that left part of the
+   * selection behind broke that: the holder stayed, the target went, and the
+   * `on delete set null` took the link with it. No 409, nothing in the
+   * response, and the analyst is told the row "was not deleted".
+   *
+   * This is the case that decided the refusal above is whole-selection rather
+   * than per row. -> #682, and `bulk-delete.service.ts`'s own invariant.
+   */
+  it('does not orphan a reference by refusing its holder and deleting its target', async () => {
+    // Its own pair, because a demo host is named by timeline rows outside the
+    // selection and the reference check answers that one first.
+    const [host] = await seed!
+      .insert(systems)
+      .values({ caseId, hostname: 'ORPHAN-HOST' })
+      .returning()
+    const [naming] = await seed!
+      .insert(malware)
+      .values({ caseId, filename: 'ORPHAN-SAMPLE', systemId: host!.id })
+      .returning()
+
+    // The holder moves, so a per-row refusal would keep it and drop its host.
+    await seed!
+      .update(malware)
+      .set({ version: naming!.version + 1 })
+      .where(eq(malware.id, naming!.id))
+
+    await expect(
+      controller().remove(
+        caseId,
+        {
+          targets: [
+            { collection: 'systems', rows: [selection(host!)] },
+            { collection: 'malware', rows: [selection(naming!)] },
+          ],
+        },
+        asSession(session),
+      ),
+    ).rejects.toMatchObject({ response: { refused: [naming!.id] } })
+
+    const [stillThere] = await seed!.select().from(malware).where(eq(malware.id, naming!.id))
+    expect(stillThere!.systemId, 'the reference was blanked by a delete nobody was told about').toBe(
+      host!.id,
+    )
+    const [survivor] = await seed!.select().from(systems).where(eq(systems.id, host!.id))
+    expect(survivor, 'the host went while the row naming it stayed').toBeDefined()
+  })
+
   it('reports an id it did not find rather than claiming it deleted it', async () => {
     const ghost = '00000000-0000-4000-8000-000000000000'
     const result = await controller().remove(
       caseId,
-      { targets: [{ collection: 'actions', ids: [ghost] }] },
+      { targets: [{ collection: 'actions', rows: [{ id: ghost, version: 1 }] }] },
       asSession(session),
     )
 
@@ -612,11 +696,14 @@ describe('the selection as it arrives over HTTP', () => {
     'survives the wire for %s',
     (collection) => {
       const id = '11111111-1111-4111-8111-111111111111'
-      const sent = camelKeys({ targets: [{ collection, ids: [id] }] })
+      const sent = camelKeys({ targets: [{ collection, rows: [{ id, version: 3 }] }] })
 
       const parsed = bulkDeleteBodySchema.safeParse(sent)
       expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true)
       expect(parsed.data?.targets[0]?.collection).toBe(collection)
+      // The version has to survive the conversion too: a selection whose rows
+      // arrive without one is refused wholesale rather than deleting blind.
+      expect(parsed.data?.targets[0]?.rows[0]?.version).toBe(3)
     },
   )
 })
