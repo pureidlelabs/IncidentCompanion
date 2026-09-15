@@ -189,10 +189,11 @@ export const AsAnAnalyst: Story = {
       await expect(canvas.queryByTestId('picker-row-accounts')).toBeNull()
       await expect(canvas.queryByTestId('picker-row-activity')).toBeNull()
       await expect(canvas.queryByTestId('picker-row-administration')).toBeNull()
+      await expect(canvas.queryByTestId('picker-row-health')).toBeNull()
     })
     await step('the ones they may read still are', async () => {
       await expect(canvas.getByTestId('picker-row-languages')).toBeVisible()
-      await expect(canvas.getByTestId('picker-row-health')).toBeVisible()
+      await expect(canvas.getByTestId('picker-row-cases')).toBeVisible()
     })
   },
 }

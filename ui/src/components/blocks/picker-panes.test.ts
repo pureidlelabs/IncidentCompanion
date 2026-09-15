@@ -25,6 +25,10 @@ describe('the picker rail', () => {
     expect(offered).not.toContain('accounts')
     expect(offered).not.toContain('activity')
     expect(offered).not.toContain('administration')
+    // What the install is made of, rather than what a case holds: both of
+    // Health's routes are `@AdminOnly()`, and the row was kept when they were
+    // not. -> `server/test/analyst-privilege.test.ts`
+    expect(offered).not.toContain('health')
   })
 
   it('still offers an analyst the panes they may read', () => {
@@ -32,7 +36,6 @@ describe('the picker rail', () => {
 
     // Its list is an open `@Get()`; only the upload and the delete are admin.
     expect(offered).toContain('languages')
-    expect(offered).toContain('health')
     // And nothing outside the System group moved.
     expect(offered).toContain('cases')
     expect(offered).toContain('reports')

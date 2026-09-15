@@ -69,6 +69,13 @@ const REFUSED_TO_AN_ANALYST: readonly string[] = [
   // so - the route being `@AdminOnly()` is the code, and this is the
   // decision showing up in a diff.
   'GET /api/install/activity',
+  // **What the install is made of, rather than what a case holds.** These two
+  // report the host and the database: memory, CPU, load, free disk, and every
+  // table's live row count and size. The row count is the part that decides
+  // it - `GET /api/accounts` is refused two lines above, and `pg_stat` hands
+  // back how many accounts exist to anybody who can reach this.
+  'GET /api/health/activity',
+  'GET /api/health/resources',
   // Reading the retention window is an administrator's, and changing it is
   // the one setting whose change destroys evidence.
   'GET /api/install/audit/retention',
@@ -100,6 +107,7 @@ const REFUSED_TO_AN_ANALYST: readonly string[] = [
 describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
   let harness: Harness
   let analyst: Persona
+  let administrator: Persona
   let measured: string[]
 
   beforeAll(async () => {
@@ -107,9 +115,9 @@ describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
     // The admin is arranged first so the analyst cannot land in the install's
     // first-account slot. Asserting both roles below is what stops this file
     // silently testing one administrator against another.
-    const admin = await sharedAdmin(harness)
+    administrator = await sharedAdmin(harness)
     analyst = await sharedAnalyst(harness)
-    expect(admin.role).toBe('admin')
+    expect(administrator.role).toBe('admin')
 
     measured = []
     for (const one of operations(harness.document)) {
@@ -133,4 +141,24 @@ describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
   it('is refused exactly the routes that are privileged, and no others', () => {
     expect([...measured].sort()).toEqual([...REFUSED_TO_AN_ANALYST].sort())
   })
+
+  /**
+   * **The control for the list above.** A guard that refused everybody would
+   * satisfy it perfectly: the analyst would be refused every route named, and
+   * nothing here would notice that the administrator was too.
+   *
+   * Two routes rather than all of them, because the list above is a set
+   * comparison and this is a direction check -- and these two are the ones
+   * whose gate is newest.
+   */
+  it.each(['/api/health/activity', '/api/health/resources'])(
+    'answers an administrator at %s',
+    async (path) => {
+      const response = await fetch(`${harness.base}${path}`, {
+        headers: { cookie: administrator.cookie },
+      })
+
+      expect(response.status, 'the gate refuses the people it is meant to admit').toBe(200)
+    },
+  )
 })
