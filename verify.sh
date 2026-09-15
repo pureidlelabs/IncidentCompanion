@@ -173,19 +173,16 @@ fi
 # ------------------------------------------------------------------ hooks
 # **A worktree has no `.venv`**, and skipping on that alone meant this tier was
 # never run in the only place a branch is ever built - so four failures sat at
-# head unseen, three of them caused by files the branch deleted. Borrow the
-# main checkout's interpreter and run it against *this* tree: "run it from the
-# main checkout" is an answer about a different commit.
-VENV=.venv/bin/python
-if [ ! -x "$VENV" ]; then
-  VENV="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.venv/bin/python"
-fi
-if ! behaviour; then
-  :
-elif [ -x "$VENV" ]; then
-  step "hooks and guidance" "$VENV" -m pytest .claude/tests -q
-else
-  SKIPPED+=("hooks and guidance (no .venv found, here or beside the repository)")
+# head unseen, three of them caused by files the branch deleted. It runs
+# against *this* tree whichever interpreter it borrows: "run it from the main
+# checkout" is an answer about a different commit.
+#
+# **`venv_python.sh` decides, because it executes each candidate rather than
+# testing the path.** A `.venv` is not evidence it runs, and `--ensure` builds
+# or repairs one -- so there is no state left where this tier has nothing to
+# run and says so in a SKIPPED line. -> #653
+if behaviour; then
+  step "hooks and guidance" "$(scripts/venv_python.sh --ensure)" -m pytest .claude/tests -q
 fi
 
 # ----------------------------------------------------------------- prose
