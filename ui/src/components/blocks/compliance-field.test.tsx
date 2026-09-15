@@ -260,7 +260,7 @@ describe('a grouped vocabulary', () => {
   it('survives a clear and a re-choose', async () => {
     const user = userEvent.setup()
     const spec = served(DETAILED)
-    const chosen = [
+    const chosen: ComplianceRecord['doraRootCauseDetailed'] = [
       'malicious actions: fraudulent actions',
       'human error: omission',
       'external event: third-party failures',
@@ -274,7 +274,7 @@ describe('a grouped vocabulary', () => {
       await user.click(screen.getByRole('checkbox', { name: one }))
     }
     expect(stored(onSet)).toEqual(
-      (spec.options ?? []).filter((one) => chosen.includes(one)),
+      (spec.options ?? []).filter((one) => chosen.some((term) => term === one)),
     )
   })
 })

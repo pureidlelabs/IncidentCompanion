@@ -45,7 +45,7 @@ import { COMPLIANCE } from '../domain/compliance-form.js'
 import * as compliance from '../domain/vocabularies/compliance.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 
-const VOCABULARIES: Record<string, readonly string[]> = {
+export const VOCABULARIES: Record<string, readonly string[]> = {
   severity: vocab.SEVERITY,
   caseStatus: ['open', 'closed'],
   incidentClass: INCIDENT_CLASS,

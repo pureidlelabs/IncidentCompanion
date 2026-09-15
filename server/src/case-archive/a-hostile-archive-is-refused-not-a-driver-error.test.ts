@@ -117,7 +117,7 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
       // no archive in this repository carried an action row -- so returning the
       // event schema for both left the whole dispatch untested.
       kind: 'action',
-      actionType: 'contain',
+      actionType: 'containment action',
       description: 'Host isolated',
       time: new Date(),
       createdBy: actorId,
@@ -219,6 +219,28 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
   })
 
   /**
+   * **The same door, on the collection whose schema is chosen by the row.** A
+   * timeline row is judged by the arm its `kind` names, so a refusal proved on
+   * `systems` says nothing about the two schemas reached through that dispatch.
+   * -> #675
+   */
+  it('refuses a vocabulary value no schema defines on a timeline action', async () => {
+    const hostile = await tamperedWith(await exported(), 'timeline', [
+      {
+        id: 'tl-v',
+        kind: 'action',
+        description: 'Host isolated',
+        time: new Date().toISOString(),
+        actionType: 'contain',
+      },
+    ])
+
+    await expect(importer.load(hostile, '', actorId)).rejects.toThrow(
+      'this archive states a actionType in timeline that this install cannot read',
+    )
+  })
+
+  /**
    * **An array in a text column was stored as `{"a","b"}`** -- Postgres array
    * literal syntax, written into a hostname by a JavaScript array reaching a
    * column that takes a string.
@@ -301,7 +323,7 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
     const [row] = await seed!.select().from(timeline).where(eq(timeline.caseId, result.id))
     expect(row?.kind).toBe('action')
     expect(row?.actionType, 'the action arm was not the schema the row was judged by').toBe(
-      'contain',
+      'containment action',
     )
   })
 
