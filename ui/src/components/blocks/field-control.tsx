@@ -185,7 +185,6 @@ export function FieldControl<TData>({
                   onSet(field.name, next)
                 }}
                 options={field.options ?? []}
-                optionLabels={field.optionLabels}
               />
             )
 
