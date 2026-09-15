@@ -15,6 +15,8 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { INT4_MAX } from '../src/domain/column-bounds.js'
+
 import {
   boot,
   bootable,
@@ -123,5 +125,35 @@ describe.skipIf(!runnable)('what the documented reads actually serve', () => {
   it('has no unswept entry for a read that is gone', () => {
     const live = new Set(operations(harness.document).map((one) => one.template))
     expect(NOT_SWEPT.filter(([path]) => !live.has(path)).map(([path]) => path)).toEqual([])
+  })
+
+  /**
+   * **A version is compared against an `integer` column, so the door owes a
+   * ceiling.** Without one the number reaches the driver and comes back as a
+   * query error naming columns, rather than as a refusal naming the field --
+   * the door having checked that it is a whole number and not that it is one
+   * this database can store.
+   *
+   * Read off the published reference rather than off the schemas, because the
+   * reference is what a caller writes against: a bound the document does not
+   * publish is a bound no client knows about, whatever the code does.
+   */
+  it('publishes a ceiling on every version a caller presents', () => {
+    const schemas = (harness.document.components?.schemas ?? {}) as Record<
+      string,
+      { properties?: Record<string, { type?: string; maximum?: number }> }
+    >
+
+    const unbounded: string[] = []
+    for (const [name, schema] of Object.entries(schemas)) {
+      for (const [field, property] of Object.entries(schema.properties ?? {})) {
+        if (field !== 'version' || property.type !== 'integer') continue
+        if (property.maximum !== INT4_MAX) {
+          unbounded.push(`${name}.${field}: maximum ${String(property.maximum)}`)
+        }
+      }
+    }
+
+    expect(unbounded.sort(), 'these reach the column without being told what it holds').toEqual([])
   })
 })

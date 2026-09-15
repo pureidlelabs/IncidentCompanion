@@ -43,6 +43,7 @@ import { LibraryService } from '../library/library.service.js'
 import { CreateCaseDto, patchCaseSchema } from './cases.dto.js'
 import { demoCaseSchema } from '../demos/catalogue.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
+import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * A demo card, as the picker draws it.
@@ -259,7 +260,7 @@ export class CasesController {
     @Session() session: UserSession,
   ): Promise<CaseIn> {
     const { version, ...rest } = (body ?? {}) as { version?: unknown } & Record<string, unknown>
-    if (!Number.isInteger(version)) {
+    if (!rowVersion().safeParse(version).success) {
       throw new UnprocessableEntityException({ message: 'A patch has to name the version it read.' })
     }
 

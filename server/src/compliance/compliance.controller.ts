@@ -30,6 +30,7 @@ import { z } from 'zod'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { caseComplianceSchema } from '../domain/entities/case-compliance.js'
 import { verdictSchema } from './verdict.js'
+import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * What a caller is promised, which is the record plus the two fields it needs
@@ -42,7 +43,7 @@ import { verdictSchema } from './verdict.js'
  */
 export const complianceRecordSchema = caseComplianceSchema.extend({
   caseId: z.uuid(),
-  version: z.number().int().describe('Present this on the next patch, or it is refused.'),
+  version: rowVersion().describe('Present this on the next patch, or it is refused.'),
 })
 
 export type ComplianceRecord = z.infer<typeof complianceRecordSchema>
@@ -71,7 +72,7 @@ function published(row: ComplianceRow): ComplianceRecord {
  * analyst can act on where a validation tree is not.
  */
 const compliancePatchSchema = patchComplianceSchema.extend({
-  version: z.number().int().describe('The version this analyst read. A stale one is refused with 409.'),
+  version: rowVersion().describe('The version this analyst read. A stale one is refused with 409.'),
 })
 
 class CompliancePatchDto extends createZodDto(compliancePatchSchema) {}

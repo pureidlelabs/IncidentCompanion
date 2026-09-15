@@ -24,6 +24,7 @@ import { withCase } from '../db/scope.js'
 import { changeFeed, user } from '../db/schema/index.js'
 import { z } from 'zod'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
+import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * How many entries the feed answers with.
@@ -51,7 +52,7 @@ const activitySchema = z.object({
   entity: z.string().describe('The collection written to.'),
   entityId: z.string(),
   op: z.string().describe('insert, update or delete.'),
-  version: z.number().int(),
+  version: rowVersion(),
   by: z.string().describe('The analyst who wrote it, by display name.'),
   at: z.number().describe('Seconds since the epoch.'),
   fields: z
