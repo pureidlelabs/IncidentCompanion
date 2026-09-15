@@ -16,6 +16,10 @@ import { describe, expect, it } from 'vitest'
 import { caseCompliance } from '../db/schema/case-compliance.js'
 import { COMPLIANCE, complianceFieldNames } from './compliance-form.js'
 import { caseComplianceSchema } from './entities/case-compliance.js'
+import {
+  DORA_ROOT_CAUSE_DETAILED,
+  DORA_ROOT_CAUSE_HIGH,
+} from './vocabularies/compliance.js'
 import { formSpec } from './field-spec.js'
 
 /** Python's spelling to the column's, the same conversion the client applies. */
@@ -103,5 +107,42 @@ describe('the compliance forms', () => {
       .filter((name) => !drawn.has(name))
 
     expect(unreachable, 'these validate and store, and no card draws them').toEqual([])
+  })
+
+  /**
+   * A picker offers the vocabulary it is drawn from, all of it, in its order.
+   *
+   * `vocabularies/compliance.ts` opens by saying it is the only copy, and this
+   * document restated each DORA list in both places it builds a form. Three
+   * copies agree until one is edited, and the one that reaches a regulator is
+   * whichever the screen happened to send.
+   *
+   * **The order is asserted, not just the set.** These are pickers a regulator
+   * reads back, and a list reordered between the two copies is a different
+   * screen for the same field.
+   *
+   * **A computed field is not here**, and the case above is why: 4.3's terms
+   * are the ones this case's own 4.2 causes offer, so a static list of all
+   * eighteen would offer causes the case does not owe.
+   */
+  it('offers every term of the vocabulary each DORA picker draws from', () => {
+    const owed: Record<string, readonly string[]> = {
+      dora_root_cause_high: DORA_ROOT_CAUSE_HIGH,
+      dora_root_cause_detailed: Object.values(DORA_ROOT_CAUSE_DETAILED).flat(),
+    }
+
+    const wrong: string[] = []
+    for (const [name, form] of Object.entries(COMPLIANCE.forms)) {
+      for (const field of form.fields) {
+        const want = owed[field.name]
+        if (!want) continue
+        const got = field.options ?? []
+        if (got.length !== want.length || got.some((term, at) => term !== want[at])) {
+          wrong.push(`${name}.${field.name}: offers ${String(got.length)} of ${String(want.length)}`)
+        }
+      }
+    }
+
+    expect(wrong.sort(), 'a picker disagreeing with the only copy of its list').toEqual([])
   })
 })

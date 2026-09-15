@@ -19,6 +19,24 @@
  * drawn. Evaluated against `GET /api/regimes`, never against this document.
  */
 
+import {
+  DORA_ROOT_CAUSE_DETAILED,
+  DORA_ROOT_CAUSE_HIGH,
+} from './vocabularies/compliance.js'
+
+/**
+ * The detailed causes, flattened to the one list the 4.2 picker draws.
+ *
+ * The map is keyed by the high-level cause that offers each branch, and
+ * `Object.values` keeps the branches in declaration order -- which is the
+ * order these were written out in by hand.
+ *
+ * **4.3 has no equivalent here on purpose.** It is `computed_from` 4.2 and
+ * carries no options, because the terms it owes are the ones the case's own
+ * detailed causes offer rather than all eighteen.
+ */
+const DORA_DETAILED_TERMS: string[] = Object.values(DORA_ROOT_CAUSE_DETAILED).flat()
+
 export interface ComplianceFieldSpec {
   name: string
   label: string
@@ -514,13 +532,7 @@ export const COMPLIANCE: ComplianceBlock = {
           kind: 'multi_lines',
           label: 'Root cause (4.1)',
           name: 'dora_root_cause_high',
-          options: [
-            'malicious actions',
-            'process failure',
-            'system failure / malfunction',
-            'human error',
-            'external event',
-          ],
+          options: [...DORA_ROOT_CAUSE_HIGH],
           vocabulary: 'ROOT_CAUSE_HIGH',
         },
         {
@@ -528,36 +540,7 @@ export const COMPLIANCE: ComplianceBlock = {
           kind: 'multi_lines',
           label: 'Root cause, detailed (4.2)',
           name: 'dora_root_cause_detailed',
-          options: [
-            'malicious actions: deliberate internal actions',
-            'malicious actions: deliberate physical damage/manipulation/theft',
-            'malicious actions: fraudulent actions',
-            'process failure: insufficient monitoring or failure of monitoring and control',
-            'process failure: i nsufficient/unclear roles and responsibilities',
-            'process failure: ICT risk management process failure',
-            'process failure: insufficient or failure of ICT operations and ICT security operations',
-            'process failure: insufficient or failure of ICT project management',
-            'process failure: inadequacy of internal policies, procedures and documentation',
-            'Process failure: inadequate ICT systems acquisition, development, and maintenance',
-            'process failure: other (please specify)',
-            'system failure: hardware capacity and performance',
-            'system failure: hardware maintenance',
-            'system failure: hardware obsolescence/ageing',
-            'system failure: software compatibility/configuration',
-            'system failure: software performance',
-            'system failure: network configuration',
-            'system failure: physical damage',
-            'system failure: other (please specify)',
-            'human error: omission',
-            'human error: mistake',
-            'human error: skills & knowledge',
-            'human error: inadequate human resources',
-            'human error miscommunication',
-            'human error: other (please specify)',
-            'external event: natural disasters/force majeure',
-            'external event: third-party failures',
-            'external event: other (please specify)',
-          ],
+          options: DORA_DETAILED_TERMS,
         },
         {
           computed_from: 'dora_root_cause_detailed',
@@ -676,13 +659,7 @@ export const COMPLIANCE: ComplianceBlock = {
           kind: 'multi_lines',
           label: 'Root cause (4.1)',
           name: 'dora_root_cause_high',
-          options: [
-            'malicious actions',
-            'process failure',
-            'system failure / malfunction',
-            'human error',
-            'external event',
-          ],
+          options: [...DORA_ROOT_CAUSE_HIGH],
           vocabulary: 'ROOT_CAUSE_HIGH',
         },
         {
@@ -690,36 +667,7 @@ export const COMPLIANCE: ComplianceBlock = {
           kind: 'multi_lines',
           label: 'Root cause, detailed (4.2)',
           name: 'dora_root_cause_detailed',
-          options: [
-            'malicious actions: deliberate internal actions',
-            'malicious actions: deliberate physical damage/manipulation/theft',
-            'malicious actions: fraudulent actions',
-            'process failure: insufficient monitoring or failure of monitoring and control',
-            'process failure: i nsufficient/unclear roles and responsibilities',
-            'process failure: ICT risk management process failure',
-            'process failure: insufficient or failure of ICT operations and ICT security operations',
-            'process failure: insufficient or failure of ICT project management',
-            'process failure: inadequacy of internal policies, procedures and documentation',
-            'Process failure: inadequate ICT systems acquisition, development, and maintenance',
-            'process failure: other (please specify)',
-            'system failure: hardware capacity and performance',
-            'system failure: hardware maintenance',
-            'system failure: hardware obsolescence/ageing',
-            'system failure: software compatibility/configuration',
-            'system failure: software performance',
-            'system failure: network configuration',
-            'system failure: physical damage',
-            'system failure: other (please specify)',
-            'human error: omission',
-            'human error: mistake',
-            'human error: skills & knowledge',
-            'human error: inadequate human resources',
-            'human error miscommunication',
-            'human error: other (please specify)',
-            'external event: natural disasters/force majeure',
-            'external event: third-party failures',
-            'external event: other (please specify)',
-          ],
+          options: DORA_DETAILED_TERMS,
         },
         {
           computed_from: 'dora_root_cause_detailed',
