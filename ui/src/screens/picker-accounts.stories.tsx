@@ -32,6 +32,7 @@ const meta = {
   ],
   args: {
     analyst: 'r.okonkwo',
+    admin: true,
     accounts: PICKER_ACCOUNTS,
     userMenu: sessionRows,
     onAbout: fn(),

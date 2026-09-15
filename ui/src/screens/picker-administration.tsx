@@ -12,6 +12,8 @@ export interface PickerAdministrationScreenProps {
   accounts: readonly AccountRow[] | undefined
   /** Who is signed in, at the rail's foot. */
   analyst: string
+  /** Whether to offer the rail rows only an administrator may use. */
+  admin?: boolean | undefined
   /** The sign-in windows this install sets. Absent draws none. */
   signIn?: readonly BoundRow[] | undefined
   /** Opens the About door from the rail's head. */
@@ -34,6 +36,7 @@ export function PickerAdministrationScreen({
   onAbout,
   accounts: accountsGiven,
   analyst,
+  admin,
   signIn,
   onPane,
   onImportArchive,
@@ -54,6 +57,7 @@ export function PickerAdministrationScreen({
     <PickerFrame
       pane="administration"
       analyst={analyst}
+      admin={admin}
       {...(onPane ? { onPane } : {})}
       {...(onImportArchive ? { onImportArchive } : {})}
       userMenu={userMenu}

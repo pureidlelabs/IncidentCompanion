@@ -34,6 +34,9 @@ import { PickerTemplatesScreen } from './picker-templates'
  */
 const RAIL = {
   analyst: 'r.okonkwo',
+  // Every pane is owed a body, including the three only an administrator is
+  // offered a row for.
+  admin: true,
   userMenu: null,
   onAbout: () => undefined,
   // The rows each pane draws. A screen that takes none ignores them, and the

@@ -40,6 +40,7 @@ const meta = {
   ],
   args: {
     analyst: 'r.okonkwo',
+    admin: true,
     userMenu: sessionRows,
     health: {
       uptime: PICKER_UPTIME,

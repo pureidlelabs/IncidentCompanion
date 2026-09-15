@@ -127,14 +127,21 @@ function useAnalyst(): string | undefined {
   return useSession()?.username
 }
 
+/** Undefined until the session lands reads as an analyst, which is the safe way to be wrong. */
+function useIsAdmin(): boolean {
+  return useSession()?.admin === true
+}
+
 export function CasesPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const cases = useCases()
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   return (
     <PickerCasesScreen
       cases={cases.data ?? []}
       busy={cases.isPending}
       analyst={analyst ?? ''}
+      admin={admin}
       {...(cases.error === null ? {} : { problem: cases.error })}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
@@ -147,9 +154,11 @@ export function CasesPaneView({ onPane, onImportArchive, userMenu, onAbout }: Pa
 
 export function NewPaneView({ onPane, onImportArchive, userMenu, onAbout, onBlank, onFromImporter, onLiveSource }: PaneProps) {
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   return (
     <PickerNewScreen
       analyst={analyst ?? ''}
+      admin={admin}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
       userMenu={userMenu}
@@ -164,6 +173,7 @@ export function NewPaneView({ onPane, onImportArchive, userMenu, onAbout, onBlan
 export function DemosPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const demos = useDemos()
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   return (
     <PickerDemosScreen
       // The demos are seeded at server start, so a card is a link into the
@@ -172,6 +182,7 @@ export function DemosPaneView({ onPane, onImportArchive, userMenu, onAbout }: Pa
       demos={demos.data ?? []}
       busy={demos.isPending}
       analyst={analyst ?? ''}
+      admin={admin}
       {...(demos.error === null ? {} : { problem: demos.error })}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
@@ -205,11 +216,13 @@ function libraryRows(entries: readonly { name: string }[] | undefined): LibraryR
 export function TemplatesPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const library = useLibrary('templates')
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   return (
     <PickerTemplatesScreen
       entries={libraryRows(library.data?.entries)}
       busy={library.isPending}
       analyst={analyst ?? ''}
+      admin={admin}
       {...(library.error === null ? {} : { problem: library.error })}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
@@ -223,11 +236,13 @@ export function TemplatesPaneView({ onPane, onImportArchive, userMenu, onAbout }
 export function ReportsPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const library = useLibrary('report-layouts')
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   return (
     <PickerReportsScreen
       entries={libraryRows(library.data?.entries)}
       busy={library.isPending}
       analyst={analyst ?? ''}
+      admin={admin}
       {...(library.error === null ? {} : { problem: library.error })}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
@@ -241,11 +256,13 @@ export function ReportsPaneView({ onPane, onImportArchive, userMenu, onAbout }: 
 export function SnippetsPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const library = useLibrary('report-snippets')
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   return (
     <PickerSnippetsScreen
       entries={libraryRows(library.data?.entries)}
       busy={library.isPending}
       analyst={analyst ?? ''}
+      admin={admin}
       {...(library.error === null ? {} : { problem: library.error })}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
@@ -259,6 +276,7 @@ export function SnippetsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
 export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const accounts = useAccounts()
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   // `''` is the create path: `useAccountWrite` appends to `/accounts`.
   const create = useAccountWrite('')
   const refused = create.data?.ok === false ? splitWritten(create.data).problem : undefined
@@ -278,6 +296,7 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
       accounts={accountRows(accounts.data?.accounts)}
       busy={accounts.isPending}
       analyst={analyst ?? ''}
+      admin={admin}
       {...(accounts.error === null ? {} : { problem: accounts.error })}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
@@ -291,6 +310,7 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
 export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const accounts = useAccounts()
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   const policy = usePolicy()
   const setPolicy = useSetPolicy()
   const windows = sessionBounds(
@@ -314,6 +334,7 @@ export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAb
       accounts={accountRows(accounts.data?.accounts)}
       busy={accounts.isPending}
       analyst={analyst ?? ''}
+      admin={admin}
       {...(accounts.error === null ? {} : { problem: accounts.error })}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
@@ -327,6 +348,7 @@ export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAb
 export function LanguagesPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const languages = useLanguages()
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   const remove = useLanguageRemove()
   const upload = useLanguageUpload()
   const rows: LanguageRow[] = (languages.data?.languages ?? []).map((pack) => ({
@@ -348,6 +370,7 @@ export function LanguagesPaneView({ onPane, onImportArchive, userMenu, onAbout }
       }}
       busy={languages.isPending}
       analyst={analyst ?? ''}
+      admin={admin}
       {...(languages.error === null ? {} : { problem: languages.error })}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
@@ -390,12 +413,14 @@ function auditRows(lines: readonly AuditLine[] | undefined): AuditRow[] {
 
 export function ActivityPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   const activity = useInstallActivity('all', '24h')
   return (
     <PickerActivityScreen
       audit={auditRows(activity.page?.events)}
       busy={activity.isPending}
       analyst={analyst ?? ''}
+      admin={admin}
       {...(activity.error === null ? {} : { problem: activity.error })}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
@@ -408,6 +433,7 @@ export function ActivityPaneView({ onPane, onImportArchive, userMenu, onAbout }:
 
 export function HealthPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const analyst = useAnalyst()
+  const admin = useIsAdmin()
   // Three reads, because they answer three different questions: the readiness
   // probe says whether a dependency answered, the resources read says what
   // this machine is doing, and the activity read says what the install holds.
@@ -439,6 +465,7 @@ export function HealthPaneView({ onPane, onImportArchive, userMenu, onAbout }: P
         void activity.refetch()
       }}
       analyst={analyst ?? ''}
+      admin={admin}
       onPane={onPane}
       {...(onImportArchive ? { onImportArchive } : {})}
       userMenu={userMenu}

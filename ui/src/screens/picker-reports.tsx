@@ -9,6 +9,8 @@ export interface PickerReportsScreenProps {
   entries: readonly LibraryRow[] | undefined
   /** Who is signed in, at the rail's foot. */
   analyst: string
+  /** Whether to offer the rail rows only an administrator may use. */
+  admin?: boolean | undefined
   /** Opens the About door from the rail's head. */
   onAbout: () => void
   /** Where a rail row goes. Without it the rows are inert. */
@@ -29,6 +31,7 @@ export function PickerReportsScreen({
   onAbout,
   entries: entriesGiven,
   analyst,
+  admin,
   onPane,
   onImportArchive,
   userMenu,
@@ -41,6 +44,7 @@ export function PickerReportsScreen({
     <PickerFrame
       pane="reports"
       analyst={analyst}
+      admin={admin}
       {...(onPane ? { onPane } : {})}
       {...(onImportArchive ? { onImportArchive } : {})}
       userMenu={userMenu}

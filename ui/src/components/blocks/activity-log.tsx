@@ -105,17 +105,8 @@ const OUTCOMES = ['Failure', 'Success'] as const
 
 /** Where severity gets its ink, so a word and a colour say the same thing. */
 /**
- * An OCSF severity, as a tone on the product's ramp.
- *
- * **Declared rather than handed to `toneFor`**, which answers `none` for
- * `Fatal` -- grey, for the most severe line there is. The audit scale is
- * OCSF's six points and the ramp is the product's five, so the two meet here
- * and nowhere else.
- *
- * **The colours are the ramp's.** A private map is how `Low` came to be
- * lettered `text-severity-low`, which the tokens measure at 1.81:1 as type and
- * is the whole reason the `-type` pair exists, and how `Critical` and `High`
- * came to be one hue. -> `severity-tones.ts`, #659
+ * An OCSF severity as a tone on the product's ramp. Declared rather than handed
+ * to `toneFor`, which answers `none` for `Fatal`.
  */
 export function toneForAudit(severity: AuditRow['severity']): FieldTone {
   // Above critical on OCSF's scale, and the ramp has no step above it.
