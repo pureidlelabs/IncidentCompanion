@@ -11,14 +11,40 @@
  * So the count is taken first, and a non-empty answer refuses the whole
  * selection.
  */
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql, type SQL } from 'drizzle-orm'
 
 import { columnOf } from '../db/column-access.js'
 import type { Database } from '../db/client.js'
 import { withCase } from '../db/scope.js'
-import { REVIEWABLE } from './registry.js'
-import { REFERENCE_HOLDERS } from '../domain/collections.js'
-import type { BulkTarget } from '../domain/collections.js'
+import { REFERENCE_HOLDERS, REVIEWABLE } from './registry.js'
+import { reports } from '../db/schema/report.js'
+import type { BulkTarget, Collection } from '../domain/collections.js'
+
+/**
+ * Rows whose reference an analyst could still release, per holder collection.
+ *
+ * **A reference nobody can remove is not one worth refusing over.** A block in
+ * a sent report cannot be deleted or edited -- `refuseWritesToSentReport`
+ * turns both away -- so counting it leaves the analyst with a delete that is
+ * refused, a holder they cannot reach, and no way out. The reference is inert
+ * besides: a sent report is painted from its frozen tree and its figure is
+ * fetched by hash from the evidence store, so the row being refused over is
+ * not what the export reads. -> `report/render.service.ts`
+ *
+ * A block in a *draft* report is the opposite on every count, and is still
+ * counted -- which is why the collection is scoped rather than dropped.
+ *
+ * Only the report tier has rows that close, so this is one entry rather than a
+ * table. -> `collection.service.ts`, which says the same of `refuseIfClosed`.
+ */
+function releasable(collection: Collection): SQL | undefined {
+  if (collection !== 'report_blocks') return undefined
+  return sql`not exists (
+    select 1 from ${reports}
+    where ${reports.id} = ${columnOf(REVIEWABLE['report_blocks']!, 'reportId')}
+      and ${reports.sentAt} is not null
+  )`
+}
 
 /**
  * How many surviving rows name each id in the selection.
@@ -58,7 +84,7 @@ export async function referenceCounts(
       if (!holder) throw new Error(`no table for ${collection}, which declares a reference`)
       const rowId = columnOf(holder, 'id')
       const held = columnOf(holder, field)
-      const inCase = eq(columnOf(holder, 'caseId'), caseId)
+      const inCase = and(eq(columnOf(holder, 'caseId'), caseId), releasable(collection))
 
       if (!many) {
         const rows = (await tx

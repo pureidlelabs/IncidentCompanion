@@ -729,6 +729,44 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     expect(refused!.references[artefact!.id]).toBeGreaterThanOrEqual(1)
   })
 
+  /**
+   * **A sent report's block is not a reference anybody can release.**
+   *
+   * Holding evidence for it boxes the analyst in from three sides: the delete
+   * is refused, the block cannot be deleted or edited because its report is
+   * frozen, and the refusal names no holder to go and find. The reference is
+   * also inert -- a sent report is painted from its frozen tree and its figure
+   * is fetched by hash from the evidence store, so the row being refused over
+   * is not what the export reads.
+   *
+   * The draft case above is the opposite on every count, which is why the two
+   * are held apart rather than the collection being dropped as a holder.
+   */
+  it('lets evidence go when only a sent report cites it', async () => {
+    const [artefact] = await seed!
+      .insert(evidence)
+      .values({ caseId, type: 'file', name: 'SENT-FIGURE-SOURCE', location: 'nowhere' })
+      .returning()
+    const [paper] = await seed!
+      .insert(reports)
+      .values({ caseId, label: 'Sent', sentAt: new Date() })
+      .returning()
+    await seed!
+      .insert(reportBlocks)
+      .values({ caseId, reportId: paper!.id, kind: 'figure', evidenceId: artefact!.id })
+
+    const result = await controller().remove(
+      caseId,
+      { targets: [{ collection: 'evidence', rows: [selection(artefact!)] }] },
+      asSession(session),
+    )
+
+    expect(
+      result.deleted,
+      'the analyst cannot reach the block to release it, so this refusal has no way out',
+    ).toEqual([{ collection: 'evidence', id: artefact!.id }])
+  })
+
   it('reports an id it did not find rather than claiming it deleted it', async () => {
     const ghost = '00000000-0000-4000-8000-000000000000'
     const result = await controller().remove(
