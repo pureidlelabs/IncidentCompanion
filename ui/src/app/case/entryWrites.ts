@@ -59,10 +59,9 @@ export async function announced<T>(what: string, run: () => Promise<T>): Promise
  * express -- and a loop half-deletes, stopping at the first refusal with the
  * earlier rows already gone. -> `api/useBulkDelete.ts`, #665
  *
- * **The version each row was read at travels with it**, which a loop used to
- * be the only way to carry. The bulk route takes one per row now, so a row
- * another analyst edited is refused rather than deleted, and the whole
- * selection is refused with it. -> #682
+ * **The version each row was read at travels with it.** The bulk route takes
+ * one per row, so a row another analyst edited is refused rather than deleted,
+ * and the whole selection is refused with it. -> #682
  *
  * Exported because three write paths delete a selection and only one of them
  * is `entryWrites`: evidence and the timeline each assemble their own `writes`
