@@ -23,6 +23,11 @@ interface Source {
  *
  * `key` is the wire's name for the collection and the label is the analyst's:
  * for Assets the two differ, because the case holds `systems`.
+ *
+ * **Hand-kept, and held to the rail by a test.** The palette's destinations
+ * derive from the sections, so a collection added there and not here is a row
+ * an analyst can walk to and cannot find -- which is what happened to Methods.
+ * -> #666
  */
 const SOURCES: readonly Source[] = [
   { label: 'Timeline', key: 'timeline', slug: 'timeline', titles: ['description', 'eventSource', 'tactic', 'technique', 'actionType'] },
@@ -33,6 +38,7 @@ const SOURCES: readonly Source[] = [
   { label: 'Malware', key: 'malware', slug: 'entities#malware', titles: ['filename', 'hash'] },
   { label: 'Cloud Apps', key: 'cloudApps', slug: 'entities#cloud-apps', titles: ['appName'] },
   { label: 'Evidence', key: 'evidence', slug: 'evidence', titles: ['name', 'location'] },
+  { label: 'Methods', key: 'methods', slug: 'methods', titles: ['name', 'established', 'console'] },
   { label: 'Actions', key: 'actions', slug: 'actions', titles: ['task'] },
   { label: 'Case notes', key: 'casenotes', slug: 'notes', titles: ['note'] },
 ]
@@ -161,3 +167,6 @@ function titleOf(row: Record<string, unknown>, titles: readonly string[]): strin
   }
   return '(untitled)'
 }
+
+/** Which collections the search reads, for a test that holds this to the rail. */
+export const SEARCHED: ReadonlySet<string> = new Set(SOURCES.map((one) => one.key))
