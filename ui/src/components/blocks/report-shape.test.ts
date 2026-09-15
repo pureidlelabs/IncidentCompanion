@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { Report, ReportBlock } from '@/api/model'
 
-import { blocksOf, railSectionsOf, sectionTally, headingIsFinal, headingOf, isFrozen, outstandingIn, shortDate, stateOf } from './report-shape'
+import { UNTITLED_SECTION, blocksOf, railSectionsOf, sectionTally, headingIsFinal, headingOf, isFrozen, outstandingIn, sectionNameOf, shortDate, stateOf } from './report-shape'
 import { DEMO_BLOCKS, DEMO_REPORTS, demoReport } from '@/fixtures/report-demo'
 import { DEMO_HEADINGS } from './report-layouts'
 
@@ -154,11 +154,24 @@ describe('what a section is called', () => {
    * **A written section has no heading key at all**, so it is the one kind
    * whose label cannot come from the pack. It is also the common path: an
    * analyst inserts one and does not title it.
+   *
+   * **So it claims no heading**, which is what the document does with it --
+   * and the word that keeps it scannable comes from `sectionNameOf`, which
+   * answers what to call a section rather than what heads one. An English
+   * heading invented here is one the file will not print. -> #676
    */
   it('names an untitled written section rather than drawing its slug', () => {
     const one = block({ heading: '', headingKey: '', kind: 'written' })
-    expect(headingOf(one, DEMO_HEADINGS)).toBe('Written section')
+    expect(headingOf(one, DEMO_HEADINGS)).toBe('')
+    expect(sectionNameOf(one, DEMO_HEADINGS)).toBe(UNTITLED_SECTION)
+    expect(sectionNameOf(one, DEMO_HEADINGS), 'the raw slug reached a reader').not.toBe('written')
     expect(headingIsFinal(one, DEMO_HEADINGS)).toBe(true)
+  })
+
+  /** A section that has a heading is called by it, not by the marker. */
+  it('calls a titled section by its heading', () => {
+    const one = block({ heading: '', headingKey: '', kind: 'timeline' })
+    expect(sectionNameOf(one, DEMO_HEADINGS)).toBe('Timeline of events')
   })
 })
 

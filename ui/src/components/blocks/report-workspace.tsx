@@ -16,6 +16,8 @@ import {
   headingOf,
   isFrozen,
   railSectionsOf,
+  sectionNameOf,
+  UNTITLED_SECTION,
   sectionTally,
   stateOf,
   type RailSection,
@@ -421,7 +423,7 @@ function SectionColumn({
           // The rail names sections by `headingOf` and so does the document;
           // React Aria names the grip from this, so a third spelling would
           // give the grip a name the screen does not use.
-          textValue={headingOf(block, headings)}
+          textValue={sectionNameOf(block, headings)}
           className="items-start border-t-0 px-0 py-0 hover:bg-transparent"
         >
           <div id={sectionDomId(block.id)} className="min-w-0 flex-1">
@@ -623,7 +625,14 @@ function SectionRail({
             <span className="w-4 shrink-0 font-mono text-2xs tabular-nums opacity-70">
               {String(section.number).padStart(2, '0')}
             </span>
-            <span className="min-w-0 flex-1 truncate">{section.heading}</span>
+            {section.heading === '' ? (
+              // **In words rather than a blank cell.** A row of nothing but a
+              // number reads as a section that failed to load, and this one is
+              // the kind the document prints no heading for either.
+              <span className="min-w-0 flex-1 truncate opacity-70">{UNTITLED_SECTION}</span>
+            ) : (
+              <span className="min-w-0 flex-1 truncate">{section.heading}</span>
+            )}
             {section.blank && (
               // In words, because the mark is a 6px difference in hue and what
               // nobody has written is the question this rail exists for.
@@ -702,7 +711,7 @@ function WrittenSection({
            */
           <p
             className="min-h-24 motion-safe:animate-pulse text-sm text-ink-muted"
-            aria-label={headingOf(block, headings)}
+            aria-label={sectionNameOf(block, headings)}
             role="status"
             aria-busy="true"
           >
