@@ -7,7 +7,7 @@
  */
 import { Inject, Injectable } from '@nestjs/common'
 import type { UserSession } from '@thallesp/nestjs-better-auth'
-import { and, count, desc, eq, gte, inArray, lt, lte, ne, sql, type SQL } from 'drizzle-orm'
+import { and, count, desc, eq, gte, inArray, lt, ne, sql, type SQL } from 'drizzle-orm'
 import type { IncomingHttpHeaders } from 'node:http'
 
 import { DATABASE } from '../db/db.module.js'
@@ -38,8 +38,6 @@ export interface Asked {
   minSeverity?: number | undefined
   after?: string | undefined
   since?: string | undefined
-  /** The new end of the range. A range has two, and only one was askable. */
-  until?: string | undefined
   /**
    * Narrow to one outcome. Counted across the table already, so a screen
    * filtering in JavaScript was narrowing a page it had been handed.
@@ -117,7 +115,6 @@ export class InstallActivityReadService {
       // Descending, so "after this cursor" means older than it.
       asked.after ? lt(installActivity.seq, BigInt(asked.after)) : undefined,
       asked.since ? gte(installActivity.at, new Date(asked.since)) : undefined,
-      asked.until ? lte(installActivity.at, new Date(asked.until)) : undefined,
       // 2 is OCSF's Failure; anything else is a success.
       asked.outcome === 'failure' ? eq(installActivity.statusId, 2) : undefined,
       asked.outcome === 'success' ? ne(installActivity.statusId, 2) : undefined,

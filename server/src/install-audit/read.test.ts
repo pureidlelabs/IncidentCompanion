@@ -304,27 +304,6 @@ describe.skipIf(!db)('reading the audit', () => {
   })
 
   /**
-   * **A range has two ends, and only one was expressible.** `since` bounds the
-   * old side; without the new one a screen offering "between these two dates"
-   * can only ask for everything after the first and cut the rest client-side --
-   * over one page, so the answer is wrong rather than slow. -> #663
-   */
-  it('narrows to lines at or before the asked upper bound', async () => {
-    const all = await reads.page({ limit: 200 }, session, {})
-    expect(all.events.length, 'nothing to bound').toBeGreaterThan(1)
-
-    // The newest line's own stamp: everything older is at or before it, and a
-    // bound one millisecond under it must drop at least that line.
-    const newest = all.events[0]!.at
-    const under = new Date(new Date(newest).getTime() - 1).toISOString()
-
-    const bounded = await reads.page({ until: under, limit: 200 }, session, {})
-
-    expect(bounded.events.every((one) => one.at <= under)).toBe(true)
-    expect(bounded.events.length).toBeLessThan(all.events.length)
-  })
-
-  /**
    * **Counted across the table, filtered on the page.** This reader already
    * counts outcomes over every line -- its own docstring says counting them in
    * JavaScript would count "outcomes on the page while channels are counted on
