@@ -62,7 +62,7 @@ type Story = StoryObj<typeof meta>
  * back to the username.
  */
 export const Roster: Story = {
-  name: 'Every state the chip has a tone for',
+  name: 'Both states an account is served in',
   args: { accounts: PICKER_ACCOUNTS },
 }
 

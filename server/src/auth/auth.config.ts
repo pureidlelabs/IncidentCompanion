@@ -85,7 +85,6 @@ const ARGON2ID = {
  */
 const COOKIE_CEILING_SECONDS = SESSION_LIFETIME_CEILING_MINUTES * 60
 
-
 /**
  * Asserted in `new-user-role.test.ts`.
  *

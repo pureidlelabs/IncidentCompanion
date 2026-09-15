@@ -30,7 +30,7 @@ import type {
  *
  * **This file is a translation, and that is the whole of its size.** The
  * provider, the server and the screen each name the same things differently:
- * an `ImportSource` has a `key` where the picker draws an `id`, a
+ * an `ImportSource` has a `key` where the picker draws an `id`, the provider's
  * `RemoteIncident` has no `id` at all, and the served preview's verdict says
  * `existing` where the review says `merge`. None of that is invented here --
  * each mapping is between two shapes that already exist.

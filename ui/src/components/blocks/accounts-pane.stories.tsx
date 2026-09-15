@@ -56,7 +56,7 @@ const NONE_DISABLED = PICKER_ACCOUNTS.filter((one) => one.state !== 'disabled')
  * permanent `0 disabled` is a number nobody acts on.
  */
 export const Roster: Story = {
-  name: 'Every state the chip has a tone for',
+  name: 'Both states an account is served in',
   args: { accounts: PICKER_ACCOUNTS },
   play: async ({ canvas }) => {
     await expect(canvas.getByText('5 accounts \u00b7 1 administrator \u00b7 2 disabled')).toBeVisible()

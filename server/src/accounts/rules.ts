@@ -9,7 +9,6 @@
 import { DEFAULT_ROLE, ROLES, type AnalystAccount, type Role } from '../domain/analyst-account.js'
 import type { Analyst } from '../auth/last-admin.js'
 
-
 /**
  * One row as the pane draws it. `state` and `tone` are resolved here and never
  * derived on the client, which renders a chip straight from them.

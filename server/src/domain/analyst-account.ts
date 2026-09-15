@@ -24,9 +24,14 @@ export const ADMIN_ROLE: Role = 'admin'
 /**
  * Every state an account is served in.
  *
- * **Two, and a lock is not one of them.** Better Auth has no per-account lock,
- * so a third state here would be a word the server cannot produce and a chip
- * nothing can reach. -> `accounts/rules.test.ts`
+ * **Two, and a lock is not one of them even though this install locks.**
+ * `auth/lockout.ts` shuts an account after repeated failures and `lockedUntil`
+ * records it; what `rowFor` builds a row from is `Analyst`, which carries no
+ * such field, so the fact is held and not served.
+ *
+ * A third term belongs here when a row produces it, and not before: a state
+ * nothing emits is a tab an analyst can select and a chip nothing can reach.
+ * -> `accounts/rules.test.ts`
  */
 export const ACCOUNT_STATES = ['active', 'disabled'] as const
 

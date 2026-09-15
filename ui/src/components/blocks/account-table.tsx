@@ -108,8 +108,10 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
   const rows = useMemo(
     () =>
       accounts.filter((one) => {
-        if (tab === 'Active' && one.state !== 'active') return false
-        if (tab === 'Disabled' && one.state !== 'disabled') return false
+        // Read from the tab rather than branched per state, so a state added to
+        // `ACCOUNT_STATES` narrows through its own tab instead of falling past
+        // every branch and drawing the whole roster under a count of one.
+        if (tab !== 'All' && one.state !== tab.toLowerCase()) return false
         if (roles.length > 0 && !roles.includes(one.role)) return false
         return matchesAccount(one, query)
       }),

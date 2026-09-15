@@ -329,7 +329,7 @@ interface LoginResponse {
    * send the analyst.
    */
   mustChangePassword?: boolean
-  /** `auth.config.ts`'s `ROLES`. `null` where the username names no account. */
+  /** `analyst-account.ts`'s `ROLES`. `null` where the username names no account. */
   role?: string | null
 }
 
