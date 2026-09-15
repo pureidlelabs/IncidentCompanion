@@ -212,6 +212,41 @@ def test_a_source_change_owes_the_checks_that_sweep_that_tree(path: str) -> None
     assert any("pytest" in c for c in got), got
 
 
+def test_no_printed_command_is_one_a_worktree_cannot_run() -> None:
+    """**`python3` is not the interpreter the suites need.**
+
+    A worktree has no `.venv`, and `CLAUDE.md` records what the bare
+    invocation answers there: `No module named pytest`. Worktrees are where
+    the rules send parallel work, and this script is what an agent reads to
+    decide what to run -- so a command it prints has to be one that runs
+    where it is read. `scripts/venv_python.sh` is the answer `verify.sh` and
+    `test.sh` already use. -> #654
+    """
+    printed = only(
+        [
+            ".claude/hooks/some_hook.py",
+            "ui/src/App.tsx",
+            "server/src/main.ts",
+            "tests/repo/test_anything.py",
+        ]
+    )
+    assert not any(c.startswith("python3 -m pytest") for c in printed), printed
+    assert any("pytest" in c for c in printed), printed
+
+
+def test_a_ui_change_owes_the_contract_tier_that_reads_ui_by_path() -> None:
+    """**`tests/contract` reads source across both workspaces**, because
+    neither suite can import the other -- so a change to either owes it, the
+    same way the repository checks are owed for sweeping those trees.
+
+    `test_heading_labels_agree.py` opens `ui/src/components/blocks/report-layouts.ts`
+    by path. Following this script, four contract tests went red in CI on a
+    branch whose local tiers were all green. -> #677
+    """
+    got = only(["ui/src/components/blocks/report-layouts.ts"])
+    assert any("tests/contract" in c for c in got), got
+
+
 def test_a_source_change_is_not_told_to_run_the_whole_python_tier() -> None:
     """The sweep over source, not the tier that builds containers.
 

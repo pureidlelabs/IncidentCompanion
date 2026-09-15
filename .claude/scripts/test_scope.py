@@ -130,12 +130,22 @@ def claimed(path: str) -> bool:
     return bool(commands([path]))
 
 
+# **Asked for, never assumed.** `python3` is not the interpreter the suites
+# need: a worktree has no `.venv`, and the bare invocation answers `No module
+# named pytest` there -- which is where the rules send parallel work, and this
+# is what an agent reads to decide what to run. `venv_python.sh` executes each
+# candidate rather than testing the path, falls back to the main checkout, and
+# `--ensure` builds one; `verify.sh` and `test.sh` both ask it the same way.
+# -> #654
+PYTEST = '"$(scripts/venv_python.sh --ensure)" -m pytest'
+
+
 def commands(paths: list[str]) -> list[tuple[str, str]]:
     """Ordered cheapest first, so a reader running them in order fails fast."""
     out: list[tuple[str, str]] = []
 
     if touches(paths, AGENT):
-        out.append(("python3 -m pytest .claude/tests -q -n auto",
+        out.append((f"{PYTEST} .claude/tests -q -n auto",
                     "the agent tooling's own guards"))
     whole_python_tier = touches(paths, PYTHON) or any(
         p.rsplit("/", 1)[-1] in STACK_DECLARATIONS for p in paths
@@ -151,14 +161,22 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
     #
     # The narrow half rather than `./test.sh`, which ends in `pytest tests` and
     # builds containers: what a source change owes is the sweep over source.
+    # **`tests/contract` reads the same trees by path**, because neither suite
+    # can import the other: `test_heading_labels_agree` opens
+    # `ui/src/components/blocks/report-layouts.ts` and compares it against the
+    # server's labels. Following this script without it, four contract tests
+    # went red in CI on a branch whose local tiers were all green -- and
+    # `CLAUDE.md`'s everyday selection has named it all along. -> #677
+    #
     # `openspec/` for the same reason and it is the one that bit: `tests/docs`
     # holds the scenario ledger's stated totals against the rows it lists, and
     # a change moving a row touches no Python either. A branch that also edits
     # `server/` was routed here by that; a ledger-only one was routed past the
     # only tier that reads it. -> `tests/docs/test_scenario_ledger.py`
     elif touches(paths, SERVER) or touches(paths, UI) or touches(paths, "openspec/"):
-        out.append(("python3 -m pytest tests/repo tests/docs .claude/tests -q -n auto",
-                    "the repository checks, which sweep `server/src`, `ui/src` and `openspec/`"))
+        out.append((f"{PYTEST} tests/repo tests/docs tests/contract .claude/tests -q -n auto",
+                    "the repository and contract checks, which read `server/src`, "
+                    "`ui/src` and `openspec/`"))
     if touches(paths, SERVER):
         out.append(("(cd server && npm run check && npm run lint)",
                     "typecheck, the Nest suite, and the eslint config nothing used to load"))
