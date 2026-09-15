@@ -11,12 +11,13 @@
  * Dutch is a seeded row, upserted on boot like the report layouts, so what the
  * app ships and what an install adds are the same kind of thing.
  */
-import { Inject, Injectable } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
+import { Inject, Injectable, UnprocessableEntityException } from '@nestjs/common'
+import { eq, inArray } from 'drizzle-orm'
 
 import { DATABASE, SEED_DATABASE, seedRoleMissing } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { reportLanguage } from '../db/schema/language.js'
+import type { ClosedRowGuard } from './freeze.js'
 import {
   EN_KEYS,
   type LanguageEntry,
@@ -32,6 +33,50 @@ import { NL } from './document/labels.nl.js'
 
 /** English's own entry, which is never a row. */
 const ENGLISH = { code: 'en', label: 'English' }
+
+/**
+ * Refuse a report naming a language this install cannot print it in.
+ *
+ * **Here rather than on the schema, because the terms are rows.** Uploading a
+ * pack is the whole of adding a language, so no compiled-in list can fix the
+ * field and a synchronous refinement has nothing to read. This is the shape
+ * the case-boundary reference check already uses: a question a schema cannot
+ * answer, asked where the write happens.
+ *
+ * **Three codes are served and only one of them is a row.** `''` is a report
+ * that has not chosen, `en` is the source language and never stored, and a
+ * pack is a row -- so a check reading the table alone would refuse the first
+ * two.
+ *
+ * **The renderer's fallback is deliberate and is left alone.** A pack removed
+ * after a report chose it still prints in English, which is the right answer
+ * for a document that already exists. What this refuses is choosing one that
+ * never existed. -> `translatorFor`
+ */
+export function refuseUnservedLanguage(): ClosedRowGuard {
+  return async (db, _caseId, target) => {
+    const asked = new Set<string>()
+    for (const row of target.rows ?? []) {
+      const code = row['language']
+      if (typeof code === 'string' && code !== '' && code !== ENGLISH.code) asked.add(code)
+    }
+    if (asked.size === 0) return
+
+    const held = await db
+      .select({ code: reportLanguage.code })
+      .from(reportLanguage)
+      .where(inArray(reportLanguage.code, [...asked]))
+    const served = new Set(held.map((one) => one.code))
+    const unserved = [...asked].filter((code) => !served.has(code)).sort()
+
+    if (unserved.length > 0) {
+      throw new UnprocessableEntityException({
+        message: 'This install has no language pack for that code.',
+        unserved,
+      })
+    }
+  }
+}
 
 export type { LanguageEntry }
 

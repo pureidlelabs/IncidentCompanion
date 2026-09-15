@@ -63,6 +63,7 @@ import { actionSchema } from '../domain/entities/action.js'
 import { caseNoteSchema } from '../domain/entities/case-note.js'
 import { reportBlockSchema, reportSchema } from '../domain/entities/report.js'
 import { refuseWritesToSentReport } from '../report/freeze.js'
+import { refuseUnservedLanguage } from '../report/language.service.js'
 import { caseOwnedRowSchema, patchSchema } from '../domain/field-spec.js'
 
 /**
@@ -512,6 +513,7 @@ export class CaseNotesController extends EntityReads {
 export const REPORTS_COLLECTION: CollectionDefinition = {
   ...ordered('reports', reports),
   refuseIfClosed: refuseWritesToSentReport('id'),
+  refuseUnservedTerm: refuseUnservedLanguage(),
 }
 
 export const REPORT_BLOCKS_COLLECTION: CollectionDefinition = {
