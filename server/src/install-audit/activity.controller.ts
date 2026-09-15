@@ -105,6 +105,9 @@ const querySchema = z.object({
   /** Resume after this `seq`. Absent means the newest page. */
   after: z.string().regex(/^\d{1,19}$/).optional(),
   since: z.iso.datetime().optional(),
+  /** The new end of the range, so a custom window is one question. */
+  until: z.iso.datetime().optional(),
+  outcome: z.enum(['success', 'failure']).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 })
 
