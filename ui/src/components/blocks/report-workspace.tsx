@@ -685,9 +685,18 @@ function WrittenSection({
         <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">
           {number}
         </span>
-        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">
-          {headingOf(block, headings)}
-        </h2>
+        {headingOf(block, headings) === '' ? (
+          // **Not a heading, because there is none.** The document prints none
+          // for this kind either, so the card says what the section is rather
+          // than inventing what it is called.
+          <span className="min-w-0 flex-1 truncate text-2xs text-ink-muted">
+            {UNTITLED_SECTION}
+          </span>
+        ) : (
+          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">
+            {headingOf(block, headings)}
+          </h2>
+        )}
         {!headingIsFinal(block, headings) && (
           <span className="shrink-0 text-2xs text-ink-muted">heading not final</span>
         )}
@@ -724,7 +733,7 @@ function WrittenSection({
            * in the same text. -> `prose-body.tsx`
            */
           <ProseBody
-            label={headingOf(block, headings)}
+            label={sectionNameOf(block, headings)}
             value={text}
             readOnly={!editable}
             placeholder={editable ? 'Write\u2026' : 'Nothing was written here.'}
