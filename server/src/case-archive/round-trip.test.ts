@@ -231,6 +231,9 @@ describe.skipIf(!db)('a case, out and back', () => {
     expect(entry!.systemId).toBe(box!.id)
     expect(entry!.systemId).not.toBe(made.systemId)
     expect(box!.hostname).toBe('WKS-01')
+    // The floor under the count a damaged archive raises: an export writes the
+    // whole case, so a sound one names nothing it does not carry.
+    expect(result.missingReferences, 'a sound archive lost a reference').toBe(0)
   })
 
   /**

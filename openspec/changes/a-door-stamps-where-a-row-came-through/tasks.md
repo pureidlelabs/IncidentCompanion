@@ -20,5 +20,9 @@
 ## 4. Left open
 
 - [ ] 4.1 Which tool found a row, as distinct from which door it came through — no column holds it, and a travelled case is where the difference shows. → #727
-- [ ] 4.2 The archive door drops an unresolvable reference and counts nothing, where the CSV door counts it for the analyst
-- [ ] 4.3 The archive import writes one change-feed row for the case and none for its collections
+- [ ] 4.2 What an imported case's activity says, which is one line saying it was created here. → #729
+
+## 5. An archive says what it named and did not carry
+
+- [x] 5.1 Count the references an archive points at and does not carry, per id rather than per field
+- [x] 5.2 Report the count beside the digests it already reports, and hold the floor a sound archive answers

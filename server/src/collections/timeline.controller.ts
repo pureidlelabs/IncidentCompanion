@@ -106,14 +106,6 @@ const BULK_LIMIT = 1000
 
 const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
 
-/**
- * What the server asserts about a row it was handed by an importer.
- *
- * **Exported because two doors write imported entries** -- this controller's
- * bulk route and `incident-import`'s commit -- and a stamp duplicated in both
- * is one that drifts. A caller able to assert `imported` could forge an
- * evidentiary claim, which is why the write schemas omit both fields.
- */
 /** What this door calls itself. -> `db/import-stamp.ts` */
 export const BULK_IMPORT = 'Bulk import'
 

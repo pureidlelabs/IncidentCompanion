@@ -349,6 +349,33 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
   })
 
   /**
+   * **An archive that names a row it does not carry says so.** A sound archive
+   * names none: the export writes the whole case, and a reference points inside
+   * it. So a count above zero is the one thing about a damaged archive an
+   * operator cannot see by opening the case -- the rows are all there and the
+   * links between some of them are not.
+   *
+   * **Counted per id, not per field**, which is why the row below loses two.
+   */
+  it('counts the references an archive names and does not carry', async () => {
+    const built = await exported()
+    const hostile = await tamperedWith(built, 'timeline', [
+      {
+        id: '11111111-1111-4111-8111-111111111111',
+        kind: 'action',
+        actionType: 'containment action',
+        description: 'Host isolated',
+        time: new Date().toISOString(),
+        systemId: '22222222-2222-4222-8222-222222222222',
+        evidenceIds: ['33333333-3333-4333-8333-333333333333'],
+      },
+    ])
+    const result = await importer.load(hostile, '', actorId)
+
+    expect(result.missingReferences, 'a scalar and a list member').toBe(2)
+  })
+
+  /**
    * **A column the archive does not state keeps the column's own default.**
    * `.partial()` leaves a schema `.default()` firing, so parsing a row that
    * omits a column returns the schema's answer for it -- written as an
