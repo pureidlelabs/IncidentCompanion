@@ -107,7 +107,7 @@ const BULK_LIMIT = 1000
 const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
 
 /** What this door calls itself. -> `db/import-stamp.ts` */
-export const BULK_IMPORT = 'Bulk import'
+const BULK_IMPORT = 'Bulk import'
 
 function parsed(schema: z.ZodType, body: unknown): Record<string, unknown> {
   const answer = schema.safeParse(body)

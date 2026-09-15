@@ -21,8 +21,4 @@
 
 - [ ] 4.1 Which tool found a row, as distinct from which door it came through — no column holds it, and a travelled case is where the difference shows. → #727
 - [ ] 4.2 What an imported case's activity says, which is one line saying it was created here. → #729
-
-## 5. An archive says what it named and did not carry
-
-- [x] 5.1 Count the references an archive points at and does not carry, per id rather than per field
-- [x] 5.2 Report the count beside the digests it already reports, and hold the floor a sound archive answers
+- [ ] 4.3 How connected an imported case is. Counting the references an archive drops was built here and taken back out: a deleted row leaves its id in a reference list, so the count cannot tell that from a file that is not whole. → #731

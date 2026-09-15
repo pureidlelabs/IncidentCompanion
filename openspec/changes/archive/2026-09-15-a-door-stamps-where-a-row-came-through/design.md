@@ -4,6 +4,8 @@ Where a row came from, as the doors that write rows answer it. Not what found th
 
 Not what an imported case's history says. An import writes one line for the case and none for its rows, which is a separate boundary and an undecided one. → #729
 
+Not how connected an imported case is. An archive drops a reference that resolves to nothing and reports nothing, and a count of them cannot tell a row deleted before the export from a file that is not whole. → #731
+
 # Design
 
 **The door answers, and the file is never asked.** Every door that writes rows an analyst here did not type knows one thing the row cannot: which door it is. A file, an archive included, can only repeat what some other install answered — truthfully about that install, and about nothing here.
@@ -15,5 +17,3 @@ Not what an imported case's history says. An import writes one line for the case
 **Stamping rather than carrying, where an archive states an answer.** The alternative is to take the file's, and the column an entity row records this in defaults to the analyst's own work — so carrying states *an analyst here typed this* for every row an analyst typed on the install that wrote the archive. That is the same false claim a door that answers nothing makes by omission, for the rows most likely to be read. Stamping is the answer that is false in neither direction, and its cost is recorded above.
 
 **An entry read in is unreviewed, whatever the archive says.** The flag means nobody here has read the row. It is what an analyst filters a freshly imported timeline by, and a case arriving with every entry already cleared is the one state that makes the filter useless.
-
-**An archive names what it does not carry, for references as it already does for files.** A sound archive names none: an export writes the whole case, and a reference points inside it. So a count above zero says the file is not the whole of what was exported — which is the one thing about a damaged archive an operator cannot see by opening the case, because the rows are all there and the links between some of them are not.

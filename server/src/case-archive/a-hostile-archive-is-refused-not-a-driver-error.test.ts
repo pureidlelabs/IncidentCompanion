@@ -345,34 +345,6 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
 
     const [row] = await seed!.select().from(systems).where(eq(systems.caseId, result.id))
     expect(row?.source).toBe(ARCHIVE_IMPORT)
-    expect(row?.source, 'the column default claims somebody here typed it').not.toBe('manual')
-  })
-
-  /**
-   * **An archive that names a row it does not carry says so.** A sound archive
-   * names none: the export writes the whole case, and a reference points inside
-   * it. So a count above zero is the one thing about a damaged archive an
-   * operator cannot see by opening the case -- the rows are all there and the
-   * links between some of them are not.
-   *
-   * **Counted per id, not per field**, which is why the row below loses two.
-   */
-  it('counts the references an archive names and does not carry', async () => {
-    const built = await exported()
-    const hostile = await tamperedWith(built, 'timeline', [
-      {
-        id: '11111111-1111-4111-8111-111111111111',
-        kind: 'action',
-        actionType: 'containment action',
-        description: 'Host isolated',
-        time: new Date().toISOString(),
-        systemId: '22222222-2222-4222-8222-222222222222',
-        evidenceIds: ['33333333-3333-4333-8333-333333333333'],
-      },
-    ])
-    const result = await importer.load(hostile, '', actorId)
-
-    expect(result.missingReferences, 'a scalar and a list member').toBe(2)
   })
 
   /**

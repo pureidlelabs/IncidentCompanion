@@ -157,27 +157,15 @@ const NEVER_CARRIED = new Set([
  * the list instead, which is what a deleted row already looks like there.
  *
  * A scalar that resolves to nothing becomes null, which those columns allow.
- *
- * Counts each id it could not place into `lost`, one per id rather than one
- * per field, so a list that loses two members counts two.
  */
-function remapped(
-  value: unknown,
-  remap: ReadonlyMap<string, string>,
-  lost: { count: number },
-): unknown {
+function remapped(value: unknown, remap: ReadonlyMap<string, string>): unknown {
   if (Array.isArray(value)) {
     return value.flatMap((one) => {
       const found = typeof one === 'string' ? remap.get(one) : undefined
-      if (found === undefined) lost.count += 1
       return found === undefined ? [] : [found]
     })
   }
-  if (typeof value === 'string') {
-    const found = remap.get(value)
-    if (found === undefined) lost.count += 1
-    return found ?? null
-  }
+  if (typeof value === 'string') return remap.get(value) ?? null
   return value
 }
 
@@ -192,10 +180,6 @@ export const importResultSchema = z.object({
     .number()
     .int()
     .describe("Digests the archive's rows name and the archive did not carry."),
-  missingReferences: z
-    .number()
-    .int()
-    .describe("Rows the archive's rows point at and the archive did not carry."),
 })
 
 export type ImportResult = z.infer<typeof importResultSchema>
@@ -325,17 +309,6 @@ export class ArchiveImportService {
       const remap = new Map<string, string>()
       let rows = 0
 
-      /**
-       * References the archive names and does not carry, counted for the
-       * operator rather than dropped in silence.
-       *
-       * **A sound archive loses none**, because an export writes the whole case
-       * and a reference points inside it. So a count above zero says the file
-       * is not the whole of what was exported, which is the one thing about a
-       * damaged archive an operator cannot see by opening the case.
-       */
-      const lost = { count: 0 }
-
       for (const [name, table] of TABLES) {
         const incoming = record[name]
         if (!Array.isArray(incoming) || incoming.length === 0) continue
@@ -358,9 +331,7 @@ export class ArchiveImportService {
           // hostname goes, a number no column can hold. -> #625
           for (const [key, value] of Object.entries(checked(name, one))) {
             if (NEVER_CARRIED.has(key) || !columns.has(key)) continue
-            values[key] = REFERENCE_FIELD_NAMES.has(key)
-              ? remapped(value, remap, lost)
-              : value
+            values[key] = REFERENCE_FIELD_NAMES.has(key) ? remapped(value, remap) : value
           }
           // A timestamp arrives as an ISO string and the column wants a Date.
           for (const key of Object.keys(values)) {
@@ -428,14 +399,7 @@ export class ArchiveImportService {
       }
 
       this.log.log(`imported ${String(rows)} rows as case ${caseId}`)
-      return {
-        id: caseId,
-        title: String(record.title),
-        rows,
-        attachments,
-        missingFiles,
-        missingReferences: lost.count,
-      }
+      return { id: caseId, title: String(record.title), rows, attachments, missingFiles }
     })
   }
 
