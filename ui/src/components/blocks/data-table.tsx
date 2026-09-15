@@ -603,15 +603,14 @@ export function DataTable<TData extends { id: string }>({
 /**
  * Report the rows a table has selected, and hand the same list back.
  *
- * **Compared as a sorted JSON string, and that is the whole reason this is a
- * hook.** `getSelectedRowModel()` builds a fresh array on every render, so an
- * effect depending on the array runs on every draw -- and a caller that sets
- * state from it re-renders, rebuilds the array, and runs the effect again.
- * Sorting makes the comparison about which rows are ticked rather than the
- * order the model happened to return them in.
+ * The selection is compared as a sorted JSON string. `getSelectedRowModel()`
+ * builds a fresh array on every render, so an effect depending on the array
+ * runs on every draw, and a caller that sets state from it re-renders,
+ * rebuilds the array and runs the effect again. Sorting compares which rows
+ * are ticked rather than the order the model returned them in.
  *
- * `onChange` is called after the render that changed the selection, so a
- * caller holding it in state settles on the second pass rather than looping.
+ * `onChange` runs after the render that changed the selection, so a caller
+ * holding the list in state settles on the second pass.
  */
 export function useSelectedIds<TData extends { id: string }>(
   table: EntityTable<TData>,

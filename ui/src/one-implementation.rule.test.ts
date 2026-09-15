@@ -31,10 +31,10 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)))
  * cast standing between them to make the tree compile.
  *
  * **CamelCase, because a constant matched as `[A-Z][A-Za-z0-9]*` stops at the
- * underscore** -- which reads `PICKER_ROWS` and `PICKER_PANES` as one name
- * called `PICKER`. Asking for a lowercase second letter asks for the shape a
- * component, a type and an interface all have and a screaming constant does
- * not.
+ * underscore** -- which reads `PICKER_PANES` and `PICKER_ACCOUNTS` as one name,
+ * and files every pair of them as a fork. Asking for a lowercase second letter
+ * asks for the shape a component, a type and an interface all have and a
+ * screaming constant does not.
  *
  * **A private copy is invisible to this rule, and that is a known hole rather
  * than an oversight.** A legacy file can keep a character-for-character
