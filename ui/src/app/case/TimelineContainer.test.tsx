@@ -22,7 +22,7 @@ const patched: Record<string, unknown>[] = []
 vi.mock('@/api/case', () => ({ useCase: () => ({ data: undefined }) }))
 vi.mock('@/api/specs', () => ({ useSpecs: () => ({ data: undefined }) }))
 vi.mock('@/app/useCaseId', () => ({ useCaseId: () => 'case-1' }))
-vi.mock('@/api/useEntryDelete', () => ({ useEntryDelete: () => ({ mutateAsync: vi.fn() }) }))
+vi.mock('@/api/useBulkDelete', () => ({ useBulkDelete: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('@/api/useEntryCreate', () => ({
   useEntryCreate: () => ({
     mutateAsync: (one: Record<string, unknown>) => {

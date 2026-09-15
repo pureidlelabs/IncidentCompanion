@@ -12,7 +12,7 @@ import { TablePager } from '@/components/ui/table-pager'
 
 import { DataTable, useEntityTable, type EntityColumn } from './data-table'
 import { EmptyState } from './empty-state'
-import { TONE_INK, toneFor, type FieldTone } from './severity-tones'
+import { TONE_INK, toneFor, type FieldTone } from '@/components/ui/severity-tones'
 import type { FilterSet } from './filter-set'
 import { FilterControls } from './filter-controls'
 import { CountMeta } from './section-head'

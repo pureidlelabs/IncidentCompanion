@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { detailSummary, matchesActivity, toneForAudit, type AuditRow } from './activity-log'
-import { TONE_INK } from './severity-tones'
+import { TONE_INK } from '@/components/ui/severity-tones'
 
 /**
  * **The activity log search reads the Activity column and nothing else.**
