@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 
 import {
   DataTable,
   selectionColumn,
   useEntityTable,
+  useSelectedIds,
   type EntityColumn,
 } from '@/components/blocks/data-table'
 import { EmptyState } from '@/components/blocks/empty-state'
@@ -107,17 +108,9 @@ function ReviewTable({
     initialSelection: proposed,
   })
 
-  const ticked = JSON.stringify(
-    table
-      .getSelectedRowModel()
-      .rows.map((row) => row.id)
-      .sort(),
-  )
-  useEffect(() => {
-    onApproved(JSON.parse(ticked) as string[])
-  }, [ticked, onApproved])
+  const ticked = useSelectedIds(table, onApproved)
 
-  const approved = (JSON.parse(ticked) as string[]).length
+  const approved = ticked.length
   const fresh = candidates.filter((one) => one.verdict === 'new').length
   const silent = chosen - new Set(candidates.map((one) => one.incident)).size
 

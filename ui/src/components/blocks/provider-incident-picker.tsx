@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 
 import {
   DataTable,
   selectionColumn,
   useEntityTable,
+  useSelectedIds,
   type EntityColumn,
 } from '@/components/blocks/data-table'
 import { EmptyState } from '@/components/blocks/empty-state'
@@ -185,15 +186,7 @@ function IncidentTable({
     initialSorting: [{ id: 'created', desc: true }],
   })
 
-  const ticked = JSON.stringify(
-    table
-      .getSelectedRowModel()
-      .rows.map((row) => row.id)
-      .sort(),
-  )
-  useEffect(() => {
-    onSelected(JSON.parse(ticked) as string[])
-  }, [ticked, onSelected])
+  useSelectedIds(table, onSelected)
 
   return (
     <DataTable
