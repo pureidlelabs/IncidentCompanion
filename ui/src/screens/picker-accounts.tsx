@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { AccountRow } from '@/components/blocks/account-table'
+import type { AccountTableRow } from '@/components/blocks/account-table'
 import { AccountsPane } from '@/components/blocks/accounts-pane'
 import { NewAccountDialog, type NewAccount } from '@/components/blocks/new-account-dialog'
 import { PickerFrame } from '@/components/blocks/picker-frame'
@@ -18,7 +18,7 @@ export interface PickerAccountsScreenProps {
   /** What the server said, when it refused a create. */
   refusal?: string | undefined
   /** Accounts this install holds. Absent draws an empty list. */
-  accounts: readonly AccountRow[] | undefined
+  accounts: readonly AccountTableRow[] | undefined
   /** Who is signed in, at the rail's foot. */
   analyst: string
   /** Whether to offer the rail rows only an administrator may use. */
@@ -61,7 +61,7 @@ export function PickerAccountsScreen({
   // **The screen owns the roster, not the table.** Enabling and disabling are
   // written here so that the pane's count line and the table's tabs read one
   // list; a copy held inside the table left the two counting different things.
-  const [accounts, setAccounts] = useState<readonly AccountRow[]>(accountsGiven ?? [])
+  const [accounts, setAccounts] = useState<readonly AccountTableRow[]>(accountsGiven ?? [])
   const [given, setGiven] = useState(accountsGiven)
   if (given !== accountsGiven) {
     setGiven(accountsGiven)

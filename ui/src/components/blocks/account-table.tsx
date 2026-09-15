@@ -8,6 +8,8 @@ import { PersonAvatar } from '@/components/blocks/presence'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/tabs'
 
 import { actionsColumn, DataTable, useEntityTable, type EntityColumn } from './data-table'
+import type { AnalystAccount } from '@contract/analyst-account'
+
 import { EmptyState } from './empty-state'
 import { useFilters } from './filter-set'
 import { FilterControls } from './filter-controls'
@@ -22,18 +24,19 @@ import { TableToolbar } from './table-toolbar'
  * both wrap this in their own head, and a settings card that grew a second
  * copy of the table is the defect this exists to rule out.
  */
-export interface AccountRow {
+export interface AccountTableRow
+  extends Pick<AnalystAccount, 'username' | 'displayName' | 'role' | 'state'> {
+  /**
+   * The row identity the table sorts and selects by.
+   *
+   * Supplied by the caller: an account is addressed by its username on the
+   * wire, so a served row carries no id of its own.
+   */
   id: string
-  username: string
-  /** How they are named on a case. Falls back to the username when blank. */
-  displayName: string
-  role: string
-  /** The served word, drawn as-is: `active`, `disabled`, `locked out`. */
-  state: 'active' | 'disabled' | 'locked out'
 }
 
 /** How an account sorts and how the search reads it. */
-export function accountLabel(row: AccountRow): string {
+export function accountLabel(row: AccountTableRow): string {
   return row.displayName === '' ? row.username : row.displayName
 }
 
@@ -44,7 +47,7 @@ export function accountLabel(row: AccountRow): string {
  * install, and how many cannot sign in. `disabled` is appended only when there
  * is one, because a permanent `0 disabled` is a number nobody acts on.
  */
-export function accountCountLine(rows: readonly AccountRow[]): string {
+export function accountCountLine(rows: readonly AccountTableRow[]): string {
   const admins = rows.filter((one) => one.role === 'admin').length
   const off = rows.filter((one) => one.state === 'disabled').length
   const parts = [
@@ -61,20 +64,27 @@ export function accountCountLine(rows: readonly AccountRow[]): string {
  * Both lines of the Account cell: the name it sorts by and the username under
  * it, which is the whole of what that column draws.
  */
-export function matchesAccount(row: AccountRow, query: string): boolean {
+export function matchesAccount(row: AccountTableRow, query: string): boolean {
   return matchesWords(`${accountLabel(row)} ${row.username}`, query)
 }
 
-const ACCOUNT_TABS = ['All', 'Active', 'Disabled'] as const
+/**
+ * The tabs the pane narrows by: every served state, and one for no narrowing.
+ *
+ * Held to `ACCOUNT_STATES` by `account-table.test.ts`, because the row filter
+ * names each state in a line of its own -- a state with no tab is not drawn
+ * wrong, it is simply unreachable from every tab but All.
+ */
+export const ACCOUNT_TABS = ['All', 'Active', 'Disabled'] as const
 
 export interface AccountTableProps {
-  accounts: readonly AccountRow[]
+  accounts: readonly AccountTableRow[]
   /**
    * Enabling and disabling are the two verbs this table can perform, and it
    * performs neither itself: the caller owns the roster, so what a tab counts
    * and what the table draws cannot drift apart.
    */
-  onState: (id: string, state: AccountRow['state']) => void
+  onState: (id: string, state: AccountTableRow['state']) => void
 }
 
 export function AccountTable({ accounts, onState }: AccountTableProps) {
@@ -98,8 +108,10 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
   const rows = useMemo(
     () =>
       accounts.filter((one) => {
-        if (tab === 'Active' && one.state !== 'active') return false
-        if (tab === 'Disabled' && one.state !== 'disabled') return false
+        // Read from the tab rather than branched per state, so a state added to
+        // `ACCOUNT_STATES` narrows through its own tab instead of falling past
+        // every branch and drawing the whole roster under a count of one.
+        if (tab !== 'All' && one.state !== tab.toLowerCase()) return false
         if (roles.length > 0 && !roles.includes(one.role)) return false
         return matchesAccount(one, query)
       }),
@@ -107,7 +119,7 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
   )
 
   const columns = useMemo(() => accountColumns(onState), [onState])
-  const table = useEntityTable<AccountRow>({
+  const table = useEntityTable<AccountTableRow>({
     data: rows,
     columns,
     meta: { pendingIds: new Set(), commit: () => undefined },
@@ -210,8 +222,8 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
  * administrator is scanning the table for.
  */
 function accountColumns(
-  onState: (id: string, state: AccountRow['state']) => void,
-): EntityColumn<AccountRow>[] {
+  onState: (id: string, state: AccountTableRow['state']) => void,
+): EntityColumn<AccountTableRow>[] {
   return [
     {
       id: 'account',
@@ -269,18 +281,10 @@ function accountColumns(
       header: 'State',
       meta: { className: 'w-40' },
       cell: ({ row: one }) => (
-        <FieldToneBadge
-          value={one.original.state}
-          // The tone is the served word's, not the state's spelling: a locked
-          // account is a thing to act on, a disabled one is a decision already
-          // made.
-          tone={
-            one.original.state === 'locked out' ? held('critical', 'solid') : held('none', 'hollow')
-          }
-        />
+        <FieldToneBadge value={one.original.state} tone={held('none', 'hollow')} />
       ),
     },
-    actionsColumn<AccountRow>(
+    actionsColumn<AccountTableRow>(
       (one) => accountLabel(one),
       (one) => [
         [

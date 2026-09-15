@@ -7,7 +7,7 @@ import {
   NO_DIALS,
   ProviderIncidentPicker,
   type Dials,
-  type RemoteIncident,
+  type PickerIncident,
 } from '@/components/blocks/provider-incident-picker'
 import {
   ProviderWorkspacePicker,
@@ -73,7 +73,7 @@ export interface ImportSentinelScreenProps {
    */
   sources?: readonly SourceChoice[]
   /** The incidents the filter left. */
-  incidents?: readonly RemoteIncident[]
+  incidents?: readonly PickerIncident[]
   /** What the server says the selected incidents would add. */
   candidates?: readonly Candidate[]
   /** Which incidents are carried into the review on a direct mount. */
@@ -110,7 +110,7 @@ export interface SentinelWrites {
   /** The workspaces that identity can read. */
   sources: () => Promise<readonly SourceChoice[]>
   /** The incidents in the chosen workspace that the dials leave. */
-  incidents: (sourceId: string, dials: Dials) => Promise<readonly RemoteIncident[]>
+  incidents: (sourceId: string, dials: Dials) => Promise<readonly PickerIncident[]>
   /** What the selected incidents would add to this case, as the server sees it. */
   preview: (sourceId: string, incidentIds: readonly string[]) => Promise<readonly Candidate[]>
   /**
@@ -228,7 +228,7 @@ function hoursAgo(hours: number): string {
  * was handed would look right against rows that arrived sorted, and the
  * provider returns them in no order this screen may assume.
  */
-export const DEMO_INCIDENTS: readonly RemoteIncident[] = [
+export const DEMO_INCIDENTS: readonly PickerIncident[] = [
   {
     id: 'INC-88214',
     number: '88214',
@@ -686,7 +686,7 @@ export function ImportSentinelScreen({
  * provider filters on the incident *number*, so `INC-88214` typed into that box
  * is a filter it would refuse.
  */
-function matching(incidents: readonly RemoteIncident[], dials: Dials): readonly RemoteIncident[] {
+function matching(incidents: readonly PickerIncident[], dials: Dials): readonly PickerIncident[] {
   const title = dials.title.trim().toLowerCase()
   const number = dials.number.trim()
   const hours = Number(dials.sinceHours)

@@ -14,7 +14,7 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
 
-import { ADMIN_ROLE } from '../auth/auth.config.js'
+import { ADMIN_ROLE } from '../domain/analyst-account.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { user } from '../db/schema/auth.js'

@@ -9,6 +9,7 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { eq, sql } from 'drizzle-orm'
 
+import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
 import { recordInstallActivity } from '../install-activity/record.js'
 import { trustedAddressHeaders } from '../wire/caller-address.js'
 import { admin } from 'better-auth/plugins'
@@ -83,18 +84,6 @@ const ARGON2ID = {
  * -> `test/the-idle-window-reaches-the-browser.test.ts`
  */
 const COOKIE_CEILING_SECONDS = SESSION_LIFETIME_CEILING_MINUTES * 60
-
-/**
- * The whole role vocabulary, and it is two words.
- *
- * Declared here because `defaultRole` below and the list the Accounts pane
- * offers are the same fact. `admin` gates managing accounts, the idle timeout
- * and the API access level; everything else a signed-in analyst does, case
- * data included, is ungated by role.
- */
-export const ROLES = ['analyst', 'admin'] as const
-export const DEFAULT_ROLE: (typeof ROLES)[number] = 'analyst'
-export const ADMIN_ROLE: (typeof ROLES)[number] = 'admin'
 
 /**
  * Asserted in `new-user-role.test.ts`.

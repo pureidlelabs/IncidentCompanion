@@ -11,7 +11,8 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { ADMIN_ROLE, DEFAULT_ROLE, roleForNewUser } from './auth.config.js'
+import { ADMIN_ROLE, DEFAULT_ROLE } from '../domain/analyst-account.js'
+import { roleForNewUser } from './auth.config.js'
 
 describe('the role a new account is created with', () => {
   it('makes the first account the administrator, whatever it asked for', () => {

@@ -14,7 +14,7 @@ import { changedFields, same } from '@/api/entryFields'
 import type { CollectionName } from '@/api/model'
 import { fieldsOf, sealed, type FieldSpec, type FormSpec } from '@/api/specs'
 import { isEmpty, problemsAgainst, problemsIn, type EntitySchema, type Problems } from '@/api/validateDraft'
-import { FieldControl } from '@/components/blocks/field-control'
+import { FieldControl, type Suggestions } from '@/components/blocks/field-control'
 import { FieldRow, summarise } from '@/components/blocks/field-row'
 import {
   FoldedGroups,
@@ -31,9 +31,6 @@ import { isThenable } from '@/lib/isThenable'
 export type ReferenceOptions = Readonly<
   Partial<Record<CollectionName, ReadonlyMap<string, string>>>
 >
-
-/** Values the case already carries, for the two kinds whose vocabulary is the case. */
-export type Suggestions = Readonly<Record<string, readonly string[]>>
 
 type Draft = Record<string, unknown>
 

@@ -23,7 +23,22 @@ import { describe, expect, it } from 'vitest'
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)))
 
 /**
- * An exported component declaration.
+ * An exported declaration, by any of the keywords that carry a name.
+ *
+ * **The keyword is not the point.** A name has one implementation whether it
+ * is declared a function, a class, a type or an interface, and a forked type
+ * costs what a forked component costs: two callers holding shapes that
+ * disagree, and a cast standing between them to make the tree compile.
+ *
+ * **Still unread: `export default`, `export async function`, `export enum`,
+ * `export abstract class` and `export let`.** None has a capitalised
+ * declaration in this tree, so each is a hole rather than a finding.
+ *
+ * **CamelCase, because a constant matched as `[A-Z][A-Za-z0-9]*` stops at the
+ * underscore** -- which reads `PICKER_PANES` and `PICKER_ACCOUNTS` as one name,
+ * and files every pair of them as a fork. Asking for a lowercase second letter
+ * asks for the shape a component, a type and an interface all have and a
+ * screaming constant does not.
  *
  * **A private copy is invisible to this rule, and that is a known hole rather
  * than an oversight.** A legacy file can keep a character-for-character
@@ -35,41 +50,92 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)))
  * through a trailing `export { X }`, which is most of them, so it names far
  * more than it finds. A rule naming that much on the day it lands is an audit,
  * and an audit nobody can clear gets switched off -- which would cost the real
- * forks this does catch.
+ * forks this does catch. **Dropping `export` is what did that**, not the
+ * keyword beside it: every alternation above is still a real export, so each
+ * adds names without adding a guess.
  *
- * **The half of that hole a regex can close is the trailing block itself.**
+ * **The other half a regex can close is the trailing block itself.**
  * `export { X }` is a real export list, not a guess at one, so reading it adds
- * no private declaration and no false hit -- and it is what catches a name
- * exported from two files through a block rather than a declaration, which a
- * rule reading `export function` alone passes over.
+ * no private declaration -- and it is what catches a name exported from two
+ * files through a block rather than a declaration, which a rule reading a
+ * declaration alone passes over. A name the file imported is skipped, or a
+ * forwarded third-party symbol reads as this file's own implementation.
  *
  * What stays open is the private declaration nothing exports, which needs the
  * parser the paragraph above describes.
  */
-const EXPORTED = /export function ([A-Z][A-Za-z0-9]*)/g
+const EXPORTED = /export (function|const|type|interface|class) ([A-Z][a-z][A-Za-z0-9]*)\b/g
 
 /**
  * A trailing `export { X, Y as Z }`, and never `export { X } from '...'`.
  *
  * A re-export names somebody else's implementation, so counting it would file
  * a barrel file as a second copy of everything it forwards.
+ *
+ * `export type { X }` is not matched, because `\s*` cannot cross the keyword --
+ * which is what leaves this a value-space export and nothing else.
  */
 const EXPORT_BLOCK = /export\s*\{([^}]*)\}\s*(?!from)/g
 
-/** Every component name a file exports, by declaration or by trailing block. */
-function exportedBy(text: string): string[] {
-  const found = [...text.matchAll(EXPORTED)].map(([, name]) => name ?? '')
+/**
+ * A name qualified by the declaration space it is exported into.
+ *
+ * **TypeScript keeps values and types in separate namespaces, and so does this
+ * rule.** A component and the interface naming what it takes may both be
+ * called `Pane`: the compiler resolves each from the position it is used in,
+ * and neither is a second implementation of the other. Pooling the keywords
+ * files every one of those pairs as a fork, which is the backlog the paragraph
+ * above refuses to report -- eight of them stood in this tree the day the
+ * keywords were added, against four real forks.
+ *
+ * So `Pane` the function and `Pane` the interface are two names here, while
+ * `AccountRow` declared as an interface in two files is one.
+ */
+type Exported = `${'value' | 'type'}:${string}`
+
+/** Every name a file exports, by declaration or by trailing block. */
+function exportedBy(text: string): Exported[] {
+  const borrowed = new Set(
+    [...text.matchAll(IMPORTED)].flatMap(([, list = '']) =>
+      list.split(',').map((part) => part.trim().split(/\s+as\s+/).pop()?.trim() ?? ''),
+    ),
+  )
+  const found: Exported[] = []
+  for (const [, keyword = '', name = ''] of text.matchAll(EXPORTED)) {
+    found.push(`${keyword === 'type' || keyword === 'interface' ? 'type' : 'value'}:${name}`)
+  }
   for (const [whole, list = ''] of text.matchAll(EXPORT_BLOCK)) {
     const at = text.indexOf(whole)
     if (/^\s*from/.test(text.slice(at + whole.length, at + whole.length + 8))) continue
     for (const part of list.split(',')) {
       const name = part.trim().split(/\s+as\s+/).pop()?.trim() ?? ''
-      if (/^[A-Z][A-Za-z0-9]*$/.test(name)) found.push(name)
+      if (borrowed.has(name)) continue
+      if (/^[A-Z][A-Za-z0-9]*$/.test(name)) found.push(`value:${name}`)
     }
   }
-  return found.filter((name) => name !== '')
+  return found
 }
 
+/**
+ * Every name a file imports, so a block does not forward one as its own.
+ *
+ * `export { DialogTrigger }` under an `import { DialogTrigger } from
+ * 'react-aria-components'` is a re-export written in two statements instead of
+ * one. Counting it declares the file an implementation of a component it does
+ * not hold, and a second file forwarding the same third-party name is then a
+ * fork of something neither wrote.
+ */
+const IMPORTED = /import\s*(?:type\s*)?\{([^}]*)\}\s*from/g
+
+/** The name a qualified export carries, without the space in front of it. */
+function nameOf(exported: string): string {
+  return exported.slice(exported.indexOf(':') + 1)
+}
+
+/** The declaration space a qualified export names: `value` or `type`. */
+function spaceOf(exported: string): string {
+  return exported.slice(0, exported.indexOf(':'))
+}
 
 /** The file's name without its extension. */
 function baseOf(file: string): string {
@@ -107,7 +173,7 @@ describe('a component name has one implementation', () => {
       seen.add(file)
       where.set(key, seen)
       const spelt = spelling.get(key) ?? new Set<string>()
-      spelt.add(name)
+      spelt.add(nameOf(name))
       spelling.set(key, spelt)
     }
   }
@@ -128,24 +194,32 @@ describe('a component name has one implementation', () => {
     // when it has quietly died.
     expect(files.length).toBeGreaterThan(300)
     expect(where.size).toBeGreaterThan(300)
-    expect(where.has('datatable')).toBe(true)
+    expect(where.has('value:datatable')).toBe(true)
+    // A class is a declaration this rule read past until it was named: four
+    // stand in `ui/src`, and a second `ApiError` would have gone unreported.
+    expect(where.has('value:apierror')).toBe(true)
   })
 
   it('reads a trailing export block, and walks past a re-export', () => {
     // The half of the hole this closes is invisible otherwise: a reader that
     // stopped matching the block would leave every fork below it pardoned, and
     // the suite would print the same green as a tree with one implementation.
-    expect(exportedBy('function Input() {}\nexport { Input }')).toEqual(['Input'])
-    expect(exportedBy('export { Input as Box, controlBase }')).toEqual(['Box'])
+    expect(exportedBy('function Input() {}\nexport { Input }')).toEqual(['value:Input'])
+    expect(exportedBy('export { Input as Box, controlBase }')).toEqual(['value:Box'])
     expect(exportedBy("export { Input } from './field'")).toEqual([])
+    // A re-export written as two statements is still a re-export. Without
+    // this, every kit file forwarding a React Aria or lucide symbol is filed
+    // as an implementation of it, and the second one to do so is a fork.
+    expect(
+      exportedBy("import { DialogTrigger } from 'react-aria-components'\nexport { DialogTrigger }"),
+    ).toEqual([])
     // And a live file spelling it this way is actually read by the block:
     // `input.tsx` declares `function Input` with no `export` keyword and
     // exports it through a trailing block one line down.
-    expect(ours('Input').map((file) => relative(SRC, file).replaceAll('\\', '/')).sort()).toEqual([
+    expect(ours('value:Input').map((file) => relative(SRC, file).replaceAll('\\', '/')).sort()).toEqual([
       'components/ui/input.tsx',
     ])
   })
-
 
   it('grows no second implementation of a name', () => {
     const forks: string[] = []
@@ -155,7 +229,7 @@ describe('a component name has one implementation', () => {
       if (bases.size < 2) continue
       const paths = seen.map((file) => relative(SRC, file).replaceAll('\\', '/')).sort()
       if (KNOWN.get(name)?.join() === paths.join()) continue
-      forks.push(`${spellings(name).join('/')}: ${paths.join(', ')}`)
+      forks.push(`${spellings(name).join('/')} (${spaceOf(name)}): ${paths.join(', ')}`)
     }
     expect(
       forks.sort(),

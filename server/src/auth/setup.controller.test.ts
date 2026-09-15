@@ -18,7 +18,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { ADMIN_ROLE } from './auth.config.js'
+import { ADMIN_ROLE } from '../domain/analyst-account.js'
 import { SetupController, type ClaimDto } from './setup.controller.js'
 import { mintToken } from './setup.token.js'
 

@@ -601,6 +601,34 @@ export function DataTable<TData extends { id: string }>({
 }
 
 /**
+ * Report the rows a table has selected, and hand the same list back.
+ *
+ * The selection is compared as a sorted JSON string. `getSelectedRowModel()`
+ * builds a fresh array on every render, so an effect depending on the array
+ * runs on every draw, and a caller that sets state from it re-renders,
+ * rebuilds the array and runs the effect again. Sorting compares which rows
+ * are ticked rather than the order the model returned them in.
+ *
+ * `onChange` runs after the render that changed the selection, so a caller
+ * holding the list in state settles on the second pass.
+ */
+export function useSelectedIds<TData extends { id: string }>(
+  table: EntityTable<TData>,
+  onChange: (next: readonly string[]) => void,
+): readonly string[] {
+  const ticked = JSON.stringify(
+    table
+      .getSelectedRowModel()
+      .rows.map((row) => row.id)
+      .sort(),
+  )
+  useEffect(() => {
+    onChange(JSON.parse(ticked) as string[])
+  }, [ticked, onChange])
+  return useMemo(() => JSON.parse(ticked) as readonly string[], [ticked])
+}
+
+/**
  * The leading checkbox column, ready to spread into a screen's column list.
  *
  * - Selection is the TanStack table's; nothing here holds a set of ids.

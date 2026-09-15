@@ -17,7 +17,7 @@ import { msalTokenProvider } from '@/api/sentinel/msalTokenProvider'
 import { ImportSentinelScreen, type SentinelWrites } from '@/screens/import-sentinel'
 
 import type { Candidate } from '@/components/blocks/provider-import-review'
-import type { RemoteIncident as PickerIncident } from '@/components/blocks/provider-incident-picker'
+import type { PickerIncident } from '@/components/blocks/provider-incident-picker'
 import type {
   ImporterSession,
   IncidentSource,

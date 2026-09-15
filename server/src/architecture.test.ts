@@ -61,6 +61,11 @@ describe('every relative import resolves', () => {
  *
  * An entry grants the forward edge only; the reverse edge stays forbidden by
  * its absence, which is the property every one of these lists is protecting.
+ *
+ * **`domain` reaches nothing, so an edge into it can never become a cycle.**
+ * It is the wire's own vocabulary, read by the client as `@contract` as well,
+ * and the reason a folder lists it is always the same one: a word the browser
+ * has to know is described there rather than beside the code that serves it.
  */
 const MAY_IMPORT: Record<string, string[]> = {
   domain: [],
@@ -75,7 +80,7 @@ const MAY_IMPORT: Record<string, string[]> = {
    * a cycle, and the alternative to the edge is each folder deciding for
    * itself - which is the defect it replaces. -> `wire/caller-address.ts`
    */
-  auth: ['db', 'config', 'install-activity', 'policy', 'wire'],
+  auth: ['db', 'domain', 'config', 'install-activity', 'policy', 'wire'],
   // `customers` because a case is opened *under* one: the door that raises a
   // case has to know which, and a reference is unique within it. The reverse
   // edge stays absent -- a customer knows nothing about cases.
@@ -112,7 +117,7 @@ const MAY_IMPORT: Record<string, string[]> = {
    * `install-activity` is the audit line each of those writes owes, and it
    * holds the handle so this folder still does not.
    */
-  accounts: ['auth', 'install-activity'],
+  accounts: ['auth', 'domain', 'install-activity'],
   /**
    * A leaf above `db`: it appends a row and reads nothing back.
    *
@@ -162,7 +167,7 @@ const MAY_IMPORT: Record<string, string[]> = {
   'incident-import': ['db', 'domain', 'collections', 'cases', 'access'],
   // `auth` for `AdminOnly` and `install-activity` for the line every
   // install-level write owes: granting reach is managing the install.
-  access: ['db', 'auth', 'install-activity'],
+  access: ['db', 'domain', 'auth', 'install-activity'],
   wire: [],
   /** A pure transformation of bytes: it knows an archive's members, not a case. */
   archive: [],

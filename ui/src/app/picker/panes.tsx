@@ -47,7 +47,8 @@ import { chosenIn, filterSetOf, type FilterDimension, type FilterSelection } fro
 import { FLOORS, LOG_LABEL, type ActivityReading, type AuditRow } from '@/components/blocks/activity-log'
 import { useState } from 'react'
 import type { PickerPane } from '@/components/blocks/picker-panes'
-import type { AccountRow } from '@/components/blocks/account-table'
+import type { AnalystAccount } from '@contract/analyst-account'
+import type { AccountTableRow } from '@/components/blocks/account-table'
 import type { LibraryRow } from '@/components/blocks/library-collection'
 import type { LanguageRow } from '@/components/blocks/picker-rows'
 
@@ -196,14 +197,13 @@ export function DemosPaneView({ onPane, onImportArchive, userMenu, onAbout }: Pa
 }
 
 /**
- * An account as the table wants it.
+ * A served account as the table wants it: the same row, with an id.
  *
- * **Two types share the name `AccountRow`** -- `api/accounts` sends one with
- * no key, `account-table` draws one that needs an `id`. The username is
- * the key the server addresses an account by, so it is the id here.
+ * `username` is the key a route addresses an account by, so it is the identity
+ * the table sorts and selects on.
  */
-function accountRows(rows: readonly { username: string }[] | undefined): AccountRow[] {
-  return (rows ?? []).map((row) => ({ ...row, id: row.username })) as AccountRow[]
+function accountRows(rows: readonly AnalystAccount[] | undefined): AccountTableRow[] {
+  return (rows ?? []).map((row) => ({ ...row, id: row.username }))
 }
 
 /**

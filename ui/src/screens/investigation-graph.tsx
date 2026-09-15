@@ -16,12 +16,9 @@ import {
   buildIncidentGraph,
   type IncidentNode,
 } from '@/components/blocks/incident-graph'
-import { KIND_LABEL } from '@/components/blocks/graph-kinds'
+import { GRAPH_KINDS, KIND_LABEL, type GraphKind } from '@/components/blocks/graph-kinds'
 import { buildGraphMenu } from '@/components/blocks/graph-menu'
 import type { Specs } from '@/api/specs'
-
-/** The five kinds of entity a case names, which the chips narrow by. */
-export type EntityKind = 'system' | 'account' | 'network' | 'malware' | 'cloud_app'
 
 /**
  * What the case names, and what names it: every kind of event the timeline
@@ -38,7 +35,7 @@ export interface InvestigationGraphScreenProps {
   /** The served form, which the model reads a reference's target from. */
   specs: Specs | undefined
   /** Kinds left out of the drawing. */
-  hidden?: readonly EntityKind[]
+  hidden?: readonly GraphKind[]
   /** Open on the list rather than the drawing. */
   listing?: boolean
   /** The node the drawing opens selected, by id. */
@@ -58,8 +55,6 @@ export interface InvestigationGraphScreenProps {
   onRetry?: (() => void) | undefined
 }
 
-const KINDS: readonly EntityKind[] = ['system', 'account', 'network', 'malware', 'cloud_app']
-
 /** One press of a zoom control. The floor, the ceiling and the box are the
  *  drawing's own: cytoscape clamps and centres them. */
 const ZOOM_STEP = 1.2
@@ -75,7 +70,7 @@ export function InvestigationGraphScreen({
   problem,
   onRetry,
 }: InvestigationGraphScreenProps) {
-  const [hidden, setHidden] = useState<ReadonlySet<EntityKind>>(new Set(initialHidden))
+  const [hidden, setHidden] = useState<ReadonlySet<GraphKind>>(new Set(initialHidden))
   const [listing, setListing] = useState(initialListing)
   const [picked, setPicked] = useState<string | undefined>(selected)
   /** Groups the analyst has separated into their members. */
@@ -121,7 +116,7 @@ export function InvestigationGraphScreen({
     const keep = whole.nodes.filter(
       (node) =>
         node.kind === 'event' ||
-        (!hidden.has(node.kind as EntityKind) && (!sharedOnly || node.bridge)),
+        (!hidden.has(node.kind as GraphKind) && (!sharedOnly || node.bridge)),
     )
     const ids = new Set(keep.map((node) => node.id))
     const bundled = bundleThroughJunctions(
@@ -157,7 +152,7 @@ export function InvestigationGraphScreen({
    * evidence and methods are not entities here, so neither earns a door.
    */
   const screenFor = new Map(
-    KINDS.flatMap((kind) => {
+    GRAPH_KINDS.flatMap((kind) => {
       const target = ENTITY_TARGETS[kind]
       return target ? [[kind, { slug: target.slug, title: target.title }] as const] : []
     }),
@@ -177,7 +172,7 @@ export function InvestigationGraphScreen({
         setPicked(undefined)
       },
       hideKind: (kind) => {
-        setHidden((was) => new Set(was).add(kind as EntityKind))
+        setHidden((was) => new Set(was).add(kind as GraphKind))
       },
       refold: () => {
         setExpanded(new Set())
@@ -192,7 +187,7 @@ export function InvestigationGraphScreen({
     viewport?.zoomBy(factor)
   }
 
-  const countOf = (kind: EntityKind) =>
+  const countOf = (kind: GraphKind) =>
     whole.nodes.reduce((total, node) => (node.kind === kind ? total + node.count : total), 0)
 
   return (
@@ -202,7 +197,7 @@ export function InvestigationGraphScreen({
       toolbar={
         <FilterBar label="Narrow the graph">
           <FilterGroup label="Kinds" first>
-            {KINDS.map((kind) => (
+            {GRAPH_KINDS.map((kind) => (
               <Chip
                 key={kind}
                 label={KIND_LABEL[kind] ?? kind}

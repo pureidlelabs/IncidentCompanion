@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 
 import {
   DataTable,
   selectionColumn,
   useEntityTable,
+  useSelectedIds,
   type EntityColumn,
 } from '@/components/blocks/data-table'
 import { EmptyState } from '@/components/blocks/empty-state'
@@ -13,8 +14,14 @@ import { ListBoxItem } from '@/components/ui/list-box'
 import { Select } from '@/components/ui/select'
 import { TextField } from '@/components/ui/text-field'
 
-/** One incident as a provider serves it. */
-export interface RemoteIncident {
+/**
+ * One incident as the picker draws it, which is not what a provider serves.
+ *
+ * `id` is the row's identity for the table and the selection; a provider names
+ * an incident by its own key, so the caller holding both does the mapping.
+ * -> `ImportSentinelContainer.forPicker`
+ */
+export interface PickerIncident {
   id: string
   /** What the provider counts it as, and the only thing an ID filter matches. */
   number: string
@@ -65,7 +72,7 @@ export function ProviderIncidentPicker({
   selected,
   onSelected,
 }: {
-  incidents: readonly RemoteIncident[]
+  incidents: readonly PickerIncident[]
   total: number
   dials: Dials
   onDials: (next: Dials) => void
@@ -167,27 +174,19 @@ function IncidentTable({
   incidents,
   onSelected,
 }: {
-  incidents: readonly RemoteIncident[]
+  incidents: readonly PickerIncident[]
   onSelected: (next: readonly string[]) => void
 }) {
   const columns = useMemo(() => incidentColumns(), [])
-  const table = useEntityTable<RemoteIncident>({
-    data: incidents as RemoteIncident[],
+  const table = useEntityTable<PickerIncident>({
+    data: incidents as PickerIncident[],
     columns,
     meta: { pendingIds: new Set(), commit: () => undefined },
     // Newest first, which is the shift an analyst comes in on.
     initialSorting: [{ id: 'created', desc: true }],
   })
 
-  const ticked = JSON.stringify(
-    table
-      .getSelectedRowModel()
-      .rows.map((row) => row.id)
-      .sort(),
-  )
-  useEffect(() => {
-    onSelected(JSON.parse(ticked) as string[])
-  }, [ticked, onSelected])
+  useSelectedIds(table, onSelected)
 
   return (
     <DataTable
@@ -205,9 +204,9 @@ function IncidentTable({
 }
 
 /** The listing's columns. The title is the only width-less one. */
-function incidentColumns(): EntityColumn<RemoteIncident>[] {
+function incidentColumns(): EntityColumn<PickerIncident>[] {
   return [
-    selectionColumn<RemoteIncident>((row) => `Import incident ${row.id}`),
+    selectionColumn<PickerIncident>((row) => `Import incident ${row.id}`),
     {
       accessorKey: 'id',
       header: 'Incident',
