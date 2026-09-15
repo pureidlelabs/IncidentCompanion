@@ -59,6 +59,33 @@ def test_the_two_languages_read_the_same_variables():
     )
 
 
+def test_the_hooks_tier_cannot_be_skipped_for_want_of_an_interpreter():
+    """`verify.sh` asks for its interpreter the way `test.sh` does.
+
+    A `.venv` existing is not evidence it runs: a worktree built on macOS
+    carries one whose `bin/python` dangles in the container, so `-x` says yes
+    and the interpreter still will not start. `scripts/venv_python.sh` settles
+    it by *executing* each candidate, falls back to the main checkout itself,
+    and `--ensure` builds or repairs one -- so there is no state left where the
+    tier has nothing to run and says so in a SKIPPED line.
+
+    The comment above that block records what one silent skip already cost
+    here: four failures sat at head unseen, three of them caused by files the
+    branch had deleted. -> #653
+    """
+    verify = (REPO_ROOT / "verify.sh").read_text(encoding="utf-8")
+
+    assert "venv_python.sh --ensure" in verify, (
+        "verify.sh picks its own interpreter, so it can miss one test.sh would have built"
+    )
+    assert "-x \"$VENV\"" not in verify, (
+        "a file test cannot tell a dangling interpreter from a working one"
+    )
+    assert not re.search(r"SKIPPED\+=\(\"hooks", verify), (
+        "the tier that four unseen failures hid in can be skipped again"
+    )
+
+
 def test_verify_sh_turns_the_mode_on_where_it_certifies():
     """`verify.sh` is the run that certifies, so it is where the mode belongs.
 
