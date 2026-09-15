@@ -15,7 +15,7 @@
  * **What this does not cover:** the layout a lifted cap buys, which jsdom
  * cannot see, and the entity renderer, which reads these already.
  */
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { fieldOf, formSpec, type FormSpec } from '@/api/specs'
@@ -64,37 +64,5 @@ describe('a case field drawn from the served form', () => {
     const root = draw(['customer']).querySelector('[data-field="customer"]')
 
     expect(root?.className).not.toContain('max-w-none')
-  })
-
-  /**
-   * **Hardening rather than a reported symptom.** No form serves an option
-   * label today - every one in the served document belongs to the compliance
-   * form, which `compliance-field.tsx` draws - so this asserts the
-   * pass-through rather than a sentence an analyst has read. -> #689
-   */
-  it('passes an option label through to the control that reads it', () => {
-    const labelled = {
-      ...CASE_FORM,
-      fields: [
-        {
-          name: 'status',
-          label: 'Status',
-          kind: 'select',
-          options: ['open', 'closed'],
-          optionLabels: { open: 'Still open' },
-        },
-      ],
-    } as unknown as FormSpec
-
-    render(
-      <CaseFields
-        form={labelled}
-        names={['status']}
-        values={{ status: 'open' }}
-        onChange={() => undefined}
-      />,
-    )
-
-    expect(screen.getByRole('button').textContent).toContain('Still open')
   })
 })

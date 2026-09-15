@@ -129,8 +129,7 @@ export function summarise<TData>(
     default: {
       const text = typeof value === 'string' ? value : typeof value === 'number' ? String(value) : ''
       if (text.trim() === '') return absent
-      const shown = field.optionLabels?.[text] ?? text
-      return { summary: shown, filled: true }
+      return { summary: text, filled: true }
     }
   }
 }

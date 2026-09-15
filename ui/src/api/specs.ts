@@ -82,8 +82,6 @@ export interface FieldSpec<TData = Record<string, unknown>> {
   options?: readonly string[]
   /** Which vocabulary these options come from, for example `severity`. */
   vocabulary?: string
-  /** Display text for an option whose stored value reads badly, keyed by value. */
-  optionLabels?: Readonly<Record<string, string>>
   /** A consequence the analyst cannot see from the screen. */
   hint?: string
   /**
@@ -97,7 +95,6 @@ export interface FieldSpec<TData = Record<string, unknown>> {
   tier?: FieldTier
   ref?: FieldRef
   required?: boolean
-  optional?: boolean
   fullWidth?: boolean
   /** Renders below the fold. Data - nothing evaluates it here. */
   subordinate?: boolean

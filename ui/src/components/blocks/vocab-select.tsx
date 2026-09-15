@@ -39,17 +39,16 @@ export function VocabSelect({
   value,
   onValueChange,
   options,
-  optionLabels,
   renderValue,
   placeholder = '\u2014',
   allowEmpty = true,
   className,
+  optionLabels,
   ...props
 }: {
   value: string
   onValueChange: (value: string) => void
   options: readonly string[]
-  optionLabels?: Readonly<Record<string, string>> | undefined
   /**
    * Draw a value as something other than its own text, in the trigger and in
    * every row - a status dot, a swatch - rather than leaving the box grey
@@ -67,6 +66,8 @@ export function VocabSelect({
   /** Offer the blank row. False for a field the spec marks required. */
   allowEmpty?: boolean
   className?: string | undefined
+  /** Display text per option, for a caller whose values do not read as words. */
+  optionLabels?: Readonly<Record<string, string>> | undefined
   'aria-label'?: string | undefined
   /**
    * The element naming this control, which is how a `Field` names it.

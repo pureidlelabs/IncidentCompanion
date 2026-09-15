@@ -111,7 +111,6 @@ function control(
         value={value}
         onValueChange={onChange}
         options={spec.options ?? []}
-        optionLabels={spec.optionLabels}
         allowEmpty
       />
     )
