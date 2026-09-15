@@ -86,7 +86,15 @@ export const reportLayoutsSchema = z.object({
   ),
   stages: z.array(z.string()).describe('Leading empty entry: "no stage" is a real choice.'),
   tlp: z.array(z.string()).describe('Leading empty entry, for the same reason as stages.'),
-  languages: z.array(z.object({ code: z.string(), label: z.string() })),
+  /**
+   * **Coverage crosses with the name**, because the picker a report's language
+   * is set from is where an analyst decides -- and a pack at a fraction read
+   * the same as a whole one while this published two fields. The pane that
+   * states coverage was the only place it was drawn. -> #688
+   */
+  languages: z.array(
+    z.object({ code: z.string(), label: z.string(), coverage: z.number().min(0).max(1) }),
+  ),
   /**
    * Every heading key the pack resolves, in the language asked for: the pack
    * stays on the server, and what crosses is what it resolved.
