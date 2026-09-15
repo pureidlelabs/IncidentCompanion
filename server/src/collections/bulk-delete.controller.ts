@@ -56,7 +56,11 @@ export const bulkDeleteBodySchema = z
       .array(
         z.object({
           collection: z.enum(BULK_TARGETS),
-          ids: z.array(z.uuid()).max(1000),
+          // **Each row with the version it was read at**, so a row another
+          // analyst has edited since is refused rather than deleted. -> #682
+          rows: z
+            .array(z.object({ id: z.uuid(), version: z.number().int().min(0) }))
+            .max(1000),
         }),
       )
       .max(BULK_TARGETS.length),
@@ -70,10 +74,16 @@ export const bulkDeleteBodySchema = z
  * second one's delete finds some already gone, and refusing the whole call
  * would make a race look like a fault. Both lists are returned so the screen
  * can say what actually happened.
+ *
+ * **`refused` is a different answer from `missing`**: the row is still there,
+ * under a version the caller did not have. A screen that tells an analyst
+ * "already gone" about a row somebody has just edited sends them looking for
+ * the wrong thing. -> #682
  */
 export const bulkDeletedSchema = z.object({
   deleted: z.array(z.object({ collection: z.string(), id: z.uuid() })),
   missing: z.array(z.object({ collection: z.string(), id: z.uuid() })),
+  refused: z.array(z.object({ collection: z.string(), id: z.uuid() })),
 })
 
 class BulkDeletedDto extends createZodDto(bulkDeletedSchema) {}
@@ -103,9 +113,9 @@ export class BulkDeleteController {
     @Session() session: UserSession,
   ) {
     const targets = body.targets.flatMap((one) =>
-      one.ids.map((id) => ({ collection: one.collection, id })),
+      one.rows.map((row) => ({ collection: one.collection, id: row.id, version: row.version })),
     )
-    if (targets.length === 0) return { deleted: [], missing: [] }
+    if (targets.length === 0) return { deleted: [], missing: [], refused: [] }
 
     // **Checked before anything is deleted, over the whole selection.** Per
     // row it would delete the first twelve and then refuse the thirteenth,

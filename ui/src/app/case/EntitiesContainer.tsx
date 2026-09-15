@@ -6,7 +6,7 @@ import { useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryDelete } from '@/api/useEntryDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useBulkDelete } from '@/api/useBulkDelete'
-import { reportBulkMissing } from '@/components/blocks/notify'
+import { reportBulkMissing, reportBulkRefused } from '@/components/blocks/notify'
 import { useCaseId } from '@/app/useCaseId'
 import { kindFor } from '@/components/blocks/entity-scope'
 import { EntitiesScreen } from '@/screens/entities'
@@ -108,9 +108,11 @@ export function EntitiesContainer() {
        * a loop also half-deletes, stopping at the first refusal with the rest
        * already gone. -> `api/useBulkDelete.ts`, #665
        */
-      const targets: Partial<Record<CollectionName, string[]>> = {}
+      // **The version each row was read at travels with it**, so a row another
+      // analyst has edited since is refused rather than deleted. -> #682
+      const targets: Partial<Record<CollectionName, { id: string; version: number }[]>> = {}
       for (const row of doomed) {
-        ;(targets[row.collection] ??= []).push(row.id)
+        ;(targets[row.collection] ??= []).push({ id: row.id, version: row.version })
       }
       if (Object.keys(targets).length === 0) return
       const written = await announcing('the entities', () => bulkDelete.mutateAsync({ targets }))
@@ -120,6 +122,13 @@ export function EntitiesContainer() {
       reportBulkMissing(
         written.missing.map((row) => row.id),
         'entities',
+      )
+      // A refused row is still on screen holding somebody else's edit, which
+      // sends the analyst somewhere a missing one does not.
+      reportBulkRefused(
+        written.refused.map((row) => row.id),
+        'entities',
+        'deleted',
       )
     },
   }

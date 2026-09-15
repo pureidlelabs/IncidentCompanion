@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
   reportBulkMissing,
+  reportBulkRefused,
   reportImportedCase,
   reportUploadedPack,
   reportWriteFailure,
@@ -47,6 +48,31 @@ describe('reportBulkMissing', () => {
   it('names the stale ids, plural for more than one', () => {
     reportBulkMissing(['s2', 's5'], 'systems')
     expect(raised().content.title).toBe('2 systems were no longer there.')
+  })
+})
+
+describe('reportBulkRefused', () => {
+  it('says nothing when nothing was refused', () => {
+    reportBulkRefused([], 'systems')
+    expect(toastQueue.visibleToasts).toHaveLength(0)
+  })
+
+  it('says what did not happen to them, defaulting to a patch', () => {
+    reportBulkRefused(['s2'], 'systems')
+    expect(raised().content.title).toBe('1 systems changed since you read it and was not updated.')
+  })
+
+  /**
+   * **A delete says "deleted", because the analyst's next step differs.** Both
+   * refusals mean the row moved, and telling somebody a row "was not updated"
+   * when they asked for it to be removed sends them to the wrong screen.
+   * -> #682
+   */
+  it('says deleted when that is what was refused', () => {
+    reportBulkRefused(['s2', 's5'], 'entities', 'deleted')
+    expect(raised().content.title).toBe(
+      '2 entities changed since you read them and were not deleted.',
+    )
   })
 })
 

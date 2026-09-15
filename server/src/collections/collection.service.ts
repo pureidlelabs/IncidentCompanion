@@ -45,14 +45,19 @@ import {
 import { CaseChannel } from '../live/case-channel.service.js'
 import type { ClosedRowGuard } from '../report/freeze.js'
 
-function groupByCollection(
-  targets: { collection: BulkTarget; id: string }[],
-): [BulkTarget, string[]][] {
-  const grouped = new Map<BulkTarget, string[]>()
-  for (const { collection, id } of targets) {
-    const ids = grouped.get(collection)
-    if (ids) ids.push(id)
-    else grouped.set(collection, [id])
+/** One row of a selection: which collection it is in, and what it was read at. */
+export interface BulkRow {
+  collection: BulkTarget
+  id: string
+  version: number
+}
+
+function groupByCollection(targets: BulkRow[]): [BulkTarget, BulkRow[]][] {
+  const grouped = new Map<BulkTarget, BulkRow[]>()
+  for (const target of targets) {
+    const rows = grouped.get(target.collection)
+    if (rows) rows.push(target)
+    else grouped.set(target.collection, [target])
   }
   return [...grouped]
 }
@@ -213,27 +218,45 @@ export class CollectionService {
    * `report_blocks`, so a selection cannot name one.
    * -> `collections/registry.ts`
    *
-   * **No version check**, matching the client's contract, which sends ids
-   * only. The reference check in front of this is the guard that matters here.
+   * **Every row carries the version it was read at, and one that moved since
+   * is refused rather than deleted.** A selection is a read followed by a
+   * write, so it has the window a single write closes with `?version=`; the
+   * specification asks that acting in bulk carry every guarantee a single act
+   * carries. -> #682, and #62/#65 on the bulk patch path.
+   *
+   * `refused` and `missing` answer different questions -- moved since you
+   * looked, and never there -- so they are reported apart.
    */
   async removeMany(
     caseId: string,
-    targets: { collection: BulkTarget; id: string }[],
+    targets: BulkRow[],
     actorId: string,
   ): Promise<{
     deleted: { collection: string; id: string }[]
     missing: { collection: string; id: string }[]
+    refused: { collection: string; id: string }[]
   }> {
     const outcome = await withCase(this.db, caseId, async (tx) => {
       const deleted: { collection: string; id: string }[] = []
+      const refused: { collection: string; id: string }[] = []
 
-      for (const [collection, ids] of groupByCollection(targets)) {
+      for (const [collection, rows] of groupByCollection(targets)) {
         const table = TABLES[collection]
         const id = columnOf(table, 'id')
+        const version = columnOf(table, 'version')
+
+        // **The version travels in the statement, not in a read before it**,
+        // which would leave open the window this check exists to close.
+        const pairs = rows.map((row) => sql`(${row.id}::uuid, ${row.version})`)
         const gone = (await tx
           .delete(table)
-          .where(and(inArray(id, ids), eq(columnOf(table, 'caseId'), caseId)))
-          .returning({ id })) as { id: string }[]
+          .where(
+            and(
+              eq(columnOf(table, 'caseId'), caseId),
+              sql`(${id}, ${version}) IN (${sql.join(pairs, sql`, `)})`,
+            ),
+          )
+          .returning({ id, version })) as { id: string; version: number }[]
 
         for (const row of gone) deleted.push({ collection, id: row.id })
 
@@ -244,22 +267,45 @@ export class CollectionService {
               entity: collection,
               entityId: row.id,
               op: 'delete' as const,
-              version: 0,
+              // The version the row held when it went, so a listener can tell
+              // this delete from one that removed a different edit of the row.
+              version: row.version,
               actorId,
               fields: [],
             })),
           )
         }
+
+        // A named row that did not go is either still here under a version the
+        // caller did not have, or not here at all. One read answers which.
+        const removed = new Set(gone.map((row) => row.id))
+        const rest = rows.filter((row) => !removed.has(row.id)).map((row) => row.id)
+        if (rest.length > 0) {
+          const here = new Set(
+            (
+              (await tx
+                .select({ id })
+                .from(table)
+                .where(and(inArray(id, rest), eq(columnOf(table, 'caseId'), caseId)))) as {
+                id: string
+              }[]
+            ).map((row) => row.id),
+          )
+          for (const one of rest) if (here.has(one)) refused.push({ collection, id: one })
+        }
       }
 
-      const removed = new Set(deleted.map((row) => `${row.collection}:${row.id}`))
+      const answered = new Set(
+        [...deleted, ...refused].map((row) => `${row.collection}:${row.id}`),
+      )
       return {
         deleted,
+        refused,
         // Reported rather than dropped: an id that matched nothing is either
         // already gone or belongs to another case, and both are worth the
         // caller knowing before it tells the analyst everything was removed.
         missing: targets
-          .filter((t) => !removed.has(`${t.collection}:${t.id}`))
+          .filter((t) => !answered.has(`${t.collection}:${t.id}`))
           .map((t) => ({ collection: t.collection, id: t.id })),
       }
     })

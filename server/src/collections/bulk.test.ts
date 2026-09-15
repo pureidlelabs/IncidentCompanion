@@ -496,7 +496,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
       .where(eq(systems.caseId, caseId))
 
     await expect(
-      controller().remove(caseId, { targets: [{ collection: 'systems', ids: [host!.id] }] }, asSession(session)),
+      controller().remove(caseId, { targets: [{ collection: 'systems', rows: [{ id: host!.id, version: host!.version }] }] }, asSession(session)),
     ).rejects.toMatchObject({ response: { message: 'Some of those are still referenced.' } })
 
     const [survivor] = await seed!.select().from(systems).where(eq(systems.id, host!.id))
@@ -513,7 +513,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
 
     const result = await controller().remove(
       caseId,
-      { targets: [{ collection: 'actions', ids: [task!.id] }] },
+      { targets: [{ collection: 'actions', rows: [{ id: task!.id, version: task!.version }] }] },
       asSession(session),
     )
 
@@ -528,7 +528,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     const expected = naming.filter((row) => row.systemId === host!.id).length
 
     const refused = await controller()
-      .remove(caseId, { targets: [{ collection: 'systems', ids: [host!.id] }] }, asSession(session))
+      .remove(caseId, { targets: [{ collection: 'systems', rows: [{ id: host!.id, version: host!.version }] }] }, asSession(session))
       .then(() => null)
       .catch((error: unknown) => (error as { response: { references: Record<string, number> } }).response)
 
@@ -556,7 +556,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     const [artefact] = await seed!.select().from(evidence).where(eq(evidence.caseId, caseId))
     const held = async () =>
       controller()
-        .remove(caseId, { targets: [{ collection: 'evidence', ids: [artefact!.id] }] }, asSession(session))
+        .remove(caseId, { targets: [{ collection: 'evidence', rows: [{ id: artefact!.id, version: artefact!.version }] }] }, asSession(session))
         .then(() => 0)
         .catch(
           (error: unknown) =>
@@ -579,11 +579,86 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     expect(survivor).toBeDefined()
   })
 
+  /**
+   * **A selection carries the version each row was read at, and a row that
+   * moved since is refused rather than deleted.**
+   *
+   * The single-row door has always demanded it; this one took ids alone, so
+   * the same act got two answers depending on which door it arrived at -- and
+   * #665 routed the Entities screen's multi-row delete onto this one, which is
+   * what made the gap reachable from a screen. -> #682, and #62/#65, which is
+   * this defect and its fix on the bulk patch path.
+   */
+  it('refuses a row whose version moved, and leaves it there', async () => {
+    const tasks = await seed!.select().from(actions).where(eq(actions.caseId, caseId))
+    const stale = tasks[0]!
+    const fresh = tasks[1]!
+
+    // Somebody else writes first, so the version the selection carries is old.
+    await seed!
+      .update(actions)
+      .set({ task: 'the first writer', version: stale.version + 1 })
+      .where(eq(actions.id, stale.id))
+
+    const result = await controller().remove(
+      caseId,
+      {
+        targets: [
+          {
+            collection: 'actions',
+            rows: [
+              { id: stale.id, version: stale.version },
+              { id: fresh.id, version: fresh.version },
+            ],
+          },
+        ],
+      },
+      asSession(session),
+    )
+
+    expect(result.refused).toEqual([{ collection: 'actions', id: stale.id }])
+    expect(result.deleted).toEqual([{ collection: 'actions', id: fresh.id }])
+
+    const [survivor] = await seed!.select().from(actions).where(eq(actions.id, stale.id))
+    expect(survivor, "the other analyst's row was deleted under them").toBeDefined()
+    expect(survivor!.task).toBe('the first writer')
+  })
+
+  /**
+   * **A refusal is not a disappearance.** `missing` and `refused` answer
+   * different questions -- already gone, and moved since you looked -- and a
+   * screen that cannot tell them apart tells the analyst the wrong one.
+   */
+  it('separates a row that moved from one that was never there', async () => {
+    const ghost = '00000000-0000-4000-8000-000000000000'
+    const [task] = await seed!.select().from(actions).where(eq(actions.caseId, caseId))
+
+    const result = await controller().remove(
+      caseId,
+      {
+        targets: [
+          {
+            collection: 'actions',
+            rows: [
+              { id: task!.id, version: task!.version + 7 },
+              { id: ghost, version: 1 },
+            ],
+          },
+        ],
+      },
+      asSession(session),
+    )
+
+    expect(result.deleted).toEqual([])
+    expect(result.refused).toEqual([{ collection: 'actions', id: task!.id }])
+    expect(result.missing).toEqual([{ collection: 'actions', id: ghost }])
+  })
+
   it('reports an id it did not find rather than claiming it deleted it', async () => {
     const ghost = '00000000-0000-4000-8000-000000000000'
     const result = await controller().remove(
       caseId,
-      { targets: [{ collection: 'actions', ids: [ghost] }] },
+      { targets: [{ collection: 'actions', rows: [{ id: ghost, version: 1 }] }] },
       asSession(session),
     )
 
@@ -612,11 +687,14 @@ describe('the selection as it arrives over HTTP', () => {
     'survives the wire for %s',
     (collection) => {
       const id = '11111111-1111-4111-8111-111111111111'
-      const sent = camelKeys({ targets: [{ collection, ids: [id] }] })
+      const sent = camelKeys({ targets: [{ collection, rows: [{ id, version: 3 }] }] })
 
       const parsed = bulkDeleteBodySchema.safeParse(sent)
       expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true)
       expect(parsed.data?.targets[0]?.collection).toBe(collection)
+      // The version has to survive the conversion too: a selection whose rows
+      // arrive without one is refused wholesale rather than deleting blind.
+      expect(parsed.data?.targets[0]?.rows[0]?.version).toBe(3)
     },
   )
 })
