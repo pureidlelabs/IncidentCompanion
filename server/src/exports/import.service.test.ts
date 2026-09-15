@@ -15,7 +15,7 @@ import { CSV_IMPORT, ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
-import { accounts, cases, changeFeed, evidence, impact, systems, user } from '../db/schema/index.js'
+import { accounts, cases, changeFeed, evidence, impact, systems, timeline, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -86,6 +86,35 @@ describe.skipIf(!db)('importing a CSV', () => {
     expect(after.map((row) => row.hostname).sort()).toEqual(
       before.map((row) => row.hostname).sort(),
     )
+  })
+
+  /**
+   * **The timeline is exported and was not importable**, which is the one
+   * contract `csv-import.ts` opens by stating: the file this app hands out is
+   * a file it must be able to take back.
+   *
+   * Its schema depends on the row's kind, so it is absent from
+   * `COLLECTION_SCHEMAS` and the import door read that map to decide whether a
+   * collection exists at all -- answering that there is no such collection for
+   * one the export door had just written a file for.
+   *
+   * **Both kinds in one file**, because that is what an export of a real case
+   * produces and because a parser given the union of two shapes is the half
+   * most likely to be wrong.
+   */
+  it('takes back the timeline file it just wrote, both kinds of row', async () => {
+    const before = await seed!.select().from(timeline).where(eq(timeline.caseId, caseId))
+    expect(
+      new Set(before.map((row) => row.kind)).size,
+      'the fixture holds one kind of entry, so this would not test the dispatch',
+    ).toBeGreaterThan(1)
+
+    const csv = await exports_.collectionCsv(caseId, 'timeline')
+    const { added } = await service.fromCsv('timeline', emptyCaseId, csv, ME)
+
+    expect(added).toBe(before.length)
+    const after = await seed!.select().from(timeline).where(eq(timeline.caseId, emptyCaseId))
+    expect(after.map((row) => row.kind).sort()).toEqual(before.map((row) => row.kind).sort())
   })
 
   it('re-imports into the case it came from without an id collision', async () => {
@@ -327,9 +356,14 @@ describe.skipIf(!db)('importing a CSV', () => {
     ).rejects.toMatchObject({ response: { message: expect.stringContaining('row 2') } })
   })
 
-  it('refuses a collection that has no single schema, naming the ones that do', async () => {
+  /**
+   * Every bulk target is importable now that the timeline dispatches on its
+   * row's kind, so what is left to refuse is a name that is no collection at
+   * all -- and the refusal still names the ones that are.
+   */
+  it('refuses a collection it has never heard of, naming the ones it knows', async () => {
     await expect(
-      service.fromCsv('timeline', emptyCaseId, 'kind\nevent\n', ME),
+      service.fromCsv('teapots' as never, emptyCaseId, 'label\nnope\n', ME),
     ).rejects.toMatchObject({ response: { message: expect.stringContaining('systems') } })
   })
 

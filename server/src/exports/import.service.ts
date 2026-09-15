@@ -6,7 +6,7 @@
  * All or nothing: `createMany` is one transaction, so a file whose 400th row
  * is bad leaves the case exactly as it was.
  */
-import { BadRequestException, Injectable, Optional } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common'
 import { getTableColumns } from 'drizzle-orm'
 
 import { CsvInvalid, parseCsv, type CsvShape } from './csv-import.js'
@@ -14,7 +14,7 @@ import { CollectionService } from '../collections/collection.service.js'
 import type { CollectionName } from '../domain/wire.js'
 import { ConflictsService } from '../collections/conflicts.service.js'
 import { REFERENCE_TABLES, TABLES, type BulkTarget } from '../collections/registry.js'
-import { COLLECTION_SCHEMAS, IMPORTABLE, referencesOf } from '../domain/collections.js'
+import { IMPORTABLE, importSchemaFor, importSchemasFor, referencesOf } from '../domain/collections.js'
 import { camelKeys } from '../wire/naming.js'
 import { hasIdentity, indexOf, matchIn, namingsOf, rememberIn, type Known } from '../domain/identity.js'
 import { namesOf } from '../domain/reference-key.js'
@@ -171,7 +171,16 @@ export class ImportService {
    * itself produced the only importable shape.
    */
   private shapeOf(collection: BulkTarget): CsvShape {
-    const schema = COLLECTION_SCHEMAS[collection]!
+    /**
+     * **Every column any of the collection's schemas names.** The timeline is
+     * judged by one of two depending on the row's `kind`, and a file exported
+     * from a real case holds both -- so the shape a file is parsed against is
+     * their union, and the row is judged by the arm its own kind names.
+     */
+    const shape: Record<string, unknown> = Object.assign(
+      {},
+      ...importSchemasFor(collection).map((one) => one.shape),
+    ) as Record<string, unknown>
     const allowed = new Set<string>()
     const lists = new Set<string>()
     const booleans = new Set<string>()
@@ -185,12 +194,12 @@ export class ImportService {
     const table = TABLES[collection]
     const ignored = new Set<string>()
     for (const [property, column] of Object.entries(getTableColumns(table))) {
-      if (property in schema.shape) continue
+      if (property in shape) continue
       ignored.add(property)
       ignored.add((column as { name: string }).name)
     }
 
-    for (const [field, sub] of Object.entries(schema.shape)) {
+    for (const [field, sub] of Object.entries(shape)) {
       const kind = (sub as { def?: { type?: string; innerType?: { def?: { type?: string } } } }).def
       const inner = kind?.type === 'default' ? kind.innerType?.def?.type : kind?.type
 
@@ -218,8 +227,11 @@ export class ImportService {
     actorId: string,
     onDuplicate: OnDuplicate = 'skip',
   ): Promise<ImportResult> {
-    if (!COLLECTION_SCHEMAS[collection]) {
-      throw new BadRequestException({
+    // **404 rather than 400, the same as the export door's.** One condition --
+    // there is no such collection -- answered two ways is two answers to one
+    // question, and the controller in front of this already says 404. -> #650
+    if (importSchemaFor(collection) === undefined) {
+      throw new NotFoundException({
         message: `No collection ${collection}. Importable: ${IMPORTABLE.sort().join(', ')}.`,
       })
     }
@@ -235,7 +247,7 @@ export class ImportService {
       return { added: 0, skipped: 0, replaced: 0, refused: 0, unlinked: 0, unlinkedBy: {} }
     }
 
-    const schema = COLLECTION_SCHEMAS[collection]
+    const schemaOf = (row: Record<string, unknown>) => importSchemaFor(collection, row)!
     /**
      * **Five of the ten importable tables have no `source` column**, and a key
      * naming no column is dropped by the query builder without a word -- so an
@@ -265,8 +277,31 @@ export class ImportService {
      */
     const lost = await this.resolveReferences(collection, caseId, named)
 
+    /** Every field some kind of this collection declares, for the filter below. */
+    const elsewhere = new Set(
+      importSchemasFor(collection).flatMap((one) => Object.keys(one.shape)),
+    )
+
     const rows = named.map((given, index) => {
-      const result = schema.safeParse(given)
+      const judge = schemaOf(given)
+      /**
+       * **A file holds one set of columns and a collection may have two kinds
+       * of row.** An export of a real timeline writes the columns of both, so
+       * an action arrives carrying the event-only ones -- `hideFromGraph` as
+       * `false` rather than as an empty cell, because the writer reads them off
+       * the table. The schemas are strict, so the arm judging the row would
+       * refuse those as unrecognised keys and the app's own file would not come
+       * back.
+       *
+       * **Only a column another kind of this collection declares is dropped.**
+       * A column no kind has is left where it is and refused by name, which is
+       * what catches a misspelt heading -- dropping everything the arm does not
+       * name would make a typo silently do nothing.
+       */
+      const meant = Object.fromEntries(
+        Object.entries(given).filter(([field]) => field in judge.shape || !elsewhere.has(field)),
+      )
+      const result = judge.safeParse(meant)
       if (!result.success) {
         const first = result.error.issues[0]
         throw new BadRequestException({

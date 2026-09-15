@@ -19,6 +19,7 @@ import {
   TABLES,
   type Collection,
 } from './registry.js'
+import { importSchemaFor } from '../domain/collections.js'
 import { columnOf } from '../db/column-access.js'
 import {
   COLLECTION_SCHEMAS,
@@ -83,7 +84,17 @@ describe('every map is a total slice of the registry', () => {
   it('validates with a schema for exactly the collections that declare one', () => {
     const withSchema = NAMES.filter((name) => 'schema' in COLLECTIONS[name])
     expect(Object.keys(COLLECTION_SCHEMAS)).toEqual(withSchema)
-    expect(IMPORTABLE).toEqual(withSchema)
+  })
+
+  /**
+   * **Importable is wider than `COLLECTION_SCHEMAS`, and the gap is one
+   * collection.** A file may be written back for anything the export writes a
+   * file for, which is every bulk target; the timeline is the one whose schema
+   * depends on the row, and it reaches the import door through a dispatch
+   * rather than through that map. -> #650
+   */
+  it('takes a file back for every collection it writes one for', () => {
+    expect([...IMPORTABLE].sort()).toEqual([...BULK_TARGETS].sort())
   })
 
   it('names a screen key and a noun for every collection a picker points at', () => {
@@ -145,15 +156,26 @@ describe('a reference field says which shape it is', () => {
 
 describe('the deliberate gaps', () => {
   /**
-   * **`timeline` has a table and no schema on purpose.** Its patchable fields
-   * depend on the row's `kind`, so a single schema would let an import write an
-   * action's fields onto an event. Named here so the gap is a decision rather
-   * than an omission somebody closes by guessing.
+   * **`timeline` has a table and no single schema on purpose.** Its patchable
+   * fields depend on the row's `kind`, so one schema would let an import write
+   * an action's fields onto an event. Named here so the gap stays a decision
+   * rather than an omission somebody closes by guessing.
+   *
+   * **What closed instead is the import door**, which asks which schema judges
+   * this row rather than which map holds one -- so the file the export writes
+   * comes back without the single schema this test refuses. -> #650
    */
-  it('leaves timeline out of the schemas, because its shape depends on the row', () => {
+  it('leaves timeline out of the schemas, and judges its rows by kind instead', () => {
     expect(COLLECTION_SCHEMAS['timeline']).toBeUndefined()
-    expect(IMPORTABLE).not.toContain('timeline')
     expect(TABLES['timeline']).toBeDefined()
+
+    const asEvent = importSchemaFor('timeline', { kind: 'event' })
+    const asAction = importSchemaFor('timeline', { kind: 'action' })
+    expect(asEvent).toBeDefined()
+    expect(asAction).toBeDefined()
+    expect(asEvent, 'one schema for both kinds is the thing this gap exists to refuse').not.toBe(
+      asAction,
+    )
   })
 
   /**
