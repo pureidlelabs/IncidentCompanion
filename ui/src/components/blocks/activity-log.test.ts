@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { detailSummary, matchesActivity, type AuditRow } from './activity-log'
+import { detailSummary, matchesActivity, toneForAudit, type AuditRow } from './activity-log'
+import { TONE_INK } from './severity-tones'
 
 /**
  * **The activity log search reads the Activity column and nothing else.**
@@ -26,6 +27,44 @@ const line: AuditRow = {
   attributes: { account: 'svc-backup@example.test' },
   detailsVary: false,
 }
+
+/**
+ * **The audit scale is OCSF's six points, the ramp is the product's five.**
+ *
+ * So the log declares a mapping rather than reusing `toneFor`, which answers
+ * `none` for `Fatal` -- grey, for the most severe line there is. What it must
+ * not do is declare the *colours* again: a private map is how `Low` came to be
+ * lettered `text-severity-low`, which the tokens measure at 1.81:1 and is the
+ * reason the `-type` pair exists, and how `Critical` and `High` came to be the
+ * same hue. -> #659
+ */
+describe('the audit log paints severity from the shared ramp', () => {
+  it('letters Low with the readable token rather than the fill', () => {
+    expect(TONE_INK[toneForAudit('Low')]).toBe('text-severity-low-type')
+  })
+
+  it('tells Critical and High apart', () => {
+    expect(TONE_INK[toneForAudit('Critical')]).not.toBe(TONE_INK[toneForAudit('High')])
+  })
+
+  it('paints Fatal as the top of the ramp rather than as unknown', () => {
+    expect(toneForAudit('Fatal')).toBe('critical')
+  })
+
+  it('has a tone for every severity the reader can return', () => {
+    const scale: AuditRow['severity'][] = [
+      'Fatal',
+      'Critical',
+      'High',
+      'Medium',
+      'Low',
+      'Informational',
+    ]
+    for (const one of scale) expect(TONE_INK[toneForAudit(one)], one).toBeTruthy()
+    // Not all one colour, which a mapping to a single tone would also satisfy.
+    expect(new Set(scale.map((one) => TONE_INK[toneForAudit(one)])).size).toBeGreaterThan(4)
+  })
+})
 
 describe('the activity log search reads the Activity column', () => {
   it('matches a word in the activity', () => {

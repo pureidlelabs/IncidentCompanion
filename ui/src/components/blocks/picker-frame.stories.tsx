@@ -36,6 +36,7 @@ const meta = {
   args: {
     pane: 'cases',
     analyst: 'r.okonkwo',
+    admin: true,
     userMenu: sessionRows,
     onAbout: fn(),
     onPane: fn(),
@@ -175,6 +176,23 @@ export const Refused: Story = {
     })
     await step('and the analyst at the foot is still named', async () => {
       await expect(canvas.getByText('r.okonkwo')).toBeVisible()
+    })
+  },
+}
+
+/** What an analyst is offered, which is not what an administrator is. */
+export const AsAnAnalyst: Story = {
+  args: { pane: 'cases', admin: false },
+  play: async ({ canvas, canvasElement, step, userEvent }) => {
+    await unfoldRail(canvasElement, userEvent)
+    await step('the panes every route of which refuses them are not drawn', async () => {
+      await expect(canvas.queryByTestId('picker-row-accounts')).toBeNull()
+      await expect(canvas.queryByTestId('picker-row-activity')).toBeNull()
+      await expect(canvas.queryByTestId('picker-row-administration')).toBeNull()
+    })
+    await step('the ones they may read still are', async () => {
+      await expect(canvas.getByTestId('picker-row-languages')).toBeVisible()
+      await expect(canvas.getByTestId('picker-row-health')).toBeVisible()
     })
   },
 }

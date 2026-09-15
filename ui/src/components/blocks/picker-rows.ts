@@ -8,7 +8,7 @@
 
 import type { CaseSummary } from '@/api/case'
 import type { AccountRow } from '@/components/blocks/account-table'
-import type { AuditRow } from '@/components/blocks/activity-log'
+import type { ActivityReading, AuditRow } from '@/components/blocks/activity-log'
 import type { LibraryRow } from '@/components/blocks/library-collection'
 import { matchesWords } from '@/lib/word-match'
 
@@ -20,18 +20,6 @@ export const PICKER_ACCOUNTS: readonly AccountRow[] = [
   { id: 'a4', username: 'm.delacroix', displayName: 'Margot Delacroix', role: 'analyst', state: 'locked out' },
   { id: 'a5', username: 'd.novak', displayName: '', role: 'analyst', state: 'disabled' },
 ]
-
-/**
- * The instant `PICKER_AUDIT` is read against, carried beside the rows so the
- * two cannot drift apart.
- *
- * `ActivityLog` defaults its range to the last seven days and takes `now` as a
- * prop precisely so a caller can fix it. A caller that passes the wall clock
- * instead gets a table that empties itself seven days after these dates,
- * without a commit and without warning: two runs of identical code, one either
- * side of the moment the newest row falls out of the window, disagree.
- */
-export const PICKER_AUDIT_NOW = Date.parse('2026-08-24T15:00:00.000Z')
 
 /** Newest first, and wide enough that the pager has a second page to offer. */
 export const PICKER_AUDIT: readonly AuditRow[] = [
@@ -483,3 +471,31 @@ export const PICKER_CASES: readonly CaseSummary[] = [
   caseRow('6a3f7c52', 'Exposed S3 bucket', 'Northwind Freight', null, 'closed', '2026-07-18T11:47:00.000Z', false),
   caseRow('0e91d4c8', 'Worked example: ransomware campaign', 'Demo Customer', 'DEMO-0001', 'open', '2026-08-13T12:16:00.000Z', true),
 ]
+
+/**
+ * A reading whose controls do nothing.
+ *
+ * The range, the chips and the page are the pane's questions, so a screen
+ * drawn without the app has nobody to ask.
+ */
+export function inertReading(): ActivityReading {
+  const nothing = () => undefined
+  return {
+    range: '7d',
+    onRange: nothing,
+    filters: {
+      selection: {},
+      chosen: () => [],
+      one: () => undefined,
+      narrowed: false,
+      applied: [],
+      clear: nothing,
+      controls: { dimensions: [], selection: {}, onChange: nothing },
+    },
+    pageNumber: 1,
+    hasPrevious: false,
+    hasNext: false,
+    onPrevious: nothing,
+    onNext: nothing,
+  }
+}

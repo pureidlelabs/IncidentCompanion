@@ -57,6 +57,12 @@ export const PICKER_PANES: readonly PickerPane[] = [
 
 export interface PickerDestination {
   pane: PickerPane
+  /**
+   * Whether every route behind it refuses an analyst. Per pane, not per group:
+   * Report languages sits among three that are wholly `@AdminOnly` and its own
+   * list is an open `@Get()`.
+   */
+  admin?: true
   label: string
   icon: LucideIcon
 }
@@ -71,7 +77,12 @@ export interface PickerDestination {
  * **`new` is not among them either**: it is the rail's top card rather than a
  * row, which is why the pane list is longer than the rows.
  */
-export const PICKER_GROUPS: readonly { label: string; rows: readonly PickerDestination[] }[] = [
+export interface PickerGroup {
+  label: string
+  rows: readonly PickerDestination[]
+}
+
+export const PICKER_GROUPS: readonly PickerGroup[] = [
   {
     label: 'Cases',
     rows: [
@@ -90,11 +101,23 @@ export const PICKER_GROUPS: readonly { label: string; rows: readonly PickerDesti
   {
     label: 'System',
     rows: [
-      { pane: 'accounts', label: 'Accounts', icon: Users },
-      { pane: 'activity', label: 'Activity', icon: ScrollText },
-      { pane: 'administration', label: 'Administration', icon: ShieldCheck },
+      { pane: 'accounts', admin: true, label: 'Accounts', icon: Users },
+      { pane: 'activity', admin: true, label: 'Activity', icon: ScrollText },
+      { pane: 'administration', admin: true, label: 'Administration', icon: ShieldCheck },
       { pane: 'languages', label: 'Report languages', icon: Languages },
       { pane: 'health', label: 'Health', icon: Activity },
     ],
   },
 ]
+
+/**
+ * The rail this account is offered. A group left with no rows is dropped
+ * rather than drawn as an empty heading.
+ */
+export function panesFor(account: { admin: boolean }): readonly PickerGroup[] {
+  if (account.admin) return PICKER_GROUPS
+  return PICKER_GROUPS.flatMap((group) => {
+    const rows = group.rows.filter((row) => row.admin !== true)
+    return rows.length > 0 ? [{ ...group, rows }] : []
+  })
+}
