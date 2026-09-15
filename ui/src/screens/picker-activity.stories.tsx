@@ -32,7 +32,7 @@ const meta = {
     ),
   ],
   args: {
-    reading: inertReading(PICKER_AUDIT.length),
+    reading: inertReading(),
     analyst: 'r.okonkwo',
     admin: true,
     audit: PICKER_AUDIT,

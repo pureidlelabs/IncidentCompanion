@@ -110,8 +110,6 @@ export interface ActivityReading {
   hasNext: boolean
   onPrevious: () => void
   onNext: () => void
-  /** Every line the filters admit, which is more than this page holds. */
-  total: number
 }
 
 export interface ActivityLogProps {
@@ -122,7 +120,7 @@ export interface ActivityLogProps {
 const DEFAULT_RANGE: RangeKey = '7d'
 
 export function ActivityLog({ audit, reading }: ActivityLogProps) {
-  const { range, onRange, filters, total } = reading
+  const { range, onRange, filters } = reading
   // The one filter with no server-side form: a text search over the Activity
   // column, which narrows the page rather than the table, and says so.
   const [query, setQuery] = useState('')
@@ -150,7 +148,7 @@ export function ActivityLog({ audit, reading }: ActivityLogProps) {
   return (
     <Section
       title="Activity"
-      meta={total === 0 ? undefined : <CountMeta total={total} noun="event" />}
+      meta={rows.length === 0 ? undefined : <CountMeta total={rows.length} noun="event" />}
       toolbar={
         <TableToolbar
           searchColumn="Activity"
@@ -184,7 +182,6 @@ export function ActivityLog({ audit, reading }: ActivityLogProps) {
             pageNumber={reading.pageNumber}
             firstRow={(reading.pageNumber - 1) * PAGE_SIZE + 1}
             showing={rows.length}
-            total={total}
             hasPrevious={reading.hasPrevious}
             hasNext={reading.hasNext}
             onPrevious={reading.onPrevious}

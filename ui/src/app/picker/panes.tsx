@@ -414,15 +414,19 @@ function auditRows(lines: readonly AuditLine[] | undefined): AuditRow[] {
 }
 
 /**
- * The chip rows, counted over the table rather than over the page.
+ * The chip rows, counted by the reader rather than over the rows on screen.
  *
- * The counts come off the page the reader returns, which counts every line the
- * other filters admit -- a chip counting the rows on screen would say how many
- * of fifty rather than how many there are. -> #663
+ * The channel and outcome tallies are over the whole log, unnarrowed by the
+ * other filters -- so a chip says how many of that kind the install holds, not
+ * how many the current range would return. The severity counts are over runs
+ * at the raised level, which is what pressing one returns. -> #663
  */
 function activityFilters(page: AuditPage | undefined): FilterDimension[] {
   const counts = page?.counts ?? {}
   const outcomes = page?.outcomes ?? {}
+  // Counted on the raised level over runs, which is what pressing the chip
+  // returns -- and computed by the reader, which nothing was reading.
+  const severities: Record<string, number> = page?.severities ?? {}
   return [
     {
       key: 'log',
@@ -440,7 +444,10 @@ function activityFilters(page: AuditPage | undefined): FilterDimension[] {
       key: 'floor',
       label: 'Severity',
       mode: 'one',
-      options: FLOORS.map((name) => ({ value: name })),
+      options: FLOORS.map((name) => ({
+        value: name,
+        ...(severities[name] === undefined ? {} : { count: severities[name] }),
+      })),
     },
     {
       key: 'outcome',
@@ -489,7 +496,6 @@ export function ActivityPaneView({ onPane, onImportArchive, userMenu, onAbout }:
     hasNext: activity.hasNext,
     onPrevious: activity.previous,
     onNext: activity.next,
-    total: Object.values(activity.page?.counts ?? {}).reduce((sum, one) => sum + one, 0),
   }
 
   return (

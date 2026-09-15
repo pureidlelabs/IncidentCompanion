@@ -117,7 +117,7 @@ function ActivityWithFilters() {
   )
   return (
     <PickerActivityScreen
-      reading={{ ...inertReading(PICKER_AUDIT.length), filters }}
+      reading={{ ...inertReading(), filters }}
       audit={PICKER_AUDIT}
       analyst="r.okonkwo"
       userMenu={null}

@@ -22,7 +22,6 @@ const reading: ActivityReading = {
   hasNext: false,
   onPrevious: fn(),
   onNext: fn(),
-  total: PICKER_AUDIT.length,
 }
 
 /**
@@ -141,7 +140,7 @@ export const APageInTheMiddle: Story = {
   name: 'One page of many',
   args: {
     audit: PICKER_AUDIT,
-    reading: { ...reading, pageNumber: 2, hasPrevious: true, hasNext: true, total: 600 },
+    reading: { ...reading, pageNumber: 2, hasPrevious: true, hasNext: true },
   },
   play: async ({ args, canvas, step, userEvent }) => {
     await expect(canvas.getByText(/Page 2/)).toBeVisible()

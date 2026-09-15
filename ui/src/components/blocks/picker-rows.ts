@@ -21,18 +21,6 @@ export const PICKER_ACCOUNTS: readonly AccountRow[] = [
   { id: 'a5', username: 'd.novak', displayName: '', role: 'analyst', state: 'disabled' },
 ]
 
-/**
- * The instant `PICKER_AUDIT` is read against, carried beside the rows so the
- * two cannot drift apart.
- *
- * `ActivityLog` defaults its range to the last seven days and takes `now` as a
- * prop precisely so a caller can fix it. A caller that passes the wall clock
- * instead gets a table that empties itself seven days after these dates,
- * without a commit and without warning: two runs of identical code, one either
- * side of the moment the newest row falls out of the window, disagree.
- */
-export const PICKER_AUDIT_NOW = Date.parse('2026-08-24T15:00:00.000Z')
-
 /** Newest first, and wide enough that the pager has a second page to offer. */
 export const PICKER_AUDIT: readonly AuditRow[] = [
   audit('v1', '2026-08-24T14:32:00.000Z', 'Low', 'Sign-in', 'authentication', 'Success', 'r.okonkwo', null, '10.20.4.18', 1),
@@ -490,7 +478,7 @@ export const PICKER_CASES: readonly CaseSummary[] = [
  * The range, the chips and the page are the pane's questions, so a screen
  * drawn without the app has nobody to ask.
  */
-export function inertReading(total: number): ActivityReading {
+export function inertReading(): ActivityReading {
   const nothing = () => undefined
   return {
     range: '7d',
@@ -509,6 +497,5 @@ export function inertReading(total: number): ActivityReading {
     hasNext: false,
     onPrevious: nothing,
     onNext: nothing,
-    total,
   }
 }

@@ -7,7 +7,7 @@ import type { PickerPane } from '@/components/blocks/picker-panes'
 export interface PickerActivityScreenProps {
   /** Lines in the installation's own log. Absent draws an empty list. */
   audit: readonly AuditRow[] | undefined
-  /** Milliseconds, for the range the log is read over. Defaults to the clock. */
+  /** What the pane asked for, and how the log reports a press. */
   reading: ActivityReading
   /** Who is signed in, at the rail's foot. */
   analyst: string
@@ -42,9 +42,6 @@ export function PickerActivityScreen({
   busy,
   reading,
 }: PickerActivityScreenProps) {
-  // Read once on mount rather than on every render: a clock call in the render
-  // body is impure, and a relative time that shifts when the pane happens to
-  // re-render is a different number for no reason the analyst caused.
   const audit = auditGiven ?? []
   return (
     <PickerFrame
