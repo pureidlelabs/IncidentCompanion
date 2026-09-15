@@ -110,6 +110,11 @@ function nameOf(exported: string): string {
   return exported.slice(exported.indexOf(':') + 1)
 }
 
+/** The declaration space a qualified export names: `value` or `type`. */
+function spaceOf(exported: string): string {
+  return exported.slice(0, exported.indexOf(':'))
+}
+
 
 /** The file's name without its extension. */
 function baseOf(file: string): string {
@@ -195,7 +200,7 @@ describe('a component name has one implementation', () => {
       if (bases.size < 2) continue
       const paths = seen.map((file) => relative(SRC, file).replaceAll('\\', '/')).sort()
       if (KNOWN.get(name)?.join() === paths.join()) continue
-      forks.push(`${spellings(name).join('/')} (${name.split(':')[0]}): ${paths.join(', ')}`)
+      forks.push(`${spellings(name).join('/')} (${spaceOf(name)}): ${paths.join(', ')}`)
     }
     expect(
       forks.sort(),
