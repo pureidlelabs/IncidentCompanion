@@ -147,6 +147,48 @@ describe.skipIf(!db)('writing to a library', () => {
   })
 
   /**
+   * **The other half of that refusal, and the half it was taking with it.**
+   * A document carrying no entries and a built-in to switch off asks nothing
+   * of the payload schema, so a kind having none is no reason to refuse it --
+   * and turning a shipped entry off install-wide is the one thing this route
+   * can do that the per-entry routes cannot. Every report layout is a
+   * built-in, so before this the column had no reachable writer at all.
+   * -> #646
+   */
+  it('switches a shipped layout off for a kind that cannot be authored', async () => {
+    const applied = await controller.apply(
+      'report-layouts',
+      { kind: 'report-layouts', entries: [], disabledBuiltins: ['executive'] },
+      { id: 'u-1', name: 'Ada' } as never,
+      { headers: {} },
+    )
+
+    expect(applied.disabledBuiltins, 'the route reported switching nothing off').toBe(1)
+    expect(
+      (await controller.document('report-layouts')).disabledBuiltins,
+      'the shipped layout came back enabled',
+    ).toContain('executive')
+  })
+
+  /** And the same document puts it back, which is what makes the file the state. */
+  it('switches it on again when the document stops naming it', async () => {
+    await controller.apply(
+      'report-layouts',
+      { kind: 'report-layouts', entries: [], disabledBuiltins: ['executive'] },
+      { id: 'u-1', name: 'Ada' } as never,
+      { headers: {} },
+    )
+    await controller.apply(
+      'report-layouts',
+      { kind: 'report-layouts', entries: [], disabledBuiltins: [] },
+      { id: 'u-1', name: 'Ada' } as never,
+      { headers: {} },
+    )
+
+    expect((await controller.document('report-layouts')).disabledBuiltins).not.toContain('executive')
+  })
+
+  /**
    * The same refusal `create` makes, on the other door: a kind declaring no
    * payload schema is the one kind nothing else would validate, and an
    * unusable row there breaks the New report dialog for the whole install.
