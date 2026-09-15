@@ -45,6 +45,7 @@ import {
 } from '../domain/entities/timeline.js'
 import { patchSchema } from '../domain/field-spec.js'
 import type { TimelineRow } from '../domain/wire.js'
+import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * **Exported because the import door writes timeline rows too.** Rebuilding it
@@ -153,7 +154,7 @@ const PATCH_SCHEMAS = {
 } as const
 
 /** Only `version` is validated by the pipe; the rest needs the row's kind. */
-const versionSchema = z.object({ version: z.int().nonnegative() }).catchall(z.unknown())
+const versionSchema = z.object({ version: rowVersion() }).catchall(z.unknown())
 const validatePatch = new ZodValidationPipe(versionSchema)
 
 /**
@@ -374,7 +375,7 @@ export class TimelineController {
     @Session() session: UserSession,
   ) {
     const expected = Number(version)
-    if (!Number.isInteger(expected)) {
+    if (!rowVersion().safeParse(expected).success) {
       throw new ConflictException({ message: 'A delete has to name the version it read.' })
     }
     const removed = await this.collections.remove(

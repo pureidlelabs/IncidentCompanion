@@ -64,6 +64,7 @@ import { caseNoteSchema } from '../domain/entities/case-note.js'
 import { reportBlockSchema, reportSchema } from '../domain/entities/report.js'
 import { refuseWritesToSentReport } from '../report/freeze.js'
 import { caseOwnedRowSchema, patchSchema } from '../domain/field-spec.js'
+import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * Rows one request may carry, because the door is reachable from a script:
@@ -244,7 +245,7 @@ abstract class EntityReads {
       z
         .object({
           ids: z
-            .array(z.object({ id: z.uuid(), version: z.int().nonnegative() }).strict())
+            .array(z.object({ id: z.uuid(), version: rowVersion() }).strict())
             .max(BULK_LIMIT),
           fields: z.record(z.string(), z.unknown()),
         })
@@ -315,7 +316,7 @@ abstract class EntityReads {
       base,
       ...rest
     } = (body ?? {}) as { version?: unknown; base?: unknown } & Record<string, unknown>
-    if (!Number.isInteger(version)) {
+    if (!rowVersion().safeParse(version).success) {
       throw new UnprocessableEntityException({ message: 'A patch has to name the version it read.' })
     }
     const patch = this.parse(patchSchema(this.schema), rest)
@@ -384,7 +385,7 @@ abstract class EntityReads {
     @Session() session: UserSession,
   ) {
     const expected = Number(version)
-    if (!Number.isInteger(expected)) {
+    if (!rowVersion().safeParse(expected).success) {
       throw new UnprocessableEntityException({ message: 'A delete has to name the version it read.' })
     }
     const removed = await this.collections.remove(

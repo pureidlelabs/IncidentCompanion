@@ -12,6 +12,7 @@
  * of the dialog.
  */
 import { z } from 'zod'
+import { rowVersion } from './column-bounds.js'
 
 /**
  * How a field is drawn. Lifted from the Python spec vocabulary; the renderer
@@ -360,7 +361,7 @@ export const readStamp = (): z.ZodType<string, string | Date> =>
  */
 export const envelopeSchema = z.object({
   caseId: z.uuid(),
-  version: z.int().describe('Present this on the next write, or it is refused.'),
+  version: rowVersion().describe('Present this on the next write, or it is refused.'),
   createdAt: readStamp(),
   updatedAt: readStamp(),
   /** Null because deleting an analyst does not delete their work. */

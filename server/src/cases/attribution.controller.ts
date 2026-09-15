@@ -20,13 +20,14 @@ import { withCase } from '../db/scope.js'
 import { changeFeed, user } from '../db/schema/index.js'
 import { z } from 'zod'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
+import { rowVersion } from '../domain/column-bounds.js'
 
 const rowStampSchema = z.object({
   table: z.string(),
   entryId: z.string(),
   by: z.string().describe('The analyst who last wrote it, by display name.'),
   at: z.number().describe('Seconds since the epoch.'),
-  version: z.number().int(),
+  version: rowVersion(),
 })
 
 type RowStampRecord = z.infer<typeof rowStampSchema>
