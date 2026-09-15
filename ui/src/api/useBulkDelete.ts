@@ -33,8 +33,19 @@ export interface BulkDeleteVars {
 export interface BulkDeleted {
   deleted: { collection: string; id: string }[]
   missing: { collection: string; id: string }[]
-  /** Still there, under a version this caller did not have. Not `missing`. */
-  refused: { collection: string; id: string }[]
+}
+
+/**
+ * The other 409's body: the ids that moved since the selection was read.
+ *
+ * A row that moved refuses the whole call, so there is nothing to reconcile --
+ * the list is what the dialog names before the analyst tries again. -> #682
+ */
+export function refusedRows(error: ApiError): string[] {
+  const body = error.body
+  if (!body || typeof body !== 'object') return []
+  const moved = (body as { refused?: unknown }).refused
+  return Array.isArray(moved) ? moved.filter((one): one is string => typeof one === 'string') : []
 }
 
 /** The 409's body: id to the number of rows still naming it. A map rather than

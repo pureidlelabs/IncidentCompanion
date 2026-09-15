@@ -156,19 +156,11 @@ export function reportBulkMissing(missing: readonly string[], what: string): voi
  * refused one is still on screen, holding somebody else's change, and is worth
  * rereading before the patch is tried again.
  */
-export function reportBulkRefused(
-  refused: readonly string[],
-  what: string,
-  // What did not happen to them. A delete and a patch are refused for the same
-  // reason and the analyst's next step differs, so the sentence says which.
-  outcome: 'updated' | 'deleted' = 'updated',
-): void {
+export function reportBulkRefused(refused: readonly string[], what: string): void {
   if (refused.length === 0) return
   const count = refused.length
   const [subject, verb] = count === 1 ? ['it', 'was'] : ['them', 'were']
-  toast.warning(
-    `${String(count)} ${what} changed since you read ${subject} and ${verb} not ${outcome}.`,
-  )
+  toast.warning(`${String(count)} ${what} changed since you read ${subject} and ${verb} not updated.`)
 }
 
 /**

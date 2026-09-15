@@ -6,7 +6,7 @@ import { useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryDelete } from '@/api/useEntryDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useBulkDelete } from '@/api/useBulkDelete'
-import { reportBulkMissing, reportBulkRefused } from '@/components/blocks/notify'
+import { reportBulkMissing } from '@/components/blocks/notify'
 import { useCaseId } from '@/app/useCaseId'
 import { kindFor } from '@/components/blocks/entity-scope'
 import { EntitiesScreen } from '@/screens/entities'
@@ -122,13 +122,6 @@ export function EntitiesContainer() {
       reportBulkMissing(
         written.missing.map((row) => row.id),
         'entities',
-      )
-      // A refused row is still on screen holding somebody else's edit, which
-      // sends the analyst somewhere a missing one does not.
-      reportBulkRefused(
-        written.refused.map((row) => row.id),
-        'entities',
-        'deleted',
       )
     },
   }

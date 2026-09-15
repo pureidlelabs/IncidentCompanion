@@ -46,7 +46,7 @@ import { CaseChannel } from '../live/case-channel.service.js'
 import type { ClosedRowGuard } from '../report/freeze.js'
 
 /** One row of a selection: which collection it is in, and what it was read at. */
-export interface BulkRow {
+interface BulkRow {
   collection: BulkTarget
   id: string
   version: number
@@ -224,8 +224,15 @@ export class CollectionService {
    * specification asks that acting in bulk carry every guarantee a single act
    * carries. -> #682, and #62/#65 on the bulk patch path.
    *
-   * `refused` and `missing` answer different questions -- moved since you
-   * looked, and never there -- so they are reported apart.
+   * **One stale row refuses the whole selection**, with 409 and the rows that
+   * moved, and nothing is written. Per row it would delete part of the
+   * selection, and the reference check in front of this waves through a
+   * reference whose holder is *in* the selection -- on the grounds that the
+   * holder is about to go. A refusal that keeps the holder and drops its
+   * target turns that reasoning into a blanked column nobody was told about,
+   * because the keys are `on delete set null` by design.
+   * -> `bulk-delete.service.ts`, and the specification: where speed and the
+   * guarantees conflict, the guarantees win.
    */
   async removeMany(
     caseId: string,
@@ -234,11 +241,10 @@ export class CollectionService {
   ): Promise<{
     deleted: { collection: string; id: string }[]
     missing: { collection: string; id: string }[]
-    refused: { collection: string; id: string }[]
   }> {
     const outcome = await withCase(this.db, caseId, async (tx) => {
       const deleted: { collection: string; id: string }[] = []
-      const refused: { collection: string; id: string }[] = []
+      const refused: string[] = []
 
       for (const [collection, rows] of groupByCollection(targets)) {
         const table = TABLES[collection]
@@ -278,29 +284,37 @@ export class CollectionService {
 
         // A named row that did not go is either still here under a version the
         // caller did not have, or not here at all. One read answers which.
+        // **Distinct, because the caller may name an id twice** and a count of
+        // refusals is what an analyst is shown.
         const removed = new Set(gone.map((row) => row.id))
-        const rest = rows.filter((row) => !removed.has(row.id)).map((row) => row.id)
+        const rest = [...new Set(rows.filter((row) => !removed.has(row.id)).map((row) => row.id))]
         if (rest.length > 0) {
-          const here = new Set(
-            (
-              (await tx
-                .select({ id })
-                .from(table)
-                .where(and(inArray(id, rest), eq(columnOf(table, 'caseId'), caseId)))) as {
-                id: string
-              }[]
-            ).map((row) => row.id),
-          )
-          for (const one of rest) if (here.has(one)) refused.push({ collection, id: one })
+          const here = (await tx
+            .select({ id })
+            .from(table)
+            .where(and(inArray(id, rest), eq(columnOf(table, 'caseId'), caseId)))) as {
+            id: string
+          }[]
+          for (const one of here) refused.push(one.id)
         }
       }
 
-      const answered = new Set(
-        [...deleted, ...refused].map((row) => `${row.collection}:${row.id}`),
-      )
+      // **Thrown inside the transaction, so none of the deletes above stand.**
+      // The single-row door answers a moved row this way and writes nothing.
+      if (refused.length > 0) {
+        const count = refused.length
+        throw new ConflictException({
+          message:
+            count === 1
+              ? 'One of those changed since you read it, so nothing was deleted.'
+              : `${String(count)} of those changed since you read them, so nothing was deleted.`,
+          refused,
+        })
+      }
+
+      const answered = new Set(deleted.map((row) => `${row.collection}:${row.id}`))
       return {
         deleted,
-        refused,
         // Reported rather than dropped: an id that matched nothing is either
         // already gone or belongs to another case, and both are worth the
         // caller knowing before it tells the analyst everything was removed.
