@@ -3,21 +3,22 @@
  *
  * The labels around the metric rows come from the pack; the units did not.
  * `duration` returned `min`, `h` and `d` whatever the document's language was,
- * so a Dutch report read `Verblijftijd: 2 h 15 min` -- a translated label and
- * an English value on one line. -> #645
+ * so a report read a translated label and an English value on one line.
+ * -> #645
  *
  * **Driven by a pack written here rather than by the shipped Dutch one.** What
  * this asserts is that the units come from wherever the words come from, and a
  * pack of real Dutch would tie the case to whichever keys somebody has got
  * round to carrying across -- `labels.nl.ts` is partial by design.
  *
- * **What this does not cover:** how a span is worded, which is the pack's, and
- * the client's own `durationText`, which prints in the interface's language
- * rather than the report's and is a separate vocabulary on purpose.
+ * **What this does not cover:** how a span is worded, which is the pack's;
+ * whether the shipped Dutch pack carries these keys, which it does not; and the
+ * client's own `durationText`, which is chrome rather than a document and
+ * measures a different span under the same word.
  */
 import { describe, expect, it } from 'vitest'
 
-import { metrics } from './derived.js'
+import { duration, metrics } from './derived.js'
 import type { Node, TableNode } from './model.js'
 import { translatorFor } from './packs.js'
 import type { ReportInput } from './resolve.js'
@@ -83,5 +84,22 @@ describe('a span printed in a report', () => {
     const printed = values(metrics(input({}))).join(' | ')
 
     expect(printed).toMatch(/\bmin\b/)
+  })
+
+  /**
+   * **Every shape, because the table above reaches one of them.** A metrics row
+   * is hours-and-minutes on any case an analyst would open, so the minutes and
+   * days shapes would otherwise be declared here and rendered by nothing -- and
+   * a later edit to either string would be free.
+   */
+  it.each([
+    [30 * 60_000, '30 minuten'],
+    [150 * 60_000, '2 uur 30 minuten'],
+    [50 * 3_600_000, '2 dagen 2 uur'],
+    [30_000, '< 1 minuut'],
+  ])('prints every shape of span from the pack', (ms, expected) => {
+    expect(duration(ms, translatorFor({ code: 'nl', label: 'Nederlands', strings: UNITS }))).toBe(
+      expected,
+    )
   })
 })

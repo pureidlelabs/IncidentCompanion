@@ -27,9 +27,13 @@ export const EN: Record<string, string> = {
   'value.ongoing': 'ongoing',
   /**
    * A span, in the four shapes `duration` prints. `{d}`, `{h}` and `{m}` are
-   * whole numbers the caller substitutes; a language that orders them
-   * differently, or needs a different word at two versus one, reorders the
-   * placeholders here rather than asking for a code change.
+   * whole numbers the caller substitutes, so a language that orders a span
+   * differently reorders the placeholders here rather than asking for a code
+   * change.
+   *
+   * **One string per key, so there is no plural form.** A language needing a
+   * different word at one versus many cannot say so here, and English escapes
+   * that only because its units do not inflect.
    */
   'value.duration_under_minute': '< 1 min',
   'value.duration_minutes': '{m} min',
