@@ -16,6 +16,7 @@ import { envelopeSchema, field } from '../field-spec.js'
 import { ENTRY_COLOUR } from '../colours.lists.js'
 import { ukcCycle, ukcPhase } from '../killchain.js'
 import {
+  activityActionSchema,
   confidenceSchema,
   eventSourceSchema,
   severitySchema,
@@ -268,7 +269,7 @@ export const actionSchema = z.object({
     defaultsNow: true,
   }),
 
-  actionType: field(text(64), {
+  actionType: field(unsettable(activityActionSchema), {
     label: 'Action type',
     kind: 'select',
     vocabulary: 'activityAction',

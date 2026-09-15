@@ -38,6 +38,8 @@ export const evidenceTypeSchema = z.enum(lists.EVIDENCE_TYPE)
 
 export const systemTypeSchema = z.enum(lists.SYSTEM_TYPE)
 
+export const activityActionSchema = z.enum(lists.ACTIVITY_ACTION)
+
 export const zoneSchema = z.enum(lists.ZONE)
 
 export const consentTypeSchema = z.enum(lists.CONSENT_TYPE)
