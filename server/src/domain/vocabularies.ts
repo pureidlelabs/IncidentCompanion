@@ -118,7 +118,7 @@ export function optionalChoice<T extends readonly [string, ...string[]]>(values:
  * Throws where the list is empty, because an enum of nothing refuses every
  * write including the ones the form offers.
  */
-function everyTerm(offered: readonly (readonly string[])[]): [string, ...string[]] {
+function everyTerm<T extends string>(offered: readonly (readonly T[])[]): [T, ...T[]] {
   const [first, ...rest] = [...new Set(offered.flat())]
   if (first === undefined) throw new Error('a vocabulary offering no term cannot fix a field')
   return [first, ...rest]
