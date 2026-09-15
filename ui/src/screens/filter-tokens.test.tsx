@@ -21,7 +21,10 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { ReactElement } from 'react'
 
-import { PICKER_ACCOUNTS, PICKER_AUDIT, PICKER_AUDIT_NOW, PICKER_CASES } from '@/components/blocks/picker-rows'
+import { useState } from 'react'
+
+import { filterSetOf, type FilterSelection } from '@/components/blocks/filter-set'
+import { inertReading, PICKER_ACCOUNTS, PICKER_AUDIT, PICKER_CASES } from '@/components/blocks/picker-rows'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
@@ -88,6 +91,42 @@ async function removeToken(
 }
 
 /**
+ * The activity screen with somebody holding its filters.
+ *
+ * The chips moved to the pane, which asks the server with them -- so a screen
+ * drawn on its own has none, and the property this file asserts needs a holder
+ * to stand in for the pane. -> #663
+ */
+function ActivityWithFilters() {
+  const [selection, setSelection] = useState<FilterSelection>({})
+  const filters = filterSetOf(
+    [
+      {
+        key: 'log',
+        label: 'Log',
+        mode: 'one',
+        options: [
+          { value: 'authentication', label: 'Sign-in', count: 2 },
+          { value: 'administration', label: 'Administration', count: 1 },
+        ],
+      },
+      { key: 'outcome', label: 'Outcome', mode: 'one', options: [{ value: 'failure', count: 1 }] },
+    ],
+    selection,
+    setSelection,
+  )
+  return (
+    <PickerActivityScreen
+      reading={{ ...inertReading(), filters }}
+      audit={PICKER_AUDIT}
+      analyst="r.okonkwo"
+      userMenu={null}
+      onAbout={() => undefined}
+    />
+  )
+}
+
+/**
  * The eight filtered surfaces.
  *
  * The picker is three of them: its panes each hold their own filters, and the
@@ -101,7 +140,7 @@ const SURFACES: readonly { name: string; draw: () => ReactElement }[] = [
   { name: 'indicators', draw: () => <IndicatorsScreen kase={campaignCase} specs={specsFixture} /> },
   { name: 'picker cases', draw: () => <PickerCasesScreen cases={PICKER_CASES} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} /> },
   { name: 'picker accounts', draw: () => <PickerAccountsScreen accounts={PICKER_ACCOUNTS} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} roles={[]} defaultRole="analyst" onCreate={() => undefined} /> },
-  { name: 'picker activity', draw: () => <PickerActivityScreen audit={PICKER_AUDIT} now={PICKER_AUDIT_NOW} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} /> },
+  { name: 'picker activity', draw: () => <ActivityWithFilters /> },
 ]
 
 describe.each(SURFACES)('$name', ({ draw }) => {

@@ -141,23 +141,28 @@ export interface Paged {
  * what makes Previous work without asking the server for something it cannot
  * answer.
  */
-export function useInstallActivity(
-  channel: AuditChannel | 'all',
-  range: RangeKey,
-  minSeverity?: Severity,
-): Paged {
+export interface ActivityAsk {
+  channel: AuditChannel | 'all'
+  range: RangeKey
+  minSeverity?: Severity | undefined
+  outcome?: 'success' | 'failure' | undefined
+}
+
+export function useInstallActivity(ask: ActivityAsk): Paged {
+  const { channel, range, minSeverity, outcome } = ask
   /** The cursor each visited page started at. `''` is the newest page. */
   const [trail, setTrail] = useState<string[]>([''])
 
   const cursor = trail.at(-1) ?? ''
 
   const query = useQuery({
-    queryKey: ['install-activity', channel, range, minSeverity ?? '', cursor],
+    queryKey: ['install-activity', channel, range, minSeverity ?? '', outcome ?? '', cursor],
     queryFn: () => {
       const at = new URLSearchParams({ limit: String(PAGE_SIZE) })
       if (channel !== 'all') at.set('channel', channel)
       if (cursor) at.set('after', cursor)
       if (minSeverity) at.set('minSeverity', String(SEVERITY_ID[minSeverity]))
+      if (outcome) at.set('outcome', outcome)
       // **The window is computed here, not in a memo.** `Date.now()` during
       // render is impure and React's lint says so; taking it at fetch time is
       // also the more correct clock - "the last 24 hours" should mean the 24

@@ -14,6 +14,8 @@ export interface PickerHealthScreenProps {
   health: HealthPaneProps
   /** Who is signed in, at the rail's foot. */
   analyst: string
+  /** Whether to offer the rail rows only an administrator may use. */
+  admin?: boolean | undefined
   /** Opens the About door from the rail's head. */
   onAbout: () => void
   /** Where a rail row goes. Without it the rows are inert. */
@@ -30,11 +32,12 @@ export interface PickerHealthScreenProps {
   busy?: boolean
 }
 
-export function PickerHealthScreen({ onAbout, health, analyst, onPane, onImportArchive, userMenu, problem, onRetry, busy }: PickerHealthScreenProps) {
+export function PickerHealthScreen({ onAbout, health, analyst, admin, onPane, onImportArchive, userMenu, problem, onRetry, busy }: PickerHealthScreenProps) {
   return (
     <PickerFrame
       pane="health"
       analyst={analyst}
+      admin={admin}
       {...(onPane ? { onPane } : {})}
       {...(onImportArchive ? { onImportArchive } : {})}
       userMenu={userMenu}

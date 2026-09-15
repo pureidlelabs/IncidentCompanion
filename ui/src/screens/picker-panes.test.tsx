@@ -6,11 +6,11 @@ import { PICKER_PANES, type PickerPane } from '@/components/blocks/picker-panes'
 import {
   PICKER_ACCOUNTS,
   PICKER_AUDIT,
-  PICKER_AUDIT_NOW,
   PICKER_CASES,
   SOME_KEY_COUNT,
   PICKER_LANGUAGES,
   PICKER_TEMPLATES,
+  inertReading,
 } from '@/components/blocks/picker-rows'
 
 import { PickerAccountsScreen } from './picker-accounts'
@@ -34,6 +34,10 @@ import { PickerTemplatesScreen } from './picker-templates'
  */
 const RAIL = {
   analyst: 'r.okonkwo',
+  // Every pane is owed a body, including the three only an administrator is
+  // offered a row for.
+  admin: true,
+  reading: inertReading(),
   userMenu: null,
   onAbout: () => undefined,
   // The rows each pane draws. A screen that takes none ignores them, and the
@@ -42,9 +46,6 @@ const RAIL = {
   entries: PICKER_TEMPLATES,
   accounts: PICKER_ACCOUNTS,
   audit: PICKER_AUDIT,
-  // The activity log filters on a range, so the clock it reads is a fixture
-  // like the rows are. See `PICKER_AUDIT_NOW`.
-  now: PICKER_AUDIT_NOW,
   languages: PICKER_LANGUAGES,
   // The languages pane says how many strings a complete pack carries, and the
   // number is the install's rather than one in the bundle. -> #664
