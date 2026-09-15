@@ -105,7 +105,7 @@ export const PICKER_GROUPS: readonly PickerGroup[] = [
       { pane: 'activity', admin: true, label: 'Activity', icon: ScrollText },
       { pane: 'administration', admin: true, label: 'Administration', icon: ShieldCheck },
       { pane: 'languages', label: 'Report languages', icon: Languages },
-      { pane: 'health', label: 'Health', icon: Activity },
+      { pane: 'health', admin: true, label: 'Health', icon: Activity },
     ],
   },
 ]

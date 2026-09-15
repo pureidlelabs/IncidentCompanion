@@ -51,7 +51,9 @@ export const Default: Story = {
         'data-active',
         'true',
       )
-      await expect(canvas.getByTestId('picker-row-health')).not.toHaveAttribute(
+      // Any other row will do; this one is read by an analyst too, which
+      // Health no longer is.
+      await expect(canvas.getByTestId('picker-row-cases')).not.toHaveAttribute(
         'data-active',
         'true',
       )
