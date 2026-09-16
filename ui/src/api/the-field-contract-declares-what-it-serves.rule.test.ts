@@ -15,12 +15,6 @@ import served from '@/fixtures/specs.json'
  * is read by whatever draws the field -- and the branch reading it is dead for
  * every field there is, which is not visible from either side on its own.
  *
- * The cost is not the dead branch. It is that the property looks like the
- * answer to a problem: #661 was raised, and a pull request opened, on the
- * belief that a select was drawing raw values because a renderer had dropped
- * `optionLabels`. Nothing served one, so nothing an analyst could see was
- * different either way.
- *
  * **Read against the committed document rather than the types.**
  * `server/src/specs` and this interface are two descriptions of one wire, and
  * comparing a description with a description proves nothing; `specs.json` is
