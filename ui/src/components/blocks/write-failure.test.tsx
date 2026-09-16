@@ -101,6 +101,28 @@ describe('WriteFailure', () => {
     expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument()
   })
 
+  /**
+   * **The same reason, for the 422 that named nothing.** A refusal is settled
+   * by its status rather than by whether the parsing found fields: a body the
+   * schema rejected is rejected again unchanged, and reading the empty list as
+   * *nothing went wrong with the body* is what drew a refused write as a
+   * dropped connection for as long as the served `errors` was unreadable.
+   * -> #633
+   */
+  it('offers no Retry for a 422 that named no field', () => {
+    render(
+      <WriteFailure
+        what="Indicators"
+        error={new ApiError(422, 'Validation failed', { message: 'Validation failed' })}
+        onRetry={() => undefined}
+        onDismiss={() => undefined}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument()
+  })
+
   it('offers no Retry for a refusal no press changes', () => {
     for (const status of [403, 501]) {
       const { unmount } = render(

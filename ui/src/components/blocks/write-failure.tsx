@@ -41,9 +41,14 @@ export function WriteFailure({
 }) {
   const fields = error.fieldErrors.slice(0, SHOWN)
   const hidden = error.fieldErrors.length - fields.length
-  // A 403 says *not you* and a 501 says *not here*; neither changes by
-  // pressing again. The read boundary makes the same call.
-  const settled = error.status === 403 || error.status === 501
+  // A 403 says *not you*, a 501 *not here*, and a 422 *not this body*; none
+  // changes by pressing again. The read boundary makes the same call.
+  //
+  // **422 by status, not by whether fields were parsed out of it.** An empty
+  // list is "nothing was named", which is not the same claim as "nothing is
+  // wrong with the body" -- and reading it as the second drew every refusal the
+  // server could not describe as a dropped connection.
+  const settled = error.status === 403 || error.status === 501 || error.status === 422
   const retryable = onRetry !== undefined && error.fieldErrors.length === 0 && !settled
 
   return (

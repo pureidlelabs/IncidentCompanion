@@ -12,11 +12,17 @@
 import { UnprocessableEntityException } from '@nestjs/common'
 import { createZodValidationPipe } from 'nestjs-zod'
 import type { ZodError } from 'zod'
-import { treeifyError } from 'zod'
 
-/** The body every schema refusal carries, whichever route raised it. */
+/**
+ * The body every schema refusal carries, whichever route raised it.
+ *
+ * **The issues as Zod lists them, not a tree.** The client reads `errors` as a
+ * list and answers no fields for anything else, and an issue is what carries
+ * the `path` that says which field it is about.
+ * -> `a-refusal-names-the-field-it-is-about.test.ts`
+ */
 export function refusedBody(error: ZodError): { message: string; errors: unknown } {
-  return { message: 'Validation failed', errors: treeifyError(error) }
+  return { message: 'Validation failed', errors: error.issues }
 }
 
 /**
