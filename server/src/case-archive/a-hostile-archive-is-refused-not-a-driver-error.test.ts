@@ -28,7 +28,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
-import { ArchiveImportService } from './import.service.js'
+import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
 import { CASE_NAME, MANIFEST_NAME, pack, readArchive } from '../archive/format.js'
 import { cases, cloudApps, systems, timeline, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
@@ -328,16 +328,23 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
   })
 
   /**
-   * **A column the write schema does not carry still travels.** `source` says
-   * where a row came from, and dropping it silently rewrites an imported row's
-   * provenance to `manual` -- a claim about the analyst's own work.
+   * **An imported row never claims to be the analyst's own work.** The column
+   * defaults to `manual`, so a door that neither carries nor stamps writes
+   * that claim over every row it brings in.
+   *
+   * **Stamped rather than carried, which is the narrower of the two answers.**
+   * The archive states the door on the install that wrote it, and carrying
+   * that states `manual` for the rows an analyst *there* typed -- the same
+   * false claim, for the rows most likely to be read. What is lost with it is
+   * which rows that install's platform found, which is a fact about the
+   * investigation that no column holds. -> #727
    */
-  it('carries a column no analyst writes', async () => {
+  it('names the door the row came through here, not the one it came through there', async () => {
     const built = await exported()
     const result = await importer.load(built, '', actorId)
 
     const [row] = await seed!.select().from(systems).where(eq(systems.caseId, result.id))
-    expect(row?.source).toBe('sentinel')
+    expect(row?.source).toBe(ARCHIVE_IMPORT)
   })
 
   /**

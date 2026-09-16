@@ -2,10 +2,13 @@
  * What an archive's rows are judged by before any of them is written.
  *
  * The collection's own write schema, widened by the columns an export carries
- * that no analyst writes -- provenance, the evidence store's record of an
- * artefact, a report's lifecycle, a Yjs document. Those are server-written, so
- * the write schema has no reason to describe them and an import still has to
- * carry them.
+ * that no analyst writes -- the evidence store's record of an artefact, a
+ * report's lifecycle, a Yjs document. Those are server-written and only the
+ * archive knows them, so the write schema has no reason to describe them and
+ * an import still has to carry them.
+ *
+ * **Which door a row came through is not one of them.** That is the importing
+ * door's own answer, stamped rather than read. -> `db/import-stamp.ts`
  *
  * **Named by the key the case document uses**, which is the archive's wire
  * name and not always the collection's: the case document says
@@ -15,7 +18,6 @@ import { z } from 'zod'
 
 import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS } from '../domain/collections.js'
 import { reportBlockSchema, reportSchema } from '../domain/entities/report.js'
-import { provenanceSchema } from '../domain/entities/timeline.js'
 
 /**
  * The collection behind each key of the case document, where the two differ.
@@ -44,17 +46,12 @@ const when = z.iso.datetime().nullable().optional()
  *
  * **Typed, not bounded.** A column's range and length are the database's and
  * are stated there; restating them here makes a second description that drifts
- * from the one enforcing it. What this settles is the shape -- that a hostname
- * is a string rather than an object, that a provenance is one of three words --
- * and a value the shape admits and the column refuses is reported by
+ * from the one enforcing it. What this settles is the shape -- that a digest is
+ * a string rather than an object, that an assumed time is a boolean -- and a
+ * value the shape admits and the column refuses is reported by
  * `import.service.ts` as a refusal naming the collection. -> #625
  */
 const CARRIED: Readonly<Record<string, z.ZodRawShape>> = {
-  systems: { source: z.string() },
-  accounts: { source: z.string() },
-  malware: { source: z.string() },
-  networkIndicators: { source: z.string() },
-  cloudApps: { source: z.string() },
   evidence: {
     hash: z.string(),
     hashAlgorithm: z.string().nullable().optional(),
@@ -71,8 +68,6 @@ const CARRIED: Readonly<Record<string, z.ZodRawShape>> = {
     frozenAt: when,
   },
   timeline: {
-    provenance: provenanceSchema,
-    unreviewed: z.boolean(),
     timeAssumed: z.boolean(),
   },
 }
