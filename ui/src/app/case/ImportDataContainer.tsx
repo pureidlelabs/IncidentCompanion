@@ -26,6 +26,7 @@ export function ImportDataContainer() {
       kase={kase.data}
       specs={specs.data}
       collections={batchCreatable.data}
+      busy={kase.isPending || specs.isPending || batchCreatable.isPending}
       {...(result ? { result } : {})}
       {...(importing.isPending && aimed ? { importing: aimed } : {})}
       onImport={(collection, file) => {

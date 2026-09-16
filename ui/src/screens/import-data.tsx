@@ -37,6 +37,11 @@ export interface ImportDataScreenProps {
   specs: Specs | undefined
   /** The tables `GET /api/collections` marks batch-creatable. */
   collections: readonly CollectionName[] | undefined
+  /**
+   * The screen draws no empty state while this holds: an empty state is an
+   * answer, and a read that has not returned does not have one.
+   */
+  busy?: boolean
   /** What the last import into one table produced. */
   result?: ImportResult
   /**
@@ -166,6 +171,7 @@ export function ImportDataScreen({
   kase,
   specs,
   collections,
+  busy = false,
   result,
   onImport,
   importing,
@@ -248,13 +254,15 @@ export function ImportDataScreen({
           </Alert>
         )}
 
-        {rows.length === 0 ? (
+        {rows.length === 0 && !busy && (
           <EmptyState
             icon={Upload}
             title="No importable tables"
             detail="This install offers no batch door yet."
           />
-        ) : (
+        )}
+
+        {rows.length > 0 && (
           // `ItemGroup` carries `role="list"` and `Item` is a `div`: the kit's
           // row takes no element of its own, so a real `ul`/`li` is not
           // available here.

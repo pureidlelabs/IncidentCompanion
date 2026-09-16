@@ -56,6 +56,18 @@ function draw() {
   render(<ImportDataContainer />, { wrapper })
 }
 
+describe('the import screen while the route has not answered', () => {
+  it('says nothing about what this install offers', () => {
+    fetchMock.mockReturnValue(new Promise<Response>(() => undefined))
+    draw()
+
+    expect(
+      screen.queryByText('No importable tables'),
+      'a read that has not returned is drawn as an install with no batch door',
+    ).not.toBeInTheDocument()
+  })
+})
+
 describe('the tables the import screen offers', () => {
   it('are the ones the route marks batch-creatable', async () => {
     draw()

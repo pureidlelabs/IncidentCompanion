@@ -282,7 +282,7 @@ describe('the import data screen', () => {
   it('hands the chosen file over against the table whose button was pressed', async () => {
     const user = userEvent.setup()
     const onImport = vi.fn()
-    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} onImport={onImport} />)
+    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} collections={batchDoorsFixture} onImport={onImport} />)
 
     await user.click(screen.getByRole('button', { name: 'Import CSV into Assets' }))
     const picker = document.querySelector<HTMLInputElement>('input[type="file"]')
