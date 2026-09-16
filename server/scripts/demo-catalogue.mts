@@ -3,7 +3,7 @@
  *
  *     npx tsx scripts/demo-catalogue.mts <output directory>
  */
-import { writeApiCatalogue } from '../src/demos/api-catalogue.js'
+import { writeApiCatalogue } from '../src/demo-catalogue/api-catalogue.js'
 
 const out = process.argv[2]
 if (!out) throw new Error('usage: demo-catalogue.mts <output directory>')
