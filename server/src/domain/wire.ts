@@ -100,6 +100,16 @@ export type ReportRow = Row<typeof reportSchema> & {
    * -> `report/freeze.ts`
    */
   sentAt: string | null
+
+  /**
+   * The report this one replaces, where it replaces one.
+   *
+   * **On the row and not in the schema**, for `sentAt`'s reason: a client that
+   * could set it would rewrite which correction stands. It is how a reader
+   * tells a correction from a first draft, and -- read the other way -- how a
+   * superseded report is known to be superseded.
+   */
+  supersedes: string | null
 }
 export type ReportBlockRow = Row<typeof reportBlockSchema> & {
   /**
