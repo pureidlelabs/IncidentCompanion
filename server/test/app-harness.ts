@@ -29,7 +29,7 @@ import { Test } from '@nestjs/testing'
 import { DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
 import { installPreferences } from '../src/db/schema/index.js'
-import type { InstallPreferenceRow } from '../src/db/schema/preferences.js'
+import { putSettingsBack } from './install-settings.js'
 import { Socket } from 'node:net'
 import { declined } from './must-run.js'
 import type { OpenAPIObject } from '@nestjs/swagger'
@@ -189,32 +189,16 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
     base,
     document,
     close: async () => {
-      await putSettingsBack(db, settingsAtBoot)
-      await app.close()
+      // **The app closes whatever the restore does.** A harness left listening
+      // is a port and a pool that never come back, which fails the rest of the
+      // run rather than this file.
+      try {
+        await putSettingsBack(db, settingsAtBoot)
+      } finally {
+        await app.close()
+      }
     },
   }
-}
-
-/**
- * The install settings this file found, back the way it found them.
- *
- * **Here rather than in each file that changes one.** `install_preferences` is
- * install-wide and the tier shares one database, so a setting left where a test
- * put it is one every later file inherits -- and the failure lands on whichever
- * file reads that setting rather than on the one that moved it, which reads as
- * that file being broken. Four files were each restoring by hand and one of
- * them only on the path where its assertions passed. -> #122
- *
- * **Written rather than asked for**: a teardown that went through the route
- * would need an administrator's session, which is the one thing a file whose
- * assertions have already failed may not still hold.
- */
-async function putSettingsBack(
-  db: Database,
-  atBoot: readonly InstallPreferenceRow[],
-): Promise<void> {
-  await db.delete(installPreferences)
-  if (atBoot.length > 0) await db.insert(installPreferences).values([...atBoot])
 }
 
 /** What every harness account ends up holding, so any of them can sign back in. */

@@ -59,6 +59,17 @@ describe.skipIf(!runnable)('attacking the policy settings', () => {
       body: JSON.stringify(body),
     })
 
+  /**
+   * **Back to unset, through the table.** The route needs an administrator's
+   * session and answers `!ok` without throwing, so a restore made that way is
+   * silent exactly when it matters: a case whose assertions have already failed
+   * is the one most likely to have lost the session. No row is what an install
+   * that never set the key holds, so deleting is the exact restore.
+   */
+  const unset = async (key: string) => {
+    await db.delete(installPreferences).where(eq(installPreferences.key, key))
+  }
+
   const stored = async (key: string) => {
     const [row] = await db
       .select()
@@ -153,7 +164,7 @@ describe.skipIf(!runnable)('attacking the policy settings', () => {
         'the control would keep the value it read at boot',
       ).toBe(target)
     } finally {
-      await put({ key, value: POLICY_SETTINGS[key].fallback }, admin.cookie)
+      await unset(key)
     }
   })
 
@@ -188,7 +199,7 @@ describe.skipIf(!runnable)('attacking the policy settings', () => {
       ).toBeGreaterThanOrEqual(4)
       expect(loosened.at(-1)?.detail?.['from'], 'the line cannot say it was loosened').toBe('5')
     } finally {
-      await put({ key, value: POLICY_SETTINGS[key].fallback }, admin.cookie)
+      await unset(key)
     }
   })
 })

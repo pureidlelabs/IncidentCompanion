@@ -8,12 +8,14 @@
  * a screen down.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { InstallPreferencesService, SETTINGS, isSettingKey } from './install.service.js'
 import { installPreferences } from '../db/schema/preferences.js'
+import type { InstallPreferenceRow } from '../db/schema/preferences.js'
 import { DEFAULT_POLICY } from '../domain/compliance-policy.js'
 import { openTestPool } from '../../test/database.js'
+import { putSettingsBack } from '../../test/install-settings.js'
 
 describe('the vocabulary', () => {
   it('knows its own keys and nothing else', () => {
@@ -69,13 +71,29 @@ const db = pool ? drizzle({ client: pool }) : null
 describe.skipIf(!db)('reading and writing one', () => {
   const settings = () => new InstallPreferencesService(db!)
 
+  /**
+   * **This file empties the table, and it reaches no harness.** It opens its
+   * own pool rather than booting the app, so `app-harness`'s restore never runs
+   * for it -- and `src/**` and `test/**` are one serial run, so every setting a
+   * later file expects to find would be gone. What it needs is its own copy of
+   * the same snapshot. -> #122
+   */
+  let atStart: InstallPreferenceRow[] = []
+
+  beforeAll(async () => {
+    atStart = await db!.select().from(installPreferences)
+  })
+
   beforeEach(async () => {
     await db!.delete(installPreferences)
   })
 
   afterAll(async () => {
-    await db!.delete(installPreferences)
-    await pool!.end()
+    try {
+      await putSettingsBack(db!, atStart)
+    } finally {
+      await pool!.end()
+    }
   })
 
   it('answers the default when nothing has ever been set', async () => {

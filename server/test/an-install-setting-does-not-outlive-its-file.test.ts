@@ -63,6 +63,11 @@ describe.skipIf(!runnable)('an install setting a test leaves behind', () => {
     const first = await boot()
     const admin = await sharedAdmin(first)
     const atBoot = await stored(first)
+    // Or the case asserts nothing: a file that already left this value makes
+    // "the setting came back" and "the setting never went" the same reading.
+    expect(atBoot, 'the install already holds the value this leaves behind').not.toEqual(
+      LEFT_BEHIND,
+    )
 
     await set(first, admin.cookie, LEFT_BEHIND)
     expect(
