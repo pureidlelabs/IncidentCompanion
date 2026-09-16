@@ -113,7 +113,11 @@ function needsAdditional(detailed: readonly string[]): boolean {
 }
 
 /**
- * DORA's gaps: the Article 6 gate and the tracked Annex II fields left empty.
+ * DORA's gaps: the tracked Annex II fields left empty.
+ *
+ * **Not the Article 6 gate.** A line exists only for a regime in play, and DORA
+ * is in play once that gate has an answer, so a gap asking for it could reach
+ * nobody. -> `regimes.ts`, #693
  *
  * **No stage filter yet, and it is owed.** Three of the four are final-report
  * fields; at the initial notification they are not late, they are not yet
@@ -123,9 +127,6 @@ function needsAdditional(detailed: readonly string[]): boolean {
  */
 function doraReadiness(row: ComplianceRow): Readiness {
   const gaps: string[] = []
-  if (dora.inScope(row).met === null) {
-    gaps.push('whether critical services were affected (Article 6)')
-  }
   for (const [number, column, title] of TRACKED_ITS_FIELDS) {
     const value = row[column]
     const empty = Array.isArray(value) ? value.length === 0 : !value
@@ -133,9 +134,10 @@ function doraReadiness(row: ComplianceRow): Readiness {
     if (number === '4.3' && !needsAdditional(row.doraRootCauseDetailed ?? [])) continue
     gaps.push(`${number} ${title}`)
   }
-  // The four Annex II fields plus the Article 6 gate, which is an RTS
-  // criterion and not an Annex II field - so `untracked` is not a subtraction
-  // from `tracked`.
+  // The four Annex II fields plus the Article 6 gate, which is an RTS criterion
+  // and not an Annex II field - so `untracked` is not a subtraction from
+  // `tracked`. The gate counts as tracked and stated: a line exists only once
+  // it is answered.
   return summarise('dora', gaps, TRACKED_ITS_FIELDS.length + 1, ANNEX_II_FIELDS - TRACKED_ITS_FIELDS.length)
 }
 
