@@ -182,6 +182,14 @@ Nothing MUST expand, execute or interpret an artefact to decide what it is.
 - WHEN the question is whether its contents are confidential
 - THEN the answer is that the wrapping does not make them so
 
+#### Scenario: An operator asks what protects the state at rest
+
+- GIVEN an install holding a database, a cache and stored evidence
+- WHEN an operator asks the install how that state is protected
+- THEN it says the application writes all of it unencrypted
+- AND it says confidentiality at rest is whatever the storage underneath provides
+- AND evidence is named rather than left to be assumed either way
+
 **Confidentiality at rest is the operator's, and the application MUST say so rather than assume it.** The storage this runs on belongs to whoever installed it — their disks, their volumes, their platform — and encrypting them is a decision they have already taken for everything else they run. This application MUST NOT encrypt durable state itself, because doing so would put a key it manages in front of storage the operator already protects, and would make recovery depend on that key surviving.
 
 What it MUST do is state the assumption: an install MUST be able to tell an operator that its durable state, including evidence, is stored unencrypted by the application and relies on the storage beneath it. An operator who has not encrypted that storage MUST be able to learn it from the application rather than from an auditor.

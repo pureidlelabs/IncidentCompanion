@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 497 |
-| Demonstrated | 401 |
+| Scenarios | 498 |
+| Demonstrated | 402 |
 | Undemonstrable | 1 |
 | Unbuilt | 81 |
 | Undemonstrated | 14 |
@@ -574,6 +574,7 @@
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | The same artefact arrives twice | demonstrated | server/src/evidence/store.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | demonstrated | server/src/health/install.controller.test.ts |
+| Evidence is wrapped, and the wrapping is containment rather than confidentiality | An operator asks what protects the state at rest | demonstrated | server/src/health/install.controller.test.ts |
 | What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | demonstrated | server/src/health/an-install-says-what-it-cannot-find.test.ts |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
