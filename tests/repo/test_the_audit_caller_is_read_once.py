@@ -11,7 +11,9 @@ SOURCE = ROOT / "server" / "src"
 
 DECORATOR = SOURCE / "install-activity" / "caller.ts"
 
-HAND_BUILT = "headers: request.headers, request }"
+# The identifier is bound rather than spelled, so a handler taking `req` is the
+# same object under another name.
+HAND_BUILT = re.compile(r"headers:\s*(\w+)\.headers,\s*request(?::\s*\1)?\s*,?\s*\}")
 
 
 def test_only_the_decorator_builds_the_caller() -> None:
@@ -20,7 +22,7 @@ def test_only_the_decorator_builds_the_caller() -> None:
         if path == DECORATOR:
             continue
         # Collapsed, so the same object split over lines is still the same object.
-        if HAND_BUILT in re.sub(r"\s+", " ", path.read_text(encoding="utf-8")):
+        if HAND_BUILT.search(re.sub(r"\s+", " ", path.read_text(encoding="utf-8"))):
             offenders.append(str(path.relative_to(ROOT)))
 
     assert not offenders, (

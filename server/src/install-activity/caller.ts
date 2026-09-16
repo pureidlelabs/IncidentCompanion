@@ -6,7 +6,7 @@ import type { Caller as CallerShape } from './install-activity.service.js'
 
 export type Caller = CallerShape
 
-/** The decorator's own body, which a test cannot reach through the decorator. */
+/** The audit caller, read off the request of an HTTP execution context. */
 export function callerOf(context: ExecutionContext): Caller {
   const request = context
     .switchToHttp()
