@@ -14,7 +14,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 
 import { request, type ApiError } from './client'
-import type { BatchCreatableCollectionName } from './model'
+import type { CollectionName } from './model'
 import { keys } from './queryKeys'
 
 export interface BulkCreateResult {
@@ -23,7 +23,7 @@ export interface BulkCreateResult {
 
 export function useEntryBulkCreate(
   caseId: string,
-  collection: BatchCreatableCollectionName,
+  collection: CollectionName,
 ): UseMutationResult<BulkCreateResult, ApiError, Record<string, unknown>[]> {
   const client = useQueryClient()
   const listKey = keys.collection(caseId, collection)

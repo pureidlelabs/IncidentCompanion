@@ -12,6 +12,7 @@ import { fieldsOf, type Specs } from '@/api/specs'
 import { EmptyState } from '@/components/blocks/empty-state'
 import { Section } from '@/components/blocks/section'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { SectionMeta } from '@/components/blocks/section-head'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Item, ItemActions, ItemContent, ItemGroup, ItemTitle } from '@/components/ui/item'
@@ -38,10 +39,15 @@ export interface ImportDataScreenProps {
   /** The tables `GET /api/collections` marks batch-creatable. */
   collections: readonly CollectionName[] | undefined
   /**
-   * The screen draws no empty state while this holds: an empty state is an
-   * answer, and a read that has not returned does not have one.
+   * The listing is still being read.
+   *
+   * Nothing is drawn while this holds: an empty state is an answer, and a read
+   * that has not returned does not have one.
    */
   busy?: boolean
+  problem?: unknown
+  /** Asked again when *Try again* is pressed. */
+  onRetry?: (() => void) | undefined
   /** What the last import into one table produced. */
   result?: ImportResult
   /**
@@ -172,6 +178,8 @@ export function ImportDataScreen({
   specs,
   collections,
   busy = false,
+  problem,
+  onRetry,
   result,
   onImport,
   importing,
@@ -254,73 +262,78 @@ export function ImportDataScreen({
           </Alert>
         )}
 
-        {rows.length === 0 && !busy && (
-          <EmptyState
-            icon={Upload}
-            title="No importable tables"
-            detail="This install offers no batch door yet."
-          />
-        )}
-
-        {rows.length > 0 && (
-          // `ItemGroup` carries `role="list"` and `Item` is a `div`: the kit's
-          // row takes no element of its own, so a real `ul`/`li` is not
-          // available here.
-          <ItemGroup className="gap-0 divide-y divide-border border-y border-border">
-            {rows.map((row) => (
-              <Item key={row.collection} role="listitem" variant="default">
-                {/* `flex-wrap` and `min-w-0`: forced onto one line the title
+        <AsyncBoundary
+          isPending={busy}
+          isError={problem !== undefined}
+          error={problem}
+          {...(onRetry ? { refetch: onRetry } : {})}
+        >
+          {rows.length === 0 ? (
+            <EmptyState
+              icon={Upload}
+              title="No importable tables"
+              detail="This install offers no batch door yet."
+            />
+          ) : (
+            // `ItemGroup` carries `role="list"` and `Item` is a `div`: the kit's
+            // row takes no element of its own, so a real `ul`/`li` is not
+            // available here.
+            <ItemGroup className="gap-0 divide-y divide-border border-y border-border">
+              {rows.map((row) => (
+                <Item key={row.collection} role="listitem" variant="default">
+                  {/* `flex-wrap` and `min-w-0`: forced onto one line the title
                     clips at a narrow measure, and `ItemTitle` is
                     `line-clamp-1`, so it clips without an ellipsis. */}
-                <ItemContent className="min-w-0 flex-row flex-wrap items-center gap-x-3 gap-y-0.5">
-                  <ItemTitle className="min-w-0">{row.label}</ItemTitle>
-                  <span className="text-sm font-normal text-ink-muted tabular-nums">
-                    {`${String(row.count)} ${row.count === 1 ? 'row' : 'rows'}`}
-                  </span>
-                  <span className="text-2xs text-ink-muted">
-                    {row.fields.length === 0
-                      ? 'no form served'
-                      : `${String(row.fields.length)} columns`}
-                  </span>
-                </ItemContent>
-                <ItemActions>
-                  <ButtonLink
-                    variant="ghost"
-                    size="sm"
-                    href={templateHref(row.fields)}
-                    download={`${row.collection}-template.csv`}
-                    data-part="template"
-                  >
-                    <Download aria-hidden />
-                    Template
-                  </ButtonLink>
-                  {/* Absent rather than greyed where no form is served: a
-                      disabled importer is a promise about a table this install
-                      cannot describe. */}
-                  {row.fields.length > 0 && (
-                    <Button
+                  <ItemContent className="min-w-0 flex-row flex-wrap items-center gap-x-3 gap-y-0.5">
+                    <ItemTitle className="min-w-0">{row.label}</ItemTitle>
+                    <span className="text-sm font-normal text-ink-muted tabular-nums">
+                      {`${String(row.count)} ${row.count === 1 ? 'row' : 'rows'}`}
+                    </span>
+                    <span className="text-2xs text-ink-muted">
+                      {row.fields.length === 0
+                        ? 'no form served'
+                        : `${String(row.fields.length)} columns`}
+                    </span>
+                  </ItemContent>
+                  <ItemActions>
+                    <ButtonLink
                       variant="ghost"
                       size="sm"
-                      isDisabled={!onImport}
-                      isPending={importing === row.collection}
-                      aria-label={`Import CSV into ${row.label}`}
-                      {...(onImport
-                        ? {
-                            onPress: () => {
-                              pick(row.collection)
-                            },
-                          }
-                        : {})}
+                      href={templateHref(row.fields)}
+                      download={`${row.collection}-template.csv`}
+                      data-part="template"
                     >
-                      <Upload aria-hidden />
-                      Import CSV
-                    </Button>
-                  )}
-                </ItemActions>
-              </Item>
-            ))}
-          </ItemGroup>
-        )}
+                      <Download aria-hidden />
+                      Template
+                    </ButtonLink>
+                    {/* Absent rather than greyed where no form is served: a
+                      disabled importer is a promise about a table this install
+                      cannot describe. */}
+                    {row.fields.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        isDisabled={!onImport}
+                        isPending={importing === row.collection}
+                        aria-label={`Import CSV into ${row.label}`}
+                        {...(onImport
+                          ? {
+                              onPress: () => {
+                                pick(row.collection)
+                              },
+                            }
+                          : {})}
+                      >
+                        <Upload aria-hidden />
+                        Import CSV
+                      </Button>
+                    )}
+                  </ItemActions>
+                </Item>
+              ))}
+            </ItemGroup>
+          )}
+        </AsyncBoundary>
       </div>
       {/* Off-screen rather than `hidden`: a hidden input cannot be clicked
           in every browser, and `sr-only` keeps it focusable and clickable

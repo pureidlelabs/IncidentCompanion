@@ -12,18 +12,25 @@ import { COLLECTION_NAMES, type CollectionName } from './model'
 import { request } from './client'
 import { keys } from './queryKeys'
 
-type Wire = Record<string, { batch_create: boolean }>
+/** What the listing says about one table, of which only the flag is read here. */
+export type CollectionsListing = Record<string, { batch_create: boolean }>
+
+/**
+ * The listing reduced to the tables a batch may be written to.
+ *
+ * Walked in `COLLECTION_NAMES` order rather than the listing's, so the row
+ * order is this client's and a served name it has no label or case key for is
+ * dropped rather than drawn blank.
+ */
+export function batchCreatable(served: CollectionsListing): readonly CollectionName[] {
+  return COLLECTION_NAMES.filter((name) => served[name]?.batch_create === true)
+}
 
 /** Static server-side metadata for the life of the process. See `specs.ts`. */
 export function useBatchCreatableCollections(): UseQueryResult<readonly CollectionName[]> {
   return useQuery({
     queryKey: keys.collections(),
-    queryFn: async () => {
-      const served = await request<Wire>('/collections', { raw: true })
-      // Walked rather than filtered, so the row order is this client's and a
-      // served name it has no label or case key for is dropped.
-      return COLLECTION_NAMES.filter((name) => served[name]?.batch_create === true)
-    },
+    queryFn: async () => batchCreatable(await request<CollectionsListing>('/collections', { raw: true })),
     staleTime: Infinity,
     gcTime: Infinity,
     refetchOnWindowFocus: false,

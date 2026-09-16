@@ -68,6 +68,24 @@ describe('the import screen while the route has not answered', () => {
   })
 })
 
+describe('the import screen when the route refuses the listing', () => {
+  it('says what failed and offers the read again, rather than an install with no door', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ message: 'The listing is unavailable' }), { status: 500 }),
+    )
+    draw()
+
+    await waitFor(() => {
+      expect(screen.getByText('The listing is unavailable')).toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(
+      screen.queryByText('No importable tables'),
+      'a read that failed is drawn as an install with no batch door',
+    ).not.toBeInTheDocument()
+  })
+})
+
 describe('the tables the import screen offers', () => {
   it('are the ones the route marks batch-creatable', async () => {
     draw()

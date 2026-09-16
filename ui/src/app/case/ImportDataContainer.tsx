@@ -27,6 +27,10 @@ export function ImportDataContainer() {
       specs={specs.data}
       collections={batchCreatable.data}
       busy={kase.isPending || specs.isPending || batchCreatable.isPending}
+      {...(batchCreatable.error === null ? {} : { problem: batchCreatable.error })}
+      onRetry={() => {
+        void batchCreatable.refetch()
+      }}
       {...(result ? { result } : {})}
       {...(importing.isPending && aimed ? { importing: aimed } : {})}
       onImport={(collection, file) => {

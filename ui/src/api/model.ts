@@ -226,8 +226,6 @@ export const COLLECTION_NAMES: readonly CollectionName[] = [
   'timeline',
 ]
 
-export type BatchCreatableCollectionName = CollectionName
-
 export type GenericCreateCollectionName = CollectionName
 
 /**
