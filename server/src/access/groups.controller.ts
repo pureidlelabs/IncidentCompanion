@@ -120,7 +120,9 @@ export class GroupsController {
   async membership(
     @Param('groupId', ParseUUIDPipe) groupId: string,
   ): Promise<z.infer<typeof membershipSchema>> {
-    return this.groups.membership(groupId)
+    const held = await this.groups.membership(groupId)
+    if (held === null) throw new NotFoundException(`No group ${groupId}.`)
+    return held
   }
 
   @Post()

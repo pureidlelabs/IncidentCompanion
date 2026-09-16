@@ -22,6 +22,14 @@ Asking something of the whole corpus — whether an indicator has been seen befo
 
 Each is designed rather than composed: cacheable, boundable, and enforced where every other read is enforced. A traversal question is still one question with one answer shape.
 
+## A rule between two fields is published as an example, and the example is posted
+
+A schema states what one field may hold. A rule holding *between* two fields -- a password and its repeat -- has no spelling in a schema at all, so a caller building a body from the published shape alone assembles one the route refuses, by a rule the description does not carry.
+
+**The route publishes an example whose fields satisfy the rule.** That is what a caller reads and what a generated client offers as a starting body.
+
+**An example is authored beside the schema, so it is held to what is served by being posted.** A description derived from the routes cannot derive this one, because the rule it states is not in the schema to derive from -- and an example nothing sends is prose that ages exactly as any second description of the wire does. So the sweep that posts a generated instance at every documented body posts the example too, and only where the generated one was refused: the example is the answer to a refusal, never a way for a route to opt out of being generated at all.
+
 ## What a route owes regardless of its shape
 
 **Reach is enforced in the store**, not at the entry point. A route is not the boundary; it is a caller of one.

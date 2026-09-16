@@ -21,7 +21,7 @@ import {
 } from '@/components/blocks/picker-rows'
 
 import { batchDoorsFixture } from '@/fixtures/batch-doors'
-import { campaignCase } from '@/fixtures/campaign'
+import { CAMPAIGN_NOW, campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
 import { specsFixture } from '@/fixtures/specs'
 
@@ -177,7 +177,7 @@ describe("the case overview's queue doors", () => {
   it('opens the section the row is answered on', async () => {
     const user = userEvent.setup()
     const onOpen = vi.fn()
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} onOpen={onOpen} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} onOpen={onOpen} />)
 
     const queue = screen.getByRole('region', { name: 'Open items' })
     const doors = within(queue).getAllByRole('button')

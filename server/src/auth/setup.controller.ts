@@ -55,16 +55,24 @@ const claimSchema = z
     /**
      * **The same rule as `password`, stated rather than implied.** A bare
      * `string` here says the repeat may be anything, which is false - it must
-     * be a password. It also makes the pair expressible: the cross-field
-     * check is a `refine` and cannot appear in the published schema, so a
-     * caller generating a body from the document produced two different
-     * strings and was refused by a rule the document does not carry.
+     * be a password.
      */
     repeat: z.string().min(MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT).max(200),
   })
   .refine((body) => body.password === body.repeat, {
     message: 'The two passwords are not the same.',
     path: ['repeat'],
+  })
+  /** The pair the `refine` demands, which no schema can state. */
+  .meta({
+    examples: [
+      {
+        token: 'the-token-the-console-printed',
+        username: 'first.administrator@example.invalid',
+        password: 'the-first-passphrase',
+        repeat: 'the-first-passphrase',
+      },
+    ],
   })
 
 export class ClaimDto extends createZodDto(claimSchema) {}

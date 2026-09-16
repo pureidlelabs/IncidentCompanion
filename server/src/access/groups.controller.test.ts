@@ -13,6 +13,7 @@
  * inherits it rather than being the one somebody forgot.
  */
 import { readFileSync } from 'node:fs'
+import { NotFoundException } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
@@ -209,6 +210,29 @@ describe.skipIf(!db)('granting reach through a group', () => {
     await expect(
       controller.grant(gone, { userId: ANALYST, level: 'read' }, caller),
     ).rejects.toMatchObject({ status: 404 })
+  })
+
+  /**
+   * **Two empty result sets say nothing about whether the group exists.**
+   * -> #812
+   *
+   * `answers a group that holds nothing` is what gives this one its meaning: a
+   * read that refused every id would pass alone.
+   */
+  it('refuses reading a group that does not exist', async () => {
+    const gone = '33333333-3333-4333-8333-333333333333'
+
+    const refused = await controller.membership(gone).catch((error: unknown) => error)
+
+    expect(refused).toBeInstanceOf(NotFoundException)
+    expect((refused as NotFoundException).getResponse()).toMatchObject({
+      statusCode: 404,
+      error: 'Not Found',
+    })
+  })
+
+  it('answers a group that holds nothing, which is not the same as one that is gone', async () => {
+    expect(await controller.membership(sector)).toEqual({ members: [], customers: [] })
   })
 
   it('refuses a group with no name', async () => {

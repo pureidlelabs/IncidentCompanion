@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useCase } from '@/api/case'
@@ -30,6 +31,8 @@ export function OverviewContainer() {
   const record = useComplianceRecord(caseId)
   const navigate = useNavigate()
   const patch = useCaseMutation(caseId)
+  // Read once, so the reading holds for the mount.
+  const [now] = useState(() => Date.now())
 
   const writes: CaseWrites = {
     // The version travels from the form rather than from `kase.data`: the form
@@ -44,6 +47,7 @@ export function OverviewContainer() {
       kase={kase.data}
       specs={specs.data}
       record={record.data}
+      now={now}
       busy={kase.isPending || specs.isPending}
       {...(kase.error === null ? {} : { problem: kase.error })}
       onRetry={() => {

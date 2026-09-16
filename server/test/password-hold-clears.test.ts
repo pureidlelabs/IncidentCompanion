@@ -64,6 +64,34 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
     expect(((await refused.json()) as { mustChangePassword?: boolean }).mustChangePassword).toBe(true)
   })
 
+  /**
+   * **The repeat is checked here and not only in the browser**, and until now
+   * only the setup door's copy of that rule had a test. A client that skipped
+   * it would set a password its owner mistyped, and the account is then locked
+   * out by the thing meant to protect it -- from a screen that said it worked.
+   *
+   * Asserted on the field as well as the status: the rule holds between two
+   * fields, so a refusal that named neither would leave the form with nothing
+   * to put the sentence beside.
+   */
+  it('refuses a new password that does not match its repeat, naming the field', async () => {
+    const held = await heldAccount()
+
+    const refused = await fetch(`${harness.base}/api/change-password`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: held.cookie },
+      body: JSON.stringify({ current: ISSUED, password: CHOSEN, repeat: `${CHOSEN}-typo` }),
+    })
+    expect(refused.status).toBe(422)
+    const said = (await refused.json()) as { errors?: { path?: unknown[] }[] }
+    expect(said.errors?.map((one) => one.path?.join('.'))).toEqual(['repeat'])
+
+    // And the password was not set: the account is still held, and still
+    // signs in with the one it was issued.
+    const after = await fetch(`${harness.base}/api/cases`, { headers: { cookie: held.cookie } })
+    expect(after.status, 'the mistyped pair was written anyway').toBe(403)
+  })
+
   it('may use the app immediately afterwards, on the same session', async () => {
     const held = await heldAccount()
 
