@@ -28,13 +28,10 @@ import type { Database } from '../db/client.js'
 import { cases } from '../db/schema/index.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { routeOf } from '../install-activity/route-of.js'
-import { ReachService, type Level } from './reach.service.js'
+import { RANK, ReachService, type Level } from './reach.service.js'
 
 /** What `ParseUUIDPipe` accepts, so the guard and the pipe refuse the same set. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-
-/** Weakest to strongest, matching `reach.service.ts`. */
-const RANK: readonly Level[] = ['read', 'write', 'delete']
 
 const enough = (held: Level | null, needed: Level): boolean =>
   held !== null && RANK.indexOf(held) >= RANK.indexOf(needed)

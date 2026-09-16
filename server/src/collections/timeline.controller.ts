@@ -11,6 +11,7 @@
  * to write over.
  */
 import { CreatedIdsDto, DeletedDto } from './acknowledged.js'
+import { parsed, versionRead, bulkBodySchema } from './write-door.js'
 import {
   UnprocessableEntityException,
   Body,
@@ -27,7 +28,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
-import { ZodResponse, ZodValidationPipe, createZodDto, createZodValidationPipe } from 'nestjs-zod'
+import { ZodResponse, createZodDto, createZodValidationPipe } from 'nestjs-zod'
 import { z } from 'zod'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
@@ -46,7 +47,6 @@ import {
 } from '../domain/entities/timeline.js'
 import { patchSchema } from '../domain/field-spec.js'
 import type { TimelineRow } from '../domain/wire.js'
-import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * **Exported because the import door writes timeline rows too.** Rebuilding it
@@ -102,20 +102,8 @@ const RefusingPipe = createZodValidationPipe({
  */
 const validateEntry = new RefusingPipe(timelineWriteSchema)
 
-const BULK_LIMIT = 1000
-
-const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
-
 /** What this door calls itself. -> `db/import-stamp.ts` */
 const BULK_IMPORT = 'Bulk import'
-
-function parsed(schema: z.ZodType, body: unknown): Record<string, unknown> {
-  const answer = schema.safeParse(body)
-  if (!answer.success) {
-    throw new UnprocessableEntityException({ message: 'Validation failed', errors: answer.error.issues })
-  }
-  return answer.data as Record<string, unknown>
-}
 
 /**
  * When an entry happened, and whether the server had to decide that.
@@ -146,10 +134,6 @@ const PATCH_SCHEMAS = {
   event: patchSchema(eventWriteSchema.omit({ kind: true })),
   action: patchSchema(actionWriteSchema.omit({ kind: true })),
 } as const
-
-/** Only `version` is validated by the pipe; the rest needs the row's kind. */
-const versionSchema = z.object({ version: rowVersion() }).catchall(z.unknown())
-const validatePatch = new ZodValidationPipe(versionSchema)
 
 /**
  * What the timeline routes answer with: `timelineRowSchema`, never a shape
@@ -300,33 +284,26 @@ export class TimelineController {
   async update(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body(validatePatch) body: unknown,
+    @Body() body: unknown,
     @Session() session: UserSession,
   ) {
     // `base` rides with the patch and is not part of it - see the entity
     // controller. Stripped here too, or the per-kind strict schema refuses the
     // whole save as naming a column the timeline does not have.
-    const { version, base, ...raw } = body as {
-      version: number
+    const { version, base, ...raw } = (body ?? {}) as {
+      version?: unknown
       base?: Record<string, unknown>
     } & Record<string, unknown>
+    const expected = versionRead(version, 'patch')
 
     // The row's kind decides which fields are patchable, so it is read before
     // the patch is validated. The version check still guards the write itself:
     // a kind cannot change, so a race here cannot pick the wrong schema.
     const existing = (await this.collections.get(DEFINITION, caseId, id)) as { kind: 'event' | 'action' }
-    const parsed = PATCH_SCHEMAS[existing.kind].safeParse(raw)
-    if (!parsed.success) {
-      throw new UnprocessableEntityException({
-        message: 'Validation failed',
-        errors: parsed.error.issues,
-      })
-    }
-    if (Object.keys(parsed.data).length === 0) {
+    const patch = parsed(PATCH_SCHEMAS[existing.kind], raw)
+    if (Object.keys(patch).length === 0) {
       throw new UnprocessableEntityException({ message: 'A patch has to change something.' })
     }
-
-    const patch = parsed.data
     // Same rule as create, or clearing a time on an existing row writes an
     // Invalid Date and the column refuses it.
     if ('time' in patch) Object.assign(patch, whenItHappened(patch['time'] as string | undefined))
@@ -335,13 +312,21 @@ export class TimelineController {
       DEFINITION,
       caseId,
       id,
-      version,
+      expected,
       patch,
       session.user.id,
     )
     // Projected like the reads: a raw row carries the derived kill-chain
     // fields as null, and the client caches what a write answers.
     if (result.ok) return timelineToWire(result.row) as TimelineRow
+
+    // A row the case-scoped read cannot see has no version to report, so it is
+    // 404 and nothing is recorded - recording would write a conflict into this
+    // case naming another case's row and the patch aimed at it. See the entity
+    // controller, which has the argument in full.
+    if (result.currentVersion === null) {
+      throw new NotFoundException(`No timeline entry ${id} in this case.`)
+    }
 
     // Kept before the refusal is thrown: these values exist nowhere else once
     // this response is sent.
@@ -368,15 +353,11 @@ export class TimelineController {
     @Query('version') version: string,
     @Session() session: UserSession,
   ) {
-    const expected = Number(version)
-    if (!rowVersion().safeParse(expected).success) {
-      throw new ConflictException({ message: 'A delete has to name the version it read.' })
-    }
     const removed = await this.collections.remove(
       DEFINITION,
       caseId,
       id,
-      expected,
+      versionRead(version, 'delete'),
       session.user.id,
     )
     if (!removed) {

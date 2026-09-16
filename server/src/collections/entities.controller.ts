@@ -12,6 +12,7 @@
  * discriminated union, and per-kind patch validation.
  */
 import { CreatedIdsDto, DeletedDto } from './acknowledged.js'
+import { BULK_LIMIT, bulkBodySchema, parsed, versionRead } from './write-door.js'
 import {
   Inject,
   UnprocessableEntityException,
@@ -66,13 +67,6 @@ import { refuseWritesToSentReport } from '../report/freeze.js'
 import { refuseUnservedLanguage } from '../report/language.service.js'
 import { caseOwnedRowSchema, patchSchema } from '../domain/field-spec.js'
 import { rowVersion } from '../domain/column-bounds.js'
-
-/**
- * Rows one request may carry, because the door is reachable from a script:
- * high enough never to refuse an analyst, low enough that one request cannot
- * hold a transaction open over the whole table.
- */
-const BULK_LIMIT = 1000
 
 /**
  * A collection ordered by `createdAt` - an entity has no clock of its own the
@@ -169,17 +163,6 @@ abstract class EntityReads {
     protected readonly conflicts?: ConflictsService,
   ) {}
 
-  private parse(schema: z.ZodType, body: unknown): Record<string, unknown> {
-    const parsed = schema.safeParse(body)
-    if (!parsed.success) {
-      throw new UnprocessableEntityException({
-        message: 'Validation failed',
-        errors: parsed.error.issues,
-      })
-    }
-    return parsed.data as Record<string, unknown>
-  }
-
   @Get()
   @ZodResponse({ status: 200, type: EntityRowsDto, description: "The collection's rows." })
   async list(@Param('caseId', ParseUUIDPipe) caseId: string) {
@@ -200,7 +183,7 @@ abstract class EntityReads {
     @Body() body: ReorderBodyDto,
     @Session() session: UserSession,
   ) {
-    const { ids } = this.parse(reorderBodySchema, body) as { ids: string[] }
+    const { ids } = parsed(reorderBodySchema, body) as { ids: string[] }
     return this.collections.reorder(this.definition, caseId, ids, session.user.id)
   }
 
@@ -211,15 +194,12 @@ abstract class EntityReads {
     @Body() body: unknown,
     @Session() session: UserSession,
   ) {
-    const { entries } = this.parse(
-      z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict(),
-      body,
-    ) as { entries: unknown[] }
+    const { entries } = parsed(bulkBodySchema, body) as { entries: unknown[] }
 
     // Every row against the same schema the single create uses: a batch door
     // that validated more loosely would be the way around every rule the
     // strict parse enforces.
-    const rows = entries.map((entry) => this.parse(this.schema.strict(), entry))
+    const rows = entries.map((entry) => parsed(this.schema.strict(), entry))
     const { ids } = await this.collections.createMany(
       this.definition,
       caseId,
@@ -242,7 +222,7 @@ abstract class EntityReads {
      * caller that could send bare ids would be asking to overwrite whatever
      * the row has become.
      */
-    const parsed = this.parse(
+    const selection = parsed(
       z
         .object({
           ids: z
@@ -254,14 +234,14 @@ abstract class EntityReads {
       body,
     ) as { ids: { id: string; version: number }[]; fields: Record<string, unknown> }
 
-    const fields = this.parse(patchSchema(this.schema), parsed.fields)
+    const fields = parsed(patchSchema(this.schema), selection.fields)
     if (Object.keys(fields).length === 0) {
       throw new UnprocessableEntityException({ message: 'A patch has to change something.' })
     }
     return this.collections.updateMany(
       this.definition,
       caseId,
-      parsed.ids,
+      selection.ids,
       fields,
       session.user.id,
     )
@@ -286,7 +266,7 @@ abstract class EntityReads {
     @Body() body: unknown,
     @Session() session: UserSession,
   ) {
-    const values = this.parse(this.schema.strict(), body)
+    const values = parsed(this.schema.strict(), body)
     return asRow(await this.collections.create(this.definition, caseId, values, session.user.id))
   }
 
@@ -317,10 +297,8 @@ abstract class EntityReads {
       base,
       ...rest
     } = (body ?? {}) as { version?: unknown; base?: unknown } & Record<string, unknown>
-    if (!rowVersion().safeParse(version).success) {
-      throw new UnprocessableEntityException({ message: 'A patch has to name the version it read.' })
-    }
-    const patch = this.parse(patchSchema(this.schema), rest)
+    const expected = versionRead(version, 'patch')
+    const patch = parsed(patchSchema(this.schema), rest)
     if (Object.keys(patch).length === 0) {
       throw new UnprocessableEntityException({ message: 'A patch has to change something.' })
     }
@@ -329,7 +307,7 @@ abstract class EntityReads {
       this.definition,
       caseId,
       id,
-      version as number,
+      expected,
       patch,
       session.user.id,
     )
@@ -385,15 +363,11 @@ abstract class EntityReads {
     @Query('version') version: string,
     @Session() session: UserSession,
   ) {
-    const expected = Number(version)
-    if (!rowVersion().safeParse(expected).success) {
-      throw new UnprocessableEntityException({ message: 'A delete has to name the version it read.' })
-    }
     const removed = await this.collections.remove(
       this.definition,
       caseId,
       id,
-      expected,
+      versionRead(version, 'delete'),
       session.user.id,
     )
     if (!removed) throw new ConflictException({ message: 'Someone else wrote this first.' })

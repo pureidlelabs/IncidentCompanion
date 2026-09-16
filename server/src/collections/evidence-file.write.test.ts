@@ -253,6 +253,41 @@ describe.skipIf(!db)('an evidence attachment', () => {
     expect(row!.storedAt).toBeNull()
   })
 
+  /**
+   * **A row that moved while the bytes arrived is a conflict, not a refusal of
+   * the request.** This route reads the row, spends the upload reading the
+   * body, and writes against the version it read, so a patch landing in between
+   * is the ordinary case rather than a contrived one. -> #638
+   *
+   * Arranged inside `put`, which is where an upload's time actually goes.
+   */
+  it('answers a row that moved mid-upload with a conflict naming the version it reached', async () => {
+    const { caseId, id } = await caseWithRow()
+    const [before] = await seed!.select().from(evidence).where(eq(evidence.id, id))
+    const racing = {
+      put: async (request: never, name?: string) => {
+        await rows.update(
+          caseId,
+          id,
+          { version: before!.version, name: 'Renamed while uploading' },
+          { user: { id: actorId } } as never,
+        )
+        return store.put(request, name)
+      },
+    } as unknown as EvidenceStore
+
+    await expect(
+      new EvidenceFileController(db!, racing).attach(caseId, id, upload('mail body'), {
+        user: { id: actorId },
+      } as never),
+    ).rejects.toMatchObject({ status: 409, response: { currentVersion: before!.version + 1 } })
+
+    // The attach wrote nothing, so the row still carries the other analyst's.
+    const [after] = await seed!.select().from(evidence).where(eq(evidence.id, id))
+    expect(after!.name).toBe('Renamed while uploading')
+    expect(after!.storedAt).toBeNull()
+  })
+
   it('hands back a zip under `infected`, holding the exact bytes', async () => {
     // **The download is the stored file, byte for byte.** Evidence is sealed at
     // rest so an analyst's own AV cannot quarantine it, and what leaves is that

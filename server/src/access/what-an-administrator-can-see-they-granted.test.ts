@@ -220,6 +220,28 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
     })
 
     /**
+     * **Two groups for one analyst, on a customer nobody reaches by role**,
+     * which is where naming the floor is not merely unhelpful but false: there
+     * is no floor on this customer to name. -> #779
+     *
+     * Every other case here gives an analyst one row on the customer under
+     * test, which is the shape the defect hid behind.
+     */
+    it('names the group where two groups reach one analyst, not the floor', async () => {
+      const [second] = await db!.insert(groups).values({ name: 'Night shift' }).returning()
+      await db!.insert(groupCustomers).values({ groupId: second!.id, customerId: acme })
+      await db!.insert(groupMembers).values({ groupId: second!.id, userId: ALEX, level: 'delete' })
+
+      const held = (await reach.reachTo(acme)).find((one) => one.userId === ALEX)
+
+      expect(held?.level, 'the weaker grant was reported as what the analyst reaches').toBe('delete')
+      expect(
+        held?.granted,
+        'a customer nobody reaches by role reported the reach as the floor',
+      ).toMatchObject({ by: 'group', groupName: 'Night shift' })
+    })
+
+    /**
      * The same question from the other end: a group granting no more than the
      * floor is not what grants the reach.
      */
