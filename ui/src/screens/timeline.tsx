@@ -337,9 +337,8 @@ export function TimelineScreen({
         editor.edit(entry)
         return
       case 'delete':
-        void write.remove([entry.id]).then(() => {
-          setEntries((current) => withoutTimelineEntries(current, new Set([entry.id])))
-        })
+        // Asked, not written. Both doors that offer a row delete arrive here.
+        setDeleting([entry.id])
         return
     }
   }
@@ -767,10 +766,19 @@ export function TimelineScreen({
               setEntries((current) => withoutTimelineEntries(current, new Set(doomed)))
             })
           }}
-          title={(count) =>
-            count === 1 ? 'Delete this entry?' : `Delete ${String(count)} entries?`
+          title={(count) => {
+            if (count !== 1) return `Delete ${String(count)} entries?`
+            // The control just pressed was `Delete <description>`, so the
+            // question uses the same words rather than asking about an entry
+            // the analyst has to work out.
+            const named = entries.find((one) => one.id === deleting?.[0])?.description
+            return named ? `Delete ${named}?` : 'Delete this entry?'
+          }}
+          consequence={
+            deleting?.length === 1
+              ? 'The entry goes; the graph and the report update to match.'
+              : 'They go in one step; the graph and the report update to match.'
           }
-          consequence="They go in one step; the graph and the report update to match."
         />
       </AsyncBoundary>
     </Section>
