@@ -160,6 +160,14 @@ const MAY_IMPORT: Record<string, string[]> = {
   ],
   'demo-reports': ['db', 'domain', 'demos', 'report', 'cases', 'config'],
   /**
+   * Reaches the controllers whose answers it captures, which is why it is not
+   * in `demos/`: widening that folder to `health`, `report` and `specs` closes
+   * a cycle, since `cases` imports `demos` and `report` imports `cases`.
+   *
+   * Nothing in `src/` imports this one, so the edges cannot become cycles.
+   */
+  'demo-catalogue': ['domain', 'demos', 'health', 'report', 'specs'],
+  /**
    * Above the features, and the edges say why: it maps a vendor payload onto
    * `domain` schemas, writes through `collections`, and opens a new case
    * through `cases` for the door that starts one from an incident.
