@@ -211,7 +211,10 @@ export function reportImportedCase(imported: {
   }
   if (imported.lostAtExport > 0) {
     const count = imported.lostAtExport
-    const noun = count === 1 ? 'attachment' : 'attachments'
+    // **Files, where the count beside it says attachments.** The archive names
+    // one entry per artefact and the count above is of rows, so two rows naming
+    // one lost file read as two and one. The nouns are what keep both true.
+    const noun = count === 1 ? 'file' : 'files'
     notes.push(
       `The install that wrote the archive had already lost ${String(count)} ${noun}.`,
     )

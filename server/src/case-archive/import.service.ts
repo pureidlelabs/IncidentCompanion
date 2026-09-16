@@ -198,9 +198,9 @@ export const importResultSchema = z.object({
     .number()
     .int()
     .describe(
-      'Attachments the archive states the install that wrote it recorded and could ' +
-        'not find. Part of missingFiles; an archive written without its attachments ' +
-        'states none.',
+      'How many attachments the archive states its exporter could not find when it ' +
+        'was written. One per artefact, as the archive states it, rather than one per ' +
+        'row naming it. An archive written without its attachments states none.',
     ),
   unresolvedReferences: z
     .number()

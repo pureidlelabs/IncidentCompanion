@@ -248,16 +248,31 @@ describe('reportImportedCase', () => {
     expect(raised().content.tone).toBe('warning')
     expect(raised().content.description).toBe(
       '2 attachments the rows name are not in the archive. ' +
-        'The install that wrote the archive had already lost 2 attachments.',
+        'The install that wrote the archive had already lost 2 files.',
     )
   })
 
-  it('speaks of one lost attachment in the singular', () => {
+  it('speaks of one lost file in the singular', () => {
     reportImportedCase({ rows: 9, missingFiles: 1, lostAtExport: 1, unresolvedReferences: 0 })
 
     expect(raised().content.description).toBe(
       '1 attachment the rows name is not in the archive. ' +
-        'The install that wrote the archive had already lost 1 attachment.',
+        'The install that wrote the archive had already lost 1 file.',
+    )
+  })
+
+  /**
+   * **The two counts are in different units and neither sentence pretends
+   * otherwise.** The archive names one entry per artefact and the count beside
+   * it is of rows, so a file two rows name is two absent and one lost.
+   * `round-trip.test.ts` is where the pair is produced. -> #652
+   */
+  it('says files and attachments rather than reconciling the two', () => {
+    reportImportedCase({ rows: 40, missingFiles: 2, lostAtExport: 1, unresolvedReferences: 0 })
+
+    expect(raised().content.description).toBe(
+      '2 attachments the rows name are not in the archive. ' +
+        'The install that wrote the archive had already lost 1 file.',
     )
   })
 
