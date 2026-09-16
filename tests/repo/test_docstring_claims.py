@@ -147,8 +147,10 @@ def archived_as(bare: str, dirs: set[str]) -> str | None:
 
     The folder moves to `openspec/changes/archive/<date>-<id>/` at the sync, so
     the pointer names an argument that is still there rather than a dead path.
+    The date is what the archive prefixes with, and requiring it keeps this off
+    any other name a sibling under `archive/` could end in the same `-<id>`.
     """
-    if not bare.startswith(CHANGES) or bare.startswith(ARCHIVE):
+    if not bare.startswith(CHANGES):
         return None
     dated = re.compile(re.escape(ARCHIVE) + r'\d{4}-\d{2}-\d{2}-'
                        + re.escape(bare[len(CHANGES):]) + '$')
@@ -160,6 +162,13 @@ def resolves_directory(cited: str, dirs: set[str]) -> bool:
 
     By suffix, as `resolves` reads a file: `components/ui/` and `db/schema/` are
     written from where the reader is, and neither is a path from the root.
+
+    **The suffix is searched across every tree, so `src/api/` written in a server
+    file resolves against `ui/src/api`.** A citation naming a directory that two
+    trees both have is answering the same question either way -- the reader is
+    sent somewhere real -- and narrowing to the citing tree would refuse the
+    `server/` file pointing at a client directory, which is a citation this
+    codebase writes.
     """
     if cited.startswith('/'):
         return True  # a route, not a directory
@@ -175,8 +184,8 @@ def git_ignores(paths: set[str]) -> set[str]:
 
     A child path is what the query takes: a pattern ending in `/` matches a
     directory, and the answer cannot tell that a path which is not there is one.
-    `dist/` is excluded from `server/.gitignore` rather than from the root, so
-    each citation is asked about under every top-level tree as well.
+    An ignore file sits in the tree it governs as well as at the root, so each
+    citation is asked about under every top-level tree as well as bare.
     """
     if not paths:
         return set()
@@ -214,7 +223,8 @@ def test_a_citation_written_from_the_reader_resolves() -> None:
 def test_a_citation_of_a_folder_resolves() -> None:
     """The directory half of the predicate, for the same reason as the file half."""
     dirs = {'ui/src/components/ui', 'server/src/db/schema',
-            'openspec/changes/archive/2026-09-16-a-door-stamps-where-a-row-came-through'}
+            'openspec/changes/archive/2026-09-16-a-door-stamps-where-a-row-came-through',
+            'openspec/changes/archive/draft-a-planted-change'}
 
     assert CITED_DIR.findall('-> `openspec/changes/a-thing/`') == ['openspec/changes/a-thing/']
     assert CITED_DIR.findall('the `rules/` directory') == [], 'one segment is a name'
@@ -227,7 +237,11 @@ def test_a_citation_of_a_folder_resolves() -> None:
 
     landed = 'openspec/changes/a-door-stamps-where-a-row-came-through/'
     assert resolves_directory(landed, dirs), 'an archived change still holds the argument'
-    assert not resolves_directory('openspec/changes/archive/a-door-stamps/', dirs)
+    assert not resolves_directory('openspec/changes/a-planted-change/', dirs), (
+        'only a date prefixes an archived change')
+
+    # A directory git excludes is absent on purpose, and one it tracks is not.
+    assert git_ignores({'node_modules', 'openspec/changes'}) == {'node_modules'}
 
 
 def test_every_cited_path_resolves() -> None:
@@ -249,14 +263,16 @@ def test_every_cited_path_resolves() -> None:
             continue
         text = path.read_text(errors='ignore')
         for line_no, line in enumerate(text.split('\n'), 1):
-            if ABSENT_ON_PURPOSE.search(line):
-                continue
             for cited in CITED.findall(line):
                 if is_a_host(cited) or resolves(cited, known, near=rel):
+                    continue
+                if ABSENT_ON_PURPOSE.search(line):
                     continue
                 dangling.append(f'{rel}:{line_no} cites {cited}')
             for cited in CITED_DIR.findall(line):
                 if is_a_host(cited) or resolves_directory(cited, dirs):
+                    continue
+                if ABSENT_ON_PURPOSE.search(line):
                     continue
                 folders.append((f'{rel}:{line_no} cites {cited}',
                                 cited.removeprefix('./').rstrip('/')))
