@@ -430,6 +430,7 @@ export function EvidenceScreen({
  */
 const BLANK_EVIDENCE: Omit<EvidenceEntry, 'id'> = {
   version: 1,
+  source: 'manual',
   name: '',
   type: '',
   location: '',
