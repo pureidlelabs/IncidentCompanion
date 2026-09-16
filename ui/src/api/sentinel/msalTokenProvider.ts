@@ -109,6 +109,16 @@ export function signInFailure(thrown: unknown): string {
 const POPUP_POLL_MS = 500
 
 /**
+ * How long a closed popup is given before it is read as a cancellation.
+ *
+ * A sign-in that worked closes the popup too: the bridge page posts the
+ * response and calls `window.close()` in the same breath, and the code
+ * exchange that answers `acquireTokenPopup` then runs in this tab with the
+ * window already gone.
+ */
+const POPUP_CLOSED_GRACE_MS = 3000
+
+/**
  * `acquireTokenPopup`, answered when the analyst closes the popup.
  *
  * MSAL 5 takes the popup's response over a `BroadcastChannel` and watches the
@@ -128,17 +138,23 @@ async function popupOrCancelled(
     popup = (message.payload as PopupEvent).popupWindow
   }, [EventType.POPUP_OPENED])
   let polling = 0
+  let grace = 0
   try {
     return await Promise.race([
       app.acquireTokenPopup({ scopes, overrideInteractionInProgress: true }),
       new Promise<never>((_, reject) => {
         polling = window.setInterval(() => {
-          if (popup?.closed) reject(new BrowserAuthError('user_cancelled', ''))
+          if (!popup?.closed) return
+          window.clearInterval(polling)
+          grace = window.setTimeout(() => {
+            reject(new BrowserAuthError('user_cancelled', ''))
+          }, POPUP_CLOSED_GRACE_MS)
         }, POPUP_POLL_MS)
       }),
     ])
   } finally {
     window.clearInterval(polling)
+    window.clearTimeout(grace)
     if (listening) app.removeEventCallback(listening)
   }
 }

@@ -505,7 +505,11 @@ export function ImportSentinelScreen({
       setRefused(undefined)
       try {
         if (here === 'connect') {
-          setWho(await writes.connect({ tenantId, clientId }))
+          try {
+            setWho(await writes.connect({ tenantId, clientId }))
+          } catch (thrown) {
+            throw new Error(signInFailure(thrown), { cause: thrown })
+          }
           const answered = await writes.sources()
           setListed(answered)
           // The pick follows the listing: leaving it on the fixture's first id
@@ -527,13 +531,7 @@ export function ImportSentinelScreen({
         }
         setHere(stepAt(at + 1))
       } catch (error) {
-        setRefused(
-          here === 'connect'
-            ? signInFailure(error)
-            : error instanceof Error
-              ? error.message
-              : 'The provider refused.',
-        )
+        setRefused(error instanceof Error ? error.message : 'The provider refused.')
       } finally {
         setWaiting(false)
       }
