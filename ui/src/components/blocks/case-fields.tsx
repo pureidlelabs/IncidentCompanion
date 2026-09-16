@@ -66,8 +66,7 @@ export function CaseFields({
           <Field
             key={name}
             label={spec.label}
-            // A handle for the submit to focus what it refused. `Field` mints
-            // no id of its own - React Aria labels the control through context.
+            // A handle for the submit to focus what it refused.
             data-field={name}
             // The same rule the entity renderer lifts the cap on, rather than
             // a second reading of `fullWidth`: `Field` caps every field at

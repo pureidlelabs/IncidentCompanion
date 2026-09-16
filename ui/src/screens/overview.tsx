@@ -7,7 +7,7 @@ import type { Problems } from '@/api/validateDraft'
 import type { QueueRow } from '@/components/blocks/case-queue'
 import { CasePicturePane } from '@/components/blocks/case-picture-pane'
 import { CaseRecordForm, type CaseWrites } from '@/components/blocks/case-record-form'
-import { paneHoldingLabel } from '@/components/blocks/case-record-groups'
+import { paneHoldingLabel, paneHoldingName } from '@/components/blocks/case-record-groups'
 import { Section } from '@/components/blocks/section'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/tabs'
 import { dayNumber } from '@/lib/statutory-clock'
@@ -32,6 +32,8 @@ export interface OverviewScreenProps {
   refusal?: { field: string; by: string }
   /** Fields the last submit was refused on, by name. */
   refused?: Problems
+  /** A field an open item sends the analyst to, by name. Opens its tab. */
+  focusField?: string | undefined
   /** Opens the section a queue row is answered on. */
   onOpen?: ((row: QueueRow) => void) | undefined
   /** The moment the clocks are read at, in epoch milliseconds. */
@@ -62,6 +64,7 @@ export function OverviewScreen({
   record,
   refusal,
   refused,
+  focusField,
   onOpen,
   now,
   writes,
@@ -70,15 +73,18 @@ export function OverviewScreen({
   onRetry,
 }: OverviewScreenProps) {
   const fields = useMemo(() => (specs ? fieldsOf(formSpec(specs, 'CASE_FIELDS')) : []), [specs])
-  const wanted = useMemo(
-    () =>
-      refusal === undefined
-        ? READ
-        : paneHoldingLabel(fields, refusal.field) === 'times'
-          ? TIMES
-          : PROPERTIES,
-    [fields, refusal],
-  )
+  // A refusal outranks a door: the door is where the analyst was going, the
+  // refusal is the write they have already lost.
+  const wanted = useMemo(() => {
+    const pane =
+      refusal !== undefined
+        ? paneHoldingLabel(fields, refusal.field)
+        : focusField === undefined || focusField === ''
+          ? undefined
+          : paneHoldingName(fields, focusField)
+    if (pane === undefined) return READ
+    return pane === 'times' ? TIMES : PROPERTIES
+  }, [fields, refusal, focusField])
 
   const [tab, setTab] = useState<string>(wanted)
   // A refusal arriving after the screen was drawn is the repaint that another
@@ -88,7 +94,10 @@ export function OverviewScreen({
   const [was, setWas] = useState(wanted)
   if (was !== wanted) {
     setWas(wanted)
-    setTab(wanted)
+    // Pushed onto a pane, never pulled off one. A door is spent the moment the
+    // cursor is in the field it named, and returning to Read on that repaint
+    // would undo the press that got here.
+    if (wanted !== READ) setTab(wanted)
   }
 
   const day = dayNumber(kase?.detectedAt, kase?.openedAt, new Date(now))
@@ -139,6 +148,7 @@ export function OverviewScreen({
             specs={specs}
             pane="details"
             refusal={onTimes ? undefined : refusal}
+            focusField={onTimes ? undefined : focusField}
             {...(refused ? { refused } : {})}
             {...(writes ? { writes } : {})}
           />
@@ -150,6 +160,7 @@ export function OverviewScreen({
             specs={specs}
             pane="times"
             refusal={onTimes ? refusal : undefined}
+            focusField={onTimes ? focusField : undefined}
             {...(refused ? { refused } : {})}
             {...(writes ? { writes } : {})}
           />

@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 
 import { useCase } from '@/api/case'
-import { useSpecs } from '@/api/specs'
+import { fieldOf, formSpec, useSpecs } from '@/api/specs'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useBulkDelete } from '@/api/useBulkDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
@@ -36,6 +36,15 @@ export function TimelineContainer() {
     .getAll('phase')
     .map((one) => one.trim())
     .filter((one) => one !== '')
+
+  // An open item on the overview links here already narrowed to the entries it
+  // counted. A field the event form does not name is no narrowing: it is in no
+  // entry's expected set, so honouring it would empty the list and leave the
+  // bar naming nothing.
+  const asked = (address.get('missing') ?? '').trim()
+  const missing =
+    specs.data && fieldOf(formSpec(specs.data, 'EVENT_FIELDS'), asked) ? asked : ''
+  const unreviewed = address.get('unreviewed') !== null
 
   const create = useEntryCreate(caseId, 'timeline')
   const patch = useEntryMutation(caseId, 'timeline')
@@ -73,9 +82,11 @@ export function TimelineContainer() {
       // between two timeline addresses remounts nothing and a seeded filter
       // would outlive the phase that set it -- the rail draws Timeline as a
       // link even when it is the section already open.
-      key={phases.join('\u0000')}
+      key={[...phases, missing, unreviewed ? '1' : ''].join('\u0000')}
       busy={kase.isPending || specs.isPending}
       phases={phases}
+      missing={missing}
+      unreviewed={unreviewed}
       {...(kase.error === null ? {} : { problem: kase.error })}
       onRetry={() => {
         void kase.refetch()
