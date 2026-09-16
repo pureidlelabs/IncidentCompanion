@@ -216,8 +216,8 @@ describe.skipIf(!db)('granting reach through a group', () => {
    * **Two empty result sets say nothing about whether the group exists.**
    * -> #812
    *
-   * The empty-group case below is what gives this one its meaning: a read that
-   * refused every id would pass alone.
+   * `answers a group that holds nothing` is what gives this one its meaning: a
+   * read that refused every id would pass alone.
    */
   it('refuses reading a group that does not exist', async () => {
     const gone = '33333333-3333-4333-8333-333333333333'
