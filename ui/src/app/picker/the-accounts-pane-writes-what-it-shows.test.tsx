@@ -86,4 +86,25 @@ describe('the Accounts pane', () => {
       ).toEqual(['/accounts/nina%40example.test/disable'])
     })
   })
+
+  /**
+   * *An administrator MUST be able to end a session* -- and the route has
+   * existed with nothing to press it. Asserted on the request for the reason
+   * above: a control that ends no session looks the same from the row.
+   */
+  it('sends a write when an administrator ends an account\'s sessions', async () => {
+    draw()
+    await vi.waitFor(() => {
+      expect(screen.getByText('nina@example.test')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: /more for Nina/i }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /end sessions/i }))
+
+    await vi.waitFor(() => {
+      expect(sent.writes.map((one) => one.path)).toEqual([
+        '/accounts/nina%40example.test/sessions/end',
+      ])
+    })
+  })
 })

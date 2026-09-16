@@ -296,6 +296,9 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
           },
         })
       }}
+      onEndSessions={(username) => {
+        act.mutate({ path: `/${encodeURIComponent(username)}/sessions/end` })
+      }}
       onState={(username, next) => {
         // The row follows the server rather than the press: the query is
         // invalidated either way, so what is drawn is what is stored.

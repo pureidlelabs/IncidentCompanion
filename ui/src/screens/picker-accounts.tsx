@@ -25,6 +25,8 @@ export interface PickerAccountsScreenProps {
    * and a server that was never told.
    */
   onState?: ((username: string, next: AccountTableRow['state']) => void) | undefined
+  /** Ends every session one account holds. Absent draws no such row. */
+  onEndSessions?: ((username: string) => void) | undefined
   /** Who is signed in, at the rail's foot. */
   analyst: string
   /** Whether to offer the rail rows only an administrator may use. */
@@ -54,6 +56,7 @@ export function PickerAccountsScreen({
   refusal,
   accounts: accountsGiven,
   onState,
+  onEndSessions,
   analyst,
   admin,
   onPane,
@@ -93,6 +96,7 @@ export function PickerAccountsScreen({
           onNewAccount={() => {
             setMinting(true)
           }}
+          {...(onEndSessions ? { onEndSessions } : {})}
           onState={(id, state) => {
             if (onState) {
               onState(id, state)

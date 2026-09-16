@@ -85,9 +85,11 @@ export interface AccountTableProps {
    * and what the table draws cannot drift apart.
    */
   onState: (id: string, state: AccountTableRow['state']) => void
+  /** Ends every session the account holds. Absent draws no such row. */
+  onEndSessions?: ((id: string) => void) | undefined
 }
 
-export function AccountTable({ accounts, onState }: AccountTableProps) {
+export function AccountTable({ accounts, onState, onEndSessions }: AccountTableProps) {
   const [tab, setTab] = useState<(typeof ACCOUNT_TABS)[number]>('All')
   const [query, setQuery] = useState('')
 
@@ -118,7 +120,10 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
     [accounts, tab, roles, query],
   )
 
-  const columns = useMemo(() => accountColumns(onState), [onState])
+  const columns = useMemo(
+    () => accountColumns(onState, onEndSessions),
+    [onState, onEndSessions],
+  )
   const table = useEntityTable<AccountTableRow>({
     data: rows,
     columns,
@@ -223,6 +228,7 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
  */
 function accountColumns(
   onState: (id: string, state: AccountTableRow['state']) => void,
+  onEndSessions: ((id: string) => void) | undefined,
 ): EntityColumn<AccountTableRow>[] {
   return [
     {
@@ -297,6 +303,20 @@ function accountColumns(
             disabled: true,
             onSelect: () => undefined,
           },
+          // **Separate from Disable, because they are different acts.** Ending
+          // a session puts an analyst out now and leaves the account able to
+          // sign back in; disabling stops the next sign-in and is not urgent.
+          ...(onEndSessions
+            ? [
+                {
+                  id: 'sessions',
+                  label: 'End sessions',
+                  onSelect: () => {
+                    onEndSessions(one.id)
+                  },
+                },
+              ]
+            : []),
           one.state === 'disabled'
             ? {
                 id: 'enable',

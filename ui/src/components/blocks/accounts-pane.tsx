@@ -8,9 +8,16 @@ export interface AccountsPaneProps {
   onNewAccount: () => void
   /** Enabling or disabling one account. The caller owns the roster. */
   onState: (id: string, state: AccountTableRow['state']) => void
+  /** Ends every session one account holds. Absent draws no such row. */
+  onEndSessions?: ((id: string) => void) | undefined
 }
 
-export function AccountsPane({ accounts, onNewAccount, onState }: AccountsPaneProps) {
+export function AccountsPane({
+  accounts,
+  onNewAccount,
+  onState,
+  onEndSessions,
+}: AccountsPaneProps) {
   return (
     <Section
       title="Accounts"
@@ -25,7 +32,11 @@ export function AccountsPane({ accounts, onNewAccount, onState }: AccountsPanePr
         </Button>
       }
     >
-      <AccountTable accounts={accounts} onState={onState} />
+      <AccountTable
+        accounts={accounts}
+        onState={onState}
+        {...(onEndSessions ? { onEndSessions } : {})}
+      />
     </Section>
   )
 }
