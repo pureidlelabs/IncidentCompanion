@@ -19,16 +19,15 @@ export interface PickerAccountsScreenProps {
   refusal?: string | undefined
   /** Accounts this install holds. Absent draws an empty list. */
   accounts: readonly AccountTableRow[] | undefined
-  /**
-   * Writes an account's state. Absent, the row flips locally instead, which is
-   * what the gallery needs and what an install must never get: a row that moved
-   * and a server that was never told.
-   */
-  onState?: ((username: string, next: AccountTableRow['state']) => void) | undefined
+  /** Writes an account's state. Required: the row is not decoration. */
+  onState: (username: string, next: AccountTableRow['state']) => void
   /** Ends every session one account holds. Absent draws no such row. */
   onEndSessions?: ((username: string) => void) | undefined
-  /** Ends every session the install holds. Absent draws no such control. */
-  onEndEverySession?: (() => void) | undefined
+  /**
+   * Ends every session the install holds. Absent draws no such control. The
+   * confirm waits on what this resolves.
+   */
+  onEndEverySession?: (() => void | Promise<void>) | undefined
   /** Moves an account to a role. Absent draws no role rows. */
   onRole?: ((username: string, role: string) => void) | undefined
   /** Who is signed in, at the rail's foot. */
@@ -74,15 +73,6 @@ export function PickerAccountsScreen({
 }: PickerAccountsScreenProps) {
   const [minting, setMinting] = useState(false)
 
-  // **The screen owns the roster, not the table.** Enabling and disabling are
-  // written here so that the pane's count line and the table's tabs read one
-  // list; a copy held inside the table left the two counting different things.
-  const [accounts, setAccounts] = useState<readonly AccountTableRow[]>(accountsGiven ?? [])
-  const [given, setGiven] = useState(accountsGiven)
-  if (given !== accountsGiven) {
-    setGiven(accountsGiven)
-    setAccounts(accountsGiven ?? [])
-  }
   return (
     <PickerFrame
       pane="accounts"
@@ -98,22 +88,14 @@ export function PickerAccountsScreen({
     >
       <>
         <AccountsPane
-          accounts={accounts}
+          accounts={accountsGiven ?? []}
           onNewAccount={() => {
             setMinting(true)
           }}
           {...(onEndSessions ? { onEndSessions } : {})}
           {...(onEndEverySession ? { onEndEverySession } : {})}
           {...(onRole ? { roles, onRole } : {})}
-          onState={(id, state) => {
-            if (onState) {
-              onState(id, state)
-              return
-            }
-            setAccounts((current) =>
-              current.map((one) => (one.id === id ? { ...one, state } : one)),
-            )
-          }}
+          onState={onState}
         />
         {/* **Here rather than in the container.** A dialog a container mounts
             is one the gallery never shows, so the screen an analyst sees and

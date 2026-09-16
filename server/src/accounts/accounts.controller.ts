@@ -31,7 +31,7 @@ import type { IncomingHttpHeaders } from 'node:http'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
-import { ACCOUNT_STATES, ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
+import { ACCOUNT_STATES, DEFAULT_ROLE, ROLES, roleName } from '../domain/analyst-account.js'
 import { type Auth } from '../auth/auth.config.js'
 import { PasswordHoldService } from '../auth/password-hold.service.js'
 import { LockoutClearService } from '../auth/lockout-clear.service.js'
@@ -130,6 +130,7 @@ const accountRowSchema = z.object({
   state: z.enum(ACCOUNT_STATES),
   tone: z.enum(['positive', 'negative']),
   disabled: z.boolean(),
+  you: z.boolean(),
 })
 
 class AccountWrittenDto extends createZodDto(writtenSchema) {}
@@ -174,9 +175,9 @@ export class InstallAccountsController {
 
   @Get()
   @ZodResponse({ status: 200, type: AccountsDto, description: 'Every account, with the roles an install offers.' })
-  async list(@Req() request: { headers: IncomingHttpHeaders }) {
+  async list(@Req() request: { headers: IncomingHttpHeaders }, @Caller() caller: Caller) {
     return {
-      accounts: (await this.users(request)).map((user) => rowFor(user)),
+      accounts: (await this.users(request)).map((user) => rowFor(user, caller.session.user.id)),
       roles: [...ROLES],
       defaultRole: DEFAULT_ROLE,
     }
@@ -450,8 +451,7 @@ export class InstallAccountsController {
       headers: this.headersOf(caller),
     })
     await this.activity.roleChanged(caller, target.email, from, parsed.data.role)
-    const named = parsed.data.role === ADMIN_ROLE ? 'an administrator' : 'an analyst'
-    return done(`${username} is now ${named}.`)
+    return done(`${username} is now an ${roleName(parsed.data.role)}.`)
   }
 
 }

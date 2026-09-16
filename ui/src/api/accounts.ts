@@ -38,13 +38,10 @@ export function useAccounts(): UseQueryResult<AccountsView> {
 }
 
 /**
- * Enable one account, named at mutate time rather than at hook-call time.
-/**
  * One mutation per control. `path` is the suffix after `/accounts` - `''`
- * creates, and `/{username}/{verb}` acts on one row - and
- * every write invalidates the one accounts key **on refusal too**, the
- * settings pane's rule: the only recovery a row has is showing what is
- * actually stored.
+ * creates, and `/{username}/{verb}` acts on one row - and every write
+ * invalidates the one accounts key **on refusal too**, the settings pane's
+ * rule: the only recovery a row has is showing what is actually stored.
  */
 export function useAccountWrite(
   path: string,

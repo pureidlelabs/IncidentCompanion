@@ -16,8 +16,11 @@ export interface AccountsPaneProps {
   /**
    * Ends every session the install holds, once the analyst has confirmed.
    * Absent draws no such control.
+   *
+   * The dialog waits on what this resolves, so a caller that returns its write
+   * gets the held confirm; one that returns nothing closes immediately.
    */
-  onEndEverySession?: (() => void) | undefined
+  onEndEverySession?: (() => void | Promise<void>) | undefined
   /** The roles this install offers, for the row's role rows. */
   roles?: readonly string[] | undefined
   /** Moves an account to a role. Absent draws no role rows. */
@@ -34,6 +37,20 @@ export function AccountsPane({
   onRole,
 }: AccountsPaneProps) {
   const [sweeping, setSweeping] = useState(false)
+  const [ending, setEnding] = useState(false)
+
+  // **Closed on settle, not on the press.** Ending every session is a sweep
+  // over as many sessions as the install holds, and a dialog that closes the
+  // moment it is confirmed shows the analyst nothing while it runs.
+  async function endEverySession() {
+    setEnding(true)
+    try {
+      await onEndEverySession?.()
+    } finally {
+      setEnding(false)
+      setSweeping(false)
+    }
+  }
 
   return (
     <Section
@@ -74,9 +91,9 @@ export function AccountsPane({
         title="End every session?"
         consequence="Every analyst is signed out, including you. Anybody can sign back in."
         confirmLabel="End every session"
+        isPending={ending}
         onConfirm={() => {
-          setSweeping(false)
-          onEndEverySession?.()
+          void endEverySession()
         }}
         onCancel={() => {
           setSweeping(false)

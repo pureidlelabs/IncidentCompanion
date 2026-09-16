@@ -20,6 +20,7 @@ const person: AccountTableRow = {
   displayName: 'Rachel Okonkwo',
   role: 'admin',
   state: 'active',
+  you: false,
 }
 
 describe('the accounts search reads both lines of the Account column', () => {

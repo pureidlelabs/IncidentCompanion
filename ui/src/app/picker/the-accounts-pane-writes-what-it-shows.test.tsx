@@ -20,19 +20,38 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const stub = vi.hoisted(() => {
+  /** The real one's shape, less the getters no reporter on this path reads. */
+  class ApiError extends Error {
+    readonly fieldErrors: readonly unknown[] = []
+    constructor(
+      readonly status: number,
+      message: string,
+      readonly body: unknown,
+    ) {
+      super(message)
+      this.name = 'ApiError'
+    }
+  }
+  return { ApiError }
+})
+
 const sent = vi.hoisted(() => ({
   reads: [] as string[],
   writes: [] as { path: string; body: unknown }[],
+  /** What the next write answers with. Null is the ordinary accepted write. */
+  answer: null as { status: number; message: string; body: unknown } | null,
 }))
 
 vi.mock('@/api/client', () => ({
-  ApiError: class extends Error {
-    status = 0
-    body: unknown = null
-  },
+  ApiError: stub.ApiError,
   request: (path: string, init?: { method?: string; body?: unknown }) => {
     if (init?.method === 'POST') {
       sent.writes.push({ path, body: init.body })
+      if (sent.answer) {
+        const { status, message, body } = sent.answer
+        return Promise.reject(new stub.ApiError(status, message, body))
+      }
       return Promise.resolve({ ok: true, messages: [['Done.', 'positive']] })
     }
     sent.reads.push(path)
@@ -45,6 +64,18 @@ vi.mock('@/api/client', () => ({
           state: 'active',
           tone: 'positive',
           disabled: false,
+          you: false,
+        },
+        // The administrator reading the pane. Their own row is the one every
+        // verb here is wrong on, and the server is what says which row it is.
+        {
+          username: 'ada@example.test',
+          displayName: 'Ada',
+          role: 'admin',
+          state: 'active',
+          tone: 'positive',
+          disabled: false,
+          you: true,
         },
       ],
       roles: ['analyst', 'admin'],
@@ -54,6 +85,14 @@ vi.mock('@/api/client', () => ({
 }))
 
 const { AccountsPaneView } = await import('./panes')
+const { toastQueue } = await import('@/components/blocks/notify')
+
+/** Every sentence the pane raised, however it was raised. */
+const raised = vi.spyOn(toastQueue, 'add')
+
+function titles(): string[] {
+  return raised.mock.calls.map(([one]) => (one as { title?: string }).title ?? '')
+}
 
 function draw() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -64,9 +103,38 @@ function draw() {
   )
 }
 
+async function drawn() {
+  draw()
+  await vi.waitFor(() => {
+    expect(screen.getByText('nina@example.test')).toBeInTheDocument()
+  })
+}
+
+async function pressRow(item: RegExp) {
+  await userEvent.click(screen.getByRole('button', { name: /more for Nina/i }))
+  await userEvent.click(await screen.findByRole('menuitem', { name: item }))
+}
+
+async function pressSweep() {
+  await userEvent.click(screen.getByRole('button', { name: /end every session/i }))
+  await userEvent.click(
+    await screen.findByRole('button', { name: /^end every session$/i, hidden: false }),
+  )
+}
+
+/** Every control that writes, and how it is pressed. */
+const CONTROLS: readonly (readonly [string, () => Promise<void>])[] = [
+  ['Disable', () => pressRow(/disable/i)],
+  ['End sessions', () => pressRow(/end sessions/i)],
+  ['a role row', () => pressRow(/make administrator/i)],
+  ['End every session', pressSweep],
+]
+
 beforeEach(() => {
   sent.reads.length = 0
   sent.writes.length = 0
+  sent.answer = null
+  raised.mockClear()
 })
 
 describe('the Accounts pane', () => {
@@ -120,7 +188,7 @@ describe('the Accounts pane', () => {
     })
 
     await userEvent.click(screen.getByRole('button', { name: /more for Nina/i }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /make admin/i }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /make administrator/i }))
 
     await vi.waitFor(() => {
       expect(sent.writes).toEqual([
@@ -152,5 +220,101 @@ describe('the Accounts pane', () => {
     await vi.waitFor(() => {
       expect(sent.writes.map((one) => one.path)).toEqual(['/accounts/sessions/end'])
     })
+  })
+
+  /**
+   * **A row action's only recovery is the sentence.** The query is invalidated
+   * whether the write landed or not, so a refusal nobody says leaves the row
+   * snapping back to what is stored with nothing to tell the administrator
+   * their change did not take -- which is the phantom this file exists for,
+   * one layer down.
+   *
+   * The two arrive by different routes and each is its own case: a 422 is
+   * answered as `Written` *data* by `postWritten`, where a 403 throws.
+   */
+  it.each(CONTROLS)('says what the server refused, pressing %s', async (_name, press) => {
+    sent.answer = {
+      status: 422,
+      message: 'Refused.',
+      body: {
+        ok: false,
+        messages: [['You cannot do that to the account you are signed in with.', 'negative']],
+      },
+    }
+    await drawn()
+    await press()
+
+    await vi.waitFor(() => {
+      expect(titles()).toContain('You cannot do that to the account you are signed in with.')
+    })
+  })
+
+  it.each(CONTROLS)('says a refusal that is not a sentence, pressing %s', async (_name, press) => {
+    sent.answer = { status: 403, message: 'Administrators only.', body: null }
+    await drawn()
+    await press()
+
+    await vi.waitFor(() => {
+      expect(titles().join(' ')).toMatch(/was not saved/)
+    })
+  })
+
+  /**
+   * The count line is the probe because the row follows the server: a disable
+   * the server refused must leave the pane counting what is stored, and the
+   * line names a disabled account only when there is one.
+   */
+  it('leaves the roster as the server serves it when a write is refused', async () => {
+    sent.answer = { status: 422, message: 'Refused.', body: { ok: false, messages: [['No.', 'negative']] } }
+    await drawn()
+    await pressRow(/disable/i)
+
+    await vi.waitFor(() => {
+      expect(titles()).toContain('No.')
+    })
+    expect(screen.getByText(/2 accounts/)).not.toHaveTextContent('disabled')
+  })
+
+  /**
+   * **Every verb on the row is one an administrator performs on somebody
+   * else.** On their own row each is a different kind of wrong -- the server
+   * refuses the disable, the role change succeeds and takes the pane with it,
+   * and ending the sessions signs them out mid-act -- and the row can say none
+   * of it, because the account it is about is the one reading it.
+   *
+   * Asserted against the same menu on another row, so a menu that simply drew
+   * nothing would not pass.
+   */
+  it('offers an administrator none of these verbs on their own row', async () => {
+    await drawn()
+
+    await userEvent.click(screen.getByRole('button', { name: /more for Ada/i }))
+    const mine = await screen.findAllByRole('menuitem')
+    expect(mine.map((one) => one.textContent)).toEqual(['Copy Ada', 'Reset password\u2026'])
+
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(screen.getByRole('button', { name: /more for Nina/i }))
+    await vi.waitFor(() => {
+      expect(screen.getAllByRole('menuitem').map((one) => one.textContent)).toEqual([
+        'Copy Nina',
+        'Reset password\u2026',
+        'Make administrator',
+        'End sessions',
+        'Disable\u2026',
+      ])
+    })
+  })
+
+  /**
+   * The row offers a role by the word the server writes into its own sentence
+   * -- *nina@example.test is now an administrator* -- rather than by the token
+   * the wire carries.
+   */
+  it('names a role the way the sentence that confirms it does', async () => {
+    await drawn()
+
+    await userEvent.click(screen.getByRole('button', { name: /more for Nina/i }))
+    const items = await screen.findAllByRole('menuitem')
+    expect(items.map((one) => one.textContent)).toContain('Make administrator')
   })
 })

@@ -130,6 +130,7 @@ export const TooMuchData: Story = {
       displayName: i % 5 === 0 ? '' : `Person Number ${String(i)}`,
       role: i % 12 === 0 ? 'admin' : 'analyst',
       state: i % 7 === 0 ? 'disabled' : 'active',
+      you: i === 0,
     })),
   },
   play: async ({ canvas, canvasElement }) => {

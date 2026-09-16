@@ -16,6 +16,7 @@ import {
   reportImportedCase,
   reportUploadedPack,
   reportWriteFailure,
+  toast,
 } from '@/components/blocks/notify'
 import {
   connectionGauge,
@@ -26,6 +27,7 @@ import {
   uptimeLine,
 } from '@/app/picker/health'
 import { splitWritten } from '@/api/written'
+import type { Written } from '@/api/library'
 import { PickerAccountsScreen } from '@/screens/picker-accounts'
 import { PickerActivityScreen } from '@/screens/picker-activity'
 import { PickerAdministrationScreen } from '@/screens/picker-administration'
@@ -275,6 +277,21 @@ export function SnippetsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
   )
 }
 
+/**
+ * Run one account write and say whatever comes back.
+ *
+ * **Both answers, because they arrive by different routes.** `postWritten`
+ * hands a 422 back as `Written` data rather than throwing, so a handler that
+ * reads only the thrown failure drops every sentence the server wrote -- and
+ * the row's only recovery is that sentence, since the query is invalidated
+ * whether the write landed or not.
+ */
+async function acted(what: string, run: () => Promise<Written>): Promise<void> {
+  const written = await announced(what, run)
+  const problem = written?.ok === false ? splitWritten(written).problem : undefined
+  if (problem !== undefined) toast.error(problem)
+}
+
 export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const accounts = useAccounts()
   const analyst = useAnalyst()
@@ -297,20 +314,26 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
         })
       }}
       onRole={(username, role) => {
-        act.mutate({ path: `/${encodeURIComponent(username)}/role`, body: { role } })
+        void acted('the role', () =>
+          act.mutateAsync({ path: `/${encodeURIComponent(username)}/role`, body: { role } }),
+        )
       }}
-      onEndEverySession={() => {
-        act.mutate({ path: '/sessions/end' })
-      }}
+      onEndEverySession={() =>
+        acted('every session', () => act.mutateAsync({ path: '/sessions/end' }))
+      }
       onEndSessions={(username) => {
-        act.mutate({ path: `/${encodeURIComponent(username)}/sessions/end` })
+        void acted('the sessions', () =>
+          act.mutateAsync({ path: `/${encodeURIComponent(username)}/sessions/end` }),
+        )
       }}
       onState={(username, next) => {
         // The row follows the server rather than the press: the query is
         // invalidated either way, so what is drawn is what is stored.
-        act.mutate({
-          path: `/${encodeURIComponent(username)}/${next === 'disabled' ? 'disable' : 'enable'}`,
-        })
+        void acted('the account', () =>
+          act.mutateAsync({
+            path: `/${encodeURIComponent(username)}/${next === 'disabled' ? 'disable' : 'enable'}`,
+          }),
+        )
       }}
       accounts={accountRows(accounts.data?.accounts)}
       busy={accounts.isPending}
