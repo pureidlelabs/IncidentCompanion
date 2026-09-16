@@ -132,6 +132,31 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
   })
 
   /**
+   * **A response is typed only once nothing is left that can refuse or fail.**
+   * The label is what a browser and a client parsing by content type believe,
+   * so anything raised after it is set wears it -- which is what `@Header` did
+   * for every refusal this route makes. -> #814
+   *
+   * **Asserted on the call, not on the header**, because that is the whole of
+   * what the handler decides: a refusal that never reached the typing leaves
+   * Nest to answer JSON, as it does for every other refusal in the app.
+   *
+   * **What this does not cover:** a failure raised between the reads and the
+   * typing, which is a window of nothing -- the call is the last statement
+   * before the return, and `a-refusal-is-labelled-as-a-refusal.test.ts` asks
+   * the route over HTTP for the refusals that can be provoked.
+   */
+  it('types nothing when it refuses', async () => {
+    const seen: string[] = []
+
+    await expect(
+      controller.collectionCsv(caseId, 'nonsense', { type: (value: string) => seen.push(value) }),
+    ).rejects.toThrow()
+
+    expect(seen, 'the refusal was labelled as the file it refused to make').toEqual([])
+  })
+
+  /**
    * **An instruction the import does not offer is refused, and does not fall
    * back to one it does.**
    *

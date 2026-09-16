@@ -108,19 +108,11 @@ export class ExportsController {
   async collectionCsv(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('collection') collection: string,
-    /**
-     * **Typed here rather than by `@Header`, which is applied before the
-     * handler runs and so survives whatever the handler throws.** The
-     * collection below is validated inside this body, so its 400 wore the
-     * label of the file it refused to make: a browser offered the refusal as a
-     * download and a client parsing by content type choked on JSON it was told
-     * was CSV. -> the indicators export, which has always set its own.
-     */
+    /** Typed below, once nothing is left that can refuse or fail. */
     @Res({ passthrough: true }) response: { type(value: string): unknown },
   ): Promise<string> {
     const table = this.tableFor(collection)
     const rows = await this.caseRows(table, caseId)
-    response.type('text/csv; charset=utf-8')
 
     /**
      * **Headed with the database's own column names, not Drizzle's property
@@ -135,6 +127,9 @@ export class ExportsController {
 
     const named = await this.namesIn(collection, caseId)
 
+    // **Last, so nothing after it can throw.** A refusal raised once the label
+    // is set wears it. -> `test/a-refusal-is-labelled-as-a-refusal.test.ts`
+    response.type('text/csv; charset=utf-8')
     return toCsv(
       rows.map((row) =>
         Object.fromEntries(
