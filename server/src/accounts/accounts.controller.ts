@@ -20,6 +20,7 @@ import {
   Param,
   Post,
   Req,
+  ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common'
 import { AuthService } from '@thallesp/nestjs-better-auth'
@@ -34,7 +35,7 @@ import { ACCOUNT_STATES, ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analy
 import { type Auth } from '../auth/auth.config.js'
 import { PasswordHoldService } from '../auth/password-hold.service.js'
 import { LockoutClearService } from '../auth/lockout-clear.service.js'
-import { duplicateEmail, rowFor } from './rules.js'
+import { callerLast, duplicateEmail, rowFor } from './rules.js'
 import { AccountLookupService } from '../auth/account-lookup.service.js'
 import { stranding, type Analyst } from '../auth/last-admin.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '../auth/password-policy.js'
@@ -94,6 +95,23 @@ const resetSchema = z
  * is how an array-wrapped id reached its handler as an id.
  */
 const roleSchema = z.object({ role: z.enum(ROLES) }).strict()
+
+/**
+ * The body of a route that takes none.
+ *
+ * **Refused rather than ignored.** A route that answers 200 to a body nobody
+ * could mean tells the caller it was understood, and the caller believes it.
+ * -> `test/malformed-requests.test.ts`
+ */
+const noBodySchema = z.object({}).strict()
+
+/**
+ * How many times the sweep re-reads before it gives up.
+ *
+ * Two would do on any install nobody is signing into; the third is what
+ * turns a sweep that cannot finish into a refusal rather than a loop.
+ */
+const PASSES = 3
 
 /**
  * What the account routes answer with.
@@ -162,6 +180,70 @@ export class InstallAccountsController {
       roles: [...ROLES],
       defaultRole: DEFAULT_ROLE,
     }
+  }
+
+  // Above every `:username` route: Nest matches in declaration order, so a
+  // two-segment `:username/<verb>` added later would swallow this one and then
+  // refuse `end` as an address nobody holds.
+  @Post('sessions/end')
+  @HttpCode(200)
+  @ZodResponse({ status: 200, type: AccountWrittenDto, description: 'Every session was ended.' })
+  async endEverySession(@Body() body: unknown, @Caller() caller: Caller): Promise<Written> {
+    if (!noBodySchema.safeParse(body ?? {}).success) refuse('Ending every session takes no body.')
+
+    /**
+     * **Swept until nothing holds a session, not once.** A sign-in landing
+     * between the read and the revocation survives a single pass, and the
+     * answer would still say every session ended. `PASSES` bounds it because an
+     * install signing in faster than this loop revokes is a different problem
+     * and an unbounded loop is not its answer.
+     */
+    let ended = 0
+    for (let pass = 0; pass < PASSES; pass += 1) {
+      const holders = await this.accounts.withAnOpenSession()
+      if (holders.length === 0) break
+      // Earlier passes have already signed people out, so this says what
+      // happened rather than that nothing did.
+      if (pass === PASSES - 1) {
+        refuse(
+          `Sessions are being opened faster than they can be ended. ${String(ended)} were signed ` +
+            'out and some remain.',
+        )
+      }
+      for (const userId of callerLast(holders, caller.session.user.id)) {
+        await this.endOneAccountsSessions(caller, userId)
+        ended += 1
+      }
+    }
+
+    await this.activity.everySessionEnded(caller, ended)
+    return done(
+      ended === 1
+        ? 'One analyst was signed out, including you.'
+        : `${String(ended)} analysts were signed out, including you.`,
+    )
+  }
+
+  /**
+   * Records that an account's sessions ended, then ends them.
+   *
+   * **That order, and a refusal when the line does not land.** The audit
+   * swallows a failed write everywhere else, so acting first would let a sweep
+   * sign an analyst out with nothing saying it happened.
+   * -> `openspec/constitution.md`
+   */
+  private async endOneAccountsSessions(caller: Caller, userId: string): Promise<void> {
+    const who = await this.accounts.byId(userId)
+    const landed = await this.activity.sessionsEnded(caller, who?.email ?? userId)
+    if (!landed) {
+      throw new ServiceUnavailableException({
+        message: 'The audit could not record this, so no session was ended.',
+      })
+    }
+    await this.auth.api.revokeUserSessions({
+      body: { userId },
+      headers: this.headersOf(caller),
+    })
   }
 
   @Post()
@@ -238,6 +320,31 @@ export class InstallAccountsController {
     // it. -> `db/schema/install-activity.ts`
     await this.activity.passwordReset(caller, target.email)
     return done(`${username} will set their own password at the next sign-in.`)
+  }
+
+  /**
+   * Every session the account holds, not whichever one an administrator saw.
+   *
+   * The requirement is about the analyst rather than about a cookie: ending one
+   * of two leaves them working from the other, which is the scenario failing
+   * while the route reports success.
+   */
+  @Post(':username/sessions/end')
+  @HttpCode(200)
+  @ZodResponse({ status: 200, type: AccountWrittenDto, description: "The account's sessions were ended." })
+  async endSessions(
+    @Param('username') username: string,
+    @Body() body: unknown,
+    @Caller() caller: Caller,
+  ): Promise<Written> {
+    if (!noBodySchema.safeParse(body ?? {}).success) {
+      refuse("Ending an account's sessions takes no body.")
+    }
+    const target = await this.accounts.byAddress(username)
+    if (!target) refuse(`No account for ${username}.`)
+
+    await this.endOneAccountsSessions(caller, target.id)
+    return done(`${username} has been signed out everywhere.`)
   }
 
   /**

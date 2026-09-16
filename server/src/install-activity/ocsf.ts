@@ -114,6 +114,11 @@ const MAP: Record<InstallEvent, Mapping> = {
     activityId: 4,
     activityName: 'Password Reset',
   },
+  // **Authentication's Logoff, not Account Change.** Nothing about the account
+  // moved; a session ended, which is the class a reviewer asks for when they
+  // want to know who was put out and when.
+  account_sessions_ended: { cls: CLASS.authentication, activityId: 2, activityName: 'Logoff' },
+  every_session_ended: { cls: CLASS.authentication, activityId: 2, activityName: 'Logoff' },
   // **Not Account Change.** A role is a privilege, and the framework has a
   // class for privileges being handed over - which is the one a reviewer
   // searches when asking who was given what.
