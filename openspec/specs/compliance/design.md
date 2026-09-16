@@ -8,6 +8,8 @@
 
 **Reporting stage is not the case's state.** A case can be contained and still owe a final report, and can owe an intermediate one while the incident is live. One axis cannot say both.
 
+**A readiness line hangs off a verdict, so it never asks for the answer that decides whether a regime is in play.** What a case is short of is reported for the regimes it is already in play for; the answer that brings one into play is asked on the form, not in the readiness surface. Giving that answer its own route is a second surface and a different product.
+
 # Design
 
 ## Three outcomes, and the third is not the second
