@@ -25,7 +25,9 @@ from __future__ import annotations
 import pathlib
 import re
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
+from tests._repo import REPO_ROOT
+
+ROOT = REPO_ROOT
 RULE = ROOT / ".vale" / "styles" / "Shared" / "NoHistory.yml"
 
 TREES = ("server/src", "ui/src", "server/e2e", "server/test", "tests", ".claude")

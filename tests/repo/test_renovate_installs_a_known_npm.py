@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import json
 import re
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+from tests._repo import REPO_ROOT
+
 ROOT_MANIFEST = REPO_ROOT / "package.json"
 MISE = REPO_ROOT / ".devcontainer" / "mise.toml"
 DEV_DOCKERFILE = REPO_ROOT / ".devcontainer" / "Dockerfile"
