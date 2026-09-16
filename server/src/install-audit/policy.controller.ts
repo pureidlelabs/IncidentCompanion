@@ -22,6 +22,7 @@ import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { POLICY_SETTINGS, type PolicyKey } from '../policy/keys.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
+import { refused } from '../domain/written.js'
 
 const KEYS = Object.keys(POLICY_SETTINGS) as [PolicyKey, ...PolicyKey[]]
 
@@ -103,15 +104,9 @@ export class InstallPolicyController {
      * refusal.
      */
     if (body.value < bound.floor || body.value > bound.ceiling) {
-      throw new UnprocessableEntityException({
-        ok: false,
-        messages: [
-          [
-            `${body.key} must be between ${String(bound.floor)} and ${String(bound.ceiling)}.`,
-            'negative',
-          ],
-        ],
-      })
+      throw new UnprocessableEntityException(
+        refused(`${body.key} must be between ${String(bound.floor)} and ${String(bound.ceiling)}.`),
+      )
     }
 
     // Read before writing, or the line cannot say what it changed from.

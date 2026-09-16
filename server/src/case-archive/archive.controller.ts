@@ -38,6 +38,7 @@ import {
 import { BadArchive } from '../archive/format.js'
 import { PolicyService } from '../policy/policy.service.js'
 import { WeakPassphrase } from '../archive/envelope.js'
+import { refusedBody } from '../domain/refusal.js'
 
 const exportSchema = z
   .object({
@@ -73,9 +74,7 @@ export class ArchiveController {
   ): Promise<void> {
     const parsed = exportSchema.safeParse(body ?? {})
     if (!parsed.success) {
-      throw new UnprocessableEntityException({
-        message: parsed.error.issues.map((one) => one.message).join(' '),
-      })
+      throw new UnprocessableEntityException(refusedBody(parsed.error))
     }
     const { passphrase, includeFiles } = parsed.data
 

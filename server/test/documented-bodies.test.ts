@@ -20,11 +20,23 @@ import { boot, bootable, seedDemoContent, operations, sharedAdmin, type Harness,
 
 const runnable = await bootable()
 
-/** Routes whose body cannot be generated from its schema, with the reason. */
+/**
+ * Routes whose body cannot be generated *validly* from its schema, each with
+ * the reason.
+ *
+ * Two kinds: a body that is not JSON at all, and one whose rule holds between
+ * two fields rather than on either -- which a schema cannot state and so an
+ * instance generator cannot satisfy.
+ */
 const NOT_GENERATED: ReadonlyArray<readonly [string, string]> = [
   ['/api/cases/import', 'Takes an archive. Bytes have no instance to generate.'],
   ['/api/cases/{caseId}/{collection}.csv', 'Takes a CSV, and the header decides the collection.'],
   ['/api/appearance/avatar', 'Takes an image.'],
+  [
+    '/api/change-password',
+    'Refines across two fields: the new password must equal its repeat, which no ' +
+      'generated instance can satisfy, so the body is well shaped and refused. -> #805',
+  ],
 ]
 
 interface Schema {

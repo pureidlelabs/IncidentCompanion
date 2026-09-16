@@ -33,3 +33,7 @@ Each is designed rather than composed: cacheable, boundable, and enforced where 
 **A read carries the version it was read at**, so a caller can write against it and be refused where it moved.
 
 **A refusal discriminates.** Not permitted, not found, and not decidable are different answers, and a route that collapses them either leaks or misleads.
+
+**A refusal carries its status, never a success carrying bad news.** A write that did not happen answers a refusing status with the sentence in its body, rather than a 200 or a 201 saying it did not work. Anything reading the status rather than the body -- a proxy, a log, a client somebody writes later -- is right to believe it, and a surface that unwraps both shapes lets the two drift because each works.
+
+**The shape a refusal carries is described once, and every route answers with that description.** A body assembled at the door is a second description of the wire, and the tier that reads it cannot tell which door it came from -- so a door that disagrees is found by an analyst rather than by a check.

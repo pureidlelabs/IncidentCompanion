@@ -12,12 +12,8 @@
 import { UnprocessableEntityException } from '@nestjs/common'
 import { createZodValidationPipe } from 'nestjs-zod'
 import type { ZodError } from 'zod'
-import { treeifyError } from 'zod'
 
-/** The body every schema refusal carries, whichever route raised it. */
-export function refusedBody(error: ZodError): { message: string; errors: unknown } {
-  return { message: 'Validation failed', errors: treeifyError(error) }
-}
+import { refusedBody } from '../domain/refusal.js'
 
 /**
  * The global body validator.

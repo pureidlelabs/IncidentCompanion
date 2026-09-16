@@ -32,6 +32,7 @@ import { ZodResponse, createZodDto, createZodValidationPipe } from 'nestjs-zod'
 import { z } from 'zod'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
+import { refusedBody } from '../domain/refusal.js'
 import { CollectionService, type CollectionDefinition } from './collection.service.js'
 import { importStamp } from '../db/import-stamp.js'
 import { ConflictsService } from './conflicts.service.js'
@@ -82,14 +83,11 @@ export const DEFINITION: CollectionDefinition = {
  *
  * Built here rather than taken from `wire/refusals.ts`, whose `ValidationPipe`
  * is the same thing: `architecture.test.ts` refuses `collections/` reaching
- * `wire/`, and the body below is the one this file's `parsed` already sends.
+ * `wire/`, so the body comes from `domain/refusal.ts`, which both may read.
  */
 const RefusingPipe = createZodValidationPipe({
   createValidationException: (error: unknown) =>
-    new UnprocessableEntityException({
-      message: 'Validation failed',
-      errors: (error as z.ZodError).issues,
-    }),
+    new UnprocessableEntityException(refusedBody(error as z.ZodError)),
 })
 
 /**

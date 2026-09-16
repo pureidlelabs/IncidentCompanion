@@ -49,8 +49,9 @@ import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { libraryRowSchema } from './library.service.js'
-import { writtenSchema, type Written } from '../domain/written.js'
+import { refused, writtenSchema, written, type Written } from '../domain/written.js'
 import { AdminOnly } from '../auth/admin-only.js'
+import { refusedBody } from '../domain/refusal.js'
 
 /**
  * What the editor form submits.
@@ -330,7 +331,7 @@ export class LibraryController {
 
     const parsed = createSchema.safeParse(body ?? {})
     if (!parsed.success) {
-      throw new UnprocessableEntityException({ message: 'Validation failed', errors: parsed.error.issues })
+      throw new UnprocessableEntityException(refusedBody(parsed.error))
     }
     const { label, description, startFrom } = parsed.data
 
@@ -347,7 +348,7 @@ export class LibraryController {
     }
     const shape = kind.payload.safeParse(source)
     if (!shape.success) {
-      throw new UnprocessableEntityException({ message: 'Validation failed', errors: shape.error.issues })
+      throw new UnprocessableEntityException(refusedBody(shape.error))
     }
 
     const taken = new Set((await this.library.list(slug)).map((row) => row.name))
@@ -359,7 +360,7 @@ export class LibraryController {
       ...(description === undefined ? {} : { description }),
       payload: shape.data as Record<string, unknown>,
     })
-    return { ok: true, messages: [[`${label} added.`, 'positive']] }
+    return written(`${label} added.`)
   }
 
   /**
@@ -426,10 +427,7 @@ export class LibraryController {
     const schema = kind.payload as z.ZodObject
     const submitted = editorActionSchema.safeParse(body ?? {})
     if (!submitted.success) {
-      throw new UnprocessableEntityException({
-        message: 'Validation failed',
-        errors: submitted.error.issues,
-      })
+      throw new UnprocessableEntityException(refusedBody(submitted.error))
     }
     const action = submitted.data
 
@@ -473,8 +471,7 @@ export class LibraryController {
     // silent no-op from the `where` clause below.
     if (row.builtin) {
       throw new UnprocessableEntityException({
-        ok: false,
-        messages: [['A built-in is duplicated rather than edited.', 'negative']],
+        ...refused('A built-in is duplicated rather than edited.'),
         editor: render(action.values, [
           ['A built-in is duplicated rather than edited.', 'negative'],
         ]),
@@ -493,8 +490,7 @@ export class LibraryController {
 
     await this.library.update(slug, name, candidate.data)
     return {
-      ok: true,
-      messages: [[`Saved ${row.label}.`, 'positive']],
+      ...written(`Saved ${row.label}.`),
       editor: render(action.values, []),
     }
   }
@@ -527,6 +523,6 @@ export class LibraryController {
       })
     }
     await this.library.remove(slug, name)
-    return { ok: true, messages: [[`${existing.label} removed.`, 'positive']] }
+    return written(`${existing.label} removed.`)
   }
 }

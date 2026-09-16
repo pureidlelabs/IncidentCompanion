@@ -24,6 +24,7 @@ import { matchIn, rememberIn } from '../domain/identity.js'
 import { alertToTimeline, entityRefsOf } from './providers/sentinel/alerts.js'
 import { PLATFORM } from './providers/sentinel/platform.js'
 import { importStamp } from '../db/import-stamp.js'
+import { refusedBody } from '../domain/refusal.js'
 
 /** What a candidate is keyed by, so `commit` can name what `preview` showed. */
 function candidateId(incident: string, identity: string): string {
@@ -442,10 +443,9 @@ export class ImportService {
     }
     const parsed = schema.safeParse(merged)
     if (!parsed.success) {
-      throw new UnprocessableEntityException({
-        message: `An imported ${collection} row is not valid`,
-        errors: parsed.error.issues,
-      })
+      throw new UnprocessableEntityException(
+        refusedBody(parsed.error, `An imported ${collection} row is not valid`),
+      )
     }
     return parsed.data
   }

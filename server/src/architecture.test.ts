@@ -110,7 +110,7 @@ const MAY_IMPORT: Record<string, string[]> = {
   /** Install-level, and reads nothing else: a customer is a record on its own. */
   // `auth` for `AdminOnly` and `install-activity` for the line every
   // install-level write owes: keeping the directory is managing the install.
-  customers: ['db', 'auth', 'install-activity'],
+  customers: ['db', 'auth', 'install-activity', 'domain'],
   recent: ['db', 'auth', 'access'],
   /**
    * Not `db`: every account write goes through Better Auth's admin plugin.
@@ -138,7 +138,7 @@ const MAY_IMPORT: Record<string, string[]> = {
   // holding the address rule this shares with the audit and Better Auth.
   throttle: ['db', 'auth', 'install-activity', 'wire'],
   /** Above `auth`, because reading the audit is admin-gated. */
-  'install-audit': ['db', 'auth', 'install-activity', 'preferences', 'policy', 'config'],
+  'install-audit': ['db', 'auth', 'install-activity', 'preferences', 'policy', 'config', 'domain'],
   /** A leaf: the certificate is materialised before the Nest container exists. */
   tls: [],
   // `preferences` for the install's regime switches alone: `library`'s
@@ -176,7 +176,10 @@ const MAY_IMPORT: Record<string, string[]> = {
   // `auth` for `AdminOnly` and `install-activity` for the line every
   // install-level write owes: granting reach is managing the install.
   access: ['db', 'domain', 'auth', 'install-activity'],
-  wire: [],
+  // `domain` for the refusal body: the shape is the contract the client's
+  // reader answers to, and the folders that raise their own pipe may not reach
+  // `wire`. The edge is to a leaf, so it cannot become a cycle.
+  wire: ['domain'],
   /** A pure transformation of bytes: it knows an archive's members, not a case. */
   archive: [],
   /**

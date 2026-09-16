@@ -20,8 +20,8 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  UnprocessableEntityException,
 } from '@nestjs/common'
-import { UnprocessableEntityException } from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
@@ -29,6 +29,7 @@ import { AdminOnly } from '../auth/admin-only.js'
 import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { CustomersService } from './customers.service.js'
+import { refusedBody } from '../domain/refusal.js'
 
 /**
  * What an administrator may set: the name, and the organisation's own facts
@@ -122,9 +123,7 @@ export class CustomersController {
   private parse<T>(schema: z.ZodType<T>, body: unknown): T {
     const parsed = schema.safeParse(body ?? {})
     if (!parsed.success) {
-      throw new UnprocessableEntityException({
-        message: parsed.error.issues.map((one) => one.message).join(' '),
-      })
+      throw new UnprocessableEntityException(refusedBody(parsed.error))
     }
     return parsed.data
   }

@@ -36,6 +36,7 @@ import {
   refuseRetention,
 } from '../install-activity/prune.service.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
+import { refused } from '../domain/written.js'
 
 export const retentionSchema = z.object({
   days: z
@@ -124,12 +125,12 @@ export class AuditRetentionController {
      * which tells an administrator nothing and reads as the server being
      * broken rather than the number being wrong.
      */
-    const refused =
+    const refusal =
       (body.days === undefined ? null : refuseRetention(body.days)) ??
       (body.operationalDays === undefined
         ? null
         : refuseOperationalRetention(body.operationalDays))
-    if (refused) throw new UnprocessableEntityException({ ok: false, messages: [[refused, 'negative']] })
+    if (refusal) throw new UnprocessableEntityException(refused(refusal))
 
     // **Read before writing, or the line cannot say what it changed from** -
     // the same reason the role change reads the old role first.

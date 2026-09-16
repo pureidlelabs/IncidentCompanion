@@ -9,6 +9,7 @@ import { UnprocessableEntityException } from '@nestjs/common'
 import { z } from 'zod'
 
 import { rowVersion } from '../domain/column-bounds.js'
+import { refusedBody } from '../domain/refusal.js'
 
 /**
  * Rows one request may carry, because the door is reachable from a script:
@@ -20,8 +21,7 @@ export const BULK_LIMIT = 1000
 export const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
 
 /**
- * Parse a body by hand, or throw a 422 carrying `message` and the flat list of
- * Zod issues under `errors` - where the global pipe sends a tree.
+ * Parse a body by hand, or throw the 422 the global pipe would have thrown.
  *
  * For a route taking `@Body() body: unknown` because its schema depends on
  * something the pipe cannot know: the collection, or the row's kind.
@@ -29,10 +29,7 @@ export const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_
 export function parsed(schema: z.ZodType, body: unknown): Record<string, unknown> {
   const answer = schema.safeParse(body)
   if (!answer.success) {
-    throw new UnprocessableEntityException({
-      message: 'Validation failed',
-      errors: answer.error.issues,
-    })
+    throw new UnprocessableEntityException(refusedBody(answer.error))
   }
   return answer.data as Record<string, unknown>
 }

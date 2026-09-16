@@ -32,6 +32,7 @@ import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT, refusePassword } from './p
 import { readPolicy } from '../policy/read.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import { refusedBody } from '../domain/refusal.js'
 
 /**
  * **`repeat` is checked here and not only in the browser.** A client that
@@ -72,9 +73,7 @@ export class ChangePasswordController {
   ): Promise<{ changed: true }> {
     const parsed = changeSchema.safeParse(body ?? {})
     if (!parsed.success) {
-      throw new UnprocessableEntityException({
-        message: parsed.error.issues.map((one) => one.message).join(' '),
-      })
+      throw new UnprocessableEntityException(refusedBody(parsed.error))
     }
 
     // **The current password is verified by Better Auth.** It owns the hash and

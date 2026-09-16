@@ -43,6 +43,7 @@ import { CreateCaseDto, patchCaseSchema } from './cases.dto.js'
 import { demoCaseSchema } from '../demos/catalogue.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { rowVersion } from '../domain/column-bounds.js'
+import { refusedBody } from '../domain/refusal.js'
 
 /**
  * A demo card, as the picker draws it.
@@ -221,10 +222,9 @@ export class CasesController {
     if (!row) throw new NotFoundException(`No case template "${template}".`)
     const seed = caseTemplateSchema.safeParse(row.payload)
     if (!seed.success) {
-      throw new BadRequestException({
-        message: `The template "${template}" cannot be read.`,
-        errors: seed.error.issues,
-      })
+      throw new BadRequestException(
+        refusedBody(seed.error, `The template "${template}" cannot be read.`),
+      )
     }
     const made = await this.cases.create(fields, caller.session.user.id, seed.data)
     await this.activity.caseCreated(caller, made.id, made.title)
@@ -256,10 +256,7 @@ export class CasesController {
 
     const parsed = patchCaseSchema.safeParse(rest)
     if (!parsed.success) {
-      throw new UnprocessableEntityException({
-        message: 'Validation failed',
-        errors: z.treeifyError(parsed.error),
-      })
+      throw new UnprocessableEntityException(refusedBody(parsed.error))
     }
     if (Object.keys(parsed.data).length === 0) {
       throw new UnprocessableEntityException({ message: 'A patch has to change something.' })

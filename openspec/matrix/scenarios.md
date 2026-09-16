@@ -594,7 +594,7 @@
 | The interface describes itself, and the description is generated | A route is added | demonstrated | server/test/openapi-contract.test.ts |
 | The interface describes itself, and the description is generated | A route changes shape | undemonstrated | |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts |
-| A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/malformed-requests.test.ts |
+| A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/src/domain/a-refusal-names-the-field-it-is-about.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts |
 | A fact can be asked for across cases | An indicator is asked about across cases | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |

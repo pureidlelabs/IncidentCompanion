@@ -101,6 +101,28 @@ describe('WriteFailure', () => {
     expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument()
   })
 
+  /**
+   * **The same reason, for the 422 that named nothing.** A refusal is settled
+   * by its status rather than by whether the parsing found fields: a body the
+   * schema rejected is rejected again unchanged, and reading the empty list as
+   * *nothing went wrong with the body* is what drew a refused write as a
+   * dropped connection for as long as the served `errors` was unreadable.
+   * -> #633
+   */
+  it('offers no Retry for a 422 that named no field', () => {
+    render(
+      <WriteFailure
+        what="Indicators"
+        error={new ApiError(422, 'Validation failed', { message: 'Validation failed' })}
+        onRetry={() => undefined}
+        onDismiss={() => undefined}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument()
+  })
+
   it('offers no Retry for a refusal no press changes', () => {
     for (const status of [403, 501]) {
       const { unmount } = render(
@@ -186,6 +208,44 @@ describe('WriteFailure', () => {
     )
     expect(rows).toHaveLength(4)
     expect(screen.getByText('and 3 more')).toBeInTheDocument()
+  })
+
+  /**
+   * **One field can fail twice**, and a schema says so as two issues on one
+   * path -- too short *and* not one of the values it allows. Keyed on the field
+   * alone, React draws two children under one key. Reachable since every pipe
+   * refusal populates this list. -> #633
+   */
+  it('draws a row per issue when two name the same field', () => {
+    const twice = new ApiError(422, 'Validation failed', {
+      errors: [
+        { path: ['triage'], message: 'Too small: expected >=1 characters' },
+        { path: ['triage'], message: 'Invalid option' },
+      ],
+    })
+    // **React draws both rows either way**, so the list alone says nothing.
+    // What a repeated key costs is reconciliation, and the warning is the only
+    // thing that reports it before an analyst sees a row keep the wrong text.
+    const warned = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      render(<WriteFailure what="Indicators" error={twice} onDismiss={() => undefined} />)
+
+      const rows = within(screen.getByRole('list', { name: 'Fields refused' })).getAllByRole(
+        'listitem',
+      )
+      expect(rows.map((row) => row.textContent)).toEqual([
+        'triageToo small: expected >=1 characters',
+        'triageInvalid option',
+      ])
+      expect(
+        warned.mock.calls.map((call) => call.map(String).join(' ')).filter((line) =>
+          line.includes('same key'),
+        ),
+        'two issues on one field share a key',
+      ).toEqual([])
+    } finally {
+      warned.mockRestore()
+    }
   })
 
   it('says nothing about a count when every field fits', () => {
