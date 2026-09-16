@@ -61,11 +61,9 @@ export const installSettingsSchema = z.object({
     evidenceNote: z.string(),
     /**
      * **What nothing here does to durable state, and whose job it therefore
-     * is.** The application does not encrypt what it stores: a key it managed
-     * would sit in front of storage the operator already protects, and
-     * recovery would depend on that key surviving. Saying so is what it owes
-     * in exchange, and an operator who has not encrypted the storage beneath
-     * should learn it here rather than from an auditor.
+     * is.** A key this application managed would sit in front of storage the
+     * operator already protects, and recovery would then depend on that key
+     * surviving; saying so is what it owes in exchange.
      */
     encryptionNote: z.string(),
     /**

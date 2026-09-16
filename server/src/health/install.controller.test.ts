@@ -177,11 +177,7 @@ describe('what the install says about the wrapping', () => {
    * Why nothing is encrypted here is on the field itself. -> #177
    *
    * **Three properties rather than the sentence**, as the notes beside it are
-   * asserted: rewording is free, and dropping any of the three is not. Each
-   * alone misleads -- *unencrypted* without *the storage beneath* reads as a
-   * defect rather than a division of responsibility, and either without
-   * *evidence* leaves the artefacts, which are the most sensitive thing here,
-   * to be assumed covered or assumed not.
+   * asserted: rewording is free, and dropping any of the three is not.
    */
   it('says the state it keeps is unencrypted, and what confidentiality rests on', async () => {
     const note = (await settingsOf()).storage.encryptionNote
