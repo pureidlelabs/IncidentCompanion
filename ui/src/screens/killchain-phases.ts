@@ -106,9 +106,6 @@ export function coverageOf(kase: Case, specs: Specs): Coverage {
     return {
       phase,
       num: at + 1,
-      // The first cycle any entry in the phase declares. Never derived from
-      // the phase's position: the server owns that mapping and a second copy
-      // here would disagree the day it moves.
       cycle: own.map(cycleOf).find((value) => value !== '') ?? '',
       observed: own.length > 0,
       hosts: [...hosts].sort(),

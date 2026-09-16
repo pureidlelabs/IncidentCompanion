@@ -299,14 +299,14 @@ describe('the open-item queue', () => {
 })
 
 describe('kill chain coverage', () => {
+  const vocabulary = specsFixture.vocabularies.ukcPhase ?? []
   /** Named here, this would be the copy the screen stopped holding. */
-  const outside = (specsFixture.vocabularies.ukcPhase ?? []).filter(
-    (phase) => ukcCycle(phase) === '',
-  )
+  const outside = vocabulary.filter((phase) => ukcCycle(phase) === '')
 
   it('keeps the vocabulary member the chain has no stage for out of the rows', () => {
-    expect(outside).toHaveLength(1)
-    expect(phasesOf(specsFixture)).not.toContain(outside[0])
+    // Empty would make every assertion below it pass over nothing.
+    expect(outside).not.toEqual([])
+    expect(phasesOf(specsFixture)).toEqual(vocabulary.filter((phase) => !outside.includes(phase)))
     expect(phasesOf(specsFixture)).toHaveLength(18)
   })
 
