@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest'
 
 import { ACTIVITY_ACTION } from '@contract/vocabularies.lists'
 
+import { COLLECTION_TO_CASE_KEY } from '../api/model'
+
 import { actionClassOf } from './action-class'
 import { durationText } from './case-time'
 
@@ -175,5 +177,54 @@ describe('a shared derivation is defined once', () => {
         .some((path) => pattern.test(readFileSync(path, 'utf8')))
     })
     expect(undefinedHere).toEqual([])
+  })
+})
+
+/**
+ * **Which collections a case holds is written once, and the app publishes it.**
+ *
+ * `COLLECTION_NAMES` and `COLLECTION_TO_CASE_KEY` are the roster, and several
+ * modules derive from them. The archive screen wrote its own instead and it
+ * fell a table behind: `methods` was missing, so a case was offered for export
+ * under a count short by however many it held, and the file carried rows the
+ * screen had not mentioned. -> #809
+ *
+ * **A bare list is what is refused, not every mention.** Naming each collection
+ * to attach something to it -- a label and a slug, a search field, a table per
+ * kind -- is what those modules are for, and they say more per entry than the
+ * name. A run of nothing but the names is the second roster: it can only be
+ * used as a set, and it is the one that falls behind because nothing about it
+ * breaks when a collection is added.
+ */
+const ROSTER: readonly string[] = Object.values(COLLECTION_TO_CASE_KEY)
+
+/** A line holding one roster key and nothing else. */
+const BARE = (key: string) => new RegExp(`^\\s*['"\`]${key}['"\`],?\\s*$`, 'm')
+
+describe('one roster of collections', () => {
+  const files = globSync('**/*.{ts,tsx}', { cwd: SRC, absolute: true })
+    .map((path) => path.split('\\').join('/'))
+    .filter((path) => !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'))
+
+  it('finds the roster to count against', () => {
+    // Without this the scan below compares every file against an empty list
+    // and passes over nothing.
+    expect(ROSTER.length).toBeGreaterThan(10)
+  })
+
+  it('lists the collections as bare names in one place', () => {
+    const listed = files
+      .map((file) => relative(SRC, file))
+      // `api/model.ts` is where the roster is published.
+      .filter((file) => file !== 'api/model.ts')
+      .filter((file) => {
+        const text = withoutComments(readFileSync(resolve(SRC, file), 'utf8'))
+        return ROSTER.filter((key) => BARE(key).test(text)).length >= 6
+      })
+
+    expect(
+      listed.sort(),
+      'a second roster of the collections a case holds, which is the one that falls behind',
+    ).toEqual([])
   })
 })

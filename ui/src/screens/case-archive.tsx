@@ -1,7 +1,7 @@
 import { Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
-import type { Case } from '@/api/model'
+import { COLLECTION_NAMES, COLLECTION_TO_CASE_KEY, type Case } from '@/api/model'
 import { ArchivePassphraseFields } from '@/components/blocks/archive-passphrase-fields'
 import { FormSection } from '@/components/blocks/form-section'
 import { Section } from '@/components/blocks/section'
@@ -57,22 +57,6 @@ export interface CaseArchiveScreenProps {
   onRetry?: (() => void) | undefined
 }
 
-/** The tables a `.iccase` carries, in the order the case document lists them. */
-const ARCHIVED: readonly (keyof Case)[] = [
-  'timeline',
-  'systems',
-  'accounts',
-  'networkIndicators',
-  'malware',
-  'cloudApps',
-  'impact',
-  'evidence',
-  'actions',
-  'casenotes',
-  'reports',
-  'reportBlocks',
-]
-
 export function CaseArchiveScreen({
   kase,
   refusal,
@@ -91,11 +75,16 @@ export function CaseArchiveScreen({
   /**
    * **No route serves an archive inventory**, so the count is summed here from
    * the same case document every other section already holds.
+   *
+   * **Over the roster the app publishes, never a list written here.** A second
+   * spelling of which tables a `.iccase` carries is one that falls behind, and
+   * this one had: it was a table short, so a case was offered for export under
+   * a count that did not match the file. -> #809
    */
   const entries = useMemo(
     () =>
-      ARCHIVED.reduce((total, key) => {
-        const rows = kase?.[key]
+      COLLECTION_NAMES.reduce((total, name) => {
+        const rows = kase?.[COLLECTION_TO_CASE_KEY[name]]
         return total + (Array.isArray(rows) ? rows.length : 0)
       }, 0),
     [kase],
