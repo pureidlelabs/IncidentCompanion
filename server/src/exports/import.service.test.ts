@@ -350,11 +350,7 @@ describe.skipIf(!db)('importing a CSV', () => {
     ).rejects.toMatchObject({ response: { message: expect.stringContaining('row 2') } })
   })
 
-  /**
-   * Every bulk target is importable now that the timeline dispatches on its
-   * row's kind, so what is left to refuse is a name that is no collection at
-   * all -- and the refusal still names the ones that are.
-   */
+  /** What is left to refuse is a name that is no collection at all. */
   it('refuses a collection it has never heard of, naming the ones it knows', async () => {
     await expect(
       service.fromCsv('teapots' as never, emptyCaseId, 'label\nnope\n', ME),

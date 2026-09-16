@@ -224,9 +224,7 @@ export class ImportService {
     actorId: string,
     onDuplicate: OnDuplicate = 'skip',
   ): Promise<ImportResult> {
-    // **404 rather than 400, the same as the export door's.** One condition --
-    // there is no such collection -- answered two ways is two answers to one
-    // question, and the controller in front of this already says 404. -> #650
+    // 404 rather than 400, the same as the export door's. -> #650
     if (importSchemaFor(collection) === undefined) {
       throw new NotFoundException({
         message: `No collection ${collection}. Importable: ${IMPORTABLE.sort().join(', ')}.`,
@@ -277,17 +275,12 @@ export class ImportService {
       const judge = schemaOf(given)
       /**
        * **A file holds one set of columns and a collection may have two kinds
-       * of row.** An export of a real timeline writes the columns of both, so
-       * an action arrives carrying the event-only ones -- `hideFromGraph` as
-       * `false` rather than as an empty cell, because the writer reads them off
-       * the table. The schemas are strict, so the arm judging the row would
-       * refuse those as unrecognised keys and the app's own file would not come
-       * back.
+       * of row**, so an action arrives carrying the event-only ones and the
+       * strict arm judging it would refuse them as unrecognised keys.
        *
-       * **Only a column another kind of this collection declares is dropped.**
-       * A column no kind has is left where it is and refused by name, which is
-       * what catches a misspelt heading -- dropping everything the arm does not
-       * name would make a typo silently do nothing.
+       * **Only a column another kind declares is dropped.** One no kind has
+       * stays and is refused by name, which is what catches a misspelt
+       * heading.
        */
       const meant = Object.fromEntries(
         Object.entries(given).filter(([field]) => field in judge.shape || !elsewhere.has(field)),
