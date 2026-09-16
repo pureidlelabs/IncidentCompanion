@@ -24,7 +24,7 @@ Check these before reaching for a tool. Each is a real answer already in the tre
 | `ui/src/structure.test.ts` | a module imported only by its own test; a dependency only the spike needs | anything in `server/` |
 | `server/src/architecture.test.ts` | an import resolving nowhere; a folder reaching a folder it may not | orphans — it checks the edge, never whether anything points *in* |
 | `npm run lint` (both) | an unused local, parameter or import **inside one file** | an unused *export* — no `no-unused-modules` rule is configured |
-| `ui` typecheck | the same, plus unused class members: `noUnusedLocals` and `noUnusedParameters` are on in `tsconfig.app.json` | exports again |
+| either typecheck | the same, plus unused class members: `noUnusedLocals` and `noUnusedParameters` are on in `server/tsconfig.json` and `ui/tsconfig.app.json` | exports again |
 
 `ui/src/structure.test.ts` also carries an `openFindings` list — two modules it found and nobody has decided yet. **Read it first; those are hunt output already recorded.**
 
@@ -53,7 +53,7 @@ What it printed here:
 | unused exports | 89 | 98 |
 | unused exported types | 45 | 45 |
 
-**The dependency rows are the highest-value output and they are nearly clean.** `selfsigned` in `server/package.json` is real — nothing outside the manifest names it, and it is what minted the certificate before nginx took TLS over. `ui` carries `zod`, `react-markdown` and `@tiptap/extension-bubble-menu` with no importer at all.
+**The dependency rows are the highest-value output and they are nearly clean.** `ui` carries `zod`, `react-markdown` and `@tiptap/extension-bubble-menu` with no importer at all.
 
 **Its false positives, all four seen here:**
 
@@ -70,13 +70,14 @@ A file reached by no `import` in either tier. **Resolve `@/` and `@contract/`, a
 
 ### 3. Unused class members, which nothing else sees
 
-eslint's `no-unused-vars` skips class properties and the server's `tsconfig.json` does not carry the flags the client's does. Run them explicitly:
+eslint's `no-unused-vars` skips class properties, so `noUnusedLocals` and `noUnusedParameters` are the only readers. Both trees carry them, so each typecheck already answers this and there is nothing to run by hand:
 
 ```bash
-cd server && ./node_modules/.bin/tsc -p tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters
+cd server && npm run typecheck       # both configs, exit 0
+cd ui && npx tsc -b --noEmit --force # exit 0
 ```
 
-**3 errors, all `private readonly`**: two `Logger` fields nothing logs through, and an injected `db` in `content.seeder.ts` whose only surviving mention is a comment. The client is clean under the same flags, because it has carried them since it was scaffolded (`cd ui && npx tsc -b --noEmit --force`, exit 0).
+**A member surviving to this hunt means a typecheck was not run**, so run one before looking further. `tests/repo/test_unused_members_are_seen.py` is what refuses a branch taking the server's pair back out.
 
 ### 4. The false-positive gauntlet
 
