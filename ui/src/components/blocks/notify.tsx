@@ -190,15 +190,11 @@ export function reportUploadedPack(pack: { label: string; ignored: readonly stri
 /**
  * Say what an imported archive brought, and what it named but did not carry.
  *
- * **Both counts are halves nothing else can tell the analyst.** An archive
- * exported without its files imports cleanly and its rows go on naming
- * evidence that is not in it; a case whose links were tidied away imports with
- * every row present and some of the links between them gone. The import is the
- * only moment that knows either.
+ * **Both counts are halves nothing else can tell the analyst**, and the import
+ * is the only moment that knows either.
  *
- * A warning rather than an error, for both: a handover export omits every
- * attachment deliberately, and a reference list keeps the id of a row an
- * analyst deleted, so neither says the archive is at fault. -> #731
+ * A warning rather than an error, for both: neither says the archive is at
+ * fault. -> `openspec/specs/case-archive/design.md`, #731
  */
 export function reportImportedCase(imported: {
   rows: number

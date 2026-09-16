@@ -6,7 +6,7 @@
 
 Reading an archive MUST tell the operator how much of what the new case names is in it: the attachments its rows name that the archive did not carry, and the rows its rows name that it does not contain.
 
-Neither MUST be presented as a fault in the archive, and neither MUST refuse the read. An archive is written without its attachments deliberately, and a reference list keeps the id of a row an analyst deleted — so a sound archive of a real case carries both. What the operator is told is what is true whichever cause produced it: this case names things that are not in it.
+Neither MUST be presented as a fault in the archive, and neither MUST refuse the read: a sound archive of a real case carries both. What the operator is told is what is true whichever cause produced it — this case names things that are not in it.
 
 This MUST reach the operator rather than only the response. A count the interface does not draw tells nobody.
 

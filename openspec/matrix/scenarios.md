@@ -145,9 +145,9 @@
 | Reading an archive creates a case; it never overwrites one | An archive is read in | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is attributed | demonstrated | server/src/case-archive/round-trip.test.ts |
+| Reading an archive creates a case; it never overwrites one | An archive states where its rows came from | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive says how complete the case it made is | An archive carries rows that name what it left behind | demonstrated | ui/src/components/blocks/notify.test.ts |
 | Reading an archive says how complete the case it made is | A case names a row that is not in it | demonstrated | server/src/case-archive/round-trip.test.ts |
-| Reading an archive creates a case; it never overwrites one | An archive states where its rows came from | demonstrated | server/src/case-archive/round-trip.test.ts |
 | An archive's rows are checked against what this install can hold | An archive states a term outside a fixed set | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
 | An archive's rows are checked against what this install can hold | An archive states a value of the wrong shape | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
 | An archive's rows are checked against what this install can hold | An archive states a value the store cannot hold | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |

@@ -157,26 +157,30 @@ const NEVER_CARRIED = new Set([
  *
  * A scalar that resolves to nothing becomes null, which those columns allow.
  *
- * **Counts what it dropped, because the case is less connected than the file
- * says and nothing else can see it.** The rows all arrive; the links between
- * some of them do not. -> #731
+ * **Answers which ids it dropped**, so the import can say how connected the
+ * case is. Why that is worth saying, and why it is not a claim about the file,
+ * is in `openspec/specs/case-archive/design.md`.
  */
 function remapped(
   value: unknown,
   remap: ReadonlyMap<string, string>,
-): { value: unknown; dropped: number } {
+): { value: unknown; dropped: readonly string[] } {
   if (Array.isArray(value)) {
-    const kept = value.flatMap((one) => {
+    const kept: string[] = []
+    const dropped: string[] = []
+    for (const one of value) {
       const found = typeof one === 'string' ? remap.get(one) : undefined
-      return found === undefined ? [] : [found]
-    })
-    return { value: kept, dropped: value.length - kept.length }
+      if (found === undefined) {
+        if (typeof one === 'string') dropped.push(one)
+      } else kept.push(found)
+    }
+    return { value: kept, dropped }
   }
   if (typeof value === 'string') {
     const found = remap.get(value)
-    return { value: found ?? null, dropped: found === undefined ? 1 : 0 }
+    return { value: found ?? null, dropped: found === undefined ? [value] : [] }
   }
-  return { value, dropped: 0 }
+  return { value, dropped: [] }
 }
 
 export const importResultSchema = z.object({
@@ -194,9 +198,8 @@ export const importResultSchema = z.object({
     .number()
     .int()
     .describe(
-      'Ids the rows name that no row in the archive became, so the case is less ' +
-        'connected than its rows suggest. Not a fault in the archive: a reference list ' +
-        'keeps the id of a row an analyst deleted.',
+      'Rows the case names that no row in the archive became, counted once each ' +
+        'however many times they are named. Not a refusal and not a fault in the archive.',
     ),
 })
 
@@ -236,8 +239,14 @@ export class ArchiveImportService {
     // first would, for the moment between, describe a file this install does
     // not hold - and a failure in between would leave exactly that.
     let missingFiles = 0
-    /** Ids the archive's rows name that no row in it became. -> #731 */
-    let unresolved = 0
+    /**
+     * Ids the archive's rows name that no row in it became.
+     *
+     * **A set, because the count is of rows and not of links.** One deleted
+     * row named by two entries is one row the case is missing, and counting
+     * the occurrences would say two. -> #731
+     */
+    const unresolved = new Set<string>()
     const held = new Set<string>()
     for (const [name, bytes] of Object.entries(members)) {
       if (!name.startsWith(EVIDENCE_PREFIX)) continue
@@ -357,7 +366,7 @@ export class ArchiveImportService {
             }
             const mapped = remapped(value, remap)
             values[key] = mapped.value
-            unresolved += mapped.dropped
+            for (const id of mapped.dropped) unresolved.add(id)
           }
           // A timestamp arrives as an ISO string and the column wants a Date.
           for (const key of Object.keys(values)) {
@@ -431,7 +440,7 @@ export class ArchiveImportService {
         rows,
         attachments,
         missingFiles,
-        unresolvedReferences: unresolved,
+        unresolvedReferences: unresolved.size,
       }
     })
   }

@@ -27,9 +27,8 @@ export interface ImportArchive {
  * `missingFiles` is how many attachments the archive's rows name and it did
  * not carry, which for a handover export is all of them and is not a fault.
  *
- * `unresolvedReferences` is how many rows the case names that are not in it --
- * how connected the case is, which the rows alone do not say. Also not a
- * fault: a reference list keeps the id of a row an analyst deleted. -> #731
+ * `unresolvedReferences` is how many rows the case names that are not in it,
+ * counted once each however many times they are named. -> #731
  */
 export interface ImportedCase {
   id: string

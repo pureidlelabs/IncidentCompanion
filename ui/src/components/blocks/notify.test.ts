@@ -209,13 +209,10 @@ describe('reportImportedCase', () => {
 
 
   /**
-   * **How connected the case is, which the rows alone do not say.** Every row
-   * arrives and some of the links between them do not, so a silent success
-   * hands the analyst a case that looks whole and is not.
-   *
-   * Not a fault in the archive, and told as a warning for that reason: nothing
-   * scrubs a reference list when a row is deleted, so a sound export of a case
-   * somebody tidied carries ids that resolve to nothing. -> #731
+   * **How connected the case is, which the rows alone do not say.** A silent
+   * success hands the analyst a case that looks whole and is not. Told as a
+   * warning, because it is not a fault in the archive.
+   * -> `openspec/specs/case-archive/design.md`, #731
    */
   it('names the rows the case points at and does not contain', () => {
     reportImportedCase({ rows: 86, missingFiles: 0, unresolvedReferences: 3 })
