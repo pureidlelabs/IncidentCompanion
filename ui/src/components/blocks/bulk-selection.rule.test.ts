@@ -50,11 +50,7 @@ describe('a bulk bar comes with a select-all', () => {
     .map((rel) => rel.split('\\').join('/'))
     .filter((rel) => !rel.endsWith('.test.tsx'))
     // A file that defines the bar rather than rendering a table is not a caller.
-    .filter(
-      (rel) =>
-        rel !== 'components/blocks/bulk-actions.tsx' &&
-        rel !== 'components/blocks/bulk-actions.tsx',
-    )
+    .filter((rel) => rel !== 'components/blocks/bulk-actions.tsx')
     // `SelectionSlotProvider` is where a section puts the bar, not a table itself.
     .filter((rel) => rel !== 'components/ui/selection-slot.tsx')
     .map((rel) => ({ path: rel, text: code(readFileSync(join(SRC, rel), 'utf8')) }))
