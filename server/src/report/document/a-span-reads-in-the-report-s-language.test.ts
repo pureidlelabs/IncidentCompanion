@@ -12,7 +12,8 @@
  * client's own `durationText`, which is chrome rather than a document and
  * measures a different span under the same word.
  */
-import { describe, expect, it } from 'vitest'
+import { Logger } from '@nestjs/common'
+import { describe, expect, it, vi } from 'vitest'
 
 import { duration, metrics } from './derived.js'
 import { NL } from './labels.nl.js'
@@ -96,6 +97,18 @@ describe('a gap between two beats in the narrative', () => {
 
     expect(printed).toMatch(/\bhr\b|\bdays?\b/)
   })
+
+  /** Two durations on one line: the `+` is what tells them apart. -> `narrative.ts` */
+  it('marks the gap with a plus and the span it covers without one', () => {
+    const printed = JSON.stringify(narrative(withBeats('nl')))
+
+    expect(printed, 'no gap was marked as one').toMatch(/\+[^"]*(uur|min|dagen)/)
+    // Counted: these beats print three spans and exactly the first owes a plus.
+    expect(
+      (printed.match(/\+/g) ?? []).length,
+      'a plus reached a span that is not a gap, or the gap lost its own',
+    ).toBe(1)
+  })
 })
 
 describe('a span printed in a report', () => {
@@ -131,15 +144,54 @@ describe('a span printed in a report', () => {
   })
 
   /**
-   * **A language code is whatever an install uploaded.** `LANGUAGE_TAG` accepts
-   * tags ICU refuses, and a throw here is a report that will not render at all.
+   * **A language code is whatever an install uploaded, and it fails two ways.**
+   * `aaa-aaaaaaaa-aaaaaaaa` is well formed to `LANGUAGE_TAG` and a `RangeError`
+   * to ICU, so unguarded it is a report that renders not at all; `zz` is a tag
+   * ICU takes and holds no unit data for, which throws nothing and would pass a
+   * case asserting only that a number reached the cell. `''` is a report that
+   * has not chosen. All three owe English units rather than a failure.
    */
   it.each([['aaa-aaaaaaaa-aaaaaaaa'], [''], ['zz']])(
-    'prints a span rather than throwing on the code %j',
+    'falls back to English units on the code %j',
     (language) => {
-      expect(values(metrics(input(language))).join(' | ')).toMatch(/\d/)
+      expect(values(metrics(input(language))).join(' | ')).toMatch(/\bhr\b/)
     },
   )
+
+  /**
+   * **The English above is not evidence the code was noticed**, because ICU
+   * resolves an unknown tag to English on its own -- so the case above passes
+   * whether or not anything checked. The log is the only observable difference,
+   * and the count is the second half: a document prints many spans, and one
+   * warning per row is a line nobody reads.
+   *
+   * `qq` is used by no other case here, which is what keeps the count honest --
+   * the codes already reported are held for the life of the module.
+   */
+  it('says once, not per span, that a language ICU cannot print in reads English', () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    try {
+      values(metrics(input('qq')))
+      values(metrics(input('qq')))
+
+      const mine = warn.mock.calls.filter((call) => String(call[0]).includes('`qq`'))
+      expect(mine, 'a code ICU holds no unit data for went unreported').toHaveLength(1)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  /** A language ICU can print in is not a complaint. */
+  it('says nothing about a language ICU has unit data for', () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    try {
+      values(metrics(input('nl')))
+
+      expect(warn.mock.calls.filter((call) => String(call[0]).includes('`nl`'))).toHaveLength(0)
+    } finally {
+      warn.mockRestore()
+    }
+  })
 
   /**
    * **Every shape, because the table above reaches one of them.** A metrics row

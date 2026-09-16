@@ -10,6 +10,8 @@
  * and the GDPR triggers are the compliance tier's determination and arrive
  * through it; deriving them again is a second answer to one question.
  */
+import { Logger } from '@nestjs/common'
+
 import type * as vocabularies from '../../domain/vocabularies.lists.js'
 import { formatTimestamp } from './labels.js'
 import type { Cell, Node } from './model.js'
@@ -76,18 +78,37 @@ export function span(from: unknown, to: unknown): number | null {
   return out < 0 ? null : out
 }
 
+/** Codes already reported, so a document of fifty spans says it once. */
+const reported = new Set<string>()
+
+function reportOnce(language: string, what: string): void {
+  if (reported.has(language)) return
+  reported.add(language)
+  new Logger('ReportSpans').warn(`ICU ${what} \`${language}\`, so spans in it are English.`)
+}
+
 /**
  * A span formatter for a language code, falling back to English.
  *
- * A code is whatever an install uploaded, and `LANGUAGE_TAG` accepts tags ICU
- * refuses -- an unguarded construction is a report that will not render at all.
+ * A code is whatever an install uploaded, and `LANGUAGE_TAG` accepts two kinds
+ * ICU will not print in: one it refuses outright, which unguarded is a report
+ * that renders not at all rather than in English, and one it takes and holds no
+ * unit data for, which prints English under a pack reporting full coverage.
+ * Neither is visible in the document, so each is said once per code.
  */
 function spanFormat(language: string): Intl.DurationFormat {
-  try {
-    return new Intl.DurationFormat([language, 'en'], { style: 'short' })
-  } catch {
-    return new Intl.DurationFormat('en', { style: 'short' })
+  // A report that has not chosen a language is English, and is not a complaint.
+  if (language !== '') {
+    try {
+      if (Intl.DurationFormat.supportedLocalesOf([language]).length > 0) {
+        return new Intl.DurationFormat(language, { style: 'short' })
+      }
+      reportOnce(language, 'holds no unit data for')
+    } catch {
+      reportOnce(language, 'cannot read a language tag from')
+    }
   }
+  return new Intl.DurationFormat('en', { style: 'short' })
 }
 
 /**
