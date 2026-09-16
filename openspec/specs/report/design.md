@@ -12,6 +12,8 @@
 
 **The address names which report is open and nothing else about the reading of it.** Which section is being written, where the pane is scrolled and what the outline has folded stay out: they are states of reading rather than of what is being read, and an address carrying them is one nobody can send.
 
+**A language pack carries words, never units or stamps.** How a span and a date are written comes from the locale's own data, so a report in a language nobody has translated still states its figures correctly, and a pack's coverage figure measures the words alone.
+
 **Nothing outside the report section composes an address naming a report.** A producer of such links -- a search result, a cross-reference -- is work of its own. An address naming no report, or naming one the case does not hold, opens the index rather than a guess.
 
 # Design

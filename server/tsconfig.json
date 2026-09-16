@@ -15,7 +15,12 @@
     // full build could typecheck this project.
     "module": "node20",
     "target": "ES2023",
-    "lib": ["ES2023"],
+    // **`lib` is what the runtime has; `target` is what is emitted.** They are
+    // allowed to differ and here they must: `package.json` pins `node >=26`,
+    // which carries `Intl.DurationFormat`, and TypeScript files that under
+    // ES2025. Raising `target` as well would change emitted syntax across the
+    // whole server for a type-only need.
+    "lib": ["ES2025"],
     "outDir": "./dist",
     // **`.`, not `./src`, which is what keeps `main.js` at `dist/src/`.** Nest
     // 11's swc builder emitted that layout whatever this said; Nest 12's

@@ -116,9 +116,9 @@ describe('the case header', () => {
     )
     const text = JSON.stringify(nodes)
     expect(text).toContain('TIME TO DETECT')
-    expect(text).toContain('1 h 0 min')
+    expect(text).toContain('1 hr')
     expect(text).toContain('DWELL TIME')
-    expect(text).toContain('2 h 0 min')
+    expect(text).toContain('2 hr')
     expect(text).toContain('1 of 2')
   })
 
