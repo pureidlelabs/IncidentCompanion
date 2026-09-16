@@ -230,6 +230,25 @@ export class ReportLifecycleService {
   ): Promise<{ id: string; superseded: string; blocks: number }> {
     const report = await this.reportOr404(caseId, reportId)
 
+    /**
+     * **Asked before the work, and settled by the index after it.** A report
+     * already corrected is refused here so the caller reads a sentence rather
+     * than a constraint; two calls that both pass this check are two inserts
+     * naming one predecessor, and `reports_supersedes_idx` refuses the second.
+     * Which of the two answers is which does not matter to the caller -- what
+     * matters is that one succeeds. -> #182
+     */
+    const [already] = await withCase(this.db, caseId, (tx) =>
+      tx
+        .select({ id: reports.id })
+        .from(reports)
+        .where(and(eq(reports.caseId, caseId), eq(reports.supersedes, reportId)))
+        .limit(1),
+    )
+    if (already) {
+      throw new ConflictException('That report has already been superseded.')
+    }
+
     const blocks = await withCase(this.db, caseId, (tx) =>
       tx
         .select()
@@ -252,6 +271,7 @@ export class ReportLifecycleService {
           // **A draft, whatever the original was.** A successor minted `final`
           // would be a document nobody wrote presented as one somebody signed.
           status: 'draft',
+          supersedes: reportId,
           createdBy: actorId,
           updatedBy: actorId,
         })

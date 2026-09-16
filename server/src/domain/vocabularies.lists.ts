@@ -354,3 +354,27 @@ export const METHOD_KIND = [
  * and costs nothing. -> `ui/src/components/ui/code-block.tsx`
  */
 export const QUERY_GRAMMAR = ['kql', 'powershell', 'bash', 'json'] as const
+
+/**
+ * Where a case's work sits: the incident response functions of NIST CSF 2.0 as
+ * SP 800-61r3 applies them, plus the closing state this product adds.
+ *
+ * **The state answers where the work is, not how far along it is.** A case is
+ * not required to pass through every one and may return to an earlier one: an
+ * incident believed handled that resumes is ordinary rather than exceptional.
+ * -> `openspec/specs/cases/spec.md`
+ *
+ * **No underscore, like every other option here.** `fromWire` camelises names
+ * and not values, and an option carrying one is the shape a recursive
+ * conversion would rewrite with no way back. -> `ui/src/api/specs.test.ts`
+ */
+export const CASE_STATES = ['respond', 'recover', 'post-incident', 'closed'] as const
+
+/**
+ * The states in which the incident itself is still running.
+ *
+ * **Stated rather than derived.** A reader asking "not closed" counts a case in
+ * write-up as a live incident, which is the one distinction the state exists to
+ * make.
+ */
+export const LIVE_STATES = ['respond', 'recover'] as const

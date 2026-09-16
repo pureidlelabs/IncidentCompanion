@@ -17,6 +17,7 @@ import type { Database } from '../db/client.js'
 import type { Env } from '../config/env.js'
 import { whereIs } from './where.js'
 import { AdminOnly } from '../auth/admin-only.js'
+import { isLive } from '../domain/vocabularies.js'
 
 export const activitySchema = z.object({
   database: z.object({
@@ -48,7 +49,9 @@ export const activitySchema = z.object({
   ),
   cases: z.object({
     total: z.number().int(),
-    open: z.number().int(),
+    /** The states where the incident is still running, which excludes write-up. */
+    live: z.number().int(),
+    postIncident: z.number().int(),
     closed: z.number().int(),
     /** Counted apart: nearly every case on a fresh install is a demo. */
     demo: z.number().int(),
@@ -144,10 +147,14 @@ export class ActivityController {
         approximateRows: count(row.rows),
         bytes: count(row.bytes),
       })),
+      /** Live is stated, and is not the same as "not closed". -> `domain/case.ts` */
       cases: {
         total: caseRows.reduce((sum, row) => sum + count(row.count), 0),
-        open: caseRows
-          .filter((row) => row.status === 'open')
+        live: caseRows
+          .filter((row) => isLive(row.status))
+          .reduce((sum, row) => sum + count(row.count), 0),
+        postIncident: caseRows
+          .filter((row) => row.status === 'post-incident')
           .reduce((sum, row) => sum + count(row.count), 0),
         closed: caseRows
           .filter((row) => row.status === 'closed')

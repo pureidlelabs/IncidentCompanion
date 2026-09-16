@@ -37,11 +37,8 @@ const ENGLISH = { code: 'en', label: 'English' }
 /**
  * Refuse a report naming a language this install cannot print it in.
  *
- * **Here rather than on the schema, because the terms are rows.** Uploading a
- * pack is the whole of adding a language, so no compiled-in list can fix the
- * field and a synchronous refinement has nothing to read. This is the shape
- * the case-boundary reference check already uses: a question a schema cannot
- * answer, asked where the write happens.
+ * **Here rather than on the schema, because the terms are rows** and a
+ * synchronous refinement has nothing to read.
  *
  * **Three codes are served and only one of them is a row.** `''` is a report
  * that has not chosen, `en` is the source language and never stored, and a

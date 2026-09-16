@@ -945,7 +945,11 @@ export function IncidentCanvas({
         {status !== undefined && (
           <div
             data-part="canvas-status"
-            className="pointer-events-none absolute right-4 bottom-4 z-10 text-2xs text-ink-muted *:pointer-events-auto"
+            // **A ground, because the drawing repaints under this corner**, and
+            // on the slot rather than on what fills it: a status is one short
+            // line, and the ghost buttons that fill it carry no resting ground
+            // of their own. -> #196
+            className="pointer-events-none absolute right-4 bottom-4 z-10 rounded-sm border border-border bg-surface px-1 py-1 text-2xs text-ink-muted *:pointer-events-auto"
           >
             {status}
           </div>

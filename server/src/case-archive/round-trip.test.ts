@@ -19,7 +19,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
-import { ArchiveImportService } from './import.service.js'
+import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
 import { isSealed } from '../archive/envelope.js'
 import { readArchive } from '../archive/format.js'
 import { cases, customers, evidence, reports, systems, timeline, user } from '../db/schema/index.js'
@@ -285,6 +285,37 @@ describe.skipIf(!db)('a case, out and back', () => {
 
     const [box] = await seed!.select().from(systems).where(eq(systems.caseId, result.id))
     expect(box!.createdBy).toBe(other)
+  })
+
+  /**
+   * That a row says which door it came through *here*, not which door it came
+   * through on the install that wrote the archive.
+   *
+   * **`unreviewed` is the half with a cost.** Carried over as `false`, a case
+   * imported from elsewhere arrives with every entry claiming somebody on this
+   * install has read it, which is the one thing that flag is for.
+   */
+  it('stamps where a row came through, over whatever the archive claims', async () => {
+    const made = await furnished()
+    await seed!
+      .update(systems)
+      .set({ source: 'Microsoft Sentinel' })
+      .where(eq(systems.id, made.systemId))
+    await seed!
+      .update(timeline)
+      .set({ provenance: 'typed', unreviewed: false })
+      .where(eq(timeline.caseId, made.caseId))
+
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+    await freeTheReference(made.caseId)
+    const result = await importer.load(built.bytes, '', other)
+
+    const [box] = await seed!.select().from(systems).where(eq(systems.caseId, result.id))
+    const [entry] = await seed!.select().from(timeline).where(eq(timeline.caseId, result.id))
+
+    expect(box!.source, 'the archive door names itself').toBe(ARCHIVE_IMPORT)
+    expect(entry!.provenance).toBe('imported')
+    expect(entry!.unreviewed, 'nobody on this install has read it yet').toBe(true)
   })
 
   it('carries the artefact bytes, and they still resolve', async () => {

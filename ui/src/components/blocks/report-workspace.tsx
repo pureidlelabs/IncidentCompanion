@@ -16,6 +16,8 @@ import {
   headingOf,
   isFrozen,
   railSectionsOf,
+  sectionNameOf,
+  UNTITLED_SECTION,
   sectionTally,
   stateOf,
   type RailSection,
@@ -421,7 +423,7 @@ function SectionColumn({
           // The rail names sections by `headingOf` and so does the document;
           // React Aria names the grip from this, so a third spelling would
           // give the grip a name the screen does not use.
-          textValue={headingOf(block, headings)}
+          textValue={sectionNameOf(block, headings)}
           className="items-start border-t-0 px-0 py-0 hover:bg-transparent"
         >
           <div id={sectionDomId(block.id)} className="min-w-0 flex-1">
@@ -456,10 +458,8 @@ export interface LanguageChoice {
  * A code read as its label, with the two a served list cannot name.
  *
  * **A partial pack says so here**, because this is the moment the choice is
- * made: the languages pane states coverage, and an analyst setting a report's
- * language was reading a name that looked the same at 12% and at 100%.
- * A complete pack says nothing extra, or the number is on every row and reads
- * as decoration. -> #688
+ * made. A complete pack says nothing extra, or the number is on every row and
+ * reads as decoration. -> #688
  */
 export function labelsFor(languages: readonly LanguageChoice[]): Record<string, string> {
   const labels: Record<string, string> = { '': 'The install\u2019s own' }
@@ -623,7 +623,14 @@ function SectionRail({
             <span className="w-4 shrink-0 font-mono text-2xs tabular-nums opacity-70">
               {String(section.number).padStart(2, '0')}
             </span>
-            <span className="min-w-0 flex-1 truncate">{section.heading}</span>
+            {section.heading === '' ? (
+              // **In words rather than a blank cell.** A row of nothing but a
+              // number reads as a section that failed to load, and this one is
+              // the kind the document prints no heading for either.
+              <span className="min-w-0 flex-1 truncate opacity-70">{UNTITLED_SECTION}</span>
+            ) : (
+              <span className="min-w-0 flex-1 truncate">{section.heading}</span>
+            )}
             {section.blank && (
               // In words, because the mark is a 6px difference in hue and what
               // nobody has written is the question this rail exists for.
@@ -676,9 +683,18 @@ function WrittenSection({
         <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">
           {number}
         </span>
-        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">
-          {headingOf(block, headings)}
-        </h2>
+        {headingOf(block, headings) === '' ? (
+          // **Not a heading, because there is none.** The document prints none
+          // for this kind either, so the card says what the section is rather
+          // than inventing what it is called.
+          <span className="min-w-0 flex-1 truncate text-2xs text-ink-muted">
+            {UNTITLED_SECTION}
+          </span>
+        ) : (
+          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">
+            {headingOf(block, headings)}
+          </h2>
+        )}
         {!headingIsFinal(block, headings) && (
           <span className="shrink-0 text-2xs text-ink-muted">heading not final</span>
         )}
@@ -702,7 +718,7 @@ function WrittenSection({
            */
           <p
             className="min-h-24 motion-safe:animate-pulse text-sm text-ink-muted"
-            aria-label={headingOf(block, headings)}
+            aria-label={sectionNameOf(block, headings)}
             role="status"
             aria-busy="true"
           >
@@ -715,7 +731,7 @@ function WrittenSection({
            * in the same text. -> `prose-body.tsx`
            */
           <ProseBody
-            label={headingOf(block, headings)}
+            label={sectionNameOf(block, headings)}
             value={text}
             readOnly={!editable}
             placeholder={editable ? 'Write\u2026' : 'Nothing was written here.'}

@@ -305,12 +305,29 @@ export function unassessedLimbs(row: ComplianceRow): readonly string[] {
 /**
  * The whole determination: in scope, and meeting the applicable test.
  *
+ * **A recorded call answers the test and the thresholds do not overrule it.**
+ * Scope is Article 2 and still governs, so an unclassified entity stays
+ * undetermined whatever was recorded. -> `statedDetermination`
+ *
  * **Undetermined rather than false whenever the track is unknown** - picking
  * one assesses the entity against an instrument that may not apply to it, and
  * both tracks reach confident opposite verdicts on the same facts.
  */
 export function significance(row: ComplianceRow): Determination {
   const scope = allOf([inScope(row)])
+  const stated = statedDetermination(row)
+  if (stated !== '') {
+    return gate(
+      [
+        scope,
+        allOf([
+          criterion('stated', 'Recorded by the analyst', stated === 'significant', 'Art 23',
+            `recorded as ${stated}`),
+        ]),
+      ],
+      'NIS2 Article 23 significance',
+    )
+  }
   const which = track(row)
   if (which === '') {
     return gate(

@@ -19,8 +19,15 @@ import { describe, expect, it } from 'vitest'
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 
-/** `@/blocks`, `@/features`, `@/screens` and the rest read the same way. */
-const APP_TIER = /from\s*['"]@\/(api|fixtures|features|screens|blocks)(?:\/[^'"]*)?['"]/
+/**
+ * `@/blocks`, `@/features`, `@/screens` and the rest read the same way.
+ *
+ * **`components/` is optional in the middle**, because the app tier's
+ * directories also sit under it: `@/components/blocks/...` is a screen's own
+ * pieces, and a pattern anchored at `@/` alone matches neither. -> #713
+ */
+const APP_TIER =
+  /from\s*['"]@\/(?:components\/)?(api|fixtures|features|screens|blocks)(?:\/[^'"]*)?['"]/
 
 describe('the kit publishes on its own', () => {
   // Stories are the kit's documentation pages, not shipped code, and the

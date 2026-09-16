@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -60,7 +60,17 @@ describe('writing a note in the pane', () => {
     await user.click(screen.getByRole('button', { name: 'New note' }))
 
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(document.activeElement).toBe(noteField())
+    // **Waited for, because the caret arrives asynchronously.** The editor is
+    // built after the click -- tiptap constructs it, the body reports ready,
+    // and the screen takes the focus on a tick after that. Sampling
+    // `activeElement` on the line after the click asks whether all of that has
+    // already happened, which under load it has not: measured at 2 failures in
+    // 30 runs six at a time, and never once when the runs were not concurrent.
+    // The property is unchanged -- a caret that never arrives still fails here,
+    // it just fails for the reason it says. -> #410
+    await waitFor(() => {
+      expect(document.activeElement).toBe(noteField())
+    })
   })
 
   it('shows in the index what was typed into the field', async () => {
