@@ -18,6 +18,8 @@
 
 **The destination is the operator's, and choosing it is theirs.** Article V names a log destination among the infrastructure an operator points the application at; the test is who owns the thing at the other end, and this end of it is theirs. Sending the audit there is the one outbound request the install makes, and nothing about a case travels on it.
 
+**The audit's six severities are drawn on the product's five tones.** The scale the record speaks has a step above critical and the interface's severity ramp does not, so the top two levels share a tone. The lettered level beside the mark is what tells them apart, and the ramp does not grow a sixth step to close the gap.
+
 **Connections are a gap.** No interceptor runs on a connection upgrade, so anything the socket records is written by hand and is not guaranteed by the same mechanism as everything else.
 
 # Design
