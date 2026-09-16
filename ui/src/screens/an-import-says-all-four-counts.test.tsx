@@ -2,14 +2,12 @@
  * That an import reports all four counts the specification asks it for: added,
  * already there, refused, and written with something missing.
  *
- * **The silence was the defect, twice.** `skipped` and `replaced` reached the
- * route's answer and were drawn by nothing, so an analyst re-importing a file
- * the case already held read "0 rows imported" and nothing else. -> #793
- *
- * **The silence was the defect.** The count existed on the server, reached the
- * route's answer, and was drawn by nothing -- so a case landed less connected
- * than the file implied and whoever read it next could not tell whether the
- * connection was never made or was lost on the way in. -> #51
+ * **The silence was the defect, in both halves.** Each count existed on the
+ * server and reached the route's answer while the screen drew nothing: a case
+ * landed less connected than the file implied, with no way to tell whether the
+ * connection was never made or was lost on the way in (-> #51), and a file
+ * re-imported into a case that already held it read "0 rows imported" and
+ * stopped there (-> #793).
  *
  * `openspec/specs/data-exchange/spec.md` asks for the number *and* the kind:
  * *four references could not be carried* leaves an analyst reading the whole
@@ -130,6 +128,27 @@ describe('an import that met rows the case already held', () => {
       '28 already there',
     )
     expect(said, 'the analyst is not told how many rows were replaced').toContain('4 replaced')
+  })
+
+  /**
+   * The headline over the strip, which an analyst reads before the strip. `0
+   * rows imported into Assets` is what an import that did nothing looks like,
+   * and a file every row of which was already present is not that.
+   */
+  it('does not headline a file that was already present as nothing happening', () => {
+    render(
+      <ImportDataScreen
+        kase={campaignCase}
+        specs={specsFixture}
+        result={{ ...carried, written: 0, skipped: 28 }}
+      />,
+    )
+
+    const said = document.body.textContent
+    expect(said, 'an import that added nothing new is headlined as one that did nothing').toContain(
+      'Nothing new in Impact',
+    )
+    expect(said).not.toContain('0 rows imported into Impact')
   })
 
   /** A count of nothing is not a line of the strip. */

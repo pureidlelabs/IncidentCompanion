@@ -176,6 +176,9 @@ export const AlreadyThere: Story = {
     await step('it says how many were already there and how many it replaced', async () => {
       await expect(canvas.getByText(/28 already there, 4 replaced/)).toBeVisible()
     })
+    await step('and does not headline it as an import that did nothing', async () => {
+      await expect(canvas.getByText('Nothing new in Assets')).toBeVisible()
+    })
   },
 }
 
@@ -213,9 +216,19 @@ export const Narrow: Story = {
   ),
 }
 
-/** A result strip long enough to wrap: every count non-zero, and four kinds lost. */
+/**
+ * A result strip long enough to wrap: every count non-zero, and four kinds
+ * lost.
+ *
+ * In `Narrow`'s frame, so the wrap is the strip's rather than the canvas's.
+ */
 export const Overlong: Story = {
   name: 'A result too long for one line',
+  render: (args) => (
+    <div className="w-[420px] border border-dashed border-border p-2">
+      <ImportDataScreen {...args} />
+    </div>
+  ),
   args: {
     result: {
       collection: 'timeline',

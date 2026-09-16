@@ -118,8 +118,6 @@ function lostReferences(by: Readonly<Record<string, number>>): string {
 /**
  * What the import met that the case already held: *28 already there, 4
  * replaced*, trailed by a space for whatever is said next.
- *
- * A count of zero is no line, so a file holding no duplicate returns nothing.
  */
 function duplicates(result: ImportResult): string {
   const said = [
@@ -127,6 +125,21 @@ function duplicates(result: ImportResult): string {
     result.replaced > 0 ? `${String(result.replaced)} replaced` : '',
   ].filter((part) => part !== '')
   return said.length === 0 ? '' : `${said.join(', ')}. `
+}
+
+/**
+ * The headline over an import that refused nothing.
+ *
+ * A file every row of which the case already held wrote nothing new, and
+ * *0 rows imported* over *28 already there* reads as an import that did
+ * nothing at all.
+ */
+function headline(result: ImportResult): string {
+  const label = COLLECTION_LABELS[result.collection]
+  if (result.written === 0 && result.skipped + result.replaced > 0) {
+    return `Nothing new in ${label}`
+  }
+  return `${String(result.written)} rows imported into ${label}`
 }
 
 /**
@@ -208,7 +221,7 @@ export function ImportDataScreen({
       <div className="flex flex-col gap-4">
         {showing && result.refused === 0 && (
           <Alert variant="success">
-            <AlertTitle>{`${String(result.written)} rows imported into ${COLLECTION_LABELS[result.collection]}`}</AlertTitle>
+            <AlertTitle>{headline(result)}</AlertTitle>
             <AlertDescription>
               {/* **Said either way.** Silence would mean both "nothing was
                   lost" and "nobody looked", and a case quietly less connected
