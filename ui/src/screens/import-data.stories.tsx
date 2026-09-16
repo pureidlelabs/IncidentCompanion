@@ -60,7 +60,15 @@ export const EmptyCase: Story = {
 export const Imported: Story = {
   name: 'An import that landed',
   args: {
-    result: { collection: 'systems', written: 30, refused: 0, unlinked: 0, unlinkedBy: {} },
+    result: {
+      collection: 'systems',
+      written: 30,
+      skipped: 0,
+      replaced: 0,
+      refused: 0,
+      unlinked: 0,
+      unlinkedBy: {},
+    },
   },
   play: async ({ canvas, step }) => {
     await step('it says how many landed and where', async () => {
@@ -90,6 +98,8 @@ export const ReferencesLost: Story = {
     result: {
       collection: 'impact',
       written: 18,
+      skipped: 0,
+      replaced: 0,
       refused: 0,
       unlinked: 5,
       unlinkedBy: { systems: 3, methods: 2 },
@@ -123,14 +133,11 @@ export const RowsRefused: Story = {
     result: {
       collection: 'network_indicators',
       written: 14,
+      skipped: 0,
+      replaced: 0,
       refused: 3,
       unlinked: 0,
       unlinkedBy: {},
-      refusals: [
-        { row: 4, detail: 'value is not an address, a domain or a URL' },
-        { row: 9, detail: 'disposition is not one of benign, suspicious, malicious' },
-        { row: 17, detail: 'firstSeen is not a time' },
-      ],
     },
   },
   play: async ({ canvas, step }) => {
@@ -142,42 +149,32 @@ export const RowsRefused: Story = {
       // landed, which is the half an analyst would stop reading at.
       await expect(canvas.queryByText(/rows imported into/)).toBeNull()
     })
-    await step('and each refusal names its line and its reason', async () => {
-      await expect(canvas.getByText(/value is not an address/)).toBeVisible()
-      await expect(canvas.getByText(/firstSeen is not a time/)).toBeVisible()
-    })
   },
 }
 
 /**
- * What the route actually answers: a count of refusals and no line numbers.
+ * A file imported a second time, every row of which the case already holds.
  *
- * **The shape the container can fill.** `POST /cases/{id}/{collection}.csv`
- * returns `{ added, skipped, replaced, refused, unlinked, unlinkedBy }`, so a
- * screen that can only report refusals it has line numbers for reports none
- * -- and the analyst reads an unqualified success over a file the server took
- * in part. The count is what has to be true; the lines are detail this route
- * does not carry yet.
+ * **The state the two missing counts hid.** Without them this reads `0 rows
+ * imported` and nothing else, which is an import that did nothing rather than
+ * one that found every row already present. -> #793
  */
-export const RefusedWithoutDetail: Story = {
-  name: 'Rows refused, with only a count to say so',
+export const AlreadyThere: Story = {
+  name: 'A file the case already holds',
   args: {
     result: {
-      collection: 'network_indicators',
-      written: 14,
-      refused: 3,
+      collection: 'systems',
+      written: 0,
+      skipped: 28,
+      replaced: 4,
+      refused: 0,
       unlinked: 0,
       unlinkedBy: {},
     },
   },
   play: async ({ canvas, step }) => {
-    await step('it still says how many were refused', async () => {
-      await expect(canvas.getByText('14 rows imported, 3 refused')).toBeVisible()
-    })
-    await step('and does not report the import as whole', async () => {
-      // The half an analyst stops reading at. A file the server took in part
-      // reported as landed is worse than one reported as failed.
-      await expect(canvas.queryByText(/rows imported into/)).toBeNull()
+    await step('it says how many were already there and how many it replaced', async () => {
+      await expect(canvas.getByText(/28 already there, 4 replaced/)).toBeVisible()
     })
   },
 }
@@ -216,23 +213,18 @@ export const Narrow: Story = {
   ),
 }
 
-/** A refusal long enough to wrap inside its own line. */
+/** A result strip long enough to wrap: every count non-zero, and four kinds lost. */
 export const Overlong: Story = {
-  name: 'A refusal too long for one line',
+  name: 'A result too long for one line',
   args: {
     result: {
       collection: 'timeline',
-      unlinked: 0,
-      unlinkedBy: {},
-      written: 0,
-      refused: 1,
-      refusals: [
-        {
-          row: 2,
-          detail:
-            'systemId points at a row in another case, and a reference may not cross the case boundary - re-export the template from this case and map the column again',
-        },
-      ],
+      written: 132,
+      skipped: 47,
+      replaced: 19,
+      refused: 6,
+      unlinked: 24,
+      unlinkedBy: { systems: 11, accounts: 7, methods: 4, network_indicators: 2 },
     },
   },
 }
