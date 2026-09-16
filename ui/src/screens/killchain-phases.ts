@@ -1,3 +1,5 @@
+import { ukcCycle } from '@contract/killchain'
+
 import { isEvent, type Case, type TimelineEntry } from '@/api/model'
 import type { Specs } from '@/api/specs'
 
@@ -9,14 +11,10 @@ import type { Specs } from '@/api/specs'
  * accounted for, which is a table of every phase and the evidence behind it.
  */
 
-/**
- * The served vocabulary member that is not a phase.
- *
- * `ukcPhase` publishes it so an entry can be filed as neither attack nor
- * response, and the chain has no stage for it - so it is counted as an absence
- * rather than drawn as a nineteenth row.
- */
-const NOT_A_PHASE = 'policy violation'
+/** The served vocabulary members the chain has no stage for: `ukcCycle` gives them none. */
+function outsideOf(specs: Specs): readonly string[] {
+  return (specs.vocabularies.ukcPhase ?? []).filter((phase) => ukcCycle(phase) === '')
+}
 
 /** Where a phase sits in the intrusion: getting in, moving, getting out. */
 export type Cycle = 'in' | 'through' | 'out' | ''
@@ -48,9 +46,11 @@ export interface Coverage {
    * the four; the screen holds them already, so making the door hand them over
    * costs a length where a number stood.
    *
-   * Counted events filed against the vocabulary member that is not a phase.
+   * Counted events filed against a vocabulary member that is not a phase.
    */
   notAPhase: readonly string[]
+  /** How the install names what the chain has no stage for. */
+  outside: readonly string[]
   /** Counted events carrying no phase at all. */
   untagged: readonly string[]
   /** Events the analyst has taken off the graph. */
@@ -61,7 +61,7 @@ export interface Coverage {
 
 /** The phases the install publishes, in canonical order. */
 export function phasesOf(specs: Specs): readonly string[] {
-  return (specs.vocabularies.ukcPhase ?? []).filter((phase) => phase !== NOT_A_PHASE)
+  return (specs.vocabularies.ukcPhase ?? []).filter((phase) => ukcCycle(phase) !== '')
 }
 
 const cycleOf = (entry: TimelineEntry): Cycle => {
@@ -86,6 +86,8 @@ export function coverageOf(kase: Case, specs: Specs): Coverage {
   const events = kase.timeline.filter(isEvent)
   const counted = events.filter((entry) => !entry.hideFromGraph)
   const hostNames = new Map(kase.systems.map((row) => [row.id, row.hostname]))
+  const outside = outsideOf(specs)
+  const isOutside = new Set(outside)
 
   const placed = new Set<string>()
   const phases = phasesOf(specs).map((phase, at): CoveragePhase => {
@@ -104,9 +106,6 @@ export function coverageOf(kase: Case, specs: Specs): Coverage {
     return {
       phase,
       num: at + 1,
-      // The first cycle any entry in the phase declares. Never derived from
-      // the phase's position: the server owns that mapping and a second copy
-      // here would disagree the day it moves.
       cycle: own.map(cycleOf).find((value) => value !== '') ?? '',
       observed: own.length > 0,
       hosts: [...hosts].sort(),
@@ -123,8 +122,9 @@ export function coverageOf(kase: Case, specs: Specs): Coverage {
       .map((row) => row.hostname)
       .sort(),
     hostTotal: kase.systems.length,
+    outside,
     notAPhase: counted
-      .filter((entry) => entry.ukcPhase.trim().toLowerCase() === NOT_A_PHASE)
+      .filter((entry) => isOutside.has(entry.ukcPhase.trim().toLowerCase()))
       .map(titleOf),
     untagged: counted.filter((entry) => entry.ukcPhase.trim() === '').map(titleOf),
     hidden: events.filter((entry) => entry.hideFromGraph).map(titleOf),

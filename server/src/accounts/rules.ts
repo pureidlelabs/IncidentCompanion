@@ -47,3 +47,15 @@ export function duplicateEmail(why: unknown): boolean {
   }
   return at.cause === undefined ? false : duplicateEmail(at.cause)
 }
+
+/**
+ * The order a sweep revokes in: everybody else, then the caller.
+ *
+ * Every revocation is authorised by the caller's own session, so revoking
+ * theirs partway through leaves the rest unauthorised -- the sweep then reports
+ * success having signed out whoever happened to come first. The set it is given
+ * carries no order of its own.
+ */
+export function callerLast(holders: readonly string[], caller: string): string[] {
+  return [...holders.filter((id) => id !== caller), ...holders.filter((id) => id === caller)]
+}

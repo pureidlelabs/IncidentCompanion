@@ -80,11 +80,11 @@
 | An install can federate its sign-in to the organisation's identity provider | Somebody must lose access now | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
 | An install can federate its sign-in to the organisation's identity provider | A mapping is removed | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
 | An install can federate its sign-in to the organisation's identity provider | An analyst is reached both ways | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
-| A session belongs to its holder and ends when it should | An administrator ends a session | unbuilt | Not built: no route ends another analyst's session. -> #204 |
+| A session belongs to its holder and ends when it should | An administrator ends a session | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
 | A session belongs to its holder and ends when it should | A session goes idle | demonstrated | server/test/a-session-past-its-window-is-refused.test.ts |
 | A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | unbuilt | Not built: a session has an idle window and no absolute cap. -> #203 |
 | A session belongs to its holder and ends when it should | An analyst reviews their own sessions | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
-| A session belongs to its holder and ends when it should | Every session is ended at once | unbuilt | Not built: no route ends another analyst's session. -> #204 |
+| A session belongs to its holder and ends when it should | Every session is ended at once | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
 | An administrator can see who reaches what, and why | An administrator reviews access | unbuilt | Not built: whether an account is local or the provider's, and its second factor. -> #59 |
 | An administrator can see who reaches what, and why | An administrator asks why | demonstrated | server/src/access/what-an-administrator-can-see-they-granted.test.ts |
 | An administrator can see who reaches what, and why | An administrator asks from the customer's side | demonstrated | server/src/access/what-an-administrator-can-see-they-granted.test.ts |
@@ -262,12 +262,12 @@
 | What the application writes, it can read back | A file names a field that does not exist | demonstrated | server/src/exports/csv-import.test.ts |
 | What the application writes, it can read back | A blank value | demonstrated | server/src/exports/a-blank-cell-is-not-a-value.test.ts |
 | An import is all of it or none of it | One row in a file is invalid | demonstrated | server/src/exports/import.service.test.ts |
-| An import is all of it or none of it | An import succeeds | demonstrated | server/src/exports/import.service.test.ts |
+| An import is all of it or none of it | An import succeeds | demonstrated | ui/src/screens/an-import-says-all-four-counts.test.tsx |
 | A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | demonstrated | server/src/exports/import.service.test.ts |
 | A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | demonstrated | server/src/exports/import.service.test.ts |
 | A reference travels as what it points at, not as where it was kept | A file names where a row was kept | demonstrated | server/src/exports/import.service.test.ts |
-| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | ui/src/screens/an-import-says-what-it-could-not-carry.test.tsx |
-| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | ui/src/screens/an-import-says-what-it-could-not-carry.test.tsx |
+| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | ui/src/screens/an-import-says-all-four-counts.test.tsx |
+| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | ui/src/screens/an-import-says-all-four-counts.test.tsx |
 | An import says what to do about something already there | The analyst does not say what to do | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | A row was changed by somebody else | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | An unrecognised instruction | demonstrated | server/src/exports/exports.controller.test.ts |

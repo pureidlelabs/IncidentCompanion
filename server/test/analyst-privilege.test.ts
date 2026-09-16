@@ -88,6 +88,8 @@ const REFUSED_TO_AN_ANALYST: readonly string[] = [
   // are in `disabledPaths`, because a guard outside the endpoint has to
   // guess the body shape and every path that acts.
   'POST /api/accounts/{username}/role',
+  'POST /api/accounts/{username}/sessions/end',
+  'POST /api/accounts/sessions/end',
   'POST /api/accounts/{username}/disable',
   'POST /api/accounts/{username}/enable',
   'POST /api/regimes/{name}',

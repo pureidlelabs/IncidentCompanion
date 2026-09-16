@@ -75,17 +75,15 @@ export interface ImportResult {
   collection: CollectionName
   /** How many rows the server wrote. */
   written: number
+  /** How many the case already held, left as they were. */
+  skipped: number
+  /** How many already-present rows the import overwrote, having been asked to. */
+  replaced: number
   /**
-   * How many it refused.
-   *
-   * **A count, because that is what the route answers.** It returns
-   * `{ added, skipped, replaced, refused }` and no line numbers, so a screen
-   * reporting only the refusals it has lines for reports none of them -- and
-   * an analyst reads an unqualified success over a file taken in part.
+   * How many it refused: a replacement somebody else had already changed, or
+   * was holding open in a merge review.
    */
   refused: number
-  /** Which lines, and why, where the caller knows. */
-  refusals?: readonly { row: number; detail: string }[]
   /**
    * How many references the destination could not resolve.
    *
@@ -115,6 +113,33 @@ function lostReferences(by: Readonly<Record<string, number>>): string {
       return `${String(count)} to ${label ?? collection}`
     })
     .join(', ')
+}
+
+/**
+ * What the import met that the case already held: *28 already there, 4
+ * replaced*, trailed by a space for whatever is said next.
+ */
+function duplicates(result: ImportResult): string {
+  const said = [
+    result.skipped > 0 ? `${String(result.skipped)} already there` : '',
+    result.replaced > 0 ? `${String(result.replaced)} replaced` : '',
+  ].filter((part) => part !== '')
+  return said.length === 0 ? '' : `${said.join(', ')}. `
+}
+
+/**
+ * The headline over an import that refused nothing.
+ *
+ * A file every row of which the case already held wrote nothing new, and
+ * *0 rows imported* over *28 already there* reads as an import that did
+ * nothing at all.
+ */
+function headline(result: ImportResult): string {
+  const label = COLLECTION_LABELS[result.collection]
+  if (result.written === 0 && result.skipped + result.replaced > 0) {
+    return `Nothing new in ${label}`
+  }
+  return `${String(result.written)} rows imported into ${label}`
 }
 
 /**
@@ -196,13 +221,13 @@ export function ImportDataScreen({
       <div className="flex flex-col gap-4">
         {showing && result.refused === 0 && (
           <Alert variant="success">
-            <AlertTitle>{`${String(result.written)} rows imported into ${COLLECTION_LABELS[result.collection]}`}</AlertTitle>
+            <AlertTitle>{headline(result)}</AlertTitle>
             <AlertDescription>
               {/* **Said either way.** Silence would mean both "nothing was
                   lost" and "nobody looked", and a case quietly less connected
                   than its file is found later by somebody who cannot tell
                   which. -> `openspec/specs/data-exchange/spec.md` */}
-              <p className="mb-1">{carriage(result)}</p>
+              <p className="mb-1">{`${duplicates(result)}${carriage(result)}`}</p>
               <Button
                 variant="link"
                 size="xs"
@@ -228,23 +253,7 @@ export function ImportDataScreen({
             <AlertTitle>
               {`${String(result.written)} rows imported, ${String(result.refused)} refused`}
             </AlertTitle>
-            <AlertDescription>{carriage(result)}</AlertDescription>
-            {/* The lines where the caller has them. The count above is what
-                the route answers, and it is the half that has to be said: a
-                partial import reported as whole is the one reading an analyst
-                acts on and should not. */}
-            {result.refusals !== undefined && result.refusals.length > 0 && (
-              <AlertDescription>
-                <ul className="mt-1 flex flex-col gap-0.5">
-                  {result.refusals.map((one) => (
-                    <li key={one.row} className="text-xs">
-                      <span className="font-mono tabular-nums">{`Row ${String(one.row)}`}</span>
-                      {` - ${one.detail}`}
-                    </li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            )}
+            <AlertDescription>{`${duplicates(result)}${carriage(result)}`}</AlertDescription>
           </Alert>
         )}
 

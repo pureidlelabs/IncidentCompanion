@@ -52,6 +52,7 @@ const ENTRIES = [
   'collections.ts',
   'identity.ts',
   'indicator-shape.ts',
+  'killchain.ts',
   'malware-shape.ts',
   'prose-authoring.ts',
   /**
