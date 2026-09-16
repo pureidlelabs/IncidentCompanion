@@ -318,9 +318,13 @@ export function TimelineScreen({
         editor.edit(entry)
         return
       case 'delete':
-        void write.remove([entry.id]).then(() => {
-          setEntries((current) => withoutTimelineEntries(current, new Set([entry.id])))
-        })
+        /**
+         * **Asked, not written.** Both doors that offer a row delete -- the
+         * toolbar's trash and the row menu's item -- arrive here, and this was
+         * the one path on the screen that wrote without asking while its own
+         * bulk bar confirmed the same act.
+         */
+        setDeleting([entry.id])
         return
     }
   }
