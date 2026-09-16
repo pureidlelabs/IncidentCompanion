@@ -45,10 +45,8 @@ const block = (over: Partial<ReportBlock>): ReportBlock =>
  * **No `heading.written`, because no pack can carry one.**
  * `report/block-kinds.test.ts` asserts the English pack does not hold that key
  * and `packFrom` drops any uploaded key English lacks, so a fixture carrying it
- * describes a pack the server is tested never to produce.
- *
- * `heading.figure` is here because the other written kind *is* named, which is
- * what holds the exception below to one kind.
+ * describes a pack the server is tested never to produce. `heading.figure` is
+ * here because the other written kind *is* named.
  */
 const DUTCH = {
   'heading.exec_summary': 'Managementsamenvatting',
@@ -108,10 +106,7 @@ describe('a heading on the report screen', () => {
     expect(headingOf(written({}), {})).toBe('')
   })
 
-  /**
-   * **A written section the analyst titled is that title**, which is the whole
-   * reason the kind has no served heading.
-   */
+  /** Which is the whole reason the kind has no served heading. */
   it('is the analyst\u2019s own title on a written section that has one', () => {
     expect(headingOf(written({ heading: 'Hoe wij het vonden' }), DUTCH)).toBe('Hoe wij het vonden')
   })
@@ -125,11 +120,7 @@ describe('a heading on the report screen', () => {
     expect(labelForKind('written', DUTCH)).toBe('Written section')
   })
 
-  /**
-   * **The exception is `written` alone.** `figure` is the other written kind
-   * and the English pack does name it, so a fix that keyed off "the analyst
-   * writes this one" would take its heading away too.
-   */
+  /** **The exception is `written` alone.** -> `report-shape.ts` */
   it('leaves the other written kind its served heading', () => {
     expect(headingOf(written({ kind: 'figure' }), DUTCH)).toBe('Figuur')
   })
