@@ -26,7 +26,7 @@
  * it stops the next one. `blocks.test.ts`'s smells are the other half: they
  * catch a copy that imports nothing and retypes the classes instead.
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -100,8 +100,8 @@ const OWNED: Readonly<Record<string, string>> = {
   KbdGroup: 'blocks/chord-keys.tsx',
   KbdKeyName: 'blocks/chord-keys.tsx',
   LabelledSeparator: 'blocks/sso-sign-in.tsx',
-  ListBox: 'blocks/command-palette.tsx',
-  ListBoxSection: 'blocks/command-palette.tsx',
+  ListBox: 'blocks/palette-results.tsx',
+  ListBoxSection: 'blocks/palette-results.tsx',
   Mark: 'blocks/auth-masthead.tsx',
   Menu: 'blocks/data-table.tsx',
   MenuItem: 'blocks/picker-frame.tsx',
@@ -260,6 +260,13 @@ function sources(dir: string, into: string[] = []): string[] {
   return into
 }
 
+/** The files an `OWNED` value names; a bare name is a block, and ` / ` splits a pair. */
+function ownerFiles(owner: string): string[] {
+  return owner
+    .split(' / ')
+    .map((part) => join(SRC, 'components', part.endsWith('.tsx') ? part : `blocks/${part}.tsx`))
+}
+
 /** The capitalised names a file imports from the component tiers. */
 function imported(file: string): string[] {
   const text = readFileSync(file, 'utf8')
@@ -287,6 +294,18 @@ describe('a block owns the parts it is built from', () => {
   it('finds source to read', () => {
     expect(screenFiles.length).toBeGreaterThan(30)
     expect(blockFiles.length).toBeGreaterThan(10)
+  })
+
+  it('names an owner that still exists', () => {
+    const gone = Object.entries(OWNED)
+      .flatMap(([name, owner]) => ownerFiles(owner).map((file) => ({ name, file })))
+      .filter(({ file }) => !existsSync(file))
+      .map(({ name, file }) => `${name}: ${file.slice(SRC.length + 1)}`)
+
+    expect(
+      gone.sort(),
+      'an owner is what a reader consults to decide whether an entry may go - point it at the block that holds the part now',
+    ).toEqual([])
   })
 
   /**
