@@ -42,7 +42,7 @@ async function reachReview(page: Page): Promise<void> {
 
   /**
    * **Any time, because the fixture's incidents are dated and the default is a
-   * window.** `NO_DIALS` opens on `Last 7 days` and `fixtureSource.ts` carries
+   * window.** `NO_DIALS` opens on `Last 7 days` and `fixtures/sentinel-source.ts` carries
    * fixed dates, so the listing empties the moment those are a week old --
    * *0 of 0 incident(s)* on a step whose next control needs a ticked row. The
    * dates are the fixture's own business; what this asks for is every incident

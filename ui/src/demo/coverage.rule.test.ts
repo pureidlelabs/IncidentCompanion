@@ -19,6 +19,13 @@ import { describe, expect, it } from 'vitest'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const API = join(HERE, '../api')
 
+/** The client's own source, less its tests and stories. */
+function clientSources(): readonly string[] {
+  return globSync('**/*.{ts,tsx}', { cwd: API, absolute: true }).filter(
+    (path) => !/\.(test|stories)\.tsx?$/.test(path),
+  )
+}
+
 /**
  * The first path segment of every route `src/api` asks for.
  *
@@ -33,9 +40,7 @@ const API = join(HERE, '../api')
  */
 function askedFor(): ReadonlySet<string> {
   const found = new Set<string>()
-  const files = globSync('**/*.{ts,tsx}', { cwd: API, absolute: true }).filter(
-    (path) => !/\.(test|stories)\.tsx?$/.test(path),
-  )
+  const files = clientSources()
   expect(files.length, 'no client api source found; has src/api moved?').toBeGreaterThan(20)
 
   for (const file of files) {
@@ -80,16 +85,20 @@ function askedFor(): ReadonlySet<string> {
  * one entry, and that is where the demo's defects were: a bulk edit read as a
  * row id, and four routes answering at any depth.
  */
-function caseRoutes(source: string): readonly string[] {
-  const found: string[] = []
-  for (const match of source.matchAll(/\/cases\/\$\{[^}]*\}\/([a-z][a-z0-9-]*)/g)) {
-    found.push(match[1] ?? '')
+function askedForCases(): ReadonlySet<string> {
+  const found = new Set<string>()
+  for (const file of clientSources()) {
+    for (const match of readFileSync(file, 'utf8').matchAll(
+      /\/cases\/\$\{[^}]*\}\/([a-z][a-z0-9-]*)/g,
+    )) {
+      found.add(match[1] ?? '')
+    }
   }
   return found
 }
 
 /** A case route the demo answers, by the name the client asks for it under. */
-const CASE_SERVED = new Set(['summary', 'timeline'])
+const CASE_SERVED = new Set(['summary'])
 
 /** A case route the demo refuses, each because the store is not here. */
 const CASE_REFUSED = new Set([
@@ -105,7 +114,6 @@ const CASE_REFUSED = new Set([
   'compliance',
   'evidence',
   'imports',
-  'reports',
 ])
 
 /** What the demo answers. Kept beside the handler's own routing table. */
@@ -156,10 +164,7 @@ describe('the demo has decided about every route the client calls', () => {
   })
 
   it('has decided about every route under a case as well', () => {
-    const files = globSync('**/*.{ts,tsx}', { cwd: API, absolute: true }).filter(
-      (path) => !/\.(test|stories)\.tsx?$/.test(path),
-    )
-    const asked = new Set(files.flatMap((file) => caseRoutes(readFileSync(file, 'utf8'))))
+    const asked = askedForCases()
     expect(asked.size, 'no case routes found; has the path shape changed?').toBeGreaterThan(3)
 
     const undecided = [...asked].filter(
@@ -175,5 +180,14 @@ describe('the demo has decided about every route the client calls', () => {
     const asked = askedFor()
     const stale = [...SERVED, ...REFUSED].filter((segment) => !asked.has(segment))
     expect(stale.sort().join(', '), 'listed here but no longer called by the client').toBe('')
+  })
+
+  it('lists no case route it does not need to', () => {
+    const asked = askedForCases()
+    const stale = [...CASE_SERVED, ...CASE_REFUSED].filter((segment) => !asked.has(segment))
+    expect(
+      stale.sort().join(', '),
+      'listed as a case route but no longer called by the client',
+    ).toBe('')
   })
 })

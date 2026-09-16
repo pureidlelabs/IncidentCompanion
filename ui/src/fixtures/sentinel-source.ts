@@ -29,7 +29,7 @@ import type {
   RemoteAlert,
   RemoteIncident,
   SourceListing,
-} from './source'
+} from '@/api/sentinel/source'
 
 export const FIXTURE_IDENTITY = 'analyst@example.invalid'
 
