@@ -635,7 +635,7 @@ export function ImportSentinelScreen({
                   nothing beside it is the same picture as an import that did
                   not work. -> #382 */}
               {(wrote?.skippedExisting ?? 0) > 0 &&
-                ` ${String(wrote?.skippedExisting ?? 0)} row(s) were already in the case.`}
+                ` ${String(wrote?.skippedExisting ?? 0)} already there.`}
             </p>
           ) : (
             <>

@@ -95,7 +95,7 @@ SENTENCE = re.compile(
 # Two passes over the same text see both.
 #
 # **The second form is a template whose first thing is the value.**
-# ` ${n} row(s) were already in the case.` is a sentence an analyst reads, and
+# ` ${n} already there.` is a sentence an analyst reads, and
 # requiring a capital first would leave it, and every count worded that way, to
 # nothing.
 #
@@ -292,9 +292,32 @@ def test_copy_around_an_interpolation_is_extracted() -> None:
     claimed is that the extractor reaches the tree's own copy.
     """
     values = {v for _, _, v in screen_strings()}
-    assert any("row(s) were already in the case" in v for v in values), (
+    assert any("already there" in v for v in values), (
         "a status line naming a count is not extracted, so nothing lints the "
         "words on either side of the number"
+    )
+
+
+def test_a_row_already_present_is_said_one_way() -> None:
+    """One fact, one sentence, across every import screen.
+
+    The words are the requirement's own -- *how many were already there*, at
+    `openspec/specs/data-exchange/spec.md`. A second spelling is not a
+    violation any content rule scores, so nothing else can refuse it.
+    """
+    said = [
+        (path, line, text)
+        for path, line, text in screen_strings()
+        if path.startswith("ui/src/screens/import-")
+        and path.endswith(".tsx")
+        # A count of what the case already held, not any sentence using the
+        # word: `PLACEHOLDER` is what an interpolated number was replaced by.
+        and re.search(rf"\b{PLACEHOLDER}\b.*already", text, re.I)
+    ]
+    assert said, "no import screen reports rows the case already held"
+    wrong = [f"{p}:{n}  {t}" for p, n, t in said if "already there" not in t.lower()]
+    assert not wrong, "a row already present is spelled a second way:\n  " + "\n  ".join(
+        wrong
     )
 
 
