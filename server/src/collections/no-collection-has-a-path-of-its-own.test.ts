@@ -58,6 +58,19 @@ for (const ctor of CONTROLLERS) {
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const CONTROLLER_FILES = readdirSync(HERE).filter((name) => name.endsWith('.controller.ts'))
+const SOURCE_FILES = readdirSync(HERE).filter(
+  (name) => name.endsWith('.ts') && !name.endsWith('.test.ts'),
+)
+
+/** What the doors share, and the file each of them is declared in. */
+const ONE_HOME: Record<string, string> = {
+  'const BULK_LIMIT': 'write-door.ts',
+  'const bulkBodySchema': 'write-door.ts',
+  'function parsed': 'write-door.ts',
+  'function versionRead': 'write-door.ts',
+  'class CreatedIdsDto': 'acknowledged.ts',
+  'class DeletedDto': 'acknowledged.ts',
+}
 
 const MUTATION = /\b(?:db|tx)\s*\.\s*(?:insert|update|delete)\s*\(/g
 
@@ -101,6 +114,22 @@ describe('a collection that needs something the others do not', () => {
       mutationsIn('collection.service.ts'),
       'the shared service writes nothing, so a controller writing nothing proves nothing',
     ).toBeGreaterThan(0)
+  })
+
+  /**
+   * **A second declaration of a shared name is a second implementation**, and
+   * nothing compares the copies, so they drift into two answers. -> #638
+   *
+   * Asserted as *exactly one*, so renaming a declaration fails here rather than
+   * leaving a sweep that matches nothing and reports success.
+   */
+  it.each(Object.entries(ONE_HOME))('%s is declared once, in %s', (declaration, home) => {
+    const holders = SOURCE_FILES.filter((name) =>
+      readFileSync(join(HERE, name), 'utf8').includes(declaration),
+    )
+    expect(holders, `${declaration} is declared in ${holders.join(', ') || 'no file'}`).toEqual([
+      home,
+    ])
   })
 
   it.each(CONTROLLER_FILES)('%s writes no row itself', (name) => {
