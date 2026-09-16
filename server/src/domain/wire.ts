@@ -58,8 +58,12 @@ export interface RowMeta {
  * Which door the row came through - `manual`, or the importer that wrote it.
  *
  * **Server-owned, so it is on the row and not in the schema.** A client that
- * could set it could claim an analyst typed what a CSV supplied. `impact` is
- * the one entity without it: a conclusion has no importer to come from.
+ * could set it could claim an analyst typed what a CSV supplied.
+ *
+ * **Every importable collection carries it.** Several did not, on the reading
+ * that a conclusion or a method has no importer to come from; the CSV door
+ * takes all ten, so that reading described the doors as they were rather than
+ * as they are. -> #732
  */
 export interface EntrySource {
   source: string
@@ -75,15 +79,16 @@ export type MalwareRow = Row<typeof malwareSchema> & EntrySource
 export type NetworkIndicatorRow = Row<typeof networkIndicatorSchema> & EntrySource
 export type CloudAppRow = Row<typeof cloudAppSchema> & EntrySource
 /**
- * How a finding was obtained. **No `EntrySource`**: a method *is* the record of
- * where something came from, so a column saying where the record came from
- * would be the same claim twice.
+ * How a finding was obtained.
+ *
+ * The method is where a *finding* came from; `source` is where the method row
+ * itself came from, and a file of methods can be imported like any other.
  */
-export type MethodRow = Row<typeof methodSchema>
+export type MethodRow = Row<typeof methodSchema> & EntrySource
 
-export type ImpactRow = Row<typeof impactSchema>
-export type ActionRow = Row<typeof actionSchema>
-export type CaseNoteRow = Row<typeof caseNoteSchema>
+export type ImpactRow = Row<typeof impactSchema> & EntrySource
+export type ActionRow = Row<typeof actionSchema> & EntrySource
+export type CaseNoteRow = Row<typeof caseNoteSchema> & EntrySource
 
 /**
  * A report and its sections.
@@ -124,7 +129,7 @@ export type ReportBlockRow = Row<typeof reportBlockSchema> & {
  * taken on a caller's word is a claim about nothing - the verification that
  * checks the file against it becomes circular. -> `db/schema/entities.ts`
  */
-export type EvidenceRow = Row<typeof evidenceSchema> & {
+export type EvidenceRow = Row<typeof evidenceSchema> & EntrySource & {
   hash: string
   /**
    * Which function produced the digest. **Here and not in the schema, because

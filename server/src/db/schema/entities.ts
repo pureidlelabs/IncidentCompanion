@@ -9,7 +9,7 @@
 import { boolean, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 import { cases } from './case.js'
-import { figure, figuresWithinReach, rowVersioning } from './columns.js'
+import { figure, figuresWithinReach, rowVersioning, source } from './columns.js'
 import { caseScoped } from './scoped.js'
 
 const owner = () => ({
@@ -18,9 +18,6 @@ const owner = () => ({
     .notNull()
     .references(() => cases.id, { onDelete: 'cascade' }),
 })
-
-/** Which door the row came through. Distinct from the timeline's `provenance`. */
-const source = () => text('source').notNull().default('manual')
 
 export const systems = pgTable(
   'systems',
@@ -133,6 +130,7 @@ export const impact = pgTable(
   'impact',
   {
     ...owner(),
+    source: source(),
     label: text('label').notNull().default(''),
     category: text('category').notNull().default(''),
     /** See `vocabularies.DATA_DISPOSITION`. Never blank: `unknown` is a real answer. */
@@ -208,6 +206,7 @@ export const evidence = pgTable(
   'evidence',
   {
     ...owner(),
+    source: source(),
     type: text('type').notNull().default(''),
     name: text('name').notNull().default(''),
     location: text('location').notNull().default(''),
@@ -272,6 +271,7 @@ export const methods = pgTable(
   'methods',
   {
     ...owner(),
+    source: source(),
     name: text('name').notNull().default(''),
     kind: text('kind').notNull().default(''),
     established: text('established').notNull().default(''),

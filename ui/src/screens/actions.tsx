@@ -303,6 +303,7 @@ const ACTION_COLUMNS = ['task', 'taskType', 'status', 'assignee', 'dateDue'] as 
 /** What a task carries that the served form does not ask for. */
 const BLANK_ACTION: Omit<ActionEntry, 'id'> = {
   version: 1,
+  source: 'manual',
   task: '',
   taskType: '',
   status: 'open',

@@ -38,6 +38,16 @@ export const rowVersioning = {
 }
 
 /**
+ * Which door the row came through. Distinct from the timeline's `provenance`.
+ *
+ * Defaults to `manual`, so a row nothing stamped reads as the analyst's own
+ * work -- which is what it is. An import door states its own name instead, and
+ * `db/import-stamp.ts` is what narrows a stamp to the columns a table has: a
+ * table without this one takes the stamp and stores nothing.
+ */
+export const source = () => text('source').notNull().default('manual')
+
+/**
  * Postgres `bytea`, for a column holding a Yjs document.
  *
  * Drizzle 1.0 has no first-class bytea for node-postgres, so every table that
