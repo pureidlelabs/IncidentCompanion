@@ -86,9 +86,6 @@ export function probe([rootSel, excludeSel]) {
      * whole class of false positive.** A wrapped inline element's bounding rect
      * is the *union* of its lines: a link whose text wraps reports a box as
      * wide as its container and two lines tall, so it intersects every other
-     * link on either line. Measured on the timeline, whose entity links wrap:
-     * `overlap: controls overlap by 208x14px` between two links that touch
-     * nothing, in both grounds - the shape of a real cross-theme defect.
      *
      * A block element has exactly one client rect, so nothing else moves.
      */
@@ -96,12 +93,8 @@ export function probe([rootSel, excludeSel]) {
         const clips = [];
         // **A text field paints inside its own content box, and its padding is
         // where an inset control is *meant* to sit.** The date half of
-        // `datetime-input.tsx` is `w-40 pr-9` with a `w-9` calendar trigger laid
-        // over that padding: the boxes overlap by exactly 36x32px and no glyph
-        // ever lands under the trigger, because the typed text is confined to
-        // the content box, which ends one pixel short of it -- measured at a
-        // content-box right edge of 139 against a trigger left edge of 140, and
-        // reported as an `overlap` wherever the pair is drawn.
+        // `datetime-input.tsx` lays a calendar trigger over its own right
+        // padding, and no glyph ever lands under it.
         //
         // **Clamped, not excluded.** Drop the padding and the content box grows
         // under the trigger, and the finding comes back - which is the whole
@@ -277,27 +270,11 @@ export function probe([rootSel, excludeSel]) {
     // under muted-caption noise.
     //
     // **The browser converts the colour; nothing here parses one.** A computed
-    // colour is reported in whatever space it was authored in, and this probe
-    // has now been wrong twice by reading one syntax as another:
-    //
-    //   `color-mix()`  -> `color(srgb 0.909 0.903 0.948)`   0..1 floats
-    //   a Tailwind v4 token -> `oklch(0.22 0.012 260)`      not RGB at all
-    //
-    // A bare digit match takes 0.909 for an 8-bit channel, so a near-white
-    // ground scored as near-black -- the New report dialog's layout card read
-    // 1.49:1 where it measures 11.36:1. The oklch case is worse and was live
-    // for the whole React tier: the same scrape yields `rgb(0.22, 0.012, 260)`,
-    // whose blue channel pins at 255 for *every* token, so foreground and
-    // ground both compute to the same luminance and **every** element reports
-    // 1.00:1. `ui/src/styles/tokens.css` is oklch throughout; the older tier
-    // was hex and unaffected, which is why it went unnoticed.
-    //
-    // Both were false *negatives* as much as false positives, and an oracle
-    // that misreports is believed in either direction. So the fix is not a
-    // third branch: painting to a canvas makes the browser do the conversion,
-    // which is exact, handles every syntax it accepts including ones not
-    // invented yet, and clamps to sRGB -- the gamut the screen shows anyway,
-    // so it is the right answer for a contrast question.
+    // colour is reported in whatever space it was authored in -- `color(srgb
+    // 0.909 0.903 0.948)` from `color-mix()`, `oklch(0.22 0.012 260)` from a
+    // Tailwind v4 token -- and a digit match reads one syntax as another, in
+    // both directions. Painting to a canvas makes the browser convert: exact,
+    // every syntax it accepts, and clamped to the gamut the screen shows.
     //
     // Memoised because the walk touches every element and a page has a handful
     // of distinct colours: `getImageData` per element is what makes this cost

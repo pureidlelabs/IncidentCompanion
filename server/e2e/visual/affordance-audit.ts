@@ -411,11 +411,6 @@ export function unreachableWithinStories(
  * is already how a screen pairs with its twin (`SHAPE_WORDS`), so nothing is
  * listed by hand and a screen added tomorrow joins its family by being named.
  *
- * **The Storybook title was tried first and is worse.** Its last-but-one
- * segment is a menu category rather than a shape: `Screens/Case` holds a
- * timeline, a graph, two forms and a notes list, so the check reports
- * disagreements between screens that were never alike.
- *
  * **The surface is part of the key**, because a block is not a small screen.
  * `data-table` has no filter bar and is not missing one; mixed in with the
  * table *screens* it reports their toolbar controls as its own gap.

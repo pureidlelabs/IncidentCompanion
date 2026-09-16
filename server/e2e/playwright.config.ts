@@ -6,12 +6,8 @@ import { defineConfig, devices } from '@playwright/test'
 /**
  * Where the app is. A run against an already-started dev server reuses it.
  *
- * **Derived, because a literal here tests somebody else's app.** This read
- * `https://127.0.0.1:8124` - the main checkout's port - so a worktree running
- * the browser tier drove whichever stack happened to own 8124, and a *green*
- * run was the dangerous outcome: it certified a tree whose code was never
- * loaded. Same script as `dev-node.sh` and `vitest.config.mts`.
- * See `server/scripts/stack.mjs`.
+ * **Derived, because a literal here tests somebody else's app.** Same script
+ * as `dev-node.sh` and `vitest.config.mts`. See `server/scripts/stack.mjs`.
  *
  * **`__dirname`, not `import.meta`.** Playwright loads this config through a
  * CommonJS wrapper whatever the extension says, so `import.meta.url` throws
@@ -55,9 +51,7 @@ const DIST = STACK().apiUrl
  * What this tier does not run, wherever the list is needed.
  *
  * **Named, because a project's `testIgnore` replaces the config's rather than
- * adding to it.** Spelling one pattern on a project silently un-ignored these
- * three: the sweep ran inside the tier, pressed controls on the shared fixture
- * case, and took `two-analysts.spec.ts` down with it.
+ * adding to it.**
  */
 const NOT_THIS_TIER = [
   '**/visual/sweep.spec.ts',
@@ -79,15 +73,6 @@ export default defineConfig({
    * `visual/selftest.spec.ts` stays in: it is seconds, it asserts, and its
    * trigger is a change to the section action row's markup - which touches
    * neither the probes nor the sweep, so nobody would think to run it by hand.
-   *
-   * **`visual/storybook.spec.ts` is excluded for the sweep's reason, and it
-   * took arming the tier to see it.** It probes every story in the kit under a
-   * thirty-minute budget of its own and reports what it measured - the same
-   * shape as the sweep and the same buy of no failure. It was invisible while
-   * it skipped for want of a Storybook; the first run that had one sat in it
-   * past twenty minutes with four tests still unreported.
-   * `npm run visual:storybook` drives it through
-   * `visual/playwright.storybook.config.ts`.
    *
    * **`*.storybook.spec.ts` is a tier of its own, not an exclusion.** Measured:
    * none of the ten reaches `baseURL`, `signIn` or any route -- they drive
@@ -141,19 +126,6 @@ export default defineConfig({
    * `test.sh` and `verify.sh` both probe the API port while `BASE` resolves to
    * Vite's, so a dead front end passed their check and arrived here as a screen
    * that would not draw.
-   *
-   * **The default, because nothing here needs `--keep-data`.**
-   * `reuseExistingServer` means this command runs only when nothing answers, so
-   * there is no session underneath it, and the database is a tmpfs recreated on
-   * every start regardless.
-   *
-   * **The launcher is unreliable, and that is not this flag's doing.** Six cold
-   * starts of `./dev-node.sh --no-storybook --api-only` came up twice: the
-   * other four answered the readiness probe with a 500 from the throttler guard
-   * -- *"Stream isn't writeable and enableOfflineQueue options is false"* -- and
-   * `dev-node.sh` gave up at its 30s budget and killed the server. A start that
-   * succeeds is healthy by 18s, so the window is narrow and the outcome is a
-   * coin toss. Anything unattended inherits that. -> #89
    */
   webServer: {
     command: './dev-node.sh',
@@ -191,19 +163,6 @@ export default defineConfig({
      * no limit - so a click behind a modal scrim that failed to close is not a
      * failure but a hang, and the test dies on its *own* timeout ten minutes
      * later with no indication of which control it was waiting on.
-     *
-     * **And it is the only bound on a press; per-call ones are not added
-     * back.** A second authority for a quantity declared here buys nothing the
-     * diagnosis needs -- a click blocked by an overlay reports the same
-     * `intercepts pointer events` message and the same retry log whichever
-     * timeout expires.
-     *
-     * **Raising this is one edit and it is load-bearing in both directions.**
-     * `picker.spec.ts` presses 110 controls inside a 300s budget, so a pane
-     * whose controls are all blocked exhausts the test before the sweep can
-     * report which ones - at 6s it already did for the 59-control snippets
-     * pane. A larger number here buys headroom under load and spends the
-     * sweep's own budget faster.
      */
     actionTimeout: 15_000,
     // 1440x900 is what `visual/sweep.ts` measures at, so findings stay comparable.

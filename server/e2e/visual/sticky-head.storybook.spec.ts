@@ -19,12 +19,6 @@
  * stick, so the reading says nothing whatever the head does. What is true
  * regardless of how many rows a fixture holds is that the box a head sticks to
  * has to be the box its rows scroll in.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/sticky-head.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 
