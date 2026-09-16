@@ -18,6 +18,7 @@ import { Dialog, DialogBody } from '@/components/ui/dialog'
 import { TextField } from '@/components/ui/text-field'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
+import { signInFailure } from '@/api/sentinel/msalTokenProvider'
 
 /**
  * The four-phase importer: connect, pick a workspace, filter incidents, review.
@@ -504,7 +505,11 @@ export function ImportSentinelScreen({
       setRefused(undefined)
       try {
         if (here === 'connect') {
-          setWho(await writes.connect({ tenantId, clientId }))
+          try {
+            setWho(await writes.connect({ tenantId, clientId }))
+          } catch (thrown) {
+            throw new Error(signInFailure(thrown), { cause: thrown })
+          }
           const answered = await writes.sources()
           setListed(answered)
           // The pick follows the listing: leaving it on the fixture's first id

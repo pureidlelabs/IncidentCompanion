@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import { actionsColumn, DataTable, selectionColumn } from './data-table'
@@ -41,11 +41,17 @@ const columns: EntityColumn<Widget>[] = [
 ]
 
 /** Prints what the *table* holds, which is what every bulk action reads. */
-function Harness({ canSelect }: { canSelect?: (row: Widget) => boolean }) {
+function Harness({
+  canSelect,
+  cols = columns,
+}: {
+  canSelect?: (row: Widget) => boolean
+  cols?: EntityColumn<Widget>[]
+}) {
   const [data] = useState(widgets)
   const table = useEntityTable<Widget>({
     data,
-    columns,
+    columns: cols,
     ...(canSelect ? { canSelect } : {}),
     meta: { pendingIds: new Set(), commit: () => undefined },
   })
@@ -98,6 +104,27 @@ describe('the selection column reports what it draws', () => {
 
     await user.click(all())
     expect(selectedIds()).toBe('')
+  })
+
+  /**
+   * `Checkbox` takes `children` out before React Aria sees them, so a caption
+   * rendering nothing leaves the header box unnamed and warns nobody. The
+   * fallback answers to what the caption drew, never to whether one was given.
+   */
+  it('names the header box from the caption, and falls back when it draws nothing', () => {
+    const captioned = (caption: (rowCount: number) => ReactNode): EntityColumn<Widget>[] => [
+      selectionColumn<Widget>((row) => row.name, caption),
+      ...columns.slice(1),
+    ]
+
+    const { unmount } = render(
+      <Harness cols={captioned((rows) => `Select all ${String(rows)} shown`)} />,
+    )
+    expect(screen.getByRole('checkbox', { name: 'Select all 3 shown' })).toBeInTheDocument()
+    unmount()
+
+    render(<Harness cols={captioned(() => null)} />)
+    expect(screen.getByRole('checkbox', { name: 'Select every row' })).toBeInTheDocument()
   })
 
   /**

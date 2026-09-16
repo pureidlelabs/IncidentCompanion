@@ -1,11 +1,20 @@
-import { BrowserAuthError, InteractionRequiredAuthError } from '@azure/msal-browser'
-import type { AccountInfo, AuthenticationResult, IPublicClientApplication } from '@azure/msal-browser'
+import { BrowserAuthError, EventType, InteractionRequiredAuthError } from '@azure/msal-browser'
+import type {
+  AccountInfo,
+  AuthenticationResult,
+  EventCallbackFunction,
+  EventMessage,
+  IPublicClientApplication,
+} from '@azure/msal-browser'
 import { describe, expect, it, vi } from 'vitest'
 
 import { isConfigured, msalTokenProvider, signInFailure } from './msalTokenProvider'
 import { EMPTY_CONNECTION } from './connectionConfig'
 
 const CONFIG = { tenantId: 'contoso.onmicrosoft.com', clientId: 'client-guid' }
+
+/** `msalTokenProvider`'s own poll rate, which the timings here are written against. */
+const POPUP_POLL_MS = 500
 
 const ACCOUNT = {
   homeAccountId: 'home', environment: 'login.microsoftonline.com',
@@ -36,6 +45,8 @@ function fakeMsal(over: Partial<IPublicClientApplication> = {}) {
     setActiveAccount: vi.fn(),
     acquireTokenSilent: vi.fn(() => Promise.resolve(result('silent-token'))),
     acquireTokenPopup: vi.fn(() => Promise.resolve(result('popup-token'))),
+    addEventCallback: vi.fn((_callback: EventCallbackFunction) => 'callback-id'),
+    removeEventCallback: vi.fn(),
   }
   const app = { ...spies, ...over } as unknown as IPublicClientApplication
   return { app, ...spies }
@@ -92,6 +103,56 @@ describe('acquiring a token', () => {
 
     await expect(provider.acquireToken(['scope'])).rejects.toThrow('network down')
     expect(spy.acquireTokenPopup).not.toHaveBeenCalled()
+  })
+
+  it('answers a closed popup instead of sitting on an unsettled call', async () => {
+    const popup = { closed: false }
+    const opened = vi.fn(() => new Promise<AuthenticationResult>(() => undefined))
+    const { app, ...spy } = fakeMsal({ acquireTokenPopup: opened })
+    const provider = msalTokenProvider(CONFIG, { application: app })
+
+    const asked = provider.acquireToken(['scope'])
+    await vi.waitFor(() => {
+      expect(spy.addEventCallback).toHaveBeenCalled()
+    })
+    const announce = spy.addEventCallback.mock.calls[0]![0]
+    announce({
+      eventType: EventType.POPUP_OPENED,
+      payload: { popupWindow: popup as unknown as Window },
+    } as EventMessage)
+    popup.closed = true
+
+    await expect(asked).rejects.toMatchObject({ errorCode: 'user_cancelled' })
+    expect(opened).toHaveBeenCalledWith(
+      expect.objectContaining({ overrideInteractionInProgress: true }))
+    expect(spy.removeEventCallback).toHaveBeenCalledWith('callback-id')
+  })
+
+  /**
+   * **A sign-in that worked closes the popup too**, and the token call is
+   * still in flight when it does. Whether the exchange beats the poll is the
+   * machine's business, so the stub settles after a tick the poll is certain
+   * to have run through.
+   */
+  it('lets a sign-in finish after its own popup has closed', async () => {
+    const popup = { closed: false }
+    const exchanging = vi.fn(() => new Promise<AuthenticationResult>((resolve) => {
+      setTimeout(() => { resolve(result('popup-token')) }, POPUP_POLL_MS + 400)
+    }))
+    const { app, ...spy } = fakeMsal({ acquireTokenPopup: exchanging })
+    const provider = msalTokenProvider(CONFIG, { application: app })
+
+    const asked = provider.acquireToken(['scope'])
+    await vi.waitFor(() => {
+      expect(spy.addEventCallback).toHaveBeenCalled()
+    })
+    spy.addEventCallback.mock.calls[0]![0]({
+      eventType: EventType.POPUP_OPENED,
+      payload: { popupWindow: popup as unknown as Window },
+    } as EventMessage)
+    popup.closed = true
+
+    expect(await asked).toBe('popup-token')
   })
 
   it('initialises once however many tokens are asked for', async () => {

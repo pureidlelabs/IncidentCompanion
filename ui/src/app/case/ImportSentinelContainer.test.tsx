@@ -23,6 +23,7 @@ import {
   createMemoryRouter,
 } from 'react-router-dom'
 import type * as React from 'react'
+import type * as TokenProviderModule from '@/api/sentinel/msalTokenProvider'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -168,7 +169,10 @@ function withClient(node: React.ReactNode) {
   return <QueryClientProvider client={new QueryClient()}>{node}</QueryClientProvider>
 }
 vi.mock('@/api/sentinel/armSource', () => ({ armSource: () => provider }))
-vi.mock('@/api/sentinel/msalTokenProvider', () => ({ msalTokenProvider: () => ({}) }))
+vi.mock('@/api/sentinel/msalTokenProvider', async (real) => ({
+  ...(await real<typeof TokenProviderModule>()),
+  msalTokenProvider: () => ({}),
+}))
 /**
  * Every ask for the demo source, with the address it was asked about -- so a
  * render that made one, and a `connect` that asked about a different address,
