@@ -57,6 +57,8 @@ HOST_PROFILES = {
 MACOS_RUNTIMES = {
     "colima": "colima-macos",
     "docker-desktop": "docker-desktop-macos",
+    # The expected spelling, unconfirmed against a running daemon. A wrong one
+    # makes `detect_host_profile` raise naming what the daemon said.
     "orbstack": "orbstack-macos",
 }
 

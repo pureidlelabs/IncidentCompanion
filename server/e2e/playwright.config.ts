@@ -55,6 +55,8 @@ const DIST = STACK().apiUrl
  */
 const NOT_THIS_TIER = [
   '**/visual/sweep.spec.ts',
+  // Reports rather than asserts, under a budget of its own: `npm run
+  // visual:storybook` is where it runs.
   '**/visual/storybook.spec.ts',
   '**/*.storybook.spec.ts',
 ]

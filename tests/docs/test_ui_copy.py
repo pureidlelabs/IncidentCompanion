@@ -136,7 +136,6 @@ NOT_COPY = re.compile(
     r"^\s*(import|export)\b|\b(describe|it|test|expect)\(\s*$|" + CONSOLE.pattern
 )
 
-#: A comment line, which quotes other people's copy to explain why ours differs.
 #: What an interpolation is read as. A digit, because the value one stands in
 #: for is almost always a count, and because no content rule scores it.
 PLACEHOLDER = "0"
@@ -178,6 +177,7 @@ def without_interpolations(value: str) -> str:
         at = end + 1 if end < len(value) else len(value)
 
 
+#: A comment line, which quotes other people's copy to explain why ours differs.
 COMMENT_LINE = re.compile(r"^\s*(\*|//|/\*)")
 
 #: One unspaced token carrying punctuation prose does not: an id, a path, a

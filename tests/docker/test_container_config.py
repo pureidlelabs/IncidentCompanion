@@ -214,6 +214,8 @@ def test_the_published_port_is_the_one_the_base_url_names():
         "the nginx service publishes nothing, so no Origin the base URL names "
         "is reachable -- something else is the door, or there is no door")
 
+    # Read from the right: `fields[0]` is `'${IC_STACK_PORT'`, which the base
+    # URL contains too, so it passes on the exact defect this asserts against.
     fields = published[0].split(":")
     host_side = fields[-2] if len(fields) >= 2 else ""
     assert host_side in base, (
