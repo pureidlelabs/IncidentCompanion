@@ -31,6 +31,7 @@ import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { caseComplianceSchema } from '../domain/entities/case-compliance.js'
 import { verdictSchema } from './verdict.js'
 import { rowVersion } from '../domain/column-bounds.js'
+import { refusedBody } from '../domain/refusal.js'
 
 /**
  * What a caller is promised, which is the record plus the two fields it needs
@@ -167,10 +168,7 @@ export class ComplianceController {
 
     const parsed = patchComplianceSchema.safeParse(rest)
     if (!parsed.success) {
-      throw new UnprocessableEntityException({
-        message: 'Validation failed',
-        errors: z.treeifyError(parsed.error),
-      })
+      throw new UnprocessableEntityException(refusedBody(parsed.error))
     }
     if (Object.keys(parsed.data).length === 0) {
       throw new UnprocessableEntityException({ message: 'A patch has to change something.' })

@@ -25,6 +25,12 @@ import {
 import { AuthService } from '@thallesp/nestjs-better-auth'
 
 import { AdminOnly } from '../auth/admin-only.js'
+import { refused, written as done, type Written } from '../domain/written.js'
+
+/** A 422 carrying the sentence, which is what `postWritten` unwraps. */
+function refuse(...texts: string[]): never {
+  throw new UnprocessableEntityException(refused(...texts))
+}
 import { fromNodeHeaders } from 'better-auth/node'
 import type { IncomingHttpHeaders } from 'node:http'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
@@ -40,34 +46,6 @@ import { stranding, type Analyst } from '../auth/last-admin.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '../auth/password-policy.js'
 import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
-
-/** `[text, level]` - the level is second, as every refusal in this app spells it. */
-type Message = [string, string]
-
-interface Written {
-  ok: boolean
-  messages: Message[]
-}
-
-/**
- * **A refusal is a 422 carrying the sentence, not a 200 saying `ok: false`.**
- *
- * `postWritten` unwraps either, so both *work* - which is exactly why they
- * drift. The library editor already answers 422, and a POST that refuses
- * while returning "201 Created" is wrong to anything reading the status
- * rather than the body: a proxy, a log, or the API door this app will grow
- * again later.
- */
-function refuse(...texts: string[]): never {
-  throw new UnprocessableEntityException({
-    ok: false,
-    messages: texts.map((text) => [text, 'negative']),
-  })
-}
-
-function done(text: string): Written {
-  return { ok: true, messages: [[text, 'positive']] }
-}
 
 /**
  * **`username` is the email**, because that is the identity an analyst signs in

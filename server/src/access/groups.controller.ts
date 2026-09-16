@@ -31,6 +31,7 @@ import { InstallActivityService } from '../install-activity/install-activity.ser
 import { LEVELS } from '../db/schema/groups.js'
 import { isMissingParent } from '../db/missing-parent.js'
 import { GroupsService } from './groups.service.js'
+import { refusedBody } from '../domain/refusal.js'
 
 const grantSchema = z.object({ userId: z.string().min(1), level: z.enum(LEVELS) }).strict()
 const holdSchema = z.object({ customerId: z.uuid() }).strict()
@@ -74,9 +75,7 @@ export class GroupsController {
   private parse<T>(schema: z.ZodType<T>, body: unknown): T {
     const parsed = schema.safeParse(body ?? {})
     if (!parsed.success) {
-      throw new UnprocessableEntityException({
-        message: parsed.error.issues.map((one) => one.message).join(' '),
-      })
+      throw new UnprocessableEntityException(refusedBody(parsed.error))
     }
     return parsed.data
   }

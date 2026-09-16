@@ -43,6 +43,7 @@ import { CreateCaseDto, patchCaseSchema } from './cases.dto.js'
 import { demoCaseSchema } from '../demos/catalogue.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { rowVersion } from '../domain/column-bounds.js'
+import { refusedBody } from '../domain/refusal.js'
 
 /**
  * A demo card, as the picker draws it.
@@ -256,10 +257,7 @@ export class CasesController {
 
     const parsed = patchCaseSchema.safeParse(rest)
     if (!parsed.success) {
-      throw new UnprocessableEntityException({
-        message: 'Validation failed',
-        errors: z.treeifyError(parsed.error),
-      })
+      throw new UnprocessableEntityException(refusedBody(parsed.error))
     }
     if (Object.keys(parsed.data).length === 0) {
       throw new UnprocessableEntityException({ message: 'A patch has to change something.' })

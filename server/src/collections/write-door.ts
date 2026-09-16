@@ -9,6 +9,7 @@ import { UnprocessableEntityException } from '@nestjs/common'
 import { z } from 'zod'
 
 import { rowVersion } from '../domain/column-bounds.js'
+import { refusedBody } from '../domain/refusal.js'
 
 /**
  * Rows one request may carry, because the door is reachable from a script:
@@ -29,10 +30,7 @@ export const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_
 export function parsed(schema: z.ZodType, body: unknown): Record<string, unknown> {
   const answer = schema.safeParse(body)
   if (!answer.success) {
-    throw new UnprocessableEntityException({
-      message: 'Validation failed',
-      errors: answer.error.issues,
-    })
+    throw new UnprocessableEntityException(refusedBody(answer.error))
   }
   return answer.data as Record<string, unknown>
 }

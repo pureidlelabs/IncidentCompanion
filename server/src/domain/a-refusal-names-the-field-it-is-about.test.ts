@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
-import { refusedBody } from './refusals.js'
+import { refusedBody } from './refusal.js'
 
 /** Three ways at once, so one fixture covers a path, a type and a stray key. */
 function refused(): z.ZodError {

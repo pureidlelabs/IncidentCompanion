@@ -8,7 +8,7 @@
  *
  * **Where it is used and where it is not.** A refusal an analyst can act on
  * carries this shape and a 422, which the client unwraps to show beside the
- * control. A schema failure carries the validation tree instead - see
+ * control. A schema failure carries the issues it failed on instead - see
  * `wire/refusals.ts` for which status means which.
  */
 import { z } from 'zod'
@@ -31,3 +31,25 @@ export const writtenSchema = z.object({
 })
 
 export type Written = z.infer<typeof writtenSchema>
+
+/**
+ * A write that happened, with a sentence to show for it.
+ *
+ * Pure, and here rather than beside the refusals, because this tier is bundled
+ * into the browser and a throwing helper carries Nest with it.
+ */
+export function written(text: string): Written {
+  return { ok: true, messages: [[text, 'positive']] }
+}
+
+/**
+ * A write refused, with the sentences to show for it.
+ *
+ * A builder rather than a throw, because a route whose body carries more than
+ * `Written` -- the library editor sends the re-rendered form beside it --
+ * spreads this instead of spelling the tuple again.
+ * `wire/refusals.ts` throws it for everybody else.
+ */
+export function refused(...texts: string[]): Written {
+  return { ok: false, messages: texts.map((text) => [text, 'negative']) }
+}

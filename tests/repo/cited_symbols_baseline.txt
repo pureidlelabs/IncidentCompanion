@@ -114,6 +114,7 @@ TableKit
 TableMap
 ThrottlerRequest
 toLocaleDateString
+treeifyError
 translateX
 UPDATE
 useAsyncList
