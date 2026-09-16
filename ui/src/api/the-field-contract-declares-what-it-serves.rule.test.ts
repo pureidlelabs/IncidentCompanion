@@ -10,21 +10,11 @@ import served from '@/fixtures/specs.json'
  * **A property the contract declares and the document never carries is a
  * branch of the client nothing can reach.**
  *
- * `FieldSpec` is this application's reading of `GET /api/specs`, written by
- * hand rather than generated. A property nobody serves compiles, renders and
- * is read by whatever draws the field -- and the branch reading it is dead for
- * every field there is, which is not visible from either side on its own.
+ * Read against the committed document rather than the types: `specs.json` is
+ * held equal to what the route answers by `specs.controller.test.ts`.
  *
- * **Read against the committed document rather than the types.**
- * `server/src/specs` and this interface are two descriptions of one wire, and
- * comparing a description with a description proves nothing; `specs.json` is
- * held equal to what the route answers by
- * `server/src/specs/specs.controller.test.ts`.
- *
- * **Fields only, and the forms only.** The compliance block is a different
- * shape with a different reader -- `ComplianceFieldSpec` carries an
- * `optionLabels` that *is* served and drawn -- so this asks about `forms`
- * rather than about the whole document.
+ * **Forms only.** `ComplianceFieldSpec` has its own reader, and its
+ * `optionLabels` *is* served.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 
