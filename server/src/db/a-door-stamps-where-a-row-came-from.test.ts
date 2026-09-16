@@ -63,7 +63,7 @@ describe('the stamp a door puts on a row', () => {
     for (const name of IMPORTABLE) {
       const table = BULK_TABLES[name as keyof typeof BULK_TABLES]
       expect(table, `${name} is importable and has no table here`).toBeDefined()
-      const columns = new Set(Object.keys(getTableColumns(table!)))
+      const columns = new Set(Object.keys(getTableColumns(table)))
       expect(
         ORIGIN.some((one) => columns.has(one)),
         `${name} can be imported into and has no column saying a row arrived, so the ` +
