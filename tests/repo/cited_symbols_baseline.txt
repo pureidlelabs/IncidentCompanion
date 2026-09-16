@@ -7,6 +7,7 @@ AtMinute
 AugmentedZodDto
 BodyInit
 borderColor
+BroadcastChannel
 BYPASSRLS
 CalendarDateTime
 callbackURL
@@ -86,6 +87,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT
 partialRecord
 peerOptional
 pointerType
+popupBridgeTimeout
 preserveSessionInDatabase
 PressEvent
 PressEvents

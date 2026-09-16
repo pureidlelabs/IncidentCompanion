@@ -1,5 +1,11 @@
-import { BrowserAuthError, InteractionRequiredAuthError } from '@azure/msal-browser'
-import type { AccountInfo, AuthenticationResult, IPublicClientApplication } from '@azure/msal-browser'
+import { BrowserAuthError, EventType, InteractionRequiredAuthError } from '@azure/msal-browser'
+import type {
+  AccountInfo,
+  AuthenticationResult,
+  EventCallbackFunction,
+  EventMessage,
+  IPublicClientApplication,
+} from '@azure/msal-browser'
 import { describe, expect, it, vi } from 'vitest'
 
 import { isConfigured, msalTokenProvider, signInFailure } from './msalTokenProvider'
@@ -36,6 +42,8 @@ function fakeMsal(over: Partial<IPublicClientApplication> = {}) {
     setActiveAccount: vi.fn(),
     acquireTokenSilent: vi.fn(() => Promise.resolve(result('silent-token'))),
     acquireTokenPopup: vi.fn(() => Promise.resolve(result('popup-token'))),
+    addEventCallback: vi.fn((_callback: EventCallbackFunction) => 'callback-id'),
+    removeEventCallback: vi.fn(),
   }
   const app = { ...spies, ...over } as unknown as IPublicClientApplication
   return { app, ...spies }
@@ -92,6 +100,36 @@ describe('acquiring a token', () => {
 
     await expect(provider.acquireToken(['scope'])).rejects.toThrow('network down')
     expect(spy.acquireTokenPopup).not.toHaveBeenCalled()
+  })
+
+  /**
+   * **The popup is closed, and MSAL answers nothing.** Its response arrives
+   * over a `BroadcastChannel` the closed window never writes to, so the call
+   * sits until the bridge times out. The stub is that call: a promise that
+   * never settles.
+   */
+  it('answers a closed popup instead of sitting on an unsettled call', async () => {
+    const popup = { closed: false }
+    const opened = vi.fn(() => new Promise<AuthenticationResult>(() => undefined))
+    const { app, ...spy } = fakeMsal({ acquireTokenPopup: opened })
+    const provider = msalTokenProvider(CONFIG, { application: app })
+
+    const asked = provider.acquireToken(['scope'])
+    await vi.waitFor(() => {
+      expect(spy.addEventCallback).toHaveBeenCalled()
+    })
+    const announce = spy.addEventCallback.mock.calls[0]![0]
+    announce({
+      eventType: EventType.POPUP_OPENED,
+      payload: { popupWindow: popup as unknown as Window },
+    } as EventMessage)
+    popup.closed = true
+
+    await expect(asked).rejects.toMatchObject({ errorCode: 'user_cancelled' })
+    // Without the override the abandoned interaction blocks the next attempt.
+    expect(opened).toHaveBeenCalledWith(
+      expect.objectContaining({ overrideInteractionInProgress: true }))
+    expect(spy.removeEventCallback).toHaveBeenCalledWith('callback-id')
   })
 
   it('initialises once however many tokens are asked for', async () => {

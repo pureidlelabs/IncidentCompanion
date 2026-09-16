@@ -30,6 +30,7 @@ import type {
   AccountInfo,
   AuthenticationResult,
   IPublicClientApplication,
+  PopupEvent,
 } from '@azure/msal-browser'
 
 import type { ConnectionConfig } from './connectionConfig'
@@ -104,6 +105,44 @@ export function signInFailure(thrown: unknown): string {
   return 'Could not sign in to Azure.'
 }
 
+/** How often the popup is looked at. MSAL's own relay path polls at this rate. */
+const POPUP_POLL_MS = 500
+
+/**
+ * `acquireTokenPopup`, answered when the analyst closes the popup.
+ *
+ * MSAL 5 takes the popup's response over a `BroadcastChannel` and watches the
+ * window only on its relay path, so the ordinary path answers a closed popup
+ * at `popupBridgeTimeout` and not before. `POPUP_OPENED` hands over the
+ * window, which MSAL opens and nothing else holds.
+ *
+ * The abandoned interaction is in progress until that same timeout, so
+ * without `overrideInteractionInProgress` the next attempt is refused.
+ */
+async function popupOrCancelled(
+  app: IPublicClientApplication, scopes: string[],
+): Promise<AuthenticationResult> {
+  const { BrowserAuthError, EventType } = await loadMsal()
+  let popup: Window | undefined
+  const listening = app.addEventCallback((message) => {
+    popup = (message.payload as PopupEvent).popupWindow
+  }, [EventType.POPUP_OPENED])
+  let polling = 0
+  try {
+    return await Promise.race([
+      app.acquireTokenPopup({ scopes, overrideInteractionInProgress: true }),
+      new Promise<never>((_, reject) => {
+        polling = window.setInterval(() => {
+          if (popup?.closed) reject(new BrowserAuthError('user_cancelled', ''))
+        }, POPUP_POLL_MS)
+      }),
+    ])
+  } finally {
+    window.clearInterval(polling)
+    if (listening) app.removeEventCallback(listening)
+  }
+}
+
 /**
  * A `TokenProvider` over one set of connection coordinates.
  *
@@ -143,7 +182,7 @@ export function msalTokenProvider(
         if (!(thrown instanceof InteractionRequiredAuthError)) throw thrown
       }
     }
-    const result = await app.acquireTokenPopup({ scopes })
+    const result = await popupOrCancelled(app, scopes)
     // Assigned unconditionally: `setActiveAccount` takes null, and an
     // interactive result that names no account genuinely is no session - which
     // is what `session()` should then answer.
