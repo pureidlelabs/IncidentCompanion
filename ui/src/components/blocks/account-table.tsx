@@ -87,9 +87,20 @@ export interface AccountTableProps {
   onState: (id: string, state: AccountTableRow['state']) => void
   /** Ends every session the account holds. Absent draws no such row. */
   onEndSessions?: ((id: string) => void) | undefined
+  /** The roles this install offers. Empty draws no role rows. */
+  roles?: readonly string[] | undefined
+  /** Moves an account to a role. Absent draws no role rows. */
+  onRole?: ((id: string, role: string) => void) | undefined
 }
 
-export function AccountTable({ accounts, onState, onEndSessions }: AccountTableProps) {
+export function AccountTable({
+  accounts,
+  onState,
+  onEndSessions,
+  // `roles` is taken below by the filter's own chosen set.
+  roles: offered,
+  onRole,
+}: AccountTableProps) {
   const [tab, setTab] = useState<(typeof ACCOUNT_TABS)[number]>('All')
   const [query, setQuery] = useState('')
 
@@ -121,8 +132,8 @@ export function AccountTable({ accounts, onState, onEndSessions }: AccountTableP
   )
 
   const columns = useMemo(
-    () => accountColumns(onState, onEndSessions),
-    [onState, onEndSessions],
+    () => accountColumns(onState, onEndSessions, offered, onRole),
+    [onState, onEndSessions, offered, onRole],
   )
   const table = useEntityTable<AccountTableRow>({
     data: rows,
@@ -229,6 +240,8 @@ export function AccountTable({ accounts, onState, onEndSessions }: AccountTableP
 function accountColumns(
   onState: (id: string, state: AccountTableRow['state']) => void,
   onEndSessions: ((id: string) => void) | undefined,
+  roles: readonly string[] | undefined,
+  onRole: ((id: string, role: string) => void) | undefined,
 ): EntityColumn<AccountTableRow>[] {
   return [
     {
@@ -303,6 +316,20 @@ function accountColumns(
             disabled: true,
             onSelect: () => undefined,
           },
+          // **One row per role this install offers, its own excepted.** A
+          // submenu would be a second surface for two items; the list is the
+          // server's, so an install that grows a role grows a row.
+          ...(onRole
+            ? (roles ?? [])
+                .filter((role) => role !== one.role)
+                .map((role) => ({
+                  id: `role-${role}`,
+                  label: `Make ${role}`,
+                  onSelect: () => {
+                    onRole(one.id, role)
+                  },
+                }))
+            : []),
           // **Separate from Disable, because they are different acts.** Ending
           // a session puts an analyst out now and leaves the account able to
           // sign back in; disabling stops the next sign-in and is not urgent.

@@ -109,6 +109,27 @@ describe('the Accounts pane', () => {
   })
 
   /**
+   * **A role is the reach an account has**, so changing one is the write an
+   * administrator makes least often and can least afford to have silently not
+   * happen. One item per role the server named, this row's own excepted.
+   */
+  it('sends a write when an administrator changes a role', async () => {
+    draw()
+    await vi.waitFor(() => {
+      expect(screen.getByText('nina@example.test')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: /more for Nina/i }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /make admin/i }))
+
+    await vi.waitFor(() => {
+      expect(sent.writes).toEqual([
+        { path: '/accounts/nina%40example.test/role', body: { role: 'admin' } },
+      ])
+    })
+  })
+
+  /**
    * *An administrator MUST be able to end every session at once.*
    *
    * **Confirmed before it runs**, because it signs the administrator out with

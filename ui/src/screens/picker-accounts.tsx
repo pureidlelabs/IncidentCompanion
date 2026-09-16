@@ -29,6 +29,8 @@ export interface PickerAccountsScreenProps {
   onEndSessions?: ((username: string) => void) | undefined
   /** Ends every session the install holds. Absent draws no such control. */
   onEndEverySession?: (() => void) | undefined
+  /** Moves an account to a role. Absent draws no role rows. */
+  onRole?: ((username: string, role: string) => void) | undefined
   /** Who is signed in, at the rail's foot. */
   analyst: string
   /** Whether to offer the rail rows only an administrator may use. */
@@ -60,6 +62,7 @@ export function PickerAccountsScreen({
   onState,
   onEndSessions,
   onEndEverySession,
+  onRole,
   analyst,
   admin,
   onPane,
@@ -101,6 +104,7 @@ export function PickerAccountsScreen({
           }}
           {...(onEndSessions ? { onEndSessions } : {})}
           {...(onEndEverySession ? { onEndEverySession } : {})}
+          {...(onRole ? { roles, onRole } : {})}
           onState={(id, state) => {
             if (onState) {
               onState(id, state)

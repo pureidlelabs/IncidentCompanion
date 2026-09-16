@@ -18,6 +18,10 @@ export interface AccountsPaneProps {
    * Absent draws no such control.
    */
   onEndEverySession?: (() => void) | undefined
+  /** The roles this install offers, for the row's role rows. */
+  roles?: readonly string[] | undefined
+  /** Moves an account to a role. Absent draws no role rows. */
+  onRole?: ((id: string, role: string) => void) | undefined
 }
 
 export function AccountsPane({
@@ -26,6 +30,8 @@ export function AccountsPane({
   onState,
   onEndSessions,
   onEndEverySession,
+  roles,
+  onRole,
 }: AccountsPaneProps) {
   const [sweeping, setSweeping] = useState(false)
 
@@ -80,6 +86,8 @@ export function AccountsPane({
         accounts={accounts}
         onState={onState}
         {...(onEndSessions ? { onEndSessions } : {})}
+        {...(roles ? { roles } : {})}
+        {...(onRole ? { onRole } : {})}
       />
     </Section>
   )
