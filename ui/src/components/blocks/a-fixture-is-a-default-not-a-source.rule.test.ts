@@ -9,15 +9,10 @@ import { describe, expect, it } from 'vitest'
  * **A part holds no example content at all -- not as a source, and not as a
  * default.**
  *
- * A block that reads `PICKER_SERVING` in its body draws the same install
- * whatever it is handed, and there is no prop to hand it anything. The gallery
- * is green and right -- a story has no server, so the fixture is the correct
- * answer there -- and nothing else looks until a container tries to pass real
- * data and finds nowhere to put it.
- *
- * A pane that reads its fixtures and takes no props reports an install that
- * does not exist -- an outage belonging to nobody, a list of fictional cases --
- * with a passing story, a passing pixel sweep and a passing suite.
+ * A part that reads `PICKER_SERVING` in its body reports an install that does
+ * not exist -- an outage belonging to nobody, a list of fictional cases -- and
+ * takes no prop to hand it anything else, with a passing story, a passing
+ * pixel sweep and a passing suite.
  *
  * **A default is the same leak arriving quietly**, which is what this rule
  * used to permit and the specification does not:

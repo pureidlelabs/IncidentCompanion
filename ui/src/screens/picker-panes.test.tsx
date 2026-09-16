@@ -87,9 +87,7 @@ const SCREENS: Readonly<Record<PickerPane, React.ComponentType<typeof RAIL>>> = 
 const OWED: readonly { pane: PickerPane; heading: string; only: string }[] = [
   { pane: 'new', heading: 'Start a case', only: 'Blank case' },
   { pane: 'cases', heading: 'Your cases', only: 'Ticket' },
-  // **The empty state, because the pane is handed nothing here.** It used to
-  // name a worked case, drawn from the picker fixture the pane defaulted to --
-  // which is the leak #237 is about rather than anything this screen does.
+  // The empty state, because the pane is handed nothing here. -> #237
   { pane: 'demos', heading: 'Demo cases', only: 'This install offers no demo cases.' },
   { pane: 'templates', heading: 'Case templates', only: 'New template' },
   { pane: 'reports', heading: 'Reports', only: 'Layouts' },

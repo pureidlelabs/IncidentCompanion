@@ -18,10 +18,7 @@ export interface DemosPaneProps {
   /**
    * The demo cases this install seeds.
    *
-   * **Required, and an empty list draws the empty state below.** It defaulted
-   * to the picker fixture, so a container whose list had not arrived drew a
-   * worked set belonging to no install -- and a story, a sweep and the suite
-   * all passed on it. -> #237
+   * Required, and an empty list draws the empty state below. -> #237
    */
   demos: readonly DemoRow[]
   /** Where a card goes, from the demo it draws. Required: a card is a door. */

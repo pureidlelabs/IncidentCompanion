@@ -28,9 +28,7 @@ const meta = {
     ),
   ],
   args: {
-    // **The example lives here.** The screen hands the pane whatever it has,
-    // and a gallery has no server -- so the fixture is right in a story and
-    // wrong as a default in the part. -> #237
+    // The example lives here, never in the part. -> #237
     demos: PICKER_DEMOS,
     analyst: 'r.okonkwo',
     userMenu: sessionRows,
