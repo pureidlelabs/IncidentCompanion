@@ -233,6 +233,50 @@ describe.skipIf(!db)('a case, out and back', () => {
     expect(box!.hostname).toBe('WKS-01')
   })
 
+
+  /**
+   * **How connected the case is, which the receiving analyst cannot see.** The
+   * rows are all there and some of the links between them are not, and nothing
+   * on the screen says so.
+   *
+   * **Not a claim that the archive is damaged.** A dangling id in a reference
+   * list is the ordinary state of a case: nothing scrubs those lists when a row
+   * is deleted, so a sound export of a case an analyst has tidied carries them.
+   * The count says what is true either way -- this case names rows that are not
+   * in it. -> #731
+   *
+   * Built by deleting the evidence row the entry names, which is what an
+   * analyst tidying a case does. The scalar beside it is a foreign key with
+   * `on delete set null`, so only the list can dangle.
+   */
+  it('says how many rows the case names that it does not contain', async () => {
+    const made = await furnished()
+    await seed!.delete(evidence).where(eq(evidence.id, made.evidenceId))
+
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
+    await freeTheReference(made.caseId)
+    const result = await importer.load(built.bytes, '', other)
+
+    expect(
+      result.unresolvedReferences,
+      'the import said nothing about a link the case lost',
+    ).toBe(1)
+
+    const [entry] = await seed!.select().from(timeline).where(eq(timeline.caseId, result.id))
+    expect(entry!.evidenceIds, 'the dangling id was kept rather than dropped').toHaveLength(0)
+  })
+
+  /** The control: a case whose links all resolve reports none. */
+  it('says none for a case that names nothing it does not contain', async () => {
+    const made = await furnished()
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
+    await freeTheReference(made.caseId)
+
+    const result = await importer.load(built.bytes, '', other)
+
+    expect(result.unresolvedReferences).toBe(0)
+  })
+
   /**
    * **A list of references is remapped like a single one.**
    *

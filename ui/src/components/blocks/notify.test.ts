@@ -174,7 +174,7 @@ describe('reporting a refused write', () => {
 
 describe('reportImportedCase', () => {
   it('says what arrived when the archive carried every file its rows name', () => {
-    reportImportedCase({ rows: 86, missingFiles: 0 })
+    reportImportedCase({ rows: 86, missingFiles: 0, unresolvedReferences: 0 })
 
     expect(raised().content.title).toBe('86 rows imported.')
     expect(raised().content.tone).toBe('success')
@@ -188,7 +188,7 @@ describe('reportImportedCase', () => {
    * to a file store to look for files the import already knows are absent.
    */
   it('names the attachments the archive did not carry', () => {
-    reportImportedCase({ rows: 86, missingFiles: 12 })
+    reportImportedCase({ rows: 86, missingFiles: 12, unresolvedReferences: 0 })
 
     expect(raised().content.title).toBe('86 rows imported.')
     expect(raised().content.description).toBe(
@@ -202,13 +202,46 @@ describe('reportImportedCase', () => {
    * tone for something worth reading and not for something that went wrong.
    */
   it('tells a missing attachment as a warning rather than a failure', () => {
-    reportImportedCase({ rows: 4, missingFiles: 4 })
+    reportImportedCase({ rows: 4, missingFiles: 4, unresolvedReferences: 0 })
 
     expect(raised().content.tone).toBe('warning')
   })
 
+
+  /**
+   * **How connected the case is, which the rows alone do not say.** Every row
+   * arrives and some of the links between them do not, so a silent success
+   * hands the analyst a case that looks whole and is not.
+   *
+   * Not a fault in the archive, and told as a warning for that reason: nothing
+   * scrubs a reference list when a row is deleted, so a sound export of a case
+   * somebody tidied carries ids that resolve to nothing. -> #731
+   */
+  it('names the rows the case points at and does not contain', () => {
+    reportImportedCase({ rows: 86, missingFiles: 0, unresolvedReferences: 3 })
+
+    expect(raised().content.title).toBe('86 rows imported.')
+    expect(raised().content.tone).toBe('warning')
+    expect(raised().content.description).toBe('3 rows the case names are not in it.')
+  })
+
+  it('speaks of one unresolved row in the singular', () => {
+    reportImportedCase({ rows: 9, missingFiles: 0, unresolvedReferences: 1 })
+
+    expect(raised().content.description).toBe('1 row the case names is not in it.')
+  })
+
+  /** Both at once, because a branch on one of them says nothing about the other. */
+  it('says both when the archive is short of files and the case short of links', () => {
+    reportImportedCase({ rows: 86, missingFiles: 2, unresolvedReferences: 3 })
+
+    expect(raised().content.description).toBe(
+      '2 attachments the rows name are not in the archive. 3 rows the case names are not in it.',
+    )
+  })
+
   it('speaks of one row and one attachment in the singular', () => {
-    reportImportedCase({ rows: 1, missingFiles: 1 })
+    reportImportedCase({ rows: 1, missingFiles: 1, unresolvedReferences: 0 })
 
     expect(raised().content.title).toBe('1 row imported.')
     expect(raised().content.description).toBe(

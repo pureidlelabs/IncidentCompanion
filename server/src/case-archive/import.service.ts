@@ -156,16 +156,27 @@ const NEVER_CARRIED = new Set([
  * the list instead, which is what a deleted row already looks like there.
  *
  * A scalar that resolves to nothing becomes null, which those columns allow.
+ *
+ * **Counts what it dropped, because the case is less connected than the file
+ * says and nothing else can see it.** The rows all arrive; the links between
+ * some of them do not. -> #731
  */
-function remapped(value: unknown, remap: ReadonlyMap<string, string>): unknown {
+function remapped(
+  value: unknown,
+  remap: ReadonlyMap<string, string>,
+): { value: unknown; dropped: number } {
   if (Array.isArray(value)) {
-    return value.flatMap((one) => {
+    const kept = value.flatMap((one) => {
       const found = typeof one === 'string' ? remap.get(one) : undefined
       return found === undefined ? [] : [found]
     })
+    return { value: kept, dropped: value.length - kept.length }
   }
-  if (typeof value === 'string') return remap.get(value) ?? null
-  return value
+  if (typeof value === 'string') {
+    const found = remap.get(value)
+    return { value: found ?? null, dropped: found === undefined ? 1 : 0 }
+  }
+  return { value, dropped: 0 }
 }
 
 export const importResultSchema = z.object({
@@ -179,6 +190,14 @@ export const importResultSchema = z.object({
     .number()
     .int()
     .describe("Digests the archive's rows name and the archive did not carry."),
+  unresolvedReferences: z
+    .number()
+    .int()
+    .describe(
+      'Ids the rows name that no row in the archive became, so the case is less ' +
+        'connected than its rows suggest. Not a fault in the archive: a reference list ' +
+        'keeps the id of a row an analyst deleted.',
+    ),
 })
 
 export type ImportResult = z.infer<typeof importResultSchema>
@@ -217,6 +236,8 @@ export class ArchiveImportService {
     // first would, for the moment between, describe a file this install does
     // not hold - and a failure in between would leave exactly that.
     let missingFiles = 0
+    /** Ids the archive's rows name that no row in it became. -> #731 */
+    let unresolved = 0
     const held = new Set<string>()
     for (const [name, bytes] of Object.entries(members)) {
       if (!name.startsWith(EVIDENCE_PREFIX)) continue
@@ -330,7 +351,13 @@ export class ArchiveImportService {
           // hostname goes, a number no column can hold. -> #625
           for (const [key, value] of Object.entries(checked(name, one))) {
             if (NEVER_CARRIED.has(key) || !columns.has(key)) continue
-            values[key] = REFERENCE_FIELD_NAMES.has(key) ? remapped(value, remap) : value
+            if (!REFERENCE_FIELD_NAMES.has(key)) {
+              values[key] = value
+              continue
+            }
+            const mapped = remapped(value, remap)
+            values[key] = mapped.value
+            unresolved += mapped.dropped
           }
           // A timestamp arrives as an ISO string and the column wants a Date.
           for (const key of Object.keys(values)) {
@@ -398,7 +425,14 @@ export class ArchiveImportService {
       }
 
       this.log.log(`imported ${String(rows)} rows as case ${caseId}`)
-      return { id: caseId, title: String(record.title), rows, attachments, missingFiles }
+      return {
+        id: caseId,
+        title: String(record.title),
+        rows,
+        attachments,
+        missingFiles,
+        unresolvedReferences: unresolved,
+      }
     })
   }
 
