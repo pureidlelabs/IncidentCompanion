@@ -31,8 +31,7 @@ export function OverviewContainer() {
   const record = useComplianceRecord(caseId)
   const navigate = useNavigate()
   const patch = useCaseMutation(caseId)
-  // At mount rather than per render: a fresh reading on every repaint moves
-  // the clocks under the analyst.
+  // Read once, so the reading holds for the mount.
   const [now] = useState(() => Date.now())
 
   const writes: CaseWrites = {
