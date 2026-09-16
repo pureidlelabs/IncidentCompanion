@@ -13,10 +13,14 @@ import type { IncidentFilter } from './source'
  * judge; this counts loads. The count moves in the mock factory, which runs
  * once per module load, so naming the module does not raise it.
  */
-const loaded = vi.hoisted(() => ({ times: 0 }))
+const loaded = vi.hoisted(() => ({ times: 0, refuseNext: false }))
 
 vi.mock('@/fixtures/sentinel-source', async (importOriginal) => {
   loaded.times += 1
+  if (loaded.refuseNext) {
+    loaded.refuseNext = false
+    throw new Error('chunk did not arrive')
+  }
   return await importOriginal<typeof SentinelFixture>()
 })
 
@@ -40,6 +44,23 @@ describe('the demo importer', () => {
     expect(loaded.times, 'the fixture was loaded by a path that does not use it').toBe(0)
   })
 
+  /**
+   * **Second, because a refused load has to be the first one.** A module that
+   * evaluated once is held by the runner, and the factory is not asked again.
+   */
+  it('does not keep a chunk that failed to arrive', async () => {
+    const address = '?importer=demo&retried=1'
+    loaded.refuseNext = true
+
+    // Not matched on the message: the runner relabels a throw from a mock
+    // factory with advice of its own, and the app never sees that text.
+    await expect(demoSourceFromUrl(address)).rejects.toThrow()
+
+    // What the Connect phase's retry reaches. A kept rejection is replayed to
+    // every later call, so the demo importer would never open again.
+    await expect(demoSourceFromUrl(address)).resolves.not.toBeNull()
+  })
+
   it('answers with the fixture incidents when the address names it', async () => {
     expect(demoImporterAsked('?importer=demo')).toBe(true)
     const source = await demoSourceFromUrl('?importer=demo')
@@ -50,14 +71,14 @@ describe('the demo importer', () => {
     const page = await source!.listIncidents(session, sources[0]!, NO_DIALS, null)
 
     expect(page.incidents.map((one) => one.key)).toEqual(['SEN-1001', 'SEN-1002'])
-    expect(loaded.times).toBe(1)
   })
 
   /** One source per address, so a caller holding it across renders is stable. */
   it('answers the same source for the same address', async () => {
+    const before = loaded.times
     const first = await demoSourceFromUrl('?importer=demo')
     const second = await demoSourceFromUrl('?importer=demo')
     expect(second).toBe(first)
-    expect(loaded.times).toBe(1)
+    expect(loaded.times, 'the fixture was fetched twice for one address').toBe(before)
   })
 })

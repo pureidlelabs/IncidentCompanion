@@ -169,11 +169,15 @@ function withClient(node: React.ReactNode) {
 }
 vi.mock('@/api/sentinel/armSource', () => ({ armSource: () => provider }))
 vi.mock('@/api/sentinel/msalTokenProvider', () => ({ msalTokenProvider: () => ({}) }))
-/** Every ask for the demo source, so a render that made one is visible. */
-const askedForTheFixture = vi.fn(() => Promise.resolve(provider))
+/**
+ * Every ask for the demo source, with the address it was asked about -- so a
+ * render that made one, and a `connect` that asked about a different address,
+ * are both visible.
+ */
+const askedForTheFixture = vi.fn((_search: string) => Promise.resolve(provider))
 vi.mock('@/api/sentinel/demoSource', () => ({
-  demoImporterAsked: () => false,
-  demoSourceFromUrl: () => askedForTheFixture(),
+  demoImporterAsked: (search: string) => new URLSearchParams(search).get('importer') === 'demo',
+  demoSourceFromUrl: (search: string) => askedForTheFixture(search),
 }))
 vi.mock('@/api/incidentImport', () => ({
   previewImport: (_caseId: string, payload: { incidents: unknown[] }) => {
@@ -304,6 +308,7 @@ describe('the Sentinel import container', () => {
     writes = null
     openCase = 'case-1'
     askedForTheFixture.mockClear()
+    window.history.replaceState({}, '', '/')
   })
 
   /**
@@ -321,6 +326,28 @@ describe('the Sentinel import container', () => {
 
     await writes!.connect({})
     expect(askedForTheFixture).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * **The screen is drawn against one address and connects against the same
+   * one.** Reading `location` twice lets a navigation between the two draw the
+   * wizard preconfigured -- no registration asked for -- and then connect
+   * through Entra with nothing to give it.
+   */
+  it('connects against the address it was drawn for', async () => {
+    window.history.replaceState({}, '', '/?importer=demo')
+    render(inCase(<ImportSentinelContainer />))
+    await waitFor(() => {
+      expect(writes).not.toBeNull()
+    })
+
+    window.history.replaceState({}, '', '/')
+    await writes!.connect({})
+
+    expect(
+      askedForTheFixture,
+      'the address was read a second time, so the phase and the screen can disagree',
+    ).toHaveBeenCalledWith('?importer=demo')
   })
 
   /**

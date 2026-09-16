@@ -82,9 +82,13 @@ export function ImportSentinelContainer({
    * needs no registration, so the connect phase is open on it.
    *
    * The address, not the source: asking for the source fetches its chunk, so
-   * `connect` is where that happens. -> `api/sentinel/demoSource.ts`
+   * `connect` is where that happens. Both read the address captured here, so a
+   * navigation between the render and the phase cannot draw the wizard
+   * preconfigured and then connect through Entra.
+   * -> `api/sentinel/demoSource.ts`
    */
-  const bundled = demoImporterAsked()
+  const search = globalThis.location.search
+  const bundled = demoImporterAsked(search)
   /**
    * **Built at `connect`, from what the analyst typed.** The registration is
    * the screen's to collect and this file's to turn into a source -- building
@@ -234,7 +238,8 @@ export function ImportSentinelContainer({
   const writes: SentinelWrites = useMemo(
     () => ({
       connect: async (registration) => {
-        provider.current = (await demoSourceFromUrl()) ?? armSource(msalTokenProvider(registration))
+        provider.current =
+          (await demoSourceFromUrl(search)) ?? armSource(msalTokenProvider(registration))
         session.current = await provider.current.connect()
         return session.current.identity
       },
@@ -335,7 +340,7 @@ export function ImportSentinelContainer({
           return commitImport(caseId, held.payload, { approved: [...approved], edits: [] })
         },
     }),
-    [caseId, startsACase, client],
+    [search, caseId, startsACase, client],
   )
 
   // `connected` because the app can always attempt a live sign-in once it is

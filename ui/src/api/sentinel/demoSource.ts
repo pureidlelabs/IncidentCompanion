@@ -59,7 +59,15 @@ export function demoSourceFromUrl(
     cached = {
       search,
       source: demoImporterAsked(search)
-        ? import('@/fixtures/sentinel-source').then((module) => module.fixtureSource())
+        ? import('@/fixtures/sentinel-source')
+            .then((module) => module.fixtureSource())
+            .catch((error: unknown) => {
+              // A chunk that failed to arrive is not an answer. Kept, it would
+              // be replayed to every later call, and the Connect phase's retry
+              // could never reach the fixture again.
+              if (cached?.search === search) cached = null
+              throw error
+            })
         : null,
     }
   }

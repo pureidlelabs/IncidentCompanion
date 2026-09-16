@@ -57,6 +57,19 @@ describe('the auth client', () => {
     expect(namesOf('useSession.ts')).toContain('useSession')
   })
 
+  /**
+   * **A star re-export names nothing, so the check above reads it as empty**
+   * -- and one line reinstates every shadow at once, including any Better Auth
+   * grows later. There is no name to compare, so the shape is refused.
+   */
+  it('re-exports no module wholesale', () => {
+    expect(
+      /^export\s+\*/m.test(readFileSync(join(API, 'authClient.ts'), 'utf8')),
+      'a star re-export puts every Better Auth name in this module at once, ' +
+        'the wrapped ones included',
+    ).toBe(false)
+  })
+
   it('exports no name this tier already wraps', () => {
     const wrapped = new Set([...namesOf('client.ts'), ...namesOf('useSession.ts')])
     expect(
