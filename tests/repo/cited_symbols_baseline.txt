@@ -81,6 +81,7 @@ onRequest
 onResizeEnd
 OSFamily
 OTEL_EXPORTER_OTLP_ENDPOINT
+outerHTML
 partialRecord
 peerOptional
 PLAYWRIGHT_VERSION
