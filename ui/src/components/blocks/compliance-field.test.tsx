@@ -288,3 +288,87 @@ describe('a vocabulary with neither shape', () => {
     expect(screen.getByRole('checkbox', { name: 'Loss of confidentiality' })).toBeInTheDocument()
   })
 })
+
+/**
+ * **What each kind posts, which is what the column has to accept.**
+ *
+ * This control emits the stored shape directly -- there is no conversion
+ * between it and the PATCH -- so what it hands `onSet` is what the record is
+ * asked to hold. A ground is `z.enum(['yes','no']).nullable()`, and an answer
+ * taken back as `''` is refused by the write, so the answer cannot be
+ * withdrawn at all. -> #845
+ *
+ * **Asserted on the value handed out, not on the control.** A select that
+ * draws *not stated* perfectly and posts the wrong thing looks right on every
+ * screen, and the refusal arrives on the write.
+ */
+describe('what an answer posts when it is taken back', () => {
+  /** A served select whose vocabulary carries the not-stated row. */
+  const GROUND = 'nis2EntityClass'
+
+  /**
+   * Opens the select on `from` and picks `option`.
+   *
+   * **The two differ on purpose.** React Aria fires no selection change for
+   * the row already chosen, so a case that starts on its own answer asserts
+   * nothing at all.
+   */
+  async function pick(spec: ComplianceFieldSpec, from: string, option: string | RegExp) {
+    const user = userEvent.setup()
+    const onSet = draw(spec, { [spec.name]: from })
+    await user.click(screen.getByRole('button'))
+    await user.click(await screen.findByRole('option', { name: option }))
+    return onSet
+  }
+
+  it('posts null for a ground taken back, never the empty string', async () => {
+    const onSet = await pick(served(GROUND), 'essential', /not stated/i)
+
+    expect(
+      stored(onSet),
+      'the column is an enum with no empty member, so this write is refused',
+    ).toBeNull()
+  })
+
+  it('posts the option itself for a ground that is answered', async () => {
+    // The control: a select that posted null for everything would satisfy the
+    // case above and store nothing anybody chose.
+    const spec = served(GROUND)
+    const answer = (spec.options ?? []).find((one) => one !== '')
+    expect(answer, 'the served vocabulary offers nothing but the not-stated row').toBeDefined()
+
+    const onSet = await pick(spec, '', new RegExp(spec.optionLabels?.[answer!] ?? answer!, 'i'))
+
+    expect(stored(onSet)).toBe(answer)
+  })
+
+  it('keeps an emptied note as an empty string, because clearing text is an edit', async () => {
+    const user = userEvent.setup()
+    const spec = served('competentAuthority')
+    const onSet = draw(spec, { [spec.name]: 'BIPT' })
+
+    await user.clear(screen.getByRole('textbox'))
+
+    expect(stored(onSet), 'a cleared note read as a question nobody asked').toBe('')
+  })
+
+  it('posts null for an emptied count rather than zero', async () => {
+    const user = userEvent.setup()
+    const spec = served('annualTurnoverEur')
+    const onSet = draw(spec, { [spec.name]: 12 })
+
+    await user.clear(screen.getByRole('spinbutton'))
+
+    expect(stored(onSet), 'an emptied count read as nobody was affected').toBeNull()
+  })
+
+  it('posts a zero an analyst typed, which is an answer', async () => {
+    const user = userEvent.setup()
+    const spec = served('annualTurnoverEur')
+    const onSet = draw(spec, {})
+
+    await user.type(screen.getByRole('spinbutton'), '0')
+
+    expect(stored(onSet), 'a typed zero read as unanswered').toBe(0)
+  })
+})
