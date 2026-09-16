@@ -328,7 +328,7 @@ describe('a field gated on a checkbox or on another field\'s value', () => {
    * **The blank comes off the wire, not off the control kind.** A kind cannot
    * answer the question: a single-reference column refuses `''` and stores
    * `null`, and a count stores `null` for *not stated* where `0` is a real
-   * answer. The server parses the column and serves the result beside the gate.
+   * answer. The server parses the column and serves the result on the field.
    */
   it('empties a shut field to the blank its column holds', () => {
     const scope = fieldOf(formSpec(specsFixture, 'NETWORK_FIELDS'), 'scope')
@@ -337,14 +337,20 @@ describe('a field gated on a checkbox or on another field\'s value', () => {
   })
 
   /**
-   * **A field with no gate is never sealed, and answers nothing.** A fallback
-   * here would be a third table: the one thing this must not do is invent a
-   * value for a column it was told nothing about.
+   * **A column that insists on a value answers nothing, and the answer is
+   * never invented.** A fallback here would be a third table: the one thing
+   * this must not do is name a value for a column it was told nothing about.
+   * A gate is not what makes a field answer -- a select clears through this
+   * too, and no select is gated.
    */
-  it('answers nothing for a field that declares no gate', () => {
+  it('answers the column blank without a gate, and nothing for a required column', () => {
     const port = fieldOf(formSpec(specsFixture, 'NETWORK_FIELDS'), 'port')
     expect(port?.applicableWhen).toBeUndefined()
-    expect(emptyFor(port!)).toBeUndefined()
+    expect(emptyFor(port!)).toBe('')
+
+    const title = fieldOf(formSpec(specsFixture, 'CASE_FIELDS'), 'title')
+    expect(title?.required, 'the served requirement went missing').toBe(true)
+    expect(emptyFor(title!)).toBeUndefined()
   })
 })
 

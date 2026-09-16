@@ -34,6 +34,8 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+const SELECT_ALL = /^Select all \d+ shown$/
+
 /** 88 entries over a week: 83 events and the 5 activities the SOC recorded. */
 export const Populated: Story = {
   name: 'A week of a live campaign',
@@ -119,7 +121,7 @@ export const NothingSelected: Story = {
   args: { newestFirst: false },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('checkbox', { name: 'Select every row' })).not.toBeChecked()
+    await expect(canvas.getByRole('checkbox', { name: SELECT_ALL })).not.toBeChecked()
     await expect(canvas.queryByText(/\d+ selected/)).toBeNull()
   },
 }
@@ -130,9 +132,8 @@ export const SomeSelected: Story = {
   args: { newestFirst: false },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const rowBoxes = canvas
-      .getAllByRole('checkbox')
-      .filter((box) => box.getAttribute('aria-label') !== 'Select every row')
+    const selectAll = canvas.getByRole('checkbox', { name: SELECT_ALL })
+    const rowBoxes = canvas.getAllByRole('checkbox').filter((box) => box !== selectAll)
     const first = rowBoxes[0]
     if (!first) throw new Error('the demo case has no row to tick')
     await userEvent.click(first)
@@ -145,14 +146,15 @@ export const SomeSelected: Story = {
   },
 }
 
-/** Every row ticked through the header box, and the bar names the whole case. */
+/** Every row ticked by pressing the caption rather than the box. */
 export const AllSelected: Story = {
   name: 'Selection: every row ticked',
   args: { newestFirst: false },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const total = campaignCase.timeline.length
-    await userEvent.click(canvas.getByRole('checkbox', { name: 'Select every row' }))
+    await userEvent.click(canvas.getByText(SELECT_ALL))
+    await expect(canvas.getByRole('checkbox', { name: SELECT_ALL })).toBeChecked()
     await waitFor(async () => {
       await expect(canvas.getByText(`${String(total)} selected`)).toBeVisible()
     })
@@ -522,6 +524,9 @@ export const RowDeleted: Story = {
     const canvas = within(canvasElement)
     const bins = await canvas.findAllByRole('button', { name: /^Delete / })
     await userEvent.click(bins[1]!)
+    // A row delete asks first, the same as the bulk bar's. -> #831
+    const confirm = await screen.findByRole('alertdialog')
+    await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     await expect(args.writes!.remove).toHaveBeenCalledOnce()
     await expect(args.writes!.remove).toHaveBeenCalledWith([withTwins().timeline[2]!.id])
   },
@@ -538,6 +543,8 @@ export const RemovePending: Story = {
     const rows = () => canvasElement.querySelectorAll('[data-part="timeline-row"]').length
     const before = rows()
     await userEvent.click((await canvas.findAllByRole('button', { name: /^Delete / }))[0]!)
+    const confirm = await screen.findByRole('alertdialog')
+    await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     await expect(args.writes!.remove).toHaveBeenCalledOnce()
     await expect(rows()).toBe(before)
   },
@@ -553,7 +560,7 @@ export const BulkDeleted: Story = {
     // Three entries on two lines, which is what makes the assertion below say
     // anything: a selection resolved off the lines would name two.
     await expect(canvasElement.querySelectorAll('[data-part="timeline-row"]')).toHaveLength(2)
-    await userEvent.click(await canvas.findByRole('checkbox', { name: 'Select every row' }))
+    await userEvent.click(await canvas.findByRole('checkbox', { name: SELECT_ALL }))
     await userEvent.click(await canvas.findByRole('button', { name: /^Delete \d+$/ }))
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))

@@ -282,7 +282,14 @@ export function TimelineScreen({
    * second copy of its markup.
    */
   const selectionColumns = useMemo(
-    () => [selectionColumn<TimelineEntry>((row) => `Select ${row.description || 'entry'}`)],
+    () => [
+      selectionColumn<TimelineEntry>(
+        (row) => `Select ${row.description || 'entry'}`,
+        // Handed the count rather than closing over it: a count in the
+        // dependency list rebuilds the columns the selection is keyed to.
+        (shown) => <span className="text-xs">{`Select all ${String(shown)} shown`}</span>,
+      ),
+    ],
     [],
   )
   const table: EntityTable<TimelineEntry> = useEntityTable<TimelineEntry>({
@@ -337,9 +344,8 @@ export function TimelineScreen({
         editor.edit(entry)
         return
       case 'delete':
-        void write.remove([entry.id]).then(() => {
-          setEntries((current) => withoutTimelineEntries(current, new Set([entry.id])))
-        })
+        // Asked, not written. Both doors that offer a row delete arrive here.
+        setDeleting([entry.id])
         return
     }
   }
@@ -611,9 +617,8 @@ export function TimelineScreen({
         ) : (
           <>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 text-xs text-ink-muted">
+              <span className="flex items-center text-ink-muted">
                 {selectAllCheckbox}
-                {`Select all ${String(visible.length)} shown`}
               </span>
               <BulkActionBar
                 table={table}
@@ -767,10 +772,19 @@ export function TimelineScreen({
               setEntries((current) => withoutTimelineEntries(current, new Set(doomed)))
             })
           }}
-          title={(count) =>
-            count === 1 ? 'Delete this entry?' : `Delete ${String(count)} entries?`
+          title={(count) => {
+            if (count !== 1) return `Delete ${String(count)} entries?`
+            // The control just pressed was `Delete <description>`, so the
+            // question uses the same words rather than asking about an entry
+            // the analyst has to work out.
+            const named = entries.find((one) => one.id === deleting?.[0])?.description
+            return named ? `Delete ${named}?` : 'Delete this entry?'
+          }}
+          consequence={
+            deleting?.length === 1
+              ? 'The entry goes; the graph and the report update to match.'
+              : 'They go in one step; the graph and the report update to match.'
           }
-          consequence="They go in one step; the graph and the report update to match."
         />
       </AsyncBoundary>
     </Section>

@@ -7,6 +7,7 @@ import {
   useUploadAvatar,
 } from '@/api/appearance'
 import { changeOwnPassword } from '@/api/client'
+import { announced, announcing } from '@/app/case/entryWrites'
 import type { AccountProfileWrites } from '@/components/blocks/account-profile-section'
 import { useSession } from '@/api/useSession'
 import { useGround } from '@/lib/useGround'
@@ -14,6 +15,17 @@ import type { Theme } from '@/lib/theme-preference'
 import { AccountDialog } from '@/components/blocks/account-dialog'
 
 import { refusalOf } from '../auth/refusal'
+
+/**
+ * What a refused profile write says, since the default subject-verb fits none
+ * of the three: the initials are plural, and removing a picture is not saving
+ * one.
+ */
+const REFUSED = {
+  tone: 'The colour was not saved.',
+  initials: 'The initials were not saved.',
+  picture: 'The picture was not removed.',
+} as const
 
 /**
  * The account dialog, bound to the analyst's own appearance, ground and
@@ -60,16 +72,26 @@ export function AccountContainer({
       })
     },
     clearPicture: () => {
-      clear.mutate()
+      void announced('the picture', () => clear.mutateAsync(), { said: REFUSED.picture })
     },
-    setTone: (tone) => {
-      save.mutate({ tone, initials: mine?.initials ?? '' })
+    // Awaited rather than voided: `announcing` rethrows, and the rejection is
+    // what puts the control back.
+    setTone: async (tone) => {
+      await announcing(
+        'the colour',
+        () => save.mutateAsync({ tone, initials: mine?.initials ?? '' }),
+        { said: REFUSED.tone },
+      )
     },
-    setInitials: (initials) => {
-      save.mutate({
-        ...(mine?.tone !== undefined ? { tone: mine.tone } : {}),
-        initials,
-      })
+    setInitials: async (initials) => {
+      await announcing(
+        'the initials',
+        () => save.mutateAsync({
+          ...(mine?.tone !== undefined ? { tone: mine.tone } : {}),
+          initials,
+        }),
+        { said: REFUSED.initials },
+      )
     },
   }
 

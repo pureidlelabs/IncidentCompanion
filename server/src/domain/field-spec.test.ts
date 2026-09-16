@@ -339,7 +339,9 @@ describe('a generated refusal and an empty field', () => {
         kind: 'select',
       }),
       flag: gated('flag', z.boolean().default(false), 'checkbox'),
-      count: gated('count', z.number().default(0), 'number'),
+      // `optionalCount()` rather than `z.number().default(0)`: a gate needs a
+      // blank to seal to, and `0` is an answer an analyst may mean.
+      count: gated('count', optionalCount(), 'number'),
       list: gated('list', z.array(z.uuid()).default([]), 'multi_device_select'),
       note: gated('note', z.string().trim().max(80).default(''), 'text'),
     }),
@@ -347,7 +349,7 @@ describe('a generated refusal and an empty field', () => {
 
   it('takes a row that sets nothing while every gate is shut', () => {
     // `.default()` materialises before the object-level refine, so `false` and
-    // `0` arrive at the check as values. Reading them as *set* refuses a body
+    // `[]` arrive at the check as values. Reading them as *set* refuses a body
     // carrying nothing at all.
     const answer = probe.safeParse({})
     expect(

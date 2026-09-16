@@ -28,12 +28,15 @@ import { Separator } from '@/components/ui/separator'
  */
 export function WriteFailure({
   what,
+  said,
   error,
   onRetry,
   onDismiss,
 }: {
   /** The collection, in the analyst's words: `Indicators`, `the section order`. */
   what: string
+  /** The whole title. -> `WriteFailureOptions` */
+  said?: string
   error: ApiError
   /** Absent where the caller holds no way to run the write again. */
   onRetry?: (() => void) | undefined
@@ -65,7 +68,7 @@ export function WriteFailure({
       <div className="flex items-start gap-3">
         <OctagonXIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <AlertTitle>{what} was not saved.</AlertTitle>
+          <AlertTitle>{said ?? `${what} was not saved.`}</AlertTitle>
           <AlertDescription>{error.message}</AlertDescription>
         </div>
       </div>

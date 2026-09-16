@@ -222,6 +222,63 @@ describe.skipIf(!db)('the preferences routes', () => {
     )
   })
 
+  /**
+   * **A refusal is not the picture, so it does not carry the picture's cache.**
+   *
+   * `@Header` is applied to the response before the handler body runs, so the
+   * one-year immutable directive meant for an image survived the 404 raised
+   * for an analyst who has none: a client was told it could keep that refusal
+   * for a year without asking again, and an analyst who then uploaded a
+   * picture stayed faceless to anybody holding it. -> #836
+   *
+   * **The `?v=` the client appends is not the guard.** It changes on every
+   * write, so the picture appears at a different URL and a different cache key.
+   *
+   * Asserted on what the handler does with the response, because that is what
+   * it decides: a 404 that never reached the typing is answered by Nest with
+   * no cache header of the route's at all.
+   */
+  describe('the cache a picture carries', () => {
+    /** Records the headers a handler sets, and the type it answers with. */
+    function recorder() {
+      const seen: { header: string; value: string }[] = []
+      return {
+        seen,
+        type: (value: string) => seen.push({ header: 'content-type', value }),
+        setHeader: (header: string, value: string) => seen.push({ header, value }),
+      }
+    }
+
+    it('sets none of it on the refusal for an analyst with no picture', async () => {
+      const response = recorder()
+
+      await expect(prefs.avatar(SAM, response)).rejects.toMatchObject({ status: 404 })
+
+      expect(
+        response.seen,
+        'the refusal was cached as though it were the picture',
+      ).toEqual([])
+    })
+
+    it('sets it on the picture it does serve', async () => {
+      // A real 1x1 PNG: the upload is decoded and re-encoded, so a stub that
+      // only looks like a header is refused.
+      const png = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        'base64',
+      )
+      await new PreferencesService(db!).setAvatar(SAM, png, 'image/png')
+      const response = recorder()
+
+      await prefs.avatar(SAM, response)
+
+      const cache = response.seen.find((one) => one.header === 'cache-control')?.value ?? ''
+      expect(cache, 'a picture served without the cache the URL is versioned for').toContain(
+        'immutable',
+      )
+    })
+  })
+
   describe('asking for a picture nobody has', () => {
     /**
      * **404, not 400.** The request was well formed and the analyst is real;
@@ -229,9 +286,9 @@ describe.skipIf(!db)('the preferences routes', () => {
      * and sends whoever debugs it looking at the URL.
      */
     it('answers 404 rather than calling the request bad', async () => {
-      await expect(prefs.avatar(SAM, { type: () => undefined })).rejects.toMatchObject({
-        status: 404,
-      })
+      const nothing = { type: () => undefined, setHeader: () => undefined }
+
+      await expect(prefs.avatar(SAM, nothing)).rejects.toMatchObject({ status: 404 })
     })
 
     /**
@@ -251,7 +308,7 @@ describe.skipIf(!db)('the preferences routes', () => {
     )
       await new PreferencesService(db!).setAvatar(SAM, png, 'image/png')
 
-      const sent = await prefs.avatar(SAM, { type: () => undefined })
+      const sent = await prefs.avatar(SAM, { type: () => undefined, setHeader: () => undefined })
       expect(sent).toBeDefined()
     })
   })
