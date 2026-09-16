@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, waitFor, within } from 'storybook/test'
 
 import type { Case } from '@/api/model'
-import { campaignCase } from '@/fixtures/campaign'
+import { CAMPAIGN_NOW, campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
 import { specsFixture } from '@/fixtures/specs'
 import { inACase } from '@/fixtures/in-a-case'
@@ -20,7 +20,7 @@ const meta = {
   component: OverviewScreen,
   decorators: [inACase('overview')],
   parameters: { layout: 'fullscreen' },
-  args: { kase: campaignCase, specs: specsFixture, record: campaignCompliance },
+  args: { kase: campaignCase, specs: specsFixture, record: campaignCompliance, now: CAMPAIGN_NOW },
 } satisfies Meta<typeof OverviewScreen>
 
 export default meta

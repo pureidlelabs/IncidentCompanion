@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 
 import type { Case } from '@/api/model'
-import { campaignCase } from '@/fixtures/campaign'
+import { CAMPAIGN_NOW, campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
 import { specsFixture } from '@/fixtures/specs'
 
@@ -18,7 +18,7 @@ const meta = {
   title: 'Blocks/List/Case picture',
   component: CasePicturePane,
   parameters: { layout: 'padded' },
-  args: { kase: campaignCase, specs: specsFixture, record: campaignCompliance },
+  args: { kase: campaignCase, specs: specsFixture, record: campaignCompliance, now: CAMPAIGN_NOW },
 } satisfies Meta<typeof CasePicturePane>
 
 export default meta

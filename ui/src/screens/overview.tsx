@@ -35,7 +35,7 @@ export interface OverviewScreenProps {
   /** Opens the section a queue row is answered on. */
   onOpen?: ((row: QueueRow) => void) | undefined
   /** The moment the clocks are read at, in epoch milliseconds. */
-  now?: number
+  now: number
   /** Omitted in the gallery, where a field is typed into and never sent. */
   writes?: CaseWrites
   /**
@@ -63,7 +63,7 @@ export function OverviewScreen({
   refusal,
   refused,
   onOpen,
-  now = Date.parse('2026-08-19T09:00:00.000Z'),
+  now,
   writes,
   busy = false,
   problem,

@@ -7,7 +7,7 @@ import type { RailReport } from '@/api/case'
 import { CaseProviders, NO_CLAIMS } from '@/app/case/CaseProviders'
 import { CaseFrame } from '@/components/blocks/case-frame'
 import { AriaRouter } from '@/components/ui/aria-router'
-import { campaignCase } from '@/fixtures/campaign'
+import { CAMPAIGN_NOW, campaignCase } from '@/fixtures/campaign'
 import { caseActivity, caseChrome } from '@/fixtures/caseChrome'
 
 /**
@@ -53,7 +53,7 @@ export function inACase(section: string): Decorator {
               <CaseFrame
                 section={section}
                 {...caseChrome}
-                activity={{ entries: caseActivity(Math.floor(GALLERY_NOW / 1000)) }}
+                activity={{ entries: caseActivity(Math.floor(CAMPAIGN_NOW / 1000)) }}
                 counts={FIXTURE_COUNTS}
                 reports={own.reports ?? campaignCase.reports}
                 openReport={own.openId ?? null}
@@ -95,14 +95,6 @@ function Routed({ children }: { children: ReactNode }) {
     </AriaRouter>
   )
 }
-
-/**
- * The moment the gallery's activity feed is read at.
- *
- * Fixed, so a screenshot taken in a year shows the same reading as one taken
- * today - which is what the Picture screen's own stories hold their clock at.
- */
-const GALLERY_NOW = Date.parse('2026-08-19T09:00:00.000Z')
 
 /**
  * What the campaign fixture holds, per section.
