@@ -72,7 +72,7 @@ describe('what the install is holding', () => {
     const { db } = scripted([TABLES, DATABASE, CASES, ACCOUNTS])
     const read = await new ActivityController(db, CONFIG).read()
 
-    expect(read.cases).toEqual({ total: 12, open: 10, closed: 2, demo: 6 })
+    expect(read.cases).toEqual({ total: 12, live: 10, postIncident: 0, closed: 2, demo: 6 })
   })
 
   /**
@@ -95,7 +95,7 @@ describe('what the install is holding', () => {
       [
         { status: 'respond', is_demo: false, count: '3' },
         { status: 'recover', is_demo: true, count: '5' },
-        { status: 'post_incident', is_demo: false, count: '4' },
+        { status: 'post-incident', is_demo: false, count: '4' },
         { status: 'closed', is_demo: false, count: '11' },
         { status: 'closed', is_demo: true, count: '2' },
       ],
@@ -158,7 +158,7 @@ describe('what the install is holding', () => {
     const read = await new ActivityController(db, CONFIG).read()
 
     expect(read.tables).toEqual([])
-    expect(read.cases).toEqual({ total: 0, open: 0, closed: 0, demo: 0 })
+    expect(read.cases).toEqual({ total: 0, live: 0, postIncident: 0, closed: 0, demo: 0 })
     expect(read.accounts).toEqual({ total: 0, admins: 0, analysts: 0 })
     expect(read.database).toEqual({
       sizeBytes: 0,

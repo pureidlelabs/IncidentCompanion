@@ -17,7 +17,7 @@ import type { Database } from '../db/client.js'
 import type { Env } from '../config/env.js'
 import { whereIs } from './where.js'
 import { AdminOnly } from '../auth/admin-only.js'
-import { LIVE_STATES, type CaseStatus } from '../domain/case.js'
+import { isLive } from '../domain/vocabularies.js'
 
 export const activitySchema = z.object({
   database: z.object({
@@ -156,10 +156,10 @@ export class ActivityController {
       cases: {
         total: caseRows.reduce((sum, row) => sum + count(row.count), 0),
         live: caseRows
-          .filter((row) => LIVE_STATES.includes(row.status as CaseStatus))
+          .filter((row) => isLive(row.status))
           .reduce((sum, row) => sum + count(row.count), 0),
         postIncident: caseRows
-          .filter((row) => row.status === 'post_incident')
+          .filter((row) => row.status === 'post-incident')
           .reduce((sum, row) => sum + count(row.count), 0),
         closed: caseRows
           .filter((row) => row.status === 'closed')

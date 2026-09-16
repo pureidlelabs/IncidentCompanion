@@ -12,6 +12,21 @@ export * from './vocabularies.lists.js'
 import * as lists from './vocabularies.lists.js'
 import * as compliance from './vocabularies/compliance.js'
 
+/** Where a case's work sits. -> `vocabularies.lists.ts` */
+export const caseStatusSchema = z.enum(lists.CASE_STATES)
+
+export type CaseStatus = (typeof lists.CASE_STATES)[number]
+
+/**
+ * Whether the incident behind a case is still running.
+ *
+ * Takes any string, because the callers are counting rows a database handed
+ * back rather than values they have already narrowed.
+ */
+export function isLive(status: string): boolean {
+  return (lists.LIVE_STATES as readonly string[]).includes(status)
+}
+
 export const severitySchema = z.enum(lists.SEVERITY)
 export type Severity = z.infer<typeof severitySchema>
 

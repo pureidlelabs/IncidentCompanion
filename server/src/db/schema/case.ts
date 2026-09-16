@@ -23,7 +23,7 @@ import { customers } from './customer.js'
 export const caseStatus = pgEnum('case_status', [
   'respond',
   'recover',
-  'post_incident',
+  'post-incident',
   'closed',
 ])
 

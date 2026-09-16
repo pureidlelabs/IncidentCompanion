@@ -29,7 +29,7 @@
 import { z } from 'zod'
 
 import { envelopeSchema, field, patchSchema, readStamp } from './field-spec.js'
-import { SEVERITY } from './vocabularies.js'
+import { LIVE_STATES, SEVERITY, caseStatusSchema, type CaseStatus } from './vocabularies.js'
 import { VERIS_ACTIONS } from './vocabularies/compliance.js'
 
 /**
@@ -43,27 +43,9 @@ import { VERIS_ACTIONS } from './vocabularies/compliance.js'
  */
 export const INCIDENT_CLASS = ['unknown', ...VERIS_ACTIONS] as const
 
-/**
- * Where a case's work sits, in the incident response functions of NIST CSF 2.0
- * as SP 800-61r3 applies them, plus the closing state this product adds.
- *
- * **The state answers where the work is, not how far along it is.** A case is
- * not required to pass through every one and may return to an earlier one: an
- * incident believed handled that resumes is ordinary.
- * -> `openspec/specs/cases/spec.md`
- */
-export const caseStatusSchema = z.enum(['respond', 'recover', 'post_incident', 'closed'])
+/** Where a case's work sits, and which of those states are a live incident. */
+export { LIVE_STATES, caseStatusSchema, type CaseStatus }
 
-export type CaseStatus = z.infer<typeof caseStatusSchema>
-
-/**
- * The states in which the incident itself is still running.
- *
- * **Stated rather than derived.** A reader asking `!== 'closed'` counts a case
- * in write-up as a live incident, which is the one distinction the state
- * exists to make.
- */
-export const LIVE_STATES: readonly CaseStatus[] = ['respond', 'recover']
 
 
 const stamp = (label: string) =>

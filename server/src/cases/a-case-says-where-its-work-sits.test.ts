@@ -32,7 +32,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 describe('the states a case can be in', () => {
   it('names the four the specification names, and no others', () => {
-    expect(caseStatusSchema.options).toEqual(['respond', 'recover', 'post_incident', 'closed'])
+    expect(caseStatusSchema.options).toEqual(['respond', 'recover', 'post-incident', 'closed'])
   })
 
   /**
@@ -43,7 +43,7 @@ describe('the states a case can be in', () => {
    */
   it('says which of them mean the incident is still live', () => {
     expect([...LIVE_STATES]).toEqual(['respond', 'recover'])
-    expect(LIVE_STATES, 'write-up is not a live incident').not.toContain('post_incident')
+    expect(LIVE_STATES, 'write-up is not a live incident').not.toContain('post-incident')
     expect(LIVE_STATES).not.toContain('closed')
   })
 })
@@ -100,9 +100,9 @@ describe.skipIf(!db)('a case moving between states', () => {
   it('moves to post-incident without being closed', async () => {
     const row = await raised()
 
-    const moved = await moveTo(row.id, row.version, 'post_incident')
+    const moved = await moveTo(row.id, row.version, 'post-incident')
 
-    expect(moved.status).toBe('post_incident')
+    expect(moved.status).toBe('post-incident')
     expect(LIVE_STATES, 'a case in write-up still counts as a live incident').not.toContain(
       moved.status,
     )
@@ -116,7 +116,7 @@ describe.skipIf(!db)('a case moving between states', () => {
    */
   it('returns to respond from post-incident', async () => {
     const row = await raised()
-    const moved = await moveTo(row.id, row.version, 'post_incident')
+    const moved = await moveTo(row.id, row.version, 'post-incident')
 
     const back = await moveTo(row.id, moved.version, 'respond')
 
