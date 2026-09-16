@@ -14,6 +14,7 @@
  * the parameter it was given, and returns it under the key the response schema
  * declares.
  */
+import { NotFoundException } from '@nestjs/common'
 import { describe, expect, it } from 'vitest'
 
 import { ReachController } from './reach.controller.js'
@@ -73,6 +74,33 @@ describe('the reach routes', () => {
     expect(answer.reachedBy[0]?.username, 'the answer is empty or under the wrong key').toBe(
       'alex@example.test',
     )
+  })
+
+  /**
+   * **An empty list says nothing about whether the id names anybody.** An
+   * account in no group reaches the default customer and an account that does
+   * not exist reaches nothing, and the two were the same answer -- so an
+   * administrator following a stale link was shown a reach screen for somebody
+   * who is not there, and the document's own 404 for that path described a
+   * refusal the route never made. -> #818, and #812 one controller over.
+   *
+   * The two cases above are what give these their meaning: a read that refused
+   * every id would pass here alone.
+   */
+  it.each([
+    ['ofAccount', 'u-gone'],
+    ['ofCustomer', '33333333-3333-4333-8333-333333333333'],
+  ] as const)('refuses %s for an id that names nothing', async (route, id) => {
+    const absent = { reachOf: () => Promise.resolve(null), reachTo: () => Promise.resolve(null) }
+    const controller = new ReachController(absent as never)
+
+    const refused = await controller[route](id).catch((error: unknown) => error)
+
+    expect(refused).toBeInstanceOf(NotFoundException)
+    expect((refused as NotFoundException).getResponse()).toMatchObject({
+      statusCode: 404,
+      error: 'Not Found',
+    })
   })
 })
 

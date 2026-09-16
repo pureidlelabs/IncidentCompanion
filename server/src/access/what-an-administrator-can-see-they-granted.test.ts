@@ -105,7 +105,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
 
   describe('for an account', () => {
     it('names every customer it reaches, the level, and what granted it', async () => {
-      const held = await reach.reachOf(ALEX)
+      const held = (await reach.reachOf(ALEX))!
 
       expect(
         held.find((one) => one.customerId === acme),
@@ -122,7 +122,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
      * group would send an administrator looking for one to revoke.
      */
     it('reports the default customer as the floor, not as a grant', async () => {
-      const held = await reach.reachOf(SAM)
+      const held = (await reach.reachOf(SAM))!
 
       expect(held.map((one) => one.customerId), 'an analyst in no group reaches nothing').toEqual([
         fallback,
@@ -147,7 +147,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
       await db!.insert(groupCustomers).values({ groupId: also!.id, customerId: fallback })
       await db!.insert(groupMembers).values({ groupId: also!.id, userId: SAM, level: 'write' })
 
-      const row = (await reach.reachOf(SAM)).find((one) => one.customerId === fallback)
+      const row = (await reach.reachOf(SAM))!.find((one) => one.customerId === fallback)
 
       expect(row?.level, 'the level changed, so this is not the case it says it is').toBe('write')
       expect(
@@ -161,7 +161,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
       await db!.insert(groupCustomers).values({ groupId: also!.id, customerId: fallback })
       await db!.insert(groupMembers).values({ groupId: also!.id, userId: SAM, level: 'delete' })
 
-      const row = (await reach.reachOf(SAM)).find((one) => one.customerId === fallback)
+      const row = (await reach.reachOf(SAM))!.find((one) => one.customerId === fallback)
 
       expect(row?.level).toBe('delete')
       expect(row?.granted, 'the grant that raised the level is not the one named').toMatchObject({
@@ -175,7 +175,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
       await db!.insert(groupCustomers).values({ groupId: second!.id, customerId: acme })
       await db!.insert(groupMembers).values({ groupId: second!.id, userId: ALEX, level: 'delete' })
 
-      const held = await reach.reachOf(ALEX)
+      const held = (await reach.reachOf(ALEX))!
       const row = held.find((one) => one.customerId === acme)
 
       expect(row?.level, 'the weaker grant was reported as what the analyst reaches').toBe('delete')
@@ -188,7 +188,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
 
   describe('from the customer', () => {
     it('names every analyst who reaches it, the level, and what granted it', async () => {
-      const held = await reach.reachTo(acme)
+      const held = (await reach.reachTo(acme))!
 
       expect(held, 'nobody is reported as reaching a customer a group holds').toHaveLength(1)
       expect(held[0]).toMatchObject({
@@ -206,7 +206,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
      * roster here would be a claim about them.
      */
     it('reports every analyst on the default customer, by the floor', async () => {
-      const held = await reach.reachTo(fallback)
+      const held = (await reach.reachTo(fallback))!
       const mine = held.filter((one) => one.userId === ALEX || one.userId === SAM)
 
       expect(
@@ -232,7 +232,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
       await db!.insert(groupCustomers).values({ groupId: second!.id, customerId: acme })
       await db!.insert(groupMembers).values({ groupId: second!.id, userId: ALEX, level: 'delete' })
 
-      const held = (await reach.reachTo(acme)).find((one) => one.userId === ALEX)
+      const held = (await reach.reachTo(acme))!.find((one) => one.userId === ALEX)
 
       expect(held?.level, 'the weaker grant was reported as what the analyst reaches').toBe('delete')
       expect(
@@ -250,7 +250,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
       await db!.insert(groupCustomers).values({ groupId: also!.id, customerId: fallback })
       await db!.insert(groupMembers).values({ groupId: also!.id, userId: SAM, level: 'write' })
 
-      const held = await reach.reachTo(fallback)
+      const held = (await reach.reachTo(fallback))!
       const mine = held.find((one) => one.userId === SAM)
 
       expect(mine?.level).toBe('write')
@@ -258,6 +258,25 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
         mine?.granted,
         'a group granting no more than the floor is named as what grants the reach',
       ).toEqual({ by: 'default' })
+    })
+  })
+
+  /**
+   * **An empty list says nothing about whether the id names anybody.** An
+   * account in no group reaches the default customer and an account that is not
+   * there reaches nothing; both answered a list, so an administrator following
+   * a stale link was shown a reach screen for somebody who is not there.
+   *
+   * The cases above are what give these their meaning: a read answering `null`
+   * for every id would pass here alone. -> #818
+   */
+  describe('for an id nobody holds', () => {
+    it('answers that there is no such account, rather than no reach', async () => {
+      expect(await reach.reachOf('u-nobody-holds-this')).toBeNull()
+    })
+
+    it('answers that there is no such customer, rather than nobody reaching it', async () => {
+      expect(await reach.reachTo('33333333-3333-4333-8333-333333333333')).toBeNull()
     })
   })
 
