@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 
 import type { ComplianceVerdict } from '@/api/compliance'
 import { Badge } from '@/components/ui/badge'
+import { TONE_CLASS } from '@/components/ui/severity-tones'
 
 /**
  * One regime's answer on this case, and what it was reached from.
@@ -61,7 +62,7 @@ export function VerdictChip({ verdict }: { verdict: boolean | null }): ReactNode
   if (verdict === null) return <Badge variant="outlined">Undetermined</Badge>
   if (verdict) {
     return (
-      <Badge variant="solid" className="bg-severity-critical text-on-severity">
+      <Badge variant="solid" className={TONE_CLASS.critical}>
         Reportable
       </Badge>
     )

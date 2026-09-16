@@ -2,6 +2,7 @@ import { useCase } from '@/api/case'
 import { useSpecs } from '@/api/specs'
 import { useBulkPatch } from '@/api/useBulkPatch'
 import { useEntryCreate } from '@/api/useEntryCreate'
+import { useBulkDelete } from '@/api/useBulkDelete'
 import { useEntryDelete } from '@/api/useEntryDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useCaseId } from '@/app/useCaseId'
@@ -20,10 +21,12 @@ export function ImpactContainer() {
       patch: useEntryMutation(caseId, 'impact'),
       bulk: useBulkPatch(caseId, 'impact'),
       remove: useEntryDelete(caseId, 'impact'),
+      bulkDelete: useBulkDelete(caseId),
     },
     { one: 'the impact row', many: 'the selected rows' },
     () => kase.data?.impact ?? [],
     async () => (await kase.refetch()).data?.impact ?? [],
+    'impact',
   ) as ImpactWrites
 
   return (
