@@ -181,6 +181,9 @@ export function FieldControl<TData>({
               <VocabSelect
                 {...ids}
                 value={text}
+                // A column whose every legal value is an answer has no clear,
+                // so it is offered no row for one. -> `blankOf`
+                allowEmpty={emptyFor(field) !== undefined}
                 onValueChange={(next) => {
                   // The blank row is in no vocabulary, so it posts the column's
                   // own empty: `''` is a value every enum refuses.

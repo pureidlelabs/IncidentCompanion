@@ -651,7 +651,6 @@
           "label": "Verdict",
           "kind": "select",
           "subordinate": true,
-          "blank": "unknown",
           "default": "unknown",
           "vocabulary": "assetVerdict",
           "options": [
@@ -668,7 +667,6 @@
           "label": "Analysis status",
           "kind": "select",
           "subordinate": true,
-          "blank": "open",
           "default": "open",
           "vocabulary": "taskStatus",
           "options": [
@@ -684,7 +682,6 @@
           "label": "Zone",
           "kind": "select",
           "subordinate": true,
-          "blank": "external",
           "default": "external",
           "vocabulary": "zone",
           "options": [
@@ -860,7 +857,6 @@
           "label": "Kind",
           "kind": "select",
           "tier": "identity",
-          "blank": "domain",
           "default": "domain",
           "vocabulary": "indicatorType",
           "options": [
@@ -910,7 +906,6 @@
           "label": "Disposition",
           "kind": "select",
           "subordinate": true,
-          "blank": "unknown",
           "default": "unknown",
           "vocabulary": "disposition",
           "options": [
@@ -925,7 +920,6 @@
           "label": "Triage",
           "kind": "select",
           "subordinate": true,
-          "blank": "untriaged",
           "default": "untriaged",
           "vocabulary": "triage",
           "options": [
@@ -1065,7 +1059,6 @@
           "label": "Verdict",
           "kind": "select",
           "subordinate": true,
-          "blank": "unknown",
           "default": "unknown",
           "vocabulary": "assetVerdict",
           "options": [
@@ -1180,7 +1173,6 @@
           "label": "What happened to it",
           "kind": "select",
           "tier": "assessment",
-          "blank": "unknown",
           "default": "unknown",
           "vocabulary": "dataDisposition",
           "options": [
@@ -1367,7 +1359,6 @@
           "label": "Verified publisher",
           "kind": "select",
           "subordinate": true,
-          "blank": "unknown",
           "default": "unknown",
           "vocabulary": "verifiedPublisher",
           "options": [
@@ -1773,7 +1764,6 @@
           "label": "Status",
           "kind": "select",
           "subordinate": true,
-          "blank": "open",
           "default": "open",
           "vocabulary": "taskStatus",
           "options": [
@@ -1850,7 +1840,6 @@
           "name": "status",
           "label": "Status",
           "kind": "select",
-          "blank": "respond",
           "default": "respond",
           "vocabulary": "caseStatus",
           "options": [

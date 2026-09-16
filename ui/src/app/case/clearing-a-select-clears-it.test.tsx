@@ -14,18 +14,22 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { CAMPAIGN_NOW, campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
 import { specsFixture } from '@/fixtures/specs'
-import { pickFromSelect } from '@/test/select'
+import { pickFromSelect, selectTrigger } from '@/test/select'
 
 import { OverviewContainer } from './OverviewContainer'
 
 const kase = { ...campaignCase, severity: 'medium', incidentClass: 'hacking' }
 
 const mutateAsync = vi.fn().mockResolvedValue({ caseId: campaignCase.id })
+
+beforeEach(() => {
+  mutateAsync.mockClear()
+})
 
 vi.mock('@/api/case', () => ({
   useCase: () => ({ data: kase, isPending: false, error: null, refetch: vi.fn() }),
@@ -40,13 +44,17 @@ vi.mock('@/api/specs', async (original) => ({
 
 vi.spyOn(Date, 'now').mockReturnValue(CAMPAIGN_NOW)
 
-async function clear(label: string): Promise<void> {
+async function properties(): Promise<void> {
   render(
     <MemoryRouter>
       <OverviewContainer />
     </MemoryRouter>,
   )
   await userEvent.click(screen.getByRole('tab', { name: 'Properties' }))
+}
+
+async function clear(label: string): Promise<void> {
+  await properties()
   await pickFromSelect(label, '')
   // The form writes on blur, so the analyst has to leave the control.
   await userEvent.tab()
@@ -67,5 +75,20 @@ describe('clearing a select', () => {
 
     const [write] = mutateAsync.mock.calls.at(-1) as [{ fields: Record<string, unknown> }]
     expect(Object.keys(write.fields)).toEqual(['severity'])
+  })
+
+  /**
+   * **Status defaults to `respond`, so it has no empty.** Offering the row
+   * anyway gives the analyst a `-` that writes `respond` -- a live case
+   * silently reopened by a control that reads as clearing one. The column
+   * serves no blank, so the row is not drawn and nothing can be posted.
+   */
+  it('is not offered for a column whose every value is an answer', async () => {
+    await properties()
+    await userEvent.click(selectTrigger('Status'))
+    await screen.findByRole('listbox')
+
+    expect(document.querySelector('[role="option"][data-value=""]')).toBeNull()
+    expect(mutateAsync).not.toHaveBeenCalled()
   })
 })
