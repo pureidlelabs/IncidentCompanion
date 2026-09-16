@@ -11,6 +11,8 @@ import { describe, expect, it } from 'vitest'
 import {
   EN_KEYS,
   coverageIn,
+  english,
+  headingPack,
   orderedLanguages,
   packFrom,
   translatorFor,
@@ -72,6 +74,24 @@ describe('reading an uploaded pack', () => {
   it('is 1 for English itself and 0 for a pack with nothing', () => {
     expect(coverageIn(Object.fromEntries(EN_KEYS.map((k) => [k, 'x'])))).toBe(1)
     expect(coverageIn({})).toBe(0)
+  })
+})
+
+describe('the heading pack a client resolves a section title through', () => {
+  it('answers a key with its words rather than with the key', () => {
+    expect(headingPack(english())).toContainEqual({
+      key: 'heading.exec_summary',
+      label: 'Executive summary',
+    })
+  })
+
+  it('serves nothing that stands for itself, and nothing that is not a heading', () => {
+    // A pair whose label is its key renders as `heading.exec_summary` on a
+    // chip, which is the shape this pack exists to keep off a screen.
+    const pack = headingPack((key) => (key === 'heading.figure' ? key : `Said: ${key}`))
+    expect(pack.filter((pair) => pair.label === pair.key)).toEqual([])
+    expect(pack.filter((pair) => !pair.key.startsWith('heading.'))).toEqual([])
+    expect(pack.length).toBeGreaterThan(10)
   })
 })
 

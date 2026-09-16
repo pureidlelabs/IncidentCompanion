@@ -5,8 +5,8 @@
  * put a string: one `Y.Doc` per report, one fragment per block, and the client
  * types into it through Tiptap. So anything that *seeds* prose has to build the
  * same node shapes the editor would have produced, or the walk that paints the
- * document reads nothing. **`demos/content.seeder.ts` is the only caller** -
- * a snippet the library inserts is written by the client, not through here.
+ * document reads nothing. **A snippet the library inserts does not come through
+ * here**: the client writes that one into the document it already has open.
  *
  * **Markdown in, because that is what the source material is**: the demo
  * cases hold their report bodies as markdown strings. Only the subset those

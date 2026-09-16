@@ -29,13 +29,13 @@ import { describe, expect, it } from 'vitest'
 const HERE = dirname(fileURLToPath(import.meta.url))
 
 /**
- * The one package the closure may reach.
+ * The packages the closure may reach.
  *
- * A second entry here is a real decision - it is a dependency the client did
- * not have - so the list is written out rather than derived from what happens
- * to be installed.
+ * An entry here is a real decision - it is what the browser carries to open
+ * these doors - so the list is written out rather than derived from what
+ * happens to be installed.
  */
-const ALLOWED_PACKAGES = new Set(['zod'])
+const ALLOWED_PACKAGES = new Set(['zod', 'yjs'])
 
 /** A `.lists` module, which is a source file rather than its test. */
 const isListModule = (name: string) => name.endsWith('.lists.ts') && !name.endsWith('.test.ts')
@@ -53,6 +53,7 @@ const ENTRIES = [
   'identity.ts',
   'indicator-shape.ts',
   'malware-shape.ts',
+  'prose-authoring.ts',
   /**
    * **Every `.lists` module the client value-imports, named one at a time.**
    * `ui/eslint.config.js` permits them by the glob `!@contract/*.lists`, and a

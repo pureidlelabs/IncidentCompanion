@@ -31,8 +31,8 @@ const NOTE_FRAGMENT = 'note'
 const SAVE_AFTER_MS = 400
 
 export interface LoopbackSeeds {
-  /** The text a field starts from where nothing is stored, or nothing. */
-  seedOf?: (field: string) => string | null
+  /** Writes what a field starts from, where nothing is stored. */
+  seedInto?: (doc: Y.Doc, field: string) => void
   /** Told the field's flattened text whenever its document changes. */
   onText?: (field: string, text: string) => void
 }
@@ -59,7 +59,8 @@ export function textOf(doc: Y.Doc): string {
   return doc.getXmlFragment(NOTE_FRAGMENT).toArray().map(flat).join('\n').trim()
 }
 
-function seed(doc: Y.Doc, text: string): void {
+/** A note's column as its document, a paragraph per line. */
+export function seedNote(doc: Y.Doc, text: string): void {
   const fragment = doc.getXmlFragment(NOTE_FRAGMENT)
   const paragraphs = text.split('\n').map((line) => {
     const paragraph = new Y.XmlElement('paragraph')
@@ -88,10 +89,7 @@ async function build(field: string): Promise<Y.Doc> {
   const stored = await loadProse(field)
   const restored = stored === null ? null : base64.decode(stored)
   if (restored) Y.applyUpdate(doc, restored)
-  else {
-    const text = seeds.seedOf?.(field) ?? null
-    if (text) seed(doc, text)
-  }
+  else seeds.seedInto?.(doc, field)
   let timer: ReturnType<typeof setTimeout> | undefined
   doc.on('update', () => {
     seeds.onText?.(field, textOf(doc))
