@@ -399,6 +399,7 @@ function Detail({ row }: { row: EntityRow<MethodEntry> }) {
 /** What a method carries that the served form does not ask for. */
 const BLANK_METHOD: Omit<MethodEntry, 'id'> = {
   version: 1,
+  source: 'manual',
   name: '',
   kind: '',
   established: '',

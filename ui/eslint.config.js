@@ -234,6 +234,10 @@ export default tseslint.config(
            * entry point in `browser-safe.test.ts`, so the closure is walked
            * rather than argued from, and a test holds the two lists level.
            *
+           * `prose-authoring` writes markdown into a block's fragment, which is
+           * how the demo seeds a report document the way the server's seeder
+           * does. Its closure is yjs, which the client already runs.
+           *
            * `identity` is the natural key an import is deduplicated on, and the
            * client value-imports it so the preview counts what the write will
            * do rather than a second rule that agrees until it does not. Its
@@ -249,12 +253,14 @@ export default tseslint.config(
             '!@contract/identity',
             '!@contract/indicator-shape',
             '!@contract/malware-shape',
+            '!@contract/prose-authoring',
           ],
           allowTypeImports: true,
           message:
             'Types only, except @contract/*.lists, @contract/collections, ' +
-            '@contract/identity and the @contract/*-shape advice modules. A ' +
-            'value import from anywhere else can reach a Drizzle table.',
+            '@contract/identity, @contract/prose-authoring and the ' +
+            '@contract/*-shape advice modules. A value import from anywhere ' +
+            'else can reach a Drizzle table.',
         }],
         paths: [{
           name: 'zod',

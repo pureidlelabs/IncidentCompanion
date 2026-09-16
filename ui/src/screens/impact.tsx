@@ -370,6 +370,7 @@ export function ImpactScreen({
  */
 const BLANK_IMPACT: Omit<ImpactEntry, 'id'> = {
   version: 1,
+  source: 'manual',
   label: '',
   category: '',
   disposition: 'unknown',
