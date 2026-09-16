@@ -332,12 +332,8 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
    * defaults to `manual`, so a door that neither carries nor stamps writes
    * that claim over every row it brings in.
    *
-   * **Stamped rather than carried, which is the narrower of the two answers.**
-   * The archive states the door on the install that wrote it, and carrying
-   * that states `manual` for the rows an analyst *there* typed -- the same
-   * false claim, for the rows most likely to be read. What is lost with it is
-   * which rows that install's platform found, which is a fact about the
-   * investigation that no column holds. -> #727
+   * **Stamped rather than carried, which is the narrower of the two answers**,
+   * and what is lost with it is recorded. -> #727
    */
   it('names the door the row came through here, not the one it came through there', async () => {
     const built = await exported()
