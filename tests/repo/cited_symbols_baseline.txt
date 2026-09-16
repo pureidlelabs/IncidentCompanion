@@ -28,6 +28,7 @@ expandedKeys
 EXPIRE
 exposeFunction
 FileHashes
+FileList
 filterDOMProps
 findAll
 findBy
@@ -42,6 +43,7 @@ getActiveSessionReferences
 getAuthoritativeSessionFromCtx
 getCenterVisibleCells
 GETDEL
+getDropOperation
 getEmbedResizeViewport
 getIsPinned
 getSize

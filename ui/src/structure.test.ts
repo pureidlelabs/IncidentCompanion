@@ -190,7 +190,6 @@ describe('no module is kept alive only by its own test', () => {
       'api/usePendingEntryIds.ts',
       'api/sentinel/connectionConfig.ts',
       'api/sentinel/source.ts',
-      'components/blocks/import-csv-control.tsx',
       'components/blocks/pane-head.tsx',
       'lib/whenAgo.ts',
     ]

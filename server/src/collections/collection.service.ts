@@ -465,10 +465,9 @@ export class CollectionService {
           unlinked += await dropForeignReferences(tx, def, row)
           continue
         }
-        // **Named by row, 1-based.** The CSV import highlights the offending
-        // preview row by parsing `row <n>: ` off the message, and a batch is
-        // where that matters -- a refusal with no row leaves the analyst a
-        // whole file to search. -> `ui/src/components/blocks/csv-import.ts`
+        // **Named by row, 1-based**: a refusal naming no row leaves the
+        // analyst a whole file to search.
+        // -> `openspec/specs/data-exchange/spec.md`
         await refuseDanglingReferences(tx, def, row, at + 1)
       }
 
