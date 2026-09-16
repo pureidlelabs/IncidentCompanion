@@ -108,7 +108,7 @@ const FAULTS: Fault[] = [
      *
      * The cell sits in a `display: table` of its own because the row is a flex
      * container, and a flex item's `display: table-cell` is blockified to
-     * `block` — which sends the fault through the ordinary branch and proves
+     * `block`, which sends the fault through the ordinary branch and proves
      * nothing about the one it is aimed at.
      */
     break: ({ row }) => {
