@@ -60,7 +60,13 @@ export const Populated: Story = {
   args: {
     section: 'timeline',
     ...caseChrome,
-    activity: { entries: caseActivity(Math.floor(NOW / 1000)) },
+    // The shape the container hands over, so the gallery's door is the app's:
+    // a read that landed, and the way to ask for it again.
+    activity: {
+      entries: caseActivity(Math.floor(NOW / 1000)),
+      busy: false,
+      onRetry: () => undefined,
+    },
     counts: COUNTS,
     children: Pane,
   },

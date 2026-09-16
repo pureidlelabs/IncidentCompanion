@@ -239,10 +239,6 @@ describe('a route answers at its own depth and no other', () => {
   })
 })
 
-/**
- * **The header's activity door reads this route.** The client draws a refusal
- * rather than an empty history only while the answer is one. -> #828
- */
 describe('what the demo has no store for', () => {
   it('refuses the case activity rather than answering an empty feed', async () => {
     const answer = await ask(`/cases/${caseId()}/activity`)

@@ -422,6 +422,23 @@ describe('the activity door, when the read did not land', () => {
     expect(screen.queryByText('Nothing has been written to this case yet.')).toBeNull()
   })
 
+  /**
+   * **A read still out is not an answer either.** The sentence was drawn from
+   * the first frame of every visit, before the request had returned.
+   */
+  it('says nothing about the case while the read is still out', async () => {
+    activity.mockReturnValue({
+      data: undefined,
+      isPending: true,
+      error: null,
+      refetch: activityAgain,
+    })
+    await openTheDoor()
+
+    expect(await screen.findByRole('status')).toBeInTheDocument()
+    expect(screen.queryByText('Nothing has been written to this case yet.')).toBeNull()
+  })
+
   /** And the read that landed on nothing still says so, which is the true claim. */
   it('keeps the empty line for a case nothing has been written to', async () => {
     await openTheDoor()

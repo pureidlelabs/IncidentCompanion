@@ -12,10 +12,7 @@ import { ActivityDoor } from './activity-door'
  * here is the half a rewrite gets wrong silently: which writes count as new,
  * and that nothing here installs a timer.
  *
- * The panel's contents are not asserted from this file. It is a React Aria
- * overlay animated by Motion, and Motion does not run in jsdom - so a closed
- * panel and an open one that never finished entering are the same DOM. The
- * browser tier is what says the feed shows.
+ * What the panel holds is the feed's own file and the door's stories.
  */
 const entry = (seq: number, at: number): ActivityEntry => ({
   seq,
