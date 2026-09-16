@@ -99,6 +99,45 @@ describe('the regimes a case is in play for', () => {
     expect(readiness(answered, ALL_ON, POLICY).map((one) => one.regime)).toEqual(['dora'])
   })
 
+  /**
+   * **A gap asking for the answer that decides whether a regime is in play can
+   * never be shown**, because the line carrying it exists only once that answer
+   * is given. The two conditions are one predicate with opposite comparisons.
+   *
+   * Quantified over all 27 combinations of the three Article 6 grounds rather
+   * than asserted on one row: the claim is that no row reaches it, and a single
+   * case cannot say that. -> #693
+   *
+   * **What this does not cover:** whether the analyst is asked Article 6 at
+   * all. They are, on the DORA card, which renders on the install switch rather
+   * than on the case being in play. Nor does it catch such a gap being written
+   * back into `doraReadiness` -- nothing would reach it, which is the whole
+   * complaint, and this asserts over what a row can be shown.
+   */
+  it('shows no gap for the answer that decides whether the regime is in play', () => {
+    const answers = ['yes', 'no', null] as const
+    const gaps: string[] = []
+    for (const critical of answers) {
+      for (const supervised of answers) {
+        for (const malicious of answers) {
+          const row = record({
+            doraCriticalFunctions: critical,
+            doraSupervisedServices: supervised,
+            doraMaliciousAccess: malicious,
+          })
+          gaps.push(...readiness(row, ALL_ON, POLICY).flatMap((one) => one.gaps))
+        }
+      }
+    }
+
+    expect(gaps.length, 'no combination put DORA in play, so this asserts over nothing')
+      .toBeGreaterThan(0)
+    expect(
+      gaps.filter((gap) => gap.includes('Article 6')),
+      'a gap asks for the answer that had to be given before the line could exist',
+    ).toEqual([])
+  })
+
   /** A regime switched off is in play for neither, whatever the row says. */
   it.each(ROWS)('offers nothing for a regime switched off, for %s', (_what, row) => {
     const off = { nis2: false, gdpr: false, dora: false }

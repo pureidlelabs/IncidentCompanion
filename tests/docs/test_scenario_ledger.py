@@ -14,13 +14,13 @@ scenario breaks this rather than quietly detaching its status.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 import pytest
 
 from tests._ledger import rows as ledger_rows
+from tests._repo import REPO_ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = REPO_ROOT
 SPECS = sorted((ROOT / "openspec" / "specs").glob("*/spec.md"))
 LEDGER = ROOT / "openspec" / "matrix" / "scenarios.md"
 
