@@ -9,7 +9,17 @@
  */
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger'
 import { cleanupOpenApiDoc } from 'nestjs-zod'
-import type { INestApplication } from '@nestjs/common'
+import { ParseUUIDPipe, RequestMethod, type INestApplication } from '@nestjs/common'
+import {
+  GUARDS_METADATA,
+  METHOD_METADATA,
+  PATH_METADATA,
+  ROUTE_ARGS_METADATA,
+} from '@nestjs/common/constants'
+import { RouteParamtypes } from '@nestjs/common/enums/route-paramtypes.enum.js'
+import { ModulesContainer } from '@nestjs/core'
+
+import { CaseAccessGuard } from './access/case-access.guard.js'
 
 import {
   asDownload,
@@ -60,7 +70,85 @@ export function openApiDocument(app: INestApplication): OpenAPIObject {
     .addSecurityRequirements('cookie')
     .build()
 
-  return publishedDocument(SwaggerModule.createDocument(app, spec))
+  return publishedDocument(SwaggerModule.createDocument(app, spec), uuidParsedRoutes(app))
+}
+
+/** `@Controller` and the method decorators each take a string or an array. */
+const firstPath = (path: unknown): string => {
+  const first: unknown = Array.isArray(path) ? path[0] : path
+  return typeof first === 'string' ? first : ''
+}
+
+/** The document's spelling of a route: `/api/cases/{caseId}` from `cases/:caseId`. */
+const joined = (...parts: string[]): string =>
+  `/${parts
+    .flatMap((part) => part.split('/'))
+    .filter(Boolean)
+    .join('/')}`.replace(/:([A-Za-z0-9_]+)/g, '{$1}')
+
+const guardsTheCase = (guard: unknown): boolean =>
+  guard === CaseAccessGuard || guard instanceof CaseAccessGuard
+
+/**
+ * Whether this handler binds a path parameter through `ParseUUIDPipe`, told from
+ * a `@Query('id', ParseUUIDPipe)` - which refuses with the same 400 and is not
+ * in the path - by the parameter type in the `ROUTE_ARGS_METADATA` key rather
+ * than by the name it binds.
+ */
+function parsesAUuid(controller: object, method: string): boolean {
+  const bound = (Reflect.getMetadata(ROUTE_ARGS_METADATA, controller, method) ?? {}) as Record<
+    string,
+    { pipes?: unknown[] }
+  >
+  return Object.entries(bound).some(
+    ([key, one]) =>
+      key.startsWith(`${RouteParamtypes.PARAM}:`) &&
+      (one.pipes ?? []).some((pipe) => pipe === ParseUUIDPipe || pipe instanceof ParseUUIDPipe),
+  )
+}
+
+/**
+ * Every route that refuses a malformed path parameter before its handler runs,
+ * spelled `get /api/cases/{caseId}`.
+ */
+export function uuidParsedRoutes(app: INestApplication): Set<string> {
+  const found = new Set<string>()
+  for (const module of app.get(ModulesContainer).values()) {
+    for (const wrapper of module.controllers.values()) {
+      const controller = wrapper.metatype
+      if (typeof controller !== 'function') continue
+      const base = firstPath(Reflect.getMetadata(PATH_METADATA, controller))
+      const onClass = (Reflect.getMetadata(GUARDS_METADATA, controller) ?? []) as unknown[]
+
+      // Up the prototype chain: routes are inherited from a base controller.
+      const proto = controller.prototype as Record<string, unknown>
+      const names = new Set<string>()
+      for (
+        let at: object | null = proto;
+        at && at !== Object.prototype;
+        at = Object.getPrototypeOf(at) as object | null
+      ) {
+        for (const name of Object.getOwnPropertyNames(at)) names.add(name)
+      }
+
+      for (const name of names) {
+        if (name === 'constructor') continue
+        const handler: unknown = proto[name]
+        if (typeof handler !== 'function') continue
+        const verb: unknown = Reflect.getMetadata(METHOD_METADATA, handler)
+        if (typeof verb !== 'number') continue
+
+        const template = joined(base, firstPath(Reflect.getMetadata(PATH_METADATA, handler)))
+        const guards = [
+          ...onClass,
+          ...((Reflect.getMetadata(GUARDS_METADATA, handler) ?? []) as unknown[]),
+        ]
+        if (!guards.some(guardsTheCase) && !parsesAUuid(controller, name)) continue
+        found.add(`${RequestMethod[verb]!.toLowerCase()} ${template}`)
+      }
+    }
+  }
+  return found
 }
 
 /**
@@ -72,9 +160,12 @@ export function openApiDocument(app: INestApplication): OpenAPIObject {
  * against. It also drops the `x-nestjs_zod-*` marks, so anything reading one
  * runs before it.
  */
-export function publishedDocument(document: OpenAPIObject): OpenAPIObject {
+export function publishedDocument(
+  document: OpenAPIObject,
+  uuidParsed: ReadonlySet<string>,
+): OpenAPIObject {
   withoutArrayShorthand(document)
-  return tidy(cleanupOpenApiDoc(document))
+  return tidy(cleanupOpenApiDoc(document), uuidParsed)
 }
 
 /** `nestjs-zod`'s mark on a property whose JSON Schema type is not a string. */
@@ -192,9 +283,11 @@ function withoutTuples(node: unknown): void {
  *
  * **Everything here is derived from the path and from `COLLECTION_SCHEMAS`**,
  * never from a hand-kept map of controller to display name - a collection added
- * tomorrow is documented without touching this file.
+ * tomorrow is documented without touching this file. The one thing the paths
+ * cannot answer is `uuidParsed`, which `uuidParsedRoutes` reads off the
+ * controllers.
  */
-export function tidy(document: OpenAPIObject): OpenAPIObject {
+export function tidy(document: OpenAPIObject, uuidParsed: ReadonlySet<string>): OpenAPIObject {
   const paths: OpenAPIObject['paths'] = {}
   const tags = new Set<string>()
   /** Heading -> the resource tags under it, for `x-tagGroups`. */
@@ -247,7 +340,13 @@ export function tidy(document: OpenAPIObject): OpenAPIObject {
         (parameter) => (parameter as { in?: string }).in === 'query',
       )
       one.responses = {
-        ...refusals(method, path, Boolean(one.requestBody), queried),
+        ...refusals(
+          method,
+          path,
+          Boolean(one.requestBody),
+          queried,
+          uuidParsed.has(`${method} ${path}`),
+        ),
         ...one.responses,
       }
     }

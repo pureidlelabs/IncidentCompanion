@@ -551,12 +551,16 @@ const VERSIONED_POST: ReadonlySet<string> = new Set(['/api/cases/{caseId}/eviden
  * exist, and a versioned write means somebody else may have written first.
  * `@nestjs/swagger` documents only what a decorator says, and this codebase
  * validates through a pipe, so nothing else describes these.
+ *
+ * `parsesAUuid` is the shape the path alone cannot carry: whether the route
+ * refuses a malformed parameter before the handler runs. -> `openapi.ts`
  */
 export function refusals(
   method: string,
   path: string,
   hasBody: boolean,
   hasQuery = false,
+  parsesAUuid = false,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   const row = /\{[^}]+\}/.test(path)
@@ -565,9 +569,18 @@ export function refusals(
 
   // Two statuses, and the split is the contract: a body the server cannot read
   // is 400; one it read and will not act on is 422. -> `wire/refusals.ts`
-  if (hasBody) {
+  if (hasBody || parsesAUuid) {
     out['400'] = {
-      description: 'The body is not readable \u2014 malformed JSON, or not the media type this route takes.',
+      description: [
+        parsesAUuid
+          ? 'A path parameter is not a uuid. A well-formed id that names nothing is the 404.'
+          : '',
+        hasBody
+          ? 'The body is not readable \u2014 malformed JSON, or not the media type this route takes.'
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
       ...json(REFUSAL),
     }
   }

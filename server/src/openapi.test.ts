@@ -8,14 +8,23 @@
  * path or decorators changed is invisible here - `test/openapi-contract.test.ts`
  * and `test/documented-bodies.test.ts` are the tier that reads the real one.
  */
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { NotFoundException } from '@nestjs/common'
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  Query,
+  UseGuards,
+  type INestApplication,
+} from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import { createZodDto } from 'nestjs-zod'
 
 import { caseSchema, createCaseSchema } from './cases/cases.dto.js'
-import { publishedDocument, tidy } from './openapi.js'
+import { publishedDocument, tidy, uuidParsedRoutes } from './openapi.js'
 import { groupOf, humanise, published, resourceOf, summarise } from './openapi.prose.js'
 import { COLLECTION_SCHEMAS } from './domain/collections.js'
 import { caseReadSchema } from './domain/case.js'
@@ -26,6 +35,10 @@ import { libraryListingSchema } from './library/library.controller.js'
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger'
 import { OpenApiController, OpenApiStore } from './openapi.controller.js'
 import { ResourcesController } from './health/resources.controller.js'
+import { CaseAccessGuard } from './access/case-access.guard.js'
+
+/** No route uuid-parses anything, for a fixture built to ask about something else. */
+const NONE: ReadonlySet<string> = new Set()
 
 /**
  * **A prose rule in one file governs one file.**
@@ -127,7 +140,7 @@ describe('making the generated document readable', () => {
         '/api/docs': { get: { tags: ['Docs'], responses: {} } },
         '/api/docs/boot.js': { get: { tags: ['Docs'], responses: {} } },
       },
-    })
+    }, NONE)
 
   /**
    * **The catch-all is the one that must go.** `/{*path}` is the SPA fallback,
@@ -212,7 +225,7 @@ describe('making the generated document readable', () => {
         '/api/cases/{caseId}/accounts': { get: { responses: {} } },
         '/api/accounts': { get: { responses: {} } },
       },
-    }) as unknown as { 'x-tagGroups': { name: string; tags: string[] }[] }
+    }, NONE) as unknown as { 'x-tagGroups': { name: string; tags: string[] }[] }
 
     const seen = new Map<string, string[]>()
     for (const group of out['x-tagGroups']) {
@@ -239,7 +252,7 @@ describe('making the generated document readable', () => {
         '/api/cases/{caseId}/accounts': { get: { responses: {} } },
         '/api/accounts': { get: { responses: {} } },
       },
-    }) as unknown as { 'x-tagGroups': { name: string; tags: string[] }[] }
+    }, NONE) as unknown as { 'x-tagGroups': { name: string; tags: string[] }[] }
     const all = out['x-tagGroups'].flatMap((g) => g.tags)
     expect(all).toHaveLength(new Set(all).size)
     expect(all.some((t) => t.includes('('))).toBe(true)
@@ -255,7 +268,7 @@ describe('making the generated document readable', () => {
       openapi: '3.0.0',
       info: { title: 't', version: '1' },
       paths: { '/api/cases/{caseId}/systems': { get: { tags: ['X'], responses: {} } } },
-    }) as unknown as { 'x-tagGroups': Record<string, unknown>[] }
+    }, NONE) as unknown as { 'x-tagGroups': Record<string, unknown>[] }
     const data = out['x-tagGroups'].find((g) => g.name === 'Case data')
 
     expect(data).toBeDefined()
@@ -367,7 +380,7 @@ describe('making the generated document readable', () => {
         paths: {
           [path]: { [method]: { tags: ['X'], responses: { [declared]: { description: '' } } } },
         },
-      })
+      }, NONE)
       return (out.paths[path] as Record<string, { responses: Record<string, unknown> }>)[method]!
         .responses
     }
@@ -400,12 +413,17 @@ describe('making the generated document readable', () => {
   })
 
   describe('the refusals a caller has to handle', () => {
-    const responses = (path: string, method: string) => {
-      const out = tidy({
-        openapi: '3.0.0',
-        info: { title: 't', version: '1' },
-        paths: { [path]: { [method]: { tags: ['X'], responses: { '200': { description: '' } } } } },
-      })
+    const responses = (path: string, method: string, uuidParsed: string[] = []) => {
+      const out = tidy(
+        {
+          openapi: '3.0.0',
+          info: { title: 't', version: '1' },
+          paths: {
+            [path]: { [method]: { tags: ['X'], responses: { '200': { description: '' } } } },
+          },
+        },
+        new Set(uuidParsed),
+      )
       const op = (out.paths[path] as Record<string, { responses: Record<string, unknown> }>)[method]!
       return Object.keys(op.responses).sort()
     }
@@ -414,8 +432,20 @@ describe('making the generated document readable', () => {
       expect(responses('/api/cases/{caseId}/systems', 'post')).toContain('400')
     })
 
-    it('documents no validation refusal where there is no body', () => {
-      expect(responses('/api/cases/{caseId}/systems', 'get')).not.toContain('400')
+    /**
+     * **A path nothing uuid-parses**, which is the only kind left with no way
+     * to be told no: `/api/cases/{caseId}` is refused by its guard before the
+     * handler, so a read there answers a 400 and this would be asserting the
+     * opposite of the served document.
+     */
+    it('documents no validation refusal where there is no body and no uuid', () => {
+      expect(responses('/api/library/{slug}', 'get')).not.toContain('400')
+    })
+
+    it('documents the malformed id where the route parses one', () => {
+      expect(
+        responses('/api/cases/{caseId}/systems', 'get', ['get /api/cases/{caseId}/systems']),
+      ).toContain('400')
     })
 
     it('documents the missing session on a guarded route', () => {
@@ -484,7 +514,7 @@ describe('making the generated document readable', () => {
         paths: {
           '/api/cases/{caseId}/systems/{id}': { patch: { tags: ['X'], responses: {} } },
         },
-      })
+      }, NONE)
       expect(JSON.stringify(out.paths['/api/cases/{caseId}/systems/{id}']))
         .toContain('currentVersion')
     })
@@ -587,7 +617,7 @@ describe('making the generated document readable', () => {
         openapi: '3.0.0',
         info: { title: 't', version: '1' },
         paths: { [path]: { [method]: { tags: ['X'], responses: { '200': { description: '' } } } } },
-      })
+      }, NONE)
       return (out.paths[path] as Record<string, Record<string, unknown>>)[method]!
     }
 
@@ -682,7 +712,7 @@ describe('making the generated document readable', () => {
         openapi: '3.0.0',
         info: { title: 't', version: '1' },
         paths: { [path]: { [method]: { tags: ['X'], responses: { '200': { description: '' } } } } },
-      })
+      }, NONE)
       return (out.paths[path] as Record<string, Record<string, unknown>>)[method]!
     }
 
@@ -817,7 +847,7 @@ describe('making the generated document readable', () => {
       openapi: '3.0.0',
       info: { title: 't', version: '1' },
       paths: { '/api/x': { get: { tags: ['X'], summary: 'Raise a case', responses: {} } } },
-    })
+    }, NONE)
     expect((out.paths['/api/x'] as Record<string, { summary: string }>)['get']?.summary)
       .toBe('Raise a case')
   })
@@ -848,7 +878,7 @@ describe('a tuple lowered for OpenAPI 3.0', () => {
       info: { title: 't', version: '1' },
       paths: {},
       components: { schemas: { Thing: { type: 'array', prefixItems: positions } } },
-    } as never) as unknown as {
+    } as never, NONE) as unknown as {
       components: { schemas: { Thing: Record<string, unknown> } }
     }
     return out.components.schemas.Thing
@@ -917,7 +947,10 @@ describe('a nullable scalar is published as one, not as an array', () => {
       .setTitle('t')
       .setVersion('1')
       .build()
-    const document = publishedDocument(SwaggerModule.createDocument(app, spec, { extraModels }))
+    const document = publishedDocument(
+      SwaggerModule.createDocument(app, spec, { extraModels }),
+      NONE,
+    )
     components = (document.components?.schemas ?? {}) as Record<string, Published>
     await app.close()
   }, 30_000)
@@ -952,5 +985,94 @@ describe('a nullable scalar is published as one, not as an array', () => {
     for (const [key, value] of Object.entries(published)) {
       expect({ [key]: value.type }).toEqual({ [key]: source[key]?.type })
     }
+  })
+})
+
+/**
+ * What `uuidParsedRoutes` reads a route's declaration as, asked of the three
+ * shapes that differ.
+ *
+ * **The third is the one a reading by parameter name gets wrong**: the same
+ * pipe, under the same name the path uses, bound to the query instead - a 400
+ * a malformed id in the path never produces.
+ */
+class PipedController {
+  read(id: string): string {
+    return id
+  }
+}
+
+class GuardedController {
+  read(id: string): string {
+    return id
+  }
+}
+
+class QueriedController {
+  read(id: string): string {
+    return id
+  }
+}
+
+/**
+ * `@Get` applied by hand, because a decorator cannot be written as one here.
+ *
+ * `tsconfig.json` excludes `**` + `/*.test.ts`, and that is the file vite reads
+ * `experimentalDecorators` from - so a parameter decorator in a test file is a
+ * parse failure. Nest's own decorators are what run below either way, in the
+ * order TypeScript would have run them: parameters, then the method, then the
+ * class.
+ */
+const reads = (controller: { prototype: object }, path: string): void => {
+  const proto = controller.prototype
+  Get(path)(proto, 'read', Object.getOwnPropertyDescriptor(proto, 'read')!)
+}
+
+Param('id', ParseUUIDPipe)(PipedController.prototype, 'read', 0)
+reads(PipedController, ':id')
+Controller('piped')(PipedController)
+
+Param('caseId')(GuardedController.prototype, 'read', 0)
+reads(GuardedController, ':caseId')
+UseGuards(CaseAccessGuard)(GuardedController)
+Controller('guarded')(GuardedController)
+
+Query('id', ParseUUIDPipe)(QueriedController.prototype, 'read', 0)
+reads(QueriedController, ':id')
+Controller('queried')(QueriedController)
+
+describe('which routes are read as parsing a uuid', () => {
+  let app: INestApplication
+  let parsed: Set<string>
+
+  // Never initialised: the routes are read off the metadata, and initialising
+  // would have Nest resolve `CaseAccessGuard`'s own dependencies.
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      controllers: [PipedController, GuardedController, QueriedController],
+    })
+      // The guard is read off the metadata, never run, and the real one wants
+      // a database.
+      .overrideGuard(CaseAccessGuard)
+      .useValue({ canActivate: () => true })
+      .compile()
+    app = moduleRef.createNestApplication()
+    parsed = uuidParsedRoutes(app)
+  }, 30_000)
+
+  afterAll(async () => {
+    await app?.close()
+  })
+
+  it('reads the pipe on a path parameter', () => {
+    expect([...parsed]).toContain('get /piped/{id}')
+  })
+
+  it('reads the guard that parses ahead of the pipes', () => {
+    expect([...parsed]).toContain('get /guarded/{caseId}')
+  })
+
+  it('reads nothing else, so the query-bound pipe is not one of them', () => {
+    expect([...parsed].sort()).toEqual(['get /guarded/{caseId}', 'get /piped/{id}'])
   })
 })
