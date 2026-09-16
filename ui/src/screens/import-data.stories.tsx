@@ -113,9 +113,8 @@ export const ReferencesLost: Story = {
 /**
  * An import the server took in part.
  *
- * The refusals are on this screen rather than in the dialog that sent them: the
- * dialog is gone by the time the server answers, and a refused row is the one
- * thing an analyst has to act on afterwards.
+ * The refusals stay on this screen, beside the row they were sent from: a
+ * refused row is the one thing an analyst has to act on afterwards.
  */
 export const RowsRefused: Story = {
   name: 'Rows the server refused',
