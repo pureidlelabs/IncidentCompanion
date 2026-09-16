@@ -85,9 +85,7 @@ describe('no module is kept alive only by its own test', () => {
    */
   it('every module is imported by something other than its own test', () => {
     // `fixtures/` and `test/` exist to be imported by tests and nothing else,
-    // so "no product caller" is their correct state rather than a finding. A
-    // module named for a fixture is the same thing filed in a feature
-    // directory: `api/sentinel/fixtureSource.ts`.
+    // so "no product caller" is their correct state rather than a finding.
     const support = [join(SRC, 'fixtures'), join(SRC, 'test')]
 
     /**
@@ -129,8 +127,7 @@ describe('no module is kept alive only by its own test', () => {
      */
     const screensTier = (path: string) => path.startsWith(join(SRC, 'screens') + '/')
 
-    const isSupport = (path: string) =>
-      support.some((dir) => path.startsWith(dir)) || /fixture/i.test(path)
+    const isSupport = (path: string) => support.some((dir) => path.startsWith(dir))
 
     const all = filesUnder(SRC, isSource)
 
