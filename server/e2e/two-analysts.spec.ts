@@ -305,11 +305,11 @@ async function whereItStopped(
   return `it left the first browser, and ${last} after ${String(waitMs)}ms -- so it either never reached the server or reached it and is not yet written down`
 }
 
-/** The note text of a row, whatever the row turns out to be. */
+/** The note text of a row, and '' for a row whose note is not text. */
 function noteOf(row: unknown): string {
-  return typeof row === 'object' && row !== null
-    ? String((row as { note?: unknown }).note ?? '')
-    : ''
+  if (typeof row !== 'object' || row === null) return ''
+  const note = (row as { note?: unknown }).note
+  return typeof note === 'string' ? note : ''
 }
 
 function presence(page: Page) {
