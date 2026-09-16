@@ -89,6 +89,7 @@ PressEvent
 PressEvents
 preventFocusOnPress
 QUIT
+RangeError
 refetchOnReconnect
 refreshUserSessions
 renderInline
