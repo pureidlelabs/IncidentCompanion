@@ -2,7 +2,7 @@ import { Plus, ShieldAlert } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 
 import type { Case, ImpactEntry } from '@/api/model'
-import { fieldOf, formSpec, shortLabel, type Specs } from '@/api/specs'
+import { fieldOf, formSpec, type Specs } from '@/api/specs'
 import { BulkActionBar, bulkFieldsFor } from '@/components/blocks/bulk-actions'
 import { Collection } from '@/components/blocks/collection'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button'
 
 import { entityNames, referenceOptions } from '@/components/blocks/entity-scope'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
+import { labelled } from '@/lib/field-label'
 import { useInFlight } from '@/lib/useInFlight'
 import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
 import {
@@ -398,7 +399,7 @@ function impactColumns(
     recordCount: 'Records',
     systemId: 'Held on',
   }
-  const label = (name: string) => overrides[name] ?? shortLabel(fieldOf(form, name)?.label ?? name)
+  const label = labelled(form, overrides)
   const tones = specs.fieldTones.disposition
 
   const count = (field: 'subjectCount' | 'recordCount'): EntityColumn<ImpactEntry> => ({

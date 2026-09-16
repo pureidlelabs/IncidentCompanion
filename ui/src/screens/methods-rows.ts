@@ -1,4 +1,5 @@
 import type { MethodEntry } from '@/api/model'
+import { matchesWords } from '@/lib/word-match'
 
 /**
  * The Methods table's narrowing and its two derived cells.
@@ -19,18 +20,9 @@ function minute(stamp: string | null): string {
  * The Name column and nothing else -- not the query, which is a couple of
  * hundred characters of a query language and would match `where` and
  * `summarize` on every row written in the same dialect.
- *
- * AND across whitespace-separated terms, so a second word narrows rather
- * than widens; a blank query matches every row.
  */
 export function matchesMethod(row: MethodEntry, query: string): boolean {
-  const hay = row.name.toLowerCase()
-  return query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((word) => hay.includes(word))
+  return matchesWords(row.name, query)
 }
 
 /**

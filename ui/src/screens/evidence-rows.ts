@@ -1,4 +1,5 @@
 import type { EvidenceEntry } from '@/api/model'
+import { matchesWords } from '@/lib/word-match'
 
 /**
  * The Evidence table's narrowing.
@@ -14,15 +15,8 @@ import type { EvidenceEntry } from '@/api/model'
  * has no such column: the row *is* the record, and the column carrying its own
  * name is `Name`. So the state, the type, the host, the location, the hash and
  * the classification beside it are not searched, and neither is a tag, which
- * the table draws in no column at all. AND across whitespace-separated terms,
- * so a second word narrows rather than widens; a blank query matches every row.
+ * the table draws in no column at all.
  */
 export function matchesRecord(row: EvidenceEntry, query: string): boolean {
-  const hay = row.name.toLowerCase()
-  return query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((word) => hay.includes(word))
+  return matchesWords(row.name, query)
 }
