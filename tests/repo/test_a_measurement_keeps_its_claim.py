@@ -24,7 +24,9 @@ import importlib.util
 import pathlib
 import re
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
+from tests._repo import REPO_ROOT
+
+ROOT = REPO_ROOT
 SIBLING = pathlib.Path(__file__).with_name("test_history_is_not_narrated.py")
 
 _spec = importlib.util.spec_from_file_location("_history", SIBLING)

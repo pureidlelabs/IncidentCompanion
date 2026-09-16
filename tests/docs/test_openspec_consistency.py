@@ -15,7 +15,9 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
+from tests._repo import REPO_ROOT
+
+ROOT = REPO_ROOT
 OPENSPEC = ROOT / "openspec"
 SPECS = sorted(OPENSPEC.glob("specs/*/spec.md"))
 CONSTITUTION = OPENSPEC / "constitution.md"
