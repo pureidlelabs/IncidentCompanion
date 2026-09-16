@@ -16,6 +16,7 @@ import {
   PATH_METADATA,
   ROUTE_ARGS_METADATA,
 } from '@nestjs/common/constants'
+import { RouteParamtypes } from '@nestjs/common/enums/route-paramtypes.enum.js'
 import { ModulesContainer } from '@nestjs/core'
 
 import { CaseAccessGuard } from './access/case-access.guard.js'
@@ -89,21 +90,19 @@ const guardsTheCase = (guard: unknown): boolean =>
   guard === CaseAccessGuard || guard instanceof CaseAccessGuard
 
 /**
- * Whether a `@Param` this handler binds to a segment of `template` carries
- * `ParseUUIDPipe`.
- *
- * **The template membership is what makes it a *path* parameter**: a
- * `@Query('id', ParseUUIDPipe)` binds the same way and refuses with a 422.
+ * Whether this handler binds a path parameter through `ParseUUIDPipe`, told from
+ * a `@Query('id', ParseUUIDPipe)` - which refuses with the same 400 and is not
+ * in the path - by the parameter type in the `ROUTE_ARGS_METADATA` key rather
+ * than by the name it binds.
  */
-function parsesAUuid(controller: object, method: string, template: string): boolean {
+function parsesAUuid(controller: object, method: string): boolean {
   const bound = (Reflect.getMetadata(ROUTE_ARGS_METADATA, controller, method) ?? {}) as Record<
     string,
-    { data?: unknown; pipes?: unknown[] }
+    { pipes?: unknown[] }
   >
-  return Object.values(bound).some(
-    (one) =>
-      typeof one.data === 'string' &&
-      template.includes(`{${one.data}}`) &&
+  return Object.entries(bound).some(
+    ([key, one]) =>
+      key.startsWith(`${RouteParamtypes.PARAM}:`) &&
       (one.pipes ?? []).some((pipe) => pipe === ParseUUIDPipe || pipe instanceof ParseUUIDPipe),
   )
 }
@@ -111,11 +110,6 @@ function parsesAUuid(controller: object, method: string, template: string): bool
 /**
  * Every route that refuses a malformed path parameter before its handler runs,
  * spelled `get /api/cases/{caseId}`.
- *
- * Read off what each route declares - `ParseUUIDPipe` on a `@Param`, or
- * `CaseAccessGuard`, which parses `caseId` itself because a guard runs ahead of
- * the pipes. A route whose parameter is a name declares neither and answers 404
- * to nonsense, which is the answer it already publishes.
  */
 export function uuidParsedRoutes(app: INestApplication): Set<string> {
   const found = new Set<string>()
@@ -126,8 +120,7 @@ export function uuidParsedRoutes(app: INestApplication): Set<string> {
       const base = firstPath(Reflect.getMetadata(PATH_METADATA, controller))
       const onClass = (Reflect.getMetadata(GUARDS_METADATA, controller) ?? []) as unknown[]
 
-      // Up the prototype chain: the collection controllers are generated from
-      // one base class and declare no method of their own.
+      // Up the prototype chain: routes are inherited from a base controller.
       const proto = controller.prototype as Record<string, unknown>
       const names = new Set<string>()
       for (
@@ -150,7 +143,7 @@ export function uuidParsedRoutes(app: INestApplication): Set<string> {
           ...onClass,
           ...((Reflect.getMetadata(GUARDS_METADATA, handler) ?? []) as unknown[]),
         ]
-        if (!guards.some(guardsTheCase) && !parsesAUuid(controller, name, template)) continue
+        if (!guards.some(guardsTheCase) && !parsesAUuid(controller, name)) continue
         found.add(`${RequestMethod[verb]!.toLowerCase()} ${template}`)
       }
     }
@@ -169,7 +162,7 @@ export function uuidParsedRoutes(app: INestApplication): Set<string> {
  */
 export function publishedDocument(
   document: OpenAPIObject,
-  uuidParsed: ReadonlySet<string> = new Set(),
+  uuidParsed: ReadonlySet<string>,
 ): OpenAPIObject {
   withoutArrayShorthand(document)
   return tidy(cleanupOpenApiDoc(document), uuidParsed)
@@ -290,12 +283,11 @@ function withoutTuples(node: unknown): void {
  *
  * **Everything here is derived from the path and from `COLLECTION_SCHEMAS`**,
  * never from a hand-kept map of controller to display name - a collection added
- * tomorrow is documented without touching this file.
+ * tomorrow is documented without touching this file. The one thing the paths
+ * cannot answer is `uuidParsed`, which `uuidParsedRoutes` reads off the
+ * controllers.
  */
-export function tidy(
-  document: OpenAPIObject,
-  uuidParsed: ReadonlySet<string> = new Set(),
-): OpenAPIObject {
+export function tidy(document: OpenAPIObject, uuidParsed: ReadonlySet<string>): OpenAPIObject {
   const paths: OpenAPIObject['paths'] = {}
   const tags = new Set<string>()
   /** Heading -> the resource tags under it, for `x-tagGroups`. */
