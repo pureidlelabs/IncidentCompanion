@@ -31,10 +31,10 @@ export function ComplianceControl({
   /**
    * The answer, in the shape the record stores it.
    *
-   * **`unknown` rather than a string, and deliberately so.** This control emits
-   * `string[]` for the multi kinds and `null` for a question taken back or an
-   * emptied number, which are the stored shapes -- so a caller sends the value
-   * on unconverted rather than splitting a joined string.
+   * **Deliberately wide.** This control emits `string[]` for the multi kinds
+   * and `null` for a question taken back or an emptied number, which are the
+   * stored shapes -- so a caller sends the value on unconverted rather than
+   * splitting a joined string.
    */
   onSet: (name: string, value: unknown) => void
 }) {
@@ -134,10 +134,7 @@ export function ComplianceControl({
         selectedKey={value === '' ? UNSET : value}
         onSelectionChange={(key) => {
           // **`null` on the way out, whatever the row is called on the way
-          // in.** These columns are enums with no empty member, so an answer
-          // taken back as `''` is refused by the write and cannot be taken
-          // back at all. Every other kind on this control already posts what
-          // the record holds. -> #845
+          // in.** -> #845
           onSet(spec.name, key === UNSET ? null : String(key))
         }}
       >

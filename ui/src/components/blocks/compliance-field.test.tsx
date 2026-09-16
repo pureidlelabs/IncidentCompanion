@@ -301,26 +301,28 @@ describe('a vocabulary with neither shape', () => {
  * **Asserted on the value handed out, not on the control.** A select that
  * draws *not stated* perfectly and posts the wrong thing looks right on every
  * screen, and the refusal arrives on the write.
- *
- * These were held by a boundary nothing called: its own tests were the only
- * thing asserting them, and they were asserting a function no screen reached.
- * It is deleted, and they are asserted here against the control that does the
- * work.
  */
 describe('what an answer posts when it is taken back', () => {
   /** A served select whose vocabulary carries the not-stated row. */
   const GROUND = 'nis2EntityClass'
 
-  async function pick(spec: ComplianceFieldSpec, option: string | RegExp) {
+  /**
+   * Opens the select on `from` and picks `option`.
+   *
+   * **The two differ on purpose.** React Aria fires no selection change for
+   * the row already chosen, so a case that starts on its own answer asserts
+   * nothing at all.
+   */
+  async function pick(spec: ComplianceFieldSpec, from: string, option: string | RegExp) {
     const user = userEvent.setup()
-    const onSet = draw(spec, { [spec.name]: 'yes' })
+    const onSet = draw(spec, { [spec.name]: from })
     await user.click(screen.getByRole('button'))
     await user.click(await screen.findByRole('option', { name: option }))
     return onSet
   }
 
   it('posts null for a ground taken back, never the empty string', async () => {
-    const onSet = await pick(served(GROUND), /not stated/i)
+    const onSet = await pick(served(GROUND), 'essential', /not stated/i)
 
     expect(
       stored(onSet),
@@ -335,7 +337,7 @@ describe('what an answer posts when it is taken back', () => {
     const answer = (spec.options ?? []).find((one) => one !== '')
     expect(answer, 'the served vocabulary offers nothing but the not-stated row').toBeDefined()
 
-    const onSet = await pick(spec, new RegExp(spec.optionLabels?.[answer!] ?? answer!, 'i'))
+    const onSet = await pick(spec, '', new RegExp(spec.optionLabels?.[answer!] ?? answer!, 'i'))
 
     expect(stored(onSet)).toBe(answer)
   })
@@ -360,7 +362,7 @@ describe('what an answer posts when it is taken back', () => {
     expect(stored(onSet), 'an emptied count read as nobody was affected').toBeNull()
   })
 
-  it('posts a zero a analyst typed, which is an answer', async () => {
+  it('posts a zero an analyst typed, which is an answer', async () => {
     const user = userEvent.setup()
     const spec = served('annualTurnoverEur')
     const onSet = draw(spec, {})
