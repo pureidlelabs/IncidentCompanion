@@ -73,21 +73,11 @@ PATTERNS = [
 ]
 
 #: A prop whose value is a backtick string with nothing interpolated.
-#
-# **`title={`…`}` was invisible.** Measured: a violation planted in one left
-# the suite green, three simultaneous ones (`Oops`, `Something went wrong`,
-# `on the left`) and still green.
 TEMPLATE_PROP = re.compile(
     rf'\b(?:{COPY_PROPS})\s*=\s*\{{\s*`([^`${{]{{4,200}})`\s*\}}'
 )
 
 #: Any sentence-shaped literal inside a `.tsx` file.
-#
-# **The ternary is why this exists.** `{cond ? 'There is nothing at this
-# address' : 'This screen stopped rendering'}` is the most common way this
-# interface picks copy, and none of the prop or JSX-text patterns above reach
-# inside an expression container -- so all four branches of `RouteError`, the
-# longest sentences on that screen, were unlinted.
 #
 # Deliberately broad and then filtered, rather than another enumeration of
 # syntax: the enumeration is what missed twice already.
@@ -103,10 +93,6 @@ SENTENCE = re.compile(
 # would have scanned -- so copy chosen inside a template's own ternary, which
 # is the most common way this interface picks copy, stops being seen at all.
 # Two passes over the same text see both.
-#
-# A toast is a call argument, not a prop, so `TEMPLATE_PROP` never reaches it
-# -- which leaves every toast in the app uncovered by the `ErrorTone` rules
-# written for them.
 #
 # **The second form is a template whose first thing is the value.**
 # ` ${n} row(s) were already in the case.` is a sentence an analyst reads, and
@@ -134,11 +120,6 @@ TEMPLATE = re.compile(
 # provided via props or context"* when a component is used outside its
 # provider, and no analyst has a console open. Excluding by *file* would have
 # taken the vendored tree's real copy with it.
-#
-# **Kept out of `NOT_COPY` because it is the only one safe to apply to the
-# line above.** `export const MESSAGE =` wraps onto its own string too, and a
-# lookbehind for the whole of `NOT_COPY` would silently unlint every copy
-# constant declared that way.
 CONSOLE = re.compile(r"\bconsole\.(warn|error|log|info|debug)\(")
 
 
@@ -146,10 +127,8 @@ def opens_a_console_call(line: str) -> bool:
     """True when `line` starts a console call that has not closed on it.
 
     **The unclosed test is the whole of it, and a bare `CONSOLE.search` is
-    wrong.** Plant a violation on the line directly under a *complete*
-    `console.warn(...)` and the suite stays green: without the unclosed test,
-    two rules that should both fire are switched off for every line following
-    any console call in the tree.
+    wrong.** Without it two rules that should both fire are switched off for
+    every line following any console call in the tree.
     """
     return bool(CONSOLE.search(line)) and line.count("(") > line.count(")")
 
@@ -157,12 +136,6 @@ NOT_COPY = re.compile(
     r"^\s*(import|export)\b|\b(describe|it|test|expect)\(\s*$|" + CONSOLE.pattern
 )
 
-#: A comment line, which quotes other people's copy to explain why ours differs.
-#
-# **This is the cost of the broad `SENTENCE` sweep.** `severity-tones.ts` quotes
-# React Router's *"Unexpected Application Error!"* in a docstring, to say what
-# the app replaced -- and an exclamation mark inside an explanation of somebody
-# else's exclamation mark is not a violation of anything.
 #: What an interpolation is read as. A digit, because the value one stands in
 #: for is almost always a count, and because no content rule scores it.
 PLACEHOLDER = "0"
@@ -204,16 +177,15 @@ def without_interpolations(value: str) -> str:
         at = end + 1 if end < len(value) else len(value)
 
 
+#: A comment line, which quotes other people's copy to explain why ours differs.
 COMMENT_LINE = re.compile(r"^\s*(\*|//|/\*)")
 
 #: One unspaced token carrying punctuation prose does not: an id, a path, a
 #: filename, a CSS unit, a class name.
 #
-# **Unspaced *and* punctuated, because either alone is wrong.** 630 of the
-# values this sweep reaches have no space in them and 578 are ordinary copy --
-# `Assets`, `Accounts`, `Evidence` -- so dropping every unspaced value
-# unlinted more than it cleaned. The 52 that remain all carry a slash, a
-# colon, an underscore, a digit or a dotted extension.
+# **Unspaced *and* punctuated, because either alone is wrong.** Most unspaced
+# values are ordinary copy -- `Assets`, `Accounts`, `Evidence` -- so dropping
+# every unspaced one unlints more than it cleans.
 #
 # They reach the content rules only to fail one on a later edit: `via-ink/10`
 # is a Tailwind gradient and `via` is a banned word.

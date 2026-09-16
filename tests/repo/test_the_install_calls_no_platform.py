@@ -1,15 +1,7 @@
 """The install makes no outbound request, so it can reach nobody's platform.
 
-`incident-import` reads Article V against a product whose purpose is to reach
-data an operator already owns:
-
-    An install MUST NOT make an outbound request to a detection platform.
-    Where an incident is brought in from one, the analyst's browser MUST be
-    what talks to that platform, using a credential the analyst holds, and the
-    install MUST receive only what the analyst's browser sends it.
-
-    An install with no connection configured MUST make no request to any
-    platform at all.
+`incident-import` reads Article V of the constitution against a product whose
+purpose is to reach data an operator already owns.
 
 **The boundary is not crossed by the data arriving; it would be crossed by the
 install holding a credential to fetch it unattended.** So the property is about

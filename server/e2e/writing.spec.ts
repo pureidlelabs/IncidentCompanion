@@ -84,13 +84,6 @@ async function fill(control: Locator, mark: string): Promise<string | null> {
     tag: node.tagName,
     type: (node as HTMLInputElement).type,
     required: (node as HTMLInputElement).required,
-    // **The shape, because the platform types are not used.** A UTC timestamp
-    // is two text boxes rather than `type="date"` and `type="time"`, which
-    // render in the operating system's locale where no attribute reaches them
-    // - so a field labelled UTC would draw `mm/dd/yyyy` and a twelve-hour
-    // clock. Keying off `type` alone types the mark into a box that wants a
-    // date, and the form then refuses for a reason that has nothing to do with
-    // the write path.
     shape: (node as HTMLInputElement).placeholder,
   }))
 
@@ -98,12 +91,6 @@ async function fill(control: Locator, mark: string): Promise<string | null> {
   if (kind.type === 'checkbox' || kind.type === 'radio') return null
   if (kind.type === 'file') return null
 
-  /**
-   * **A datetime-local field takes its own format and nothing else.** Typing
-   * prose into one leaves it empty, the form then refuses for a reason that
-   * has nothing to do with the write path, and the sweep reports a defect in
-   * the wrong place.
-   */
   const value =
     kind.type === 'datetime-local'
       ? '2026-08-12T09:30'
@@ -141,21 +128,6 @@ function fields(page: Page): Locator {
    * button is present, enabled, and outside the accessibility tree that
    * `getByRole` reads -- filling a link field takes the buttons `getByRole` can
    * see inside the dialog down to the popup's own, and Escape puts them back.
-   *
-   * **So the sweep reported "no submit control" for a dialog it had just
-   * filled** - and only on this dialog, because the tier layout put the link
-   * band last, leaving a popup open at the moment the submit was looked for.
-   * The app is right: a modal popup is meant to take the screen, and an
-   * analyst dismisses it before saving.
-   *
-   * **What it gives up, said out loud.** These are the `device_select` and
-   * `multi_device_select` controls - 7 of the event form's 15, 6 of the
-   * action form's 11 - so neither browser sweep now drives a reference picker
-   * *inside a dialog*: this one skips them and `prodding.spec.ts` submits
-   * empty by design. No section drops to zero fillable controls, so the
-   * exclusion cannot hide a section that stopped writing; what it can hide is
-   * a regression in `EntityCombobox` or `ReferenceMultiSelect`, which is
-   * precisely the surface that broke here.
    */
   return page
     .locator(DIALOG)
@@ -186,11 +158,6 @@ type Written =
 
 /**
  * Opens the current section's Add dialog, fills it with `mark`, submits it.
- *
- * **Shared by both sweeps rather than copied**, because the second one needs
- * exactly this and needs it to have written a row it can then find by its
- * mark - a second filler would drift from this one and the round trip would
- * be certifying a form nobody submits.
  */
 async function writeARow(page: Page, mark: string): Promise<Written> {
   await dismissToasts(page)
@@ -290,13 +257,6 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
       () => false,
       () => true,
     )
-  /**
-   * **Three outcomes, not two.** Closed wrote its row. Open *and saying why*
-   * is a refusal, the class this spec exists for. Open and silent is
-   * `undriveable` and is never reported as a refusal: it cannot be told apart
-   * from a widget this sweep failed to fill, which the portalled
-   * autocompletes and tag selects are.
-   */
   if (!stillOpen) {
     await dismissToasts(page)
     return { outcome: 'wrote' }
@@ -328,12 +288,6 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
  *
  * A section belongs here once it has written on consecutive runs rather than
  * on one; the `wrote` annotation is what says which.
- *
- * **`entities`, `evidence` and `methods` joined once the sweep could open a
- * dialog at all.** `DIALOG` had been matching nothing, so `openAddDialog`
- * threw on every section and each one was recorded as undriveable; with that
- * repaired they write, on two consecutive runs, which is what this list asks
- * for before a slug is added to it.
  */
 const ALWAYS_WRITES = [
   'accounts',
@@ -386,15 +340,6 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
       type: 'not-driven',
       description: undriveable.join(', ') || 'none',
     })
-    /**
-     * **And the skipped ones, which are otherwise collected and never
-     * reported.**
-     * `skipped` covers a section with no Add dialog *and* one whose dialog had
-     * nothing this sweep could type - two very different things, both silent.
-     * A section that stops writing shows up in the failure below as a bare
-     * slug with no reason attached, which is a diagnosis that starts from
-     * nothing.
-     */
     test.info().annotations.push({
       type: 'skipped',
       description: skipped.join(', ') || 'none',
@@ -426,12 +371,6 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
 
     expect(refused, 'filled forms the server would not take').toEqual([])
 
-    /**
-     * **What the sweep could not reach, said out loud.** A dialog it cannot
-     * fill and a section that offers none are different answers, and neither
-     * is a defect - but a sweep that reports 5 of 22 without saying which 17
-     * reads as covering the case.
-     */
     test.info().annotations.push({
       type: 'no-dialog',
       description: `${String(skipped.length)}: ${skipped.join(', ')}`,
@@ -444,11 +383,6 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
 
 /**
  * Whether the mark still appears anywhere in the case document.
- *
- * **Serialised and searched rather than walked per collection.** The mark is a
- * unique run token written into one text field, so a substring hit is the row
- * and nothing else - and this needs no slug-to-collection map, which is the
- * thing that made the obvious port of `bulk-delete.spec.ts` fail.
  */
 async function stillInCase(
   api: APIRequestContext,

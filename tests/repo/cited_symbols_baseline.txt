@@ -83,7 +83,6 @@ OSFamily
 OTEL_EXPORTER_OTLP_ENDPOINT
 partialRecord
 peerOptional
-PLAYWRIGHT_VERSION
 pointerType
 preserveSessionInDatabase
 PressEvent

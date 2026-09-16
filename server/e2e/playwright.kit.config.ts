@@ -2,11 +2,8 @@
  * The component half of the browser tier: Storybook, and no server at all.
  *
  * **Split from `playwright.config.ts` by what it drives, not by what it looks
- * like.** Measured across the ten `*.storybook.spec.ts` files: not one of them
- * reaches `baseURL`, calls `signIn` or navigates a route. They load a story and
- * measure its geometry -- focus rings, sticky heads, clipped text, the action
- * cluster a row reveals. Under the app's config they were nonetheless waiting
- * on Postgres, a pushed schema and a seeded analyst before they could start.
+ * like.** No `*.storybook.spec.ts` reaches `baseURL`, calls `signIn` or
+ * navigates a route: they load a story and measure its geometry.
  *
  * **Which is the whole gain: this is a CI job with no services.** It needs a
  * checkout, a Chromium and `npm run storybook`, and it shards like any other.

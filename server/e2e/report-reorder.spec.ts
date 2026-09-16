@@ -28,9 +28,6 @@ test.beforeEach(async ({ baseURL }) => {
  * and the same gesture ending in `Enter` fires it with a real target and posts
  * the order.
  *
- *     Space/ArrowDown/Space:  onReorder fired: (never)          POSTs=0
- *     Enter/ArrowDown/Enter:  onReorder fired: {"dropPosition":"before"}  POSTs=1
- *
  * The library says so itself, in the region this spec reads: *"Started
  * dragging. Press Tab to navigate to a drop target, then press Enter to drop,
  * or press Escape to cancel."* -> https://react-aria.adobe.com/dnd
@@ -43,9 +40,7 @@ const DROP = 'Enter'
  * **`Drag`, because React Aria names the drag button itself.** `SortableItem`
  * deliberately gives it no `aria-label` -- *"React Aria names the drag button
  * after the row's own text, and an explicit label would win and say less"* --
- * and what it produces is `Drag <the row's text>`. The outline drew as a plain
- * `<ol>` until #381 was wired, so no grip had ever been named at all and this
- * pattern had never matched anything.
+ * and what it produces is `Drag <the row's text>`.
  */
 const GRIP = /^Drag /
 
@@ -55,9 +50,7 @@ const GRIP = /^Drag /
  * **A grip cannot be focused directly, and that is the collection working.**
  * `GridList` keeps a roving tabindex: every row but the focused one is
  * `tabindex="-1"`, so `locator.focus()` on a grip inside another row is pulled
- * back to the focused row and the drag never starts at all. Measured -- asking
- * for the fourth grip and pressing Enter left focus on the first row and
- * `onDragStart` never fired.
+ * back to the focused row and the drag never starts at all.
  *
  * So the route is the one a person has: the grid takes focus on its first row,
  * the arrow keys move between rows, and `keyboardNavigationBehavior="tab"` is

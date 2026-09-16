@@ -1,20 +1,13 @@
 /**
  * Switching a report's language, on a page nobody else is touching.
  *
- * **Written to tell a product defect from an artefact of the harness.** A
- * capture showed the merge-review dialog on this interaction, and a single
- * capture cannot say whether the conflict came from the app or from an earlier
- * spec in the same run: one worker, one fresh page, one control pressed.
- *
  * **It owns the report it drives, which is what makes a second run mean
  * anything.** Opening a shared demo report and taking whichever the client
  * lands on is not repeatable: a tier run leaves reports behind with an empty
  * language, created by the specs themselves. Land on one of those and the
- * control reads "Default language", so a locator
- * filtering on the language names matches nothing and the spec times out on a
- * control that is present and correct. It fails as a click timeout or as a text
- * timeout depending on how far it got, which is why it reads as two different
- * flakes.
+ * control reads "Default language", so a locator filtering on the language
+ * names matches nothing and the spec times out on a control that is present
+ * and correct.
  *
  * So the report is created here, in this worker's own case, with the language
  * it starts from stated rather than inherited.
