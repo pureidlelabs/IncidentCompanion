@@ -55,3 +55,23 @@ export function useAccountWrite(
     onSettled: () => client.invalidateQueries({ queryKey: keys.accounts() }),
   })
 }
+
+/**
+ * One mutation for the row actions, which name their account when pressed.
+ *
+ * `useAccountWrite` fixes its path when the hook is called, which suits the
+ * create door and cannot say *disable whichever row this was*. Invalidates the
+ * same key on refusal too, for the reason the create does: the only recovery a
+ * row has is showing what is actually stored.
+ */
+export function useAccountAction(): UseMutationResult<
+  Written,
+  ApiError,
+  { path: string; body?: Record<string, unknown> }
+> {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ path, body }) => postWritten(`/accounts${path}`, body ?? {}),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.accounts() }),
+  })
+}

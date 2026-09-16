@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { useCases } from '@/api/case'
 import { useImportCase } from '@/api/useImportCase'
-import { useAccounts, useAccountWrite } from '@/api/accounts'
+import { useAccountAction, useAccounts, useAccountWrite } from '@/api/accounts'
 import { useInstallActivity, type AuditLine, type AuditPage, type RangeKey, type Severity } from '@/api/installActivity'
 import { announced } from '@/app/case/entryWrites'
 import { packFromFile, useLanguageRemove, useLanguageUpload, useLanguages } from '@/api/languages'
@@ -281,6 +281,7 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
   const admin = useIsAdmin()
   // `''` is the create path: `useAccountWrite` appends to `/accounts`.
   const create = useAccountWrite('')
+  const act = useAccountAction()
   const refused = create.data?.ok === false ? splitWritten(create.data).problem : undefined
   return (
     <PickerAccountsScreen
@@ -293,6 +294,13 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
           onSuccess: (written) => {
             if (written.ok) accounts.refetch().catch(() => undefined)
           },
+        })
+      }}
+      onState={(username, next) => {
+        // The row follows the server rather than the press: the query is
+        // invalidated either way, so what is drawn is what is stored.
+        act.mutate({
+          path: `/${encodeURIComponent(username)}/${next === 'disabled' ? 'disable' : 'enable'}`,
         })
       }}
       accounts={accountRows(accounts.data?.accounts)}

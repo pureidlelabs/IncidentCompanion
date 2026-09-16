@@ -19,6 +19,12 @@ export interface PickerAccountsScreenProps {
   refusal?: string | undefined
   /** Accounts this install holds. Absent draws an empty list. */
   accounts: readonly AccountTableRow[] | undefined
+  /**
+   * Writes an account's state. Absent, the row flips locally instead, which is
+   * what the gallery needs and what an install must never get: a row that moved
+   * and a server that was never told.
+   */
+  onState?: ((username: string, next: AccountTableRow['state']) => void) | undefined
   /** Who is signed in, at the rail's foot. */
   analyst: string
   /** Whether to offer the rail rows only an administrator may use. */
@@ -47,6 +53,7 @@ export function PickerAccountsScreen({
   creating = false,
   refusal,
   accounts: accountsGiven,
+  onState,
   analyst,
   admin,
   onPane,
@@ -87,6 +94,10 @@ export function PickerAccountsScreen({
             setMinting(true)
           }}
           onState={(id, state) => {
+            if (onState) {
+              onState(id, state)
+              return
+            }
             setAccounts((current) =>
               current.map((one) => (one.id === id ? { ...one, state } : one)),
             )
