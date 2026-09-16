@@ -12,7 +12,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { keys } from '@/api/queryKeys'
 import { ENTRY_SLUG } from '@/components/blocks/case-sections'
 import { armSource } from '@/api/sentinel/armSource'
-import { demoSourceFromUrl } from '@/api/sentinel/demoSource'
+import { demoImporterAsked, demoSourceFromUrl } from '@/api/sentinel/demoSource'
 import { msalTokenProvider } from '@/api/sentinel/msalTokenProvider'
 import { ImportSentinelScreen, type SentinelWrites } from '@/screens/import-sentinel'
 
@@ -75,20 +75,23 @@ export function ImportSentinelContainer({
   // is a routing defect, which is what `useCaseId` would have thrown for.
   if (!startsACase && caseId === '') throw new Error('The importer needs a case to fill.')
   /**
-   * The bundled fixture, when the address asks for it.
+   * Whether the address asks for the bundled fixture.
    *
    * `?importer=demo` is what makes the wizard reachable without an interactive
    * Entra sign-in, which is how the browser tier walks the four phases. It
    * needs no registration, so the connect phase is open on it.
+   *
+   * The address, not the source: asking for the source fetches its chunk, so
+   * `connect` is where that happens. -> `api/sentinel/demoSource.ts`
    */
-  const bundled = demoSourceFromUrl()
+  const bundled = demoImporterAsked()
   /**
    * **Built at `connect`, from what the analyst typed.** The registration is
    * the screen's to collect and this file's to turn into a source -- building
    * it from stored coordinates before the phase runs is what left the door
    * disabled with nothing on screen saying why.
    */
-  const provider = useRef<IncidentSource | null>(bundled)
+  const provider = useRef<IncidentSource | null>(null)
   const session = useRef<ImporterSession | null>(null)
   const workspaces = useRef<readonly ImportSource[]>([])
   /** The incidents the last listing returned, by the id the screen hands back. */
@@ -231,7 +234,7 @@ export function ImportSentinelContainer({
   const writes: SentinelWrites = useMemo(
     () => ({
       connect: async (registration) => {
-        provider.current = bundled ?? armSource(msalTokenProvider(registration))
+        provider.current = (await demoSourceFromUrl()) ?? armSource(msalTokenProvider(registration))
         session.current = await provider.current.connect()
         return session.current.identity
       },
@@ -332,7 +335,7 @@ export function ImportSentinelContainer({
           return commitImport(caseId, held.payload, { approved: [...approved], edits: [] })
         },
     }),
-    [bundled, caseId, startsACase, client],
+    [caseId, startsACase, client],
   )
 
   // `connected` because the app can always attempt a live sign-in once it is
@@ -341,7 +344,7 @@ export function ImportSentinelContainer({
   return (
     <ImportSentinelScreen
       connected
-      preconfigured={bundled !== null}
+      preconfigured={bundled}
       writes={writes}
       onCreated={(made) => {
         onClose?.()

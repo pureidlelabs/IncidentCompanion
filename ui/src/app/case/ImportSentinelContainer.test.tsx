@@ -169,7 +169,12 @@ function withClient(node: React.ReactNode) {
 }
 vi.mock('@/api/sentinel/armSource', () => ({ armSource: () => provider }))
 vi.mock('@/api/sentinel/msalTokenProvider', () => ({ msalTokenProvider: () => ({}) }))
-vi.mock('@/api/sentinel/demoSource', () => ({ demoSourceFromUrl: () => provider }))
+/** Every ask for the demo source, so a render that made one is visible. */
+const askedForTheFixture = vi.fn(() => Promise.resolve(provider))
+vi.mock('@/api/sentinel/demoSource', () => ({
+  demoImporterAsked: () => false,
+  demoSourceFromUrl: () => askedForTheFixture(),
+}))
 vi.mock('@/api/incidentImport', () => ({
   previewImport: (_caseId: string, payload: { incidents: unknown[] }) => {
     previews.push(payload)
@@ -298,6 +303,24 @@ describe('the Sentinel import container', () => {
     previews.length = 0
     writes = null
     openCase = 'case-1'
+    askedForTheFixture.mockClear()
+  })
+
+  /**
+   * **The fixture is a chunk of its own, and asking for it is what fetches
+   * it.** An analyst who opens the door against a real tenant should never pay
+   * for 13 KB of invented ones, so the ask belongs in `connect` and not in the
+   * render that draws the phase.
+   */
+  it('asks for the demo source at connect and not while rendering', async () => {
+    render(inCase(<ImportSentinelContainer />))
+    await waitFor(() => {
+      expect(writes).not.toBeNull()
+    })
+    expect(askedForTheFixture, 'the fixture was fetched to draw a screen').not.toHaveBeenCalled()
+
+    await writes!.connect({})
+    expect(askedForTheFixture).toHaveBeenCalledTimes(1)
   })
 
   /**

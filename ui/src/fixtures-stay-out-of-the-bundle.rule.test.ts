@@ -28,18 +28,26 @@ const MAY_READ = /(\.(test|stories)\.tsx?$)|(^fixtures\/)|(^demo\/)/
  * demo's first report. The directory is the boundary, so the rule holds
  * however the fixtures are arranged among themselves.
  *
- * **Every import shape, because the defect needs only one.** A re-export, a
- * bare side-effect import and a dynamic `import()` put the bytes in the graph
- * exactly as a named import does, and the test above matches a relative
+ * **Every static shape, because the defect needs only one.** A re-export, a
+ * bare side-effect import and a `require()` all put the bytes in the importing
+ * chunk exactly as a named import does, and the test matches a relative
  * spelling as well as the alias -- `vite.config.ts` aliases `@` to `src`, so
  * the two reach one module.
+ *
+ * **A dynamic `import()` is allowed, being a chunk boundary** -- the fixture
+ * is emitted as its own file and requested when that branch runs, which is
+ * the property this rule defends rather than an exception to it.
+ *
+ * **What that gives up**: a dynamic import on a path every visitor walks,
+ * which is a chunk arriving late rather than a fixture in the first payload.
+ * No rule here tells the two apart; a reader of the diff does.
  */
 function importsAFixture(source: string): boolean {
   const specifiers = [
     // `from '...'` covers both an import and a re-export; the other two arms
-    // are a bare side-effect import and a dynamic `import()` or `require()`.
+    // are a `require()` and a bare side-effect import.
     ...source.matchAll(/\bfrom\s*['"]([^'"]+)['"]/g),
-    ...source.matchAll(/\b(?:import|require)\s*\(\s*['"]([^'"]+)['"]\s*\)/g),
+    ...source.matchAll(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g),
     ...source.matchAll(/^\s*import\s+['"]([^'"]+)['"]/gm),
   ].map((match) => match[1] ?? '')
 

@@ -9,7 +9,7 @@
  *
  * **Two implementations ship.** `armSource.ts` is the live one -- PKCE SPA
  * sign-in through `msalTokenProvider`, against the ARM origins the CSP allows
- * -- and `fixtureSource.ts` answers from the bundle, which is what tests,
+ * -- and `fixtures/sentinel-source.ts` answers from the bundle, which is what tests,
  * stories and `?importer=demo` drive. A component takes an
  * `IncidentSource | null`, and `null` is the honest state the Connect phase
  * renders before a tenant and client id have been given.
