@@ -205,7 +205,6 @@ export class PreferencesController {
    * **Named, because a presence roster draws everybody's.** This is the one
    * route here that reads somebody else's row, and it serves an image and
    * nothing else - no theme, no clock, no initials.
-   *
    */
   @Get(':userId/avatar')
   // **Kept even though the bytes are now this process's own PNG.** It costs
@@ -229,14 +228,7 @@ export class PreferencesController {
     if (!found) throw new NotFoundException({ message: 'That analyst has no picture.' })
     // **Cached hard, and only once there is a picture to cache.** The client
     // appends `?v=`, which changes on every write, so a long cache cannot serve
-    // a stale face -- but a refusal carrying it tells a client to keep *that*
-    // for a year, and an analyst who then uploads one stays faceless to
-    // anybody holding it.
-    // **Cached hard, and only once there is a picture to cache.** The client
-    // appends `?v=`, which changes on every write, so a long cache cannot serve
-    // a stale face -- but a refusal carrying it tells a client to keep *that*
-    // for a year, and an analyst who then uploads one stays faceless to
-    // anybody holding it.
+    // a stale face; a refusal carrying it would be kept for a year.
     response.setHeader('cache-control', 'private, max-age=31536000, immutable')
     response.type(found.type)
     return new StreamableFile(found.bytes, { type: found.type })

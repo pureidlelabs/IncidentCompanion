@@ -222,7 +222,6 @@ describe.skipIf(!db)('the preferences routes', () => {
     )
   })
 
-
   /**
    * **A refusal is not the picture, so it does not carry the picture's cache.**
    *
@@ -233,10 +232,7 @@ describe.skipIf(!db)('the preferences routes', () => {
    * picture stayed faceless to anybody holding it. -> #836
    *
    * **The `?v=` the client appends is not the guard.** It changes on every
-   * write, so the picture appears at a different URL and a different cache
-   * key -- which is what has been hiding this. A caller composing the URL
-   * without it, or a change to how the version is carried, removes the mask
-   * and leaves the header promising a year.
+   * write, so the picture appears at a different URL and a different cache key.
    *
    * Asserted on what the handler does with the response, because that is what
    * it decides: a 404 that never reached the typing is answered by Nest with
@@ -290,9 +286,9 @@ describe.skipIf(!db)('the preferences routes', () => {
      * and sends whoever debugs it looking at the URL.
      */
     it('answers 404 rather than calling the request bad', async () => {
-      await expect(prefs.avatar(SAM, { type: () => undefined, setHeader: () => undefined })).rejects.toMatchObject({
-        status: 404,
-      })
+      const nothing = { type: () => undefined, setHeader: () => undefined }
+
+      await expect(prefs.avatar(SAM, nothing)).rejects.toMatchObject({ status: 404 })
     })
 
     /**
