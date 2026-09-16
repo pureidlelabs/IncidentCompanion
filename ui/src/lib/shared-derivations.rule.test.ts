@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 import { ACTIVITY_ACTION } from '@contract/vocabularies.lists'
@@ -119,8 +119,7 @@ function withoutComments(text: string): string {
 }
 
 describe('a shared derivation is defined once', () => {
-  const files = glob
-    .sync('**/*.{ts,tsx}', { cwd: SRC, absolute: true })
+  const files = globSync('**/*.{ts,tsx}', { cwd: SRC, absolute: true })
     .map((path) => path.split('\\').join('/'))
     .filter((path) => !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'))
 
@@ -150,8 +149,7 @@ describe('a shared derivation is defined once', () => {
     // absent, which is how a rule keyed on names goes quietly inert.
     const undefinedHere = SHARED.filter((name) => {
       const pattern = new RegExp(`export\\s+(?:function|const)\\s+${name}\\b`)
-      return !glob
-        .sync('*.ts', { cwd: HERE, absolute: true })
+      return !globSync('*.ts', { cwd: HERE, absolute: true })
         .some((path) => pattern.test(readFileSync(path, 'utf8')))
     })
     expect(undefinedHere).toEqual([])

@@ -28,6 +28,8 @@ import type { NestExpressApplication } from '@nestjs/platform-express'
 import { Test } from '@nestjs/testing'
 import { DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
+import { installPreferences } from '../src/db/schema/index.js'
+import { putSettingsBack } from './install-settings.js'
 import { Socket } from 'node:net'
 import { declined } from './must-run.js'
 import type { OpenAPIObject } from '@nestjs/swagger'
@@ -179,7 +181,24 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
   await app.get(LibraryService, { strict: false }).seedBuiltIns()
   await app.get(LanguageService, { strict: false }).seedBuiltIn()
 
-  return { app, base, document, close: () => app.close() }
+  const db = app.get<Database>(DATABASE)
+  const settingsAtBoot = await db.select().from(installPreferences)
+
+  return {
+    app,
+    base,
+    document,
+    close: async () => {
+      // **The app closes whatever the restore does.** A harness left listening
+      // is a port and a pool that never come back, which fails the rest of the
+      // run rather than this file.
+      try {
+        await putSettingsBack(db, settingsAtBoot)
+      } finally {
+        await app.close()
+      }
+    },
+  }
 }
 
 /** What every harness account ends up holding, so any of them can sign back in. */

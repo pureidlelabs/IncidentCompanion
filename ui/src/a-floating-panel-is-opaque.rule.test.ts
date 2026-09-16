@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -113,8 +113,7 @@ function classExpressions(source: string): string[] {
  * below without reading a file -- the same shape as a clean Vale run over no
  * files. The sibling rule tests carry the same guard.
  */
-const SOURCES = glob
-  .sync('src/**/*.{ts,tsx}', { cwd: process.cwd() })
+const SOURCES = globSync('src/**/*.{ts,tsx}', { cwd: process.cwd() })
   .filter((file) => !/\.(test|stories)\.tsx?$/.test(file))
 
 describe('a floating panel is opaque', () => {
