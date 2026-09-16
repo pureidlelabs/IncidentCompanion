@@ -13,9 +13,8 @@
  * tables nothing has heard of. So `batch_create` is snake_case too, matching
  * what `collections.ts` reads.
  *
- * **It gates an affordance, so a wrong answer is a button that 404s.** The
- * batch flag is what the CSV import reads to decide whether to offer a bulk
- * write at all.
+ * **A wrong flag is a caller told a route exists where it does not**, so the
+ * batch flag is derived from the registry rather than declared beside it.
  */
 import { Controller, Get } from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
@@ -41,9 +40,8 @@ const NO_BATCH = new Set(['evidence'])
  * **One entry, and it earns the exception.** The timeline is absent from that
  * registry because its two kinds validate apart, and this route read that
  * absence as "no bulk route" -- which was true until `timeline.controller.ts`
- * mounted `POST bulk` for the importer that had been posting to it. The listing
- * is what the Import Data screen offers, so a false here is the feature staying
- * hidden with the route in place.
+ * mounted `POST bulk` for the importer that had been posting to it. A false
+ * here hides a route that is mounted.
  *
  * **Held by driving the routes, not by matching this list against another
  * one.** `test/timeline-bulk.test.ts` and the agreement case in

@@ -15,9 +15,9 @@
  * early.
  *
  * **Comments are skipped rather than treated as text**, and that is not a
- * refinement: `ImportCsvDialog`'s file input carries a `//` comment reading
- * "jsdom's ... button's own", whose two apostrophes open and close a string
- * state that swallowed the tag's `>` and ran the scan into the *next* field.
+ * refinement: a file input carried a `//` comment whose two apostrophes
+ * opened and closed a string state that swallowed the tag's `>` and ran the
+ * scan into the *next* field.
  * The sweep reported the wrong file with a real defect present, which is the
  * failure that reads as a true positive. Inside a tag a `//` can only be a
  * comment - a `//` in an attribute value is already inside a quote.

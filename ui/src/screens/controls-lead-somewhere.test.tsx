@@ -274,6 +274,24 @@ describe('the import data screen', () => {
       expect(control).toBeDisabled()
     }
   })
+
+  /**
+   * **The one import door, end to end.** One picker serves every row, so the
+   * aim is where a file reaching the wrong table would come from.
+   */
+  it('hands the chosen file over against the table whose button was pressed', async () => {
+    const user = userEvent.setup()
+    const onImport = vi.fn()
+    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} onImport={onImport} />)
+
+    await user.click(screen.getByRole('button', { name: 'Import CSV into Assets' }))
+    const picker = document.querySelector<HTMLInputElement>('input[type="file"]')
+    expect(picker, 'the screen draws no file picker').not.toBeNull()
+    const file = new File(['hostname\nweb-01\n'], 'systems.csv', { type: 'text/csv' })
+    await user.upload(picker!, file)
+
+    expect(onImport).toHaveBeenCalledWith('systems', file)
+  })
 })
 
 describe('the notes screen', () => {

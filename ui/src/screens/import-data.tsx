@@ -236,10 +236,9 @@ export function ImportDataScreen({
           </Alert>
         )}
 
-        {/* **The refusals are on the screen rather than in the dialog that sent
-            them.** The dialog is gone by the time the server answers, and a row
-            the server would not take is the one thing an analyst has to act on
-            afterwards. */}
+        {/* **The refusals stay on the screen, beside the row they were sent
+            from.** A row the server would not take is the one thing an analyst
+            has to act on afterwards. */}
         {showing && result.refused > 0 && (
           <Alert variant="destructive">
             <AlertTitle>

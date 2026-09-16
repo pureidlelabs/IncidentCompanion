@@ -496,9 +496,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
+      # Named, where the server tier takes `CI`. -> `ui/vite.config.ts`
       - name: Client suite
         env:
           SHARD: ${{ matrix.shard }}
+          IC_SUITE_MUST_RUN: '1'
         run: cd ui && npx vitest run --shard="$SHARD/3"
 
   # -------------------------------------------------------------- the image

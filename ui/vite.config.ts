@@ -9,6 +9,7 @@ import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
 import { chromium } from 'playwright'
 import { defineConfig, type Plugin, type ProxyOptions } from 'vite'
+import type { Reporter, TestModule, Vitest } from 'vitest/node'
 
 /**
  * Whether the story tier can run here, decided once and announced when it
@@ -70,6 +71,48 @@ function ignoreReactAriaWindowFocusThrow(error: {
     message.includes("Failed to execute 'contains' on 'Node'") &&
     stack.includes('isFocusMovingToTarget')
   return isTheThrow ? false : undefined
+}
+
+/** The fewest test files a whole certifying run may finish and still pass. */
+const MUST_RUN_FILES = 200
+
+/**
+ * Refuses a certifying run that reported green having run little of the tier.
+ *
+ * A worker pool that times out leaves the run with no test modules and no
+ * failure to report, which vitest exits 0 on. -> #797
+ *
+ * Armed by `IC_SUITE_MUST_RUN` alone, where `server/test/must-run.ts` also
+ * reads `CI`.
+ */
+class MustRunReporter implements Reporter {
+  private floor = MUST_RUN_FILES
+
+  onInit(vitest: Vitest): void {
+    // A shard is a fraction of the tier by construction, and nothing is
+    // missing from it. The count a shard was never given is not evidence.
+    const shard = vitest.config.shard
+    if (shard) this.floor = Math.ceil(MUST_RUN_FILES / shard.count)
+  }
+
+  onTestRunEnd(testModules: readonly TestModule[]): void {
+    if (!process.env.IC_SUITE_MUST_RUN) return
+    // A module the pool enqueued and never reached is `queued` or `pending`,
+    // and counting one of those is how a timed-out run passes this.
+    const ran = testModules.filter((module) => {
+      const state = module.state()
+      return state !== 'queued' && state !== 'pending'
+    }).length
+    if (ran >= this.floor) return
+
+    console.error(
+      `The client tier finished ${String(ran)} test files, where it owes ` +
+        `${String(this.floor)}. This run is certifying (IC_SUITE_MUST_RUN), ` +
+        'where a tier that ran less than itself is a failure rather than a pass. ' +
+        'Run without IC_SUITE_MUST_RUN to run part of the tier deliberately.',
+    )
+    process.exitCode = 1
+  }
 }
 
 /**
@@ -291,6 +334,7 @@ export default defineConfig({
       ? ['--no-webstorage']
       : [],
     setupFiles: ['./src/test/setup.ts'],
+    reporters: ['default', new MustRunReporter()],
     onUnhandledError: ignoreReactAriaWindowFocusThrow,
     css: false,
     // `include` lives on the `unit` project below, not here. Once `projects`
