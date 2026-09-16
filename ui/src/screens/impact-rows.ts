@@ -1,4 +1,5 @@
 import type { ImpactEntry } from '@/api/model'
+import { matchesWords } from '@/lib/word-match'
 
 /**
  * Which impact columns a case earns, and how a byte count reads.
@@ -52,16 +53,8 @@ export function volumeText(bytes: number | null | undefined): string {
  * **The Data column and nothing else** - which is `label`, the data's own name.
  * The category, what happened to it, the counts and the host it was held on are
  * their own columns and are not searched; neither are the notes or the tags,
- * which the table draws in no column at all. AND across whitespace-separated
- * terms, so a second word narrows rather than widens; a blank query matches
- * every row.
+ * which the table draws in no column at all.
  */
 export function matchesData(row: ImpactEntry, query: string): boolean {
-  const hay = row.label.toLowerCase()
-  return query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((word) => hay.includes(word))
+  return matchesWords(row.label, query)
 }

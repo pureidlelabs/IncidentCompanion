@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 
 import type { ActionEntry, Case } from '@/api/model'
-import { fieldOf, formSpec, shortLabel, type Specs } from '@/api/specs'
+import { formSpec, type Specs } from '@/api/specs'
 import { BulkActionBar, bulkFieldsFor } from '@/components/blocks/bulk-actions'
 import { Collection } from '@/components/blocks/collection'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
@@ -21,6 +21,7 @@ import type { FieldToneSpec } from '@/api/specs'
 
 import { matchesTask } from './action-rows'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
+import { labelled } from '@/lib/field-label'
 import { useInFlight } from '@/lib/useInFlight'
 import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
 
@@ -329,8 +330,7 @@ function paintTone(
 
 function actionColumns(specs: Specs): EntityColumn<ActionEntry>[] {
   const form = formSpec<ActionEntry>(specs, 'ACTION_FIELDS')
-  const overrides: Record<string, string> = { task: 'Task' }
-  const label = (name: string) => overrides[name] ?? shortLabel(fieldOf(form, name)?.label ?? name)
+  const label = labelled(form, { task: 'Task' })
   const statusTones = specs.fieldTones.status
 
   const text = (field: keyof ActionEntry): EntityColumn<ActionEntry> =>

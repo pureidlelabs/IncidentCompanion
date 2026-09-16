@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 
 import type { Case, EvidenceEntry } from '@/api/model'
-import { fieldOf, formSpec, shortLabel, type Specs } from '@/api/specs'
+import { fieldOf, formSpec, type Specs } from '@/api/specs'
 import { BulkActionBar, bulkFieldsFor } from '@/components/blocks/bulk-actions'
 import { Collection } from '@/components/blocks/collection'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
@@ -22,6 +22,7 @@ import { AddAction } from '@/components/blocks/section-head'
 import { entityNames, referenceOptions } from '@/components/blocks/entity-scope'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
 import { matchesRecord } from './evidence-rows'
+import { labelled } from '@/lib/field-label'
 import { useInFlight } from '@/lib/useInFlight'
 import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
 
@@ -471,11 +472,10 @@ function StateCell({ entry }: { entry: EvidenceEntry }) {
  * cannot come to name a heading the table has stopped drawing.
  */
 function evidenceLabel(specs: Specs | undefined, name: string): string {
-  const overrides: Record<string, string> = { name: 'Name', systemId: 'Host' }
-  const served = specs
-    ? shortLabel(fieldOf(formSpec<EvidenceEntry>(specs, 'EVIDENCE_FIELDS'), name)?.label ?? name)
-    : name
-  return overrides[name] ?? served
+  return labelled(specs && formSpec<EvidenceEntry>(specs, 'EVIDENCE_FIELDS'), {
+    name: 'Name',
+    systemId: 'Host',
+  })(name)
 }
 
 function evidenceColumns(

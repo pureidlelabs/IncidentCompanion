@@ -2,7 +2,7 @@ import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import type { Case, MethodEntry } from '@/api/model'
-import { fieldOf, formSpec, shortLabel, type Specs } from '@/api/specs'
+import { formSpec, type Specs } from '@/api/specs'
 import { suggestionsFor } from '@/api/suggestions'
 import { Absent } from '@/components/ui/absent'
 import { BulkActionBar, bulkFieldsFor } from '@/components/blocks/bulk-actions'
@@ -25,6 +25,7 @@ import { CodeBlock } from '@/components/ui/code-block'
 
 import { matchesMethod, rowsText, windowText } from './methods-rows'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
+import { labelled } from '@/lib/field-label'
 import { useInFlight } from '@/lib/useInFlight'
 import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
 
@@ -427,10 +428,7 @@ function methodLabel(specs: Specs, name: string): string {
     // its own heading saying it once.
     rowsReturned: 'Rows',
   }
-  return (
-    overrides[name] ??
-    shortLabel(fieldOf(formSpec<MethodEntry>(specs, 'METHOD_FIELDS'), name)?.label ?? name)
-  )
+  return labelled(formSpec<MethodEntry>(specs, 'METHOD_FIELDS'), overrides)(name)
 }
 
 function methodColumns(specs: Specs): EntityColumn<MethodEntry>[] {

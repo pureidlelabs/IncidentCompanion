@@ -92,10 +92,17 @@ test.describe('two analysts in one case', () => {
       await mine.click()
       await one.keyboard.type(written)
 
-      await expect(
-        await noteBody(two),
-        'the second analyst never saw what the first typed',
-      ).toContainText(written, { timeout: 20_000 })
+      try {
+        await expect(await noteBody(two)).toContainText(written, { timeout: 20_000 })
+      } catch (cause) {
+        // The original carries Playwright's received text and call log, and a
+        // `noteBody` throw carries its own diagnosis: replacing either with a
+        // stage verdict loses the half that says what was actually on screen.
+        throw new Error(
+          `the second analyst never saw what the first typed, and ${await whereItStopped(one, demo, written)}`,
+          { cause },
+        )
+      }
     } finally {
       await first.close()
       await second.close()
@@ -204,11 +211,105 @@ async function demoCaseId(page: Page): Promise<string> {
  *
  * A prose body is a contenteditable rather than a textarea, and the screen
  * names it from the served form's label.
+ *
+ * **`exact`, so a second textbox named `Notes` cannot silently become
+ * `.first()`.** On a timeout it says what the screen held: *not visible* twenty
+ * seconds later tells a reader nothing.
  */
 async function noteBody(page: Page) {
-  const body = page.getByRole('textbox', { name: 'Note' }).first()
-  await body.waitFor({ state: 'visible', timeout: 20_000 })
+  const body = page.getByRole('textbox', { name: 'Note', exact: true }).first()
+  try {
+    await body.waitFor({ state: 'visible', timeout: 20_000 })
+  } catch {
+    throw new Error(`no note body on ${page.url()} -- ${await whatTheScreenHeld(page)}`)
+  }
   return body
+}
+
+/**
+ * What the notes screen was showing, for a failure that found no body.
+ *
+ * Every count rather than the first thing that matches: a screen with no
+ * textboxes and a screen with one nobody named are different failures, and a
+ * message that reported only "not found" makes them the same.
+ */
+async function whatTheScreenHeld(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const named = (el: Element) =>
+      el.getAttribute('aria-label') ?? el.getAttribute('placeholder') ?? ''
+    const boxes = [...document.querySelectorAll('[role="textbox"], textarea, input[type="text"]')]
+    // The body still arriving is a `role="status"` paragraph rather than a
+    // textbox, so it counts as none of them and reads exactly like an empty
+    // screen. It is the likelier of the two on a timeout.
+    const waiting = document.querySelector('[role="status"][aria-busy="true"]')
+    const main = document.querySelector('main')
+    return [
+      waiting ? 'still loading the body' : 'not loading',
+      `textboxes=${String(boxes.length)}`,
+      `named=[${boxes.map(named).filter(Boolean).join('|')}]`,
+      `main=${main ? String(main.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 200) : 'absent'}`,
+    ].join(' ')
+  })
+}
+
+/**
+ * Which of the three stages a hand-off reached, for a failure that has to say.
+ *
+ * The update never left the first browser, never reached the server, or never
+ * reached the second, and the three have different fixes.
+ *
+ * **The server is polled rather than read once**, because a note is persisted
+ * after a quiet moment rather than per keystroke. A stage is named only on a
+ * positive: everything else says what it could not establish.
+ */
+async function whereItStopped(
+  page: Page,
+  caseId: string,
+  written: string,
+  waitMs = 20_000,
+): Promise<string> {
+  // A read that failed and an editor that is empty are different answers, and
+  // only the second says the text never left.
+  let mine: string | null
+  try {
+    mine = await page.getByRole('textbox', { name: 'Note', exact: true }).first().textContent()
+  } catch (why) {
+    return `the first analyst's own editor could not be read, so no stage is named: ${String(why)}`
+  }
+  if (!(mine ?? '').includes(written)) {
+    return 'it never left the first browser: the text is not in the first analyst\'s own editor'
+  }
+
+  const until = Date.now() + waitMs
+  let last = 'the case has no note holding it'
+  while (Date.now() < until) {
+    const answered = await page.request.get(`/api/cases/${caseId}/casenotes`).catch(() => null)
+    if (!answered) {
+      last = 'the notes route could not be reached from the first browser'
+    } else if (!answered.ok()) {
+      last = `the notes route answered ${String(answered.status())}`
+    } else {
+      const body: unknown = await answered.json()
+      // A read of the wrong shape finds nothing, which is what a note that
+      // never arrived looks like.
+      if (!Array.isArray(body)) {
+        last = `the notes route answered ${typeof body}, not a list of rows`
+      } else if (body.some((row) => String(noteOf(row)).includes(written))) {
+        return 'it reached the server and not the second browser: the stored note holds it'
+      }
+    }
+    await page.waitForTimeout(500)
+  }
+  // The row is written after a quiet moment, so its silence is two states at
+  // once and names neither.
+  return `it left the first browser, and ${last} after ${String(waitMs)}ms -- so it either never reached the server or reached it and is not yet written down`
+}
+
+/** The note text of a row, and '' for a row whose note is not text. */
+function noteOf(row: unknown): string {
+  if (typeof row !== 'object' || row === null) return ''
+  const note = (row as { note?: unknown }).note
+  return typeof note === 'string' ? note : ''
 }
 
 function presence(page: Page) {
