@@ -945,16 +945,10 @@ export function IncidentCanvas({
         {status !== undefined && (
           <div
             data-part="canvas-status"
-            // **A ground, because the drawing repaints under this corner.** The
-            // graph pans, zooms and re-lays-out beneath it, so text with
-            // nothing behind it is read against whatever the canvas is doing.
-            //
-            // **On the slot rather than on what fills it.** The toolbar and the
-            // legend get theirs from their content -- a cluster and a card,
-            // each of which is a box already -- but a status is one short line,
-            // and the ghost buttons that have filled it carry no resting
-            // ground. Making it the slot's guarantee is what stops the next
-            // one arriving without it. -> #196
+            // **A ground, because the drawing repaints under this corner**, and
+            // on the slot rather than on what fills it: a status is one short
+            // line, and the ghost buttons that fill it carry no resting ground
+            // of their own. -> #196
             className="pointer-events-none absolute right-4 bottom-4 z-10 rounded-sm border border-border bg-surface px-1 py-1 text-2xs text-ink-muted *:pointer-events-auto"
           >
             {status}

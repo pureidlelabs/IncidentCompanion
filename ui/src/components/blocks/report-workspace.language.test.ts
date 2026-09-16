@@ -5,12 +5,6 @@ import { labelsFor } from './report-workspace'
 /**
  * **What an analyst is told at the moment they choose.**
  *
- * A pack carries any fraction of the application's words. The languages pane
- * states that fraction; the picker a report is actually set from carried the
- * name alone, so a pack at 12% and one at 100% read identically exactly where
- * the choice is made -- and the half-translated document was the first anybody
- * heard of it.
- *
  * **A complete pack says nothing extra**, which is the half that keeps this
  * useful: a percentage on every row is a number nobody reads, and the point is
  * that an incomplete one stands out.
