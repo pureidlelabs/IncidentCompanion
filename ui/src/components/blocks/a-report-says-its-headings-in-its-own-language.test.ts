@@ -23,6 +23,10 @@ import type { ReportBlock } from '@/api/model'
 import { headingIsFinal, headingOf } from './report-shape'
 import { labelForKind } from './report-layouts'
 
+/** A written section, which carries no heading key because no pack answers one. */
+const written = (over: Partial<ReportBlock>): ReportBlock =>
+  block({ kind: 'written', heading: '', headingKey: '', ...over })
+
 const block = (over: Partial<ReportBlock>): ReportBlock =>
   ({
     id: 'b-1',
@@ -41,12 +45,13 @@ const block = (over: Partial<ReportBlock>): ReportBlock =>
  * **No `heading.written`, because no pack can carry one.**
  * `report/block-kinds.test.ts` asserts the English pack does not hold that key
  * and `packFrom` drops any uploaded key English lacks, so a fixture carrying it
- * describes a pack the server is tested never to produce -- and a test built on
- * it passes over the one kind this fix does not reach.
+ * describes a pack the server is tested never to produce. `heading.figure` is
+ * here because the other written kind *is* named.
  */
 const DUTCH = {
   'heading.exec_summary': 'Managementsamenvatting',
   'heading.root_cause': 'Oorzaak',
+  'heading.figure': 'Figuur',
 }
 
 describe('a heading on the report screen', () => {
@@ -91,15 +96,33 @@ describe('a heading on the report screen', () => {
   })
 
   /**
-   * **`written` is the kind no pack can answer for, and it still reads English.**
-   * A section the analyst has not titled draws `Written section` on screen in
-   * every language, and the document prints nothing for it at all -- so the
-   * screen and the file disagree about that section whatever the language.
-   * Asserted rather than left silent: this is the one kind the fix does not
-   * reach, and a test claiming otherwise is worse than none. -> #676
+   * **An untitled written section claims no heading**, because the document
+   * prints none for it. A screen answering `Written section` there invents one
+   * the file will not print, in English whatever language the report is
+   * produced in. -> `report/document/resolve.ts`, #676
    */
-  it('still draws the bundle\u2019s word for the one kind no pack carries', () => {
+  it('claims no heading for a written section the analyst has not titled', () => {
+    expect(headingOf(written({}), DUTCH)).toBe('')
+    expect(headingOf(written({}), {})).toBe('')
+  })
+
+  /** Which is the whole reason the kind has no served heading. */
+  it('is the analyst\u2019s own title on a written section that has one', () => {
+    expect(headingOf(written({ heading: 'Hoe wij het vonden' }), DUTCH)).toBe('Hoe wij het vonden')
+  })
+
+  /**
+   * **The kind still has a name, and it is a different question.**
+   * `labelForKind` answers what the picker calls a kind; `headingOf` answers
+   * what heads a section.
+   */
+  it('still names the kind for the picker, which is not a heading', () => {
     expect(labelForKind('written', DUTCH)).toBe('Written section')
+  })
+
+  /** **The exception is `written` alone.** -> `report-shape.ts` */
+  it('leaves the other written kind its served heading', () => {
+    expect(headingOf(written({ kind: 'figure' }), DUTCH)).toBe('Figuur')
   })
 
   it('falls to the kind itself where the pack names neither', () => {

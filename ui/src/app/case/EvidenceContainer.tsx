@@ -1,13 +1,13 @@
 import { useCase } from '@/api/case'
 import { useSpecs } from '@/api/specs'
 import { useBulkPatch } from '@/api/useBulkPatch'
-import { useEntryDelete } from '@/api/useEntryDelete'
+import { useBulkDelete } from '@/api/useBulkDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useEvidenceRecordCreate } from '@/api/useEvidenceRecordCreate'
 import { useEvidenceUpload } from '@/api/useEvidenceUpload'
 import { useCaseId } from '@/app/useCaseId'
 import { reportBulkMissing, reportBulkRefused } from '@/components/blocks/notify'
-import { announcing } from './entryWrites'
+import { announcing, removeSelection } from './entryWrites'
 
 import { EvidenceScreen, type EvidenceWrites } from '@/screens/evidence'
 
@@ -33,8 +33,8 @@ export function EvidenceContainer() {
   const create = useEvidenceRecordCreate(caseId)
   const patch = useEntryMutation(caseId, 'evidence')
   const bulk = useBulkPatch(caseId, 'evidence')
-  const remove = useEntryDelete(caseId, 'evidence')
   const upload = useEvidenceUpload(caseId)
+  const bulkDelete = useBulkDelete(caseId)
 
   /**
    * The row the server holds, after a write that did not answer with one.
@@ -126,16 +126,14 @@ export function EvidenceContainer() {
       return written.updated.flatMap((id) => held.filter((row) => row.id === id))
     },
 
-    remove: async (ids) => {
-      // One at a time, because the version check is per row: a delete that
-      // named no version would take a row somebody had just changed.
-      for (const id of ids) {
-        const row = kase.data?.evidence.find((one) => one.id === id)
-        await announcing('the evidence record', () =>
-          remove.mutateAsync({ entryId: id, version: row?.version ?? 0 }),
-        )
-      }
-    },
+    remove: (ids) =>
+      removeSelection(
+        bulkDelete,
+        'evidence',
+        ids,
+        () => kase.data?.evidence ?? [],
+        'the selected records',
+      ),
   }
 
   return (

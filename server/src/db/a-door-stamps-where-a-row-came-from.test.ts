@@ -2,12 +2,7 @@
  * That a door's stamp reaches the columns it names, and that no column it
  * would name is left to the file.
  *
- * **A key naming no column is dropped by the query builder without a word**,
- * which is what made the stamp conditional in the first place: written
- * unconditionally it is silent on the tables that lack the column and puts a
- * field those tables do not have into the change feed's record of the write.
- * So a stamp is only as good as the filter, and nothing else fails when the
- * filter is wrong.
+ * Nothing else fails when the filter is wrong. -> `import-stamp.ts`
  *
  * **Quantified over the tables an import writes**, so a table that gains one of
  * these columns is covered the day it does rather than when somebody remembers
