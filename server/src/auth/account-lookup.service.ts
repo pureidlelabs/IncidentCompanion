@@ -7,11 +7,11 @@
  * came to sit two lines from services matching case-folded.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
+import { eq, gt } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import { user } from '../db/schema/auth.js'
+import { session, user } from '../db/schema/auth.js'
 import { ADMIN_ROLE } from '../domain/analyst-account.js'
 import type { Analyst } from './last-admin.js'
 import { sameAddress } from './same-address.js'
@@ -63,5 +63,40 @@ export class AccountLookupService {
       })
       .from(user)
       .where(eq(user.role, ADMIN_ROLE))
+  }
+
+  /** The account an id names, so a line can say who it was about. */
+  async byId(id: string): Promise<Analyst | undefined> {
+    const [row] = await this.db
+      .select({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        banned: user.banned,
+      })
+      .from(user)
+      .where(eq(user.id, id))
+      .limit(1)
+    return row
+  }
+
+  /**
+   * The accounts holding a session that has not expired.
+   *
+   * **Asked of the sessions rather than of the roster**, so ending every
+   * session costs one revocation per signed-in analyst rather than one per
+   * account the install has ever had -- and needs no paging, which is where
+   * `listUsers`' ceiling of 500 would otherwise decide how many are missed.
+   *
+   * An expired session is left out: it is already refused, and revoking it
+   * would file an audit line for an act with no effect.
+   */
+  async withAnOpenSession(): Promise<string[]> {
+    const rows = await this.db
+      .selectDistinct({ id: session.userId })
+      .from(session)
+      .where(gt(session.expiresAt, new Date()))
+    return rows.map((row) => row.id)
   }
 }

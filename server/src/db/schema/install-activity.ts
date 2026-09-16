@@ -102,6 +102,12 @@ export const installEvent = pgEnum('install_event', [
   'rate_limited',
   'account_role_changed',
   'account_password_reset',
+  // **Ending a session is its own act, and the requirement names it.** A
+  // revocation is not an account change: the account is untouched and what
+  // stopped is a caller already inside. The sweep is separate from the one
+  // account because their blast radius is the whole difference.
+  'account_sessions_ended',
+  'every_session_ended',
   // The customer directory: which organisations the install holds is a
   // management-plane fact, and a merge moves every case at once.
   'customer_created',
@@ -205,6 +211,8 @@ export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], Instal
   rate_limited: 'operations',
   account_role_changed: 'administration',
   account_password_reset: 'administration',
+  account_sessions_ended: 'administration',
+  every_session_ended: 'administration',
   customer_created: 'administration',
   customer_changed: 'administration',
   customer_removed: 'administration',

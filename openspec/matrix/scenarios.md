@@ -80,11 +80,11 @@
 | An install can federate its sign-in to the organisation's identity provider | Somebody must lose access now | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
 | An install can federate its sign-in to the organisation's identity provider | A mapping is removed | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
 | An install can federate its sign-in to the organisation's identity provider | An analyst is reached both ways | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
-| A session belongs to its holder and ends when it should | An administrator ends a session | unbuilt | Not built: no route ends another analyst's session. -> #204 |
+| A session belongs to its holder and ends when it should | An administrator ends a session | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
 | A session belongs to its holder and ends when it should | A session goes idle | demonstrated | server/test/a-session-past-its-window-is-refused.test.ts |
 | A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | unbuilt | Not built: a session has an idle window and no absolute cap. -> #203 |
 | A session belongs to its holder and ends when it should | An analyst reviews their own sessions | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
-| A session belongs to its holder and ends when it should | Every session is ended at once | unbuilt | Not built: no route ends another analyst's session. -> #204 |
+| A session belongs to its holder and ends when it should | Every session is ended at once | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
 | An administrator can see who reaches what, and why | An administrator reviews access | unbuilt | Not built: whether an account is local or the provider's, and its second factor. -> #59 |
 | An administrator can see who reaches what, and why | An administrator asks why | demonstrated | server/src/access/what-an-administrator-can-see-they-granted.test.ts |
 | An administrator can see who reaches what, and why | An administrator asks from the customer's side | demonstrated | server/src/access/what-an-administrator-can-see-they-granted.test.ts |

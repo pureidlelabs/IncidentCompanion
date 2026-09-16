@@ -63,6 +63,28 @@ export class InstallActivityService {
     await this.write('account_password_reset', caller, username)
   }
 
+  /**
+   * Answers whether the line landed, which the caller must act on.
+   *
+   * *Where a change cannot be recorded, it MUST NOT be made* -- constitution
+   * line 36 -- and a failed write is swallowed everywhere else by design. So
+   * ending a session is recorded first and refused if the record did not land.
+   */
+  async sessionsEnded(caller: Caller, username: string): Promise<boolean> {
+    return this.write('account_sessions_ended', caller, username)
+  }
+
+  /**
+   * The sweep as one act, beside the per-account line each ended session gets.
+   *
+   * `accounts` is how many held one. Best-effort where the per-account lines
+   * are not: each change is already recorded against the account it was made
+   * to, so losing this summary leaves no change unrecorded.
+   */
+  async everySessionEnded(caller: Caller, accounts: number): Promise<void> {
+    await this.write('every_session_ended', caller, null, { accounts: String(accounts) })
+  }
+
   async customerCreated(
     caller: Caller,
     customerId: string,
@@ -206,7 +228,7 @@ export class InstallActivityService {
     caller: Caller,
     target: string | null,
     detail?: Record<string, string>,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const landed = await recordInstallActivity(this.db, {
       event,
       actor: actorOf(caller),
@@ -218,5 +240,6 @@ export class InstallActivityService {
     // Marked only after a line landed: a failed write is swallowed by design,
     // and a mark without a line would silence the boundary's vaguer one too.
     if (landed && caller.request) (caller.request as Record<symbol, boolean>)[NAMED] = true
+    return landed
   }
 }
