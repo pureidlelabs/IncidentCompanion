@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -25,7 +25,7 @@ const LITERAL = /\bscale:\s*(-?\d+(?:\.\d+)?)/g
 describe('the arrival scales are a vocabulary, not seven numbers', () => {
   it('is spelled as a literal only where the vocabulary is defined', () => {
     const offenders: string[] = []
-    const swept = glob.sync('src/**/*.{ts,tsx}', { cwd: process.cwd() })
+    const swept = globSync('src/**/*.{ts,tsx}', { cwd: process.cwd() })
 
     // **The glob is relative to where vitest was started.** Run from anywhere
     // but `ui/`, it matches nothing, every file below is skipped and the

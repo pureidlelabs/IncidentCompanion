@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -150,8 +150,7 @@ function baseOf(file: string): string {
 const KNOWN = new Map<string, string[]>()
 
 describe('a component name has one implementation', () => {
-  const files = glob
-    .sync('**/*.{ts,tsx}', { cwd: SRC, absolute: true })
+  const files = globSync('**/*.{ts,tsx}', { cwd: SRC, absolute: true })
     .filter((file) => !/\.(test|stories)\.tsx?$/.test(file))
 
   /**
