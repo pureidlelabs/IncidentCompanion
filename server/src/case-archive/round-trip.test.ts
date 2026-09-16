@@ -580,6 +580,43 @@ describe('a handover, exported without its files', () => {
       const { members } = await readArchive(built.bytes, ARCHIVE_LIMITS)
       expect(Object.keys(members).filter((one) => one.startsWith('evidence/'))).toEqual([])
     })
+
+    /** The exporting install held every artefact; the analyst asked for the record alone. */
+    it('reports the exporting install as having lost nothing', async () => {
+      const made = await furnished()
+      const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
+      await freeTheReference(made.caseId)
+      const result = await importer.load(built.bytes, '', other)
+
+      expect(result.missingFiles).toBe(1)
+      expect(
+        result.lostAtExport,
+        'a handover was reported as an archive whose install had lost the file',
+      ).toBe(0)
+    })
+  })
+
+  describe('an archive whose install had lost an artefact', () => {
+    /**
+     * **The fixture is the only thing separating this from a handover**: both
+     * import an evidence row with no bytes behind it, and the sibling case
+     * next door asserts the same import says nothing was lost. -> #652
+     */
+    it('says the install that wrote it had already lost it', async () => {
+      const made = await furnished()
+      await rm(join(root, made.hash))
+
+      const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+      expect(built.attachments, 'the artefacts were not asked for').toBe('included')
+      await freeTheReference(made.caseId)
+      const result = await importer.load(built.bytes, '', other)
+
+      expect(result.missingFiles).toBe(1)
+      expect(
+        result.lostAtExport,
+        'the import dropped what the archive said it could not find',
+      ).toBe(1)
+    })
   })
 
   describe('an encrypted archive', () => {

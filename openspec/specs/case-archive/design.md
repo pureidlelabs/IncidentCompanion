@@ -46,6 +46,14 @@ What was not found is stated on the archive, and again when it is read, so the g
 
 **The statement is optional and the archive version does not move for it.** An archive written before it existed carries nothing and reads as reporting none, which is what it meant. Moving the version would refuse every archive an install already holds, in exchange for a statement those archives were never able to make.
 
+## What the exporting install lost is relayed, never recomputed
+
+An evidence row arriving without its bytes looks identical whichever cause produced it, so a count derived from the digests that did arrive can only answer *how many files are absent*. The manifest is the one place the difference is written down, and it is written by the install that knew.
+
+It is part of the absent count rather than a number beside it: an artefact the exporting install lost is still an attachment the rows name and the archive did not carry, so subtracting it would make the first count answer a narrower question than its sentence claims.
+
+**The reader hands out what it proved.** The manifest is validated on the way in — its version, its file list, its statement of what travelled and of what was not found — so a caller parsing those same bytes a second time reads a value nothing has checked, and is safe only while the first parse happens to have run.
+
 ## How connected the case is, told without claiming the file is damaged
 
 A dangling id in a reference list is the ordinary state of a case rather than damage. Those lists are `jsonb` and nothing scrubs them when a row is deleted, so a sound export of a case an analyst has tidied carries ids that resolve to nothing. A count presented as *the archive lost these* would be wrong for the common case and would teach an operator to ignore it.

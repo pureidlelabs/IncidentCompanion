@@ -190,15 +190,16 @@ export function reportUploadedPack(pack: { label: string; ignored: readonly stri
 /**
  * Say what an imported archive brought, and what it named but did not carry.
  *
- * **Both counts are halves nothing else can tell the analyst**, and the import
- * is the only moment that knows either.
+ * **Each count is a half nothing else can tell the analyst**, and the import is
+ * the only moment that knows any of them.
  *
- * A warning rather than an error, for both: neither says the archive is at
- * fault. -> `openspec/specs/case-archive/design.md`, #731
+ * A warning rather than an error: none of them says the archive is at fault.
+ * -> `openspec/specs/case-archive/design.md`
  */
 export function reportImportedCase(imported: {
   rows: number
   missingFiles: number
+  lostAtExport: number
   unresolvedReferences: number
 }): void {
   const title = `${String(imported.rows)} ${imported.rows === 1 ? 'row' : 'rows'} imported.`
@@ -207,6 +208,13 @@ export function reportImportedCase(imported: {
     const count = imported.missingFiles
     const [noun, verb] = count === 1 ? ['attachment', 'is'] : ['attachments', 'are']
     notes.push(`${String(count)} ${noun} the rows name ${verb} not in the archive.`)
+  }
+  if (imported.lostAtExport > 0) {
+    const count = imported.lostAtExport
+    const noun = count === 1 ? 'attachment' : 'attachments'
+    notes.push(
+      `The install that wrote the archive had already lost ${String(count)} ${noun}.`,
+    )
   }
   if (imported.unresolvedReferences > 0) {
     const count = imported.unresolvedReferences

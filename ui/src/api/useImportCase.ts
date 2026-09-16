@@ -26,6 +26,8 @@ export interface ImportArchive {
  * so the id here is minted rather than the one the archive came from.
  * `missingFiles` is how many attachments the archive's rows name and it did
  * not carry, which for a handover export is all of them and is not a fault.
+ * `lostAtExport` is the part of that the archive states the install that wrote
+ * it could not find. -> #652
  *
  * `unresolvedReferences` is how many rows the case names that are not in it,
  * counted once each however many times they are named. -> #731
@@ -36,6 +38,7 @@ export interface ImportedCase {
   rows: number
   attachments: 'included' | 'omitted'
   missingFiles: number
+  lostAtExport: number
   unresolvedReferences: number
 }
 

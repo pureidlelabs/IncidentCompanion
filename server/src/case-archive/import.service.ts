@@ -194,6 +194,14 @@ export const importResultSchema = z.object({
     .number()
     .int()
     .describe("Digests the archive's rows name and the archive did not carry."),
+  lostAtExport: z
+    .number()
+    .int()
+    .describe(
+      'Attachments the archive states the install that wrote it recorded and could ' +
+        'not find. Part of missingFiles; an archive written without its attachments ' +
+        'states none.',
+    ),
   unresolvedReferences: z
     .number()
     .int()
@@ -218,7 +226,7 @@ export class ArchiveImportService {
   async load(archive: Buffer, passphrase: string, actorId: string): Promise<ImportResult> {
     const plain = await this.unsealed(archive, passphrase)
     const stored_ = await this.policy.read()
-    const { members, attachments } = await readArchive(plain, {
+    const { members, attachments, missing } = await readArchive(plain, {
       memberBytes: stored_['evidence.attachmentMegabytes'] * 1024 * 1024,
       totalBytes: stored_['evidence.archiveMegabytes'] * 1024 * 1024,
     })
@@ -440,6 +448,7 @@ export class ArchiveImportService {
         rows,
         attachments,
         missingFiles,
+        lostAtExport: missing.length,
         unresolvedReferences: unresolved.size,
       }
     })
