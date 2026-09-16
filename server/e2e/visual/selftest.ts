@@ -99,26 +99,28 @@ const FAULTS: Fault[] = [
   },
   {
     kind: 'size-overridden',
-    why: 'a table cell asking for w-40 and computing 40px',
+    why: 'a table cell asking for w-40 and computing 158px',
     /**
-     * **The sub-pixel tolerance must not swallow a real override.** A cell is
-     * forgiven a pixel because the table layout algorithm distributes the
-     * remainder across columns; one computing a quarter of what it asked for is
-     * not that, and a tolerance widened until it forgives this leaves the rule
-     * reporting nothing on any table.
+     * **Two pixels, not a hundred.** The rule tolerates a table cell a pixel
+     * because the layout algorithm distributes the remainder; a fault that
+     * missed by 120px would fire through any bound, so widening the tolerance
+     * to five would leave this green. Missing by two is what pins it.
      *
-     * `display: table-cell` on a plain element rather than a real `<table>`:
-     * this aims at the branch the tolerance lives on, and an appended table is
-     * clipped out of the action row before the probe measures it.
+     * The cell sits in a `display: table` of its own because the row is a flex
+     * container, and a flex item's `display: table-cell` is blockified to
+     * `block` — which sends the fault through the ordinary branch and proves
+     * nothing about the one it is aimed at.
      */
     break: ({ row }) => {
       const toolbar = document.querySelector(row)
       if (!toolbar) throw new Error(`no element for ${row}`)
+      const table = document.createElement('div')
+      table.style.cssText = 'display:table;width:158px;flex-shrink:0'
       const cell = document.createElement('div')
       cell.className = 'w-40'
-      cell.style.cssText =
-        'display:table-cell;width:40px;height:12px;flex-shrink:0;background:currentColor'
-      toolbar.appendChild(cell)
+      cell.style.cssText = 'display:table-cell;height:12px;background:currentColor'
+      table.appendChild(cell)
+      toolbar.appendChild(table)
     },
   },
   {

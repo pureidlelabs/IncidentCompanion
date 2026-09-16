@@ -115,10 +115,8 @@ test('keeps the report table in its columns as the window narrows', async ({
      */
     const found = await findings(page, 'main')
     for (const one of found) {
-      // **The detail, because `what` alone cannot be diagnosed.** `name()`
-      // keeps two class tokens and truncates at 48 characters, so the class
-      // that lost is usually not in it; the probe measured what was asked and
-      // what computed, and dropping that costs a reproduction to get back.
+      // The detail too: `what` is a truncated tag and class, and the numbers
+      // that say which rule fired and why are all in `detail`.
       trouble.push(`${String(width)}px ${one.kind}: ${one.what} -- ${one.detail}`)
     }
 
