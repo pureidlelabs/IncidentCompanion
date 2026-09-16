@@ -2,11 +2,6 @@
  * **A refused profile write is said out loud, and the control goes back to
  * what the server serves.**
  *
- * The colour, the initials and the picture removal each called `mutate` with
- * no handler, so a refusal left the swatch selected, the field holding letters
- * nobody stored, and nothing on the screen saying so -- the analyst finds out
- * on the next reload. -> #830
- *
  * Driven through the container against a stubbed `fetch` rather than a stubbed
  * `@/api/appearance`: the sentence an analyst reads is the server's own, and it
  * only exists once `client.ts` has mapped the response into an `ApiError`.
@@ -20,6 +15,8 @@ import { setSession } from '@/api/session'
 import { toastQueue } from '@/components/blocks/notify'
 import { ToastRegion } from '@/components/ui/toast'
 import { urlOf } from '@/test/fetchArgs'
+
+import { AccountProfileSection } from '@/components/blocks/account-profile-section'
 
 import { AccountContainer } from './AccountContainer'
 
@@ -88,18 +85,29 @@ function open() {
 /**
  * The two refusals a write meets: one about the body, one about the analyst.
  *
- * Counted rather than found: a 422 names the field it refused, so the card
- * draws the server's sentence as its own description and again in the list
- * beneath it.
+ * **The 422 carries a Zod issue**, which is what the server sends and what
+ * `ApiError.fieldErrors` reads -- `path`, never `field`. A body naming the
+ * field the other way draws a row with no field on it and still passes an
+ * assertion about the sentence.
  */
-const REFUSED: readonly [number, unknown, () => number][] = [
+const REFUSED: readonly [number, unknown, string][] = [
   [
     422,
-    { errors: [{ field: 'tone', message: 'Not a colour this install offers.' }] },
-    () => screen.getAllByText('Not a colour this install offers.').length,
+    { errors: [{ path: ['tone'], message: 'Not a colour this install offers.' }] },
+    'Not a colour this install offers.',
   ],
-  [403, { message: 'You may not change this.' }, () => screen.getAllByText('You may not change this.').length],
+  [403, { message: 'You may not change this.' }, 'You may not change this.'],
 ]
+
+/**
+ * The server's own sentence, wherever the card drew it.
+ *
+ * All of them, because a 422 draws it twice: as the card's description and
+ * again beside the field it named. Absent, this throws.
+ */
+function says(said: string): void {
+  screen.getAllByText(said)
+}
 
 /** Waits for the roster read, so the controls start on the served values. */
 async function served() {
@@ -114,8 +122,8 @@ describe('the colour', () => {
 
     await user.click(screen.getByRole('button', { name: 'Colour 1' }))
 
-    expect(await screen.findByText('your colour was not saved.')).toBeInTheDocument()
-    expect(said(), 'the server\'s own sentence did not reach the screen').toBeGreaterThan(0)
+    expect(await screen.findByText('The colour was not saved.')).toBeInTheDocument()
+    says(said)
     await waitFor(() => {
       expect(
         screen.getByRole('button', { name: 'Colour 2' }),
@@ -147,8 +155,8 @@ describe('the initials', () => {
     await user.type(field, 'zz')
     await user.tab()
 
-    expect(await screen.findByText('your initials was not saved.')).toBeInTheDocument()
-    expect(said(), 'the server\'s own sentence did not reach the screen').toBeGreaterThan(0)
+    expect(await screen.findByText('The initials were not saved.')).toBeInTheDocument()
+    says(said)
     await waitFor(() => {
       expect(field, 'the field kept letters the server refused to store').toHaveValue('AB')
     })
@@ -166,6 +174,12 @@ describe('the initials', () => {
     await waitFor(() => {
       expect(field).toHaveValue('ZZ')
     })
+    // The patch answers with the row as stored, so a second read to learn what
+    // the write already said is a round trip the analyst waits through.
+    expect(
+      fetchMock.mock.calls.filter(([, init]) => (init?.method ?? 'GET') === 'GET'),
+      'the stored letters arrived by re-reading the roster',
+    ).toHaveLength(1)
   })
 })
 
@@ -177,8 +191,8 @@ describe('removing the picture', () => {
 
     await user.click(screen.getByRole('button', { name: 'Remove' }))
 
-    expect(await screen.findByText('your picture was not saved.')).toBeInTheDocument()
-    expect(said(), 'the server\'s own sentence did not reach the screen').toBeGreaterThan(0)
+    expect(await screen.findByText('The picture was not removed.')).toBeInTheDocument()
+    says(said)
     expect(
       screen.getByRole('button', { name: 'Remove' }),
       'the row stopped offering the removal the server refused',
@@ -195,5 +209,46 @@ describe('removing the picture', () => {
       expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument()
     })
     expect(toastQueue.visibleToasts, 'an accepted write raised a toast').toHaveLength(0)
+  })
+})
+
+/**
+ * **One control's refusal is not another's.**
+ *
+ * A single signal for "something was refused" put both controls back, so a
+ * colour the server would not take also took whatever was half typed in the
+ * initials field -- and the press that sends the colour is the same press that
+ * blurs the field, so the two are always in flight together.
+ *
+ * Rendered against the section rather than the container: the initials write
+ * has to still be unanswered when the colour's refusal lands, which is the
+ * ordering that a real server decides.
+ */
+describe('two controls refused separately', () => {
+  it('leaves the letters being typed when the colour is refused', async () => {
+    const user = userEvent.setup()
+    render(
+      <AccountProfileSection
+        name="Ada"
+        tone={1}
+        initials="AB"
+        writes={{
+          setPicture: vi.fn(),
+          clearPicture: vi.fn(),
+          setTone: () => Promise.reject(new Error('refused')),
+          setInitials: () => new Promise<void>(() => undefined),
+        }}
+      />,
+    )
+
+    const field = screen.getByLabelText('Initials')
+    await user.clear(field)
+    await user.type(field, 'zz')
+    await user.click(screen.getByRole('button', { name: 'Colour 1' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Colour 2' })).toHaveAttribute('aria-pressed', 'true')
+    })
+    expect(field, 'the refused colour took the letters being typed with it').toHaveValue('zz')
   })
 })

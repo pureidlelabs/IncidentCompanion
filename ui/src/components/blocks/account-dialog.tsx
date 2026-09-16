@@ -36,8 +36,6 @@ export interface AccountPanelProps {
   initials?: string
   /** Whether a picture has been stored. */
   hasPicture?: boolean
-  /** How many writes the server has refused. -> `AccountProfileSectionProps` */
-  refusals?: number
   /** The server's words for a picture it would not store. */
   pictureRefusal?: string
   /** Omitted in the gallery, where a profile choice is held and sent nowhere. */
@@ -68,7 +66,6 @@ export function AccountPanel({
   tone,
   initials = '',
   hasPicture = false,
-  refusals = 0,
   pictureRefusal,
   profileWrites,
   ground = 'system',
@@ -90,7 +87,6 @@ export function AccountPanel({
           {...(tone === undefined ? {} : { tone })}
           initials={initials}
           hasPicture={hasPicture}
-          refusals={refusals}
           {...(pictureRefusal === undefined ? {} : { pictureRefusal })}
           {...(profileWrites ? { writes: profileWrites } : {})}
         />

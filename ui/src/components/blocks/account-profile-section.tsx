@@ -18,10 +18,10 @@ const TONES: readonly string[] = ['bg-presence-1', 'bg-presence-2', 'bg-presence
 export interface AccountProfileWrites {
   setPicture: (file: File) => void
   clearPicture: () => void
-  /** The chosen swatch; `null` for automatic. */
-  setTone: (tone: 0 | 1 | 2 | null) => void
-  /** Committed once the field is left. */
-  setInitials: (initials: string) => void
+  /** The chosen swatch; `null` for automatic. Rejects when the write was refused. */
+  setTone: (tone: 0 | 1 | 2 | null) => Promise<void>
+  /** Committed once the field is left. Rejects when the write was refused. */
+  setInitials: (initials: string) => Promise<void>
 }
 
 export interface AccountProfileSectionProps {
@@ -32,13 +32,6 @@ export interface AccountProfileSectionProps {
   /** The two characters drawn when no picture has loaded. */
   initials?: string
   hasPicture?: boolean
-  /**
-   * How many writes the server has refused.
-   *
-   * A refusal leaves the served value where it was, so a change to this is the
-   * only thing that can drop a chosen value the server did not take.
-   */
-  refusals?: number
   /** The server's words for a picture it would not store. */
   pictureRefusal?: string
   /** Omitted in the gallery, where a choice is held and sent nowhere. */
@@ -52,31 +45,31 @@ export interface AccountProfileSectionProps {
  * `tone` and `initials` are the value; `writes` carries what leaves on a
  * change. Absent `writes`, a choice still redraws the preview and reaches
  * nowhere -- which is what keeps the section drawable in the gallery.
+ *
+ * A control moves on the press and goes back to the served value when the
+ * write it sent rejects, so a refused colour leaves initials being typed alone.
  */
 export function AccountProfileSection({
   name,
   tone,
   initials = '',
   hasPicture = false,
-  refusals = 0,
   pictureRefusal,
   writes,
 }: AccountProfileSectionProps) {
   const [chosenTone, setChosenTone] = useState<number | undefined>(tone)
-  // Re-synced whenever the incoming value moves, the same shape
-  // `CaseRecordForm` uses to fold a prop change back into local state without
-  // an effect. A refusal counts as a move: the served value did not change,
-  // which is exactly why the chosen one has to go.
-  const [givenTone, setGivenTone] = useState({ tone, refusals })
-  if (givenTone.tone !== tone || givenTone.refusals !== refusals) {
-    setGivenTone({ tone, refusals })
+  // Re-synced whenever the incoming value moves, which folds a prop change
+  // back into local state without an effect.
+  const [givenTone, setGivenTone] = useState(tone)
+  if (givenTone !== tone) {
+    setGivenTone(tone)
     setChosenTone(tone)
   }
 
   const [letters, setLetters] = useState(initials)
-  const [givenInitials, setGivenInitials] = useState({ initials, refusals })
-  if (givenInitials.initials !== initials || givenInitials.refusals !== refusals) {
-    setGivenInitials({ initials, refusals })
+  const [givenInitials, setGivenInitials] = useState(initials)
+  if (givenInitials !== initials) {
+    setGivenInitials(initials)
     setLetters(initials)
   }
 
@@ -125,7 +118,9 @@ export function AccountProfileSection({
             paint="bg-muted"
             onChoose={() => {
               setChosenTone(undefined)
-              writes?.setTone(null)
+              void writes?.setTone(null).catch(() => {
+                setChosenTone(tone)
+              })
             }}
           />
           {TONES.map((paint, index) => (
@@ -136,7 +131,9 @@ export function AccountProfileSection({
               paint={paint}
               onChoose={() => {
                 setChosenTone(index)
-                writes?.setTone(index as 0 | 1 | 2)
+                void writes?.setTone(index as 0 | 1 | 2).catch(() => {
+                  setChosenTone(tone)
+                })
               }}
             />
           ))}
@@ -151,7 +148,9 @@ export function AccountProfileSection({
           value={letters}
           onChange={setLetters}
           onBlur={() => {
-            writes?.setInitials(letters)
+            void writes?.setInitials(letters).catch(() => {
+              setLetters(initials)
+            })
           }}
           className="w-40"
         />
