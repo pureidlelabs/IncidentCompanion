@@ -142,12 +142,19 @@ describe.skipIf(!runnable)('attacking the policy settings', () => {
     const ok = await put({ key, value: target }, admin.cookie)
     expect(ok.ok, await ok.text()).toBe(true)
 
-    expect(
-      (await readPolicy(db))[key],
-      'the control would keep the value it read at boot',
-    ).toBe(target)
-
-    await put({ key, value: POLICY_SETTINGS[key].fallback }, admin.cookie)
+    /**
+     * **Put back whatever the assertion does.** The harness restores what it
+     * found at boot, so a leak cannot leave this file -- but the cases below
+     * run before it closes, and one of them counts lines about this very key.
+     */
+    try {
+      expect(
+        (await readPolicy(db))[key],
+        'the control would keep the value it read at boot',
+      ).toBe(target)
+    } finally {
+      await put({ key, value: POLICY_SETTINGS[key].fallback }, admin.cookie)
+    }
   })
 
   /**
@@ -173,13 +180,15 @@ describe.skipIf(!runnable)('attacking the policy settings', () => {
     const loosened = lines.filter(
       (one) => one.detail?.['key'] === key && one.detail['to'] === '50',
     )
-    expect(loosened.length, 'the change was not recorded at all').toBeGreaterThan(0)
-    expect(
-      loosened.at(-1)?.severity,
-      'a loosened control was filed below High',
-    ).toBeGreaterThanOrEqual(4)
-    expect(loosened.at(-1)?.detail?.['from'], 'the line cannot say it was loosened').toBe('5')
-
-    await put({ key, value: POLICY_SETTINGS[key].fallback }, admin.cookie)
+    try {
+      expect(loosened.length, 'the change was not recorded at all').toBeGreaterThan(0)
+      expect(
+        loosened.at(-1)?.severity,
+        'a loosened control was filed below High',
+      ).toBeGreaterThanOrEqual(4)
+      expect(loosened.at(-1)?.detail?.['from'], 'the line cannot say it was loosened').toBe('5')
+    } finally {
+      await put({ key, value: POLICY_SETTINGS[key].fallback }, admin.cookie)
+    }
   })
 })
