@@ -618,12 +618,7 @@ describe.skipIf(!db)('the report lifecycle', () => {
     expect(fresh!.stage).toBeNull()
   })
 
-  /**
-   * **What a recipient was told does not move, and the mark is not part of
-   * it.** The requirement asks for both: the superseded report remains, *and*
-   * remains marked as superseded, so a recipient asking what they were told is
-   * answerable including where it was wrong.
-   */
+  /** Both halves of the requirement: the report remains, *and* is marked. */
   it('keeps what the recipient was told, and marks that it was superseded', async () => {
     const { caseId, reportId } = await caseWithReport([{ kind: 'timeline' }])
     await addTimelineEntry(caseId, 'first')
@@ -643,12 +638,7 @@ describe.skipIf(!db)('the report lifecycle', () => {
     ).toBe(reportId)
   })
 
-  /**
-   * **Two corrections race and one wins**, which is the scenario this is
-   * written for. Without a mark on the predecessor both calls succeed, and the
-   * case is left holding two successors with the same label and nothing saying
-   * which one stands. -> #182
-   */
+  /** **Two corrections race and one wins**, which is the scenario. -> #182 */
   it('refuses a second supersession, leaving one successor', async () => {
     const { caseId, reportId } = await caseWithReport([])
     await lifecycle.send(caseId, reportId, actorId)
@@ -698,10 +688,8 @@ describe.skipIf(!db)('the report lifecycle', () => {
    * **The constraint, asked directly**, because the case above cannot reach it
    * and a guard nothing exercises is a guard nobody knows is there.
    *
-   * Two rows naming one predecessor is what two genuinely interleaved
-   * supersessions would write, and the database is what refuses the second.
    * Driven at the table rather than through the service, which is the only way
-   * to get past the check that would otherwise answer first.
+   * past the check that would otherwise answer first.
    */
   it('refuses a second report claiming to replace the same one', async () => {
     const { caseId, reportId } = await caseWithReport([])
@@ -737,10 +725,8 @@ describe.skipIf(!db)('the report lifecycle', () => {
   })
 
   /**
-   * **The refusal leaves nothing behind.** A successor written before the mark
-   * is rejected is an orphan draft with the predecessor's label, which is the
-   * same ambiguity arriving by another route.
-   */
+   * A successor written before the mark is rejected would be an orphan draft
+   * carrying the predecessor's label. */
   it('writes no successor for the supersession it refuses', async () => {
     const { caseId, reportId } = await caseWithReport([{ kind: 'timeline' }])
     await addTimelineEntry(caseId, 'first')

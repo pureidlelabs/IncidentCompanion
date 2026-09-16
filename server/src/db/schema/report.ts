@@ -89,10 +89,7 @@ export const reports = pgTable(
   },
   (t) => [
     index('reports_case_idx').on(t.caseId),
-    // **One correction per report, enforced here rather than by a read.**
-    // Two supersessions attempted at once both pass a check and the index
-    // is what refuses the second. Nullable, so every report that replaces
-    // nothing is unaffected.
+    // Nullable, so every report that replaces nothing is unaffected.
     uniqueIndex('reports_supersedes_idx').on(t.supersedes),
     ...caseScoped(t.caseId),
   ],
