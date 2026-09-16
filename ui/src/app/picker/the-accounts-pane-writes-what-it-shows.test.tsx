@@ -107,4 +107,29 @@ describe('the Accounts pane', () => {
       ])
     })
   })
+
+  /**
+   * *An administrator MUST be able to end every session at once.*
+   *
+   * **Confirmed before it runs**, because it signs the administrator out with
+   * everybody else -- a control whose cost lands on the person pressing it owes
+   * them the sentence first.
+   */
+  it('asks before ending every session, and writes only once confirmed', async () => {
+    draw()
+    await vi.waitFor(() => {
+      expect(screen.getByText('nina@example.test')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: /end every session/i }))
+    expect(sent.writes, 'the sweep ran before anybody confirmed it').toEqual([])
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /^end every session$/i, hidden: false }),
+    )
+
+    await vi.waitFor(() => {
+      expect(sent.writes.map((one) => one.path)).toEqual(['/accounts/sessions/end'])
+    })
+  })
 })

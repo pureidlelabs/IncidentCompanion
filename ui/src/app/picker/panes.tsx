@@ -296,6 +296,9 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
           },
         })
       }}
+      onEndEverySession={() => {
+        act.mutate({ path: '/sessions/end' })
+      }}
       onEndSessions={(username) => {
         act.mutate({ path: `/${encodeURIComponent(username)}/sessions/end` })
       }}
