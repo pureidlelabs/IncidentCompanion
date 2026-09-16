@@ -38,6 +38,14 @@ Where a regime requires more than one submission over time, which have been made
 
 An assessment says what is owed. The stage record says what has been done about it. Neither is derived from the other.
 
+## An answer taken back is the absence of an answer
+
+A question these instruments ask has three states, not two: answered one way, answered the other, and not answered. The third is a real state -- an assessment that cannot say which questions are still open cannot say what it is waiting for -- so it is stored, and what it is stored as is the absence of a value rather than a member of the vocabulary.
+
+That is why a ground taken back is written as nothing at all. The vocabularies these fields offer are closed and the columns behind them hold their members and nothing else, so a value standing for *not stated* would have to be a member the vocabulary does not have. Offering the analyst a row that reads *not stated* is a separate matter: the form shows one, because a question nobody has answered still needs somewhere to be answered from and somewhere to be taken back to. What the screen draws and what the record holds are not the same list.
+
+**What decides the stored form is the schema, not the control.** A field's blank is derived by asking the schema what it accepts -- null first, then absence, then an empty value where the schema supplies one -- so a field that changes shape changes its blank with it. A screen that decided the same thing from the kind of control it happens to draw would hold a second opinion about every field, agreeing until one of them stopped being nullable and disagreeing silently after.
+
 ## A figure a regime asks for is stored wide enough to hold the answer
 
 The quantities an assessment weighs are stored so that no real answer is refused by the width of the column holding it. A 32-bit integer stops at 2,147,483,647, and Postgres refuses a larger write rather than truncating it, so a column of that width decides the answer instead of recording it.
