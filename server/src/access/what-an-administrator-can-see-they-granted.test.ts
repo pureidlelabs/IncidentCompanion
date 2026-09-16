@@ -265,10 +265,11 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
     it('names who is in it and which customers it holds', async () => {
       const held = await new GroupsService(db!).membership(dayShift)
 
-      expect(held.members, 'a group reports nobody in it').toMatchObject([
+      expect(held, 'the group reads as absent').not.toBeNull()
+      expect(held!.members, 'a group reports nobody in it').toMatchObject([
         { userId: ALEX, username: `${ALEX}@example.test`, level: 'write' },
       ])
-      expect(held.customers, 'a group reports none of the customers it holds').toMatchObject([
+      expect(held!.customers, 'a group reports none of the customers it holds').toMatchObject([
         { customerId: acme, customerName: 'Acme NV' },
       ])
     })
