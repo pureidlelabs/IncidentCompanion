@@ -47,7 +47,7 @@ import {
   doraRootCauseDetailedSchema,
 } from '../vocabularies.js'
 
-const euros =() => z.number().int().min(0).nullable().default(null)
+const euros = () => z.number().int().min(0).nullable().default(null)
 /** Held as `integer`, so the door refuses what the column cannot take. */
 const minutes = () => countingNumber().nullable().default(null)
 

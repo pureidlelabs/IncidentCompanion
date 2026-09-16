@@ -34,7 +34,6 @@ import {
 export const PROVENANCE = ['typed', 'imported', 'note'] as const
 export const provenanceSchema = z.enum(PROVENANCE)
 
-
 /** Server-owned on both kinds. Omitted from the write schemas below. */
 const owned = () => ({
   id: z.uuid(),

@@ -9,7 +9,8 @@
  * leaves this red rather than green over a search that covers nothing.
  *
  * **What this does not cover:** a copy in a file outside the two directories
- * walked here. -> #640
+ * walked here; and a copy whose whitespace or parameter name differs, since the
+ * search is textual and nothing formats `server/` on commit. -> #640
  */
 import { readFileSync, readdirSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
@@ -30,6 +31,18 @@ const FACTORIES = [
   {
     what: 'a list of references',
     spelling: /z\.array\(z\.uuid\(\)\)\.default\(\[\]\)/,
+    home: join(HERE, 'field-spec.ts'),
+    among: join(HERE, 'entities'),
+  },
+  {
+    what: 'a trimmed string',
+    spelling: /z\.string\(\)\.trim\(\)\.max\(max\)\.default\(''\)/,
+    home: join(HERE, 'field-spec.ts'),
+    among: join(HERE, 'entities'),
+  },
+  {
+    what: 'a timestamp the analyst may not have',
+    spelling: /readStamp\(\)\.nullable\(\)\.default\(null\)/,
     home: join(HERE, 'field-spec.ts'),
     among: join(HERE, 'entities'),
   },
