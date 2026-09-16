@@ -9,7 +9,9 @@ Nothing shares code across the language boundary, so the agreement is the
 thing that can drift.
 """
 
+import os
 import re
+import subprocess
 
 import pytest
 
@@ -100,6 +102,7 @@ def test_verify_sh_turns_the_mode_on_where_it_certifies():
     tiers = [
         "browser tier (the app)",
         "browser tier (the kit)",
+        "client: suite",
         "repository: suite (with the container files)",
         "server: suite",
     ]
@@ -108,4 +111,41 @@ def test_verify_sh_turns_the_mode_on_where_it_certifies():
     )
     assert "export IC_SUITE_MUST_RUN" not in verify, (
         "set globally, this turns verify.sh's deliberate in-process fallback into a failure"
+    )
+
+
+def test_the_client_tier_refuses_a_certifying_run_that_ran_nothing():
+    """The client tier's own silence, attacked where a pool timeout leaves it.
+
+    `--passWithNoTests` is what makes this an attack rather than a formality: a
+    plain empty client run already exits 1, so without the flag this is green
+    before the arm as well as after. What it cannot reach is the timeout
+    itself, whose pool deadlines are not configurable. -> #797
+    """
+    if not (REPO_ROOT / "node_modules" / "vitest").exists():
+        declined("The client must-run arm", "no node_modules -- run npm ci at the root")
+
+    done = subprocess.run(  # noqa: S603
+        [
+            "npx",
+            "vitest",
+            "run",
+            "--project=unit",
+            "--passWithNoTests",
+            "src/__matches_no_test_file__",
+        ],
+        cwd=REPO_ROOT / "ui",
+        env={**os.environ, "IC_SUITE_MUST_RUN": "1"},
+        capture_output=True,
+        text=True,
+        timeout=600,
+        check=False,
+    )
+    output = done.stdout + done.stderr
+
+    assert done.returncode != 0, (
+        f"the client tier reported green having run no test files:\n{output}"
+    )
+    assert "IC_SUITE_MUST_RUN" in output, (
+        f"the run failed for a reason other than the arm:\n{output}"
     )
