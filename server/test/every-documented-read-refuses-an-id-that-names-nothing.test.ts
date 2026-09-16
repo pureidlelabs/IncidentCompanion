@@ -2,9 +2,8 @@
  * **Every documented read refuses an id that names nothing.**
  *
  * A read that answers 200 to an id the install never issued has invented an
- * answer -- #812 was `GET /api/groups/{groupId}` serving
- * `{"members":[],"customers":[]}` for a group that was not there, so a stale
- * link read as an empty membership screen rather than as a refusal.
+ * answer, and a stale link then reads as an empty screen rather than as a
+ * refusal. -> #812
  *
  * **Walked from the published document**, so a route is swept on the day it is
  * documented. `operations()` fills `{slug}` with a slug the install really
