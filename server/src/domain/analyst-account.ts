@@ -31,10 +31,7 @@ const ROLE_NAMES: Record<Role, string> = { analyst: 'analyst', admin: 'administr
  * refusals and the row menu offers it as a verb, and a role called two things
  * on one pane is a role an administrator has to work out is one role.
  *
- * **Takes a `string`, though the vocabulary is closed.** `z.enum(ROLES)` is
- * what refuses anything else at the door; the served list reaches a screen as
- * strings, and a value that is not a role is drawn as itself rather than
- * disappearing from a menu.
+ * A value that is not a role is answered as itself.
  */
 export function roleName(role: string): string {
   return ROLE_NAMES[role as Role] ?? role

@@ -13,6 +13,10 @@
  * identifies it, so a comparison of two addresses is a lookup wearing the shape
  * of an identity check. -> `accounts.controller.ts`, `disable`
  *
+ * **Where the two rules overlap is pinned next door.** An administrator who is
+ * also the last one hears the install's rule rather than this one, which
+ * `last-admin-role.test.ts` asserts by its own refusal's wording.
+ *
  * **This file mints its own administrators rather than acting on the shared
  * one.** Before the fix the first case genuinely demoted its subject, and the
  * shared fixture is an account every other file signs in as.
@@ -122,13 +126,35 @@ describe.skipIf(!RUNNABLE)('the roster acting on the caller\u2019s own account',
     expect(after.status).toBe(200)
   }, 30_000)
 
+  /**
+   * The control. Without it every case above would pass on a route that
+   * refuses the act for everybody, which is the way this file could be green
+   * and the product broken.
+   *
+   * **Asserted on what changed, not on the status.** `other` is signed in
+   * first, so the sweep has a session to end rather than answering happily
+   * over none, and the role is read back the way the refusal case reads it.
+   */
   it('leaves both verbs available on somebody else', async () => {
-    // The control. Without it every case above would pass on a route that
-    // refuses the act for everybody.
+    const theirs = await signIn(harness, other, PASSWORD)
+    const before = await fetch(`${harness.base}/api/auth/get-session`, {
+      headers: { cookie: theirs.cookie },
+    })
+    expect(before.status, 'the account to act on is not signed in').toBe(200)
+
     const roleChanged = await post(`${encodeURIComponent(other)}/role`, { role: 'analyst' })
     expect(roleChanged.ok).toBe(true)
+    expect(await roleOf(other)).toBe('analyst')
 
     const ended = await post(`${encodeURIComponent(other)}/sessions/end`)
     expect(ended.ok).toBe(true)
+
+    /**
+     * **Asked of an application route.** `get-session` answers 200 with a null
+     * body for a cookie it does not know, so reading it would pass on a
+     * session nobody ended. -> `an-administrator-ends-a-session.test.ts`
+     */
+    const after = await fetch(`${harness.base}/api/cases`, { headers: { cookie: theirs.cookie } })
+    expect(after.status, 'the sessions were reported ended and were not').not.toBe(200)
   }, 30_000)
 })

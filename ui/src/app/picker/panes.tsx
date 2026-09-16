@@ -386,7 +386,12 @@ export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAb
   return (
     <PickerAdministrationScreen
       signIn={windows}
-      {...writes}
+      // Not `onEndEverySession`: this screen draws the table without the pane's
+      // action row, so the sweep has no control here and spreading it whole
+      // would put a prop nothing reads past a check that skips excess keys.
+      onState={writes.onState}
+      onEndSessions={writes.onEndSessions}
+      onRole={writes.onRole}
       roles={accounts.data?.roles ?? []}
       accounts={accountRows(accounts.data?.accounts)}
       busy={accounts.isPending}

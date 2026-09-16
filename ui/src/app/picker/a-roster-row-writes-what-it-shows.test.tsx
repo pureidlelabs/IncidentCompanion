@@ -384,6 +384,15 @@ describe('the Administration pane', () => {
     await vi.waitFor(() => {
       expect(titles()).toContain('You cannot disable your own account.')
     })
+
+    // This pane has no count line, so the row's own menu is the probe: a
+    // re-added local mirror would have moved the row to `disabled` and the
+    // menu would offer Enable.
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(screen.getByRole('button', { name: /more for Nina/i }))
+    expect(
+      (await screen.findAllByRole('menuitem')).map((one) => one.textContent),
+    ).toContain('Disable\u2026')
   })
 
   it('offers an administrator none of the row\'s verbs on their own row', async () => {

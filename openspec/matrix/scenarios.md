@@ -80,6 +80,10 @@
 | An install can federate its sign-in to the organisation's identity provider | Somebody must lose access now | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
 | An install can federate its sign-in to the organisation's identity provider | A mapping is removed | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
 | An install can federate its sign-in to the organisation's identity provider | An analyst is reached both ways | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| A verb the roster offers is refused on the account performing it | An administrator ends their own sessions from the roster | demonstrated | server/test/an-administrator-does-not-act-on-their-own-row.test.ts |
+| A verb the roster offers is refused on the account performing it | An administrator changes their own role | demonstrated | server/test/an-administrator-does-not-act-on-their-own-row.test.ts |
+| A verb the roster offers is refused on the account performing it | An administrator sets the role their account already holds | demonstrated | server/test/an-administrator-does-not-act-on-their-own-row.test.ts |
+| A verb the roster offers is refused on the account performing it | The same verbs on somebody else | demonstrated | server/test/an-administrator-does-not-act-on-their-own-row.test.ts |
 | A session belongs to its holder and ends when it should | An administrator ends a session | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
 | A session belongs to its holder and ends when it should | A session goes idle | demonstrated | server/test/a-session-past-its-window-is-refused.test.ts |
 | A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | unbuilt | Not built: a session has an idle window and no absolute cap. -> #203 |
