@@ -19,10 +19,12 @@ import { durationText } from './case-time'
  * `durationText` prints `0m` where this one says `under a minute`; a second
  * action-class map files an unnamed action type under a different fallback.
  *
- * Two halves, because a fork can be a wrong *value* or a second *definition*:
- * the matrix pins what the surviving implementation answers at the inputs the
- * two used to disagree on, and the scan refuses a second definition of any of
- * these names anywhere in `ui/src`.
+ * Three parts, because a fork can be a wrong *value*, a second *definition*
+ * or the same body under another name: the matrix pins what the surviving
+ * implementation answers at the inputs the two used to disagree on, the name
+ * scan refuses a second definition of any of these names anywhere in
+ * `ui/src`, and the body scan refuses the one chain every copy of
+ * `matchesWords` was spelled with.
  */
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
 const SRC = resolve(HERE, '..')
@@ -111,6 +113,8 @@ const SHARED = [
   'clockFace',
   'dayNumber',
   'NOTIFY_AUTHORITY_HOURS',
+  'matchesWords',
+  'labelled',
 ]
 
 /** Prose names these functions constantly; a definition is what is refused. */
@@ -142,6 +146,24 @@ describe('a shared derivation is defined once', () => {
       wrong.sort(),
       'a derivation both tiers draw is written once, under lib/',
     ).toEqual([])
+  })
+
+  /**
+   * The chain every copy of `matchesWords` was written as, whatever it was
+   * called.
+   *
+   * A name scan sees a copy only where somebody reused the name, and nobody
+   * did: the seven were `matchesTask`, `matchesRecord`, `matchesEntity` and
+   * four more. The body is what they had in common.
+   */
+  const SPLITS_A_QUERY = /\.toLowerCase\(\)\s*\.split\(\/\\s\+\//
+
+  it('splits a query into words under lib/ and nowhere else', () => {
+    const splitting = files
+      .filter((file) => dirname(file) !== HERE)
+      .filter((file) => SPLITS_A_QUERY.test(withoutComments(readFileSync(file, 'utf8'))))
+      .map((file) => relative(SRC, file))
+    expect(splitting.sort(), 'a word-wise query match is `matchesWords`, from lib/').toEqual([])
   })
 
   it('holds every one of those names to a definition it can find', () => {
