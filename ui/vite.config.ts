@@ -9,7 +9,7 @@ import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
 import { chromium } from 'playwright'
 import { defineConfig, type Plugin, type ProxyOptions } from 'vite'
-import type { Reporter, TestModule, TestSpecification, Vitest } from 'vitest/node'
+import type { Reporter, TestModule, Vitest } from 'vitest/node'
 
 /**
  * Whether the story tier can run here, decided once and announced when it
@@ -83,29 +83,31 @@ const MUST_RUN_FILES = 200
  * failure to report, which vitest exits 0 on. -> #797
  *
  * Armed by `IC_SUITE_MUST_RUN` alone, where `server/test/must-run.ts` also
- * reads `CI`: the story job is a `CI` run asked for a fraction of the files.
+ * reads `CI`.
  */
 class MustRunReporter implements Reporter {
   private floor = MUST_RUN_FILES
-  private planned = 0
 
   onInit(vitest: Vitest): void {
+    // A shard is a fraction of the tier by construction, and nothing is
+    // missing from it. The count a shard was never given is not evidence.
     const shard = vitest.config.shard
     if (shard) this.floor = Math.ceil(MUST_RUN_FILES / shard.count)
   }
 
-  onTestRunStart(specifications: readonly TestSpecification[]): void {
-    this.planned = specifications.length
-  }
-
   onTestRunEnd(testModules: readonly TestModule[]): void {
     if (!process.env.IC_SUITE_MUST_RUN) return
-    const ran = testModules.length
-    if (ran >= this.floor && ran >= this.planned) return
+    // A module the pool enqueued and never reached is `queued` or `pending`,
+    // and counting one of those is how a timed-out run passes this.
+    const ran = testModules.filter((module) => {
+      const state = module.state()
+      return state !== 'queued' && state !== 'pending'
+    }).length
+    if (ran >= this.floor) return
 
     console.error(
-      `The client tier collected ${String(this.planned)} test files and finished ${String(ran)}, ` +
-        `where it owes ${String(this.floor)}. This run is certifying (IC_SUITE_MUST_RUN), ` +
+      `The client tier finished ${String(ran)} test files, where it owes ` +
+        `${String(this.floor)}. This run is certifying (IC_SUITE_MUST_RUN), ` +
         'where a tier that ran less than itself is a failure rather than a pass. ' +
         'Run without IC_SUITE_MUST_RUN to run part of the tier deliberately.',
     )
