@@ -109,8 +109,8 @@ function spying(): AccountProfileWrites {
   return {
     setPicture: fn(),
     clearPicture: fn(),
-    setTone: fn(),
-    setInitials: fn(),
+    setTone: fn(() => Promise.resolve()),
+    setInitials: fn(() => Promise.resolve()),
   }
 }
 

@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult }
 
 import { request, requestBody } from './client'
 import { keys } from './queryKeys'
+import { getSession } from './session'
 
 export interface Appearance {
   /** `request`'s body takes a plain record; the named fields below are all of it. */
@@ -111,13 +112,25 @@ export function useClearAvatar() {
   })
 }
 
+/**
+ * **The answer is the row as stored**, so the roster is written from it rather
+ * than read again.
+ *
+ * Only an existing roster is written: a roster that failed to load is absent
+ * rather than empty, and seeding it here would draw this analyst's own write
+ * as though the read had answered.
+ */
 export function useSetAppearance() {
   const queries = useQueryClient()
   return useMutation({
     mutationFn: (chosen: AppearancePatch) =>
       request<Appearance>('/appearance', { method: 'PATCH', body: chosen }),
-    onSuccess: () => {
-      void queries.invalidateQueries({ queryKey: keys.appearance() })
+    onSuccess: (stored) => {
+      const userId = getSession()?.userId
+      if (userId === undefined) return
+      queries.setQueryData<Appearances>(keys.appearance(), (roster) =>
+        roster === undefined ? roster : new Map(roster).set(userId, stored),
+      )
     },
   })
 }

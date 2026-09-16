@@ -38,12 +38,33 @@ export function chordFires(chord: Chord, event: ChordEvent): boolean {
   return event.shift === (chord.shift ?? false)
 }
 
-/** Tags whose own keyboard beats a document chord. */
-const TYPING_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'])
+/** Input types that are worked rather than typed into. */
+const PRESSED_INPUTS = new Set([
+  'button',
+  'checkbox',
+  'color',
+  'file',
+  'image',
+  'radio',
+  'range',
+  'reset',
+  'submit',
+])
+
+/** Roles carrying a text box, whatever element they are spelled on. */
+const TYPING_ROLES = new Set(['combobox', 'searchbox', 'textbox'])
 
 function typesInto(node: EventTarget | null): boolean {
   if (!(node instanceof HTMLElement)) return false
-  if (TYPING_TAGS.has(node.tagName)) return true
+  if (node instanceof HTMLInputElement) return !PRESSED_INPUTS.has(node.type)
+  if (node.tagName === 'TEXTAREA' || node.tagName === 'SELECT') return true
+  if (TYPING_ROLES.has(node.getAttribute('role') ?? '')) return true
+  // The kit's select trigger is a button, and a closed one takes letters as
+  // typeahead.
+  if (node.getAttribute('aria-haspopup') === 'listbox') return true
+  // A collection's typeahead swallows the letters it matches and lets a miss
+  // through, so containment is the only signal a chord can read.
+  if (node.closest('[role="menu"], [role="listbox"]') !== null) return true
   // The attribute, not `isContentEditable`: jsdom leaves that undefined, so
   // the guard would read false in the only tier that tests it.
   const editable = node.getAttribute('contenteditable')
@@ -51,7 +72,8 @@ function typesInto(node: EventTarget | null): boolean {
 }
 
 /**
- * Whether the keyboard belongs to a control rather than to the document.
+ * Whether the keyboard belongs to something being typed into rather than to
+ * the document. Holding the focus is a different question, and not this one.
  *
  * **Where the caret is, not what the event names.** A widget with virtual
  * focus re-dispatches each keystroke onto the row it is highlighting, so the

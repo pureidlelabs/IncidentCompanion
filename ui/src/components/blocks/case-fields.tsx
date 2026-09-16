@@ -1,7 +1,7 @@
 import { spansRow } from '@/components/blocks/form-section'
 import { VocabSelect } from '@/components/blocks/vocab-select'
 import type { FieldSpec, FormSpec } from '@/api/specs'
-import { fieldOf } from '@/api/specs'
+import { emptyFor, fieldOf } from '@/api/specs'
 import { DateTimeInput } from '@/components/ui/datetime-input'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -110,12 +110,26 @@ function control(
         value={value}
         onValueChange={onChange}
         options={spec.options ?? []}
-        allowEmpty
+        // The row is withheld on the same terms as `field-control.tsx`, and
+        // the value it posts stays `''`: this form creates, and the submit
+        // drops a blank rather than sending one.
+        allowEmpty={emptyFor(spec) !== undefined}
       />
     )
   }
   if (spec.kind === 'event_datetime') {
-    return <DateTimeInput {...ids} label={spec.label} value={value} onChange={onChange} />
+    return (
+      <DateTimeInput
+        {...ids}
+        label={spec.label}
+        value={value}
+        // A door holds its fields as text and sends what is filled in, so an
+        // emptied pair is `''` here rather than the column's `null`.
+        onChange={(iso) => {
+          onChange(iso ?? '')
+        }}
+      />
+    )
   }
   if (spec.kind === 'textarea') {
     return (

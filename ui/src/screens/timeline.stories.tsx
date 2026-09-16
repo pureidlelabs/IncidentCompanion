@@ -524,6 +524,9 @@ export const RowDeleted: Story = {
     const canvas = within(canvasElement)
     const bins = await canvas.findAllByRole('button', { name: /^Delete / })
     await userEvent.click(bins[1]!)
+    // A row delete asks first, the same as the bulk bar's. -> #831
+    const confirm = await screen.findByRole('alertdialog')
+    await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     await expect(args.writes!.remove).toHaveBeenCalledOnce()
     await expect(args.writes!.remove).toHaveBeenCalledWith([withTwins().timeline[2]!.id])
   },
@@ -540,6 +543,8 @@ export const RemovePending: Story = {
     const rows = () => canvasElement.querySelectorAll('[data-part="timeline-row"]').length
     const before = rows()
     await userEvent.click((await canvas.findAllByRole('button', { name: /^Delete / }))[0]!)
+    const confirm = await screen.findByRole('alertdialog')
+    await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     await expect(args.writes!.remove).toHaveBeenCalledOnce()
     await expect(rows()).toBe(before)
   },
