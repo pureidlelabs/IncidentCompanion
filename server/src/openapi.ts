@@ -60,10 +60,55 @@ export function openApiDocument(app: INestApplication): OpenAPIObject {
     .addSecurityRequirements('cookie')
     .build()
 
-  // `cleanupOpenApiDoc` is `nestjs-zod` 5's replacement for v4's
-  // `patchNestJsSwagger()`, and skipping it ships schemas nothing validates
-  // against.
-  return tidy(cleanupOpenApiDoc(SwaggerModule.createDocument(app, spec)))
+  return publishedDocument(SwaggerModule.createDocument(app, spec))
+}
+
+/**
+ * Everything done to the document `@nestjs/swagger` hands back, in the order it
+ * has to happen in.
+ *
+ * `cleanupOpenApiDoc` is `nestjs-zod` 5's replacement for v4's
+ * `patchNestJsSwagger()`, and skipping it ships schemas nothing validates
+ * against. It also drops the `x-nestjs_zod-*` marks, so anything reading one
+ * runs before it.
+ */
+export function publishedDocument(document: OpenAPIObject): OpenAPIObject {
+  withoutArrayShorthand(document)
+  return tidy(cleanupOpenApiDoc(document))
+}
+
+/** `nestjs-zod`'s mark on a property whose JSON Schema type is not a string. */
+const EMPTY_TYPE = 'x-nestjs_zod-empty-type'
+
+/**
+ * Restore, under `node` and in place, every JSON Schema type union
+ * `@nestjs/swagger` read as its own array shorthand.
+ *
+ * `type: [String]` is how `@ApiProperty` spells *array of String*, and Zod 4
+ * emits `z.string().nullable()` as `type: ['string', 'null']`.
+ */
+function withoutArrayShorthand(node: unknown): void {
+  if (Array.isArray(node)) {
+    node.forEach(withoutArrayShorthand)
+    return
+  }
+  if (node === null || typeof node !== 'object') return
+
+  const schema = node as Record<string, unknown>
+  const items = schema['items'] as Record<string, unknown> | undefined
+  if (
+    schema[EMPTY_TYPE] === true &&
+    schema['type'] === 'array' &&
+    typeof items?.['type'] === 'string'
+  ) {
+    // ponytail: only the first member survives the flattening, so the second
+    // is assumed to be `null`. A scalar union that is not nullable -
+    // `z.union([z.string(), z.number()])` - restores as `['string', 'null']`;
+    // thread the Zod schema in per component if one is ever declared.
+    schema['type'] = [items['type'], 'null']
+    delete schema['items']
+  }
+  Object.values(schema).forEach(withoutArrayShorthand)
 }
 
 /**
