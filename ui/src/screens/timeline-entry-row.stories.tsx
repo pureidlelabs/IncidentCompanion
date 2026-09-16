@@ -132,10 +132,8 @@ export const AnActivity: Story = {
 /**
  * An entry that arrived from a platform rather than being typed.
  *
- * The marker is the row's quietest fact and sits with the derived ones, which
- * is what the screen's own rule asks for: nothing load-bearing behind a
- * disclosure, and provenance is what may recede. A row an analyst typed draws
- * no marker at all, which is every other story here.
+ * The marker sits with the derived facts, which the screen's own rule asks
+ * for: provenance is what may recede. A row an analyst typed draws none.
  */
 export const Imported: Story = {
   name: 'Imported from a platform',

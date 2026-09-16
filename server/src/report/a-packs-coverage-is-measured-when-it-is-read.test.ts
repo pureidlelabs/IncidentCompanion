@@ -15,10 +15,8 @@ import { openTestPool } from '../../test/database.js'
  * so a stored figure would freeze the divisor at whatever the app printed that
  * day. The pack here carries half the keys.
  *
- * **A sent report is unaffected and that is what makes this safe.** Its
- * rendered tree is frozen at send and painted from there, never re-resolved,
- * so the figure under a document nobody edited does not move. What moves is a
- * draft's, which is the number an analyst is deciding from.
+ * **A sent report is unaffected**, its tree being frozen at send and never
+ * re-resolved. What moves is a draft's.
  */
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
