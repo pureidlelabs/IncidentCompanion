@@ -258,7 +258,11 @@ describe('the wire contract', () => {
       _actionsTypes,
       _caseNotesKeys,
       _caseNotesTypes,
+      _casesKeys,
+      _casesTypes,
+      _timelineRowShape,
       _timelineKeys,
+      _derivedAreNotColumns,
       _timelineEventTypes,
       _timelineActionTypes,
       _methodsKeys,
@@ -267,7 +271,7 @@ describe('the wire contract', () => {
       _reportsTypes,
       _reportBlocksKeys,
       _reportBlocksDerivedAreNotColumns,
-    ]).toEqual(Array.from({ length: 27 }, () => true))
+    ]).toEqual(Array.from({ length: 31 }, () => true))
   })
 
   /**

@@ -6,7 +6,7 @@
 import { index, pgTable, text, uuid } from 'drizzle-orm/pg-core'
 
 import { cases } from './case.js'
-import { bytea, rowVersioning } from './columns.js'
+import { bytea, rowVersioning, source } from './columns.js'
 import { caseScoped } from './scoped.js'
 
 const owner = () => ({
@@ -20,6 +20,7 @@ export const actions = pgTable(
   'actions',
   {
     ...owner(),
+    source: source(),
     task: text('task').notNull().default(''),
     taskType: text('task_type').notNull().default(''),
     /**
@@ -43,6 +44,7 @@ export const caseNotes = pgTable(
   'casenotes',
   {
     ...owner(),
+    source: source(),
     /**
      * The note's words as plain text, **derived from `document` and not
      * written by an analyst**.

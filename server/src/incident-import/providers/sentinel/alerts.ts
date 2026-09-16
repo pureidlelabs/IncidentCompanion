@@ -117,7 +117,6 @@ export function alertToTimeline(raw: unknown, incident: RawIncident): MappedAler
  */
 export function entityRefsOf(
   raw: unknown,
-  incident: RawIncident,
   byRef: ReadonlyMap<string, string>,
   candidates: ReadonlyMap<string, { collection: string }>,
 ): {

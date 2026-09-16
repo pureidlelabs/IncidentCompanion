@@ -41,6 +41,14 @@ interface Writable {
   ): Promise<unknown>
 }
 
+/**
+ * Row metadata the server owns, which no write schema accepts.
+ *
+ * Patching one answers 422 rather than the 409 these cases are about, so a
+ * sweep that picked one would report the wrong refusal. `source` is here for
+ * `createdBy`'s reason: a client that could set it could claim an analyst
+ * typed what an import supplied. -> `domain/wire.ts`
+ */
 const NOT_A_PATCH = new Set([
   'id',
   'caseId',
@@ -49,6 +57,7 @@ const NOT_A_PATCH = new Set([
   'updatedAt',
   'createdBy',
   'updatedBy',
+  'source',
 ])
 
 function collections(): { name: string; make: () => Writable }[] {
@@ -78,7 +87,7 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
 
   beforeAll(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder(seed)).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
     const now = new Date()

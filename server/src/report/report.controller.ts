@@ -23,7 +23,7 @@ import { LibraryService } from '../library/library.service.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
 import { reportSnippetSchema } from '../library/kinds.js'
 import { LanguageService } from './language.service.js'
-import { EN_KEYS } from './document/packs.js'
+import { headingPack } from './document/packs.js'
 import { ReportLifecycleService, type MissingSection } from './lifecycle.service.js'
 import { ReportRenderService } from './render.service.js'
 import { pageRuler, type PageRuler } from './document/pdf.js'
@@ -45,8 +45,6 @@ import {
 
 
 
-
-const HEADING_KEYS = EN_KEYS.filter((key) => key.startsWith('heading.'))
 
 /**
  * What a layout's chip says for one block.
@@ -397,9 +395,7 @@ export class ReportController {
        * is the whole of adding a language. -> `language.service.ts`
        */
       languages: await this.languages.list(),
-      headings: HEADING_KEYS.map((key) => ({ key, label: t(key) })).filter(
-        (pair) => pair.label !== pair.key,
-      ),
+      headings: headingPack(t),
     }
   }
 }

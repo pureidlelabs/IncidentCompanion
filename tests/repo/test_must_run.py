@@ -95,8 +95,16 @@ def test_verify_sh_turns_the_mode_on_where_it_certifies():
     because their per-spec skips are otherwise invisible in an exit code.
     """
     verify = (REPO_ROOT / "verify.sh").read_text(encoding="utf-8")
-    assert verify.count("IC_SUITE_MUST_RUN=1") == 4, (
-        "verify.sh no longer arms the server suite, the container tier and both browser tiers"
+    joined = verify.replace("\\\n", " ")
+    armed = re.findall(r'step "([^"]+)"[^\n]*IC_SUITE_MUST_RUN=1', joined)
+    tiers = [
+        "browser tier (the app)",
+        "browser tier (the kit)",
+        "repository: suite (with the container files)",
+        "server: suite",
+    ]
+    assert sorted(armed) == tiers, (
+        f"verify.sh arms {sorted(armed)}; the tiers that certify are {tiers}"
     )
     assert "export IC_SUITE_MUST_RUN" not in verify, (
         "set globally, this turns verify.sh's deliberate in-process fallback into a failure"

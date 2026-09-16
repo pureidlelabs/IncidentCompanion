@@ -15,6 +15,7 @@ import {
 
 import about from './catalogue/about.json'
 import collections from './catalogue/collections.json'
+import reportLayouts from './catalogue/report-layouts.json'
 import specs from './catalogue/specs.json'
 
 import { COLLECTION_TO_CASE_KEY } from '@/api/model'
@@ -368,8 +369,8 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
   }
 
   // **Captured from this tree's own controllers at build time**, by
-  // `server/scripts/demo-catalogue.mts`. Both routes are constants the server
-  // derives from the schemas, so capturing beats describing them again - and
+  // `server/scripts/demo-catalogue.mts`. Each is a constant the server derives
+  // rather than stores, so capturing beats describing them again - and
   // eleven case screens draw nothing at all without `specs`.
   // **Each names its own depth.** Matching on the first segment alone answers
   // `/specs/anything/at/all` with the specs document, so a route added under one
@@ -379,6 +380,9 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
     if (at[0] === 'specs') return json(specs)
     if (at[0] === 'collections') return json(collections)
     if (at[0] === 'about') return json(about)
+    // `?lang` is ignored: only English is captured, and a heading drawn in
+    // English is closer to right than one drawn as `heading.exec_summary`.
+    if (at[0] === 'report-layouts') return json(reportLayouts)
     if (at[0] === 'demos') return json(demoCards())
     if (at[0] === 'recent-cases') return json(recentCases(state))
   }

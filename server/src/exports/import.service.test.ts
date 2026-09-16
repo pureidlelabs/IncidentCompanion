@@ -45,7 +45,7 @@ describe.skipIf(!db)('importing a CSV', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder(seed)).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
 
@@ -145,18 +145,23 @@ describe.skipIf(!db)('importing a CSV', () => {
   })
 
   /**
-   * Covers what is recorded, not what is stored: the query builder drops a key
-   * naming no column, so the row itself is right either way and the change
-   * feed is the only place the difference is visible.
+   * **The collection that had nowhere to record it.** `impact` took the stamp
+   * and stored nothing, because the query builder drops a key naming no column
+   * without a word -- so the row read as an analyst's own work. -> #732
+   *
+   * Asserted on the change feed as well as the row: the feed is where the
+   * difference was visible while the column was missing.
    */
-  it('names no door on a collection that has no column for one', async () => {
+  it('names the door on a collection whose stamp used to land nowhere', async () => {
     await service.fromCsv('impact', emptyCaseId, 'label,category\nMailbox down,credentials\n', ME)
+    const [row] = await seed!.select().from(impact).where(eq(impact.caseId, emptyCaseId))
     const [change] = await seed!
       .select()
       .from(changeFeed)
       .where(eq(changeFeed.caseId, emptyCaseId))
 
-    expect(change!.fields, 'the change feed names a column impact has not got').not.toContain(
+    expect(row!.source, 'an imported impact row claims somebody typed it').toBe(CSV_IMPORT)
+    expect(change!.fields, 'the change feed does not record where the row came from').toContain(
       'source',
     )
   })

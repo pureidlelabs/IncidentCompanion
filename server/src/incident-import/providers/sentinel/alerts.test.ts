@@ -126,13 +126,13 @@ describe('entityRefsOf', () => {
   ])
 
   it('links an alert naming nothing to every entity in its incident', () => {
-    const refs = entityRefsOf(alert({}), INCIDENT, byRef, candidates)
+    const refs = entityRefsOf(alert({}), byRef, candidates)
     expect(refs.system).toBe('h1')
     expect(refs.accounts.sort()).toEqual(['a1', 'a2'])
   })
 
   it('narrows to the entities an alert does name', () => {
-    const refs = entityRefsOf(alert({ entityIds: ['ref-a'] }), INCIDENT, byRef, candidates)
+    const refs = entityRefsOf(alert({ entityIds: ['ref-a'] }), byRef, candidates)
     expect(refs.system).toBeNull()
     expect(refs.accounts).toEqual(['a1'])
   })
@@ -140,7 +140,7 @@ describe('entityRefsOf', () => {
   it('drops a named ref that resolved to nothing, rather than widening', () => {
     // The dangerous direction: falling back to "everything in the incident"
     // when a named ref is unknown links the alert to entities it never named.
-    const refs = entityRefsOf(alert({ entityIds: ['ref-nope'] }), INCIDENT, byRef, candidates)
+    const refs = entityRefsOf(alert({ entityIds: ['ref-nope'] }), byRef, candidates)
     expect(refs.accounts).toEqual([])
     expect(refs.system).toBeNull()
   })
@@ -151,6 +151,6 @@ describe('entityRefsOf', () => {
       ['h1', { collection: 'systems' }],
       ['h2', { collection: 'systems' }],
     ])
-    expect(entityRefsOf(alert({}), INCIDENT, twoHosts, both).system).toBe('h1')
+    expect(entityRefsOf(alert({}), twoHosts, both).system).toBe('h1')
   })
 })

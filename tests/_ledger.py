@@ -1,10 +1,10 @@
 """Reading the scenario ledger, once.
 
 **Two readers of one file is the defect, not a duplication to tidy.** The
-ledger states its totals above the rows they count, and a command that writes
-those totals has to agree with the check that reads them. Where they disagree
-the command produces a file the check refuses, and running it again is a fixed
-point -- which is worse than no command at all.
+command answering how many scenarios there are has to count exactly what the
+check holding the rows against the specifications counts. Where they disagree,
+the number reported and the number checked are two answers with nobody able to
+tell which is wrong.
 
 The shape a reader has to get right: rows belong to the `## capability`
 heading above them, so the table in the section documenting the row format is

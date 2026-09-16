@@ -67,7 +67,7 @@ describe.skipIf(!db)('the merge review', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder(seed)).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
     const [kase] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = kase!.id
     await seedAnalyst(ME)

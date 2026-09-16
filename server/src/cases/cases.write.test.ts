@@ -106,13 +106,13 @@ describe.skipIf(!db)('writing a case', () => {
      * file pass against a controller reaching for the wrong surface.
      */
     audited.length = 0
-    const recorder = (event: string) => (caller: unknown, id: string, title: string) => {
+    const recorder = (event: string) => (_caller: unknown, id: string, title: string) => {
       audited.push({ event, target: title, detail: { caseId: id } })
       return Promise.resolve()
     }
     controller = new CasesController(
       service,
-      new DemoSeederService(seed!, seed, new DemoContentSeeder(seed)),
+      new DemoSeederService(seed!, seed, new DemoContentSeeder()),
       library,
       {
         caseCreated: recorder('case_created'),
@@ -561,7 +561,7 @@ describe.skipIf(!db)('writing a case', () => {
      */
     it('takes the entity rows with it', async () => {
       await seed!.delete(cases)
-      await new DemoSeederService(seed!, seed, new DemoContentSeeder(seed)).reseed()
+      await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
       const [demo] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
       const id = demo!.id
       // The fixture has to have rows, or the cascade assertion passes vacuously.
@@ -630,7 +630,7 @@ describe.skipIf(!db)('writing a case', () => {
      */
     it('deletes a demo case rather than protecting it', async () => {
       await seed!.delete(cases)
-      await new DemoSeederService(seed!, seed, new DemoContentSeeder(seed)).reseed()
+      await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
       const [demo] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
       expect(demo!.isDemo).toBe(true)
 

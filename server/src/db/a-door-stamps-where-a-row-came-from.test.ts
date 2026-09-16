@@ -17,7 +17,8 @@ import { describe, expect, it } from 'vitest'
 
 import { importStamp } from './import-stamp.js'
 import { TABLES } from '../case-archive/import.service.js'
-import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS } from '../domain/collections.js'
+import { TABLES as BULK_TABLES } from '../collections/registry.js'
+import { COLLECTION_SCHEMAS, IMPORTABLE, TIMELINE_WRITE_SCHEMAS } from '../domain/collections.js'
 import { archiveRowSchema } from '../case-archive/rows.js'
 
 /** What a door may state about a row, whichever door it is. */
@@ -42,6 +43,32 @@ describe('the stamp a door puts on a row', () => {
       for (const field of STAMPED) {
         if (columns.has(field)) expect(stamped, `${name}.${field} is unstamped`).toContain(field)
       }
+    }
+  })
+
+
+  /**
+   * **Every collection a file may be written back for can say a row arrived.**
+   * `importStamp` narrows to the columns the table has, so a table with none of
+   * them takes the stamp, reports the same row count and stores nothing -- the
+   * row is then indistinguishable from one an analyst typed, which is the one
+   * thing `incident-import/spec.md` says it must not be.
+   *
+   * `source` names the door and `provenance` says it arrived; a table carrying
+   * either can answer where a row came from, and the timeline carries the
+   * second. -> #732
+   */
+  it('gives every importable collection somewhere to record that a row arrived', () => {
+    const ORIGIN = ['source', 'provenance'] as const
+    for (const name of IMPORTABLE) {
+      const table = BULK_TABLES[name as keyof typeof BULK_TABLES]
+      expect(table, `${name} is importable and has no table here`).toBeDefined()
+      const columns = new Set(Object.keys(getTableColumns(table)))
+      expect(
+        ORIGIN.some((one) => columns.has(one)),
+        `${name} can be imported into and has no column saying a row arrived, so the ` +
+          `door's stamp lands nowhere and the row reads as an analyst's own work`,
+      ).toBe(true)
     }
   })
 
