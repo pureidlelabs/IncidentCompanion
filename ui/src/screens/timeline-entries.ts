@@ -201,7 +201,9 @@ export function matchesTimeline(entry: TimelineEntry, filter: TimelineFilter): b
     if (!filter.severities.includes((entry.severity ?? '').trim().toLowerCase())) return false
   }
   if (filter.phases.length && !filter.phases.includes((entry.ukcPhase ?? '').trim())) return false
-  return matchesWords(haystack(entry), filter.q)
+  // The blank query is the default state, and this runs per row and again per
+  // dimension in `countsFor` - so the eight-field haystack is not built for it.
+  return !filter.q.trim() || matchesWords(haystack(entry), filter.q)
 }
 
 export function applyTimelineFilter(
