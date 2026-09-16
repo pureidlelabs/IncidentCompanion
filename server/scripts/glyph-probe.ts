@@ -8,7 +8,7 @@
  *
  *   npx tsx scripts/glyph-probe.ts <dir>
  */
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { toPdf } from '../src/report/document/pdf.js'
@@ -45,9 +45,13 @@ const document_: Document = {
 }
 
 async function main(): Promise<void> {
-  const out = process.argv[2] ?? '.'
-  await writeFile(join(out, 'glyph-probe.pdf'), await toPdf(document_))
-  console.log('wrote glyph-probe.pdf')
+  // Under `.visual/`, which is ignored: a probe that drops a PDF beside the
+  // source leaves the tree dirty for whoever runs it next.
+  const out = process.argv[2] ?? '.visual/probes'
+  await mkdir(out, { recursive: true })
+  const wrote = join(out, 'glyph-probe.pdf')
+  await writeFile(wrote, await toPdf(document_))
+  console.log(`wrote ${wrote}`)
 }
 
 void main()

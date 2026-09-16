@@ -82,7 +82,8 @@ function pressure(document_: Document): string[] {
 }
 
 async function main(): Promise<void> {
-  const out = process.argv[2] ?? '.'
+  // Under `.visual/`, which is ignored. -> `glyph-probe.ts`
+  const out = process.argv[2] ?? '.visual/probes'
   const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? '' })
   const db = drizzle({ client: pool })
   const cases = new CasesService(db, {
