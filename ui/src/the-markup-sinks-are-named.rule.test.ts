@@ -1,25 +1,9 @@
 /**
  * **Every place the browser is handed markup to trust is named here.**
  *
- * React escapes what it renders, so imported case data -- a hostname, a
- * timeline description, an evidence filename -- reaches the DOM as text
- * whatever it contains. That is the whole answer for almost every field, and
- * it is an answer that holds only while nothing opts out of it.
- *
- * `dangerouslySetInnerHTML` is the opt-out, and there is one. Its own
- * sanitiser is argued and measured in `components/blocks/prose-schema.test.ts`:
- * a document whose schema has no HTML node cannot carry markup out. **What
- * that file cannot see is a second sink appearing beside it**, which would be
- * safe or not on its own terms and would look like nothing at all in a diff.
- *
- * So this is the ratchet rather than the control: it does not say the sink is
- * safe, it says how many there are and which. A new one fails here and its
- * author has to say, in this list, what sanitises it.
- *
- * **Imported data is the reason this is worth holding.** A case arrives from a
- * source the analyst does not control, into a workspace whose job is to render
- * it back to somebody who trusts what they read. The demo build refuses both
- * import routes; the backed path does not. -> #152
+ * **A ratchet rather than a control**: it does not say the sink is safe, it
+ * says how many there are and which. A new one fails here and its author has
+ * to say, in this list, what sanitises it. -> #152
  *
  * **What this does not cover:** whether the named sink sanitises -- that is
  * `prose-schema.test.ts` -- and the export formats, which are drawn
@@ -38,8 +22,7 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)))
 /**
  * Every way the browser can be handed a string and asked to parse it as markup.
  *
- * `insertAdjacentHTML` and `outerHTML` are here for completeness rather than
- * because the tree uses them: a sink nobody has reached for yet is the one
+ * Wider than what the tree uses: a sink nobody has reached for yet is the one
  * that arrives without anybody thinking about it.
  */
 const SINKS = /dangerouslySetInnerHTML|\binnerHTML\b|\bouterHTML\b|insertAdjacentHTML/
@@ -62,11 +45,7 @@ const FILES = globSync(['**/*.ts', '**/*.tsx'], { cwd: SRC, absolute: true }).fi
 )
 
 describe('the markup sinks are named', () => {
-  /**
-   * **A sweep over nothing passes**, and a renamed directory or a changed glob
-   * would take the whole rule with it while looking exactly like everything
-   * being in order.
-   */
+  /** A sweep over nothing passes, and looks exactly like order. */
   it('sweeps the client it is about', () => {
     expect(FILES.length, 'the glob matched no client source at all').toBeGreaterThan(200)
   })
@@ -84,11 +63,7 @@ describe('the markup sinks are named', () => {
     ).toEqual([])
   })
 
-  /**
-   * **The other direction, because a named sink that has gone is a lie.** A
-   * list that outlives what it describes reads as coverage and is the reason
-   * the next reader believes there is one sink when there are two.
-   */
+  /** The other direction: a list that outlives what it names reads as coverage. */
   it('names no sink the client no longer has', () => {
     const found = new Set(
       FILES.filter((path) => SINKS.test(readFileSync(path, 'utf8'))).map((path) =>
