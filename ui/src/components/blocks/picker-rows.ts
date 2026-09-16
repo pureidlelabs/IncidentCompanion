@@ -463,13 +463,13 @@ function caseRow(
 
 /** A roster wide enough to sort, narrow and run out of room in. */
 export const PICKER_CASES: readonly CaseSummary[] = [
-  caseRow('1ee22e6d', 'Meridian Logistics ransomware', 'Meridian Logistics', 'INC-2026-0447', 'open', '2026-08-13T06:12:00.000Z', false),
-  caseRow('7c1a4b90', 'Finance mailbox compromise', 'Northwind Freight', 'INC-2026-0431', 'open', '2026-08-11T14:40:00.000Z', false),
-  caseRow('2b55e173', 'Payroll credential stuffing', 'Kestrel Health', 'INC-2026-0424', 'open', '2026-08-09T08:05:00.000Z', false),
+  caseRow('1ee22e6d', 'Meridian Logistics ransomware', 'Meridian Logistics', 'INC-2026-0447', 'respond', '2026-08-13T06:12:00.000Z', false),
+  caseRow('7c1a4b90', 'Finance mailbox compromise', 'Northwind Freight', 'INC-2026-0431', 'recover', '2026-08-11T14:40:00.000Z', false),
+  caseRow('2b55e173', 'Payroll credential stuffing', 'Kestrel Health', 'INC-2026-0424', 'post-incident', '2026-08-09T08:05:00.000Z', false),
   caseRow('9f0c33ad', 'Supplier invoice fraud', 'Meridian Logistics', 'INC-2026-0410', 'closed', '2026-07-30T16:22:00.000Z', false),
   caseRow('4d8e21bf', 'Stolen laptop, unencrypted', 'Kestrel Health', 'INC-2026-0398', 'closed', '2026-07-24T09:15:00.000Z', false),
   caseRow('6a3f7c52', 'Exposed S3 bucket', 'Northwind Freight', null, 'closed', '2026-07-18T11:47:00.000Z', false),
-  caseRow('0e91d4c8', 'Worked example: ransomware campaign', 'Demo Customer', 'DEMO-0001', 'open', '2026-08-13T12:16:00.000Z', true),
+  caseRow('0e91d4c8', 'Worked example: ransomware campaign', 'Demo Customer', 'DEMO-0001', 'respond', '2026-08-13T12:16:00.000Z', true),
 ]
 
 /**
