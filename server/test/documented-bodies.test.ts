@@ -24,19 +24,14 @@ const runnable = await bootable()
  * Routes whose body cannot be generated *validly* from its schema, each with
  * the reason.
  *
- * Two kinds: a body that is not JSON at all, and one whose rule holds between
- * two fields rather than on either -- which a schema cannot state and so an
- * instance generator cannot satisfy.
+ * One kind: a body that is not JSON at all. A rule holding between two fields
+ * is the other way a generated instance cannot be valid, and it is not skipped
+ * -- the route publishes an example instead, which this sends in preference.
  */
 const NOT_GENERATED: ReadonlyArray<readonly [string, string]> = [
   ['/api/cases/import', 'Takes an archive. Bytes have no instance to generate.'],
   ['/api/cases/{caseId}/{collection}.csv', 'Takes a CSV, and the header decides the collection.'],
   ['/api/appearance/avatar', 'Takes an image.'],
-  [
-    '/api/change-password',
-    'Refines across two fields: the new password must equal its repeat, which no ' +
-      'generated instance can satisfy, so the body is well shaped and refused. -> #805',
-  ],
 ]
 
 interface Schema {
@@ -53,19 +48,26 @@ interface Schema {
   format?: string
   /** Honoured, because a field with a minimum refuses a one-character string. */
   minLength?: number
+  examples?: unknown[]
   $ref?: string
 }
 
 /**
- * The smallest value this schema calls valid.
+ * The smallest value this schema calls valid, or the first example it publishes.
  *
- * **Required fields only.** An optional field left out is still a valid
- * instance, and filling everything would test the generator's imagination
- * rather than the door's agreement with its own document.
+ * **A published example wins**, because a rule holding between two fields
+ * cannot be written into a schema and so cannot be met by generating from one.
+ * It is also the half of the document nothing else exercises: an example is
+ * prose until something sends it.
+ *
+ * **Required fields only**, where one is generated. An optional field left out
+ * is still a valid instance, and filling everything would test the generator's
+ * imagination rather than the door's agreement with its own document.
  */
 function instanceOf(schema: Schema, doc: Record<string, unknown>, depth = 0): unknown {
   if (depth > 6) return null
 
+  if (schema.examples?.length) return schema.examples[0]
   if (schema.$ref) {
     const name = schema.$ref.split('/').pop()
     const components = (doc.components ?? {}) as { schemas?: Record<string, Schema> }

@@ -49,6 +49,20 @@ const changeSchema = z
     message: 'The two new passwords do not match.',
     path: ['repeat'],
   })
+  /**
+   * The rule above holds between two fields, so no schema can state it and a
+   * caller building a body from the published shape alone is refused by a rule
+   * the document does not carry. The example is where the pair is shown.
+   */
+  .meta({
+    examples: [
+      {
+        current: 'the-current-passphrase',
+        password: 'the-replacement-passphrase',
+        repeat: 'the-replacement-passphrase',
+      },
+    ],
+  })
 
 class ChangePasswordDto extends createZodDto(changeSchema) {}
 
