@@ -30,7 +30,14 @@
     "visual": "playwright test --config=e2e/visual/playwright.visual.config.ts",
     "visual:dist": "VISUAL_TARGET=dist playwright test --config=e2e/visual/playwright.visual.config.ts",
     "visual:storybook": "playwright test --config=e2e/visual/playwright.storybook.config.ts",
-    "audit:affordances": "playwright test --config=e2e/visual/playwright.affordance.config.ts"
+    "audit:affordances": "playwright test --config=e2e/visual/playwright.affordance.config.ts",
+    "probe:demo-parse": "tsx scripts/demo-parse.ts",
+    "probe:glyphs": "tsx scripts/glyph-probe.ts",
+    "probe:page-ruler": "tsx scripts/page-ruler-probe.ts",
+    "probe:prose-cost": "tsx scripts/prose-stress.ts",
+    "probe:report-live": "tsx scripts/report-live-check.ts",
+    "probe:report-all": "tsx scripts/report-render-all.ts",
+    "probe:word": "tsx scripts/word-check.ts"
   },
   "dependencies": {
     "@incidentcompanion/prose-schema": "*",
