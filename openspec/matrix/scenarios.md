@@ -1,14 +1,6 @@
 # Scenario ledger
 
-**The constitution requires four numbers to be answerable at any moment**: how many scenarios exist, how many are demonstrated, how many are recorded as undemonstrable, and how many describe something the product does not yet have. This is where they are answered. `tests/docs/test_scenario_ledger.py` holds it against the specifications, so a scenario cannot be added, renamed or removed without this file being brought with it.
-
-| | |
-| --- | --- |
-| Scenarios | 500 |
-| Demonstrated | 404 |
-| Undemonstrable | 1 |
-| Unbuilt | 81 |
-| Undemonstrated | 14 |
+**The constitution requires four numbers to be answerable at any moment**: how many scenarios exist, how many are demonstrated, how many are recorded as undemonstrable, and how many describe something the product does not yet have. `.claude/scripts/ledger_totals.py` counts them from the rows below, which is what answers them. `tests/docs/test_scenario_ledger.py` holds those rows against the specifications, so a scenario cannot be added, renamed or removed without this file being brought with it.
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 

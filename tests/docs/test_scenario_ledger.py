@@ -1,10 +1,10 @@
 """The scenario ledger, held against the specifications it counts.
 
-The constitution requires three numbers to be answerable at any moment: how many
-scenarios exist, how many are demonstrated, and how many are recorded as
-undemonstrable. A ledger nobody checks answers them wrongly within a week -- a
-scenario is renamed and its row is orphaned, or one is added and never appears,
-and the count keeps reporting as though it had.
+The constitution requires four numbers to be answerable at any moment, and
+`.claude/scripts/ledger_totals.py` answers them from these rows. A ledger nobody
+checks answers them wrongly within a week -- a scenario is renamed and its row is
+orphaned, or one is added and never appears, and the count keeps reporting as
+though it had.
 
 So the ledger is checked to name exactly the scenarios the specifications carry:
 no row without a scenario, no scenario without a row. Renaming a requirement or a
@@ -32,10 +32,8 @@ STATUSES = {"demonstrated", "undemonstrated", "undemonstrable", "unbuilt"}
 def rows() -> list[tuple[str, str, str, str, str]]:
     """Every ledger row as capability, requirement, scenario, status, evidence.
 
-    **The reading lives in `tests/_ledger.py`**, because the command that writes
-    the totals has to count exactly what this counts. Two copies of it is how a
-    written header and the check that reads it come to disagree with nobody
-    able to tell which is wrong.
+    **The reading lives in `tests/_ledger.py`**, because the command answering
+    the totals has to count exactly what this counts.
     """
     return ledger_rows(LEDGER)
 
@@ -131,39 +129,18 @@ def test_what_a_status_owes_is_present(row: tuple[str, str, str, str, str]) -> N
         )
 
 
-def test_the_stated_totals_are_the_counted_totals() -> None:
-    """The summary is what anybody reads. Left to drift, it answers the three numbers wrongly.
-
-    Stated in the file rather than computed on the fly because the numbers are quoted
-    outside this repository, and a number nobody can read without running a test is one
-    that gets recalled instead.
-
-    **Generated rather than counted by hand**, which is what the failure message
-    below names. -> `.claude/scripts/ledger_totals.py`
-    """
-    counted = {status: 0 for status in STATUSES}
-    for _, _, _, status, _ in rows():
-        if status in counted:
-            counted[status] += 1
-
-    body = LEDGER.read_text()
-    stated = {
-        label.lower(): int(value)
-        for label, value in re.findall(r"^\| (Scenarios|Demonstrated|Undemonstrable|Unbuilt|Undemonstrated) \| (\d+) \|$", body, flags=re.M)
-    }
-    assert len(stated) == 5, (
-        "the ledger's summary is missing a line. It states Scenarios, Demonstrated, "
-        f"Undemonstrable, Unbuilt and Undemonstrated; found {sorted(stated)}"
+def test_no_total_is_stored_in_the_file() -> None:
+    """A total stored beside the rows it counts conflicts on every branch that adds a row."""
+    stored = [
+        line
+        for line in LEDGER.read_text().splitlines()
+        if re.match(r"^\| (Scenarios|Demonstrated|Undemonstrable|Unbuilt|Undemonstrated) \|", line)
+    ]
+    assert not stored, (
+        "the ledger states a total it also counts, so every branch that adds a row edits the "
+        "same lines and conflicts with every other one in flight. Read the numbers with "
+        f".claude/scripts/ledger_totals.py instead. Found: {stored}"
     )
-
-    repair = "run .claude/scripts/ledger_totals.py --write"
-    assert stated["scenarios"] == len(rows()), (
-        f"the ledger says {stated['scenarios']} scenarios and lists {len(rows())} -- {repair}"
-    )
-    for status in ("demonstrated", "undemonstrable", "unbuilt", "undemonstrated"):
-        assert stated[status] == counted[status], (
-            f"the ledger says {stated[status]} {status} and lists {counted[status]} -- {repair}"
-        )
 
 
 def test_every_specification_has_a_section() -> None:
