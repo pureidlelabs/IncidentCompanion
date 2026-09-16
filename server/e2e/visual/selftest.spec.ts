@@ -29,14 +29,18 @@ test.describe('the geometry probes', () => {
     // The count is asserted first: a `FAULTS` list that silently shrank would
     // otherwise pass this file with every remaining fault firing.
     //
-    // **Eleven faults over nine rules**, because two rules carry two each -
+    // **Twelve faults over nine rules**, because three rules carry two each -
     // `small-target` has the plain button and the label-wrapped input its
     // exemption must not swallow, and `overlap` has the two toolbar buttons and
     // a control laid across a padded field's content, which the content-box
-    // clamp must not forgive. The count alone lets a rule lose its only fault as
-    // long as another gains one, so the *set of kinds* below is what holds every
-    // rule covered.
-    expect(results, 'eleven faults: two small-target, two overlap').toHaveLength(11)
+    // clamp must not forgive, and `size-overridden` has the plain element and the
+    // table cell its sub-pixel tolerance must not forgive. The count alone lets
+    // a rule lose its only fault as long as another gains one, so the *set of
+    // kinds* below is what holds every rule covered.
+    expect(
+      results,
+      'twelve faults: two small-target, two overlap, two size-overridden',
+    ).toHaveLength(12)
     expect(
       new Set(results.map((one) => one.kind)),
       'every probe rule needs a fault: a rule with none is a rule nothing proves alive',

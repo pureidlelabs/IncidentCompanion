@@ -99,6 +99,30 @@ const FAULTS: Fault[] = [
   },
   {
     kind: 'size-overridden',
+    why: 'a table cell asking for w-40 and computing 40px',
+    /**
+     * **The sub-pixel tolerance must not swallow a real override.** A cell is
+     * forgiven a pixel because the table layout algorithm distributes the
+     * remainder across columns; one computing a quarter of what it asked for is
+     * not that, and a tolerance widened until it forgives this leaves the rule
+     * reporting nothing on any table.
+     *
+     * `display: table-cell` on a plain element rather than a real `<table>`:
+     * this aims at the branch the tolerance lives on, and an appended table is
+     * clipped out of the action row before the probe measures it.
+     */
+    break: ({ row }) => {
+      const toolbar = document.querySelector(row)
+      if (!toolbar) throw new Error(`no element for ${row}`)
+      const cell = document.createElement('div')
+      cell.className = 'w-40'
+      cell.style.cssText =
+        'display:table-cell;width:40px;height:12px;flex-shrink:0;background:currentColor'
+      toolbar.appendChild(cell)
+    },
+  },
+  {
+    kind: 'size-overridden',
     why: 'an element asking for size-6 and computing 12px',
     break: ({ row }) => {
       const toolbar = document.querySelector(row)
