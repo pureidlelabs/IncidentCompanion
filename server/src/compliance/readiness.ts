@@ -5,7 +5,6 @@
  * everything the regime asks for. Undetermined is a gap; `false` is not.
  */
 import { DORA_ROOT_CAUSE_ADDITIONAL } from '../domain/vocabularies/compliance.js'
-import * as dora from './dora.js'
 import * as gdpr from './gdpr.js'
 import * as nis2 from './nis2.js'
 import { REGIMES, regimesInPlay, type RegimeKey } from './regimes.js'
