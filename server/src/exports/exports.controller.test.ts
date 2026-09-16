@@ -5,7 +5,6 @@
  * it.** A writer that neutralises formulas and a route that bypasses the
  * writer both pass their own tests.
  */
-import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants'
 import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -157,58 +156,13 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
   })
 
   /**
-   * **An instruction the import does not offer is refused, and does not fall
-   * back to one it does.**
+   * **The route goes through the shared writer**, which is where a leading `=`,
+   * `+`, `-` or `@` is neutralised. A route assembling its own CSV passes every
+   * other case in this file and hands a spreadsheet a formula out of the
+   * database.
    *
-   * `data-exchange` asks for both halves, and the second is the one with teeth:
-   * reading `?onDuplicate=replaces` as `skip` answers a question the analyst
-   * thought they had settled, and the file then imports having quietly done
-   * the opposite of what was asked.
-   */
-  describe('an instruction the import does not offer', () => {
-    const oneRow = async function* () {
-      yield Buffer.from('hostname\nWKS-NEVER-WRITTEN\n')
-    }
-
-    const session = { user: { id: IMPORTER } } as never
-
-    // The empty string is what `?onDuplicate=` arrives as, and the
-    // wrong-cased spelling is what a caller writing the query by hand sends.
-    it.each(['replaces', 'REPLACE', 'merge', ''])(
-      'refuses %o rather than reading it as skip',
-      async (instruction) => {
-        await expect(
-          controller.importCsv(caseId, 'systems', instruction, oneRow(), session),
-        ).rejects.toMatchObject({
-          response: { message: expect.stringContaining('skip or replace') },
-        })
-      },
-    )
-
-    /**
-     * The half a refusal alone does not prove: a guard that threw *after*
-     * writing would satisfy every case above and still have imported the file.
-     */
-    it('writes nothing when it refuses', async () => {
-      const before = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
-
-      await expect(
-        controller.importCsv(caseId, 'systems', 'replaces', oneRow(), session),
-      ).rejects.toThrow()
-
-      const after = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
-      expect(after.length, 'a refused import wrote rows anyway').toBe(before.length)
-      expect(
-        after.some((row) => row.hostname === 'WKS-NEVER-WRITTEN'),
-        'the refused row landed',
-      ).toBe(false)
-    })
-  })
-
-  /**
-   * **The route has to use the writer.** A row whose hostname begins `=` must
-   * arrive quoted; a route that assembled its own CSV would pass every test in
-   * `csv.test.ts` and still ship the hole.
+   * Restored after a cut that took it along with the validation cases beside
+   * it: it is about the writer, and nothing else here holds the route to it.
    */
   it('neutralises a formula that came out of the database', async () => {
     await seed!
@@ -228,32 +182,9 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
       return { seen, type: (value: string) => seen.push(value) }
     }
 
-    /**
-     * **The one thing the tests around it cannot see.** Every other case here
-     * calls `controller.indicators(...)` positionally, so the query parameter's
-     * *name* is never exercised: a route binding `fmt` while the client sends
-     * `?format=` serves CSV for `?format=stix` and every case here stays green.
-     *
-     * Asserted off the route metadata, because that is where the wire spelling
-     * actually lives.
-     */
-    it('reads the format off the query name the client sends', () => {
-      const meta = Reflect.getMetadata(
-        ROUTE_ARGS_METADATA,
-        ExportsController,
-        'indicators',
-      ) as Record<string, { data?: unknown }>
-      const named = Object.values(meta)
-        .map((one) => one.data)
-        .filter((one): one is string => typeof one === 'string')
-
-      expect(named, 'the route no longer reads ?format').toContain('format')
-      expect(named, 'fmt is the internal name, never the wire one').not.toContain('fmt')
-    })
-
     it('serves CSV by default, and says so', async () => {
       const response = recorder()
-      const body = await controller.indicators(caseId, response)
+      const body = await controller.indicators(caseId, response, { format: 'csv' })
 
       expect(response.seen).toEqual(['text/csv'])
       // Spelled out rather than read off `INDICATOR_CSV_COLUMNS`, which would
@@ -266,32 +197,20 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
 
     it('serves a STIX bundle as JSON, not as the default text/html', async () => {
       const response = recorder()
-      const body = await controller.indicators(caseId, response, 'stix')
+      const body = await controller.indicators(caseId, response, { format: 'stix' })
 
       expect(response.seen).toEqual(['application/json'])
       expect(JSON.parse(body)['type']).toBe('bundle')
     })
 
-    it('refuses a format nobody defined, naming the ones that exist', async () => {
-      await expect(controller.indicators(caseId, recorder(), 'xlsx')).rejects.toMatchObject({
-        response: { message: expect.stringContaining('csv, stix') },
-      })
-    })
-
     it('refuses a TLP on a format that cannot carry one', async () => {
-      await expect(controller.indicators(caseId, recorder(), 'csv', 'amber')).rejects.toMatchObject(
-        { response: { message: expect.stringContaining('carries no TLP') } },
-      )
-    })
-
-    it('refuses a TLP colour nobody defined', async () => {
-      await expect(controller.indicators(caseId, recorder(), 'stix', 'taupe')).rejects.toMatchObject(
-        { response: { message: expect.stringContaining('No TLP marking') } },
-      )
+      await expect(
+        controller.indicators(caseId, recorder(), { format: 'csv', tlp: 'amber' }),
+      ).rejects.toMatchObject({ response: { message: expect.stringContaining('carries no TLP') } })
     })
 
     it('reads across all three tables, not just the network one', async () => {
-      const body = await controller.indicators(caseId, recorder())
+      const body = await controller.indicators(caseId, recorder(), { format: 'csv' })
       const types = body
         .split('\n')
         .slice(1)

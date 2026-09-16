@@ -37,6 +37,26 @@ import { boot, bootable, type Harness } from './app-harness.js'
 const runnable = await bootable()
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', 'src')
 
+/**
+ * The DTOs that reach the document as *parameters* rather than as a schema.
+ *
+ * A DTO bound to `@Query()` is published one parameter per key, on each
+ * operation that takes it, and `components.schemas` gets no entry -- so the
+ * count below cannot see them and would read the library working as a DTO
+ * documented nowhere.
+ *
+ * **Each is published, and asserted where that can be read**: the routes' own
+ * parameters are checked in `a-required-parameter-is-required.test.ts`, which
+ * leaves each one out and reads the answer.
+ */
+const AS_PARAMETERS: ReadonlySet<string> = new Set([
+  'ActivityQueryDto',
+  'ExportQueryDto',
+  'ImportQueryDto',
+  'IndicatorQueryDto',
+  'LangQueryDto',
+])
+
 /** Every `class X extends createZodDto(...)` the server declares, by name. */
 function declared(): { name: string; where: string }[] {
   const found: { name: string; where: string }[] = []
@@ -110,6 +130,7 @@ describe.skipIf(!runnable)('the DTOs the server declares', () => {
         ?.schemas ?? {},
     )
     const missing = [...new Set(declared().map((one) => one.name))]
+      .filter((name) => !AS_PARAMETERS.has(name))
       .filter((name) => !schemas.some((key) => key === name || key.startsWith(`${name}_`)))
       .sort()
 
@@ -117,6 +138,16 @@ describe.skipIf(!runnable)('the DTOs the server declares', () => {
       missing,
       'a DTO class declares a schema the document publishes under no key of its own',
     ).toEqual([])
+  })
+
+  /**
+   * **A name set aside is a name something still declares.** A DTO renamed or
+   * deleted leaves an entry here excusing nothing, and the next query DTO to be
+   * documented nowhere is excused by a list nobody re-read.
+   */
+  it('sets aside no DTO that is gone', () => {
+    const names = new Set(declared().map((one) => one.name))
+    expect([...AS_PARAMETERS].filter((name) => !names.has(name)).sort()).toEqual([])
   })
 
   /**

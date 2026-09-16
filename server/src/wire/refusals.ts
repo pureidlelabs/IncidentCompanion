@@ -4,7 +4,12 @@
  * | | |
  * | --- | --- |
  * | **400** | JSON that does not parse; a path parameter of the wrong shape (`ParseUUIDPipe`); a header that is missing or malformed |
- * | **422** | a body that parsed and failed its schema, and a write refused for a reason the analyst can act on |
+ * | **422** | a body that parsed and failed its schema, a query that failed its own, and a write refused for a reason the analyst can act on |
+ *
+ * **A query is refused like a body and for the same reason.** A route binding
+ * `@Query()` to a schema is validated by the pipe below, so a parameter outside
+ * what it permits is read and refused rather than unreadable -- and the refusal
+ * carries the field, which is the half a status cannot say.
  *
  * The client unwraps a 422 specifically, to show its sentence beside the
  * control that caused it.
