@@ -60,7 +60,7 @@ def test_a_specification_change_selects_the_tier_that_reads_it() -> None:
 
     A branch moving a ledger row usually edits `server/` too, which routed it
     here for the wrong reason; one that moves only a row was routed past the
-    only check that counts the rows against the totals stated above them. The
+    only check that holds the rows against the specifications they name. The
     rule this restores is the one the routing already states for the
     TypeScript trees: a tier whose tests read a tree is touched by a change to
     it. -> `tests/docs/test_scenario_ledger.py`

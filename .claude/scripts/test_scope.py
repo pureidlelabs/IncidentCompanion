@@ -175,10 +175,10 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
     # `CLAUDE.md`'s everyday selection has named it all along. -> #677
     #
     # `openspec/` for the same reason and it is the one that bit: `tests/docs`
-    # holds the scenario ledger's stated totals against the rows it lists, and
-    # a change moving a row touches no Python either. A branch that also edits
-    # `server/` was routed here by that; a ledger-only one was routed past the
-    # only tier that reads it. -> `tests/docs/test_scenario_ledger.py`
+    # holds the scenario ledger's rows against the specifications they name,
+    # and a change moving a row touches no Python either. A branch that also
+    # edits `server/` was routed here by that; a ledger-only one was routed
+    # past the only tier that reads it. -> `tests/docs/test_scenario_ledger.py`
     elif touches(paths, SERVER) or touches(paths, UI) or touches(paths, "openspec/"):
         out.append((f"{PYTEST} tests/repo tests/docs tests/contract .claude/tests -q -n auto",
                     "the repository and contract checks, which read `server/src`, "

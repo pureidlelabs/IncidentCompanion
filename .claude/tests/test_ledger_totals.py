@@ -116,3 +116,16 @@ def test_the_command_the_check_names_is_one_that_runs() -> None:
     assert named, "the check names no command, so a reader who trips it is told nothing"
     for command in named:
         assert (ROOT / command).exists(), f"the check names {command}, which is not in the tree"
+
+        done = subprocess.run(
+            [sys.executable, str(ROOT / command)],
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+            check=False,
+        )
+
+        assert done.returncode == 0, f"the check names {command}, which does not run: {done.stderr}"
+        assert done.stdout.startswith("scenarios "), (
+            f"{command} answers nothing the reader who tripped the check wanted: {done.stdout!r}"
+        )
