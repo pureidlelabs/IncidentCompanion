@@ -1,15 +1,12 @@
 /**
  * What a door stamps on a row it is writing, so a row says where it came from.
  *
- * Every import door writes rows the analyst here did not type, and each of the
- * three columns that record it is on some tables and not others -- `source` on
- * the five entity tables, `provenance` and `unreviewed` on the timeline. So the
- * stamp is stated once and filtered to what the target table can hold.
+ * Each of the three columns that record it is on some tables and not others, so
+ * the stamp is stated once and filtered to what the target table can hold.
  *
- * **Here rather than beside a door, because the four doors share no layer.**
- * `case-archive/` may not reach `collections/` and `exports/` may not reach
- * `incident-import/`; what all four reach is the schema whose columns this
- * answers about. -> `architecture.test.ts`
+ * **Here rather than beside a door, because the four doors share no layer**;
+ * what all four reach is the schema whose columns this answers about.
+ * -> `architecture.test.ts`
  */
 import { getTableColumns } from 'drizzle-orm'
 import type { PgTable } from 'drizzle-orm/pg-core'

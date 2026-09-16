@@ -163,6 +163,32 @@ export const Filed: Story = {
 export const PartWritten: Story = { name: 'A report part-written' }
 
 /**
+ * A regulatory report, which opens on a section the analyst has not titled.
+ *
+ * **The state the demo's own RCA never reaches.** Every section of that report
+ * carries a heading or a key, so the one kind with no served heading is drawn
+ * by no story on `demoReport(0)` -- and it is the common path: an analyst
+ * inserts a written section and writes before naming it.
+ *
+ * What the screen says there is not a heading, because the document prints
+ * none for it either. -> #676
+ */
+export const AnUntitledSection: Story = {
+  name: 'A section the analyst has not titled',
+  args: { report: demoReport(1) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const rail = await canvas.findByTestId('report-section-rail')
+    // Below lg the rail is not drawn; the document is reached by scrolling.
+    if (!drawn(rail)) {
+      await expect(rail).not.toBeVisible()
+      return
+    }
+    await expect(within(rail).getAllByText('untitled section').length).toBeGreaterThan(0)
+  },
+}
+
+/**
  * The rail follows the caret rather than the scroll.
  *
  * Jumping puts the caret in the section as well as bringing it on screen:

@@ -4,7 +4,7 @@ import { Section } from '@/components/blocks/section'
 import { ButtonLink } from '@/components/ui/button'
 import { IconTile } from '@/components/ui/icon-tile'
 
-import { PICKER_DEMOS, type DemoRow } from './picker-rows'
+import type { DemoRow } from './picker-rows'
 
 /**
  * The worked cases, as tiles rather than rows.
@@ -15,13 +15,17 @@ import { PICKER_DEMOS, type DemoRow } from './picker-rows'
  * it.
  */
 export interface DemosPaneProps {
-  /** The demo cases this install seeds. Defaults to a worked set. */
-  demos?: readonly DemoRow[]
+  /**
+   * The demo cases this install seeds.
+   *
+   * Required, and an empty list draws the empty state below. -> #237
+   */
+  demos: readonly DemoRow[]
   /** Where a card goes, from the demo it draws. Required: a card is a door. */
   href: (demo: DemoRow) => string
 }
 
-export function DemosPane({ demos = PICKER_DEMOS, href }: DemosPaneProps) {
+export function DemosPane({ demos, href }: DemosPaneProps) {
   return (
     <Section
       title="Demo cases"
