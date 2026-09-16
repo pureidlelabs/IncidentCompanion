@@ -166,7 +166,7 @@ export async function pack(
 export async function unpack(
   archive: Buffer,
   limits: ArchiveLimits,
-): Promise<Record<string, Uint8Array>> {
+): Promise<{ members: Record<string, Uint8Array>; manifest: Manifest }> {
   const members: Record<string, Uint8Array> = {}
   const reader = new ZipReader(new Uint8ArrayReader(archive))
 
@@ -254,7 +254,7 @@ export async function unpack(
     }
   }
 
-  return members
+  return { members, manifest }
 }
 
 export async function readArchive(
@@ -266,10 +266,7 @@ export async function readArchive(
   /** What the archive says was recorded and could not be found. */
   missing: string[]
 }> {
-  const members = await unpack(archive, limits)
-  const manifest = JSON.parse(
-    Buffer.from(members[MANIFEST_NAME]!).toString('utf8'),
-  ) as Manifest
+  const { members, manifest } = await unpack(archive, limits)
   // **Absent reads as none**, which is what an archive written before the
   // field existed meant. -> `Manifest.missing`
   return { members, attachments: manifest.attachments, missing: manifest.missing ?? [] }

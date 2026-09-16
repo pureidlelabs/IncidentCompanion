@@ -580,6 +580,70 @@ describe('a handover, exported without its files', () => {
       const { members } = await readArchive(built.bytes, ARCHIVE_LIMITS)
       expect(Object.keys(members).filter((one) => one.startsWith('evidence/'))).toEqual([])
     })
+
+    /** The exporting install held every artefact; the analyst asked for the record alone. */
+    it('reports the exporting install as having lost nothing', async () => {
+      const made = await furnished()
+      const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
+      await freeTheReference(made.caseId)
+      const result = await importer.load(built.bytes, '', other)
+
+      expect(result.missingFiles).toBe(1)
+      expect(
+        result.lostAtExport,
+        'a handover was reported as an archive whose install had lost the file',
+      ).toBe(0)
+    })
+  })
+
+  describe('an archive whose install had lost an artefact', () => {
+    /**
+     * **The fixture is the only thing separating this from a handover**: both
+     * import an evidence row with no bytes behind it, and the sibling case
+     * next door asserts the same import says nothing was lost. -> #652
+     */
+    it('says the install that wrote it had already lost it', async () => {
+      const made = await furnished()
+      await rm(join(root, made.hash))
+
+      const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+      expect(built.attachments, 'the artefacts were not asked for').toBe('included')
+      await freeTheReference(made.caseId)
+      const result = await importer.load(built.bytes, '', other)
+
+      expect(result.missingFiles).toBe(1)
+      expect(
+        result.lostAtExport,
+        'the import dropped what the archive said it could not find',
+      ).toBe(1)
+    })
+
+    /**
+     * **The two counts are in different units, and the sentence the operator
+     * reads names each unit rather than reconciling them.** The archive states
+     * one entry per artefact -- the export walks the evidence rows by digest --
+     * and the import counts one per row that arrives without its bytes.
+     */
+    it('states one lost file the case names twice once', async () => {
+      const made = await furnished()
+      await seed!.insert(evidence).values({
+        caseId: made.caseId,
+        name: 'Mailbox export, attached again',
+        hash: made.hash,
+        hashAlgorithm: 'sha256',
+        sizeBytes: 18,
+        storedAt: new Date(),
+        createdBy: actorId,
+      })
+      await rm(join(root, made.hash))
+
+      const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+      await freeTheReference(made.caseId)
+      const result = await importer.load(built.bytes, '', other)
+
+      expect(result.missingFiles, 'the rows without their bytes are what this counts').toBe(2)
+      expect(result.lostAtExport, 'the archive names the artefact once').toBe(1)
+    })
   })
 
   describe('an encrypted archive', () => {
