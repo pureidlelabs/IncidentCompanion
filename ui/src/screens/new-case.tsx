@@ -38,6 +38,10 @@ export interface NewCaseScreenProps {
   onCreated?: (caseId: string) => void
   /** Omitted in the gallery, where a submit resolves nothing. */
   writes?: NewCaseWrites
+  /** What the door that opened this calls itself. Names the dialog and its heading. */
+  title?: string
+  /** What the submit runs, where `Create case` understates it. */
+  submitLabel?: string
   /** The library and the form are still being read. */
   busy?: boolean
   /** Why the library or the form failed to load. */
@@ -84,6 +88,8 @@ export function NewCaseScreen({
   writes,
   busy = false,
   problem,
+  title = 'New case',
+  submitLabel = 'Create case',
 }: NewCaseScreenProps) {
   const templates = templatesGiven ?? []
   const [fields, setFields] = useState(BLANK)
@@ -169,10 +175,10 @@ export function NewCaseScreen({
       onOpenChange={(next) => {
         if (!next) close()
       }}
-      dialogProps={{ 'aria-label': 'New case' }}
+      dialogProps={{ 'aria-label': title }}
     >
       <DialogHeader
-        title="New case"
+        title={title}
         description="The title is the only field that has to be filled."
         onClose={close}
       />
@@ -276,7 +282,7 @@ export function NewCaseScreen({
             isDisabled={pending || busy}
             isPending={pending}
           >
-            Create case
+            {submitLabel}
           </Button>
         </DialogFooter>
       </form>

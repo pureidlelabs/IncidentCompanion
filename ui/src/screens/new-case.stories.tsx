@@ -113,6 +113,22 @@ export const Opening: Story = {
 }
 
 /**
+ * The same dialog under the import door, which hands it the tile's own words.
+ *
+ * Here rather than in the container's suite because the words are longer than
+ * the ones the header and the footer were drawn around, and jsdom measures
+ * every box at zero.
+ */
+export const FromTheImportDoor: Story = {
+  parameters: frame('520px'),
+  args: { title: 'Import from a file', submitLabel: 'Create and import' },
+  play: async () => {
+    const dialog = await screen.findByRole('dialog', { name: 'Import from a file' })
+    within(dialog).getByRole('button', { name: 'Create and import' })
+  },
+}
+
+/**
  * A template picked from the list.
  *
  * `PickPane` names each row's radio by the template's own title, so pressing
