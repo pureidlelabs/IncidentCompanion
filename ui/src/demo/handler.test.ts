@@ -239,6 +239,18 @@ describe('a route answers at its own depth and no other', () => {
   })
 })
 
+/**
+ * **The header's activity door reads this route.** The client draws a refusal
+ * rather than an empty history only while the answer is one. -> #828
+ */
+describe('what the demo has no store for', () => {
+  it('refuses the case activity rather than answering an empty feed', async () => {
+    const answer = await ask(`/cases/${caseId()}/activity`)
+    expect(answer.status).toBe(501)
+    expect(answer.body.message).toMatch(/demo/i)
+  })
+})
+
 describe("a collection's own verbs are not row ids", () => {
   it('refuses a bulk edit rather than calling it a missing entry', async () => {
     const answer = await ask(`/cases/${caseId()}/timeline/bulk`, {

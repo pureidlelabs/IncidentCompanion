@@ -27,6 +27,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { ActivityEntry } from '@/api/activity'
+import { ApiError } from '@/api/client'
 import type { CaseRailSummary, CaseSummary } from '@/api/case'
 import { THEME_OPTIONS } from '@/lib/theme-preference'
 
@@ -36,6 +38,13 @@ const summary = vi.fn<() => { data: CaseRailSummary | undefined }>()
 const cases = vi.fn<() => { data: CaseSummary[] | undefined }>()
 const session = vi.fn<() => { userId: string; username: string } | null>()
 const noteVisit = vi.fn<(caseId: string | undefined, section: string | undefined) => void>()
+const activity = vi.fn<() => {
+  data: ActivityEntry[] | undefined
+  isPending: boolean
+  error: unknown
+  refetch: () => void
+}>()
+const activityAgain = vi.fn()
 
 vi.mock('@/api/case', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -55,7 +64,7 @@ vi.mock('@/api/useCaseMutation', () => ({
 }))
 vi.mock('@/api/activity', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  useActivity: () => ({ data: [] }),
+  useActivity: () => activity(),
 }))
 // The account dialog the rail's user menu opens reads the roster and holds
 // three mutations. Nothing here opens it, and what it writes is its own test's.
@@ -103,6 +112,8 @@ beforeEach(() => {
   summary.mockReturnValue({ data: ANSWERED })
   cases.mockReturnValue({ data: [] })
   session.mockReturnValue({ userId: 'u-1', username: 'r.okonkwo@example.test' })
+  activityAgain.mockReset()
+  activity.mockReturnValue({ data: [], isPending: false, error: null, refetch: activityAgain })
   noteVisit.mockReset()
 })
 
@@ -357,5 +368,63 @@ describe('the prose keyboard sheet', () => {
     await waitFor(() => {
       expect(screen.queryByText('This list')).toBeNull()
     })
+  })
+})
+
+/**
+ * **A read that failed is not a case with no history.** The door drew the
+ * empty line for a refusal, a dropped connection and an expired session alike,
+ * so an analyst reading it during an incident concludes the case is untouched.
+ * -> #828
+ */
+describe('the activity door, when the read did not land', () => {
+  async function openTheDoor() {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByTestId('activity-door'))
+    return user
+  }
+
+  it('says what failed and offers the read again, rather than calling the case empty', async () => {
+    activity.mockReturnValue({
+      data: undefined,
+      isPending: false,
+      error: new ApiError(500, 'The activity could not be read.', null),
+      refetch: activityAgain,
+    })
+    const user = await openTheDoor()
+
+    expect(await screen.findByText('The activity could not be read.')).toBeInTheDocument()
+    expect(screen.queryByText('Nothing has been written to this case yet.')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(activityAgain).toHaveBeenCalled()
+  })
+
+  /**
+   * **A refusal is answered, and pressing it again changes nothing.** The demo
+   * has no store for the route and answers 501, which is the state the issue
+   * was measured in.
+   */
+  it('draws a refusal without a retry', async () => {
+    activity.mockReturnValue({
+      data: undefined,
+      isPending: false,
+      error: new ApiError(501, 'Not available in the demo - this one runs on the server.', null),
+      refetch: activityAgain,
+    })
+    await openTheDoor()
+
+    expect(
+      await screen.findByText('Not available in the demo - this one runs on the server.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect(screen.queryByText('Nothing has been written to this case yet.')).toBeNull()
+  })
+
+  /** And the read that landed on nothing still says so, which is the true claim. */
+  it('keeps the empty line for a case nothing has been written to', async () => {
+    await openTheDoor()
+    expect(await screen.findByText('Nothing has been written to this case yet.')).toBeInTheDocument()
   })
 })
