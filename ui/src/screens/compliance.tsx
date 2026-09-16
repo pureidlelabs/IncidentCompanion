@@ -53,10 +53,13 @@ export interface ComplianceScreenProps {
  * Where a compliance answer leaves the screen.
  *
  * **The spec travels with the value, not just the field name.** Several kinds
- * share one control and it emits a string for all of them, while the record
- * stores an array for the sets and null for an unanswered question -- so the
- * conversion needs the descriptor, and it is the container's to make.
- * -> `api/complianceWire.ts`
+ * share one control, and a caller reading the answer needs to know which kind
+ * produced it.
+ *
+ * **Nothing converts on the way out.** The control emits what the record
+ * stores -- `string[]` for the sets, `null` for a question taken back or an
+ * emptied count -- so the value goes on as it arrives.
+ * -> `components/blocks/compliance-field.test.tsx`
  */
 export interface ComplianceWrites {
   save: (spec: ComplianceFieldSpec, value: unknown) => Promise<unknown>
