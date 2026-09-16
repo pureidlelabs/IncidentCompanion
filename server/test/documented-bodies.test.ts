@@ -7,6 +7,13 @@
  * a generated instance of that shape goes to the route, and the route must not
  * answer *"validation failed"*.
  *
+ * **A refused body gets a second try from the document's own example**, and
+ * only then. A rule holding between two fields cannot be written into a schema,
+ * so the generated instance is right to be refused there; what the document
+ * owes is an example that works, and posting it is what stops that example
+ * being prose. A route that was not refused never reaches its example, so
+ * publishing one is not a way to opt out of being generated.
+ *
  * **A refusal that is not about the shape is fine and expected.** A generated
  * uuid names no row, so 404 is right; a version of 1 may be stale, so 409 is
  * right; a name that is not a regime this install has is a 400. What is being
@@ -26,7 +33,8 @@ const runnable = await bootable()
  *
  * One kind: a body that is not JSON at all. A rule holding between two fields
  * is the other way a generated instance cannot be valid, and it is not skipped
- * -- the route publishes an example instead, which this sends in preference.
+ * -- the route publishes an example, which the sweep posts after the generated
+ * body has been refused.
  */
 const NOT_GENERATED: ReadonlyArray<readonly [string, string]> = [
   ['/api/cases/import', 'Takes an archive. Bytes have no instance to generate.'],
@@ -53,21 +61,34 @@ interface Schema {
 }
 
 /**
- * The smallest value this schema calls valid, or the first example it publishes.
+ * The first example this request body publishes, following one `$ref`.
  *
- * **A published example wins**, because a rule holding between two fields
- * cannot be written into a schema and so cannot be met by generating from one.
- * It is also the half of the document nothing else exercises: an example is
- * prose until something sends it.
+ * Top level only, and deliberately: an example is how a route states a rule
+ * that holds *between* its fields, which is a fact about the whole body.
+ */
+function publishedExample(schema: Schema, doc: Record<string, unknown>): unknown {
+  if (schema.examples?.length) return schema.examples[0]
+  if (!schema.$ref) return undefined
+  const name = schema.$ref.split('/').pop()
+  const components = (doc.components ?? {}) as { schemas?: Record<string, Schema> }
+  return name ? components.schemas?.[name]?.examples?.[0] : undefined
+}
+
+/**
+ * The smallest value this schema calls valid.
  *
- * **Required fields only**, where one is generated. An optional field left out
- * is still a valid instance, and filling everything would test the generator's
- * imagination rather than the door's agreement with its own document.
+ * **Required fields only.** An optional field left out is still a valid
+ * instance, and filling everything would test the generator's imagination
+ * rather than the door's agreement with its own document.
+ *
+ * Published examples are not consulted here: an example that stood in for the
+ * generated instance would let any route opt out of generation by carrying
+ * one. They are the second body the sweep sends, and only where the first was
+ * refused.
  */
 function instanceOf(schema: Schema, doc: Record<string, unknown>, depth = 0): unknown {
   if (depth > 6) return null
 
-  if (schema.examples?.length) return schema.examples[0]
   if (schema.$ref) {
     const name = schema.$ref.split('/').pop()
     const components = (doc.components ?? {}) as { schemas?: Record<string, Schema> }
@@ -143,6 +164,21 @@ describe.skipIf(!runnable)('a body the reference calls valid', () => {
     const paths = (doc.paths ?? {}) as Record<string, Record<string, unknown>>
     const lied: string[] = []
     let sent = 0
+    let byExample = 0
+
+    /** Post one body and answer the validation refusal, if that is what came back. */
+    const refusalOf = async (method: string, path: string, body: unknown) => {
+      const response = await fetch(`${harness.base}${path}`, {
+        method,
+        headers: { cookie: admin.cookie, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (response.status !== 422) return undefined
+      const said = await response.text()
+      // A 422 that is a *business* refusal is fine; one naming validation is
+      // the document and the door disagreeing.
+      return said.includes('Validation failed') ? said : undefined
+    }
 
     for (const one of operations(harness.document)) {
       if (one.method === 'GET' || one.method === 'DELETE') continue
@@ -159,25 +195,31 @@ describe.skipIf(!runnable)('a body the reference calls valid', () => {
       sent++
 
       const path = one.path.replace('00000000-0000-4000-8000-000000000000', realCase)
-      const response = await fetch(`${harness.base}${path}`, {
-        method: one.method,
-        headers: { cookie: admin.cookie, 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      })
+      const refused = await refusalOf(one.method, path, body)
+      if (refused === undefined) continue
 
-      if (response.status === 422) {
-        const said = await response.text()
-        // A 422 that is a *business* refusal is fine; one naming validation is
-        // the document and the door disagreeing.
-        if (said.includes('Validation failed')) {
-          lied.push(`${one.method} ${one.template} -> ${said.slice(0, 160)}`)
-        }
+      /**
+       * **The example is the second body, never the first.** A rule holding
+       * between two fields cannot be written into a schema, so the generated
+       * instance is right to be refused and the example is what the document
+       * offers instead -- but only a route that was actually refused gets to
+       * fall back on one, or publishing an example would be how any route
+       * opts out of being generated at all.
+       */
+      const example = publishedExample(schema, doc)
+      if (example !== undefined && (await refusalOf(one.method, path, example)) === undefined) {
+        byExample++
+        continue
       }
+      lied.push(`${one.method} ${one.template} -> ${refused.slice(0, 160)}`)
     }
 
     expect(lied).toEqual([])
     // Guards against a run that generated nothing and asserted nothing.
     expect(sent).toBeGreaterThan(20)
+    // And against every example quietly ceasing to be published, which would
+    // leave the fallback above dead and this file passing on generation alone.
+    expect(byExample).toBeGreaterThan(0)
   }, 180_000)
 
   it('has no skip naming a route that is gone', () => {
