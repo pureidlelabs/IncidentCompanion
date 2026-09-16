@@ -456,10 +456,8 @@ export interface LanguageChoice {
  * A code read as its label, with the two a served list cannot name.
  *
  * **A partial pack says so here**, because this is the moment the choice is
- * made: the languages pane states coverage, and an analyst setting a report's
- * language was reading a name that looked the same at 12% and at 100%.
- * A complete pack says nothing extra, or the number is on every row and reads
- * as decoration. -> #688
+ * made. A complete pack says nothing extra, or the number is on every row and
+ * reads as decoration. -> #688
  */
 export function labelsFor(languages: readonly LanguageChoice[]): Record<string, string> {
   const labels: Record<string, string> = { '': 'The install\u2019s own' }

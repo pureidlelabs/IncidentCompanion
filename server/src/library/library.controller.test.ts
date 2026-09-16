@@ -147,13 +147,8 @@ describe.skipIf(!db)('writing to a library', () => {
   })
 
   /**
-   * **The other half of that refusal, and the half it was taking with it.**
-   * A document carrying no entries and a built-in to switch off asks nothing
-   * of the payload schema, so a kind having none is no reason to refuse it --
-   * and turning a shipped entry off install-wide is the one thing this route
-   * can do that the per-entry routes cannot. Every report layout is a
-   * built-in, so before this the column had no reachable writer at all.
-   * -> #646
+   * **The other half of that refusal**, stated where the route states it.
+   * -> `library.controller.ts`, #646
    */
   it('switches a shipped layout off for a kind that cannot be authored', async () => {
     const applied = await controller.apply(
