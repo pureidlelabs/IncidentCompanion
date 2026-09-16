@@ -5,9 +5,8 @@
  * an indicator naming a host not yet inserted is refused by Postgres. A
  * reference naming no row throws rather than writing null.
  */
-import { Injectable, Inject, Logger } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 
-import { SEED_DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import {
   accounts,
@@ -90,16 +89,6 @@ type Ids = Record<string, Record<string, string>>
 @Injectable()
 export class DemoContentSeeder {
   private readonly log = new Logger(DemoContentSeeder.name)
-
-  /**
-   * **`Database | null`, because DI hands this null whenever
-   * `SEED_DATABASE_URL` is unset.** A non-nullable type would be a promise the
-   * container does not keep. Nothing here reads it -- every write goes through
-   * the transaction the caller passes in -- so the first read of it is where
-   * the null arrives, and the type is what makes that a compile error rather
-   * than a dereference.
-   */
-  constructor(@Inject(SEED_DATABASE) private readonly db: Database | null) {}
 
   /**
    * **The demo's clock starts when it is seeded.** Offsets are stored as

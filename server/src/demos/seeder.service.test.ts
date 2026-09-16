@@ -35,7 +35,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 // **The seeding role, matching how Nest wires it.** Generating demos writes
 // rows into every case and deletes all of them, which the request-serving role
 // is refused. Built on `db` this suite would fail on the first insert.
-const seeder = seed ? new DemoSeederService(seed, seed, new DemoContentSeeder(seed)) : null
+const seeder = seed ? new DemoSeederService(seed, seed, new DemoContentSeeder()) : null
 
 describe.skipIf(!db)('rebuilding the demo cases', () => {
   beforeEach(async () => {

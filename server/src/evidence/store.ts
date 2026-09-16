@@ -17,7 +17,7 @@ import {
   ZipReader,
   ZipWriter,
 } from '@zip.js/zip.js'
-import { Inject, Injectable, Logger, PayloadTooLargeException } from '@nestjs/common'
+import { Inject, Injectable, PayloadTooLargeException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import type { Env } from '../config/env.js'
@@ -53,7 +53,6 @@ export interface StoredArtefact {
 
 @Injectable()
 export class EvidenceStore {
-  private readonly log = new Logger(EvidenceStore.name)
   private readonly root: string
 
   constructor(

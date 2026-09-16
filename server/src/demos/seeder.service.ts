@@ -5,7 +5,7 @@
  * Driven by the `seed --demos` one-shot, never by a lifecycle hook: nothing a
  * serving process starts reseeds.
  */
-import { Injectable, Logger, Inject } from '@nestjs/common'
+import { Injectable, Inject } from '@nestjs/common'
 import { defaultCustomer } from '../customers/customers.service.js'
 import { eq } from 'drizzle-orm'
 
@@ -59,8 +59,6 @@ async function fillCompliance(
 
 @Injectable()
 export class DemoSeederService {
-  private readonly log = new Logger(DemoSeederService.name)
-
   /**
    * **Two handles, because reading demo cases and rebuilding them are not the
    * same privilege.** `reseed` writes across every case and deletes rows, which

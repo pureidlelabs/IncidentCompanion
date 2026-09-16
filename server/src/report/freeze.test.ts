@@ -393,7 +393,7 @@ describe.skipIf(!db)('a report that has been sent', () => {
  */
 describe.skipIf(!db)('the demo cases', () => {
   beforeAll(async () => {
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder(seed)).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
   }, 90_000)
 
   it('declares reports that were filed, so this is not vacuous', () => {

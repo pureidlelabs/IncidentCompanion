@@ -71,7 +71,7 @@ describe.skipIf(!db)('filing the demo reports', () => {
     const library = new LibraryService(db!, seed)
     await library.seedBuiltIns()
 
-    const seeder = new DemoSeederService(seed!, seed, new DemoContentSeeder(seed))
+    const seeder = new DemoSeederService(seed!, seed, new DemoContentSeeder())
     await seeder.reseed()
 
     const cases_ = new CasesService(db!, {

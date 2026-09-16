@@ -226,7 +226,7 @@ export class ImportService {
           incident: incident.key,
           fields: row.fields,
           label: row.label,
-          links: entityRefsOf(alert, incident, byRef, seen),
+          links: entityRefsOf(alert, byRef, seen),
           checked: true,
         })
       }
