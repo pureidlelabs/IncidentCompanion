@@ -18,6 +18,12 @@ export interface AdministrationPaneProps {
   accounts: readonly AccountTableRow[]
   /** Enabling or disabling one account. The caller owns the roster. */
   onAccountState: (id: string, state: AccountTableRow['state']) => void
+  /** Ends every session one account holds. Absent draws no such row. */
+  onEndSessions?: ((id: string) => void) | undefined
+  /** The roles this install offers, for the row's role rows. */
+  roles?: readonly string[] | undefined
+  /** Moves an account to a role. Absent draws no role rows. */
+  onRole?: ((id: string, role: string) => void) | undefined
   /** How long each kind of record is kept. */
   audit: readonly BoundRow[] | undefined
   /** The regimes this install surfaces, and whether each is on. */
@@ -34,6 +40,9 @@ export interface AdministrationPaneProps {
 export function AdministrationPane({
   accounts,
   onAccountState,
+  onEndSessions,
+  roles,
+  onRole,
   audit: auditGiven,
   regimes: regimesGiven,
   signIn: signInGiven,
@@ -83,7 +92,13 @@ export function AdministrationPane({
           {/* The same table the Accounts pane draws, without its heading. A
               settings card that grew its own would be the second one. */}
           <div className="px-4 py-4">
-            <AccountTable accounts={accounts} onState={onAccountState} />
+            <AccountTable
+              accounts={accounts}
+              onState={onAccountState}
+              {...(onEndSessions ? { onEndSessions } : {})}
+              {...(roles ? { roles } : {})}
+              {...(onRole ? { onRole } : {})}
+            />
           </div>
         </SettingsSection>
 

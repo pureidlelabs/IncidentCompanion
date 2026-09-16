@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
 import type { AccountTableRow } from '@/components/blocks/account-table'
 import type { BoundRow } from '@/components/blocks/picker-rows'
 import { AdministrationPane } from '@/components/blocks/administration-pane'
@@ -16,6 +15,18 @@ export interface PickerAdministrationScreenProps {
   admin?: boolean | undefined
   /** The sign-in windows this install sets. Absent draws none. */
   signIn?: readonly BoundRow[] | undefined
+  /**
+   * The roster's writes. `onState` is required for the reason the Accounts
+   * pane's is: this pane draws the same table, and a row that moves without
+   * writing is the same defect wherever it is pressed.
+   */
+  onState: (username: string, next: AccountTableRow['state']) => void
+  /** Ends every session one account holds. Absent draws no such row. */
+  onEndSessions?: ((username: string) => void) | undefined
+  /** The roles this install offers, for the row's role rows. */
+  roles?: readonly string[] | undefined
+  /** Moves an account to a role. Absent draws no role rows. */
+  onRole?: ((username: string, role: string) => void) | undefined
   /** Opens the About door from the rail's head. */
   onAbout: () => void
   /** Where a rail row goes. Without it the rows are inert. */
@@ -38,6 +49,10 @@ export function PickerAdministrationScreen({
   analyst,
   admin,
   signIn,
+  onState,
+  onEndSessions,
+  roles,
+  onRole,
   onPane,
   onImportArchive,
   userMenu,
@@ -45,14 +60,6 @@ export function PickerAdministrationScreen({
   onRetry,
   busy,
 }: PickerAdministrationScreenProps) {
-  // **The screen owns the roster.** The table it ends up in draws its tabs
-  // from the same list this pane counts, so neither may hold its own copy.
-  const [accounts, setAccounts] = useState<readonly AccountTableRow[]>(accountsGiven ?? [])
-  const [given, setGiven] = useState(accountsGiven)
-  if (given !== accountsGiven) {
-    setGiven(accountsGiven)
-    setAccounts(accountsGiven ?? [])
-  }
   return (
     <PickerFrame
       pane="administration"
@@ -74,12 +81,10 @@ export function PickerAdministrationScreen({
           periods tells an operator the install is set to something it is
           not. */}
       <AdministrationPane
-        accounts={accounts}
-        onAccountState={(id, state) => {
-          setAccounts((current) =>
-            current.map((one) => (one.id === id ? { ...one, state } : one)),
-          )
-        }}
+        accounts={accountsGiven ?? []}
+        onAccountState={onState}
+        {...(onEndSessions ? { onEndSessions } : {})}
+        {...(onRole ? { roles, onRole } : {})}
         audit={undefined}
         regimes={undefined}
         signIn={signIn}

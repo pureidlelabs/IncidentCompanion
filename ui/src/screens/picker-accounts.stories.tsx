@@ -39,6 +39,7 @@ const meta = {
     roles: ['analyst', 'admin'],
     defaultRole: 'analyst',
     onCreate: fn(),
+    onState: fn(),
   },
 } satisfies Meta<typeof PickerAccountsScreen>
 

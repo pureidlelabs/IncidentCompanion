@@ -2,7 +2,7 @@
 # Read by Renovate's `mise` manager, which is enabled by default, so a bump is
 # a pull request rather than a hand-fetched checksum.
 [tools]
-node = "26.8.2"
+node = "26.9.0"
 
 # Linters the tiers run. Each was a curl, a dual-architecture checksum table and
 # a comment asking the next person to fetch two hashes.
