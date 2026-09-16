@@ -118,7 +118,7 @@ describe.skipIf(!db)('every row in the file is accounted for', () => {
 
   describe.each(SWEPT)('%s', (collection) => {
     it('adds up to the number of rows in the file, on each route through', async (ctx) => {
-      const csv = await exports_.collectionCsv(caseId, collection)
+      const csv = await exports_.collectionCsv(caseId, collection, { type: () => undefined })
       const inFile = dataRows(csv)
       // Visible as a skip rather than as a pass: a collection the demo case
       // does not populate has no file to conserve, and returning green here
@@ -148,7 +148,7 @@ describe.skipIf(!db)('every row in the file is accounted for', () => {
      * satisfied by an importer that reports every row as refused.
      */
     it('adds every row of a file the case has never seen', async (ctx) => {
-      const csv = await exports_.collectionCsv(caseId, collection)
+      const csv = await exports_.collectionCsv(caseId, collection, { type: () => undefined })
       const inFile = dataRows(csv)
       if (inFile === 0) return ctx.skip()
 
