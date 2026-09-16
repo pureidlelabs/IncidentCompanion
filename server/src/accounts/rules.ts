@@ -14,12 +14,16 @@ import type { Analyst } from '../auth/last-admin.js'
  * derived on the client, which renders a chip straight from them.
  *
  * A missing role reads as `DEFAULT_ROLE`, never as nothing.
+ *
+ * `caller` is the account asking, by id, so the row can say whether it is the
+ * one reading it.
  */
-export function rowFor(user: Analyst): AnalystAccount {
+export function rowFor(user: Analyst, caller: string): AnalystAccount {
   const disabled = user.banned === true
   return {
     username: user.email,
     displayName: user.name,
+    you: user.id === caller,
     role: (ROLES as readonly string[]).includes(user.role ?? '')
       ? (user.role as Role)
       : DEFAULT_ROLE,

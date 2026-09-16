@@ -156,6 +156,7 @@ export const AFullInstall: Story = {
       displayName: i % 7 === 0 ? '' : `Person Number ${String(i)}`,
       role: i % 11 === 0 ? 'admin' : 'analyst',
       state: stateFor(i),
+      you: i === 0,
     })),
   },
   play: async ({ canvas, args }) => {
@@ -181,16 +182,18 @@ export const DisablingMovesTheCount: Story = {
     await expect(canvas.getByRole('tab', { name: /active/i })).toHaveTextContent('3')
     await expect(canvas.getByRole('tab', { name: /disabled/i })).toHaveTextContent('2')
 
+    // Somebody else's row: the first account in this roster is the reader's
+    // own, and the row offers an administrator none of its verbs on that one.
     await step('disable an active account from its row menu', async () => {
-      await userEvent.click(canvas.getByRole('button', { name: 'More for Rachel Okonkwo' }))
+      await userEvent.click(canvas.getByRole('button', { name: 'More for Tomas Brennan' }))
       // The menu portals to the body, so it is off the story's own canvas.
-      const menu = await screen.findByRole('menu', { name: 'More for Rachel Okonkwo' })
+      const menu = await screen.findByRole('menu', { name: 'More for Tomas Brennan' })
       await userEvent.click(within(menu).getByRole('menuitem', { name: /disable/i }))
     })
 
     await expect(canvas.getByRole('tab', { name: /active/i })).toHaveTextContent('2')
     await expect(canvas.getByRole('tab', { name: /disabled/i })).toHaveTextContent('3')
-    await expect(args.onState).toHaveBeenCalledWith('a1', 'disabled')
+    await expect(args.onState).toHaveBeenCalledWith('a2', 'disabled')
   },
 }
 
@@ -211,6 +214,7 @@ export const TheLongestText: Story = {
         displayName: 'Margot Delacroix-Vandenberghe (Incident Response, Contractor)',
         role: 'analyst',
         state: 'active',
+        you: false,
       },
       ...PICKER_ACCOUNTS.slice(0, 2),
     ],

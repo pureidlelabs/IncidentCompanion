@@ -102,6 +102,22 @@ export function paneHoldingLabel(fields: readonly FieldSpec[], label: string): C
   return found?.key ?? 'details'
 }
 
+/**
+ * Which pane holds the field a door names, by the name the schema carries.
+ *
+ * `undefined` for a name no pane holds, which is the difference from
+ * `paneHoldingLabel`: a refusal has to be drawn somewhere, and a door naming
+ * nothing is a door to nowhere rather than one to `details`.
+ */
+export function paneHoldingName(
+  fields: readonly FieldSpec[],
+  name: string,
+): CaseGroupKey | undefined {
+  return groupedCaseFields(fields).find((group) =>
+    group.fields.some((field) => field.name === name),
+  )?.key
+}
+
 export function answered(draft: Draft, fields: readonly FieldSpec[]): number {
   return fields.filter((field) => {
     const value = draft[field.name]

@@ -55,6 +55,7 @@ const RAIL = {
   roles: [] as readonly string[],
   defaultRole: 'analyst',
   onCreate: () => undefined,
+  onState: () => undefined,
   href: () => '/cases/x/overview',
   // Health is the one pane whose data cannot be a sample, so the map carries
   // an empty read rather than the constants the pane used to default to.
@@ -163,7 +164,7 @@ it('reports the pane a rail row stands for', async () => {
 /** A pane with rows to narrow says which narrowing emptied it, not just that it is empty. */
 it('names what emptied the accounts table', async () => {
   const user = userEvent.setup()
-  render(<PickerAccountsScreen accounts={PICKER_ACCOUNTS} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} roles={[]} defaultRole="analyst" onCreate={() => undefined} />)
+  render(<PickerAccountsScreen accounts={PICKER_ACCOUNTS} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} roles={[]} defaultRole="analyst" onCreate={() => undefined} onState={() => undefined} />)
 
   await user.type(screen.getByRole('textbox', { name: 'Account contains' }), 'nobody by that name')
 

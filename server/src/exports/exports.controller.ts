@@ -14,7 +14,6 @@ import {
   NotFoundException,
   Controller,
   Get,
-  Header,
   Param,
   ParseUUIDPipe,
   Post,
@@ -142,10 +141,11 @@ export class ExportsController {
    * table lookup, so an unknown name is a 400.
    */
   @Get(':collection.csv')
-  @Header('content-type', 'text/csv; charset=utf-8')
   async collectionCsv(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('collection') collection: string,
+    /** Typed below, once nothing is left that can refuse or fail. */
+    @Res({ passthrough: true }) response: { type(value: string): unknown },
   ): Promise<string> {
     const table = this.tableFor(collection)
     const rows = await this.caseRows(table, caseId)
@@ -163,6 +163,9 @@ export class ExportsController {
 
     const named = await this.namesIn(collection, caseId)
 
+    // **Last, so nothing after it can throw.** A refusal raised once the label
+    // is set wears it. -> `test/a-refusal-is-labelled-as-a-refusal.test.ts`
+    response.type('text/csv; charset=utf-8')
     return toCsv(
       rows.map((row) =>
         Object.fromEntries(

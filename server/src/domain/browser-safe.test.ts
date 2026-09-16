@@ -49,6 +49,7 @@ const isListModule = (name: string) => name.endsWith('.lists.ts') && !name.endsW
  * covering a surface it has never opened.
  */
 const ENTRIES = [
+  'analyst-account.ts',
   'collections.ts',
   'identity.ts',
   'indicator-shape.ts',

@@ -38,6 +38,7 @@ const meta = {
     accounts: PICKER_ACCOUNTS,
     userMenu: sessionRows,
     onAbout: fn(),
+    onState: fn(),
   },
 } satisfies Meta<typeof PickerAdministrationScreen>
 

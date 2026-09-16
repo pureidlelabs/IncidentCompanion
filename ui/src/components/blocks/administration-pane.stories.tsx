@@ -175,10 +175,11 @@ export const TheRosterActs: Story = {
     absentForwarding: ABSENT_FORWARDING,
   },
   play: async ({ args, canvas, step }) => {
-    // The first account is active, so its menu offers Disable. Named rather
-    // than searched: a `find` that matched nothing would leave this story
-    // passing on an empty menu. The row is labelled by its display name.
-    const account = PICKER_ACCOUNTS[0]!
+    // Active, and not the reader's own row, which offers none of these verbs.
+    // Named rather than searched: a `find` that matched nothing would leave
+    // this story passing on an empty menu. The row is labelled by its display
+    // name.
+    const account = PICKER_ACCOUNTS.find((one) => !one.you && one.state === 'active')!
     await step('the row offers the state its account is not in', async () => {
       await userEvent.click(
         canvas.getByRole('button', { name: `More for ${account.displayName}` }),

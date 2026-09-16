@@ -87,7 +87,9 @@ describe.skipIf(!db)('a row that left a value blank', () => {
     const collections = new CollectionService(db!)
     service = new ImportService(collections)
     exports_ = new ExportsController(collections, service)
-    file = await exports_.collectionCsv(fromId, 'evidence')
+    // The route types its own response, so a direct call is handed somewhere
+    // to say so. -> `a-refusal-is-labelled-as-a-refusal.test.ts`
+    file = await exports_.collectionCsv(fromId, 'evidence', { type: () => undefined })
   }, 90_000)
 
   afterAll(async () => {

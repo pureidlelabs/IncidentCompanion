@@ -247,12 +247,20 @@ export default tseslint.config(
            * do rather than a second rule that agrees until it does not. Its
            * runtime closure is `invisible.lists` alone.
            *
+           * `analyst-account` is the role and state vocabularies and what to
+           * call a role in a sentence. It imports nothing at all, like the
+           * `*-shape` modules, and the word is the reason: the server writes
+           * it into its own refusals and the row menu offers it as a verb, so
+           * a second copy on this side is a role called two things on one
+           * pane.
+           *
            * **Everything else stays types-only**, and the reason is unchanged:
            * `server/src/domain` also holds modules that reach a Drizzle table.
            */
           group: [
             '@contract/*',
             '!@contract/*.lists',
+            '!@contract/analyst-account',
             '!@contract/collections',
             '!@contract/identity',
             '!@contract/indicator-shape',
@@ -262,8 +270,9 @@ export default tseslint.config(
           ],
           allowTypeImports: true,
           message:
-            'Types only, except @contract/*.lists, @contract/collections, ' +
-            '@contract/identity, @contract/killchain, @contract/prose-authoring ' +
+            'Types only, except @contract/*.lists, @contract/analyst-account, ' +
+            '@contract/collections, @contract/identity, @contract/killchain, ' +
+            '@contract/prose-authoring ' +
             'and the @contract/*-shape advice modules. A value import from ' +
             'anywhere else can reach a Drizzle table.',
         }],
