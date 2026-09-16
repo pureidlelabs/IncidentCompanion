@@ -46,6 +46,16 @@ What was not found is stated on the archive, and again when it is read, so the g
 
 **The statement is optional and the archive version does not move for it.** An archive written before it existed carries nothing and reads as reporting none, which is what it meant. Moving the version would refuse every archive an install already holds, in exchange for a statement those archives were never able to make.
 
+## What the exporting install lost is relayed, never recomputed
+
+An evidence row arriving without its bytes looks identical whichever cause produced it, so a count derived from the digests that did arrive can only answer *how many files are absent*. The manifest is the one place the difference is written down, and it is written by the install that knew.
+
+**Not subtracted from the absent count, and not in the same unit as it.** An artefact the exporting install lost is still an attachment the rows name and the archive did not carry, so taking it out would make that count answer a narrower question than its sentence claims. The two are counted differently, though: the archive states one entry per artefact and the absent count is of rows, so one lost file that two rows name reads as two absent and one lost. What the operator is told names each unit rather than reconciling them, because the archive carries no way to map its statement back to the rows.
+
+**The statement is relayed as the archive makes it.** Its shape is checked and its content is not cross-checked against the file list or the rows, so an archive somebody edited states whatever they wrote into it — which is the same standing as every other field a manifest carries.
+
+**The reader hands out what it proved.** The manifest is validated on the way in — its version, its file list, its statement of what travelled and of what was not found — so a caller parsing those same bytes a second time reads a value nothing has checked, and is safe only while the first parse happens to have run.
+
 ## How connected the case is, told without claiming the file is damaged
 
 A dangling id in a reference list is the ordinary state of a case rather than damage. Those lists are `jsonb` and nothing scrubs them when a row is deleted, so a sound export of a case an analyst has tidied carries ids that resolve to nothing. A count presented as *the archive lost these* would be wrong for the common case and would teach an operator to ignore it.

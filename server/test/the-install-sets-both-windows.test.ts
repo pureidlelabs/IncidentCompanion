@@ -25,7 +25,6 @@ import {
 } from './app-harness.js'
 import {
   SESSION_IDLE_MINUTES,
-  SESSION_LIFETIME_MINUTES,
   SESSION_LIFETIME_FLOOR_MINUTES,
 } from '../src/policy/keys.js'
 
@@ -53,11 +52,7 @@ describe.skipIf(!RUNNABLE)('the windows an install sets', () => {
   }, 90_000)
 
   afterAll(async () => {
-    // **Put the install back.** Every file in this tier shares one database,
-    // and a policy left where a test set it is a setting the next file
-    // inherits without knowing.
-    await set('auth.sessionIdleMinutes', SESSION_IDLE_MINUTES)
-    await set('auth.sessionLifetimeMinutes', SESSION_LIFETIME_MINUTES)
+    // Both windows are put back by `close`, for every file rather than this one.
     await redis.quit()
     await pool.end()
     await harness.close()

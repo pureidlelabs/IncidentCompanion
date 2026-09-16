@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -65,8 +65,7 @@ const ALLOWED = [
 ]
 
 describe('a screen is composed, not drawn', () => {
-  const files = glob
-    .sync('**/*.{ts,tsx}', { cwd: HERE, absolute: true })
+  const files = globSync('**/*.{ts,tsx}', { cwd: HERE, absolute: true })
     .map((path) => path.split('\\').join('/'))
   const stories = files.filter((path) => path.endsWith('.stories.tsx'))
   const screens = files.filter(

@@ -174,7 +174,7 @@ describe('reporting a refused write', () => {
 
 describe('reportImportedCase', () => {
   it('says what arrived when the archive carried every file its rows name', () => {
-    reportImportedCase({ rows: 86, missingFiles: 0, unresolvedReferences: 0 })
+    reportImportedCase({ rows: 86, missingFiles: 0, lostAtExport: 0, unresolvedReferences: 0 })
 
     expect(raised().content.title).toBe('86 rows imported.')
     expect(raised().content.tone).toBe('success')
@@ -188,7 +188,7 @@ describe('reportImportedCase', () => {
    * to a file store to look for files the import already knows are absent.
    */
   it('names the attachments the archive did not carry', () => {
-    reportImportedCase({ rows: 86, missingFiles: 12, unresolvedReferences: 0 })
+    reportImportedCase({ rows: 86, missingFiles: 12, lostAtExport: 0, unresolvedReferences: 0 })
 
     expect(raised().content.title).toBe('86 rows imported.')
     expect(raised().content.description).toBe(
@@ -202,7 +202,7 @@ describe('reportImportedCase', () => {
    * tone for something worth reading and not for something that went wrong.
    */
   it('tells a missing attachment as a warning rather than a failure', () => {
-    reportImportedCase({ rows: 4, missingFiles: 4, unresolvedReferences: 0 })
+    reportImportedCase({ rows: 4, missingFiles: 4, lostAtExport: 0, unresolvedReferences: 0 })
 
     expect(raised().content.tone).toBe('warning')
   })
@@ -215,7 +215,7 @@ describe('reportImportedCase', () => {
    * -> `openspec/specs/case-archive/design.md`, #731
    */
   it('names the rows the case points at and does not contain', () => {
-    reportImportedCase({ rows: 86, missingFiles: 0, unresolvedReferences: 3 })
+    reportImportedCase({ rows: 86, missingFiles: 0, lostAtExport: 0, unresolvedReferences: 3 })
 
     expect(raised().content.title).toBe('86 rows imported.')
     expect(raised().content.tone).toBe('warning')
@@ -223,22 +223,61 @@ describe('reportImportedCase', () => {
   })
 
   it('speaks of one unresolved row in the singular', () => {
-    reportImportedCase({ rows: 9, missingFiles: 0, unresolvedReferences: 1 })
+    reportImportedCase({ rows: 9, missingFiles: 0, lostAtExport: 0, unresolvedReferences: 1 })
 
     expect(raised().content.description).toBe('1 row the case names is not in it.')
   })
 
   /** Both at once, because a branch on one of them says nothing about the other. */
   it('says both when the archive is short of files and the case short of links', () => {
-    reportImportedCase({ rows: 86, missingFiles: 2, unresolvedReferences: 3 })
+    reportImportedCase({ rows: 86, missingFiles: 2, lostAtExport: 0, unresolvedReferences: 3 })
 
     expect(raised().content.description).toBe(
       '2 attachments the rows name are not in the archive. 3 rows the case names are not in it.',
     )
   })
 
+  /**
+   * **Said beside the count it is part of, rather than in place of it.** The
+   * two sentences answer different questions and the assertion is on both.
+   * -> #652
+   */
+  it('names what the install that wrote the archive had already lost', () => {
+    reportImportedCase({ rows: 86, missingFiles: 2, lostAtExport: 2, unresolvedReferences: 0 })
+
+    expect(raised().content.tone).toBe('warning')
+    expect(raised().content.description).toBe(
+      '2 attachments the rows name are not in the archive. ' +
+        'The install that wrote the archive had already lost 2 files.',
+    )
+  })
+
+  it('speaks of one lost file in the singular', () => {
+    reportImportedCase({ rows: 9, missingFiles: 1, lostAtExport: 1, unresolvedReferences: 0 })
+
+    expect(raised().content.description).toBe(
+      '1 attachment the rows name is not in the archive. ' +
+        'The install that wrote the archive had already lost 1 file.',
+    )
+  })
+
+  /**
+   * **The two counts are in different units and neither sentence pretends
+   * otherwise.** The archive names one entry per artefact and the count beside
+   * it is of rows, so a file two rows name is two absent and one lost.
+   * `round-trip.test.ts` is where the pair is produced. -> #652
+   */
+  it('says files and attachments rather than reconciling the two', () => {
+    reportImportedCase({ rows: 40, missingFiles: 2, lostAtExport: 1, unresolvedReferences: 0 })
+
+    expect(raised().content.description).toBe(
+      '2 attachments the rows name are not in the archive. ' +
+        'The install that wrote the archive had already lost 1 file.',
+    )
+  })
+
   it('speaks of one row and one attachment in the singular', () => {
-    reportImportedCase({ rows: 1, missingFiles: 1, unresolvedReferences: 0 })
+    reportImportedCase({ rows: 1, missingFiles: 1, lostAtExport: 0, unresolvedReferences: 0 })
 
     expect(raised().content.title).toBe('1 row imported.')
     expect(raised().content.description).toBe(

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -38,8 +38,7 @@ import { describe, expect, it } from 'vitest'
  */
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
 
-const FILES = glob
-  .sync(`${HERE}/**/*.tsx`)
+const FILES = globSync('**/*.tsx', { cwd: HERE, absolute: true })
   .filter((path) => !/\.(test|stories)\.tsx$/.test(path))
 
 /** Prose may name what the code may not draw -- this file's own docstring does. */

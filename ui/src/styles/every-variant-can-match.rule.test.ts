@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import fg from 'fast-glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -50,8 +50,7 @@ const EXTERNAL = new Set([
   'open',
 ])
 
-const files = fg
-  .sync(['**/*.tsx', '**/*.ts'], { cwd: SRC, absolute: true })
+const files = globSync(['**/*.tsx', '**/*.ts'], { cwd: SRC, absolute: true })
   .filter((one) => !/\.(test|stories)\.tsx?$/.test(one))
 
 const sources = new Map(files.map((one) => [one, readFileSync(one, 'utf8')]))

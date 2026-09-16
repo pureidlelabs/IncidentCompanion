@@ -55,7 +55,10 @@ if (!STORY_TIER) {
  * **Root `test` only.** Set on the `storybook` project it is never called,
  * though vitest 4.1.11 does not list it in `NonProjectOptions`.
  *
- * Remove with #429.
+ * **Upstream's, and filed**: a regression in `react-aria@3.52.0` whose fix is
+ * open at <https://github.com/adobe/react-spectrum/pull/10592>. Remove when it
+ * ships; `tests/repo/test_the_story_tier_filter_names_its_version.py` is what
+ * asks. -> #429
  */
 function ignoreReactAriaWindowFocusThrow(error: {
   message?: string

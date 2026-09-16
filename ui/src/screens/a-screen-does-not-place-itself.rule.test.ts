@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { basename, dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -80,8 +80,7 @@ const placedIn = (path: string): string[] => {
 }
 
 describe('a screen renders where it is put', () => {
-  const screens = glob
-    .sync('**/*.{ts,tsx}', { cwd: HERE, absolute: true })
+  const screens = globSync('**/*.{ts,tsx}', { cwd: HERE, absolute: true })
     .map((path) => path.split('\\').join('/'))
     .filter((path) => !path.endsWith('.stories.tsx') && !/\.test\.tsx?$/.test(path))
 
@@ -104,8 +103,7 @@ describe('a screen renders where it is put', () => {
   })
 
   it.each(
-    glob
-      .sync('**/*.{ts,tsx}', { cwd: HERE, absolute: true })
+    globSync('**/*.{ts,tsx}', { cwd: HERE, absolute: true })
       .map((path) => path.split('\\').join('/'))
       .filter((path) => !path.endsWith('.stories.tsx') && !/\.test\.tsx?$/.test(path))
       .filter((path) => !ANSWERED_ELSEWHERE.includes(basename(path)))

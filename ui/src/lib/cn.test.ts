@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 import { cn, tv } from './cn'
@@ -38,7 +38,7 @@ describe('tv comes from here', () => {
   // A `tv` taken from the package merges on Tailwind's scale alone, and the
   // class it drops is invisible at the call site.
   const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-  const files = glob.sync('**/*.{ts,tsx}', { cwd: SRC, absolute: true })
+  const files = globSync('**/*.{ts,tsx}', { cwd: SRC, absolute: true })
 
   it('reads the kit', () => {
     expect(files.some((f) => f.endsWith('button.tsx'))).toBe(true)
