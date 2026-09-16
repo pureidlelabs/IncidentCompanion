@@ -397,7 +397,7 @@ describe('the import', () => {
 
     expect(await screen.findByText(/6 row\(s\) added to the case/)).toBeInTheDocument()
     expect(
-      screen.queryByText(/already in the case/),
+      screen.queryByText(/already there/),
       'a first import volunteered that it skipped nothing',
     ).toBeNull()
   })
@@ -432,7 +432,7 @@ describe('the import', () => {
 
     expect(await screen.findByText(/0 row\(s\) added to the case/)).toBeInTheDocument()
     expect(
-      screen.getByText(/6 row\(s\) were already in the case/),
+      screen.getByText(/6 already there/),
       'a re-import reported nothing added and gave no reason',
     ).toBeInTheDocument()
   })
