@@ -8,6 +8,7 @@
  * cases below are that mistake and its mirror: matching on kind alone would
  * make "Root cause" and "Cross-border impact" the same section.
  */
+import { ConflictException } from '@nestjs/common'
 import { asc, eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import * as Y from 'yjs'
@@ -617,18 +618,140 @@ describe.skipIf(!db)('the report lifecycle', () => {
     expect(fresh!.stage).toBeNull()
   })
 
-  it('leaves the superseded report exactly as it was', async () => {
+  /**
+   * **What a recipient was told does not move, and the mark is not part of
+   * it.** The requirement asks for both: the superseded report remains, *and*
+   * remains marked as superseded, so a recipient asking what they were told is
+   * answerable including where it was wrong.
+   */
+  it('keeps what the recipient was told, and marks that it was superseded', async () => {
     const { caseId, reportId } = await caseWithReport([{ kind: 'timeline' }])
     await addTimelineEntry(caseId, 'first')
     await lifecycle.send(caseId, reportId, actorId)
     const [before] = await seed!.select().from(reports).where(eq(reports.id, reportId))
 
-    await lifecycle.supersede(caseId, reportId, actorId)
+    const { id: successor } = await lifecycle.supersede(caseId, reportId, actorId)
 
     const [after] = await seed!.select().from(reports).where(eq(reports.id, reportId))
     expect(after!.sentAt?.toISOString()).toBe(before!.sentAt?.toISOString())
     expect(after!.frozen).toEqual(before!.frozen)
     expect(after!.label).toBe(before!.label)
+    const [replacement] = await seed!.select().from(reports).where(eq(reports.id, successor))
+    expect(
+      replacement!.supersedes,
+      'nothing links the correction to the report it corrects',
+    ).toBe(reportId)
+  })
+
+  /**
+   * **Two corrections race and one wins**, which is the scenario this is
+   * written for. Without a mark on the predecessor both calls succeed, and the
+   * case is left holding two successors with the same label and nothing saying
+   * which one stands. -> #182
+   */
+  it('refuses a second supersession, leaving one successor', async () => {
+    const { caseId, reportId } = await caseWithReport([])
+    await lifecycle.send(caseId, reportId, actorId)
+
+    const { id: first } = await lifecycle.supersede(caseId, reportId, actorId)
+    // **`ConflictException`, not any throw.** The unique index refuses the
+    // second insert too, as a driver error naming a constraint -- which is a
+    // 500 and tells the analyst nothing. Asserting the type is what separates
+    // the answer from the backstop.
+    await expect(
+      lifecycle.supersede(caseId, reportId, actorId),
+      'a sent report was superseded twice',
+    ).rejects.toBeInstanceOf(ConflictException)
+
+    const all = await seed!.select().from(reports).where(eq(reports.caseId, caseId))
+    expect(all.filter((row) => row.id !== reportId)).toHaveLength(1)
+    const [successor] = all.filter((row) => row.id !== reportId)
+    expect(successor!.id, 'the successor that stands is not the one that won').toBe(first)
+    expect(successor!.supersedes).toBe(reportId)
+  })
+
+  /**
+   * **Two corrections attempted at once**, which is the scenario's own wording.
+   *
+   * **This does not demonstrate the constraint, and measuring it said so.**
+   * With `reports_supersedes_idx` dropped from the database the case still
+   * passed: the two calls did not interleave, so the check before the work
+   * caught the second and the index was never asked. What this holds is the
+   * property -- one succeeds -- rather than the mechanism that holds it when
+   * they do interleave. The case below is what holds that.
+   */
+  it('lets one of two corrections attempted at once through, and only one', async () => {
+    const { caseId, reportId } = await caseWithReport([])
+    await lifecycle.send(caseId, reportId, actorId)
+
+    const both = await Promise.allSettled([
+      lifecycle.supersede(caseId, reportId, actorId),
+      lifecycle.supersede(caseId, reportId, actorId),
+    ])
+
+    expect(both.filter((one) => one.status === 'fulfilled')).toHaveLength(1)
+    const all = await seed!.select().from(reports).where(eq(reports.caseId, caseId))
+    expect(all.filter((row) => row.supersedes === reportId)).toHaveLength(1)
+  })
+
+  /**
+   * **The constraint, asked directly**, because the case above cannot reach it
+   * and a guard nothing exercises is a guard nobody knows is there.
+   *
+   * Two rows naming one predecessor is what two genuinely interleaved
+   * supersessions would write, and the database is what refuses the second.
+   * Driven at the table rather than through the service, which is the only way
+   * to get past the check that would otherwise answer first.
+   */
+  it('refuses a second report claiming to replace the same one', async () => {
+    const { caseId, reportId } = await caseWithReport([])
+    await lifecycle.send(caseId, reportId, actorId)
+
+    const twin = (label: string) => ({
+      caseId,
+      label,
+      template: 'blank',
+      status: 'draft' as const,
+      supersedes: reportId,
+      createdBy: actorId,
+      updatedBy: actorId,
+    })
+    await seed!.insert(reports).values(twin('First correction'))
+
+    // **By SQLSTATE, because Drizzle's own message names no constraint.** It
+    // reads `Failed query: insert into "reports" ...` whatever refused it, so
+    // matching on that would pass for any failing insert. `23505` is
+    // `unique_violation` and nothing else is.
+    const refusal: unknown = await seed!
+      .insert(reports)
+      .values(twin('Second correction'))
+      .then(
+        () => null,
+        (error: unknown) => error,
+      )
+    expect(refusal, 'two reports claim to replace one, and nothing refused it').not.toBeNull()
+    expect(
+      (refusal as { cause?: { code?: string } }).cause?.code,
+      'the insert was refused for some other reason',
+    ).toBe('23505')
+  })
+
+  /**
+   * **The refusal leaves nothing behind.** A successor written before the mark
+   * is rejected is an orphan draft with the predecessor's label, which is the
+   * same ambiguity arriving by another route.
+   */
+  it('writes no successor for the supersession it refuses', async () => {
+    const { caseId, reportId } = await caseWithReport([{ kind: 'timeline' }])
+    await addTimelineEntry(caseId, 'first')
+    await lifecycle.send(caseId, reportId, actorId)
+    await lifecycle.supersede(caseId, reportId, actorId)
+
+    const before = await seed!.select().from(reports).where(eq(reports.caseId, caseId))
+    await expect(lifecycle.supersede(caseId, reportId, actorId)).rejects.toThrow()
+
+    const after = await seed!.select().from(reports).where(eq(reports.caseId, caseId))
+    expect(after).toHaveLength(before.length)
   })
 
   it('mints the successor as a draft, whatever the original was', async () => {

@@ -7,7 +7,18 @@
  * A frozen report keeps its rendered tree: it is the compliance artefact, so
  * re-rendering must not be able to produce something else.
  */
-import { index, integer, jsonb, pgTable, text, timestamp, uuid, customType } from 'drizzle-orm/pg-core'
+import {
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  customType,
+  type AnyPgColumn,
+} from 'drizzle-orm/pg-core'
 
 import { cases } from './case.js'
 import { evidence } from './entities.js'
@@ -57,9 +68,34 @@ export const reports = pgTable(
     frozen: jsonb('frozen'),
     frozenAt: timestamp('frozen_at', { withTimezone: true }),
 
+    /**
+     * The report this one replaces, where it replaces one.
+     *
+     * **On the successor and unique, so the database settles the race.** Two
+     * corrections attempted at once are two inserts naming the same
+     * predecessor, and the index refuses the second -- which is what makes
+     * *one succeeds* true rather than hoped for. A column on the predecessor
+     * could not carry a foreign key to a row that does not exist yet.
+     *
+     * `set null` on delete: a successor outlives the report it corrected, and
+     * a correction that vanished with its predecessor would leave the case
+     * holding a revision of nothing.
+     */
+    supersedes: uuid('supersedes').references((): AnyPgColumn => reports.id, {
+      onDelete: 'set null',
+    }),
+
     ...rowVersioning,
   },
-  (t) => [index('reports_case_idx').on(t.caseId), ...caseScoped(t.caseId)],
+  (t) => [
+    index('reports_case_idx').on(t.caseId),
+    // **One correction per report, enforced here rather than by a read.**
+    // Two supersessions attempted at once both pass a check and the index
+    // is what refuses the second. Nullable, so every report that replaces
+    // nothing is unaffected.
+    uniqueIndex('reports_supersedes_idx').on(t.supersedes),
+    ...caseScoped(t.caseId),
+  ],
 )
 
 export const reportBlocks = pgTable(
