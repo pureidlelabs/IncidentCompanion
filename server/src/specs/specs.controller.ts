@@ -243,16 +243,15 @@ function serialise(schema: z.ZodObject): (WireField | SectionMarker)[] {
       field['colourMap'] = DRIVEN_COLOUR[name] ?? {}
     }
     if (meta.enabledBy) field['enabledBy'] = meta.enabledBy
-    if (meta.applicableWhen) {
-      field['applicableWhen'] = meta.applicableWhen
-      /**
-       * **The blank travels with the gate, because the dialog seals to it.**
-       * The client cannot parse a schema, and a table of its own keyed on the
-       * control kind answers `''` for a reference column that stores `null`,
-       * and `0` for a count where `0` is a real answer. Served only on a gated field: nothing else seals.
-       */
-      field['blank'] = blankOf(sub as z.ZodType)
-    }
+    if (meta.applicableWhen) field['applicableWhen'] = meta.applicableWhen
+    /**
+     * **What the control posts to empty the field.** The client cannot parse a
+     * schema, and a table of its own keyed on the control kind answers `''`
+     * for a reference column that stores `null`, and `0` for a count where `0`
+     * is a real answer. Absent when the column insists on a value.
+     */
+    const blank = blankOf(sub as z.ZodType)
+    if (blank !== undefined) field['blank'] = blank
 
     // Required and default come off the Zod schema, never off `FieldMeta`: a
     // second declaration beside the schema is a second thing to keep true.

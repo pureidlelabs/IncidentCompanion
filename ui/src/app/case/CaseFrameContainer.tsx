@@ -165,7 +165,14 @@ export function CaseFrameContainer() {
           />
         }
         people={peopleFrom(presence.roster, session?.userId, appearances.data)}
-        activity={{ entries: activity.data ?? [] }}
+        activity={{
+          entries: activity.data ?? [],
+          busy: activity.isPending,
+          ...(activity.error === null ? {} : { problem: activity.error }),
+          onRetry: () => {
+            void activity.refetch()
+          },
+        }}
         // **The served tally, not a derived one.** `attention` is keyed by
         // collection and the rail's slugs are those names, which is why nothing
         // sits between them - deriving the same numbers needs every timeline

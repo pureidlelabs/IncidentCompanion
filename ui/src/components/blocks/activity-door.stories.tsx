@@ -22,6 +22,18 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+/** The panel, once it is open. The overlay portals to `body`. */
+async function panelOf(canvasElement: HTMLElement) {
+  const screen = within(canvasElement.ownerDocument.body)
+  await waitFor(() => {
+    const live = screen.queryAllByRole('dialog').filter((el) => el.checkVisibility()).at(-1)
+    if (live === undefined) throw new Error('the activity panel never opened')
+  })
+  return screen
+}
+
+const EMPTY_LINE = 'Nothing has been written to this case yet.'
+
 /** Nothing marked: the case has just been opened for the first time. */
 export const Closed: Story = {
   name: 'Nothing new',
@@ -61,17 +73,88 @@ export const Open: Story = {
   parameters: { docs: { story: { inline: false, height: '420px' } } },
   args: { defaultOpen: true },
   play: async ({ canvasElement }) => {
-    // The panel portals out of the door, and arrives a frame after the story.
-    const screen = within(canvasElement.ownerDocument.body)
-    await waitFor(() => {
-      const live = screen.queryAllByRole('dialog').filter((el) => el.checkVisibility()).at(-1)
-      if (live === undefined) throw new Error('the activity panel never opened')
-    })
+    const screen = await panelOf(canvasElement)
 
     // A case with entries does not draw the empty line. An open panel
     // listing nothing over a worked case is the failure this story exists
     // against, and it looks the same as a panel that simply has not loaded.
-    await expect(screen.queryByText('Nothing has been written to this case yet.')).toBeNull()
+    await expect(screen.queryByText(EMPTY_LINE)).toBeNull()
+  },
+}
+
+/**
+ * The read did not land.
+ *
+ * The empty line is a claim about the case, and a failed read is not evidence
+ * for it - an analyst reading it during an incident concludes the case has no
+ * history. -> #828
+ */
+export const Failed: Story = {
+  name: 'The read failed',
+  parameters: { docs: { story: { inline: false, height: '320px' } } },
+  args: {
+    entries: [],
+    defaultOpen: true,
+    problem: new Error('The activity could not be read.'),
+    onRetry: () => undefined,
+  },
+  play: async ({ canvasElement }) => {
+    const screen = await panelOf(canvasElement)
+    await expect(await screen.findByText('The activity could not be read.')).toBeVisible()
+    await expect(screen.queryByText(EMPTY_LINE)).toBeNull()
+    // The read is repeatable, so the analyst is offered it rather than being
+    // left to reload the case.
+    await expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible()
+  },
+}
+
+/**
+ * The route is refused, which no amount of pressing changes.
+ *
+ * The demo has no store for the activity and answers 501; an install answers
+ * 403 to an analyst who may not read it.
+ */
+export const Refused: Story = {
+  name: 'The read was refused',
+  parameters: { docs: { story: { inline: false, height: '320px' } } },
+  args: {
+    entries: [],
+    defaultOpen: true,
+    problem: Object.assign(new Error('Not available in the demo - this one runs on the server.'), {
+      status: 501,
+    }),
+    onRetry: () => undefined,
+  },
+  play: async ({ canvasElement }) => {
+    const screen = await panelOf(canvasElement)
+    await expect(
+      await screen.findByText('Not available in the demo - this one runs on the server.'),
+    ).toBeVisible()
+    await expect(screen.queryByText(EMPTY_LINE)).toBeNull()
+    // Offering to retry a refusal invites an analyst to keep pressing a
+    // control that keeps failing.
+    await expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+  },
+}
+
+/**
+ * The read is still out.
+ *
+ * **The skeleton is the boundary's own, and it does not have the feed's
+ * shape.** `AsyncBoundary` takes a row count and nothing else, so the
+ * placeholder is full-width bars where the feed is an indented marker beside
+ * two short lines, and the panel moves when the answer lands. This story is
+ * where that shift is visible; jsdom cannot see it, because every box there is
+ * zero.
+ */
+export const Pending: Story = {
+  name: 'Still reading',
+  parameters: { docs: { story: { inline: false, height: '320px' } } },
+  args: { entries: [], defaultOpen: true, busy: true },
+  play: async ({ canvasElement }) => {
+    const screen = await panelOf(canvasElement)
+    await expect(screen.getByRole('status')).toBeVisible()
+    await expect(screen.queryByText(EMPTY_LINE)).toBeNull()
   },
 }
 
@@ -86,7 +169,7 @@ export const Empty: Story = {
     // written to yet.
     const screen = within(canvasElement.ownerDocument.body)
     await expect(
-      await screen.findByText('Nothing has been written to this case yet.'),
+      await screen.findByText(EMPTY_LINE),
     ).toBeVisible()
   },
 }

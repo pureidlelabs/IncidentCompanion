@@ -18,6 +18,7 @@ import type { z } from 'zod'
 import { describe, expect, it } from 'vitest'
 
 import { FORM_SCHEMAS, SpecsController } from './specs.controller.js'
+import { patchSchema } from '../domain/field-spec.js'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { systemSchema } from '../domain/entities/system.js'
 import { caseStatus } from '../db/schema/case.js'
@@ -392,6 +393,49 @@ describe('the specs document', () => {
       }
     }
     expect(gated, 'no served field declares a gate - this test measured nothing').not.toEqual([])
+  })
+
+  /**
+   * **A select's blank is a way of saying nothing, and its own patch takes
+   * it; a select with no blank has no way to say nothing at all.**
+   *
+   * The blank row is in no vocabulary, so the control has to be told what to
+   * post, and both guesses available to it are wrong somewhere: `null` is
+   * refused by every `unsettable()` column and `''` by every enum. Absent, the
+   * control posts `undefined` and a PATCH reads that as no change - a clear
+   * that draws, moves the filled count and reverts on reload. -> #823
+   *
+   * **The second half is the one a passing first half hides.** A column
+   * defaulting to `respond` or `unknown` parses `undefined` back to a real
+   * member, so serving that as the blank offers the analyst `-` and writes an
+   * answer. Such a column is asserted to have no empty rather than to have
+   * this one, which is what tells the control to withhold the row.
+   */
+  it.each(Object.keys(FORM_SCHEMAS))('%s serves a blank only where one exists', (name) => {
+    const patch = patchSchema(FORM_SCHEMAS[name]!.schema)
+    const forms = document_['forms'] as Record<string, { fields: Record<string, unknown>[] }>
+    const selects = (forms[name]?.fields ?? []).filter((one) => one['kind'] === 'select')
+    const takes = (field: string, value: unknown): boolean =>
+      patch.safeParse({ [field]: value }).success
+
+    for (const entry of selects) {
+      const field = String(entry['name'])
+      const where = `${name}.${field}`
+      if ('blank' in entry) {
+        expect(
+          [null, ''],
+          `${where} clears to ${JSON.stringify(entry['blank'])}, which is an answer`,
+        ).toContain(entry['blank'])
+        expect(takes(field, entry['blank']), `${where} cannot be cleared to its own blank`).toBe(
+          true,
+        )
+      } else {
+        expect(
+          takes(field, null) || takes(field, ''),
+          `${where} serves no blank and the column has one`,
+        ).toBe(false)
+      }
+    }
   })
 
   /**
