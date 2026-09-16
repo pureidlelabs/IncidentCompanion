@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 498 |
-| Demonstrated | 402 |
+| Scenarios | 500 |
+| Demonstrated | 404 |
 | Undemonstrable | 1 |
 | Unbuilt | 81 |
 | Undemonstrated | 14 |
@@ -225,6 +225,8 @@
 | A threshold is quoted, never chosen | A quoted figure drifts from its source | demonstrated | server/src/compliance/oj.test.ts |
 | The application assesses; the organisation reports | An assessment finds a notification is owed | demonstrated | server/src/compliance/the-organisation-reports.test.ts |
 | The application assesses; the organisation reports | A notification was made | demonstrated | server/src/compliance/the-organisation-reports.test.ts |
+| A determination the analyst records is the one the assessment carries | An analyst records the determination | demonstrated | server/src/compliance/lenses.test.ts |
+| A determination the analyst records is the one the assessment carries | A recorded determination does not put an entity in scope | demonstrated | server/src/compliance/lenses.test.ts |
 | A regime that does not apply is not assessed | A customer is outside a regime | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
 | A regime that does not apply is not assessed | A case moves to a customer under different regimes | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
 | A regime that does not apply is not assessed | The analyst adopts the new customer's regimes | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
