@@ -2,6 +2,7 @@ import {
   reportBulkMissing,
   reportBulkRefused,
   reportWriteFailure,
+  type WriteFailureOptions,
 } from '@/components/blocks/notify'
 
 import type { CollectionEntry, CollectionName, GenericCreateCollectionName } from '@/api/model'
@@ -26,12 +27,16 @@ import type { BulkDeleteVars, BulkDeleted } from '@/api/useBulkDelete'
 export async function announcing<T>(
   what: string,
   run: () => Promise<T>,
+  options?: WriteFailureOptions,
 ): Promise<T> {
   try {
     return await run()
   } catch (error) {
     // The retry is announced the same way, or its own failure has nowhere to go.
-    reportWriteFailure(error, what, { retry: () => void announced(what, run) })
+    reportWriteFailure(error, what, {
+      ...options,
+      retry: () => void announced(what, run, options),
+    })
     throw error
   }
 }
@@ -43,9 +48,13 @@ export async function announcing<T>(
  * and a caller that voids the promise would otherwise leave the rethrow to
  * surface as an uncaught rejection beside the toast that already reported it.
  */
-export async function announced<T>(what: string, run: () => Promise<T>): Promise<T | undefined> {
+export async function announced<T>(
+  what: string,
+  run: () => Promise<T>,
+  options?: WriteFailureOptions,
+): Promise<T | undefined> {
   try {
-    return await announcing(what, run)
+    return await announcing(what, run, options)
   } catch {
     return undefined
   }
