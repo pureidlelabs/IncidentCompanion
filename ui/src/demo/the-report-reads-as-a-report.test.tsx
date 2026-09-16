@@ -30,7 +30,7 @@ const { EntityCardProvider } = await import('@/components/blocks/entity-card')
 const { ReportSectionScreen } = await import('@/screens/report-section')
 const { handle } = await import('./handler')
 const { LoopbackSocket, forgetProse, seedLoopback } = await import('./loopback')
-const { freshState, seedReportProse } = await import('./state')
+const { freshState, markWritten, seedReportProse } = await import('./state')
 
 let state: DemoState
 
@@ -95,11 +95,29 @@ describe('the report the published demo opens on', () => {
   it('draws the words a written section holds', async () => {
     await drawTheReport()
 
+    // `getAllByText` throws where nothing matches, which is the assertion: every
+    // written section was empty, because nothing seeded the report document.
     await waitFor(() => {
-      expect(
-        screen.getAllByText(/human-operated ransomware incident that spread domain-wide/),
-        'every written section was empty, because nothing seeded the report document',
-      ).not.toEqual([])
+      screen.getAllByText(/human-operated ransomware incident that spread domain-wide/)
     })
+  })
+
+  /**
+   * **A case written to IndexedDB by an earlier build**, which `load` hands back
+   * as it stands: nothing versions the stored document, so the marks the capture
+   * answers for are absent and only the call in `install.ts` puts them there.
+   */
+  it('counts the written sections of a case stored before the words were served', async () => {
+    for (const block of state.kase.reportBlocks) {
+      delete (block as { hasProse?: boolean }).hasProse
+    }
+    markWritten(state.kase)
+
+    await drawTheReport()
+
+    expect(
+      screen.getByText(/\d+ sections \u00b7 \d+ of \d+ written/).textContent,
+      'a stored case read its own prose and still reported none of it written',
+    ).toBe('9 sections \u00b7 3 of 3 written')
   })
 })

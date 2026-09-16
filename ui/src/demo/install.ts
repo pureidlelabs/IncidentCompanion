@@ -12,7 +12,7 @@ import { mountDemoChrome } from './chrome'
 import { handle, DEMO_ANALYST } from './handler'
 import { LoopbackSocket, forgetProse, seedLoopback, seedNote } from './loopback'
 import { landingPath } from './landing'
-import { seedReportProse, type DemoState } from './state'
+import { markWritten, seedReportProse, type DemoState } from './state'
 import { load, reset, save } from './store'
 
 /**
@@ -78,6 +78,9 @@ function answerAuth(state: DemoState): void {
 export async function installDemo(): Promise<void> {
   signIn()
   const state = await load()
+  // A case stored by an earlier build carries no marks, and nothing versions
+  // the stored document.
+  markWritten(state.kase)
   answerSockets(state)
   answerAuth(state)
 

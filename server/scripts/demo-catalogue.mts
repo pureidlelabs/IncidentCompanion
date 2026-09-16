@@ -47,10 +47,13 @@ const captured: Record<string, unknown> = {
   'report-prose': Object.fromEntries(
     Object.entries(DEMO_REPORTS).map(([reference, listed]) => [
       reference,
-      Object.fromEntries(listed.map((report) => [
-        report.label,
-        report.blocks.map((block) => block.body ?? ''),
-      ])),
+      Object.fromEntries(listed.map((report) => {
+        // The label is the key the demo finds a body by, so a second report
+        // wearing it drops the first's prose in silence.
+        if (listed.filter((one) => one.label === report.label).length > 1)
+          throw new Error(`${reference} has two reports labelled ${report.label}`)
+        return [report.label, report.blocks.map((block) => block.body ?? '')]
+      })),
     ]),
   ),
 }

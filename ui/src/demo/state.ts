@@ -59,6 +59,23 @@ export function seedReportProse(state: DemoState, doc: Y.Doc, field: string): vo
 }
 
 /**
+ * Mark every section the capture holds words for as written.
+ *
+ * **The server derives `hasProse` per read from the document**, and nothing
+ * here reads the CRDT, so the capture is what answers it - a report whose
+ * sections hold words counts itself `0 of 3 written` otherwise.
+ *
+ * **Run over a stored case as well as a fresh one**, since a case written to
+ * IndexedDB by an earlier build carries no marks and nothing versions it.
+ */
+export function markWritten(kase: Case): void {
+  const written = bodiesOf(kase)
+  for (const block of kase.reportBlocks) {
+    if (written[block.id] !== undefined) (block as { hasProse?: boolean }).hasProse = true
+  }
+}
+
+/**
  * A store nothing has written to yet.
  *
  * Cloned, because the seed is a module-level JSON import shared by every caller
@@ -71,12 +88,6 @@ export function seedReportProse(state: DemoState, doc: Y.Doc, field: string): vo
  */
 export function freshState(): DemoState {
   const kase = structuredClone(campaign) as unknown as Case
-  // **The server derives this per read from the document.** Nothing here reads
-  // the CRDT, so the capture is what answers it, and a report whose sections
-  // hold words would otherwise count itself `0 of 3 written`.
-  const written = bodiesOf(kase)
-  for (const block of kase.reportBlocks) {
-    if (written[block.id] !== undefined) (block as { hasProse?: boolean }).hasProse = true
-  }
+  markWritten(kase)
   return { kase: { ...kase, isDemo: false } }
 }
