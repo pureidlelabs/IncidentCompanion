@@ -32,6 +32,7 @@ import { z } from 'zod'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { CollectionService, type CollectionDefinition } from './collection.service.js'
+import { importStamp } from '../db/import-stamp.js'
 import { ConflictsService } from './conflicts.service.js'
 import { timeline } from '../db/schema/timeline.js'
 import {
@@ -105,15 +106,8 @@ const BULK_LIMIT = 1000
 
 const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
 
-/**
- * What the server asserts about a row it was handed by an importer.
- *
- * **Exported because two doors write imported entries** -- this controller's
- * bulk route and `incident-import`'s commit -- and a stamp duplicated in both
- * is one that drifts. A caller able to assert `imported` could forge an
- * evidentiary claim, which is why the write schemas omit both fields.
- */
-export const IMPORTED_STAMP = { provenance: 'imported' as const, unreviewed: true }
+/** What this door calls itself. -> `db/import-stamp.ts` */
+const BULK_IMPORT = 'Bulk import'
 
 function parsed(schema: z.ZodType, body: unknown): Record<string, unknown> {
   const answer = schema.safeParse(body)
@@ -293,7 +287,7 @@ export class TimelineController {
         // stamping them client-side has every row refused. A caller able to
         // claim `imported` is the reason the omission exists, and this is the
         // downstream that has to apply it.
-        ...IMPORTED_STAMP,
+        ...importStamp(BULK_IMPORT, DEFINITION.table),
       }
     })
 

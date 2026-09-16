@@ -23,7 +23,7 @@ import { mapEntity, startsChecked, SEPARATOR } from './providers/sentinel/mappin
 import { matchIn, rememberIn } from '../domain/identity.js'
 import { alertToTimeline, entityRefsOf } from './providers/sentinel/alerts.js'
 import { PLATFORM } from './providers/sentinel/platform.js'
-import { IMPORTED_STAMP } from '../collections/timeline.controller.js'
+import { importStamp } from '../db/import-stamp.js'
 
 /** What a candidate is keyed by, so `commit` can name what `preview` showed. */
 function candidateId(incident: string, identity: string): string {
@@ -282,6 +282,9 @@ export class ImportService {
       }
       if (!wanted.has(candidate.id)) continue
 
+      const def = defs.byName[candidate.collection]
+      if (!def) throw new UnprocessableEntityException(`No collection ${candidate.collection}`)
+
       /**
        * `source` is on no collection's write schema, so `edited()` has already
        * dropped any the payload or a correction carried. Stamping after it is
@@ -289,15 +292,13 @@ export class ImportService {
        */
       const fields = {
         ...this.edited(candidate.collection, candidate.fields, editsById.get(candidate.id)),
-        source: PLATFORM,
+        ...importStamp(PLATFORM, def.table),
       }
       const group = groups.find((one) => one.def.name === candidate.collection)
       if (group) {
         group.rows.push(fields)
         order.find((one) => one.collection === candidate.collection)?.ids.push(candidate.id)
       } else {
-        const def = defs.byName[candidate.collection]
-        if (!def) throw new UnprocessableEntityException(`No collection ${candidate.collection}`)
         groups.push({ def, rows: [fields] })
         order.push({ collection: candidate.collection, ids: [candidate.id] })
       }
@@ -321,7 +322,7 @@ export class ImportService {
       .map((one) => ({
         ...this.edited('timeline', one.fields, editsById.get(one.id)),
         ...this.links(one, resolved),
-        ...IMPORTED_STAMP,
+        ...importStamp(PLATFORM, defs.timeline.table),
       }))
 
     /**
