@@ -167,6 +167,40 @@ describe('the ENISA severity score', () => {
 })
 
 describe('NIS2 Article 23', () => {
+  /**
+   * **The analyst's recorded call decides, and the thresholds do not overrule
+   * it.** The app presents criteria; the call under Article 23 is the
+   * analyst's, and they are the one who defends it to a regulator.
+   *
+   * Both directions, because an override that only ever says yes is a default
+   * rather than a determination.
+   */
+  it('takes the recorded significance over what the thresholds derive', () => {
+    const scoped = { nis2EntityClass: 'essential', nis2EntityType: 'cloud' } as const
+
+    const unstated = record({ ...scoped })
+    expect(nis2.significance(unstated).met, 'nothing is stated, so nothing is derived').toBeNull()
+    expect(nis2.significance(record({ ...scoped, nis2Significance: 'significant' })).met).toBe(true)
+
+    // The quantified track would derive this one as met on its own.
+    const derivesMet = record({
+      ...scoped,
+      serviceDowntimeMinutes: 6_000,
+      serviceDowntimeComplete: true,
+    })
+    expect(nis2.significance(derivesMet).met, 'the fixture no longer derives met').toBe(true)
+    expect(nis2.significance({ ...derivesMet, nis2Significance: 'not significant' }).met).toBe(false)
+  })
+
+  /**
+   * Scope is not the analyst's to record here: a recorded call answers Article
+   * 23, and whether the entity is in scope at all is Article 2.
+   */
+  it('leaves a recorded call undetermined while the entity is unclassified', () => {
+    const row = record({ nis2Significance: 'significant' })
+    expect(nis2.significance(row).met).toBeNull()
+  })
+
   it('leaves an unclassified entity undetermined rather than out of scope', () => {
     expect(nis2.inScope(record()).met).toBeNull()
     expect(nis2.significance(record()).met).toBeNull()

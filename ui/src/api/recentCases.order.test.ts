@@ -15,7 +15,7 @@ function visit(caseId: string, over: Partial<RecentCase> = {}): RecentCase {
     title: caseId,
     reference: null,
     customer: null,
-    status: 'open',
+    status: 'respond',
     section: 'timeline',
     visitedAt: '2026-08-10T10:00:00.000Z',
     pinned: false,

@@ -218,13 +218,29 @@ const OWNED: Readonly<Record<string, string>> = {
 }
 
 /**
+ * The severity and field-tone tables, which are not parts of any one block.
+ *
+ * The kit's own data: they are read from outside `blocks/` too, which a rule
+ * counting only block importers cannot see. -> #713
+ */
+const TONE_TABLES = [
+  'FIELD_TONE_SEVERITY',
+  'FieldTone',
+  'SeverityTone',
+  'TONE_CLASS',
+  'TONE_FILL',
+  'TONE_INK',
+  'SEVERITY_FILL',
+  'SEVERITY_INK',
+]
+
+/**
  * `Label`, `Separator` and the tooltip pair are block-only today and
  * deliberately unlisted: all are general controls a screen could want on its
  * own, and listing them would be the rule claiming a boundary the blocks do not
  * actually hold.
- *
  */
-const NOT_PARTS = new Set(['Label', 'Separator', 'Tooltip', 'TooltipTrigger'])
+const NOT_PARTS = new Set(['Label', 'Separator', 'Tooltip', 'TooltipTrigger', ...TONE_TABLES])
 
 const IMPORT = /import\s+\{([^}]*)\}\s+from\s+'(@\/components\/ui\/[^']+)'/gs
 

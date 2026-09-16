@@ -332,7 +332,11 @@ describe('the states the block owes', () => {
 
     await user.click(screen.getByRole('button', { name: 'Filters' }))
 
-    expect(await screen.findByRole('button', { name: 'open 3' })).toBeTruthy()
+    // One live incident in each of the two live states, one in write-up, and
+    // three closed: which is which is the thing the chips are read for.
+    expect(await screen.findByRole('button', { name: 'respond 1' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'recover 1' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'post-incident 1' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'closed 3' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Include demo cases 1' })).toBeTruthy()
   })

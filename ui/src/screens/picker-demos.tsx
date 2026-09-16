@@ -44,7 +44,10 @@ export function PickerDemosScreen({ onAbout, demos, analyst, admin, onPane, onIm
       {...(onRetry ? { onRetry } : {})}
       {...(busy ? { busy } : {})}
     >
-      <DemosPane href={href} {...(demos ? { demos } : {})} />
+      {/* **`?? []` rather than omitting the prop.** The screen having no list
+          yet is what an install with none looks like from here, and the pane
+          says so; passing nothing used to mean the pane answered for it. */}
+      <DemosPane href={href} demos={demos ?? []} />
     </PickerFrame>
   )
 }

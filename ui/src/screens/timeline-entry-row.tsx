@@ -212,6 +212,12 @@ export function TimelineEntryRow({
 
           <Entities entry={entry} names={names} />
 
+          {entry.provenance !== 'typed' && (
+            <span data-part="timeline-origin" className="text-ink-muted">
+              {originOf(entry)}
+            </span>
+          )}
+
           {/* **Chips, not hashtags.** The sigil was doing a real job on a line
               that is otherwise a run of muted words - it said which of them
               the analyst typed rather than derived - and a chip's own edge is
@@ -257,6 +263,19 @@ export function TimelineEntryRow({
       </span>
     </li>
   )
+}
+
+/**
+ * Where a row came from, for one that did not arrive by being typed.
+ *
+ * The provenance word says how it reached this case and the tool says what
+ * observed it. A door that names no tool -- a file, an archive -- leaves the
+ * second empty and the first still answers, which is the case a marker drawn
+ * only from the tool is silent on.
+ */
+function originOf(entry: TimelineEntry): string {
+  const tool = (isEvent(entry) ? entry.sourceTool : '').trim()
+  return tool === '' ? entry.provenance : `${entry.provenance} \u00b7 ${tool}`
 }
 
 /**

@@ -11,22 +11,12 @@ import { openTestPool } from '../../test/database.js'
  * **Coverage is a fact about the pack and the application together**, so it is
  * measured when it is read rather than when the pack arrived.
  *
- * `coverageIn` divides what a pack carries by the keys the application prints.
- * Stored once, the divisor is frozen at whatever the app printed that day: a
- * pack uploaded at 100% still claims 100% after four keys are added, and the
- * note telling a reader the document is part English is gated on exactly that
- * number -- so the one case the note exists for is the one it is suppressed
- * in.
+ * `coverageIn` divides what a pack carries by the keys the application prints,
+ * so a stored figure would freeze the divisor at whatever the app printed that
+ * day. The pack here carries half the keys.
  *
- * The pack here carries half the keys. Nothing records a figure for it any
- * more -- the column that did is gone, because a stored derivation is what let
- * the two disagree -- so what these assert is that the number comes from the
- * strings every time it is asked for.
- *
- * **A sent report is unaffected and that is what makes this safe.** Its
- * rendered tree is frozen at send and painted from there, never re-resolved,
- * so the figure under a document nobody edited does not move. What moves is a
- * draft's, which is the number an analyst is deciding from.
+ * **A sent report is unaffected**, its tree being frozen at send and never
+ * re-resolved. What moves is a draft's.
  */
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null

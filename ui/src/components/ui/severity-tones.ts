@@ -1,32 +1,51 @@
 /**
  * The severity ramp as classes, and the words that resolve onto it.
  *
- * Holds no component and imports no kit, so a surface drawing a severity
- * reads this ramp rather than keeping its own.
- *
- * The colour is a token per severity and never a literal. A colour in the DOM
- * and the same colour in an SVG export are two decisions - an export has no
- * theme to consult, so nothing here is reused by one.
+ * A token per severity, never a literal. An SVG export has no theme to
+ * consult, so nothing here is reused by one.
  */
 
+/** The fill per severity, apart from the ink: a dot wants one and not both. */
+export const SEVERITY_FILL = {
+  critical: 'bg-severity-critical',
+  high: 'bg-severity-high',
+  medium: 'bg-severity-medium',
+  low: 'bg-severity-low',
+  info: 'bg-severity-info',
+  none: 'bg-severity-none',
+} as const
+
 /**
- * Fill and ink per severity, for a chip.
+ * The ink per severity.
+ *
+ * `low` is the one level light enough that the shared foreground fails on it -
+ * measured 1.8:1 against it, 10.4:1 against this one - so it carries its own.
+ */
+export const SEVERITY_INK = {
+  critical: 'text-on-severity',
+  high: 'text-on-severity',
+  medium: 'text-on-severity',
+  low: 'text-on-severity-low',
+  info: 'text-on-severity',
+  none: 'text-on-severity',
+} as const
+
+export type SeverityTone = keyof typeof SEVERITY_FILL
+
+/**
+ * Fill and ink together, for a chip.
+ *
+ * Joined rather than written out, so the halves and the whole cannot disagree.
  *
  * An unknown severity renders as `none` rather than unstyled: severity is free
  * text on the wire and a value nobody anticipated must still read as a chip.
  */
-export const TONE_CLASS = {
-  critical: 'bg-severity-critical text-on-severity',
-  high: 'bg-severity-high text-on-severity',
-  medium: 'bg-severity-medium text-on-severity',
-  // Its own ink: `low` is the one level light enough that white text fails on
-  // it - measured 1.8:1 against the shared foreground, 10.4:1 against this one.
-  low: 'bg-severity-low text-on-severity-low',
-  info: 'bg-severity-info text-on-severity',
-  none: 'bg-severity-none text-on-severity',
-} as const
-
-export type SeverityTone = keyof typeof TONE_CLASS
+export const TONE_CLASS = Object.fromEntries(
+  (Object.keys(SEVERITY_FILL) as SeverityTone[]).map((tone) => [
+    tone,
+    `${SEVERITY_FILL[tone]} ${SEVERITY_INK[tone]}`,
+  ]),
+) as Record<SeverityTone, string>
 
 /**
  * Severity to tone, where the two names differ.
