@@ -243,7 +243,13 @@ export function tidy(document: OpenAPIObject): OpenAPIObject {
        * a route reaching this by only one branch loses its 401 and 500 as an
        * absence rather than a failure. Held by `openapi.test.ts`.
        */
-      one.responses = { ...refusals(method, path, Boolean(one.requestBody)), ...one.responses }
+      const queried = (one.parameters ?? []).some(
+        (parameter) => (parameter as { in?: string }).in === 'query',
+      )
+      one.responses = {
+        ...refusals(method, path, Boolean(one.requestBody), queried),
+        ...one.responses,
+      }
     }
     paths[path] = operations
   }

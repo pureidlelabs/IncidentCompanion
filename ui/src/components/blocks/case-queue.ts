@@ -104,6 +104,12 @@ export interface QueueRow {
   action: string
   /** Which screen answers it. */
   section: string
+  /**
+   * What narrows that screen to this job, as a query string without its `?`.
+   *
+   * Empty where the screen answers the row whole.
+   */
+  query: string
   cost: number
   /** Order within one cost. */
   tier: number
@@ -130,6 +136,11 @@ export function fieldLabel(label: string): string {
     : short
 }
 
+/** The overview narrowed to one field of the case's own record. */
+function fieldQuery(name: string): string {
+  return new URLSearchParams({ field: name }).toString()
+}
+
 /**
  * Everything this screen can see is outstanding, ranked.
  *
@@ -149,6 +160,7 @@ export function buildQueue(kase: Case, specs: Specs): QueueRow[] {
       sub: 'every elapsed figure in the case is measured from it',
       action: 'Set',
       section: 'overview',
+      query: fieldQuery('detectedAt'),
       cost: COST_PRECONDITION,
       tier: 0,
       magnitude: 0,
@@ -162,6 +174,7 @@ export function buildQueue(kase: Case, specs: Specs): QueueRow[] {
       sub: 'a line is enough',
       action: 'Capture',
       section: 'timeline',
+      query: '',
       cost: COST_PRECONDITION,
       tier: 1,
       magnitude: 0,
@@ -175,6 +188,7 @@ export function buildQueue(kase: Case, specs: Specs): QueueRow[] {
       sub: 'the report is titled from it',
       action: 'Write',
       section: 'overview',
+      query: fieldQuery('title'),
       cost: COST_REPORT,
       tier: 0,
       magnitude: 0,
@@ -185,10 +199,11 @@ export function buildQueue(kase: Case, specs: Specs): QueueRow[] {
     for (const [field, count] of gapCounts(specs, kase)) {
       rows.push({
         id: `gap-${field}`,
-        label: `${String(count)} ${count === 1 ? 'entry' : 'entries'} missing ${fieldLabel(labelFor(specs, field))}`,
+        label: `${String(count)} ${count === 1 ? 'entry' : 'entries'} missing ${fieldLabel(labelFor(specs, field) ?? field)}`,
         sub: `${String(count)} of ${String(events.length)} events`,
         action: `Review ${String(count)}`,
         section: 'timeline',
+        query: new URLSearchParams({ missing: field }).toString(),
         cost: COST_COMPLETENESS,
         tier: 0,
         magnitude: count,
@@ -203,6 +218,7 @@ export function buildQueue(kase: Case, specs: Specs): QueueRow[] {
         sub: `${String(unreviewed)} of ${String(kase.timeline.length)} entries`,
         action: 'Review',
         section: 'timeline',
+        query: 'unreviewed=1',
         cost: COST_COMPLETENESS,
         tier: 1,
         magnitude: unreviewed,
@@ -238,13 +254,19 @@ export function gapCounts(specs: Specs, kase: Case): Map<string, number> {
   return counts
 }
 
-/** Every field any event could be expected to carry, for a name lookup. */
-function labelFor(specs: Specs, field: string): string {
+/**
+ * What a served form calls this field, or `undefined` where none names it.
+ *
+ * Undefined rather than the name back: a caller drawing a control from it has
+ * to be able to tell a field the analyst would recognise from a word somebody
+ * typed into the address.
+ */
+export function labelFor(specs: Specs, field: string): string | undefined {
   for (const form of ['EVENT_FIELDS', 'CASE_FIELDS']) {
     const entry = specs.forms[form]?.fields.find(
       (one) => 'name' in one && one.name === field,
     )
     if (entry !== undefined && 'label' in entry) return entry.label
   }
-  return field
+  return undefined
 }

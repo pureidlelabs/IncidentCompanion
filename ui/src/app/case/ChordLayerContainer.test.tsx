@@ -25,6 +25,7 @@ function Address() {
 }
 
 function mount(onSearch = vi.fn(), initial = '/cases/abc/timeline') {
+  const onPress = vi.fn()
   const view = render(
     <MemoryRouter initialEntries={[initial]}>
       <Routes>
@@ -35,6 +36,15 @@ function mount(onSearch = vi.fn(), initial = '/cases/abc/timeline') {
               <ChordLayerContainer onSearch={onSearch} />
               <Address />
               <textarea aria-label="A note" />
+              <button type="button" aria-label="Add entry" onClick={onPress} />
+              <a href="/cases" aria-label="Back">
+                Back
+              </a>
+              <div role="tab" tabIndex={0} aria-label="Timeline tab" />
+              <input type="checkbox" aria-label="Only mine" />
+              <div role="menu">
+                <div role="menuitem" tabIndex={0} aria-label="Export" />
+              </div>
             </>
           }
         />
@@ -42,7 +52,7 @@ function mount(onSearch = vi.fn(), initial = '/cases/abc/timeline') {
       </Routes>
     </MemoryRouter>,
   )
-  return { view, onSearch }
+  return { view, onSearch, onPress }
 }
 
 describe('the chord layer', () => {
@@ -84,6 +94,51 @@ describe('the chord layer', () => {
     await analyst.keyboard('?')
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  /** The state an analyst is in most of the time, argued in `chords.test.ts`. */
+  it.each([
+    ['a button', 'Add entry'],
+    ['a link', 'Back'],
+    ['a tab', 'Timeline tab'],
+    ['a checkbox', 'Only mine'],
+  ])('fires a chord with the focus on %s', async (_name, label) => {
+    const analyst = userEvent.setup()
+    mount()
+    screen.getByLabelText(label).focus()
+    await analyst.keyboard('?')
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  })
+
+  /**
+   * **A typeahead miss is silent.** A collection stops the keypress it uses,
+   * and lets the one that matches nothing through untouched -- so a chord
+   * fires on the letter the analyst meant for the list.
+   */
+  it('leaves the keyboard to an open menu whose typeahead misses', async () => {
+    const analyst = userEvent.setup()
+    const { onSearch } = mount()
+    screen.getByLabelText('Export').focus()
+    await analyst.keyboard('n')
+    await analyst.keyboard('?')
+    await analyst.keyboard('/')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(onSearch).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A button's own keys stay its own. `chords.test.ts` holds the registry to
+   * claiming none of them; this is the other half, that the layer lets the
+   * press through.
+   */
+  it('leaves Enter and Space to a focused button', async () => {
+    const analyst = userEvent.setup()
+    const { onPress } = mount()
+    screen.getByLabelText('Add entry').focus()
+    await analyst.keyboard('{Enter}')
+    await analyst.keyboard(' ')
+    expect(onPress).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   /**

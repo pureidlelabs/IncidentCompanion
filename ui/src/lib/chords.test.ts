@@ -58,16 +58,85 @@ describe('chordFires', () => {
       expect(fired.map((one) => one.id)).toHaveLength(1)
     }
   })
+
+  /**
+   * An unmodified chord fires with the focus on a button, a tab or a listbox
+   * option, so one spelled `Enter`, ` ` or an arrow would eat the press that
+   * works the control -- and no guard downstream can tell the two apart.
+   */
+  it('claims no unmodified key a focused control consumes', () => {
+    const consumed = new Set([
+      'enter',
+      ' ',
+      'escape',
+      'tab',
+      'home',
+      'end',
+      'pageup',
+      'pagedown',
+      'arrowup',
+      'arrowdown',
+      'arrowleft',
+      'arrowright',
+    ])
+    for (const command of COMMANDS) {
+      for (const chord of command.chords) {
+        if (chord.mod === true) continue
+        expect(consumed.has(chord.key.toLowerCase()), `${command.id} claims ${chord.key}`).toBe(
+          false,
+        )
+      }
+    }
+  })
 })
 
+function element(tag: string, attributes: Record<string, string> = {}): HTMLElement {
+  const node = document.createElement(tag)
+  for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, value)
+  return node
+}
+
+/** The row the collection is highlighting, returned rather than its parent. */
+function within(collection: HTMLElement, role: string): HTMLElement {
+  const row = element('div', { role })
+  collection.append(row)
+  return row
+}
+
 describe('isTypingTarget', () => {
-  it('gives the keyboard to anything that types, and to nothing else', () => {
-    const cell = document.createElement('div')
-    cell.setAttribute('contenteditable', 'true')
-    expect(isTypingTarget(document.createElement('input'))).toBe(true)
-    expect(isTypingTarget(document.createElement('button'))).toBe(true)
-    expect(isTypingTarget(cell)).toBe(true)
-    expect(isTypingTarget(document.createElement('div'))).toBe(false)
+  it.each([
+    ['a text box', () => element('input')],
+    ['a note', () => element('textarea')],
+    ['a plain select', () => element('select')],
+    ['an editable cell', () => element('div', { contenteditable: 'true' })],
+    ['a text box by role', () => element('div', { role: 'textbox' })],
+    ['a combo box', () => element('div', { role: 'combobox' })],
+    ['a search box', () => element('div', { role: 'searchbox' })],
+    // The spelling `ui/src/test/select.ts` pins, on the one button that types.
+    ['a select trigger', () => element('button', { 'aria-haspopup': 'listbox' })],
+    ['an option in an open listbox', () => within(element('div', { role: 'listbox' }), 'option')],
+    ['an item in an open menu', () => within(element('div', { role: 'menu' }), 'menuitem')],
+  ])('keeps the keyboard for %s', (_name, make) => {
+    expect(isTypingTarget(make())).toBe(true)
+  })
+
+  /**
+   * **The attack: a chord dead because the analyst pressed something.** Working
+   * a control leaves the focus on it, and a dialog hands the focus back to the
+   * button that opened it, so reading "has the focus" as "is being typed into"
+   * leaves every chord dead most of the time.
+   */
+  it.each([
+    ['a button', () => element('button')],
+    ['a link', () => element('a', { href: '/cases' })],
+    ['a tab', () => element('div', { role: 'tab' })],
+    ['a checkbox', () => element('input', { type: 'checkbox' })],
+    ['a plain div', () => element('div')],
+  ])('leaves the keyboard to the document on %s', (_name, make) => {
+    expect(isTypingTarget(make())).toBe(false)
+  })
+
+  it('answers for nothing at all', () => {
     expect(isTypingTarget(null)).toBe(false)
   })
 

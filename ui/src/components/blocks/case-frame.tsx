@@ -91,6 +91,12 @@ export interface CaseFrameProps {
         nameFor?: ((entity: string) => string) | undefined
         /** The newest `seq` already shown. Absent marks nothing. */
         seen?: number | undefined
+        /** The read is still out. */
+        busy?: boolean | undefined
+        /** Why the read failed, if it did. */
+        problem?: unknown
+        /** Asked again when *Try again* is pressed. */
+        onRetry?: (() => void) | undefined
       }
     | undefined
   /** Left of the header bar -- the search box. */
@@ -233,6 +239,9 @@ export function CaseFrame({
                 entries={activity.entries}
                 {...(activity.nameFor === undefined ? {} : { nameFor: activity.nameFor })}
                 {...(activity.seen === undefined ? {} : { seen: activity.seen })}
+                {...(activity.busy === undefined ? {} : { busy: activity.busy })}
+                {...(activity.problem === undefined ? {} : { problem: activity.problem })}
+                {...(activity.onRetry === undefined ? {} : { onRetry: activity.onRetry })}
               />
             )}
             {headerEnd}
