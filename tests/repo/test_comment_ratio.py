@@ -19,11 +19,12 @@ becomes an untrue description and has to be replaced by the band itself.
 from __future__ import annotations
 
 import importlib.util
-import pathlib
 
 import pytest
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
+from tests._repo import REPO_ROOT
+
+ROOT = REPO_ROOT
 
 #: The measured baseline, as the raw totals that produced it rather than a
 #: rounded percentage. Lower it when a review has justified the deletions that
