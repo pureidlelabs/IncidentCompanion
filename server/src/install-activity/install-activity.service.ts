@@ -201,11 +201,6 @@ export class InstallActivityService {
     })
   }
 
-  /** Reading the audit. Rate-limited by its caller, not here. */
-  async auditRead(caller: Caller): Promise<void> {
-    await this.write('audit_read', caller, null)
-  }
-
   private async write(
     event: InstallActivityInput['event'],
     caller: Caller,
