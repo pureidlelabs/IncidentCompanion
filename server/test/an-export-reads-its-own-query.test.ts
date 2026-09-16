@@ -80,13 +80,20 @@ describe.skipIf(!runnable)('an export reading its own query', () => {
     expect(JSON.stringify(await answered.json())).toContain('amber')
   }, 30_000)
 
+  /**
+   * **The refusal names the parameter that was wrong**, which is the half a
+   * status cannot carry: a caller sending two parameters and told only that
+   * something is unacceptable has to guess which.
+   */
   it.each([
-    ['a format nobody defined', '?format=xlsx'],
-    ['a marking nobody defined', '?format=stix&tlp=taupe'],
-  ])('refuses %s', async (_name, query) => {
+    ['a format nobody defined', '?format=xlsx', 'format'],
+    ['a marking nobody defined', '?format=stix&tlp=taupe', 'tlp'],
+  ])('refuses %s, naming it', async (_name, query, field) => {
     const answered = await indicators(query)
 
     expect(answered.status).toBe(422)
+    const said = (await answered.json()) as { errors?: { path?: unknown[] }[] }
+    expect(said.errors?.flatMap((one) => one.path ?? [])).toContain(field)
   }, 30_000)
 
   /**
@@ -120,6 +127,21 @@ describe.skipIf(!runnable)('an export reading its own query', () => {
       )
 
       expect(answered.status).toBe(422)
+      const said = (await answered.json()) as { errors?: { path?: unknown[] }[] }
+      expect(said.errors?.flatMap((one) => one.path ?? [])).toContain('onDuplicate')
+
+      /**
+       * **The half a refusal alone does not prove**: a guard that refused
+       * *after* writing would satisfy the status above and still have imported
+       * the file. Read back through the route rather than the table, which is
+       * what a caller can see.
+       */
+      const after = await fetch(`${harness.base}/api/cases/${realCase}/systems.csv`, {
+        headers: { cookie: admin.cookie },
+      })
+      expect(await after.text(), 'a refused import wrote its row anyway').not.toContain(
+        'WKS-NEVER-WRITTEN',
+      )
     },
     30_000,
   )

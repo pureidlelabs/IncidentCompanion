@@ -100,8 +100,8 @@ class ActivityPageDto extends createZodDto(activityPageSchema) {}
 
 /**
  * **Bound as a DTO rather than parsed in the body.** `@Query() query: unknown`
- * is a query `@nestjs/swagger` builds no parameter from at all, so all five
- * were published nowhere; binding this publishes each from the schema that
+ * is a query `@nestjs/swagger` builds no parameter from at all, so every one of
+ * these was published nowhere; binding this publishes each from the schema that
  * refuses it, with `required` and the default coming from the same place.
  */
 const querySchema = z.object({

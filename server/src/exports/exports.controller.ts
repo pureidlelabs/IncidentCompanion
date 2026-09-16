@@ -101,11 +101,6 @@ class CsvImportedDto extends createZodDto(importedSchema) {}
  * **`tlp` is a marking the bundle carries**, so it is refused on a format that
  * cannot carry one. That rule holds between two fields and no schema can state
  * it; it is the one check left in the handler.
- *
- * **`format` on the wire, `fmt` in the body.** Binding the internal name is
- * what made `?format=stix` unread once before: the STIX export served CSV and
- * `?format=stix&tlp=amber` answered *"Format csv carries no TLP marking"*, the
- * message naming the wrong format being the only tell.
  */
 const indicatorQuery = z.object({
   format: z

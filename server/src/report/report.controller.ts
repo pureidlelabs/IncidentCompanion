@@ -34,6 +34,15 @@ import { z } from 'zod'
 
 import { readStamp } from '../domain/field-spec.js'
 
+import {
+  BlockKindsDto,
+  ReportLayoutsDto,
+  ReportSnippetsDto,
+  type BlockKinds,
+  type ReportLayouts,
+  type ReportSnippets,
+} from './views.js'
+
 /**
  * The query every report read takes, and the only description of it.
  *
@@ -52,14 +61,6 @@ const langQuery = z.object({
 })
 
 class LangQueryDto extends createZodDto(langQuery) {}
-import {
-  BlockKindsDto,
-  ReportLayoutsDto,
-  ReportSnippetsDto,
-  type BlockKinds,
-  type ReportLayouts,
-  type ReportSnippets,
-} from './views.js'
 
 
 

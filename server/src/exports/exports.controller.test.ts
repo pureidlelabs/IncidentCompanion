@@ -130,6 +130,27 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
     })
   })
 
+  /**
+   * **The route goes through the shared writer**, which is where a leading `=`,
+   * `+`, `-` or `@` is neutralised. A route assembling its own CSV passes every
+   * other case in this file and hands a spreadsheet a formula out of the
+   * database.
+   *
+   * Restored after a cut that took it along with the validation cases beside
+   * it: it is about the writer, and nothing else here holds the route to it.
+   */
+  it('neutralises a formula that came out of the database', async () => {
+    await seed!
+      .insert(systems)
+      .values({ caseId, hostname: '=cmd|/c calc', systemType: 'laptop' })
+      .returning()
+
+    const csv = await controller.collectionCsv(caseId, 'systems')
+
+    expect(csv).toContain("'=cmd|/c calc")
+    expect(csv).not.toMatch(/(^|,)=cmd/m)
+  })
+
   describe('the indicator feed', () => {
     function recorder(): { type(value: string): unknown; seen: string[] } {
       const seen: string[] = []

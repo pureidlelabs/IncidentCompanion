@@ -112,8 +112,25 @@ describe.skipIf(!runnable)('a query parameter the document publishes', () => {
         })
         const aboutTheQuery = response.status === 422 || response.status === 400
 
-        if (parameter.required === true && response.status === 200) {
-          lied.push(`GET ${one.template} -> 200 without ${parameter.name}, which it demands`)
+        if (parameter.required === true) {
+          if (response.status === 200) {
+            lied.push(`GET ${one.template} -> 200 without ${parameter.name}, which it demands`)
+          } else if (aboutTheQuery) {
+            /**
+             * **Refused, but for this?** A status alone lets another rule's
+             * refusal stand in for the one being asked about, so the required
+             * arm would read as confirmed on a route that never noticed the
+             * parameter was missing.
+             */
+            const said = (await response.json()) as { errors?: { path?: unknown[] }[] }
+            const blamed = said.errors?.flatMap((issue) => issue.path ?? []) ?? []
+            if (!blamed.includes(parameter.name)) {
+              lied.push(
+                `GET ${one.template} -> refused without ${parameter.name} and named ` +
+                  `${blamed.length > 0 ? blamed.join(', ') : 'nothing'} instead`,
+              )
+            }
+          }
         }
         if (parameter.required !== true && aboutTheQuery) {
           lied.push(
@@ -163,9 +180,9 @@ describe.skipIf(!runnable)('a query parameter the document publishes', () => {
   })
 
   /**
-   * The five parameters the activity feed takes were published nowhere: it
-   * binds the whole query at once, which `@nestjs/swagger` builds no parameter
-   * from at all. They arrive with the schema that refuses them.
+   * The parameters the activity feed takes were published nowhere: it binds the
+   * whole query at once, which `@nestjs/swagger` builds no parameter from at
+   * all. They arrive with the schema that refuses them.
    */
   it('names every parameter a route reads its whole query for', () => {
     const paths = (harness.document as unknown as {

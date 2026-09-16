@@ -17,13 +17,17 @@ import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
+import { ReportRenderService } from './render.service.js'
+import { toMarkdown } from './document/markdown.js'
+import { toPdf } from './document/pdf.js'
+import { toWord } from './document/word.js'
+
 /**
  * What the three exports take, and the only description of it.
  *
- * **`report` is required and says so.** The URL names the case; which of its
- * reports to paint is the caller's, and there is no sensible default -- a case
- * holds several. It was refused inside the handler and published as optional,
- * which is the pair a caller cannot act on.
+ * **`report` is required.** The URL names the case; which of its reports to
+ * paint is the caller's, and there is no sensible default -- a case holds
+ * several.
  */
 const exportQuery = z.object({
   report: z.string().describe('Which of the case\u2019s reports to export.'),
@@ -31,10 +35,6 @@ const exportQuery = z.object({
 })
 
 class ExportQueryDto extends createZodDto(exportQuery) {}
-import { ReportRenderService } from './render.service.js'
-import { toMarkdown } from './document/markdown.js'
-import { toPdf } from './document/pdf.js'
-import { toWord } from './document/word.js'
 
 function filename(title: string, extension: string): string {
   const stem = title.replace(/[^A-Za-z0-9-_ ]/g, '').trim().replace(/\s+/g, '-') || 'report'
