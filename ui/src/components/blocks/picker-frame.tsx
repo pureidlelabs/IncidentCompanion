@@ -59,9 +59,6 @@ export interface PickerFrameProps {
  *
  * **Not the workspace's case switcher.** There is nothing to switch between
  * here, so the rows are the install's own facts, and never a case.
- *
- * No `onHealth` draws no Health row: the pane is one this account may not
- * reach.
  */
 const productMenuRows = (onAbout: () => void, onHealth: (() => void) | undefined) => (
   <>
