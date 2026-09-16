@@ -190,21 +190,32 @@ export function reportUploadedPack(pack: { label: string; ignored: readonly stri
 /**
  * Say what an imported archive brought, and what it named but did not carry.
  *
- * **The attachment count is the half nothing else can tell the analyst.** An
- * archive exported without its files imports cleanly and its rows go on
- * naming evidence that is not in it, so the import is the only moment that
- * knows. A warning rather than an error: a handover export omits every
- * attachment deliberately.
+ * **Both counts are halves nothing else can tell the analyst**, and the import
+ * is the only moment that knows either.
+ *
+ * A warning rather than an error, for both: neither says the archive is at
+ * fault. -> `openspec/specs/case-archive/design.md`, #731
  */
-export function reportImportedCase(imported: { rows: number; missingFiles: number }): void {
+export function reportImportedCase(imported: {
+  rows: number
+  missingFiles: number
+  unresolvedReferences: number
+}): void {
   const title = `${String(imported.rows)} ${imported.rows === 1 ? 'row' : 'rows'} imported.`
-  if (imported.missingFiles === 0) {
+  const notes: string[] = []
+  if (imported.missingFiles > 0) {
+    const count = imported.missingFiles
+    const [noun, verb] = count === 1 ? ['attachment', 'is'] : ['attachments', 'are']
+    notes.push(`${String(count)} ${noun} the rows name ${verb} not in the archive.`)
+  }
+  if (imported.unresolvedReferences > 0) {
+    const count = imported.unresolvedReferences
+    const [noun, verb] = count === 1 ? ['row', 'is'] : ['rows', 'are']
+    notes.push(`${String(count)} ${noun} the case names ${verb} not in it.`)
+  }
+  if (notes.length === 0) {
     toast.success(title)
     return
   }
-  const count = imported.missingFiles
-  const [noun, verb] = count === 1 ? ['attachment', 'is'] : ['attachments', 'are']
-  toast.warning(title, {
-    description: `${String(count)} ${noun} the rows name ${verb} not in the archive.`,
-  })
+  toast.warning(title, { description: notes.join(' ') })
 }

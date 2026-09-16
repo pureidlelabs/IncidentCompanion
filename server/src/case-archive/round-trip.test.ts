@@ -233,6 +233,68 @@ describe.skipIf(!db)('a case, out and back', () => {
     expect(box!.hostname).toBe('WKS-01')
   })
 
+
+  /**
+   * **How connected the case is, which the receiving analyst cannot see.** The
+   * rows are all there and some of the links between them are not, and nothing
+   * on the screen says so. -> `openspec/specs/case-archive/design.md`, #731
+   *
+   * The scalar beside the list is a foreign key with `on delete set null`, so
+   * only the list can dangle.
+   */
+  it('says how many rows the case names that it does not contain', async () => {
+    const made = await furnished()
+    await seed!.delete(evidence).where(eq(evidence.id, made.evidenceId))
+
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
+    await freeTheReference(made.caseId)
+    const result = await importer.load(built.bytes, '', other)
+
+    expect(
+      result.unresolvedReferences,
+      'the import said nothing about a link the case lost',
+    ).toBe(1)
+
+    const [entry] = await seed!.select().from(timeline).where(eq(timeline.caseId, result.id))
+    expect(entry!.evidenceIds, 'the dangling id was kept rather than dropped').toHaveLength(0)
+  })
+
+
+  /**
+   * **One row named twice is one row missing, not two.** The count answers how
+   * much of the case is absent; counting the occurrences would answer how many
+   * links broke, and the sentence the operator reads says rows.
+   */
+  it('counts a row the case names twice once', async () => {
+    const made = await furnished()
+    await seed!.insert(timeline).values({
+      caseId: made.caseId,
+      kind: 'event',
+      time: new Date('2026-03-03T11:00:00Z'),
+      description: 'the same artefact again',
+      evidenceIds: [made.evidenceId],
+      createdBy: actorId,
+    })
+    await seed!.delete(evidence).where(eq(evidence.id, made.evidenceId))
+
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
+    await freeTheReference(made.caseId)
+    const result = await importer.load(built.bytes, '', other)
+
+    expect(result.unresolvedReferences, 'the occurrences were counted, not the rows').toBe(1)
+  })
+
+  /** The control: a case whose links all resolve reports none. */
+  it('says none for a case that names nothing it does not contain', async () => {
+    const made = await furnished()
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
+    await freeTheReference(made.caseId)
+
+    const result = await importer.load(built.bytes, '', other)
+
+    expect(result.unresolvedReferences).toBe(0)
+  })
+
   /**
    * **A list of references is remapped like a single one.**
    *
