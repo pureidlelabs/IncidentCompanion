@@ -8,17 +8,22 @@
  * path or decorators changed is invisible here - `test/openapi-contract.test.ts`
  * and `test/documented-bodies.test.ts` are the tier that reads the real one.
  */
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { NotFoundException } from '@nestjs/common'
+import { Test } from '@nestjs/testing'
+import { createZodDto } from 'nestjs-zod'
 
 import { caseSchema, createCaseSchema } from './cases/cases.dto.js'
-import { tidy } from './openapi.js'
+import { publishedDocument, tidy } from './openapi.js'
 import { groupOf, humanise, published, resourceOf, summarise } from './openapi.prose.js'
 import { COLLECTION_SCHEMAS } from './domain/collections.js'
-import { fields, patchSchema } from './domain/field-spec.js'
+import { caseReadSchema } from './domain/case.js'
+import { caseOwnedRowSchema, fields, patchSchema } from './domain/field-spec.js'
 import { timelineWriteSchema } from './domain/entities/timeline.js'
-import type { OpenAPIObject } from '@nestjs/swagger'
+import { activityPageSchema } from './install-audit/activity.controller.js'
+import { libraryListingSchema } from './library/library.controller.js'
+import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger'
 import { OpenApiController, OpenApiStore } from './openapi.controller.js'
 import { ResourcesController } from './health/resources.controller.js'
 
@@ -869,5 +874,74 @@ describe('a tuple lowered for OpenAPI 3.0', () => {
 
     expect(out['items']).toEqual({})
     expect(out['minItems']).toBe(2)
+  })
+})
+
+/**
+ * A nullable scalar is published as one rather than as an array of the scalar.
+ *
+ * **The schemas the routes publish, not the document the server serves.** A
+ * route whose decorators changed is still invisible here, and the shorthand
+ * only ever reaches a property sitting directly on a registered model, so
+ * nothing nested is covered either. -> #811
+ */
+describe('a nullable scalar is published as one, not as an array', () => {
+  /**
+   * The schemas the routes hand `@ZodResponse`, taken from the registry so a
+   * collection added tomorrow is walked without touching this list.
+   */
+  const PUBLISHED: [string, z.ZodObject][] = [
+    ['CaseRead', caseReadSchema],
+    ['CaseOwnedRow', caseOwnedRowSchema],
+    ['ActivityPage', activityPageSchema],
+    ['LibraryListing', libraryListingSchema],
+    ...Object.entries(COLLECTION_SCHEMAS),
+  ]
+
+  type Published = { properties?: Record<string, { type?: unknown }> }
+  let components: Record<string, Published>
+
+  // `extraModels` registers a component without a route, so the document is
+  // built by the generator that ships rather than by a fixture resembling it.
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({}).compile()
+    const app = moduleRef.createNestApplication()
+    const extraModels = PUBLISHED.map(([name, schema]) => {
+      const dto = createZodDto(schema)
+      Object.defineProperty(dto, 'name', { value: name })
+      return dto.Output
+    })
+    const spec = new DocumentBuilder()
+      .setOpenAPIVersion('3.1.0')
+      .setTitle('t')
+      .setVersion('1')
+      .build()
+    const document = publishedDocument(SwaggerModule.createDocument(app, spec, { extraModels }))
+    components = (document.components?.schemas ?? {}) as Record<string, Published>
+    await app.close()
+  }, 30_000)
+
+  it('says string or null for a field a deleted analyst leaves behind', () => {
+    expect(components['CaseOwnedRow_Output']?.properties?.['createdBy']).toEqual({
+      type: ['string', 'null'],
+    })
+  })
+
+  it.each(PUBLISHED)('%s publishes an array only where its Zod source is one', (name, schema) => {
+    const published = components[`${name}_Output`]?.properties ?? {}
+    const source = (
+      z.toJSONSchema(schema, { io: 'output' }) as {
+        properties: Record<string, { type?: unknown }>
+      }
+    ).properties
+
+    // A schema that published nothing would pass every case below.
+    expect(Object.keys(published)).toEqual(Object.keys(source))
+
+    for (const [key, value] of Object.entries(published)) {
+      expect({ [key]: value.type === 'array' }).toEqual({
+        [key]: source[key]?.type === 'array',
+      })
+    }
   })
 })
