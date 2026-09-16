@@ -1,27 +1,33 @@
 /**
  * **A query parameter the document calls required is one the route refuses to
- * work without.**
+ * work without, and one it calls optional is one the route works without.**
  *
  * The write sweep next door checks that a body the reference calls valid is
  * accepted. This is the same question asked of the other half of a request:
- * `@nestjs/swagger` marks every `@Query()` parameter required unless it is told
- * otherwise, and nothing told it -- so `?` in the handler's signature and
- * `required` in the document said opposite things, with no tier reading both.
+ * `@nestjs/swagger` builds a parameter from every `@Query('name')` and marks it
+ * required, because the `?` that makes it optional is on the handler's own
+ * parameter and nothing carries that to runtime -- so the signature and the
+ * document said opposite things, with no tier reading both.
  *
- * **Asserted by omitting it, in both directions.** A parameter that is
- * genuinely required produces a refusal when it is left out; one that is not
- * answers as though nothing was missing. Each is its own way of lying, and the
- * second is the one that leaves a generated client unable to call the route.
- * Reading the handler's signature instead would test the generator against the
- * same metadata the generator used.
+ * **Asked per parameter, not per route.** A route with one required and one
+ * optional parameter, asked once with both left out, is refused for the first
+ * and says nothing about the second. So each parameter is left out of a query
+ * carrying the route's *required* ones, which is the smallest request that
+ * isolates it.
+ *
+ * **Only a 422 or a 400 is about the query.** A stand-in id names no row, so a
+ * 404 or a 403 is the route answering about the row. What cannot happen is a
+ * required parameter left out and a 200 returned, or an optional one left out
+ * and the query refused.
  *
  * **GET alone**, because a write left out of this sweep is a write performed:
  * the point of a request here is the answer's status, and the reads are where
  * that can be asked without changing the install.
  *
- * **What this does not cover:** whether a parameter that is *not* published
- * exists -- an undocumented parameter is a description that is short rather
- * than untrue, and nothing in a document can point at one.
+ * **What this does not cover:** a value a parameter will not accept, which is
+ * `an-export-reads-its-own-query.test.ts`, and a parameter that is not
+ * published at all -- an undocumented parameter is a description that is short
+ * rather than untrue, and nothing in a document can point at one.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -29,14 +35,32 @@ import { boot, bootable, seedDemoContent, operations, sharedAdmin, type Harness,
 
 const runnable = await bootable()
 
+const STAND_IN = '00000000-0000-4000-8000-000000000000'
+
 interface Parameter {
   name: string
   in: string
   required?: boolean
-  schema?: { default?: unknown }
+  // A query travels as text, so what a parameter defaults to is a scalar or it
+  // is not something this can send.
+  schema?: { default?: string | number | boolean; enum?: unknown[]; type?: string }
 }
 
-describe.skipIf(!runnable)('a query parameter the document calls required', () => {
+/**
+ * A value this parameter says it takes.
+ *
+ * Its own default first, then the first value of its enum, then a string --
+ * anything else would be the sweep inventing a value the document does not
+ * promise is acceptable.
+ */
+function valueFor(parameter: Parameter): string {
+  const schema = parameter.schema ?? {}
+  if (schema.default !== undefined) return String(schema.default)
+  if (schema.enum?.length) return String(schema.enum[0])
+  return schema.type === 'integer' || schema.type === 'number' ? '1' : STAND_IN
+}
+
+describe.skipIf(!runnable)('a query parameter the document publishes', () => {
   let harness: Harness
   let admin: Persona
   let realCase: string
@@ -55,11 +79,12 @@ describe.skipIf(!runnable)('a query parameter the document calls required', () =
     await harness?.close()
   })
 
-  it('is the only kind the route will not answer without', async () => {
+  it('is required exactly where the route treats it as required', async () => {
     const doc = harness.document as unknown as Record<string, unknown>
     const paths = (doc.paths ?? {}) as Record<string, Record<string, unknown>>
     const lied: string[] = []
-    let asked = 0
+    /** Asks that produced an answer about the row rather than about the query. */
+    let served = 0
 
     for (const one of operations(harness.document)) {
       if (one.method !== 'GET') continue
@@ -71,37 +96,43 @@ describe.skipIf(!runnable)('a query parameter the document calls required', () =
       if (query.length === 0) continue
 
       const demanded = query.filter((parameter) => parameter.required === true)
-      const path = one.path.replace('00000000-0000-4000-8000-000000000000', realCase)
-      const response = await fetch(`${harness.base}${path}`, {
-        headers: { cookie: admin.cookie },
-      })
-      asked++
+      // Every stand-in, not the first: `replace` takes one occurrence, so a
+      // path naming a case *and* a report kept the second and 404'd on it.
+      const path = one.path.replaceAll(STAND_IN, realCase)
 
-      /**
-       * **Asked in both directions, because each is a way of lying.**
-       *
-       * A parameter the document demands and the route serves happily without
-       * makes a caller send something nothing wanted; one the document calls
-       * optional and the route refuses to work without leaves a generated
-       * client unable to call the route at all.
-       *
-       * **A refusal that is not about the parameter is fine.** A stand-in id
-       * names no row, so a 404 or a 403 is about the row rather than the
-       * query. Only a 400 says *you did not send what I need*, and only a 200
-       * says *I did not need it*.
-       */
-      if (demanded.length > 0 && response.status === 200) {
-        lied.push(`GET ${one.template} -> 200 without ${demanded.map((p) => p.name).join(', ')}`)
-      }
-      if (demanded.length === 0 && response.status === 400) {
-        lied.push(`GET ${one.template} -> 400 with every parameter it calls optional left out`)
+      for (const parameter of query) {
+        // The smallest query that isolates this one: what the route demands,
+        // less this parameter.
+        const sent = demanded
+          .filter((other) => other.name !== parameter.name)
+          .map((other) => `${other.name}=${encodeURIComponent(valueFor(other))}`)
+        const asked = `${path}${sent.length > 0 ? `?${sent.join('&')}` : ''}`
+        const response = await fetch(`${harness.base}${asked}`, {
+          headers: { cookie: admin.cookie },
+        })
+        const aboutTheQuery = response.status === 422 || response.status === 400
+
+        if (parameter.required === true && response.status === 200) {
+          lied.push(`GET ${one.template} -> 200 without ${parameter.name}, which it demands`)
+        }
+        if (parameter.required !== true && aboutTheQuery) {
+          lied.push(
+            `GET ${one.template} -> ${String(response.status)} without ${parameter.name}, ` +
+              'which it calls optional',
+          )
+        }
+        if (response.status === 200) served++
       }
     }
 
     expect(lied).toEqual([])
-    // Guards against a sweep that walked a document with no query parameter on
-    // any read, which would leave this passing over nothing.
-    expect(asked).toBeGreaterThan(5)
+    /**
+     * **Counts answers, not asks.** A sweep whose every request 404'd on a
+     * stand-in would satisfy both assertions above having exercised nothing,
+     * and that is the shape this file failed in once: one route's second
+     * stand-in was never replaced.
+     */
+    expect(served).toBeGreaterThan(5)
   }, 180_000)
 
   /**
@@ -109,8 +140,8 @@ describe.skipIf(!runnable)('a query parameter the document calls required', () =
    * export serves CSV by default and a STIX bundle on `?format=stix`; the
    * document listed neither the parameter nor the second content type, so a
    * caller reading it cannot reach the bundle at all -- and `tlp`, the one
-   * parameter it *was* told to send, is refused unless the format it does not
-   * know about is the one asked for.
+   * parameter it *was* told to send, is refused unless the format it was not
+   * told about is the one asked for.
    */
   it('names the parameter that changes what the indicators export answers with', () => {
     const paths = (harness.document as unknown as {
@@ -118,11 +149,33 @@ describe.skipIf(!runnable)('a query parameter the document calls required', () =
     }).paths
     const operation = paths['/api/cases/{caseId}/indicators']?.['get']
     const named = (operation?.parameters ?? []).map((one) => one.name)
+    const format = (operation?.parameters ?? []).find((one) => one.name === 'format')
 
     expect(named).toContain('format')
+    // The default is published, so a caller can see what saying nothing gets
+    // them, and it comes from the schema the handler reads rather than a second
+    // copy written here.
+    expect(format?.schema?.default).toBe('csv')
     expect(Object.keys(operation?.responses?.['200']?.content ?? {}).sort()).toEqual([
       'application/json',
       'text/csv',
     ])
+  })
+
+  /**
+   * The five parameters the activity feed takes were published nowhere: it
+   * binds the whole query at once, which `@nestjs/swagger` builds no parameter
+   * from at all. They arrive with the schema that refuses them.
+   */
+  it('names every parameter a route reads its whole query for', () => {
+    const paths = (harness.document as unknown as {
+      paths: Record<string, Record<string, { parameters?: Parameter[] }>>
+    }).paths
+    const named = (paths['/api/install/activity']?.['get']?.parameters ?? [])
+      .filter((one) => one.in === 'query')
+      .map((one) => one.name)
+      .sort()
+
+    expect(named).toEqual(['after', 'channel', 'limit', 'minSeverity', 'outcome', 'since'])
   })
 })

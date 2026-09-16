@@ -10,11 +10,27 @@
  * served short**, naming every kind, because a document missing its timeline
  * reads exactly like a case that had none.
  */
-import { BadRequestException, Controller, Get, Param, ParseUUIDPipe, Query, Res, UseGuards } from '@nestjs/common'
+import { Controller, Get, Param, ParseUUIDPipe, Query, Res, UseGuards } from '@nestjs/common'
 import type { Response } from 'express'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
-import { OptionalQuery } from '../published-query.js'
+import { createZodDto } from 'nestjs-zod'
+import { z } from 'zod'
+
+/**
+ * What the three exports take, and the only description of it.
+ *
+ * **`report` is required and says so.** The URL names the case; which of its
+ * reports to paint is the caller's, and there is no sensible default -- a case
+ * holds several. It was refused inside the handler and published as optional,
+ * which is the pair a caller cannot act on.
+ */
+const exportQuery = z.object({
+  report: z.string().describe('Which of the case\u2019s reports to export.'),
+  lang: z.string().describe('The language to assemble in. Absent is English.').optional(),
+})
+
+class ExportQueryDto extends createZodDto(exportQuery) {}
 import { ReportRenderService } from './render.service.js'
 import { toMarkdown } from './document/markdown.js'
 import { toPdf } from './document/pdf.js'
@@ -31,16 +47,12 @@ export class ReportExportController {
   constructor(private readonly render: ReportRenderService) {}
 
   @Get('cases/:caseId/report.md')
-  // `report` stays required: `resolve` refuses without one, and the `?` on
-  // the binding is about the signature rather than the contract.
-  @OptionalQuery('lang')
   async markdown(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res() response: Response,
-    @Query('report') reportId?: string,
-    @Query('lang') lang?: string,
+    @Query() query: ExportQueryDto,
   ): Promise<void> {
-    const { document_, title } = await this.resolve(caseId, reportId, lang)
+    const { document_, title } = await this.resolve(caseId, query.report, query.lang)
     response
       .status(200)
       .type('text/markdown; charset=utf-8')
@@ -49,16 +61,12 @@ export class ReportExportController {
   }
 
   @Get('cases/:caseId/report.pdf')
-  // `report` stays required: `resolve` refuses without one, and the `?` on
-  // the binding is about the signature rather than the contract.
-  @OptionalQuery('lang')
   async pdf(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res() response: Response,
-    @Query('report') reportId?: string,
-    @Query('lang') lang?: string,
+    @Query() query: ExportQueryDto,
   ): Promise<void> {
-    const { document_, title, images } = await this.resolve(caseId, reportId, lang)
+    const { document_, title, images } = await this.resolve(caseId, query.report, query.lang)
     const file = await toPdf(document_, images)
     response
       .status(200)
@@ -71,16 +79,12 @@ export class ReportExportController {
   }
 
   @Get('cases/:caseId/report.docx')
-  // `report` stays required: `resolve` refuses without one, and the `?` on
-  // the binding is about the signature rather than the contract.
-  @OptionalQuery('lang')
   async word(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res() response: Response,
-    @Query('report') reportId?: string,
-    @Query('lang') lang?: string,
+    @Query() query: ExportQueryDto,
   ): Promise<void> {
-    const { document_, title, images } = await this.resolve(caseId, reportId, lang)
+    const { document_, title, images } = await this.resolve(caseId, query.report, query.lang)
     const file = await toWord(document_, images)
     response
       .status(200)
@@ -97,10 +101,7 @@ export class ReportExportController {
    * two chances for the artefact and the preview to differ.
    * -> `render.service.ts`
    */
-  private async resolve(caseId: string, reportId?: string, lang?: string) {
-    if (!reportId) {
-      throw new BadRequestException('Which report? The export URL names one.')
-    }
+  private async resolve(caseId: string, reportId: string, lang?: string) {
     return this.render.render(caseId, reportId, lang)
   }
 }

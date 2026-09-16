@@ -32,8 +32,26 @@ import { REPORT_STAGES, TLP_LABELS } from '../domain/entities/report.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
-import { OptionalQuery } from '../published-query.js'
 import { readStamp } from '../domain/field-spec.js'
+
+/**
+ * The query every report read takes, and the only description of it.
+ *
+ * A report is assembled in a language, so `lang` decides the headings a layout
+ * carries and the words a snippet answers in. Absent is English, applied per
+ * route where the fallback already lives.
+ *
+ * **Bound as a DTO rather than by name.** `@nestjs/swagger` marks a
+ * `@Query('lang')` required -- the `?` that makes it optional is on the
+ * handler's own parameter and nothing carries that to runtime -- while a
+ * `@Query()` DTO is published from this schema, which says what is optional
+ * because it is what refuses anything else.
+ */
+const langQuery = z.object({
+  lang: z.string().describe('The language to assemble in. Absent is English.').optional(),
+})
+
+class LangQueryDto extends createZodDto(langQuery) {}
 import {
   BlockKindsDto,
   ReportLayoutsDto,
@@ -131,14 +149,13 @@ export class ReportController {
    * than omitted, because the client dereferences it.
    */
   @Get('report-snippets')
-  @OptionalQuery('lang')
   @ZodResponse({
     status: 200,
     type: ReportSnippetsDto,
     description: 'The snippet menu, in the asked-for language where one exists.',
   })
-  async snippets(@Query('lang') lang?: string): Promise<ReportSnippets> {
-    const asked = (lang ?? '').trim() || 'en'
+  async snippets(@Query() query: LangQueryDto): Promise<ReportSnippets> {
+    const asked = (query.lang ?? '').trim() || 'en'
     const rows = await this.library.listWithPayload('report-snippets')
 
     return {
@@ -204,17 +221,16 @@ export class ReportController {
    */
   @UseGuards(CaseAccessGuard)
   @Get('cases/:caseId/reports/:id/page-ruler')
-  @OptionalQuery('lang')
   @ZodResponse({ status: 200, type: PageRulerDto, description: 'The page each section starts on.' })
   async pageRuler(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('id', ParseUUIDPipe) id: string,
-    @Query('lang') lang?: string,
+    @Query() query: LangQueryDto,
   ): Promise<PageRuler> {
     // **The ruler is given the images too.** It paginates by laying the whole
     // document out, so one built without them omits every figure and reports
     // page breaks the delivered PDF does not have.
-    const { document_, images } = await this.render!.render(caseId, id, lang)
+    const { document_, images } = await this.render!.render(caseId, id, query.lang)
     return pageRuler(document_, images)
   }
 
@@ -230,16 +246,15 @@ export class ReportController {
    */
   @UseGuards(CaseAccessGuard)
   @Post('cases/:caseId/reports/:id/send')
-  @OptionalQuery('lang')
   @ZodResponse({ status: 201, type: SentDto, description: 'The report was frozen and stamped as sent.' })
   @HttpCode(200)
   async send(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Session() session: UserSession,
-    @Query('lang') lang?: string,
+    @Query() query: LangQueryDto,
   ) {
-    return this.lifecycle!.send(caseId, id, session.user.id, lang)
+    return this.lifecycle!.send(caseId, id, session.user.id, query.lang)
   }
 
   /**
@@ -285,13 +300,12 @@ export class ReportController {
    * analyst whose report is not in English.
    */
   @Get('report-block-kinds')
-  @OptionalQuery('lang')
   @ZodResponse({
     status: 200,
     type: BlockKindsDto,
     description: 'Every section a report can hold, grouped as the insert menu draws them.',
   })
-  blockKinds(@Query('lang') _lang?: string): BlockKinds {
+  blockKinds(@Query() _query: LangQueryDto): BlockKinds {
     return { groups: blockKindGroups() }
   }
 
@@ -306,20 +320,19 @@ export class ReportController {
    * is a dialog that can be filled in and never submitted.
    */
   @Get('report-layouts')
-  @OptionalQuery('lang')
   @ZodResponse({
     status: 200,
     type: ReportLayoutsDto,
     description: 'Everything the New report form offers, in one document.',
   })
-  async layouts(@Query('lang') lang?: string): Promise<ReportLayouts> {
+  async layouts(@Query() query: LangQueryDto): Promise<ReportLayouts> {
     /**
      * **`?lang` decides the section headings the chips carry.** A route that
      * ignores it serves a Dutch report English headings on screen while the
      * pack reaches the exported file, so switching the language looks like it
      * did nothing.
      */
-    const asked = (lang ?? '').trim() || 'en'
+    const asked = (query.lang ?? '').trim() || 'en'
     const [stored, t, held] = await Promise.all([
       this.library.listWithPayload('report-layouts'),
       this.languages.translatorFor(asked),

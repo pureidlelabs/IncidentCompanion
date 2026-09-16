@@ -291,10 +291,9 @@ const json = (schema: unknown) => ({ content: { 'application/json': { schema } }
  * builds a client that parses a Word document as JSON. `format: 'binary'` is
  * how OpenAPI 3.0 spells "bytes"; without it a generator types a PDF a string.
  *
- * **A route that answers with more than one names them all.** One media type
- * per route was the shape until the indicators export, whose `?format` decides
- * between a CSV and a JSON bundle -- and a single entry made the second
- * unreachable from the description.
+ * **A route that answers with more than one names them all**, because the
+ * parameter deciding between them is no use to a caller who cannot see the
+ * second.
  */
 const DOWNLOADS: ReadonlyArray<readonly [RegExp, string | readonly string[], string, string?]> = [
   [/\/report\.md$/, 'text/markdown', 'The report as Markdown.'],
@@ -553,7 +552,12 @@ const VERSIONED_POST: ReadonlySet<string> = new Set(['/api/cases/{caseId}/eviden
  * `@nestjs/swagger` documents only what a decorator says, and this codebase
  * validates through a pipe, so nothing else describes these.
  */
-export function refusals(method: string, path: string, hasBody: boolean): Record<string, unknown> {
+export function refusals(
+  method: string,
+  path: string,
+  hasBody: boolean,
+  hasQuery = false,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   const row = /\{[^}]+\}/.test(path)
   const versioned =
@@ -566,10 +570,18 @@ export function refusals(method: string, path: string, hasBody: boolean): Record
       description: 'The body is not readable \u2014 malformed JSON, or not the media type this route takes.',
       ...json(REFUSAL),
     }
+  }
+  // **A query is refused by the same pipe and answers the same status.** A
+  // route with published parameters validates them from the schema that
+  // describes them, so a value outside what a parameter permits is read and
+  // refused exactly as a body is -- and a read with no body still has one way
+  // to be told no.
+  if (hasBody || hasQuery) {
     out['422'] = {
-      description:
-        'The body was read and refused. `message` says what was wrong; `errors` says where, ' +
-        'on routes that answer with a tree.',
+      description: hasBody
+        ? 'The body was read and refused. `message` says what was wrong; `errors` says where, ' +
+          'on routes that answer with a tree.'
+        : 'The query was read and refused. `errors` says which parameter, and why.',
       ...json(REFUSAL),
     }
   }

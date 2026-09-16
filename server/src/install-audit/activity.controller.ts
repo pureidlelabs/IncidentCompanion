@@ -98,6 +98,12 @@ export type ActivityPage = z.infer<typeof activityPageSchema>
 
 class ActivityPageDto extends createZodDto(activityPageSchema) {}
 
+/**
+ * **Bound as a DTO rather than parsed in the body.** `@Query() query: unknown`
+ * is a query `@nestjs/swagger` builds no parameter from at all, so all five
+ * were published nowhere; binding this publishes each from the schema that
+ * refuses it, with `required` and the default coming from the same place.
+ */
 const querySchema = z.object({
   channel: z.enum(installChannel.enumValues).optional(),
   /** Narrow to lines at or above this OCSF `severity_id`. */
@@ -108,6 +114,8 @@ const querySchema = z.object({
   outcome: z.enum(['success', 'failure']).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 })
+
+class ActivityQueryDto extends createZodDto(querySchema) {}
 
 @AdminOnly()
 @Controller('api/install/activity')
@@ -121,11 +129,10 @@ export class InstallActivityController {
     description: 'Audit lines, newest first, with a cursor and a count per log.',
   })
   async list(
-    @Query() query: unknown,
+    @Query() asked: ActivityQueryDto,
     @Session() session: UserSession,
     @Req() request: { headers: IncomingHttpHeaders },
   ): Promise<ActivityPage> {
-    const asked = querySchema.parse(query ?? {})
     return this.reads.page(asked, session, request.headers)
   }
 }
