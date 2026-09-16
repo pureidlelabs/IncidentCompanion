@@ -172,6 +172,37 @@ describe('what the install says about the wrapping', () => {
   })
 
   /**
+   * **The one thing an operator must not learn from an auditor.**
+   *
+   * The application does not encrypt what it stores, deliberately: a key it
+   * managed would sit in front of storage the operator already protects, and
+   * recovery would then depend on that key surviving. What it owes in exchange
+   * is saying so, and nothing said it -- every mention of encryption in the
+   * tree was about a case archive, which is a file an analyst exports rather
+   * than the state the install keeps. -> #177
+   *
+   * **Three properties rather than the sentence**, as the notes beside it are
+   * asserted: rewording is free, and dropping any of the three is not. Each
+   * alone misleads -- *unencrypted* without *the storage beneath* reads as a
+   * defect rather than a division of responsibility, and either without
+   * *evidence* leaves the artefacts, which are the most sensitive thing here,
+   * to be assumed covered or assumed not.
+   */
+  it('says the state it keeps is unencrypted, and what confidentiality rests on', async () => {
+    const note = (await settingsOf()).storage.encryptionNote
+
+    expect(note, 'the note does not say the application leaves it unencrypted').toMatch(
+      /unencrypted|does not encrypt/i,
+    )
+    expect(note, 'the note does not say what confidentiality rests on instead').toMatch(
+      /storage|disk|volume|platform/i,
+    )
+    expect(note, 'the note leaves an operator to guess whether evidence is included').toMatch(
+      /evidence|artefact/i,
+    )
+  })
+
+  /**
    * **Both halves, because either alone misleads.** The controller's own
    * comment says so: *sealed* without *not scanned* reads as protection, and
    * *not scanned* without *sealed* leaves an analyst expecting their antivirus

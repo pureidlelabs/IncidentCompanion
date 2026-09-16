@@ -60,6 +60,15 @@ export const installSettingsSchema = z.object({
      */
     evidenceNote: z.string(),
     /**
+     * **What nothing here does to durable state, and whose job it therefore
+     * is.** The application does not encrypt what it stores: a key it managed
+     * would sit in front of storage the operator already protects, and
+     * recovery would depend on that key surviving. Saying so is what it owes
+     * in exchange, and an operator who has not encrypted the storage beneath
+     * should learn it here rather than from an auditor.
+     */
+    encryptionNote: z.string(),
+    /**
      * How many artefacts this install holds the bytes of, and how many of
      * those it cannot find beside it.
      */
@@ -118,6 +127,16 @@ export class InstallSettingsController {
           'Attachments are stored in individual zips under the password "infected", ' +
           'so antivirus cannot quarantine your evidence. This app does not scan them, ' +
           'and your endpoint protection cannot see inside them.',
+        // **Says whose job it is, not only that it is undone.** "Stored
+        // unencrypted" alone reads as a defect somebody should fix here; what
+        // makes it a division of responsibility is the second half. Evidence
+        // is named because it is the most sensitive thing this holds and the
+        // one an operator is likeliest to assume is treated differently.
+        encryptionNote:
+          'The database, the cache and the evidence store are written unencrypted by this ' +
+          'application. Confidentiality at rest is whatever the storage underneath provides -- ' +
+          'your disks, your volumes, your platform. This app holds no key of its own, so ' +
+          'encrypting that storage is yours to do and yours to verify.',
         artefacts,
       },
       /**
