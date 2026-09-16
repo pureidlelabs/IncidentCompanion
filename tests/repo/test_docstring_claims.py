@@ -122,6 +122,72 @@ def resolves(cited: str, known: set[str], *, near: str = '') -> bool:
     return bare in known or any(f.endswith('/' + bare) for f in known)
 
 
+#: A backticked directory: two or more segments and a trailing `/`. The slash is
+#: what tells a citation from prose naming a folder, and a single segment is a
+#: name rather than a path -- `rules/` and `blocks/` point at nowhere in particular.
+CITED_DIR = re.compile(r'`(\.{0,2}/?[\w.-]+(?:/[\w.-]+)+/)`')
+
+CHANGES = 'openspec/changes/'
+ARCHIVE = CHANGES + 'archive/'
+
+
+def directories(files: list[str]) -> set[str]:
+    """Every directory the tree has, taken from the paths of the files in it."""
+    found: set[str] = set()
+    for one in files:
+        parent = posixpath.dirname(one)
+        while parent:
+            found.add(parent)
+            parent = posixpath.dirname(parent)
+    return found
+
+
+def archived_as(bare: str, dirs: set[str]) -> str | None:
+    """Where a pointer into `openspec/changes/` went when its branch landed.
+
+    The folder moves to `openspec/changes/archive/<date>-<id>/` at the sync, so
+    the pointer names an argument that is still there rather than a dead path.
+    """
+    if not bare.startswith(CHANGES) or bare.startswith(ARCHIVE):
+        return None
+    dated = re.compile(re.escape(ARCHIVE) + r'\d{4}-\d{2}-\d{2}-'
+                       + re.escape(bare[len(CHANGES):]) + '$')
+    return next((one for one in sorted(dirs) if dated.match(one)), None)
+
+
+def resolves_directory(cited: str, dirs: set[str]) -> bool:
+    """Whether a citation ending in `/` names a directory the tree has.
+
+    By suffix, as `resolves` reads a file: `components/ui/` and `db/schema/` are
+    written from where the reader is, and neither is a path from the root.
+    """
+    if cited.startswith('/'):
+        return True  # a route, not a directory
+    bare = cited.removeprefix('./').rstrip('/')
+    if '...' in bare:
+        return True
+    return (bare in dirs or any(one.endswith('/' + bare) for one in dirs)
+            or archived_as(bare, dirs) is not None)
+
+
+def git_ignores(paths: set[str]) -> set[str]:
+    """Which of these directories git excludes, and so are absent on purpose.
+
+    A child path is what the query takes: a pattern ending in `/` matches a
+    directory, and the answer cannot tell that a path which is not there is one.
+    `dist/` is excluded from `server/.gitignore` rather than from the root, so
+    each citation is asked about under every top-level tree as well.
+    """
+    if not paths:
+        return set()
+    probes = {f'{one}/x': one for one in paths}
+    probes.update({f'{tree.split("/")[0]}/{one}/x': one
+                   for one in paths for tree in TREES})
+    answer = subprocess.run(['git', 'check-ignore', '--stdin'], cwd=REPO_ROOT,
+                            input='\n'.join(probes), capture_output=True, text=True)
+    return {probes[one] for one in answer.stdout.split() if one in probes}
+
+
 def test_a_citation_written_from_the_reader_resolves() -> None:
     """The predicate itself, because the sweep cannot show what it skipped.
 
@@ -145,6 +211,25 @@ def test_a_citation_written_from_the_reader_resolves() -> None:
     assert not resolves('../../features/auth/Gone.tsx', tree, near=near)
 
 
+def test_a_citation_of_a_folder_resolves() -> None:
+    """The directory half of the predicate, for the same reason as the file half."""
+    dirs = {'ui/src/components/ui', 'server/src/db/schema',
+            'openspec/changes/archive/2026-09-16-a-door-stamps-where-a-row-came-through'}
+
+    assert CITED_DIR.findall('-> `openspec/changes/a-thing/`') == ['openspec/changes/a-thing/']
+    assert CITED_DIR.findall('the `rules/` directory') == [], 'one segment is a name'
+    assert CITED_DIR.findall('a `path/to/file.ts` citation') == [], 'a file is the other half'
+
+    assert resolves_directory('components/ui/', dirs), 'the house style must resolve'
+    assert resolves_directory('server/src/db/schema/', dirs), 'a full path still resolves'
+    assert not resolves_directory('openspec/changes/a-thing/', dirs)
+    assert resolves_directory('/api/auth/', dirs), 'a route is served, not stored'
+
+    landed = 'openspec/changes/a-door-stamps-where-a-row-came-through/'
+    assert resolves_directory(landed, dirs), 'an archived change still holds the argument'
+    assert not resolves_directory('openspec/changes/archive/a-door-stamps/', dirs)
+
+
 def test_every_cited_path_resolves() -> None:
     """A comment naming a file that is not there sends the reader nowhere.
 
@@ -153,7 +238,9 @@ def test_every_cited_path_resolves() -> None:
     """
     files = tracked()
     known = set(files)
+    dirs = directories(files)
     dangling: list[str] = []
+    folders: list[tuple[str, str]] = []
 
     for path in swept(files):
         rel = str(path.relative_to(REPO_ROOT))
@@ -162,18 +249,25 @@ def test_every_cited_path_resolves() -> None:
             continue
         text = path.read_text(errors='ignore')
         for line_no, line in enumerate(text.split('\n'), 1):
+            if ABSENT_ON_PURPOSE.search(line):
+                continue
             for cited in CITED.findall(line):
-                if is_a_host(cited):
-                    continue
-                if resolves(cited, known, near=rel):
-                    continue
-                if ABSENT_ON_PURPOSE.search(line):
+                if is_a_host(cited) or resolves(cited, known, near=rel):
                     continue
                 dangling.append(f'{rel}:{line_no} cites {cited}')
+            for cited in CITED_DIR.findall(line):
+                if is_a_host(cited) or resolves_directory(cited, dirs):
+                    continue
+                folders.append((f'{rel}:{line_no} cites {cited}',
+                                cited.removeprefix('./').rstrip('/')))
+
+    excluded = git_ignores({bare for _, bare in folders})
+    dangling += [where for where, bare in folders if bare not in excluded]
 
     assert not dangling, (
-        'these comments name a file that is not in the tree -- repoint or '
-        'delete them:\n  ' + '\n  '.join(sorted(dangling)))
+        'these comments name a file or directory that is not in the tree -- '
+        'repoint or delete them. A change folder that landed is under '
+        f'`{ARCHIVE}<date>-<id>/`:\n  ' + '\n  '.join(sorted(dangling)))
 
 
 def test_no_comment_block_documents_another_comment_block() -> None:
