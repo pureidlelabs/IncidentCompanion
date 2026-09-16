@@ -115,7 +115,9 @@ test('keeps the report table in its columns as the window narrows', async ({
      */
     const found = await findings(page, 'main')
     for (const one of found) {
-      trouble.push(`${String(width)}px ${one.kind}: ${one.what}`)
+      // The detail too: `what` is a truncated tag and class, and the numbers
+      // that say which rule fired and why are all in `detail`.
+      trouble.push(`${String(width)}px ${one.kind}: ${one.what} -- ${one.detail}`)
     }
 
     // The chip itself, measured against the cell it is in - a probe reports

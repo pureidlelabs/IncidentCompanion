@@ -99,6 +99,32 @@ const FAULTS: Fault[] = [
   },
   {
     kind: 'size-overridden',
+    why: 'a table cell asking for w-40 and computing 158px',
+    /**
+     * **Two pixels, not a hundred.** The rule tolerates a table cell a pixel
+     * because the layout algorithm distributes the remainder; a fault that
+     * missed by 120px would fire through any bound, so widening the tolerance
+     * to five would leave this green. Missing by two is what pins it.
+     *
+     * The cell sits in a `display: table` of its own because the row is a flex
+     * container, and a flex item's `display: table-cell` is blockified to
+     * `block`, which sends the fault through the ordinary branch and proves
+     * nothing about the one it is aimed at.
+     */
+    break: ({ row }) => {
+      const toolbar = document.querySelector(row)
+      if (!toolbar) throw new Error(`no element for ${row}`)
+      const table = document.createElement('div')
+      table.style.cssText = 'display:table;width:158px;flex-shrink:0'
+      const cell = document.createElement('div')
+      cell.className = 'w-40'
+      cell.style.cssText = 'display:table-cell;height:12px;background:currentColor'
+      table.appendChild(cell)
+      toolbar.appendChild(table)
+    },
+  },
+  {
+    kind: 'size-overridden',
     why: 'an element asking for size-6 and computing 12px',
     break: ({ row }) => {
       const toolbar = document.querySelector(row)
