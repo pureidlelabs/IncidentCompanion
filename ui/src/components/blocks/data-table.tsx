@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   type ComponentProps,
+  type ReactNode,
 } from 'react'
 
 import type { CollectionName } from '@/api/model'
@@ -638,6 +639,12 @@ export function useSelectedIds<TData extends { id: string }>(
 export function selectionColumn<TData extends { id: string }>(
   /** What this row is called, for the box a screen reader announces. */
   nameOf?: (row: TData) => string,
+  /**
+   * A caption drawn inside the header box's label, and its accessible name in
+   * place of `Select every row`. A column heading has no room for words, so
+   * only a screen drawing the header on its own passes one.
+   */
+  captionOf?: (table: EntityTable<TData>) => ReactNode,
 ): EntityColumn<TData> {
   return {
     id: 'select',
@@ -651,11 +658,13 @@ export function selectionColumn<TData extends { id: string }>(
           slot={null}
           isSelected={table.getIsAllRowsSelected()}
           isIndeterminate={table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
-          aria-label="Select every row"
+          {...(captionOf ? {} : { 'aria-label': 'Select every row' })}
           onChange={(next) => {
             table.toggleAllRowsSelected(next)
           }}
-        />
+        >
+          {captionOf?.(table)}
+        </Checkbox>
       </span>
     ),
     cell: ({ row }) => (

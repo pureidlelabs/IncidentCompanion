@@ -282,7 +282,16 @@ export function TimelineScreen({
    * second copy of its markup.
    */
   const selectionColumns = useMemo(
-    () => [selectionColumn<TimelineEntry>((row) => `Select ${row.description || 'entry'}`)],
+    () => [
+      selectionColumn<TimelineEntry>(
+        (row) => `Select ${row.description || 'entry'}`,
+        // Counted off the table rather than closed over: a count in the
+        // dependency list rebuilds the columns the selection is keyed to.
+        (all) => (
+          <span className="text-xs">{`Select all ${String(all.getRowModel().rows.length)} shown`}</span>
+        ),
+      ),
+    ],
     [],
   )
   const table: EntityTable<TimelineEntry> = useEntityTable<TimelineEntry>({
@@ -611,9 +620,8 @@ export function TimelineScreen({
         ) : (
           <>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 text-xs text-ink-muted">
+              <span className="flex items-center text-ink-muted">
                 {selectAllCheckbox}
-                {`Select all ${String(visible.length)} shown`}
               </span>
               <BulkActionBar
                 table={table}
