@@ -9,11 +9,6 @@ import { describe, expect, it } from 'vitest'
  * **A part holds no example content at all -- not as a source, and not as a
  * default.**
  *
- * A part that reads `PICKER_SERVING` in its body reports an install that does
- * not exist -- an outage belonging to nobody, a list of fictional cases -- and
- * takes no prop to hand it anything else, with a passing story, a passing
- * pixel sweep and a passing suite.
- *
  * **A default is the same leak arriving quietly**, which is what this rule
  * used to permit and the specification does not:
  *
@@ -22,9 +17,7 @@ import { describe, expect, it } from 'vitest'
  * > though it were theirs.
  *
  * Its scenario is *a part is given nothing -- then it shows nothing rather
- * than the example*. A container whose data has not arrived passes nothing,
- * and a defaulted part answers with somebody else's install rather than with
- * its own empty state. -> `openspec/specs/interface/spec.md`, #237
+ * than the example*. -> `openspec/specs/interface/spec.md`, #237
  *
  * ## What it reads
  *
