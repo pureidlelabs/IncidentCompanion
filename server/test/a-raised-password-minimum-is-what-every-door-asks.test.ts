@@ -99,14 +99,8 @@ describe.skipIf(!RUNNABLE || !db)('a raised password minimum', () => {
   }, 90_000)
 
   afterAll(async () => {
-    // **Restored, because the setting is the install's and the database is
-    // shared.** A file that leaves the minimum raised fails the next one at
-    // whichever password it issues, in a way that reads as that file's defect.
-    // Said rather than swallowed: a restore that failed leaves the install's
-    // minimum raised for every file after this one.
-    await minimumIs(MIN_PASSWORD_LENGTH).catch((why: unknown) => {
-      process.stdout.write(`  ! the password minimum was not restored: ${String(why)}\n`)
-    })
+    // The minimum is put back by `close`, for every file rather than this one.
+    // The `finally` on each case below stays: they run before it.
     await harness.close()
     await pool?.end()
   })
