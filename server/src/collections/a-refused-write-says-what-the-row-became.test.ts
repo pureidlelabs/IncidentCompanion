@@ -41,6 +41,14 @@ interface Writable {
   ): Promise<unknown>
 }
 
+/**
+ * Row metadata the server owns, which no write schema accepts.
+ *
+ * Patching one answers 422 rather than the 409 these cases are about, so a
+ * sweep that picked one would report the wrong refusal. `source` is here for
+ * `createdBy`'s reason: a client that could set it could claim an analyst
+ * typed what an import supplied. -> `domain/wire.ts`
+ */
 const NOT_A_PATCH = new Set([
   'id',
   'caseId',
@@ -49,6 +57,7 @@ const NOT_A_PATCH = new Set([
   'updatedAt',
   'createdBy',
   'updatedBy',
+  'source',
 ])
 
 function collections(): { name: string; make: () => Writable }[] {

@@ -560,6 +560,7 @@ export function NotesScreen({
 
 const BLANK_NOTE: Omit<CaseNote, 'id' | 'author' | 'createdAt'> = {
   version: 1,
+  source: 'manual',
   note: '',
   /** Served by `CASENOTE_FIELDS` and not drawn here. */
   tags: '',

@@ -118,6 +118,7 @@ const SERVED = new Set([
   'specs',
   'collections',
   'about',
+  'report-layouts',
 ])
 
 /**
@@ -132,7 +133,7 @@ const REFUSED = new Set([
   'regimes',
   'library',
   'report-block-kinds',
-  'report-layouts',
+  // `/report/languages`, which is the packs this install holds.
   'report',
   // Administration, which a single-visitor demo has no subject for.
   'accounts',
