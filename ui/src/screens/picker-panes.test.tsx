@@ -87,7 +87,8 @@ const SCREENS: Readonly<Record<PickerPane, React.ComponentType<typeof RAIL>>> = 
 const OWED: readonly { pane: PickerPane; heading: string; only: string }[] = [
   { pane: 'new', heading: 'Start a case', only: 'Blank case' },
   { pane: 'cases', heading: 'Your cases', only: 'Ticket' },
-  { pane: 'demos', heading: 'Demo cases', only: 'Worked ransomware campaign' },
+  // The empty state, because the pane is handed nothing here. -> #237
+  { pane: 'demos', heading: 'Demo cases', only: 'This install offers no demo cases.' },
   { pane: 'templates', heading: 'Case templates', only: 'New template' },
   { pane: 'reports', heading: 'Reports', only: 'Layouts' },
   { pane: 'snippets', heading: 'Snippets', only: 'New snippet' },

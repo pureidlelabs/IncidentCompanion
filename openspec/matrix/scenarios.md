@@ -5,10 +5,10 @@
 | | |
 | --- | --- |
 | Scenarios | 497 |
-| Demonstrated | 395 |
+| Demonstrated | 396 |
 | Undemonstrable | 1 |
 | Unbuilt | 86 |
-| Undemonstrated | 15 |
+| Undemonstrated | 14 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -412,7 +412,7 @@
 | A screen draws; it does not fetch, and it does not place itself | A screen is placed somewhere else | demonstrated | ui/src/screens/a-screen-does-not-place-itself.rule.test.ts |
 | Every part can be seen on its own, in the states that matter | A part that presents data is shown in isolation | undemonstrated | |
 | Every part can be seen on its own, in the states that matter | A part that presents no data is shown in isolation | undemonstrated | |
-| Every part can be seen on its own, in the states that matter | A part is given nothing | undemonstrated | |
+| Every part can be seen on its own, in the states that matter | A part is given nothing | demonstrated | ui/src/components/blocks/a-fixture-is-a-default-not-a-source.rule.test.ts |
 | The interface has one vocabulary, and it is not invented per screen | A screen needs a value the set does not have | demonstrated | ui/src/motion-scale.rule.test.ts |
 | The interface has one vocabulary, and it is not invented per screen | A name does not resolve | demonstrated | ui/src/styles/every-name-resolves.rule.test.ts |
 | The interface has one vocabulary, and it is not invented per screen | An analyst has asked for less motion | undemonstrated | |
