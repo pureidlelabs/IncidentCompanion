@@ -122,20 +122,12 @@ describe('a gap between two beats in the narrative', () => {
     expect(printed).toMatch(/\bh\b|\bmin\b|\bd\b/)
   })
 
-  /**
-   * **One line carries two durations and they mean opposite things.** The `+`
-   * is what separates time nobody accounted for from the time a run covers,
-   * and it was inside the formatter before -- so the caller that wanted the
-   * other one stripped it back off again.
-   */
+  /** Two durations on one line: the `+` is what tells them apart. -> `narrative.ts` */
   it('marks the gap with a plus and the span it covers without one', () => {
     const printed = JSON.stringify(narrative(withBeats(UNITS)))
 
     expect(printed, 'no gap was marked as one').toMatch(/\+[^"]*uur|\+[^"]*minuten|\+[^"]*dagen/)
-    // **Counted, because the shape to refuse is a `+` on the wrong duration.**
-    // These beats print three spans -- one gap under the hour, one run that
-    // covers half an hour, one band of five days -- and exactly the first owes
-    // a plus.
+    // Counted: these beats print three spans and exactly the first owes a plus.
     expect(
       (printed.match(/\+/g) ?? []).length,
       'a plus reached a span that is not a gap, or the gap lost its own',

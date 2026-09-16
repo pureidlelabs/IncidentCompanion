@@ -89,10 +89,8 @@ export function narrative(input: ReportInput): Node[] {
      * spend; a table has none, so the duration stands alone with no sentence
      * around it.
      *
-     * **It is still text the application supplies**, so it is said in the
-     * report's language like everything else on the page. The exemption this
-     * replaces was written when no span in a report could be translated at
-     * all. -> #698
+     * Text the application supplies, so it is said in the report's language
+     * like everything else on the page. -> #698
      */
     if (gap.long) {
       // **The duration goes in the widest column, not the last one.** Painted
@@ -110,9 +108,8 @@ export function narrative(input: ReportInput): Node[] {
     // timestamp: repeating a whole date beside a start two minutes earlier is a
     // date to read for one changed digit.
     const covered = run.length > 1 ? elapsed(first.at, last.at, input.t).text : ''
-    // **The `+` is on the gap and not on the span.** Both are durations on one
-    // line, and what separates them is that one is time nobody accounted for
-    // and the other is time this run covers.
+    // The `+` marks the gap, never the span: time nobody accounted for,
+    // against time this run covers.
     const since = gap.text === '' ? '' : `+${gap.text}`
     const meta = [run.length > 1 ? `\u00d7${String(run.length)}` : '', covered, gap.long ? '' : since]
       .filter(Boolean)
