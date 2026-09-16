@@ -480,7 +480,15 @@ export function probe([rootSel, excludeSel]) {
             && parseFloat(s.flexShrink) > 0) continue;
         const asked = parseFloat(want[1]) * 4;
         const got = parseFloat(s.width);
-        if (!got || Math.abs(got - asked) <= 0.6) continue;
+        // **A table cell's used width is the layout algorithm's, to within a
+        // pixel.** The algorithm distributes what is left over across the
+        // columns, so a cell asking for 160px computes 160.7px at one window
+        // width and 160.0px at the next -- a specified width is an input to it
+        // rather than a promise. Sub-pixel is never "a stronger rule is
+        // winning", and a rule that says so fires on a sound table at three
+        // widths out of four. A real override is many pixels and still reported.
+        const slack = s.display === 'table-cell' ? 1 : 0.6;
+        if (!got || Math.abs(got - asked) <= slack) continue;
         out.push({kind: 'size-overridden', what: name(el),
                   detail: `asks for ${asked}px and computes ${got.toFixed(1)}px, `
                       + 'so a stronger rule is winning'});
