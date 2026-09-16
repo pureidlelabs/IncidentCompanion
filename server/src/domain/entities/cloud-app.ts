@@ -7,7 +7,7 @@
  */
 import { z } from 'zod'
 
-import { field } from '../field-spec.js'
+import { field, ref } from '../field-spec.js'
 import { pasted } from '../pasted.js'
 import { consentTypeSchema, unsettable, verifiedPublisherSchema } from '../vocabularies.js'
 
@@ -62,7 +62,7 @@ export const cloudAppSchema = z.object({
     subordinate: true,
   }),
 
-  accountId: field(z.uuid().nullable().default(null), {
+  accountId: field(ref(), {
     tier: 'detail',
     label: 'Consenting account',
     kind: 'device_select',
@@ -75,7 +75,7 @@ export const cloudAppSchema = z.object({
    * query establishes several rows, and six copies of its text can silently
    * disagree about what was run.
    */
-  methodId: field(z.uuid().nullable().default(null), {
+  methodId: field(ref(), {
     label: 'Found by',
     kind: 'device_select',
     refTarget: 'methods',

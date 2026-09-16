@@ -23,7 +23,7 @@
  */
 import { z } from 'zod'
 
-import { field } from '../field-spec.js'
+import { field, ref, refs } from '../field-spec.js'
 import {
   dataCategorySchema,
   dataDispositionSchema,
@@ -80,7 +80,7 @@ export const impactSchema = z.object({
     label: 'Notes',
     kind: 'textarea',
   }),
-  systemId: field(z.uuid().nullable().default(null), {
+  systemId: field(ref(), {
     tier: 'detail',
     label: 'Held on',
     kind: 'device_select',
@@ -92,7 +92,7 @@ export const impactSchema = z.object({
     },
   }),
 
-  accountId: field(z.uuid().nullable().default(null), {
+  accountId: field(ref(), {
     label: 'Account involved',
     kind: 'device_select',
     refTarget: 'accounts',
@@ -104,7 +104,7 @@ export const impactSchema = z.object({
    * demonstrates it, and this is the difference between a finding and an
    * assertion.
    */
-  evidenceIds: field(z.array(z.uuid()).default([]), {
+  evidenceIds: field(refs(), {
     label: 'Evidence',
     kind: 'multi_device_select',
     refTarget: 'evidence',
@@ -116,7 +116,7 @@ export const impactSchema = z.object({
    * An impact claim reached by a query and one reached by reading a disk are
    * different claims, and only this field says which.
    */
-  methodIds: field(z.array(z.uuid()).default([]), {
+  methodIds: field(refs(), {
     label: 'Found by',
     kind: 'multi_device_select',
     refTarget: 'methods',

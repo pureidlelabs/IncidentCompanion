@@ -23,7 +23,7 @@
  */
 import { z } from 'zod'
 
-import { field } from '../field-spec.js'
+import { field, ref } from '../field-spec.js'
 import { evidenceTypeSchema, unsettable } from '../vocabularies.js'
 
 export const evidenceSchema = z.object({
@@ -93,7 +93,7 @@ export const evidenceSchema = z.object({
    * exactly what was asked** - *Acquisition tool: KAPE* is not reproducible on
    * its own, which is what makes the custody fields worth filling.
    */
-  methodId: field(z.uuid().nullable().default(null), {
+  methodId: field(ref(), {
     label: 'Collected by method',
     kind: 'device_select',
     refTarget: 'methods',
@@ -105,7 +105,7 @@ export const evidenceSchema = z.object({
     kind: 'text',
   }),
 
-  systemId: field(z.uuid().nullable().default(null), {
+  systemId: field(ref(), {
     tier: 'detail',
     label: 'Host',
     kind: 'device_select',
@@ -117,7 +117,7 @@ export const evidenceSchema = z.object({
     },
   }),
 
-  accountId: field(z.uuid().nullable().default(null), {
+  accountId: field(ref(), {
     label: 'Account',
     kind: 'device_select',
     refTarget: 'accounts',
