@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   type ComponentProps,
+  type ReactNode,
 } from 'react'
 
 import type { CollectionName } from '@/api/model'
@@ -638,26 +639,41 @@ export function useSelectedIds<TData extends { id: string }>(
 export function selectionColumn<TData extends { id: string }>(
   /** What this row is called, for the box a screen reader announces. */
   nameOf?: (row: TData) => string,
+  /**
+   * A caption drawn inside the header box's label, and its accessible name in
+   * place of `Select every row`.
+   */
+  captionOf?: (rowCount: number) => ReactNode,
 ): EntityColumn<TData> {
   return {
     id: 'select',
     meta: { className: 'w-10' },
     enableSorting: false,
-    header: ({ table }) => (
-      <span data-part="selection-checkbox">
-        <Checkbox
-          // `slot={null}` opts out of the table's own selection context, which
-          // this column does not use: selection is TanStack's.
-          slot={null}
-          isSelected={table.getIsAllRowsSelected()}
-          isIndeterminate={table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
-          aria-label="Select every row"
-          onChange={(next) => {
-            table.toggleAllRowsSelected(next)
-          }}
-        />
-      </span>
-    ),
+    header: ({ table }) => {
+      // The rows `toggleAllRowsSelected` ticks, so a caption cannot name a
+      // count the box does not honour.
+      const caption = captionOf?.(table.getPreGroupedRowModel().flatRows.length)
+      // `Checkbox` takes `children` out before React Aria sees them, so a
+      // caption rendering nothing leaves the box unnamed and warns nobody.
+      const named = caption != null && typeof caption !== 'boolean'
+      return (
+        <span data-part="selection-checkbox">
+          <Checkbox
+            // `slot={null}` opts out of the table's own selection context,
+            // which this column does not use: selection is TanStack's.
+            slot={null}
+            isSelected={table.getIsAllRowsSelected()}
+            isIndeterminate={table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
+            {...(named ? {} : { 'aria-label': 'Select every row' })}
+            onChange={(next) => {
+              table.toggleAllRowsSelected(next)
+            }}
+          >
+            {caption}
+          </Checkbox>
+        </span>
+      )
+    },
     cell: ({ row }) => (
       <span data-part="selection-checkbox" className="flex items-center justify-center">
         <Checkbox
