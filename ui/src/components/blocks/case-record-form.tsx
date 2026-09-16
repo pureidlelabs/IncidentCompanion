@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Advice } from '@/api/advice'
 import type { Case } from '@/api/model'
@@ -33,6 +33,8 @@ export interface CaseRecordFormProps {
   refusal?: { field: string; by: string } | undefined
   /** Fields the last submit was refused on, by name. */
   refused?: Problems
+  /** The field the cursor goes to once this pane is drawn, by name. */
+  focusField?: string | undefined
   /** Omitted in the gallery, where a field is typed into and never sent. */
   writes?: CaseWrites
 }
@@ -60,6 +62,7 @@ export function CaseRecordForm({
   pane,
   refusal,
   refused = NO_PROBLEMS,
+  focusField,
   writes,
 }: CaseRecordFormProps) {
   const fields = useMemo(() => (specs ? fieldsOf(formSpec(specs, 'CASE_FIELDS')) : []), [specs])
@@ -79,8 +82,22 @@ export function CaseRecordForm({
 
   const was = kase as unknown as Record<string, unknown>
 
+  const root = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (focusField === undefined) return
+    // Scoped to this pane and taken from the DOM, because `Field` mints the
+    // control's id itself and a control is whatever the served kind renders.
+    root.current
+      ?.querySelector<HTMLElement>(
+        `[data-field="${focusField}"] :is(input, textarea, select, button)`,
+      )
+      ?.focus()
+    // `groups`, because there is no control to focus until the served spec
+    // has arrived and the pane has drawn one.
+  }, [focusField, groups])
+
   return (
-    <div data-part="case-record-form" data-pane={pane} className="flex flex-col gap-5">
+    <div ref={root} data-part="case-record-form" data-pane={pane} className="flex flex-col gap-5">
       {refusal && <MergeReview field={refusal.field} by={refusal.by} />}
 
       {groups.map((group) => (

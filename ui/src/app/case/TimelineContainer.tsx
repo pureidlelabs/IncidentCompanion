@@ -37,6 +37,11 @@ export function TimelineContainer() {
     .map((one) => one.trim())
     .filter((one) => one !== '')
 
+  // An open item on the overview links here already narrowed to the entries it
+  // counted.
+  const missing = (address.get('missing') ?? '').trim()
+  const unreviewed = address.get('unreviewed') !== null
+
   const create = useEntryCreate(caseId, 'timeline')
   const patch = useEntryMutation(caseId, 'timeline')
   const bulkDelete = useBulkDelete(caseId)
@@ -73,9 +78,11 @@ export function TimelineContainer() {
       // between two timeline addresses remounts nothing and a seeded filter
       // would outlive the phase that set it -- the rail draws Timeline as a
       // link even when it is the section already open.
-      key={phases.join('\u0000')}
+      key={[...phases, missing, unreviewed ? '1' : ''].join('\u0000')}
       busy={kase.isPending || specs.isPending}
       phases={phases}
+      missing={missing}
+      unreviewed={unreviewed}
       {...(kase.error === null ? {} : { problem: kase.error })}
       onRetry={() => {
         void kase.refetch()

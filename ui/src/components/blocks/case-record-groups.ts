@@ -102,6 +102,20 @@ export function paneHoldingLabel(fields: readonly FieldSpec[], label: string): C
   return found?.key ?? 'details'
 }
 
+/**
+ * Which pane holds the field a door names, by the name the schema carries.
+ *
+ * Beside `paneHoldingLabel` and not merged with it: a refusal quotes the label
+ * the analyst read, and a door in the address carries the wire name, which is
+ * the one an address can spell.
+ */
+export function paneHoldingName(fields: readonly FieldSpec[], name: string): CaseGroupKey {
+  const found = groupedCaseFields(fields).find((group) =>
+    group.fields.some((field) => field.name === name),
+  )
+  return found?.key ?? 'details'
+}
+
 export function answered(draft: Draft, fields: readonly FieldSpec[]): number {
   return fields.filter((field) => {
     const value = draft[field.name]

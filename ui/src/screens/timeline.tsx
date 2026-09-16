@@ -19,6 +19,7 @@ import {
   PickerGroup,
   PickerRow,
 } from '@/components/blocks/filter-bar'
+import { fieldLabel, labelFor } from '@/components/blocks/case-queue'
 import { MergeReview } from '@/components/blocks/merge-review'
 import { RowContextMenu, type RowMenuGroup } from '@/components/blocks/row-menu'
 import { AddAction, CountMeta } from '@/components/blocks/section-head'
@@ -132,6 +133,10 @@ export interface TimelineScreenProps {
   timeWindow?: TimeWindow | null
   /** Kill chain phases the list opens narrowed to. Empty, the default, is all. */
   phases?: readonly string[]
+  /** One expected field the list opens narrowed to the entries lacking. */
+  missing?: string
+  /** Open narrowed to what an import left flagged for review. */
+  unreviewed?: boolean
   /** A row write another analyst got in first with. */
   refusal?: { field: string; row: string; by: string }
   /**
@@ -179,6 +184,8 @@ export function TimelineScreen({
   newestFirst: initialOrder = true,
   timeWindow = null,
   phases: initialPhases = [],
+  missing = '',
+  unreviewed = false,
   refusal,
   busy = false,
   problem,
@@ -192,6 +199,8 @@ export function TimelineScreen({
     q: search,
     window: timeWindow,
     phases: initialPhases,
+    missing,
+    unreviewed,
   })
   const [newestFirst, setNewestFirst] = useState(initialOrder)
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set())
@@ -238,14 +247,24 @@ export function TimelineScreen({
   // have none of - and reads zero rather than being absent.
   const severities = specs?.vocabularies.severity ?? []
 
-  const kindCounts = useMemo(() => countsFor(entries, filter, 'kind'), [entries, filter])
-  const severityCounts = useMemo(() => countsFor(entries, filter, 'severity'), [entries, filter])
-  const phaseCounts = useMemo(() => countsFor(entries, filter, 'phase'), [entries, filter])
+  const tiering = specs?.tiering
+  const kindCounts = useMemo(
+    () => countsFor(entries, filter, 'kind', tiering),
+    [entries, filter, tiering],
+  )
+  const severityCounts = useMemo(
+    () => countsFor(entries, filter, 'severity', tiering),
+    [entries, filter, tiering],
+  )
+  const phaseCounts = useMemo(
+    () => countsFor(entries, filter, 'phase', tiering),
+    [entries, filter, tiering],
+  )
   const phases = useMemo(() => phasesOf(entries), [entries])
 
   const visible = useMemo(
-    () => sortEntries(applyTimelineFilter(entries, filter), newestFirst),
-    [entries, filter, newestFirst],
+    () => sortEntries(applyTimelineFilter(entries, filter, tiering), newestFirst),
+    [entries, filter, newestFirst, tiering],
   )
   const runs = useMemo(() => runsOf(visible), [visible])
   const gaps = useMemo(() => gapsBefore(runs.map((run) => run.lead)), [runs])
@@ -416,6 +435,29 @@ export function TimelineScreen({
                   setFilter((was) => ({ ...was, kind: was.kind === 'action' ? '' : 'action' }))
                 }}
               />
+              {/* Drawn only while it holds: an arrival from an open item is
+                  the one thing that sets either, and a permanent chip per
+                  expected field is the whole schema on the filter row. */}
+              {filter.missing !== '' && specs && (
+                <Chip
+                  label={`Missing ${fieldLabel(labelFor(specs, filter.missing))}`}
+                  count={visible.length}
+                  pressed
+                  onToggle={() => {
+                    setFilter((was) => ({ ...was, missing: '' }))
+                  }}
+                />
+              )}
+              {filter.unreviewed && (
+                <Chip
+                  label="Unreviewed"
+                  count={visible.length}
+                  pressed
+                  onToggle={() => {
+                    setFilter((was) => ({ ...was, unreviewed: false }))
+                  }}
+                />
+              )}
             </FilterGroup>
 
             <FilterGroup label="Severity">

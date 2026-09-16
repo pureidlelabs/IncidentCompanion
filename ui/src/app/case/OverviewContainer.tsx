@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useCase } from '@/api/case'
 import { useComplianceRecord } from '@/api/compliance'
 import { useSpecs } from '@/api/specs'
 import { useCaseMutation } from '@/api/useCaseMutation'
 import { useCaseId } from '@/app/useCaseId'
+import { casePath } from '@/components/blocks/case-paths'
 import { OverviewScreen } from '@/screens/overview'
 
 import { announcing } from './entryWrites'
@@ -30,6 +31,7 @@ export function OverviewContainer() {
   const specs = useSpecs()
   const record = useComplianceRecord(caseId)
   const navigate = useNavigate()
+  const [address] = useSearchParams()
   const patch = useCaseMutation(caseId)
   // Read once, so the reading holds for the mount.
   const [now] = useState(() => Date.now())
@@ -53,8 +55,10 @@ export function OverviewContainer() {
       onRetry={() => {
         void kase.refetch()
       }}
+      focusField={address.get('field') ?? undefined}
       onOpen={(row) => {
-        void navigate(`/cases/${encodeURIComponent(caseId)}/${row.section}`)
+        const to = casePath(caseId, row.section)
+        void navigate(row.query === '' ? to : `${to}?${row.query}`)
       }}
       writes={writes}
     />

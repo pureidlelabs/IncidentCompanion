@@ -135,6 +135,9 @@ export function FieldControl<TData>({
   return (
     <Field
       label={field.label}
+      // The handle a caller focuses this field by: `Field` mints no id of
+      // its own.
+      data-field={field.name}
       required={field.required}
       // Advice wins the line and the schema's hint has it the rest of the
       // time: two sentences at 12px under one control compete to be read.
