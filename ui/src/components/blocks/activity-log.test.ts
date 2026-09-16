@@ -92,8 +92,13 @@ describe('the audit log paints severity from the shared ramp', () => {
       activity: `Recorded ${severity}`,
     })
     render(createElement(ActivityLog, { audit: [row('Fatal'), row('Critical')], reading }))
-    expect(screen.getByText('Fatal')).toBeInTheDocument()
-    expect(screen.getByText('Critical')).toBeInTheDocument()
+    for (const severity of ['Fatal', 'Critical'] as const) {
+      // The element the word is in, which is the severity cell or the test
+      // proves only that the word is somewhere on the page.
+      const cell = screen.getByText(severity)
+      expect(cell, severity).toHaveClass(TONE_INK.critical)
+      expect(cell.querySelector('[aria-hidden]'), severity).not.toBeNull()
+    }
   })
 
   it('has a tone for every severity the reader can return', () => {
