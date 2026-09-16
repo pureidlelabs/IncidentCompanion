@@ -58,20 +58,20 @@ describe('metrics', () => {
   it('measures time to detect from the first thing that happened', () => {
     const nodes = metrics(input(CLOCKS))
     // 08:00 -> 10:30. Anchored at openedAt it would read '30 min'.
-    expect(valueOf(table(nodes), 'Time to detect')).toBe('2 h 30 min')
+    expect(valueOf(table(nodes), 'Time to detect')).toBe('2 hr, 30 min')
   })
 
   it('measures dwell from the first thing that happened', () => {
     const nodes = metrics(input(CLOCKS))
-    // 08:00 -> 12:00. Anchored at detectedAt it would read '1 h 30 min'.
-    expect(valueOf(table(nodes), 'Dwell time')).toBe('4 h 0 min')
+    // 08:00 -> 12:00. Anchored at detectedAt it would read '1 hr, 30 min'.
+    expect(valueOf(table(nodes), 'Dwell time')).toBe('4 hr')
   })
 
   it('runs dwell to the close when a closed case was never marked contained', () => {
     const nodes = metrics(
       input({ ...CLOCKS, containedAt: null, status: 'closed', closedAt: '2026-01-01T14:00:00Z' }),
     )
-    expect(valueOf(table(nodes), 'Dwell time')).toBe('6 h 0 min')
+    expect(valueOf(table(nodes), 'Dwell time')).toBe('6 hr')
   })
 
   it('keeps dwell running when a close stamp outlives its status', () => {
@@ -96,7 +96,7 @@ describe('metrics', () => {
     )
     const dwell = valueOf(table(nodes), 'Dwell time')
     expect(dwell).not.toContain('ongoing')
-    expect(dwell).toBe('2 h 0 min')
+    expect(dwell).toBe('2 hr')
   })
 
   it('offers no containment coverage until something is contained', () => {
@@ -283,7 +283,7 @@ describe('metrics', () => {
   it('does not freeze the case age on a stamp left behind by a reopen', () => {
     const stale = { openedAt: '2026-01-01T00:00:00Z', closedAt: '2026-01-02T00:00:00Z' }
     const age = valueOf(table(metrics(input({ ...stale, status: 'open' }))), 'Case age')
-    expect(age).not.toBe('24 h 0 min')
+    expect(age).not.toBe('24 hr')
     expect(age).toBe(valueOf(table(metrics(input({ openedAt: stale.openedAt }))), 'Case age'))
   })
 
@@ -295,7 +295,7 @@ describe('metrics', () => {
         closedAt: '2026-01-02T00:00:00Z',
       }),
     )
-    expect(valueOf(table(nodes), 'Case age')).toBe('24 h 0 min')
+    expect(valueOf(table(nodes), 'Case age')).toBe('24 hr')
   })
 
   it('never reports a sub-minute span as zero', () => {

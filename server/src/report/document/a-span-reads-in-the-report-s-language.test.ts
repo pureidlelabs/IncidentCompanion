@@ -1,34 +1,33 @@
 /**
  * **A span in a report reads in the language the report is written in.**
  *
- * **Driven by a pack written here rather than by the shipped Dutch one**, so
- * the case asserts that units come from wherever the words come from without
- * tying itself to whichever keys `labels.nl.ts` has got round to. -> #645
+ * **Driven by the language code and not by a pack**, which is the claim: a
+ * duration is a format rather than a translation, so it follows `language` even
+ * where the translator is the English one. The shipped Dutch pack carries no
+ * unit and is the case that was reported. -> #645
  *
- * **Two formatters print spans and both take the translator.** -> #698
+ * **Two formatters print spans and both take the language.** -> #698
  *
- * **What this does not cover:** how a span is worded, which is the pack's;
- * whether the shipped Dutch pack carries these keys, which it does not; and the
+ * **What this does not cover:** how a span is worded, which is ICU's; the
  * client's own `durationText`, which is chrome rather than a document and
  * measures a different span under the same word.
  */
-import { describe, expect, it } from 'vitest'
+import { Logger } from '@nestjs/common'
+import { describe, expect, it, vi } from 'vitest'
 
 import { duration, metrics } from './derived.js'
+import { NL } from './labels.nl.js'
 import { narrative } from './narrative.js'
 import type { Node, TableNode } from './model.js'
-import { translatorFor } from './packs.js'
+import { english, translatorFor } from './packs.js'
 import type { ReportInput } from './resolve.js'
 
-/** Recognisable, and no substring of an English unit. */
-const UNITS: Record<string, string> = {
-  'value.duration_under_minute': '< 1 minuut',
-  'value.duration_minutes': '{m} minuten',
-  'value.duration_hours': '{h} uur {m} minuten',
-  'value.duration_days': '{d} dagen {h} uur',
-}
-
+/**
+ * Hours and days are the discriminating units: Dutch and English both abbreviate
+ * a minute `min`, so a case asserting on that one would pass in either language.
+ */
 const CLOCKS = {
+  // Four hours before containment, so the dwell row is hours.
   timeline: [{ time: '2026-01-01T08:00:00Z', description: 'eerste baken' }],
   openedAt: '2026-01-01T10:00:00Z',
   detectedAt: '2026-01-01T10:30:00Z',
@@ -37,12 +36,12 @@ const CLOCKS = {
   closedAt: '2026-01-01T12:30:00Z',
 }
 
-function input(strings: Record<string, string>): ReportInput {
+function input(language: string, t = english()): ReportInput {
   return {
     title: 'Onder test',
     tlp: '',
-    language: 'nl',
-    t: translatorFor({ code: 'nl', label: 'Nederlands', strings }),
+    language,
+    t,
     languageCoverage: 1,
     blocks: [],
     caseData: { id: 'c-1', title: 'Onder test', ...CLOCKS },
@@ -60,9 +59,7 @@ function values(nodes: Node[]): string[] {
   })
 }
 
-/**
- * Beats reaching all three span paths the narrative prints, annotated below.
- */
+/** Beats reaching all three span paths the narrative prints. */
 const BEATS = {
   timeline: [
     { time: '2026-01-01T08:00:00Z', description: 'eerste baken' },
@@ -79,39 +76,33 @@ const BEATS = {
   status: 'open',
 }
 
-function withBeats(strings: Record<string, string>): ReportInput {
-  return {
-    ...input(strings),
-    caseData: { id: 'c-1', title: 'Onder test', ...BEATS },
-  }
+function withBeats(language: string): ReportInput {
+  return { ...input(language), caseData: { id: 'c-1', title: 'Onder test', ...BEATS } }
 }
 
 describe('a gap between two beats in the narrative', () => {
-  /**
-   * Asserted against the shape, not the absence of a letter: `m`, `h` and `d`
-   * all occur inside ordinary Dutch.
-   */
   it('reads in the language the report is written in', () => {
-    const printed = JSON.stringify(narrative(withBeats(UNITS)))
+    const printed = JSON.stringify(narrative(withBeats('nl')))
 
-    expect(printed, 'a gap printed its own English unit').not.toMatch(/\+\d+[mhd]\b/)
+    expect(printed, 'a gap printed an English unit in a Dutch document').not.toMatch(
+      /\d\s?(hr|hrs|h|d|days?)\b/,
+    )
     expect(printed, 'no gap reached the narrative at all, so this asserts nothing').toMatch(
-      /uur|dagen|minuten/,
+      /uur|dagen/,
     )
   })
 
-  /** The floor is English, as it is everywhere else the pack falls short. */
-  it('falls back to English where the pack carries no unit', () => {
-    const printed = JSON.stringify(narrative(withBeats({})))
+  it('reads in English when that is the language', () => {
+    const printed = JSON.stringify(narrative(withBeats('en')))
 
-    expect(printed).toMatch(/\bh\b|\bmin\b|\bd\b/)
+    expect(printed).toMatch(/\bhr\b|\bdays?\b/)
   })
 
   /** Two durations on one line: the `+` is what tells them apart. -> `narrative.ts` */
   it('marks the gap with a plus and the span it covers without one', () => {
-    const printed = JSON.stringify(narrative(withBeats(UNITS)))
+    const printed = JSON.stringify(narrative(withBeats('nl')))
 
-    expect(printed, 'no gap was marked as one').toMatch(/\+[^"]*uur|\+[^"]*minuten|\+[^"]*dagen/)
+    expect(printed, 'no gap was marked as one').toMatch(/\+[^"]*(uur|min|dagen)/)
     // Counted: these beats print three spans and exactly the first owes a plus.
     expect(
       (printed.match(/\+/g) ?? []).length,
@@ -121,42 +112,102 @@ describe('a gap between two beats in the narrative', () => {
 })
 
 describe('a span printed in a report', () => {
-  it('takes its units from the pack the report is written with', () => {
-    const printed = values(metrics(input(UNITS))).join(' | ')
+  /**
+   * The reported defect: the shipped Dutch pack carries no unit, so every span
+   * in a Dutch report printed an English one.
+   */
+  it('prints Dutch units under the shipped Dutch pack, which carries none', () => {
+    const dutch = translatorFor({ code: 'nl', label: 'Nederlands', strings: NL })
+    const printed = values(metrics(input('nl', dutch))).join(' | ')
 
-    expect(
-      printed,
-      'a span printed an English unit in a document whose pack carries its own',
-    ).not.toMatch(/\b(min|h|d)\b/)
-    expect(printed, 'no span reached the table at all, so this asserts nothing').toMatch(
-      /minuten|uur|dagen/,
+    expect(printed, 'a span printed an English unit in a Dutch document').not.toMatch(
+      /\d\s?(hr|hrs|h|d|days?)\b/,
     )
+    expect(printed, 'no span reached the table at all, so this asserts nothing').toMatch(/uur/)
   })
 
   /**
-   * **The floor is English, as it is for every other key.** A pack that carries
-   * no unit prints the English one rather than a key or a blank.
+   * **A span follows the language, not the pack.** Asserted with the English
+   * translator on a Dutch report, which is the state an install without a Dutch
+   * pack is in -- and the whole difference between a format and a translation.
    */
-  it('falls back to English where the pack carries no unit', () => {
-    const printed = values(metrics(input({}))).join(' | ')
+  it('prints Dutch units with no Dutch pack at all', () => {
+    const printed = values(metrics(input('nl'))).join(' | ')
 
-    expect(printed).toMatch(/\bmin\b/)
+    expect(printed).toMatch(/uur/)
+  })
+
+  it('prints English units in an English report', () => {
+    const printed = values(metrics(input('en'))).join(' | ')
+
+    expect(printed).toMatch(/\bhr\b/)
+  })
+
+  /**
+   * **A language code is whatever an install uploaded, and it fails two ways.**
+   * `aaa-aaaaaaaa-aaaaaaaa` is well formed to `LANGUAGE_TAG` and a `RangeError`
+   * to ICU, so unguarded it is a report that renders not at all; `zz` is a tag
+   * ICU takes and holds no unit data for, which throws nothing and would pass a
+   * case asserting only that a number reached the cell. `''` is a report that
+   * has not chosen. All three owe English units rather than a failure.
+   */
+  it.each([['aaa-aaaaaaaa-aaaaaaaa'], [''], ['zz']])(
+    'falls back to English units on the code %j',
+    (language) => {
+      expect(values(metrics(input(language))).join(' | ')).toMatch(/\bhr\b/)
+    },
+  )
+
+  /**
+   * **The English above is not evidence the code was noticed**, because ICU
+   * resolves an unknown tag to English on its own -- so the case above passes
+   * whether or not anything checked. The log is the only observable difference,
+   * and the count is the second half: a document prints many spans, and one
+   * warning per row is a line nobody reads.
+   *
+   * `qq` is used by no other case here, which is what keeps the count honest --
+   * the codes already reported are held for the life of the module.
+   */
+  it('says once, not per span, that a language ICU cannot print in reads English', () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    try {
+      values(metrics(input('qq')))
+      values(metrics(input('qq')))
+
+      const mine = warn.mock.calls.filter((call) => String(call[0]).includes('`qq`'))
+      expect(mine, 'a code ICU holds no unit data for went unreported').toHaveLength(1)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  /** A language ICU can print in is not a complaint. */
+  it('says nothing about a language ICU has unit data for', () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    try {
+      values(metrics(input('nl')))
+
+      expect(warn.mock.calls.filter((call) => String(call[0]).includes('`nl`'))).toHaveLength(0)
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   /**
    * **Every shape, because the table above reaches one of them.** A metrics row
-   * is hours-and-minutes on any case an analyst would open, so the minutes and
-   * days shapes would otherwise be declared here and rendered by nothing -- and
-   * a later edit to either string would be free.
+   * is hours on any case an analyst would open, so the minutes, days and
+   * under-a-minute shapes would otherwise be rendered by nothing.
    */
   it.each([
-    [30 * 60_000, '30 minuten'],
-    [150 * 60_000, '2 uur 30 minuten'],
-    [50 * 3_600_000, '2 dagen 2 uur'],
-    [30_000, '< 1 minuut'],
-  ])('prints every shape of span from the pack', (ms, expected) => {
-    expect(duration(ms, translatorFor({ code: 'nl', label: 'Nederlands', strings: UNITS }))).toBe(
-      expected,
-    )
+    [30 * 60_000, '30 min'],
+    [150 * 60_000, '2 uur, 30 min'],
+    // Zero parts are dropped: "2 uur, 0 min" is noise on a figure a regulator reads.
+    [120 * 60_000, '2 uur'],
+    [50 * 3_600_000, '2 dagen, 2 uur'],
+    // **Never "0 minuten".** A span under a minute is real, and rounding it to
+    // zero reads as nothing having elapsed.
+    [30_000, '< 1 min'],
+  ])('prints every shape of span in the report language', (ms, expected) => {
+    expect(duration(ms, 'nl')).toBe(expected)
   })
 })
