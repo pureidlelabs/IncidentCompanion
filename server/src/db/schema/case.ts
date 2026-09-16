@@ -20,7 +20,12 @@ import { customers } from './customer.js'
  * decision, and a closed case still on disk is not a third state -
  * conflating them is how a filter for closed work starts hiding it.
  */
-export const caseStatus = pgEnum('case_status', ['open', 'closed'])
+export const caseStatus = pgEnum('case_status', [
+  'respond',
+  'recover',
+  'post-incident',
+  'closed',
+])
 
 export const cases = pgTable(
   'cases',
@@ -57,7 +62,7 @@ export const cases = pgTable(
     customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'restrict' }),
 
     title: text('title').notNull(),
-    status: caseStatus('status').notNull().default('open'),
+    status: caseStatus('status').notNull().default('respond'),
     summary: text('summary'),
 
     /**

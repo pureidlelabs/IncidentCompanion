@@ -291,10 +291,6 @@ describe.skipIf(!db)('a case, out and back', () => {
    * That a row says which door it came through *here*, not which door it came
    * through on the install that wrote the archive.
    *
-   * **The archive states both truthfully about that install**, so this plants
-   * what a real exported case carries -- a system the platform found, an entry
-   * an analyst typed and has read -- and asks what the copy says.
-   *
    * **`unreviewed` is the half with a cost.** Carried over as `false`, a case
    * imported from elsewhere arrives with every entry claiming somebody on this
    * install has read it, which is the one thing that flag is for.

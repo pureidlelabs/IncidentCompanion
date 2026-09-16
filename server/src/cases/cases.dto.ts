@@ -8,7 +8,7 @@
 import { createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
-import { patchCaseSchema } from '../domain/case.js'
+import { caseStatusSchema, patchCaseSchema } from '../domain/case.js'
 import { rowVersion } from '../domain/column-bounds.js'
 
 export { patchCaseSchema }
@@ -61,7 +61,7 @@ export const caseSchema = z.object({
   reference: z.string().nullable(),
   customer: z.string().nullable(),
   title: z.string(),
-  status: z.enum(['open', 'closed']),
+  status: caseStatusSchema,
   summary: z.string().nullable(),
   // ISO strings, for the reason given on `createCaseSchema.openedAt`: a `Date`
   // cannot be published as JSON Schema, and this schema is the API document.

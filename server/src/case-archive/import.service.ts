@@ -130,10 +130,9 @@ export const ARCHIVE_IMPORT = 'Case archive'
 /**
  * Columns an import never carries over, whatever the archive says.
  *
- * The identity and attribution of a row are this install's to mint, and where
- * the row came from is this door's to state -- an archive is truthful about
- * the install that wrote it, and every one of these answers about the install
- * reading it.
+ * Identity and attribution are this install's to mint, and where a row came
+ * from is this door's to state: an archive answers about the install that
+ * wrote it, and every one of these is about the install reading it.
  */
 const NEVER_CARRIED = new Set([
   'id',

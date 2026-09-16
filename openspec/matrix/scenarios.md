@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 497 |
-| Demonstrated | 398 |
+| Demonstrated | 401 |
 | Undemonstrable | 1 |
-| Unbuilt | 84 |
+| Unbuilt | 81 |
 | Undemonstrated | 14 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
@@ -162,11 +162,11 @@
 | A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | demonstrated | server/src/cases/customer.controller.test.ts |
 | A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case is identified by what an analyst recognises it by | A case gains its reference later | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
-| A case says where its work sits | An analyst scans the case list | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
-| A case says where its work sits | The incident ends before the case does | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
-| A case says where its work sits | A case is closed with reporting outstanding | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
-| A case says where its work sits | A case owes nothing | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
-| A case says where its work sits | A handled incident resumes | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
+| A case says where its work sits | An analyst scans the case list | demonstrated | ui/src/components/blocks/case-list.test.tsx |
+| A case says where its work sits | The incident ends before the case does | demonstrated | server/src/cases/a-case-says-where-its-work-sits.test.ts |
+| A case says where its work sits | A case is closed with reporting outstanding | unbuilt | Not built: closing is gated on what a case owes, and what a case owes is recorded nowhere. -> #188 |
+| A case says where its work sits | A case owes nothing | unbuilt | Not built: closing is gated on what a case owes, and what a case owes is recorded nowhere. -> #188 |
+| A case says where its work sits | A handled incident resumes | demonstrated | server/src/cases/a-case-says-where-its-work-sits.test.ts |
 | A case's destruction is itself a record | An analyst deletes a case | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
 | A case's destruction is itself a record | The install is asked what happened to a case | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
 | A case's destruction is itself a record | A demonstration case is removed | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
