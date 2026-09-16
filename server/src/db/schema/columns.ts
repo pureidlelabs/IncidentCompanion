@@ -48,11 +48,10 @@ export const rowVersioning = {
 export const source = () => text('source').notNull().default('manual')
 
 /**
- * Postgres `bytea`, for a column holding a Yjs document.
+ * Postgres `bytea`.
  *
- * Drizzle 1.0 has no first-class bytea for node-postgres, so every table that
- * stores a document declares the same custom type. It is here rather than
- * beside one of them because the second table to need it copied the first.
+ * Drizzle 1.0 has no first-class bytea for node-postgres, so every table
+ * storing bytes takes this one custom type.
  */
 export const bytea = customType<{ data: Buffer; notNull: false; default: false }>({
   dataType: () => 'bytea',

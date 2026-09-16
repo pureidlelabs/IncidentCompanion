@@ -16,18 +16,13 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-  customType,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 
 import { cases } from './case.js'
 import { evidence } from './entities.js'
-import { rowVersioning } from './columns.js'
+import { bytea, rowVersioning } from './columns.js'
 import { caseScoped } from './scoped.js'
-
-const bytea = customType<{ data: Buffer; notNull: false; default: false }>({
-  dataType: () => 'bytea',
-})
 
 export const reports = pgTable(
   'reports',

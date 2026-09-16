@@ -16,11 +16,8 @@ import {
   Get,
   Param,
   Put,
-  Req,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import type { IncomingHttpHeaders } from 'node:http'
-import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 
 import { AdminOnly } from '../auth/admin-only.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
@@ -29,6 +26,7 @@ import { z } from 'zod'
 import { languageTag } from '../domain/language-tag.js'
 
 import { LanguageService } from './language.service.js'
+import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { EN_KEYS } from './document/packs.js'
 
@@ -104,8 +102,7 @@ export class LanguageController {
   @Put()
   async upload(
     @Body() body: PackDto,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ) {
     if (body.code.toLowerCase() === 'en') {
       throw new UnprocessableEntityException({
@@ -120,14 +117,9 @@ export class LanguageController {
     }
     const { entry, ignored } = await this.languages.upload(
       { code: body.code, label: body.label, strings: body.strings },
-      session.user.id,
+      caller.session.user.id,
     )
-    await this.activity.languageUploaded(
-      { session, headers: request.headers, request },
-      body.code,
-      body.label,
-      ignored.length,
-    )
+    await this.activity.languageUploaded(caller, body.code, body.label, ignored.length)
     return { language: entry, ignored }
   }
 
@@ -142,8 +134,7 @@ export class LanguageController {
   @ZodResponse({ status: 200, type: RemovedLanguageDto, description: 'The pack is gone.' })
   async remove(
     @Param('code') code: string,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ) {
     if (code === 'en' || (await this.languages.isBuiltin(code))) {
       throw new BadRequestException({
@@ -154,7 +145,7 @@ export class LanguageController {
       throw new BadRequestException({ message: `This install has no ${code} pack.` })
     }
     await this.languages.remove(code)
-    await this.activity.languageRemoved({ session, headers: request.headers, request }, code)
+    await this.activity.languageRemoved(caller, code)
     return { removed: code }
   }
 }

@@ -28,6 +28,7 @@ const audit = {
   },
 }
 
+const caller = { session: { user: { id: 'u-1', name: 'Ada' } }, headers: {}, request: {} } as never
 
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -154,8 +155,7 @@ describe.skipIf(!db)('writing to a library', () => {
     const applied = await controller.apply(
       'report-layouts',
       { kind: 'report-layouts', entries: [], disabledBuiltins: ['executive'] },
-      { id: 'u-1', name: 'Ada' } as never,
-      { headers: {} },
+      caller,
     )
 
     expect(applied.disabledBuiltins, 'the route reported switching nothing off').toBe(1)
@@ -170,14 +170,12 @@ describe.skipIf(!db)('writing to a library', () => {
     await controller.apply(
       'report-layouts',
       { kind: 'report-layouts', entries: [], disabledBuiltins: ['executive'] },
-      { id: 'u-1', name: 'Ada' } as never,
-      { headers: {} },
+      caller,
     )
     await controller.apply(
       'report-layouts',
       { kind: 'report-layouts', entries: [], disabledBuiltins: [] },
-      { id: 'u-1', name: 'Ada' } as never,
-      { headers: {} },
+      caller,
     )
 
     expect((await controller.document('report-layouts')).disabledBuiltins).not.toContain('executive')
@@ -193,8 +191,7 @@ describe.skipIf(!db)('writing to a library', () => {
       controller.apply(
         'report-layouts',
         { kind: 'report-layouts', entries: [{ name: 'x', label: 'X', payload: { blocks: 'nope' } }] },
-        { id: 'u-1', name: 'Ada' } as never,
-        { headers: {} },
+        caller,
       ),
     ).rejects.toThrow()
 

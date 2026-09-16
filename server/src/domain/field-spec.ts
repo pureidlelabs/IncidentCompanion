@@ -353,6 +353,18 @@ export const readStamp = (): z.ZodType<string, string | Date> =>
   ) as unknown as z.ZodType<string, string | Date>
 
 /**
+ * The value builders an entity schema is written out of.
+ *
+ * **Functions rather than constants**, so the same field can appear in two
+ * forms under different labels without the registry overwriting one entry with
+ * the other.
+ */
+export const text = (max: number) => z.string().trim().max(max).default('')
+export const ref = () => z.uuid().nullable().default(null)
+export const refs = () => z.array(z.uuid()).default([])
+export const moment = () => readStamp().nullable().default(null)
+
+/**
  * What every case-owned row carries beyond the fields an analyst fills in - a
  * schema rather than a type, so a route has something to hand `@ZodResponse`.
  *

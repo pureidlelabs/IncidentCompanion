@@ -20,15 +20,13 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  Req,
 } from '@nestjs/common'
 import { UnprocessableEntityException } from '@nestjs/common'
-import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
-import type { IncomingHttpHeaders } from 'node:http'
 
 import { AdminOnly } from '../auth/admin-only.js'
+import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { CustomersService } from './customers.service.js'
 
@@ -141,14 +139,11 @@ export class CustomersController {
   @ZodResponse({ status: 201, type: CustomerMadeDto, description: 'The customer was created.' })
   async create(
     @Body() body: unknown,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<{ id: string }> {
     const { name, ...facts } = this.parse(createSchema, body)
     const made = await this.customers.create(name, facts)
-    await this.activity.customerCreated({ session, headers: request.headers, request }, made.id, {
-      name,
-    })
+    await this.activity.customerCreated(caller, made.id, { name })
     return made
   }
 
@@ -166,12 +161,11 @@ export class CustomersController {
   async change(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: unknown,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<typeof DONE> {
     const values = this.parse(changeSchema, body)
     await this.customers.change(id, values)
-    await this.activity.customerChanged({ session, headers: request.headers, request }, id, {
+    await this.activity.customerChanged(caller, id, {
       fields: Object.keys(values).sort().join(', '),
     })
     return DONE
@@ -181,11 +175,10 @@ export class CustomersController {
   @ZodResponse({ status: 200, type: CustomerDoneDto, description: 'The customer was removed.' })
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<typeof DONE> {
     const { name } = await this.customers.remove(id)
-    await this.activity.customerRemoved({ session, headers: request.headers, request }, id, name)
+    await this.activity.customerRemoved(caller, id, name)
     return DONE
   }
 
@@ -200,21 +193,16 @@ export class CustomersController {
   async merge(
     @Param('id', ParseUUIDPipe) surviving: string,
     @Body() body: unknown,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<typeof DONE> {
     const { losing, choices } = this.parse(mergeSchema, body)
     const { losingName } = await this.customers.merge({
       losing,
       surviving,
       choices,
-      actorId: session.user.id,
+      actorId: caller.session.user.id,
     })
-    await this.activity.customersMerged(
-      { session, headers: request.headers, request },
-      surviving,
-      { losing, losingName },
-    )
+    await this.activity.customersMerged(caller, surviving, { losing, losingName })
     return DONE
   }
 }

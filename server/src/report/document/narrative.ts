@@ -9,7 +9,6 @@
  * is as tall as its text and the model has no two-line cell.
  */
 import { duration } from './derived.js'
-import type { Translate } from './packs.js'
 import { formatTimestamp } from './labels.js'
 import type { Cell, Node } from './model.js'
 import { BAND, INK, MEDIUM, MUTED, PHASE_SEVERITY, RESPONSE } from './palette.js'
@@ -39,10 +38,10 @@ function when(value: unknown): number | null {
  * hour, above which a reader taking the rows as continuous activity is wrong
  * and nothing else on the row says so. Under a minute prints blank, never `+0m`.
  */
-function elapsed(from: number, to: number, t: Translate): { text: string; long: boolean } {
+function elapsed(from: number, to: number, language: string): { text: string; long: boolean } {
   const ms = to - from
   if (ms < 60_000) return { text: '', long: false }
-  return { text: duration(ms, t), long: ms >= LONG_GAP_MS }
+  return { text: duration(ms, language), long: ms >= LONG_GAP_MS }
 }
 
 export function narrative(input: ReportInput): Node[] {
@@ -81,7 +80,7 @@ export function narrative(input: ReportInput): Node[] {
       : (PHASE_SEVERITY[(first.entry.tactic ?? '').toLowerCase()] ?? MEDIUM)
 
     let gap = { text: '', long: false }
-    if (previous !== null) gap = elapsed(previous, first.at, input.t)
+    if (previous !== null) gap = elapsed(previous, first.at, input.language)
 
     /**
      * **A quiet day is a finding, and it gets a row** -- a duration standing
@@ -101,7 +100,7 @@ export function narrative(input: ReportInput): Node[] {
     // A run states the span it covers as a *duration* rather than an end
     // timestamp: repeating a whole date beside a start two minutes earlier is a
     // date to read for one changed digit.
-    const covered = run.length > 1 ? elapsed(first.at, last.at, input.t).text : ''
+    const covered = run.length > 1 ? elapsed(first.at, last.at, input.language).text : ''
     // The `+` marks the gap, never the span: time nobody accounted for,
     // against time this run covers.
     const since = gap.text === '' ? '' : `+${gap.text}`
