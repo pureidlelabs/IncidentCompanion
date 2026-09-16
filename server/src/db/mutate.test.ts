@@ -126,7 +126,7 @@ describe.skipIf(!db)('a version-checked write', () => {
       id: CASE_ID,
       expectedVersion: 1,
       actorId: ANALYST_B,
-      patch: { status: 'open' },
+      patch: { status: 'respond' },
     })
 
     const feed = await seed!.select().from(changeFeed)

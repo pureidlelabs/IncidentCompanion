@@ -4,7 +4,15 @@ import type { Case, Report, ReportBlock } from '@/api/model'
 import { EmptyState } from '@/components/blocks/empty-state'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
-import { WRITTEN_KINDS, factsFor, hasProse, headingIsFinal, headingOf, isFrozen } from './report-shape'
+import {
+  UNTITLED_SECTION,
+  WRITTEN_KINDS,
+  factsFor,
+  hasProse,
+  headingIsFinal,
+  headingOf,
+  isFrozen,
+} from './report-shape'
 
 /**
  * The document that leaves, and it is two different things.
@@ -86,7 +94,13 @@ export function ReportPreviewPane({
               <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">
                 {at + 1}
               </span>
-              <h2 className="min-w-0 text-lg font-semibold">{headingOf(block, headings)}</h2>
+              {headingOf(block, headings) === '' ? (
+                // Named, not headed: the document prints no heading for this
+                // kind, and an unnamed row is unscannable in the outline.
+                <span className="min-w-0 text-2xs text-ink-muted">{UNTITLED_SECTION}</span>
+              ) : (
+                <h2 className="min-w-0 text-lg font-semibold">{headingOf(block, headings)}</h2>
+              )}
               {!headingIsFinal(block, headings) && (
                 <span className="shrink-0 text-2xs font-normal text-ink-muted">
                   heading not final

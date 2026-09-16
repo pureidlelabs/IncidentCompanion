@@ -6,6 +6,11 @@
     "server",
     "ui"
   ],
+  "//engines": "Read by Renovate, which runs npm itself to update package-lock.json and on the Mend-hosted app installs that npm rather than using a pinned one. The lock file sits here, so this is the package file it reads: `server/` and `ui/` state their own node and a workspace install reaches neither. A floor rather than a pin, because the container's own versions are tracked by Renovate and a second copy of a number is a second thing to keep true. Two npm majors build this tree -- CI takes the one that ships with node, the container installs the one it pins -- so the npm floor admits both rather than naming either. tests/repo/test_renovate_installs_a_known_npm.py holds them together.",
+  "engines": {
+    "node": ">=26",
+    "npm": ">=11"
+  },
   "//allowScripts": "npm 11.19 refuses an install script until it is listed here, and warns rather than failing -- so an undeclared one prints a warning and the build works, which is how the move to workspaces nearly lost all three. A workspace install reads this from the root and nowhere else, so the two packages' own declarations were read by nobody the moment they stopped being installed separately. All three are denied. esbuild's install.js and @swc/core's postinstall.js are fallbacks that only act when the platform-native optional dependency is missing -- both were verified working with the script unrun (`esbuild --version`, `transformSync`), and @swc/core's fallback runs a nested `npm install` of @swc/wasm, a network fetch at install time. @scarf/scarf is not a fallback at all: report.js POSTs the install to scarf.sh. Declaring them is also what keeps `npm install-scripts ls` empty, so a genuinely new script is visible there rather than lost among known ones. Do not run `npm install-scripts approve --all`, which the warning invites and which would undo all three.",
   "allowScripts": {
     "esbuild": false,

@@ -409,7 +409,7 @@ describe.skipIf(!db)('writing a case', () => {
 
       const reopened = await controller.patch(
         id,
-        { version: closed.version, status: 'open', closedAt: null },
+        { version: closed.version, status: 'respond', closedAt: null },
         session as never,
       )
 

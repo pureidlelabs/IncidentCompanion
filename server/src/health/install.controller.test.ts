@@ -172,6 +172,28 @@ describe('what the install says about the wrapping', () => {
   })
 
   /**
+   * **The one thing an operator must not learn from an auditor.**
+   *
+   * Why nothing is encrypted here is on the field itself. -> #177
+   *
+   * **Three properties rather than the sentence**, as the notes beside it are
+   * asserted: rewording is free, and dropping any of the three is not.
+   */
+  it('says the state it keeps is unencrypted, and what confidentiality rests on', async () => {
+    const note = (await settingsOf()).storage.encryptionNote
+
+    expect(note, 'the note does not say the application leaves it unencrypted').toMatch(
+      /unencrypted|does not encrypt/i,
+    )
+    expect(note, 'the note does not say what confidentiality rests on instead').toMatch(
+      /storage|disk|volume|platform/i,
+    )
+    expect(note, 'the note leaves an operator to guess whether evidence is included').toMatch(
+      /evidence|artefact/i,
+    )
+  })
+
+  /**
    * **Both halves, because either alone misleads.** The controller's own
    * comment says so: *sealed* without *not scanned* reads as protection, and
    * *not scanned* without *sealed* leaves an analyst expecting their antivirus

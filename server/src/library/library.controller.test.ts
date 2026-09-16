@@ -147,6 +147,43 @@ describe.skipIf(!db)('writing to a library', () => {
   })
 
   /**
+   * **The other half of that refusal**, stated where the route states it.
+   * -> `library.controller.ts`, #646
+   */
+  it('switches a shipped layout off for a kind that cannot be authored', async () => {
+    const applied = await controller.apply(
+      'report-layouts',
+      { kind: 'report-layouts', entries: [], disabledBuiltins: ['executive'] },
+      { id: 'u-1', name: 'Ada' } as never,
+      { headers: {} },
+    )
+
+    expect(applied.disabledBuiltins, 'the route reported switching nothing off').toBe(1)
+    expect(
+      (await controller.document('report-layouts')).disabledBuiltins,
+      'the shipped layout came back enabled',
+    ).toContain('executive')
+  })
+
+  /** And the same document puts it back, which is what makes the file the state. */
+  it('switches it on again when the document stops naming it', async () => {
+    await controller.apply(
+      'report-layouts',
+      { kind: 'report-layouts', entries: [], disabledBuiltins: ['executive'] },
+      { id: 'u-1', name: 'Ada' } as never,
+      { headers: {} },
+    )
+    await controller.apply(
+      'report-layouts',
+      { kind: 'report-layouts', entries: [], disabledBuiltins: [] },
+      { id: 'u-1', name: 'Ada' } as never,
+      { headers: {} },
+    )
+
+    expect((await controller.document('report-layouts')).disabledBuiltins).not.toContain('executive')
+  })
+
+  /**
    * The same refusal `create` makes, on the other door: a kind declaring no
    * payload schema is the one kind nothing else would validate, and an
    * unusable row there breaks the New report dialog for the whole install.

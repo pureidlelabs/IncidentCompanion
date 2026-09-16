@@ -123,10 +123,8 @@ export interface CollectionDefinition {
   /**
    * A term this row names that the install does not serve.
    *
-   * Separate from `refuseIfClosed` because it is a different claim: that one
-   * asks whether the row may be written at all, this asks whether what it says
-   * is a thing. Both are questions a Zod schema cannot answer -- one needs
-   * other rows, the other needs a table the vocabulary is stored in.
+   * Separate from `refuseIfClosed`, which asks whether the row may be written
+   * at all rather than whether what it says is a thing.
    */
   readonly refuseUnservedTerm?: ClosedRowGuard
 }

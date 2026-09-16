@@ -77,7 +77,7 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
       caseId: id,
       title: 'Ransomware at Contoso',
       section: 'actions',
-      status: 'open',
+      status: 'respond',
       pinned: false,
     })
 
