@@ -11,7 +11,7 @@ import { announcing } from './entryWrites'
  *
  * **Nothing converts on the way out.** `ComplianceControl` emits the stored
  * shape already -- `string[]` for the multi kinds, `null` for an emptied
- * number or stamp. A conversion here would take a `multi_lines` answer through
+ * number or stamp or a ground taken back. A conversion here would take a `multi_lines` answer through
  * `String(['a','b'])` and split it on a newline, storing one element with a
  * comma in it.
  */
