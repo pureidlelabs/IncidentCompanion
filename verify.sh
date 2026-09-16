@@ -145,7 +145,9 @@ step "client: typecheck" bash -c 'cd ui && npx tsc -b --noEmit --force'
 # client never did, so `ui` was linted by nothing here - an error sat on the
 # release branch unseen.
 step "client: lint" bash -c 'cd ui && npm run --silent lint'
-behaviour && step "client: suite" bash -c 'cd ui && npx vitest run'
+# Armed, because a worker pool that times out leaves this tier reporting green
+# having run none of itself. -> `ui/vite.config.ts`
+behaviour && step "client: suite" bash -c 'cd ui && IC_SUITE_MUST_RUN=1 npx vitest run'
 
 # ------------------------------------------------------- repository checks
 # **`tests/docker` builds containers**, which is the whole reason a full sweep
