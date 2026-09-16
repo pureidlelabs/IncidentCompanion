@@ -134,9 +134,6 @@ export { patchSchema } from './field-spec.js'
  * this opens no path to a table.
  */
 export { patchCaseSchema } from './case.js'
-
-export const IMPORTABLE = Object.keys(COLLECTION_SCHEMAS)
-
 /**
  * The timeline's two write schemas, by the kind that discriminates them.
  *
@@ -169,6 +166,45 @@ const SUPPLIED_ELSEWHERE: Readonly<Record<string, readonly z.ZodObject[]>> = {
   timeline: [eventWriteSchema, actionWriteSchema],
   report_blocks: [reportBlockSchema],
 }
+
+/**
+ * Every schema a row of an importable collection may be judged by.
+ *
+ * **Wider than `COLLECTION_SCHEMAS`**: a collection whose schema depends on the
+ * row -- the timeline's, on its `kind` -- is absent from that map. -> #650
+ */
+const IMPORT_SCHEMAS: Readonly<Record<string, readonly z.ZodObject[]>> = {
+  ...Object.fromEntries(Object.entries(COLLECTION_SCHEMAS).map(([name, one]) => [name, [one]])),
+  timeline: SUPPLIED_ELSEWHERE.timeline!,
+}
+
+/**
+ * The schema one row of a file is judged by, or `undefined` for a collection no
+ * file may write.
+ *
+ * **A create's schema, not a read's.** An import is not a back door: a value a
+ * form would refuse is a value a file cannot write either.
+ *
+ * The timeline dispatches on `kind` the way its own write door does, and an
+ * absent `kind` takes the event arm -- the wider of the two, and what a row
+ * without one is.
+ */
+export function importSchemaFor(
+  collection: string,
+  row: Record<string, unknown> = {},
+): z.ZodObject | undefined {
+  const offered = IMPORT_SCHEMAS[collection]
+  if (!offered || offered.length === 0) return undefined
+  if (offered.length === 1) return offered[0]
+  return row['kind'] === 'action' ? offered[1] : offered[0]
+}
+
+/** Every schema that may judge a row of this collection, for a caller merging their shapes. */
+export function importSchemasFor(collection: string): readonly z.ZodObject[] {
+  return IMPORT_SCHEMAS[collection] ?? []
+}
+
+export const IMPORTABLE = Object.keys(IMPORT_SCHEMAS)
 
 export const REFERENCING_SCHEMAS: readonly z.ZodObject[] = [
   ...Object.values(COLLECTION_SCHEMAS),
