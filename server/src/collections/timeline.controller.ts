@@ -320,6 +320,14 @@ export class TimelineController {
     // fields as null, and the client caches what a write answers.
     if (result.ok) return timelineToWire(result.row) as TimelineRow
 
+    // A row the case-scoped read cannot see has no version to report, so it is
+    // 404 and nothing is recorded - recording would write a conflict into this
+    // case naming another case's row and the patch aimed at it. See the entity
+    // controller, which has the argument in full.
+    if (result.currentVersion === null) {
+      throw new NotFoundException(`No timeline entry ${id} in this case.`)
+    }
+
     // Kept before the refusal is thrown: these values exist nowhere else once
     // this response is sent.
     await this.conflicts?.record({

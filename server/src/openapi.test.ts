@@ -440,12 +440,32 @@ describe('making the generated document readable', () => {
     })
 
     /**
-     * The one versioned write the method cannot pick out, with a plain create
-     * beside it so the case is about that route rather than about every POST.
+     * **Asserted as the whole set, not as one path that carries it.** A POST
+     * documents 409 only by being named, so the risk is a second name added
+     * without a second route to answer it - which a positive case and one
+     * negative cannot see.
+     *
+     * The list is every POST the tree declares on a path naming a row
+     * (`rg -n "@Post\('" server/src`), so the case reads them all.
      */
-    it('documents the version conflict on the file attach', () => {
-      expect(responses('/api/cases/{caseId}/evidence/{id}/file', 'post')).toContain('409')
-      expect(responses('/api/cases/{caseId}/systems', 'post')).not.toContain('409')
+    it('documents the version conflict on one POST and no other', () => {
+      const posts = [
+        '/api/cases/{caseId}/evidence/{id}/file',
+        '/api/cases/{caseId}/reports/{id}/send',
+        '/api/cases/{caseId}/reports/{id}/supersede',
+        '/api/cases/{caseId}/reports/{id}/restore-sections',
+        '/api/accounts/{username}/disable',
+        '/api/accounts/{username}/enable',
+        '/api/accounts/{username}/reset',
+        '/api/accounts/{username}/role',
+        '/api/customers/{id}/merge',
+        '/api/groups/{groupId}/members',
+        '/api/groups/{groupId}/customers',
+        '/api/library/{slug}/{name}/editor',
+      ]
+      expect(posts.filter((path) => responses(path, 'post').includes('409'))).toEqual([
+        '/api/cases/{caseId}/evidence/{id}/file',
+      ])
     })
 
     it('documents a server failure everywhere', () => {
