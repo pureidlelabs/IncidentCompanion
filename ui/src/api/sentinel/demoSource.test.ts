@@ -1,0 +1,84 @@
+import { describe, expect, it, vi } from 'vitest'
+
+import { demoImporterAsked, demoSourceFromUrl } from './demoSource'
+
+import type * as SentinelFixture from '@/fixtures/sentinel-source'
+import type { IncidentFilter } from './source'
+
+/**
+ * The fixture module is reached only by the address that asks for it, and
+ * still answers with its incidents when it is.
+ *
+ * The import *graph* is `fixtures-stay-out-of-the-bundle.rule.test.ts`'s to
+ * judge; this counts loads. The count moves in the mock factory, which runs
+ * once per module load, so naming the module does not raise it.
+ */
+const loaded = vi.hoisted(() => ({ times: 0, refuseNext: false }))
+
+vi.mock('@/fixtures/sentinel-source', async (importOriginal) => {
+  loaded.times += 1
+  if (loaded.refuseNext) {
+    loaded.refuseNext = false
+    throw new Error('chunk did not arrive')
+  }
+  return await importOriginal<typeof SentinelFixture>()
+})
+
+const NO_DIALS: IncidentFilter = {
+  severity: 'Any',
+  status: 'Any',
+  title: '',
+  number: '',
+  sinceHours: 0,
+}
+
+describe('the demo importer', () => {
+  /**
+   * **First, and the order is the assertion.** A module loads once per file,
+   * so a case that reaches the fixture before this one leaves the count at 1
+   * whatever the ordinary path did.
+   */
+  it('is not asked for by an address that did not name it', async () => {
+    expect(demoImporterAsked('?section=timeline')).toBe(false)
+    await expect(demoSourceFromUrl('?section=timeline')).resolves.toBeNull()
+    expect(loaded.times, 'the fixture was loaded by a path that does not use it').toBe(0)
+  })
+
+  /**
+   * **Second, because a refused load has to be the first one.** A module that
+   * evaluated once is held by the runner, and the factory is not asked again.
+   */
+  it('does not keep a chunk that failed to arrive', async () => {
+    const address = '?importer=demo&retried=1'
+    loaded.refuseNext = true
+
+    // Not matched on the message: the runner relabels a throw from a mock
+    // factory with advice of its own, and the app never sees that text.
+    await expect(demoSourceFromUrl(address)).rejects.toThrow()
+
+    // What the Connect phase's retry reaches. A kept rejection is replayed to
+    // every later call, so the demo importer would never open again.
+    await expect(demoSourceFromUrl(address)).resolves.not.toBeNull()
+  })
+
+  it('answers with the fixture incidents when the address names it', async () => {
+    expect(demoImporterAsked('?importer=demo')).toBe(true)
+    const source = await demoSourceFromUrl('?importer=demo')
+    expect(source).not.toBeNull()
+
+    const session = await source!.connect()
+    const { sources } = await source!.listSources(session)
+    const page = await source!.listIncidents(session, sources[0]!, NO_DIALS, null)
+
+    expect(page.incidents.map((one) => one.key)).toEqual(['SEN-1001', 'SEN-1002'])
+  })
+
+  /** One source per address, so a caller holding it across renders is stable. */
+  it('answers the same source for the same address', async () => {
+    const before = loaded.times
+    const first = await demoSourceFromUrl('?importer=demo')
+    const second = await demoSourceFromUrl('?importer=demo')
+    expect(second).toBe(first)
+    expect(loaded.times, 'the fixture was fetched twice for one address').toBe(before)
+  })
+})

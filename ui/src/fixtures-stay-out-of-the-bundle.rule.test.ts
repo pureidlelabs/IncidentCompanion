@@ -18,8 +18,17 @@ import { describe, expect, it } from 'vitest'
 
 const UI = dirname(fileURLToPath(import.meta.url))
 
-/** A test, a story, a fixture or the demo chunk may read a fixture. */
-const MAY_READ = /(\.(test|stories)\.tsx?$)|(^fixtures\/)|(^demo\/)/
+/**
+ * A test, a story, a fixture or the demo chunk may read a fixture.
+ *
+ * `demoSource.ts` is named because it reaches the Sentinel fixture by
+ * `import()`, which is a chunk of its own rather than the first payload. What
+ * holds it to that shape is `demoSource.test.ts`, which counts loads and
+ * refuses one on the path that did not ask for the demo importer -- so a
+ * second file wanting the same permission argues for it in a diff.
+ */
+const MAY_READ =
+  /(\.(test|stories)\.tsx?$)|(^fixtures\/)|(^demo\/)|(^api\/sentinel\/demoSource\.ts$)/
 
 /**
  * **Any fixture, and at the first hop.** Refusing `@/fixtures/campaign` alone

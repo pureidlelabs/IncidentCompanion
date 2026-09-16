@@ -33,5 +33,3 @@ export const authClient = createAuthClient({
     customFetchImpl: (input, init) => globalThis.fetch(input as RequestInfo, init),
   },
 })
-
-export const { signIn, signOut, signUp, useSession } = authClient

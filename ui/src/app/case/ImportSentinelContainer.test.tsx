@@ -169,7 +169,16 @@ function withClient(node: React.ReactNode) {
 }
 vi.mock('@/api/sentinel/armSource', () => ({ armSource: () => provider }))
 vi.mock('@/api/sentinel/msalTokenProvider', () => ({ msalTokenProvider: () => ({}) }))
-vi.mock('@/api/sentinel/demoSource', () => ({ demoSourceFromUrl: () => provider }))
+/**
+ * Every ask for the demo source, with the address it was asked about -- so a
+ * render that made one, and a `connect` that asked about a different address,
+ * are both visible.
+ */
+const askedForTheFixture = vi.fn((_search: string) => Promise.resolve(provider))
+vi.mock('@/api/sentinel/demoSource', () => ({
+  demoImporterAsked: (search: string) => new URLSearchParams(search).get('importer') === 'demo',
+  demoSourceFromUrl: (search: string) => askedForTheFixture(search),
+}))
 vi.mock('@/api/incidentImport', () => ({
   previewImport: (_caseId: string, payload: { incidents: unknown[] }) => {
     previews.push(payload)
@@ -298,6 +307,47 @@ describe('the Sentinel import container', () => {
     previews.length = 0
     writes = null
     openCase = 'case-1'
+    askedForTheFixture.mockClear()
+    window.history.replaceState({}, '', '/')
+  })
+
+  /**
+   * **The fixture is a chunk of its own, and asking for it is what fetches
+   * it.** An analyst who opens the door against a real tenant should never pay
+   * for 13 KB of invented ones, so the ask belongs in `connect` and not in the
+   * render that draws the phase.
+   */
+  it('asks for the demo source at connect and not while rendering', async () => {
+    render(inCase(<ImportSentinelContainer />))
+    await waitFor(() => {
+      expect(writes).not.toBeNull()
+    })
+    expect(askedForTheFixture, 'the fixture was fetched to draw a screen').not.toHaveBeenCalled()
+
+    await writes!.connect({})
+    expect(askedForTheFixture).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * **The screen is drawn against one address and connects against the same
+   * one.** Reading `location` twice lets a navigation between the two draw the
+   * wizard preconfigured -- no registration asked for -- and then connect
+   * through Entra with nothing to give it.
+   */
+  it('connects against the address it was drawn for', async () => {
+    window.history.replaceState({}, '', '/?importer=demo')
+    render(inCase(<ImportSentinelContainer />))
+    await waitFor(() => {
+      expect(writes).not.toBeNull()
+    })
+
+    window.history.replaceState({}, '', '/')
+    await writes!.connect({})
+
+    expect(
+      askedForTheFixture,
+      'the address was read a second time, so the phase and the screen can disagree',
+    ).toHaveBeenCalledWith('?importer=demo')
   })
 
   /**
