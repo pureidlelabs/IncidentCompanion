@@ -90,7 +90,7 @@ describe.skipIf(!db)('an arrangement an analyst made', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder(seed)).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = one!.id
     // A draft, because a sent report refuses every block write.

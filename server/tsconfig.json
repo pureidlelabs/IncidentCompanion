@@ -49,6 +49,10 @@
     // "absent" or "explicitly undefined", which is a real distinction for a
     // patch and not a mechanical fix.
     "noUncheckedIndexedAccess": true,
+    // eslint's `no-unused-vars` skips class properties, so an injected field
+    // nothing reads was checked by nothing here. -> #631
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "emitDecoratorMetadata": true,
