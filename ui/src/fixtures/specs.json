@@ -1730,10 +1730,12 @@
           "name": "status",
           "label": "Status",
           "kind": "select",
-          "default": "open",
+          "default": "respond",
           "vocabulary": "caseStatus",
           "options": [
-            "open",
+            "respond",
+            "recover",
+            "post-incident",
             "closed"
           ]
         },
@@ -1825,7 +1827,7 @@
         "customer": "",
         "reference": "",
         "analyst": "",
-        "status": "open",
+        "status": "respond",
         "severity": "",
         "incidentClass": "",
         "detectionSource": "",
@@ -1877,7 +1879,9 @@
       "informational"
     ],
     "caseStatus": [
-      "open",
+      "respond",
+      "recover",
+      "post-incident",
       "closed"
     ],
     "incidentClass": [
