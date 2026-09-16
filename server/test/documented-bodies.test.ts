@@ -35,7 +35,7 @@ const NOT_GENERATED: ReadonlyArray<readonly [string, string]> = [
   [
     '/api/change-password',
     'Refines across two fields: the new password must equal its repeat, which no ' +
-      'generated instance can satisfy, so the body is well shaped and refused.',
+      'generated instance can satisfy, so the body is well shaped and refused. -> #805',
   ],
 ]
 

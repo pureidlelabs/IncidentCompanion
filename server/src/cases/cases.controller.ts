@@ -222,10 +222,9 @@ export class CasesController {
     if (!row) throw new NotFoundException(`No case template "${template}".`)
     const seed = caseTemplateSchema.safeParse(row.payload)
     if (!seed.success) {
-      throw new BadRequestException({
-        message: `The template "${template}" cannot be read.`,
-        errors: seed.error.issues,
-      })
+      throw new BadRequestException(
+        refusedBody(seed.error, `The template "${template}" cannot be read.`),
+      )
     }
     const made = await this.cases.create(fields, caller.session.user.id, seed.data)
     await this.activity.caseCreated(caller, made.id, made.title)

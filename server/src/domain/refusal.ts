@@ -3,8 +3,9 @@
  *
  * **Here rather than in `wire/`, because it is vocabulary rather than
  * mechanism.** `collections/` may not import `wire/` and raises a pipe of its
- * own, which is how a second description of this body came to exist; this tier
- * is the one every folder may read, and the client reads it as `@contract`.
+ * own, which is how a second description of this body came to exist. `domain`
+ * reaches nothing, so every folder that refuses can read this one without an
+ * edge that could ever become a cycle.
  *
  * Which status carries it is `wire/refusals.ts`.
  */
@@ -16,6 +17,10 @@ import type { ZodError } from 'zod'
  * the `path` saying which field it is about.
  * -> `a-refusal-names-the-field-it-is-about.test.ts`
  */
-export function refusedBody(error: ZodError): { message: string; errors: unknown } {
-  return { message: 'Validation failed', errors: error.issues }
+export function refusedBody(
+  error: ZodError,
+  /** What was being validated, where the caller can say it better than the default. */
+  message = 'Validation failed',
+): { message: string; errors: unknown } {
+  return { message, errors: error.issues }
 }

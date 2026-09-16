@@ -30,22 +30,32 @@ import { describe, expect, it } from 'vitest'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = join(HERE, '..')
 
-/** Where each shape is allowed to be spelled: its home, and nowhere else. */
+/**
+ * Where each shape is allowed to be spelled: its home, and nowhere else.
+ *
+ * **Matched on the shape, not on one spelling of it.** A tuple wrapped over
+ * four lines and a validation body carrying its own sentence are both the shape
+ * escaping, and a search for `messages: [[` or for the words *Validation
+ * failed* sees neither.
+ */
 const SHAPES = [
   {
     what: 'the validation body',
-    spelling: "message: 'Validation failed'",
+    spelling: /errors:\s*\w+\.error\.issues/,
     home: 'domain/refusal.ts',
+    athome: /errors: error\.issues/,
   },
   {
     what: 'the Written tuple',
-    spelling: 'messages: [[',
+    spelling: /messages:\s*\[\s*\[/,
     home: 'domain/written.ts',
+    athome: /messages: \[\[text, 'positive'\]\]/,
   },
   {
     what: 'the Written tuple, built by mapping',
-    spelling: "map((text) => [text, 'negative'])",
+    spelling: /map\(\(text\) => \[text, 'negative'\]\)/,
     home: 'domain/written.ts',
+    athome: /map\(\(text\) => \[text, 'negative'\]\)/,
   },
 ]
 
@@ -58,7 +68,7 @@ describe('the one spelling of a refusal', () => {
   it.each(SHAPES)('has $what nowhere but $home', ({ spelling, home }) => {
     const elsewhere = shipping()
       .filter((file) => file !== home)
-      .filter((file) => readFileSync(join(SRC, file), 'utf8').includes(spelling))
+      .filter((file) => spelling.test(readFileSync(join(SRC, file), 'utf8')))
 
     expect(
       elsewhere,
@@ -70,8 +80,8 @@ describe('the one spelling of a refusal', () => {
    * **The home still spells it**, so moving a builder out leaves this red
    * rather than green over a search that now covers nothing.
    */
-  it.each(SHAPES)('finds $what still spelled in $home', ({ spelling, home }) => {
-    expect(readFileSync(join(SRC, home), 'utf8')).toContain(spelling)
+  it.each(SHAPES)('finds $what still built in $home', ({ athome, home }) => {
+    expect(readFileSync(join(SRC, home), 'utf8')).toMatch(athome)
   })
 
   /**

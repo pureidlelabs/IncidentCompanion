@@ -176,9 +176,9 @@ const MAY_IMPORT: Record<string, string[]> = {
   // `auth` for `AdminOnly` and `install-activity` for the line every
   // install-level write owes: granting reach is managing the install.
   access: ['db', 'domain', 'auth', 'install-activity'],
-  // `domain` for the refusal body, which is a word the browser has to know:
-  // the client parses `errors` to name the field a write was refused on. The
-  // edge is to a leaf, so it cannot become a cycle.
+  // `domain` for the refusal body: the shape is the contract the client's
+  // reader answers to, and the folders that raise their own pipe may not reach
+  // `wire`. The edge is to a leaf, so it cannot become a cycle.
   wire: ['domain'],
   /** A pure transformation of bytes: it knows an archive's members, not a case. */
   archive: [],

@@ -48,7 +48,6 @@ export function written(text: string): Written {
  * A builder rather than a throw, because a route whose body carries more than
  * `Written` -- the library editor sends the re-rendered form beside it --
  * spreads this instead of spelling the tuple again.
- * `wire/refusals.ts` throws it for everybody else.
  */
 export function refused(...texts: string[]): Written {
   return { ok: false, messages: texts.map((text) => [text, 'negative']) }

@@ -15,7 +15,6 @@ import type { ZodError } from 'zod'
 
 import { refusedBody } from '../domain/refusal.js'
 
-
 /**
  * The global body validator.
  *

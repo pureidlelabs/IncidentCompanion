@@ -27,10 +27,6 @@ import { AuthService } from '@thallesp/nestjs-better-auth'
 import { AdminOnly } from '../auth/admin-only.js'
 import { refused, written as done, type Written } from '../domain/written.js'
 
-/** A 422 carrying the sentence, which is what `postWritten` unwraps. */
-function refuse(...texts: string[]): never {
-  throw new UnprocessableEntityException(refused(...texts))
-}
 import { fromNodeHeaders } from 'better-auth/node'
 import type { IncomingHttpHeaders } from 'node:http'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
@@ -91,6 +87,11 @@ const accountRowSchema = z.object({
   tone: z.enum(['positive', 'negative']),
   disabled: z.boolean(),
 })
+
+/** A 422 carrying the sentence, which is what `postWritten` unwraps. */
+function refuse(...texts: string[]): never {
+  throw new UnprocessableEntityException(refused(...texts))
+}
 
 class AccountWrittenDto extends createZodDto(writtenSchema) {}
 class AccountsDto extends createZodDto(

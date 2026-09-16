@@ -78,8 +78,14 @@ export function WriteFailure({
               schema field name is that, and the server's sentence about it is
               prose. `detail-grid.tsx` splits them the same way. */}
           <ul aria-label="Fields refused" className="flex flex-col gap-1">
-            {fields.map((refused) => (
-              <li key={refused.field} className="flex min-w-0 gap-2 text-[length:var(--text-data)]">
+            {/* Keyed with the position as well as the field: a schema can refuse
+                one field twice -- too short *and* not a value it allows -- and
+                two rows under one key is reconciliation React calls unsupported. */}
+            {fields.map((refused, at) => (
+              <li
+                key={`${String(at)}:${refused.field}`}
+                className="flex min-w-0 gap-2 text-[length:var(--text-data)]"
+              >
                 <span className="shrink-0 font-mono opacity-80">{refused.field}</span>
                 <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                   {refused.message}
