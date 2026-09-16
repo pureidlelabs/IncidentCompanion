@@ -226,35 +226,6 @@ export const COLLECTION_NAMES: readonly CollectionName[] = [
   'timeline',
 ]
 
-/**
- * **`reports` and `report_blocks` are absent, and the server agrees**: both
- * are `bulk: false`, because anything written into a report is reviewable and
- * a bulk selection has never been able to name one.
- *
- * Every collection the server opens a door for is here, which
- * `the-client-offers-every-batch-door-the-server-opens.test.ts` holds -- a
- * list that quietly refuses one is a screen with no row for it and no error
- * anywhere.
- */
-export const BATCH_CREATABLE_COLLECTION_NAMES: readonly CollectionName[] = [
-  'accounts',
-  'actions',
-  'casenotes',
-  'cloud_apps',
-  /**
-   * **A record with no digest claims no file.** It says evidence exists and
-   * `location` says where, which is the ordinary case rather than the
-   * exception; the bytes arrive on their own route and only then does
-   * `storedAt` say this install holds them. -> #362
-   */
-  'evidence',
-  'impact',
-  'malware',
-  'methods',
-  'network_indicators',
-  'systems',
-  'timeline',
-]
 export type BatchCreatableCollectionName = CollectionName
 
 export type GenericCreateCollectionName = CollectionName

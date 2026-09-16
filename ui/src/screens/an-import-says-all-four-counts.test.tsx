@@ -17,6 +17,7 @@ import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { ImportDataScreen } from './import-data'
+import { batchDoorsFixture } from '@/fixtures/batch-doors'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
@@ -36,6 +37,7 @@ describe('an import that lost references', () => {
       <ImportDataScreen
         kase={campaignCase}
         specs={specsFixture}
+        collections={batchDoorsFixture}
         result={{ ...carried, unlinked: 3, unlinkedBy: { systems: 2, methods: 1 } }}
       />,
     )
@@ -61,6 +63,7 @@ describe('an import that lost references', () => {
       <ImportDataScreen
         kase={campaignCase}
         specs={specsFixture}
+        collections={batchDoorsFixture}
         result={{ ...carried, unlinked: 1, unlinkedBy: { systems: 1 } }}
       />,
     )
@@ -74,7 +77,7 @@ describe('an import that lost references', () => {
    * "nothing was lost" and "nobody looked".
    */
   it('says plainly that an import carried everything', () => {
-    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} result={carried} />)
+    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} collections={batchDoorsFixture} result={carried} />)
 
     expect(document.body.textContent, 'an import that lost nothing does not say so').toMatch(
       /every reference/i,
@@ -91,6 +94,7 @@ describe('an import that lost references', () => {
       <ImportDataScreen
         kase={campaignCase}
         specs={specsFixture}
+        collections={batchDoorsFixture}
         result={{ ...carried, refused: 2, unlinked: 2, unlinkedBy: { systems: 2 } }}
       />,
     )
@@ -117,6 +121,7 @@ describe('an import that met rows the case already held', () => {
       <ImportDataScreen
         kase={campaignCase}
         specs={specsFixture}
+        collections={batchDoorsFixture}
         result={{ ...carried, written: 0, skipped: 28, replaced: 4 }}
       />,
     )
@@ -140,6 +145,7 @@ describe('an import that met rows the case already held', () => {
       <ImportDataScreen
         kase={campaignCase}
         specs={specsFixture}
+        collections={batchDoorsFixture}
         result={{ ...carried, written: 0, skipped: 28 }}
       />,
     )
@@ -153,7 +159,7 @@ describe('an import that met rows the case already held', () => {
 
   /** A count of nothing is not a line of the strip. */
   it('says nothing about a count of zero', () => {
-    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} result={carried} />)
+    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} collections={batchDoorsFixture} result={carried} />)
 
     const said = document.body.textContent
     expect(said).not.toContain('0 already there')

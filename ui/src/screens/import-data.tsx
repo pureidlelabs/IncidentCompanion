@@ -3,7 +3,6 @@ import { useMemo, useRef, useState } from 'react'
 
 import { formForCollection } from '@/api/entityTargets'
 import {
-  BATCH_CREATABLE_COLLECTION_NAMES,
   COLLECTION_LABELS,
   COLLECTION_TO_CASE_KEY,
   type Case,
@@ -25,13 +24,6 @@ import { Item, ItemActions, ItemContent, ItemGroup, ItemTitle } from '@/componen
  * own toolbar carries the same control for that one table, and both write
  * through the same route.
  *
- * **The rows come from what the server marks batch-creatable, not from a name
- * list**, so a table newly opened to batch writes appears here with no code
- * change - and the three the flag excludes never need a name check to stay off
- * the screen. Evidence is out because its bytes arrive on their own route; the
- * two report tables because anything written into a report is reviewable and a
- * bulk selection has never been able to name one.
- *
  * **The template leaves from here; the import does not.** A template is the
  * served field names on one line, so it is built in the browser and handed
  * over on a real `<a download>`. An import writes rows, which is a route this
@@ -43,8 +35,8 @@ export interface ImportDataScreenProps {
   kase: Case | undefined
   /** The served forms, which decide each template's columns. */
   specs: Specs | undefined
-  /** Which collections this install offers. Defaults to the batch-creatable set. */
-  collections?: readonly CollectionName[]
+  /** The tables `GET /api/collections` marks batch-creatable. */
+  collections: readonly CollectionName[] | undefined
   /** What the last import into one table produced. */
   result?: ImportResult
   /**
@@ -173,7 +165,7 @@ interface ImportRow {
 export function ImportDataScreen({
   kase,
   specs,
-  collections = BATCH_CREATABLE_COLLECTION_NAMES,
+  collections,
   result,
   onImport,
   importing,
@@ -196,7 +188,7 @@ export function ImportDataScreen({
 
   const rows = useMemo<ImportRow[]>(
     () =>
-      collections.map((collection) => {
+      (collections ?? []).map((collection) => {
         const form = specs ? formForCollection(specs, collection) : undefined
         return {
           collection,

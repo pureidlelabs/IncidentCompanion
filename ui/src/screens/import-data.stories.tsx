@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 
 import type { Case } from '@/api/model'
+import { batchDoorsFixture } from '@/fixtures/batch-doors'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
@@ -36,6 +37,7 @@ const meta = {
   args: {
     kase: campaignCase,
     specs: specsFixture,
+    collections: batchDoorsFixture,
   },
 } satisfies Meta<typeof ImportDataScreen>
 
