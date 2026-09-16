@@ -21,6 +21,32 @@ export type Role = (typeof ROLES)[number]
 export const DEFAULT_ROLE: Role = 'analyst'
 export const ADMIN_ROLE: Role = 'admin'
 
+/** What each role is called in a sentence, where the token is not the word. */
+const ROLE_NAMES: Record<Role, string> = { analyst: 'analyst', admin: 'administrator' }
+
+/**
+ * What to call a role where a person reads it.
+ *
+ * Here beside the vocabulary because the server writes the word into its
+ * refusals and the row menu offers it as a verb, and a role called two things
+ * on one pane is a role an administrator has to work out is one role.
+ *
+ * A value that is not a role is answered as itself.
+ */
+export function roleName(role: string): string {
+  return ROLE_NAMES[role as Role] ?? role
+}
+
+/**
+ * The same word with the article a sentence needs: *an administrator*, *an
+ * analyst*. Composed rather than written at the call site, so a role added to
+ * the vocabulary does not leave one sentence saying *an* in front of it.
+ */
+export function aRole(role: string): string {
+  const word = roleName(role)
+  return `${'aeiou'.includes(word[0] ?? '') ? 'an' : 'a'} ${word}`
+}
+
 /**
  * Every state an account is served in.
  *
@@ -63,4 +89,13 @@ export interface AnalystAccount {
   state: AccountState
   tone: 'positive' | 'negative'
   disabled: boolean
+  /**
+   * **Whether this row is the account asking**, answered here because nothing
+   * the client holds can work it out: the session carries a display name,
+   * which the server does not make unique, and the row is addressed by email.
+   *
+   * What a row offers turns on it -- every verb on the row is one an
+   * administrator performs on somebody else.
+   */
+  you: boolean
 }

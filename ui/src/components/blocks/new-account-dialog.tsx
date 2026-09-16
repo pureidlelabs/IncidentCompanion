@@ -1,6 +1,8 @@
 import { ShieldCheck, UserRound, UserRoundPlus, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
+import { roleName } from '@contract/analyst-account'
+
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogFooter, DialogHeader } from '@/components/ui/dialog'
 import { PasswordField } from '@/components/ui/password-field'
@@ -149,7 +151,7 @@ export function NewAccountDialog({
                   {...(known === undefined ? {} : { description: known.detail })}
                   {...(Icon === undefined ? {} : { icon: <Icon aria-hidden /> })}
                 >
-                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                  {roleName(option).charAt(0).toUpperCase() + roleName(option).slice(1)}
                 </Radio>
               )
             })}

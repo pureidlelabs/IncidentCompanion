@@ -139,7 +139,7 @@ const SURFACES: readonly { name: string; draw: () => ReactElement }[] = [
   { name: 'impact', draw: () => <ImpactScreen kase={campaignCase} specs={specsFixture} /> },
   { name: 'indicators', draw: () => <IndicatorsScreen kase={campaignCase} specs={specsFixture} /> },
   { name: 'picker cases', draw: () => <PickerCasesScreen cases={PICKER_CASES} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} /> },
-  { name: 'picker accounts', draw: () => <PickerAccountsScreen accounts={PICKER_ACCOUNTS} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} roles={[]} defaultRole="analyst" onCreate={() => undefined} /> },
+  { name: 'picker accounts', draw: () => <PickerAccountsScreen accounts={PICKER_ACCOUNTS} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} roles={[]} defaultRole="analyst" onCreate={() => undefined} onState={() => undefined} /> },
   { name: 'picker activity', draw: () => <ActivityWithFilters /> },
 ]
 

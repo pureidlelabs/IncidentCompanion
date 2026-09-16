@@ -12,13 +12,18 @@ import type { ActivityReading, AuditRow } from '@/components/blocks/activity-log
 import type { LibraryRow } from '@/components/blocks/library-collection'
 import { matchesWords } from '@/lib/word-match'
 
-/** A roster carrying both states an account is served in. */
+/**
+ * A roster carrying both states an account is served in.
+ *
+ * **One row is the reader's own**, because what a row offers turns on it and a
+ * gallery of rows that are all somebody else shows only half the table.
+ */
 export const PICKER_ACCOUNTS: readonly AccountTableRow[] = [
-  { id: 'a1', username: 'r.okonkwo', displayName: 'Rachel Okonkwo', role: 'admin', state: 'active' },
-  { id: 'a2', username: 't.brennan', displayName: 'Tomas Brennan', role: 'analyst', state: 'active' },
-  { id: 'a3', username: 's.iqbal', displayName: 'Sana Iqbal', role: 'analyst', state: 'active' },
-  { id: 'a4', username: 'm.delacroix', displayName: 'Margot Delacroix', role: 'analyst', state: 'disabled' },
-  { id: 'a5', username: 'd.novak', displayName: '', role: 'analyst', state: 'disabled' },
+  { id: 'a1', username: 'r.okonkwo', displayName: 'Rachel Okonkwo', role: 'admin', state: 'active', you: true },
+  { id: 'a2', username: 't.brennan', displayName: 'Tomas Brennan', role: 'analyst', state: 'active', you: false },
+  { id: 'a3', username: 's.iqbal', displayName: 'Sana Iqbal', role: 'analyst', state: 'active', you: false },
+  { id: 'a4', username: 'm.delacroix', displayName: 'Margot Delacroix', role: 'analyst', state: 'disabled', you: false },
+  { id: 'a5', username: 'd.novak', displayName: '', role: 'analyst', state: 'disabled', you: false },
 ]
 
 /** Newest first, and wide enough that the pager has a second page to offer. */

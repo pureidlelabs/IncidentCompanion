@@ -8,7 +8,7 @@ import { PersonAvatar } from '@/components/blocks/presence'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/tabs'
 
 import { actionsColumn, DataTable, useEntityTable, type EntityColumn } from './data-table'
-import type { AnalystAccount } from '@contract/analyst-account'
+import { roleName, type AnalystAccount } from '@contract/analyst-account'
 
 import { EmptyState } from './empty-state'
 import { useFilters } from './filter-set'
@@ -25,7 +25,7 @@ import { TableToolbar } from './table-toolbar'
  * copy of the table is the defect this exists to rule out.
  */
 export interface AccountTableRow
-  extends Pick<AnalystAccount, 'username' | 'displayName' | 'role' | 'state'> {
+  extends Pick<AnalystAccount, 'username' | 'displayName' | 'role' | 'state' | 'you'> {
   /**
    * The row identity the table sorts and selects by.
    *
@@ -85,9 +85,22 @@ export interface AccountTableProps {
    * and what the table draws cannot drift apart.
    */
   onState: (id: string, state: AccountTableRow['state']) => void
+  /** Ends every session the account holds. Absent draws no such row. */
+  onEndSessions?: ((id: string) => void) | undefined
+  /** The roles this install offers. Empty draws no role rows. */
+  roles?: readonly string[] | undefined
+  /** Moves an account to a role. Absent draws no role rows. */
+  onRole?: ((id: string, role: string) => void) | undefined
 }
 
-export function AccountTable({ accounts, onState }: AccountTableProps) {
+export function AccountTable({
+  accounts,
+  onState,
+  onEndSessions,
+  // `roles` is taken below by the filter's own chosen set.
+  roles: offered,
+  onRole,
+}: AccountTableProps) {
   const [tab, setTab] = useState<(typeof ACCOUNT_TABS)[number]>('All')
   const [query, setQuery] = useState('')
 
@@ -118,7 +131,10 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
     [accounts, tab, roles, query],
   )
 
-  const columns = useMemo(() => accountColumns(onState), [onState])
+  const columns = useMemo(
+    () => accountColumns({ onState, onEndSessions, roles: offered, onRole }),
+    [onState, onEndSessions, offered, onRole],
+  )
   const table = useEntityTable<AccountTableRow>({
     data: rows,
     columns,
@@ -221,9 +237,12 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
  * account has a password and no second factor" is the sentence an
  * administrator is scanning the table for.
  */
-function accountColumns(
-  onState: (id: string, state: AccountTableRow['state']) => void,
-): EntityColumn<AccountTableRow>[] {
+function accountColumns({
+  onState,
+  onEndSessions,
+  roles,
+  onRole,
+}: Omit<AccountTableProps, 'accounts'>): EntityColumn<AccountTableRow>[] {
   return [
     {
       id: 'account',
@@ -233,7 +252,7 @@ function accountColumns(
       cell: ({ row: one }) => (
         <span className="flex min-w-0 items-center gap-2">
           <PersonAvatar
-            person={{ name: accountLabel(one.original), you: false }}
+            person={{ name: accountLabel(one.original), you: one.original.you }}
             className="size-7 text-2xs"
           />
           <span className="flex min-w-0 flex-col">
@@ -286,35 +305,83 @@ function accountColumns(
     },
     actionsColumn<AccountTableRow>(
       (one) => accountLabel(one),
-      (one) => [
-        [
-          // Resetting a password mints one and mails it, which is the server's
-          // and cannot be stood in for. Offered and refused rather than
-          // offered and inert.
-          {
-            id: 'reset',
-            label: 'Reset password\u2026',
-            disabled: true,
-            onSelect: () => undefined,
-          },
-          one.state === 'disabled'
-            ? {
-                id: 'enable',
-                label: 'Enable',
-                onSelect: () => {
-                  onState(one.id, 'active')
-                },
-              }
-            : {
-                id: 'disable',
-                label: 'Disable\u2026',
-                danger: true,
-                onSelect: () => {
-                  onState(one.id, 'disabled')
-                },
-              },
-        ],
-      ],
+      (one) => {
+        /**
+         * **Every verb here is one an administrator performs on somebody
+         * else**, and each is a different kind of wrong on their own row: the
+         * server refuses the disable, the role change succeeds and takes the
+         * pane away with it, and ending the sessions signs them out mid-act.
+         * The pane's own *End every session* is where they sign themselves
+         * out, and it says so first.
+         *
+         * **Served, never worked out here.** The session carries a display
+         * name, which the server does not make unique, and the row is
+         * addressed by email.
+         */
+        const mine = one.you
+        return [
+          [
+            // Resetting a password mints one and mails it, which is the
+            // server's and cannot be stood in for. Offered and refused rather
+            // than offered and inert.
+            {
+              id: 'reset',
+              label: 'Reset password\u2026',
+              disabled: true,
+              onSelect: () => undefined,
+            },
+            // **One row per role this install offers, its own excepted.** A
+            // submenu would be a second surface for two items; the list is the
+            // server's, so an install that grows a role grows a row.
+            ...(onRole && !mine
+              ? (roles ?? [])
+                  .filter((role) => role !== one.role)
+                  .map((role) => ({
+                    id: `role-${role}`,
+                    label: `Make ${roleName(role)}`,
+                    onSelect: () => {
+                      onRole(one.id, role)
+                    },
+                  }))
+              : []),
+            // **Separate from Disable, because they are different acts.**
+            // Ending a session puts an analyst out now and leaves the account
+            // able to sign back in; disabling stops the next sign-in and is not
+            // urgent.
+            ...(onEndSessions && !mine
+              ? [
+                  {
+                    id: 'sessions',
+                    label: 'End sessions',
+                    onSelect: () => {
+                      onEndSessions(one.id)
+                    },
+                  },
+                ]
+              : []),
+            ...(mine
+              ? []
+              : [
+                  one.state === 'disabled'
+                    ? {
+                        id: 'enable',
+                        label: 'Enable',
+                        onSelect: () => {
+                          onState(one.id, 'active')
+                        },
+                      }
+                    : {
+                        id: 'disable',
+                        label: 'Disable\u2026',
+                        danger: true,
+                        onSelect: () => {
+                          onState(one.id, 'disabled')
+                        },
+                      },
+                ]),
+          ],
+        ]
+      },
       // Neither verb is the row's own: a password is reset and an account is
       // disabled, and both are their own confirmation.
       () => ({ edit: false, delete: false }),
