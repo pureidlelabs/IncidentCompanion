@@ -13,7 +13,6 @@ import {
   NotFoundException,
   Controller,
   Get,
-  Header,
   Param,
   ParseUUIDPipe,
   Post,
@@ -106,13 +105,22 @@ export class ExportsController {
    * table lookup, so an unknown name is a 400.
    */
   @Get(':collection.csv')
-  @Header('content-type', 'text/csv; charset=utf-8')
   async collectionCsv(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('collection') collection: string,
+    /**
+     * **Typed here rather than by `@Header`, which is applied before the
+     * handler runs and so survives whatever the handler throws.** The
+     * collection below is validated inside this body, so its 400 wore the
+     * label of the file it refused to make: a browser offered the refusal as a
+     * download and a client parsing by content type choked on JSON it was told
+     * was CSV. -> the indicators export, which has always set its own.
+     */
+    @Res({ passthrough: true }) response: { type(value: string): unknown },
   ): Promise<string> {
     const table = this.tableFor(collection)
     const rows = await this.caseRows(table, caseId)
+    response.type('text/csv; charset=utf-8')
 
     /**
      * **Headed with the database's own column names, not Drizzle's property

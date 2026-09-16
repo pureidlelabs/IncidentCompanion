@@ -78,7 +78,7 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
     const rows = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
     expect(rows.length).toBeGreaterThan(0)
 
-    const csv = await controller.collectionCsv(caseId, 'systems')
+    const csv = await controller.collectionCsv(caseId, 'systems', { type: () => undefined })
 
     const lines = csv.split('\n').filter((line) => line.length > 0)
     expect(lines).toHaveLength(rows.length + 1)
@@ -101,7 +101,7 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
     const columns = (found.rows as { column_name: string }[]).map((row) => row.column_name)
     expect(columns.length, 'no columns came back, so the sweep swept nothing').toBeGreaterThan(5)
 
-    const csv = await controller.collectionCsv(caseId, 'systems')
+    const csv = await controller.collectionCsv(caseId, 'systems', { type: () => undefined })
     const header = csv.split('\n')[0]!.split(',')
 
     expect([...header].sort()).toEqual([...columns].sort())
@@ -119,14 +119,14 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
       .insert(systems)
       .values({ caseId: other!.id, hostname: 'THEIR-SECRET-HOST', systemType: 'server' })
 
-    const csv = await controller.collectionCsv(caseId, 'systems')
+    const csv = await controller.collectionCsv(caseId, 'systems', { type: () => undefined })
 
     expect(csv).not.toContain('THEIR-SECRET-HOST')
     expect(csv).not.toContain(other!.id)
   })
 
   it('answers 400 for a collection that does not exist, naming the ones that do', async () => {
-    await expect(controller.collectionCsv(caseId, 'nonsense')).rejects.toMatchObject({
+    await expect(controller.collectionCsv(caseId, 'nonsense', { type: () => undefined })).rejects.toMatchObject({
       response: { message: expect.stringContaining('systems') },
     })
   })
@@ -191,7 +191,7 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
       .values({ caseId, hostname: '=cmd|/c calc', systemType: 'laptop' })
       .returning()
 
-    const csv = await controller.collectionCsv(caseId, 'systems')
+    const csv = await controller.collectionCsv(caseId, 'systems', { type: () => undefined })
 
     expect(csv).toContain("'=cmd|/c calc")
     expect(csv).not.toMatch(/(^|,)=cmd/m)
@@ -283,7 +283,7 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
       .values({ title: 'Empty', createdBy: null, updatedBy: null })
       .returning()
 
-    const csv = await controller.collectionCsv(empty!.id, 'systems')
+    const csv = await controller.collectionCsv(empty!.id, 'systems', { type: () => undefined })
 
     expect(csv.split('\n').filter((line) => line.length > 0)).toHaveLength(1)
   })
