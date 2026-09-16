@@ -24,12 +24,6 @@
  *
  * It needs a Storybook and skips with a reason when there is none, exactly as
  * `storybook.spec.ts` next to it does.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/row-actions-reveal.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

@@ -22,11 +22,6 @@
  * **Not a grep.** Most `fixed` in this tree is the English word or
  * `table-fixed`, and the ones that matter are computed rather than written --
  * so the question is only answerable against a rendered document.
- *
- * ```bash
- * npx playwright test --config=e2e/playwright.config.ts \
- *   e2e/visual/nothing-fixed-hangs-off-a-composited-box.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

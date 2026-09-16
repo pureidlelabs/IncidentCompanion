@@ -23,12 +23,6 @@
  * `Badge` is `w-fit`, so it sizes to its content and is never constrained by
  * the column. The fix is a cap rather than a clip, so the reading is the box
  * against its cell rather than a `Range` over a text leaf.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/a-view-clips-its-own-text.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

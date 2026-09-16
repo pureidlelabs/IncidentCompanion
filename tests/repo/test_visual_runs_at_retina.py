@@ -16,10 +16,10 @@ screen.
 
 from __future__ import annotations
 
-import pathlib
 import re
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+from tests._repo import REPO_ROOT
+
 VISUAL = REPO_ROOT / "server" / "e2e" / "visual"
 
 CONFIGS = sorted(VISUAL.glob("playwright.*.config.ts"))

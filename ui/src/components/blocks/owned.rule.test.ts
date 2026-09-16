@@ -8,7 +8,7 @@
  * edge, with a rule on the edge and none on the row.
  *
  * **The oracle is mechanical: a primitive that only blocks import is the
- * blocks'.** `RailRow` only makes sense inside a rail, `DataGridTable`
+ * blocks'.** `RailRow` only makes sense inside a rail, `Cell`
  * inside the table, `TimelineItem` inside the activity feed - so a screen
  * importing one is not borrowing a control, it is rebuilding the composite. No
  * regex per block, and a new block is covered the day it is written.
@@ -26,7 +26,7 @@
  * it stops the next one. `blocks.test.ts`'s smells are the other half: they
  * catch a copy that imports nothing and retypes the classes instead.
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -46,14 +46,8 @@ const BLOCK_DIRS = [BLOCK_DIR]
  * hold it directly, which is a decision about the block's boundary rather
  * than a fix.
  *
- * **The list is re-taken when a file changes tier, which is the ratchet
- * working rather than failing.** Seven composites moved from `ui/` to `blocks/`
- * when the tier rule found them importing blocks and layouts - so the parts
- * they are built from became block-only and joined this list: `Combobox*` with
- * `reference-select`, `HoverCard*` with `entity-card`, `AlertDialog*` with
- * `confirm-delete-dialog`. Two left it in the same pass: the case shell moved
- * to `screens/`, so `ClaimsProvider` and `PresenceStack` are held by a screen
- * now and that is correct.
+ * **A name no block imports from the kit is outside the reach of `names the
+ * block that imports it`** - the blind spot `imported()` has everywhere.
  */
 const OWNED: Readonly<Record<string, string>> = {
   // These parts are held by a block and reached by no screen. Recorded rather
@@ -100,8 +94,8 @@ const OWNED: Readonly<Record<string, string>> = {
   KbdGroup: 'blocks/chord-keys.tsx',
   KbdKeyName: 'blocks/chord-keys.tsx',
   LabelledSeparator: 'blocks/sso-sign-in.tsx',
-  ListBox: 'blocks/command-palette.tsx',
-  ListBoxSection: 'blocks/command-palette.tsx',
+  ListBox: 'blocks/palette-results.tsx',
+  ListBoxSection: 'blocks/palette-results.tsx',
   Mark: 'blocks/auth-masthead.tsx',
   Menu: 'blocks/data-table.tsx',
   MenuItem: 'blocks/picker-frame.tsx',
@@ -142,21 +136,16 @@ const OWNED: Readonly<Record<string, string>> = {
   Tag: 'blocks/compliance-field.tsx',
   TagGroup: 'blocks/compliance-field.tsx',
   TagsInput: 'blocks/field-control.tsx',
-  TextArea: 'blocks/report-workspace.tsx',
+  TextArea: 'blocks/case-fields.tsx',
   ToastMessage: 'blocks/notify.tsx',
   ToastQueue: 'blocks/notify.tsx',
   ToastTone: 'blocks/notify.tsx',
   Toolbar: 'blocks/prose-body.tsx',
-  FieldContent: 'settings-section',
-  FieldDescription: 'settings-section',
-  FieldGroup: 'settings-section',
-  FieldLabel: 'settings-section',
-  FieldTitle: 'settings-section',
+  FieldGroup: 'blocks/library-collection.tsx',
   DateTimeInput: 'case-fields',
   ItemDescription: 'pick-pane',
   ItemMedia: 'pick-pane',
   RadioGroup: 'pick-pane',
-  RadioGroupItem: 'pick-pane',
   Stepper: 'wizard',
   StepperDescription: 'wizard',
   StepperIndicator: 'wizard',
@@ -165,32 +154,12 @@ const OWNED: Readonly<Record<string, string>> = {
   StepperSeparator: 'wizard',
   StepperTitle: 'wizard',
   StepperTrigger: 'wizard',
-  AlertDialogAction: 'confirm-delete-dialog',
-  AlertDialogCancel: 'confirm-delete-dialog',
   AmbientField: 'auth-atmosphere',
   CHANGED_RAIL: 'entity-dialog / field-row',
-  Combobox: 'reference-select',
-  ComboboxChip: 'reference-select',
-  ComboboxChips: 'reference-select',
-  ComboboxChipsInput: 'reference-select',
-  ComboboxContent: 'reference-select',
-  ComboboxEmpty: 'reference-select',
-  ComboboxItem: 'reference-select',
-  ComboboxList: 'reference-select',
-  ComboboxTrigger: 'reference-select',
-  ComboboxValue: 'reference-select',
-  ContextMenuItem: 'row-menu',
-  ContextMenuSeparator: 'row-menu',
-  DataGrid: 'data-table',
-  DataGridColumnMeta: 'data-table',
-  DataGridTable: 'data-table',
-  DataGridTableVirtual: 'data-table',
   HIGHLIGHT_MS: 'data-table',
   HOVER_CARD_CLOSE_DELAY: 'entity-card',
   HOVER_CARD_OPEN_DELAY: 'entity-card',
   HoverCard: 'entity-card',
-  HoverCardContent: 'entity-card',
-  HoverCardTrigger: 'entity-card',
   ImportPreview: 'import-csv-dialog',
   IconStack: 'empty-state',
   LinkedEntity: 'entity-link / entity-card',
@@ -260,6 +229,12 @@ function sources(dir: string, into: string[] = []): string[] {
   return into
 }
 
+function ownerFiles(owner: string): string[] {
+  return owner
+    .split(' / ')
+    .map((part) => join(SRC, 'components', part.endsWith('.tsx') ? part : `blocks/${part}.tsx`))
+}
+
 /** The capitalised names a file imports from the component tiers. */
 function imported(file: string): string[] {
   const text = readFileSync(file, 'utf8')
@@ -284,9 +259,46 @@ describe('a block owns the parts it is built from', () => {
   const screenFiles = sources(join(SRC, 'screens'))
   const blockFiles = BLOCK_DIRS.flatMap((dir) => sources(dir))
 
+  const inBlocks = new Map<string, Set<string>>()
+  for (const file of blockFiles) {
+    for (const name of imported(file)) {
+      const at = inBlocks.get(name) ?? new Set<string>()
+      at.add(file.slice(SRC.length + 1))
+      inBlocks.set(name, at)
+    }
+  }
+
   it('finds source to read', () => {
     expect(screenFiles.length).toBeGreaterThan(30)
     expect(blockFiles.length).toBeGreaterThan(10)
+  })
+
+  it('names an owner that still exists', () => {
+    const gone = Object.entries(OWNED)
+      .flatMap(([name, owner]) => ownerFiles(owner).map((file) => ({ name, file })))
+      .filter(({ file }) => !existsSync(file))
+      .map(({ name, file }) => `${name}: ${file.slice(SRC.length + 1)}`)
+
+    expect(
+      gone.sort(),
+      'an owner is what a reader consults to decide whether an entry may go - point it at the block that holds the part now',
+    ).toEqual([])
+  })
+
+  /** A file that exists is not a file that holds the part, which is what the check above settles for. */
+  it('names the block that imports it', () => {
+    const wrong = Object.entries(OWNED)
+      .filter(([name]) => inBlocks.has(name))
+      .filter(([name, owner]) => {
+        const rels = ownerFiles(owner).map((file) => file.slice(SRC.length + 1))
+        return !rels.some((rel) => inBlocks.get(name)?.has(rel))
+      })
+      .map(([name, owner]) => `${name}: ${owner} imports nothing of it`)
+
+    expect(
+      wrong.sort(),
+      'the owner is a block that imports the part - name one of the blocks that does',
+    ).toEqual([])
   })
 
   /**
@@ -316,14 +328,6 @@ describe('a block owns the parts it is built from', () => {
    * somebody remembered to write down.
    */
   it('lists every part that has become block-only', () => {
-    const inBlocks = new Map<string, Set<string>>()
-    for (const file of blockFiles) {
-      for (const name of imported(file)) {
-        const at = inBlocks.get(name) ?? new Set<string>()
-        at.add(file.slice(SRC.length + 1))
-        inBlocks.set(name, at)
-      }
-    }
     const inFeatures = new Set(screenFiles.flatMap((file) => imported(file)))
 
     const unlisted = [...inBlocks.keys()]

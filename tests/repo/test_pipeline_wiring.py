@@ -45,8 +45,6 @@ CALLERS = (CI, VERIFY)
 LOCAL_ACTIONS = tuple(sorted((REPO_ROOT / ".github" / "actions").glob("*/action.yml")))
 
 #: Every workflow, found rather than listed. A named pair leaves the next
-#: workflow -- `nightly-build.yml` was one -- carrying unpinned actions and
-#: checked by nothing.
 WORKFLOWS = tuple(sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml")))
 
 
@@ -147,9 +145,6 @@ def test_every_scope_name_a_job_branches_on_is_declared_as_a_job_output() -> Non
     reads it as `needs.scope.outputs.<name>`. Miss the middle one and the
     expression is the empty string rather than an error, so the job it guards
     never runs and the gate passes it as skipped.
-
-    Found by `actionlint`, which is not installed on every machine and skips
-    there -- so this holds without it.
     """
     text = CI.read_text(encoding="utf-8")
     published = set(re.findall(r"^\s+(\w+):\s*\$\{\{\s*steps\.scope\.outputs\.\w+",
@@ -178,10 +173,6 @@ def test_every_npm_script_a_tier_runs_exists() -> None:
 
 def test_every_custom_manager_matches_something_in_the_tree() -> None:
     """A manager whose pattern matches nothing reports no dependencies, not an error.
-
-    This is the failure that hides best: Renovate finishes clean, the dashboard
-    lists everything it did find, and the pins the manager was written for stay
-    invisible exactly as they were before it existed.
     """
     assert custom_managers(), "no custom manager was read"
     for file_pattern, match_string in custom_managers():
@@ -268,11 +259,6 @@ def test_every_secret_scanning_exclusion_still_holds_a_credential() -> None:
 @pytest.mark.parametrize("path", [*WORKFLOWS, *LOCAL_ACTIONS], ids=lambda p: p.name)
 def test_every_action_is_pinned_to_a_commit(path: Path) -> None:
     """A tag is repointable by whoever can write to the repository.
-
-    That is how `tj-actions/changed-files` distributed a secret-scraping commit
-    in March 2025: the tags were moved onto it, and every workflow naming one
-    picked it up on its next run.
-
     A `./`-relative reference is exempt and the file it names is scanned
     instead: it resolves to this tree at the commit under test, so there is no
     tag to move -- but the third-party actions it wraps are as repointable as
@@ -583,10 +569,6 @@ def test_every_renovate_annotation_has_a_manager_that_reads_it() -> None:
     comment on its own -- a `customManagers` entry has to name the file before
     any of it is true. Annotate without one and the pin reads as tracked to
     everybody who opens the file, while drifting exactly as it did before.
-
-    `.devcontainer/Dockerfile`'s `PLAYWRIGHT_VERSION` is the shape: annotated,
-    and drifting from the `@playwright/test` in `server/package.json` for as
-    long as no manager named the file.
     """
     def wanted(path: Path) -> bool:
         rel = path.relative_to(REPO_ROOT).as_posix()
@@ -859,10 +841,6 @@ def test_no_workflow_restates_a_connection_string(path: Path) -> None:
 
 def step_script(job: str, step: int = 0) -> str:
     """One job's step `run:`, for executing rather than reading.
-
-    The regex tests above read the whole file at once, which is how a mapping
-    stated twice satisfied them from one of its two paths. These run the shell
-    and assert on what it wrote.
     """
     return str(ci_jobs()[job]["steps"][step]["run"])
 

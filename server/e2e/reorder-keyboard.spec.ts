@@ -17,46 +17,19 @@ import { ADMIN, asAdminApi, asPersona, demoCase, section, settle } from './suppo
  * that failure can hide.
  */
 
-/**
- * The keys React Aria's own live region names.
- *
- * **`Enter` to drop, not `Space`.** Measured against a wired outline with the
- * handler instrumented: a drop on `Space` never reaches `onReorder` at all,
- * and the same gesture ending in `Enter` fires it with a real target and posts
- * the order.
- *
- *     Space/ArrowDown/Space:  onReorder fired: (never)          POSTs=0
- *     Enter/ArrowDown/Enter:  onReorder fired: {"dropPosition":"before"}  POSTs=1
- *
- * The library says so itself, in the region this spec reads: *"Started
- * dragging. Press Tab to navigate to a drop target, then press Enter to drop,
- * or press Escape to cancel."* -> https://react-aria.adobe.com/dnd
- */
+/** The key React Aria's live region names for a drop. -> `report-reorder.spec.ts` */
 const DROP = 'Enter'
 
-/**
- * The grip's accessible name.
- *
- * **`Drag`, because React Aria names the drag button itself.** `SortableItem`
- * deliberately gives it no `aria-label` -- *"React Aria names the drag button
- * after the row's own text, and an explicit label would win and say less"* --
- * and what it produces is `Drag <the row's text>`. The outline drew as a plain
- * `<ol>` until #381 was wired, so no grip had ever been named at all and this
- * pattern had never matched anything.
- */
+/** The grip's accessible name, which React Aria composes as `Drag <row text>`. */
 const GRIP = /^Drag /
 
 /**
  * Take hold of the grip on the section at `index`, the way a keyboard reaches it.
  *
  * **A grip cannot be focused directly, and that is the collection working.**
- * `GridList` keeps a roving tabindex: every row but the focused one is
- * `tabindex="-1"`, so `locator.focus()` on a grip inside another row is pulled
- * back to the focused row and the drag never starts at all. Measured -- asking
- * for the fourth grip and pressing Enter left focus on the first row and
- * `onDragStart` never fired.
- *
- * So the route is the one a person has: the grid takes focus on its first row,
+ * `GridList` keeps a roving tabindex, so `locator.focus()` on a grip inside
+ * another row is pulled back to the focused row and the drag never starts.
+ * The route is the one a person has: the grid takes focus on its first row,
  * the arrow keys move between rows, and `keyboardNavigationBehavior="tab"` is
  * what makes Tab step into that row's own controls.
  */

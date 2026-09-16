@@ -22,12 +22,6 @@
  * the section head while resting, because no selector tells the two states
  * apart. Pulling the offset back by the inset is read only once the bar is
  * stuck, so it leaves the resting layout alone by construction.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/nothing-paints-over-the-head.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 
