@@ -42,6 +42,8 @@ import { withCase } from '../db/scope.js'
 import { BULK_TARGETS, REFERENCE_TABLES, TABLES, type BulkTarget } from '../collections/registry.js'
 import { referencesOf } from '../domain/collections.js'
 import { nameOf } from '../domain/reference-key.js'
+import { ApiQuery } from '@nestjs/swagger'
+import { OptionalQuery } from '../published-query.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
@@ -209,6 +211,7 @@ export class ExportsController {
     description: 'How many rows the file added.',
   })
   @Post(':collection.csv')
+  @OptionalQuery('onDuplicate')
   async importCsv(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('collection') collection: string,
@@ -265,6 +268,14 @@ export class ExportsController {
    * `tlp` is refused on a format that cannot carry it, rather than ignored.
    */
   @Get('indicators')
+  /**
+   * **`format` is published, and it is what decides the media type.** The
+   * document listed `tlp` alone, so the one parameter a caller was told to
+   * send is refused unless the parameter it was not told about is set --
+   * `?format=stix` -- and the STIX bundle was unreachable from the reference.
+   */
+  @ApiQuery({ name: 'format', required: false, enum: ['csv', 'stix'] })
+  @OptionalQuery('tlp')
   async indicators(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res({ passthrough: true }) response: { type(value: string): unknown },

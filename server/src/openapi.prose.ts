@@ -283,15 +283,20 @@ function schemaFor(resource: string | undefined): Record<string, unknown> | unde
 const json = (schema: unknown) => ({ content: { 'application/json': { schema } } })
 
 /**
- * The routes that answer with a file: pattern, media type, description, and
- * the method when it is not `get`.
+ * The routes that answer with a file: pattern, media type or types,
+ * description, and the method when it is not `get`.
  *
  * **Read off the handlers rather than guessed** - documenting one of these as
  * `application/json` is worse than leaving it bare, because a generator then
  * builds a client that parses a Word document as JSON. `format: 'binary'` is
  * how OpenAPI 3.0 spells "bytes"; without it a generator types a PDF a string.
+ *
+ * **A route that answers with more than one names them all.** One media type
+ * per route was the shape until the indicators export, whose `?format` decides
+ * between a CSV and a JSON bundle -- and a single entry made the second
+ * unreachable from the description.
  */
-const DOWNLOADS: ReadonlyArray<readonly [RegExp, string, string, string?]> = [
+const DOWNLOADS: ReadonlyArray<readonly [RegExp, string | readonly string[], string, string?]> = [
   [/\/report\.md$/, 'text/markdown', 'The report as Markdown.'],
   [/\/report\.pdf$/, 'application/pdf', 'The report as a PDF.'],
   [
@@ -304,10 +309,11 @@ const DOWNLOADS: ReadonlyArray<readonly [RegExp, string, string, string?]> = [
   [/\/evidence\/\{[^}]+\}\/file$/, 'application/octet-stream', 'The stored bytes.'],
   // Two formats behind one route, and they are different *sets* rather than
   // two encodings of one: `csv` is the whole inventory, `stix` the actionable
-  // subset. Declared as CSV because that is what an unqualified request serves.
+  // subset. Both are named, because `?format` is what decides and a caller
+  // reading one media type cannot see that the other exists.
   [
     /\/indicators$/,
-    'text/csv',
+    ['text/csv', 'application/json'],
     'The case\u2019s indicators. `?format=stix` serves the actionable subset as a STIX bundle instead.',
   ],
   // A download that is a POST - the export takes options in the body and
@@ -445,10 +451,19 @@ export function asDownload(operation: Operation, method: string, path: string): 
   const code = successOf(operation)
   const existing = (operation.responses[code] ?? {}) as { content?: unknown }
   if (!existing.content) {
+    const types = typeof media === 'string' ? [media] : media
     operation.responses[code] = {
       ...existing,
       description: said,
-      content: { [media]: { schema: { type: 'string', format: 'binary' } } },
+      content: Object.fromEntries(
+        // **JSON is not bytes.** `format: 'binary'` is what stops a generator
+        // typing a PDF as a string; spelling a JSON bundle the same way is the
+        // same mistake pointing the other direction.
+        types.map((one) => [
+          one,
+          { schema: one === 'application/json' ? { type: 'object' } : { type: 'string', format: 'binary' } },
+        ]),
+      ),
     }
   }
   return true

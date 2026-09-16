@@ -14,6 +14,7 @@ import { BadRequestException, Controller, Get, Param, ParseUUIDPipe, Query, Res,
 import type { Response } from 'express'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
+import { OptionalQuery } from '../published-query.js'
 import { ReportRenderService } from './render.service.js'
 import { toMarkdown } from './document/markdown.js'
 import { toPdf } from './document/pdf.js'
@@ -30,6 +31,9 @@ export class ReportExportController {
   constructor(private readonly render: ReportRenderService) {}
 
   @Get('cases/:caseId/report.md')
+  // `report` stays required: `resolve` refuses without one, and the `?` on
+  // the binding is about the signature rather than the contract.
+  @OptionalQuery('lang')
   async markdown(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res() response: Response,
@@ -45,6 +49,9 @@ export class ReportExportController {
   }
 
   @Get('cases/:caseId/report.pdf')
+  // `report` stays required: `resolve` refuses without one, and the `?` on
+  // the binding is about the signature rather than the contract.
+  @OptionalQuery('lang')
   async pdf(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res() response: Response,
@@ -64,6 +71,9 @@ export class ReportExportController {
   }
 
   @Get('cases/:caseId/report.docx')
+  // `report` stays required: `resolve` refuses without one, and the `?` on
+  // the binding is about the signature rather than the contract.
+  @OptionalQuery('lang')
   async word(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res() response: Response,

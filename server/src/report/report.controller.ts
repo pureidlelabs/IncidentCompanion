@@ -32,6 +32,7 @@ import { REPORT_STAGES, TLP_LABELS } from '../domain/entities/report.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
+import { OptionalQuery } from '../published-query.js'
 import { readStamp } from '../domain/field-spec.js'
 import {
   BlockKindsDto,
@@ -130,6 +131,7 @@ export class ReportController {
    * than omitted, because the client dereferences it.
    */
   @Get('report-snippets')
+  @OptionalQuery('lang')
   @ZodResponse({
     status: 200,
     type: ReportSnippetsDto,
@@ -202,6 +204,7 @@ export class ReportController {
    */
   @UseGuards(CaseAccessGuard)
   @Get('cases/:caseId/reports/:id/page-ruler')
+  @OptionalQuery('lang')
   @ZodResponse({ status: 200, type: PageRulerDto, description: 'The page each section starts on.' })
   async pageRuler(
     @Param('caseId', ParseUUIDPipe) caseId: string,
@@ -227,6 +230,7 @@ export class ReportController {
    */
   @UseGuards(CaseAccessGuard)
   @Post('cases/:caseId/reports/:id/send')
+  @OptionalQuery('lang')
   @ZodResponse({ status: 201, type: SentDto, description: 'The report was frozen and stamped as sent.' })
   @HttpCode(200)
   async send(
@@ -281,6 +285,7 @@ export class ReportController {
    * analyst whose report is not in English.
    */
   @Get('report-block-kinds')
+  @OptionalQuery('lang')
   @ZodResponse({
     status: 200,
     type: BlockKindsDto,
@@ -301,6 +306,7 @@ export class ReportController {
    * is a dialog that can be filled in and never submitted.
    */
   @Get('report-layouts')
+  @OptionalQuery('lang')
   @ZodResponse({
     status: 200,
     type: ReportLayoutsDto,
