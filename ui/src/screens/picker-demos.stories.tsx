@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
+import { PICKER_DEMOS } from '@/components/blocks/picker-rows'
 import { sessionRows } from '@/fixtures/railMenus'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -27,6 +28,10 @@ const meta = {
     ),
   ],
   args: {
+    // **The example lives here.** The screen hands the pane whatever it has,
+    // and a gallery has no server -- so the fixture is right in a story and
+    // wrong as a default in the part. -> #237
+    demos: PICKER_DEMOS,
     analyst: 'r.okonkwo',
     userMenu: sessionRows,
     onAbout: fn(),
