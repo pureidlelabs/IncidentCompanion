@@ -1,10 +1,13 @@
 /**
- * That an import says how many references it could not carry, and to what.
+ * That an import reports all four counts the specification asks it for: added,
+ * already there, refused, and written with something missing.
  *
- * **The silence was the defect.** The count existed on the server, reached the
- * route's answer, and was drawn by nothing -- so a case landed less connected
- * than the file implied and whoever read it next could not tell whether the
- * connection was never made or was lost on the way in. -> #51
+ * **The silence was the defect, in both halves.** Each count existed on the
+ * server and reached the route's answer while the screen drew nothing: a case
+ * landed less connected than the file implied, with no way to tell whether the
+ * connection was never made or was lost on the way in (-> #51), and a file
+ * re-imported into a case that already held it read "0 rows imported" and
+ * stopped there (-> #793).
  *
  * `openspec/specs/data-exchange/spec.md` asks for the number *and* the kind:
  * *four references could not be carried* leaves an analyst reading the whole
@@ -20,6 +23,8 @@ import { specsFixture } from '@/fixtures/specs'
 const carried = {
   collection: 'impact' as const,
   written: 12,
+  skipped: 0,
+  replaced: 0,
   refused: 0,
   unlinked: 0,
   unlinkedBy: {},
@@ -98,5 +103,60 @@ describe('an import that lost references', () => {
     )
     // And the two are still told apart: a lost reference is not a refused row.
     expect(said).toContain('2 refused')
+  })
+})
+
+describe('an import that met rows the case already held', () => {
+  /**
+   * Re-importing a file the case already holds answered `0 rows imported` and
+   * stopped there, which reads as an import that did nothing rather than one
+   * that found every row already present.
+   */
+  it('says how many were already there and how many it replaced', () => {
+    render(
+      <ImportDataScreen
+        kase={campaignCase}
+        specs={specsFixture}
+        result={{ ...carried, written: 0, skipped: 28, replaced: 4 }}
+      />,
+    )
+
+    const said = document.body.textContent
+    // The words, not the digits: `toContain('28')` matches a row count
+    // elsewhere on the screen.
+    expect(said, 'the analyst is not told how many rows were already there').toContain(
+      '28 already there',
+    )
+    expect(said, 'the analyst is not told how many rows were replaced').toContain('4 replaced')
+  })
+
+  /**
+   * The headline over the strip, which an analyst reads before the strip. `0
+   * rows imported into Assets` is what an import that did nothing looks like,
+   * and a file every row of which was already present is not that.
+   */
+  it('does not headline a file that was already present as nothing happening', () => {
+    render(
+      <ImportDataScreen
+        kase={campaignCase}
+        specs={specsFixture}
+        result={{ ...carried, written: 0, skipped: 28 }}
+      />,
+    )
+
+    const said = document.body.textContent
+    expect(said, 'an import that added nothing new is headlined as one that did nothing').toContain(
+      'Nothing new in Impact',
+    )
+    expect(said).not.toContain('0 rows imported into Impact')
+  })
+
+  /** A count of nothing is not a line of the strip. */
+  it('says nothing about a count of zero', () => {
+    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} result={carried} />)
+
+    const said = document.body.textContent
+    expect(said).not.toContain('0 already there')
+    expect(said).not.toContain('0 replaced')
   })
 })

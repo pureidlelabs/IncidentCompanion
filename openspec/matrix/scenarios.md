@@ -262,12 +262,12 @@
 | What the application writes, it can read back | A file names a field that does not exist | demonstrated | server/src/exports/csv-import.test.ts |
 | What the application writes, it can read back | A blank value | demonstrated | server/src/exports/a-blank-cell-is-not-a-value.test.ts |
 | An import is all of it or none of it | One row in a file is invalid | demonstrated | server/src/exports/import.service.test.ts |
-| An import is all of it or none of it | An import succeeds | demonstrated | server/src/exports/import.service.test.ts |
+| An import is all of it or none of it | An import succeeds | demonstrated | ui/src/screens/an-import-says-all-four-counts.test.tsx |
 | A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | demonstrated | server/src/exports/import.service.test.ts |
 | A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | demonstrated | server/src/exports/import.service.test.ts |
 | A reference travels as what it points at, not as where it was kept | A file names where a row was kept | demonstrated | server/src/exports/import.service.test.ts |
-| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | ui/src/screens/an-import-says-what-it-could-not-carry.test.tsx |
-| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | ui/src/screens/an-import-says-what-it-could-not-carry.test.tsx |
+| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | ui/src/screens/an-import-says-all-four-counts.test.tsx |
+| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | ui/src/screens/an-import-says-all-four-counts.test.tsx |
 | An import says what to do about something already there | The analyst does not say what to do | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | A row was changed by somebody else | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | An unrecognised instruction | demonstrated | server/src/exports/exports.controller.test.ts |
