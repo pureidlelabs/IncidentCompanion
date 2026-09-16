@@ -1,5 +1,5 @@
 /**
- * Disabling an account on the Accounts pane reaches the server.
+ * A row of the roster reaches the server, on every pane that draws one.
  *
  * The row menu offered Enable and Disable and both called a handler that
  * updated React state, so the row moved to `disabled`, nothing was written, the
@@ -7,13 +7,18 @@
  * reports a change it did not make is worse than one that is missing: an
  * administrator cutting somebody off believes they have. -> #794
  *
+ * **Both panes, because one table is drawn twice.** The Accounts pane and the
+ * Administration pane compose the same `AccountTable`, and fixing one of them
+ * leaves the defect intact one pane over -- where it looks identical and is
+ * reached by the same press.
+ *
  * **Asserted on the request, not on the row.** The row moving is exactly what
  * the defect did; what separates a write from a repaint is whether anything
  * left the browser.
  *
  * **What this does not cover:** what the server does with the write, which is
  * `server/test/analyst-privilege.test.ts` and the accounts controller's own
- * cases; and the other row actions, which have no control to press yet.
+ * cases.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
@@ -55,6 +60,9 @@ vi.mock('@/api/client', () => ({
       return Promise.resolve({ ok: true, messages: [['Done.', 'positive']] })
     }
     sent.reads.push(path)
+    if (path.startsWith('/install/policy')) {
+      return Promise.resolve({ settings: {}, bounds: {} })
+    }
     return Promise.resolve({
       accounts: [
         {
@@ -84,7 +92,7 @@ vi.mock('@/api/client', () => ({
   },
 }))
 
-const { AccountsPaneView } = await import('./panes')
+const { AccountsPaneView, AdministrationPaneView } = await import('./panes')
 const { toastQueue } = await import('@/components/blocks/notify')
 
 /** Every sentence the pane raised, however it was raised. */
@@ -94,11 +102,11 @@ function titles(): string[] {
   return raised.mock.calls.map(([one]) => (one as { title?: string }).title ?? '')
 }
 
-function draw() {
+function draw(Pane: typeof AccountsPaneView = AccountsPaneView) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={client}>
-      <AccountsPaneView onPane={() => undefined} userMenu={null} onAbout={() => undefined} />
+      <Pane onPane={() => undefined} userMenu={null} onAbout={() => undefined} />
     </QueryClientProvider>,
   )
 }
@@ -129,6 +137,20 @@ const CONTROLS: readonly (readonly [string, () => Promise<void>])[] = [
   ['a role row', () => pressRow(/make administrator/i)],
   ['End every session', pressSweep],
 ]
+
+/**
+ * The pane's own count line, which is the roster as it is drawn.
+ *
+ * The probe for *the row did not move*: the line names a disabled account only
+ * when there is one and counts administrators, so a disable or a role change
+ * that took would change it.
+ */
+function rosterLine(): string {
+  return screen.getByText(/\d+ accounts?/).textContent
+}
+
+/** What the mocked read serves, so a moved roster is a changed line. */
+const SERVED = '2 accounts \u00B7 1 administrator'
 
 beforeEach(() => {
   sent.reads.length = 0
@@ -247,6 +269,7 @@ describe('the Accounts pane', () => {
     await vi.waitFor(() => {
       expect(titles()).toContain('You cannot do that to the account you are signed in with.')
     })
+    expect(rosterLine(), 'the refused write moved the roster anyway').toBe(SERVED)
   })
 
   it.each(CONTROLS)('says a refusal that is not a sentence, pressing %s', async (_name, press) => {
@@ -257,6 +280,7 @@ describe('the Accounts pane', () => {
     await vi.waitFor(() => {
       expect(titles().join(' ')).toMatch(/was not saved/)
     })
+    expect(rosterLine(), 'the refused write moved the roster anyway').toBe(SERVED)
   })
 
   /**
@@ -272,7 +296,7 @@ describe('the Accounts pane', () => {
     await vi.waitFor(() => {
       expect(titles()).toContain('No.')
     })
-    expect(screen.getByText(/2 accounts/)).not.toHaveTextContent('disabled')
+    expect(rosterLine()).toBe(SERVED)
   })
 
   /**
@@ -316,5 +340,60 @@ describe('the Accounts pane', () => {
     await userEvent.click(screen.getByRole('button', { name: /more for Nina/i }))
     const items = await screen.findAllByRole('menuitem')
     expect(items.map((one) => one.textContent)).toContain('Make administrator')
+  })
+})
+
+/**
+ * *An administrator MUST be able to disable an account* -- and this pane draws
+ * the same table, reached live through `PickerRoute`. Its handler flipped the
+ * row in React state and nothing else, so the row moved here and the install
+ * never heard, which is the defect above with a different pane around it.
+ */
+describe('the Administration pane', () => {
+  it('sends a write when an administrator disables an account', async () => {
+    draw(AdministrationPaneView)
+    await vi.waitFor(() => {
+      expect(screen.getByText('nina@example.test')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: /more for Nina/i }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /disable/i }))
+
+    await vi.waitFor(() => {
+      expect(
+        sent.writes.map((one) => one.path),
+        'the row changed on screen and nothing was written',
+      ).toEqual(['/accounts/nina%40example.test/disable'])
+    })
+  })
+
+  it('says what the server refused', async () => {
+    sent.answer = {
+      status: 422,
+      message: 'Refused.',
+      body: { ok: false, messages: [['You cannot disable your own account.', 'negative']] },
+    }
+    draw(AdministrationPaneView)
+    await vi.waitFor(() => {
+      expect(screen.getByText('nina@example.test')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: /more for Nina/i }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /disable/i }))
+
+    await vi.waitFor(() => {
+      expect(titles()).toContain('You cannot disable your own account.')
+    })
+  })
+
+  it('offers an administrator none of the row\'s verbs on their own row', async () => {
+    draw(AdministrationPaneView)
+    await vi.waitFor(() => {
+      expect(screen.getByText('ada@example.test')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: /more for Ada/i }))
+    const mine = await screen.findAllByRole('menuitem')
+    expect(mine.map((one) => one.textContent)).toEqual(['Copy Ada', 'Reset password\u2026'])
   })
 })

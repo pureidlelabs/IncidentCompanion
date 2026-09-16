@@ -31,7 +31,7 @@ import type { IncomingHttpHeaders } from 'node:http'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
-import { ACCOUNT_STATES, DEFAULT_ROLE, ROLES, roleName } from '../domain/analyst-account.js'
+import { ACCOUNT_STATES, DEFAULT_ROLE, ROLES, aRole } from '../domain/analyst-account.js'
 import { type Auth } from '../auth/auth.config.js'
 import { PasswordHoldService } from '../auth/password-hold.service.js'
 import { LockoutClearService } from '../auth/lockout-clear.service.js'
@@ -344,6 +344,13 @@ export class InstallAccountsController {
     const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
 
+    // Signing yourself out mid-act, from a roster row meant for somebody else.
+    // `POST sessions/end` is where an administrator ends their own, and it says
+    // so before it runs.
+    if (target.id === caller.session.user.id) {
+      refuse('You cannot end the sessions of the account you are signed in with.')
+    }
+
     await this.endOneAccountsSessions(caller, target.id)
     return done(`${username} has been signed out everywhere.`)
   }
@@ -442,6 +449,21 @@ export class InstallAccountsController {
       )
     }
 
+    /**
+     * **After the install's own rule**, so an administrator who is also the
+     * last one is told the thing they can act on rather than the thing they
+     * cannot.
+     *
+     * **A change, not the route.** Setting the role an account already has
+     * writes nothing and strands nobody; giving yourself a different one takes
+     * the pane away with it, and the door that grants a role is the one you
+     * just left. The screen leaves this off the caller's own row, which is a
+     * courtesy to whoever is reading it rather than a permission.
+     */
+    if (target.id === caller.session.user.id && target.role !== parsed.data.role) {
+      refuse('You cannot change the role of the account you are signed in with.')
+    }
+
     // **Read `from` before the write, or it is the value the write just set.**
     // A role line that cannot say what it changed *from* answers half the
     // question somebody opens the audit with.
@@ -451,7 +473,7 @@ export class InstallAccountsController {
       headers: this.headersOf(caller),
     })
     await this.activity.roleChanged(caller, target.email, from, parsed.data.role)
-    return done(`${username} is now an ${roleName(parsed.data.role)}.`)
+    return done(`${username} is now ${aRole(parsed.data.role)}.`)
   }
 
 }

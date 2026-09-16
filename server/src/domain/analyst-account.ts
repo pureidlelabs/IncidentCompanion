@@ -22,7 +22,7 @@ export const DEFAULT_ROLE: Role = 'analyst'
 export const ADMIN_ROLE: Role = 'admin'
 
 /** What each role is called in a sentence, where the token is not the word. */
-const ROLE_NAMES: Record<string, string> = { admin: 'administrator' }
+const ROLE_NAMES: Record<Role, string> = { analyst: 'analyst', admin: 'administrator' }
 
 /**
  * What to call a role where a person reads it.
@@ -31,11 +31,23 @@ const ROLE_NAMES: Record<string, string> = { admin: 'administrator' }
  * refusals and the row menu offers it as a verb, and a role called two things
  * on one pane is a role an administrator has to work out is one role.
  *
- * A role this install grew answers as its own token rather than disappearing,
- * which is the same rule the mint-an-account form already follows.
+ * **Takes a `string`, though the vocabulary is closed.** `z.enum(ROLES)` is
+ * what refuses anything else at the door; the served list reaches a screen as
+ * strings, and a value that is not a role is drawn as itself rather than
+ * disappearing from a menu.
  */
 export function roleName(role: string): string {
-  return ROLE_NAMES[role] ?? role
+  return ROLE_NAMES[role as Role] ?? role
+}
+
+/**
+ * The same word with the article a sentence needs: *an administrator*, *an
+ * analyst*. Composed rather than written at the call site, so a role added to
+ * the vocabulary does not leave one sentence saying *an* in front of it.
+ */
+export function aRole(role: string): string {
+  const word = roleName(role)
+  return `${'aeiou'.includes(word[0] ?? '') ? 'an' : 'a'} ${word}`
 }
 
 /**

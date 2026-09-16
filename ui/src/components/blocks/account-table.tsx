@@ -252,7 +252,7 @@ function accountColumns({
       cell: ({ row: one }) => (
         <span className="flex min-w-0 items-center gap-2">
           <PersonAvatar
-            person={{ name: accountLabel(one.original), you: false }}
+            person={{ name: accountLabel(one.original), you: one.original.you }}
             className="size-7 text-2xs"
           />
           <span className="flex min-w-0 flex-col">

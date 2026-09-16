@@ -292,13 +292,46 @@ async function acted(what: string, run: () => Promise<Written>): Promise<void> {
   if (problem !== undefined) toast.error(problem)
 }
 
+/**
+ * The roster's four writes, bound to one mutation.
+ *
+ * **One set, because two panes draw one table.** Accounts and Administration
+ * both compose `AccountTable`, and a handler written twice is how one of them
+ * came to move its rows without telling the install.
+ */
+function accountWrites(act: ReturnType<typeof useAccountAction>) {
+  return {
+    onRole: (username: string, role: string) => {
+      void acted('the role', () =>
+        act.mutateAsync({ path: `/${encodeURIComponent(username)}/role`, body: { role } }),
+      )
+    },
+    onEndEverySession: () =>
+      acted('every session', () => act.mutateAsync({ path: '/sessions/end' })),
+    onEndSessions: (username: string) => {
+      void acted('the sessions', () =>
+        act.mutateAsync({ path: `/${encodeURIComponent(username)}/sessions/end` }),
+      )
+    },
+    // The row follows the server rather than the press: the query is
+    // invalidated either way, so what is drawn is what is stored.
+    onState: (username: string, next: AccountTableRow['state']) => {
+      void acted('the account', () =>
+        act.mutateAsync({
+          path: `/${encodeURIComponent(username)}/${next === 'disabled' ? 'disable' : 'enable'}`,
+        }),
+      )
+    },
+  }
+}
+
 export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const accounts = useAccounts()
   const analyst = useAnalyst()
   const admin = useIsAdmin()
   // `''` is the create path: `useAccountWrite` appends to `/accounts`.
   const create = useAccountWrite('')
-  const act = useAccountAction()
+  const writes = accountWrites(useAccountAction())
   const refused = create.data?.ok === false ? splitWritten(create.data).problem : undefined
   return (
     <PickerAccountsScreen
@@ -313,28 +346,7 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
           },
         })
       }}
-      onRole={(username, role) => {
-        void acted('the role', () =>
-          act.mutateAsync({ path: `/${encodeURIComponent(username)}/role`, body: { role } }),
-        )
-      }}
-      onEndEverySession={() =>
-        acted('every session', () => act.mutateAsync({ path: '/sessions/end' }))
-      }
-      onEndSessions={(username) => {
-        void acted('the sessions', () =>
-          act.mutateAsync({ path: `/${encodeURIComponent(username)}/sessions/end` }),
-        )
-      }}
-      onState={(username, next) => {
-        // The row follows the server rather than the press: the query is
-        // invalidated either way, so what is drawn is what is stored.
-        void acted('the account', () =>
-          act.mutateAsync({
-            path: `/${encodeURIComponent(username)}/${next === 'disabled' ? 'disable' : 'enable'}`,
-          }),
-        )
-      }}
+      {...writes}
       accounts={accountRows(accounts.data?.accounts)}
       busy={accounts.isPending}
       analyst={analyst ?? ''}
@@ -355,6 +367,7 @@ export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAb
   const admin = useIsAdmin()
   const policy = usePolicy()
   const setPolicy = useSetPolicy()
+  const writes = accountWrites(useAccountAction())
   const windows = sessionBounds(
     {
       idle: policy.data?.settings[IDLE_KEY],
@@ -373,6 +386,8 @@ export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAb
   return (
     <PickerAdministrationScreen
       signIn={windows}
+      {...writes}
+      roles={accounts.data?.roles ?? []}
       accounts={accountRows(accounts.data?.accounts)}
       busy={accounts.isPending}
       analyst={analyst ?? ''}
