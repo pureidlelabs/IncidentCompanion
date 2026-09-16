@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { useCase } from '@/api/case'
 import { useSpecs } from '@/api/specs'
+import { useBatchCreatableCollections } from '@/api/useBatchCreatableCollections'
 import { useImportCsv } from '@/api/useImportCsv'
 import { useCaseId } from '@/app/useCaseId'
 import { ImportDataScreen, type ImportResult } from '@/screens/import-data'
@@ -15,6 +16,7 @@ export function ImportDataContainer() {
   const caseId = useCaseId()
   const kase = useCase(caseId)
   const specs = useSpecs()
+  const batchCreatable = useBatchCreatableCollections()
   const importing = useImportCsv(caseId)
   const [aimed, setAimed] = useState<CollectionName | undefined>(undefined)
   const [result, setResult] = useState<ImportResult | undefined>(undefined)
@@ -23,6 +25,12 @@ export function ImportDataContainer() {
     <ImportDataScreen
       kase={kase.data}
       specs={specs.data}
+      collections={batchCreatable.data}
+      busy={kase.isPending || specs.isPending || batchCreatable.isPending}
+      {...(batchCreatable.error === null ? {} : { problem: batchCreatable.error })}
+      onRetry={() => {
+        void batchCreatable.refetch()
+      }}
       {...(result ? { result } : {})}
       {...(importing.isPending && aimed ? { importing: aimed } : {})}
       onImport={(collection, file) => {

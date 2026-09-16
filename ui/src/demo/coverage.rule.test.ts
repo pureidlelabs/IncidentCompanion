@@ -124,6 +124,7 @@ const SERVED = new Set([
   'demos',
   'recent-cases',
   'specs',
+  'collections',
   'about',
   'report-layouts',
 ])

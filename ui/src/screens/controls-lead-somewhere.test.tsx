@@ -20,6 +20,7 @@ import {
   PICKER_TEMPLATES,
 } from '@/components/blocks/picker-rows'
 
+import { batchDoorsFixture } from '@/fixtures/batch-doors'
 import { campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
 import { specsFixture } from '@/fixtures/specs'
@@ -258,7 +259,7 @@ describe('the picker', () => {
 
 describe('the import data screen', () => {
   it('hands over a template of the served columns', () => {
-    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} />)
+    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} collections={batchDoorsFixture} />)
     const link = screen.getAllByRole('link', { name: /Template/ })[0]
     const href = link?.getAttribute('href') ?? ''
     const header = decodeURIComponent(href.replace(/^data:text\/csv;charset=utf-8,/, '')).trim()
@@ -268,7 +269,7 @@ describe('the import data screen', () => {
   })
 
   it('refuses the import rather than opening a picker onto nothing', () => {
-    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} />)
+    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} collections={batchDoorsFixture} />)
     for (const control of screen.getAllByRole('button', { name: /Import CSV/ })) {
       expect(control).toBeDisabled()
     }
@@ -281,7 +282,7 @@ describe('the import data screen', () => {
   it('hands the chosen file over against the table whose button was pressed', async () => {
     const user = userEvent.setup()
     const onImport = vi.fn()
-    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} onImport={onImport} />)
+    render(<ImportDataScreen kase={campaignCase} specs={specsFixture} collections={batchDoorsFixture} onImport={onImport} />)
 
     await user.click(screen.getByRole('button', { name: 'Import CSV into Assets' }))
     const picker = document.querySelector<HTMLInputElement>('input[type="file"]')

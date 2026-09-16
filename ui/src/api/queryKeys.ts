@@ -50,6 +50,9 @@ export const keys = {
    *  analyst's compliance write leaves an open Compliance screen stale until
    *  it remounts. */
   compliance: (caseId: string) => ['case', caseId, 'compliance'] as const,
+  /** Case-less, like `specs`: which tables exist and which take a batch is
+   *  install-wide metadata, constant for the life of the process. */
+  collections: () => ['collections'] as const,
   /** Not under a case: the specs document names none and reads none. */
   specs: () => ['specs'] as const,
   /** Also case-less, and deliberately a separate key from `specs`: the regime

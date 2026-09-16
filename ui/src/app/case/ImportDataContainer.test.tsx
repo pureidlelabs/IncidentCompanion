@@ -17,6 +17,9 @@ const importCsv = vi.fn()
 vi.mock('@/app/useCaseId', () => ({ useCaseId: () => 'case-1' }))
 vi.mock('@/api/case', () => ({ useCase: () => ({ data: undefined }) }))
 vi.mock('@/api/specs', () => ({ useSpecs: () => ({ data: undefined }) }))
+vi.mock('@/api/useBatchCreatableCollections', () => ({
+  useBatchCreatableCollections: () => ({ data: undefined }),
+}))
 vi.mock('@/api/useImportCsv', () => ({
   useImportCsv: () => ({ mutateAsync: importCsv, isPending: false }),
 }))

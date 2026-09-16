@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 
 import type { Case } from '@/api/model'
+import { batchDoorsFixture } from '@/fixtures/batch-doors'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
@@ -22,12 +23,7 @@ const BLANK: Case = {
   casenotes: [],
 }
 
-/**
- * Every table the batch doors write to, in one place.
- *
- * The rows are what the server marks batch-creatable, so the three it excludes
- * - evidence and the two report tables - are absent rather than greyed.
- */
+/** Every table the listing marks batch-creatable, in one place. */
 const meta = {
   title: 'Screens/Collect/Import data',
   component: ImportDataScreen,
@@ -36,13 +32,14 @@ const meta = {
   args: {
     kase: campaignCase,
     specs: specsFixture,
+    collections: batchDoorsFixture,
   },
 } satisfies Meta<typeof ImportDataScreen>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The campaign demo: nine tables, each with the rows it already holds. */
+/** The campaign demo: every door it opens, with the rows each already holds. */
 export const Populated: Story = { name: 'Ten importable tables' }
 
 /**
