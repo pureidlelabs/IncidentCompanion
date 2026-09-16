@@ -14,14 +14,9 @@
  * ended at nginx's access log - a file no screen in this app reads.
  */
 import { Inject, Injectable, Optional, type ExecutionContext } from '@nestjs/common'
-import {
-  ThrottlerGuard,
-  type ThrottlerLimitDetail,
-  type ThrottlerRequest,
-} from '@nestjs/throttler'
+import { ThrottlerGuard, type ThrottlerLimitDetail } from '@nestjs/throttler'
 import type { Request } from 'express'
 
-import { tierApplies } from './applies.js'
 import { NO_ADDRESS, callerAddress } from '../wire/caller-address.js'
 import { TIERS } from './tiers.js'
 import { DATABASE } from '../db/db.module.js'
@@ -39,14 +34,6 @@ export class AuditedThrottlerGuard extends ThrottlerGuard {
   @Optional()
   @Inject(DATABASE)
   private readonly db?: Database
-
-  protected override handleRequest(request: ThrottlerRequest): Promise<boolean> {
-    const path = request.context.switchToHttp().getRequest<Request>().path
-    // `true` is "this request is allowed", which for a tier that does not
-    // apply is the whole of the answer.
-    if (!tierApplies(request.throttler.name, path)) return Promise.resolve(true)
-    return super.handleRequest(request)
-  }
 
   protected override getTracker(req: Record<string, unknown>): Promise<string> {
     const request = req as unknown as Request
