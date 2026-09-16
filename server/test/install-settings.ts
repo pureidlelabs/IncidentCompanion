@@ -23,7 +23,6 @@ export async function putSettingsBack(
   // **One transaction, or a failed insert leaves the install with no settings
   // at all** -- wider than the leak this exists to stop, and silent.
   await db.transaction(async (tx) => {
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await tx.delete(installPreferences)
     if (atBoot.length > 0) await tx.insert(installPreferences).values([...atBoot])
   })
