@@ -27,7 +27,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
-import { LOCKOUT_AFTER_FAILURES } from '../src/auth/lockout.js'
+import { LOCKOUT_AFTER_FAILURES } from '../src/policy/keys.js'
 import { installActivity, user } from '../src/db/schema/index.js'
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 

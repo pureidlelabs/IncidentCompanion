@@ -14,15 +14,12 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  CLEARED,
   LOCKOUT_AFTER_FAILURES,
   LOCKOUT_CEILING_FAILURES,
   LOCKOUT_FLOOR_MINUTES,
   LOCKOUT_MINUTES,
-  afterFailure,
-  isLocked,
-  policyFrom,
-} from './lockout.js'
+} from '../policy/keys.js'
+import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
 
 const NOW = new Date('2026-08-23T12:00:00Z')
 const POLICY = { afterFailures: LOCKOUT_AFTER_FAILURES, minutes: LOCKOUT_MINUTES }

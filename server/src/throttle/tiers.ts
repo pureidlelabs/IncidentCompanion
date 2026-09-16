@@ -26,9 +26,6 @@ import { minutes, seconds } from '@nestjs/throttler'
  * own controllers, do reach this guard, and verify a secret -- and nothing
  * here is tighter than `api` for them. -> #549
  *
- * `applies.test.ts` holds the property that refuses another dead one: every
- * tier must apply to a path the guard actually sees.
- *
  * **`api` sits above what an analyst produces and below what a script does**,
  * and `burst` exists because 300 a minute permits 300 in one second.
  */

@@ -40,6 +40,8 @@ A recovery credential is issued when the install is claimed. It restores adminis
 
 A local account locks after a number of consecutive failures the install sets, for a duration the install sets, and an administrator can release it.
 
+The threshold an install may set is bounded above, so no stored setting turns the control off while a screen still shows a number. The bound is NIST SP 800-63B's limit of no more than 100 consecutive failed attempts against one account.
+
 A second factor can be enrolled on any account whether or not the install requires one. Whether it is required is a single install-level policy evaluated at sign-in, and an install that has not turned it on is told plainly what that falls short of.
 
 ## Federation moves authentication, not reach
