@@ -24,3 +24,6 @@ import type { Case } from '@/api/model'
 import raw from './campaign.json'
 
 export const campaignCase = raw as unknown as Case
+
+/** The moment a story or a test reads this case at, so its readings hold still. */
+export const CAMPAIGN_NOW = Date.parse('2026-08-19T09:00:00.000Z')

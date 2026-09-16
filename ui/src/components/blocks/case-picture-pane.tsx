@@ -38,13 +38,8 @@ export interface CasePicturePaneProps {
   /** Opens the section a queue row is answered on. Without it the doors are
    *  drawn disabled. */
   onOpen?: ((row: QueueRow) => void) | undefined
-  /**
-   * The moment the clocks are read at, in epoch milliseconds.
-   *
-   * Passed in rather than taken from the machine, so a story shows the same
-   * reading in a year's time as it does today.
-   */
-  now?: number
+  /** The moment the clocks are read at, in epoch milliseconds. */
+  now: number
 }
 
 /**
@@ -63,7 +58,7 @@ export function CasePicturePane({
   specs,
   record,
   onOpen,
-  now = Date.parse('2026-08-19T09:00:00.000Z'),
+  now,
 }: CasePicturePaneProps) {
   const clocks = useMemo(() => clocksOf(record, now), [record, now])
   const queue = useMemo(() => (kase && specs ? buildQueue(kase, specs) : []), [kase, specs])

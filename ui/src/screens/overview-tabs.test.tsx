@@ -30,7 +30,7 @@ import { describe, expect, it } from 'vitest'
 import { fieldsOf, formSpec, type FieldSpec } from '@/api/specs'
 import { CaseKeyTimesSheet } from '@/components/blocks/case-key-times-sheet'
 import { groupedCaseFields } from '@/components/blocks/case-record-groups'
-import { campaignCase } from '@/fixtures/campaign'
+import { CAMPAIGN_NOW, campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
 import { specsFixture } from '@/fixtures/specs'
 
@@ -52,7 +52,7 @@ async function press(name: string): Promise<void> {
 
 describe('the tabs', () => {
   it('opens on the read pane, not on a form', () => {
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
     expect(screen.getByRole('region', { name: 'Open items' })).toBeInTheDocument()
     expect(screen.queryByLabelText(ONLY_ON_PROPERTIES)).toBeNull()
     expect(screen.queryByLabelText(ONLY_ON_TIMES)).toBeNull()
@@ -63,7 +63,7 @@ describe('the tabs', () => {
    * under both form tabs, and both tabs still open something.
    */
   it('draws the properties pane behind the properties tab and nothing else', async () => {
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
     await press('Properties')
     expect(screen.getByLabelText(ONLY_ON_PROPERTIES)).toBeInTheDocument()
     expect(screen.queryByLabelText(ONLY_ON_TIMES)).toBeNull()
@@ -71,7 +71,7 @@ describe('the tabs', () => {
   })
 
   it('draws the key times pane behind the key times tab and nothing else', async () => {
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
     await press('Key times')
     expect(screen.getByLabelText(ONLY_ON_TIMES)).toBeInTheDocument()
     expect(screen.queryByLabelText(ONLY_ON_PROPERTIES)).toBeNull()
@@ -85,7 +85,7 @@ describe('the tabs', () => {
    * covered without this file being touched.
    */
   it('leaves no served case field unreachable', async () => {
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
     await press('Properties')
     const onProperties = EVERY_LABEL.filter((label) => screen.queryByLabelText(label) !== null)
     await press('Key times')
@@ -105,7 +105,7 @@ describe('the key times flyout', () => {
   it('holds exactly the fields the key times tab holds', async () => {
     const user = userEvent.setup()
 
-    const tab = render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
+    const tab = render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
     await press('Key times')
     const onTab = EVERY_LABEL.filter((label) => screen.queryByLabelText(label) !== null)
     tab.unmount()
@@ -130,7 +130,7 @@ describe('the key times flyout', () => {
 
 describe('a refused write', () => {
   it('opens the tab holding the field it names', () => {
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />)
     expect(screen.getByText('Severity was not saved')).toBeInTheDocument()
     expect(screen.getByLabelText(ONLY_ON_PROPERTIES)).toBeInTheDocument()
   })
@@ -140,14 +140,14 @@ describe('a refused write', () => {
    * would pass the case above and strand this one.
    */
   it('opens the key times tab for a stamp', () => {
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Contained at', by: 'A. Okonkwo' }} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Contained at', by: 'A. Okonkwo' }} />)
     expect(screen.getByText('Contained at was not saved')).toBeInTheDocument()
     expect(screen.getByLabelText(ONLY_ON_TIMES)).toBeInTheDocument()
   })
 
   /** A label neither pane recognises still has to be shown somewhere. */
   it('shows a refusal on a field it cannot place', () => {
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Some field nobody serves', by: 'A. Okonkwo' }} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Some field nobody serves', by: 'A. Okonkwo' }} />)
     expect(screen.getByText('Some field nobody serves was not saved')).toBeInTheDocument()
   })
 
@@ -157,11 +157,12 @@ describe('a refused write', () => {
    * the band on a pane nobody opened.
    */
   it('moves to the tab when the refusal arrives after the screen was drawn', () => {
-    const { rerender } = render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
+    const { rerender } = render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
     expect(screen.getByRole('region', { name: 'Open items' })).toBeInTheDocument()
 
     rerender(
       <OverviewScreen
+        now={CAMPAIGN_NOW}
         kase={{ ...campaignCase, severity: 'critical' }}
         specs={specsFixture}
         record={campaignCompliance}
@@ -174,7 +175,7 @@ describe('a refused write', () => {
 
   /** One band, not one per pane: a second copy reads as a second refusal. */
   it('draws the band once', () => {
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />)
     expect(screen.getAllByText('Severity was not saved')).toHaveLength(1)
   })
 })

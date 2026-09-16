@@ -25,7 +25,7 @@ import { ComplianceScreen } from './compliance'
 import { OverviewScreen } from './overview'
 import { ReportIndexPane } from '@/components/blocks/report-index'
 import { TimelineScreen } from './timeline'
-import { campaignCase } from '@/fixtures/campaign'
+import { CAMPAIGN_NOW, campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
 import { regimesFixture } from '@/fixtures/regimes'
 import { specsFixture } from '@/fixtures/specs'
@@ -42,24 +42,25 @@ import { DEMO_HEADINGS } from '@/components/blocks/report-layouts'
  */
 describe('the overview form', () => {
   it('says nothing when nothing was refused', () => {
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
     expect(screen.queryByText(/was not saved/)).toBeNull()
   })
 
   it('names the field another analyst set first', () => {
-    render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />)
+    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />)
     expect(screen.getByText('Severity was not saved')).toBeInTheDocument()
     expect(screen.getByText(/A\. Okonkwo set it first/)).toBeInTheDocument()
   })
 
   it('keeps the refusal through the repaint that caused it', () => {
     const { rerender } = render(
-      <OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />,
+      <OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />,
     )
     // A fresh object with the other analyst's value in it: the identity change
     // is what drives the form's draft reset.
     rerender(
       <OverviewScreen
+        now={CAMPAIGN_NOW}
         kase={{ ...campaignCase, severity: 'critical' }}
         specs={specsFixture}
         record={campaignCompliance}
