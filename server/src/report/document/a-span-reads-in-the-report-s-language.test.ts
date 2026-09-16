@@ -1,20 +1,11 @@
 /**
  * **A span in a report reads in the language the report is written in.**
  *
- * The labels around the metric rows come from the pack; the units did not.
- * `duration` returned `min`, `h` and `d` whatever the document's language was,
- * so a report read a translated label and an English value on one line.
- * -> #645
+ * **Driven by a pack written here rather than by the shipped Dutch one**, so
+ * the case asserts that units come from wherever the words come from without
+ * tying itself to whichever keys `labels.nl.ts` has got round to. -> #645
  *
- * **Driven by a pack written here rather than by the shipped Dutch one.** What
- * this asserts is that the units come from wherever the words come from, and a
- * pack of real Dutch would tie the case to whichever keys somebody has got
- * round to carrying across -- `labels.nl.ts` is partial by design.
- *
- * **Two formatters printed spans and only one took the translator.** The
- * narrative block measured its own gaps between beats and printed `+45m`,
- * `+3h`, `+5d` in every language, under an exemption written when no span in a
- * report could be translated at all. -> #698
+ * **Two formatters print spans and both take the translator.** -> #698
  *
  * **What this does not cover:** how a span is worded, which is the pack's;
  * whether the shipped Dutch pack carries these keys, which it does not; and the
@@ -70,12 +61,7 @@ function values(nodes: Node[]): string[] {
 }
 
 /**
- * Beats reaching all three span paths the narrative prints.
- *
- * A run is keyed on the description and the side that said it, so two beats
- * share a row when they say the same thing: `derde baken` twice is one run
- * covering thirty minutes. A gap under the hour is printed on the row with a
- * `+`; an hour or more takes a band of its own.
+ * Beats reaching all three span paths the narrative prints, annotated below.
  */
 const BEATS = {
   timeline: [
@@ -102,9 +88,8 @@ function withBeats(strings: Record<string, string>): ReportInput {
 
 describe('a gap between two beats in the narrative', () => {
   /**
-   * **Asserted against the shape the old formatter printed**, not against the
-   * absence of a letter: `m`, `h` and `d` all occur inside ordinary Dutch, so a
-   * word-boundary match on them alone would fire on a correct document.
+   * Asserted against the shape, not the absence of a letter: `m`, `h` and `d`
+   * all occur inside ordinary Dutch.
    */
   it('reads in the language the report is written in', () => {
     const printed = JSON.stringify(narrative(withBeats(UNITS)))

@@ -84,18 +84,12 @@ export function narrative(input: ReportInput): Node[] {
     if (previous !== null) gap = elapsed(previous, first.at, input.t)
 
     /**
-     * **A quiet day is a finding, and it gets a row.** The drawing gives a
-     * compressed gap a labelled band because it has vertical distance to
-     * spend; a table has none, so the duration stands alone with no sentence
-     * around it.
-     *
-     * Text the application supplies, so it is said in the report's language
-     * like everything else on the page. -> #698
+     * **A quiet day is a finding, and it gets a row** -- a duration standing
+     * alone, said in the report's language like everything else. -> #698
      */
     if (gap.long) {
-      // **The duration goes in the widest column, not the last one.** Painted
-      // to markdown the band has no fill to carry it, so a gap parked in the
-      // trailing column reads as a stray empty row rather than as a pause.
+      // **The widest column, not the last one.** Painted to markdown the band
+      // has no fill, so a gap in the trailing column reads as a stray row.
       rows.push([
         { text: '', fill: BAND },
         { text: '', fill: BAND },
