@@ -21,12 +21,9 @@
  */
 import { z } from 'zod'
 
-import { field, readStamp } from '../field-spec.js'
+import { field, moment, text } from '../field-spec.js'
 import { rsitTypeSchema, severitySchema, unsettable } from '../vocabularies.js'
 import { RSIT_CLASSES, VERIS_ACTIONS } from '../vocabularies/compliance.js'
-
-const text = (max: number) => z.string().trim().max(max).default('')
-const moment = () => readStamp().nullable().default(null)
 
 export const rsitClassSchema = z.enum(
   RSIT_CLASSES.map((one) => one.value) as [string, ...string[]],

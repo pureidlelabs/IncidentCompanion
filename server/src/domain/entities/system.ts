@@ -12,7 +12,7 @@
  */
 import { z } from 'zod'
 
-import { field } from '../field-spec.js'
+import { field, ref } from '../field-spec.js'
 import { pasted } from '../pasted.js'
 import {
   assetVerdictSchema,
@@ -92,7 +92,7 @@ export const systemSchema = z.object({
    * query establishes several rows, and six copies of its text can silently
    * disagree about what was run.
    */
-  methodId: field(z.uuid().nullable().default(null), {
+  methodId: field(ref(), {
     label: 'Found by',
     kind: 'device_select',
     refTarget: 'methods',

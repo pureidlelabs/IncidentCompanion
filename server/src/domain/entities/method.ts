@@ -26,12 +26,10 @@
  */
 import { z } from 'zod'
 
-import { field } from '../field-spec.js'
+import { field, text } from '../field-spec.js'
 import { recorded } from '../recorded.js'
 import { optionalCount, unsettable } from '../vocabularies.js'
 import { methodKindSchema, queryGrammarSchema } from '../vocabularies.js'
-
-const text = (max: number) => z.string().trim().max(max).default('')
 
 /**
  * The ceiling on a query and on a recorded result.

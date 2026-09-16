@@ -26,7 +26,7 @@
 import { z } from 'zod'
 
 import { countingNumber } from '../column-bounds.js'
-import { field, readStamp } from '../field-spec.js'
+import { field, moment, text } from '../field-spec.js'
 import {
   DORA_ROOT_CAUSE_ADDITIONAL,
   DORA_ROOT_CAUSE_DETAILED,
@@ -47,9 +47,7 @@ import {
   doraRootCauseDetailedSchema,
 } from '../vocabularies.js'
 
-const text = (max: number) => z.string().trim().max(max).default('')
-const moment = () => readStamp().nullable().default(null)
-const euros = () => z.number().int().min(0).nullable().default(null)
+const euros =() => z.number().int().min(0).nullable().default(null)
 /** Held as `integer`, so the door refuses what the column cannot take. */
 const minutes = () => countingNumber().nullable().default(null)
 

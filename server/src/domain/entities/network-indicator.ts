@@ -16,7 +16,7 @@
  */
 import { z } from 'zod'
 
-import { field, withGates } from '../field-spec.js'
+import { field, ref, withGates } from '../field-spec.js'
 import { pasted } from '../pasted.js'
 import { dispositionSchema, indicatorTypeSchema, triageSchema } from '../vocabularies.js'
 
@@ -89,14 +89,14 @@ export const networkIndicatorSchema = withGates(
       vocabulary: 'triage',
       subordinate: true,
     }),
-    systemId: field(z.uuid().nullable().default(null), {
+    systemId: field(ref(), {
       tier: 'detail',
       label: 'Host it touched',
       kind: 'device_select',
       refTarget: 'systems',
       subordinate: true,
     }),
-    malwareId: field(z.uuid().nullable().default(null), {
+    malwareId: field(ref(), {
       label: 'Command-and-control for',
       kind: 'device_select',
       refTarget: 'malware',
@@ -107,7 +107,7 @@ export const networkIndicatorSchema = withGates(
      * query establishes several rows, and six copies of its text can silently
      * disagree about what was run.
      */
-    methodId: field(z.uuid().nullable().default(null), {
+    methodId: field(ref(), {
       label: 'Found by',
       kind: 'device_select',
       refTarget: 'methods',
