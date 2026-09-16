@@ -123,7 +123,9 @@ function spying(): AccountProfileWrites {
  */
 export const PressingEachControl: Story = {
   name: 'Pressing every control',
-  args: { name: 'r.okonkwo', writes: spying() },
+  // A served picture, because `Remove` is offered against one and not against
+  // an upload that has only been sent.
+  args: { name: 'r.okonkwo', hasPicture: true, writes: spying() },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
 

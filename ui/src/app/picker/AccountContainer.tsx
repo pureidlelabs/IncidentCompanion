@@ -62,6 +62,14 @@ export function AccountContainer({
   const name = session?.username ?? 'signed out'
   const mine = session ? appearances.data?.get(session.userId) : undefined
 
+  // The refusal is about one attempt against the picture then served, so a
+  // write that moves the served version has already answered it.
+  const [servedPicture, setServedPicture] = useState(mine?.avatarVersion)
+  if (servedPicture !== mine?.avatarVersion) {
+    setServedPicture(mine?.avatarVersion)
+    setPictureRefusal(undefined)
+  }
+
   const writes: AccountProfileWrites = {
     setPicture: (file) => {
       setPictureRefusal(undefined)
