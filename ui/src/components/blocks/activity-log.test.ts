@@ -1,6 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { createElement } from 'react'
+import { describe, expect, it, vi } from 'vitest'
 
-import { detailSummary, matchesActivity, toneForAudit, type AuditRow } from './activity-log'
+import {
+  ActivityLog,
+  detailSummary,
+  matchesActivity,
+  toneForAudit,
+  type ActivityReading,
+  type AuditRow,
+} from './activity-log'
 import { TONE_INK } from '@/components/ui/severity-tones'
 
 /**
@@ -28,6 +37,26 @@ const line: AuditRow = {
   detailsVary: false,
 }
 
+/** A reading whose controls do nothing, which is all a render needs. */
+const reading: ActivityReading = {
+  range: '7d',
+  onRange: vi.fn(),
+  filters: {
+    selection: {},
+    chosen: () => [],
+    one: () => undefined,
+    narrowed: false,
+    applied: [],
+    clear: vi.fn(),
+    controls: { dimensions: [], selection: {}, onChange: vi.fn() },
+  },
+  pageNumber: 1,
+  hasPrevious: false,
+  hasNext: false,
+  onPrevious: vi.fn(),
+  onNext: vi.fn(),
+}
+
 /**
  * **The audit scale is OCSF's six points, the ramp is the product's five.**
  *
@@ -49,6 +78,22 @@ describe('the audit log paints severity from the shared ramp', () => {
 
   it('paints Fatal as the top of the ramp rather than as unknown', () => {
     expect(toneForAudit('Fatal')).toBe('critical')
+  })
+
+  /**
+   * **The letter is the discriminator, not the hue.** A cell drawing the mark
+   * and dropping the word passes every assertion above it.
+   */
+  it('letters the level beside the mark, for the two that share a tone', () => {
+    const row = (severity: AuditRow['severity']): AuditRow => ({
+      ...line,
+      id: severity,
+      severity,
+      activity: `Recorded ${severity}`,
+    })
+    render(createElement(ActivityLog, { audit: [row('Fatal'), row('Critical')], reading }))
+    expect(screen.getByText('Fatal')).toBeInTheDocument()
+    expect(screen.getByText('Critical')).toBeInTheDocument()
   })
 
   it('has a tone for every severity the reader can return', () => {
