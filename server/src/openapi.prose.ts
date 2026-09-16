@@ -557,6 +557,7 @@ export function refusals(
   path: string,
   hasBody: boolean,
   hasQuery = false,
+  parsesAUuid = false,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   const row = /\{[^}]+\}/.test(path)
@@ -565,9 +566,21 @@ export function refusals(
 
   // Two statuses, and the split is the contract: a body the server cannot read
   // is 400; one it read and will not act on is 422. -> `wire/refusals.ts`
-  if (hasBody) {
+  //
+  // A path parameter parsed as a uuid is refused with the same status, by the
+  // pipe or by the guard that runs ahead of it. -> `openapi.ts`
+  if (hasBody || parsesAUuid) {
     out['400'] = {
-      description: 'The body is not readable \u2014 malformed JSON, or not the media type this route takes.',
+      description: [
+        parsesAUuid
+          ? 'A path parameter is not a uuid. A well-formed id that names nothing is the 404.'
+          : '',
+        hasBody
+          ? 'The body is not readable \u2014 malformed JSON, or not the media type this route takes.'
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
       ...json(REFUSAL),
     }
   }

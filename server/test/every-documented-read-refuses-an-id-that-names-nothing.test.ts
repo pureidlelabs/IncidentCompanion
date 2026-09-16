@@ -82,19 +82,34 @@ describe.skipIf(!runnable)('every documented read refuses an id that names nothi
    * The same sweep with an id that is not an id at all.
    *
    * **Not held to 404**, because which of 400 and 404 is right depends on
-   * whether the parameter is a uuid, and the sweep does not know: a library
-   * slug that is nonsense is a slug naming nothing. What it does know is that
-   * neither an answer nor a stack trace is acceptable, and a 5xx here is the
-   * value having reached a query.
+   * whether the parameter is a uuid: a library slug that is nonsense is a slug
+   * naming nothing. Held to the document instead, so whichever it is, a
+   * generated client has a branch for it -- and to 4xx, because every
+   * operation publishes 500 and a stack trace is the value having reached a
+   * query. -> #853
+   *
+   * **Both directions.** A read publishes no body, so a 400 on one can only be
+   * the parameter -- which makes an unanswered 400 a route documented as
+   * parsing a uuid that does no such thing, and that is the half a
+   * status-is-published test cannot see.
    */
-  it('refuses an id that is not well formed, rather than serving or failing on it', async () => {
+  it('refuses an id that is not well formed with a status it publishes', async () => {
     const wrong: string[] = []
     for (const one of reads) {
       const response = await fetch(`${harness.base}${filled(one.template, 'not-a-uuid')}`, {
         headers: { cookie: admin.cookie },
       })
-      if (response.status < 400 || response.status >= 500) {
-        wrong.push(`GET ${one.template} -> ${String(response.status)}`)
+      const published = publishes(harness.document, one.template)
+      if (
+        response.status < 400 ||
+        response.status >= 500 ||
+        !published.includes(String(response.status)) ||
+        (published.includes('400') && response.status !== 400)
+      ) {
+        wrong.push(
+          `GET ${one.template} -> ${String(response.status)}` +
+            ` (published ${published.join(',')})`,
+        )
       }
     }
     expect(wrong.sort()).toEqual([])
