@@ -76,10 +76,7 @@ export function CaseArchiveScreen({
    * **No route serves an archive inventory**, so the count is summed here from
    * the same case document every other section already holds.
    *
-   * **Over the roster the app publishes, never a list written here.** A second
-   * spelling of which tables a `.iccase` carries is one that falls behind, and
-   * this one had: it was a table short, so a case was offered for export under
-   * a count that did not match the file. -> #809
+   * **Over the roster the app publishes, never a list written here.**
    */
   const entries = useMemo(
     () =>

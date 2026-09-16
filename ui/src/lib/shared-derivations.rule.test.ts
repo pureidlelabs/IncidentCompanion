@@ -184,10 +184,7 @@ describe('a shared derivation is defined once', () => {
  * **Which collections a case holds is written once, and the app publishes it.**
  *
  * `COLLECTION_NAMES` and `COLLECTION_TO_CASE_KEY` are the roster, and several
- * modules derive from them. The archive screen wrote its own instead and it
- * fell a table behind: `methods` was missing, so a case was offered for export
- * under a count short by however many it held, and the file carried rows the
- * screen had not mentioned. -> #809
+ * modules derive from them. -> #809
  *
  * **A bare list is what is refused, not every mention.** Naming each collection
  * to attach something to it -- a label and a slug, a search field, a table per
