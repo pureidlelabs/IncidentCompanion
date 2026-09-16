@@ -523,6 +523,13 @@ const CONFLICT = {
 } as const
 
 /**
+ * A versioned write the method alone cannot pick out: attaching bytes writes
+ * the evidence row against the version it read. A POST is otherwise a create,
+ * which nobody can be stale about.
+ */
+const VERSIONED_POST: ReadonlySet<string> = new Set(['/api/cases/{caseId}/evidence/{id}/file'])
+
+/**
  * What every route can answer besides success.
  *
  * **Attached from the shape of the operation, never declared per route**: a
@@ -534,7 +541,8 @@ const CONFLICT = {
 export function refusals(method: string, path: string, hasBody: boolean): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   const row = /\{[^}]+\}/.test(path)
-  const versioned = method === 'patch' || method === 'delete'
+  const versioned =
+    method === 'patch' || method === 'delete' || (method === 'post' && VERSIONED_POST.has(path))
 
   // Two statuses, and the split is the contract: a body the server cannot read
   // is 400; one it read and will not act on is 422. -> `wire/refusals.ts`

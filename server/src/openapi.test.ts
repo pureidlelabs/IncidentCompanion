@@ -439,6 +439,15 @@ describe('making the generated document readable', () => {
       expect(responses('/api/cases/{caseId}/systems/{id}', 'get')).not.toContain('409')
     })
 
+    /**
+     * The one versioned write the method cannot pick out, with a plain create
+     * beside it so the case is about that route rather than about every POST.
+     */
+    it('documents the version conflict on the file attach', () => {
+      expect(responses('/api/cases/{caseId}/evidence/{id}/file', 'post')).toContain('409')
+      expect(responses('/api/cases/{caseId}/systems', 'post')).not.toContain('409')
+    })
+
     it('documents a server failure everywhere', () => {
       expect(responses('/api/health', 'get')).toContain('500')
     })

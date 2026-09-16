@@ -15,6 +15,7 @@
  * is the store's own argument for taking a stream.
  */
 import {
+  ConflictException,
   Controller,
   Get,
   Header,
@@ -138,8 +139,15 @@ export class EvidenceFileController {
     })
 
     if (!result.ok) {
-      throw new UnprocessableEntityException({
-        message: 'Somebody else changed this evidence row while the file was uploading.',
+      // The row moved while the bytes arrived, which is somebody having
+      // written first rather than a body this route would not take - so 409
+      // with the version, like every other versioned write.
+      if (result.currentVersion === null) {
+        throw new NotFoundException(`No evidence ${id} in this case.`)
+      }
+      throw new ConflictException({
+        message: 'Someone else wrote this first.',
+        currentVersion: result.currentVersion,
       })
     }
 
