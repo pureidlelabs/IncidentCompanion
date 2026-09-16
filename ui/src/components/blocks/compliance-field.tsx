@@ -32,9 +32,9 @@ export function ComplianceControl({
    * The answer, in the shape the record stores it.
    *
    * **Wider than `ComplianceValue`, and deliberately so.** This control emits
-   * `string[]` for the multi kinds and `null` for an emptied number, which are
-   * the stored shapes -- so a caller sends the value on unconverted rather
-   * than splitting a joined string.
+   * `string[]` for the multi kinds and `null` for an emptied number or stamp,
+   * which are the stored shapes -- so a caller sends the value on unconverted
+   * rather than splitting a joined string.
    */
   onSet: (name: string, value: unknown) => void
 }) {

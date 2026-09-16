@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn'
 import { Button } from './button'
 import { Calendar } from './calendar'
 import { DialogTrigger } from './dialog'
+import { ADVICE_INK } from './field'
 import { Input } from './input'
 import { Popover } from './popover'
 
@@ -95,7 +96,13 @@ export interface DateTimeInputProps {
   label: string
   /** One ISO string, or `''`. */
   value: string
-  onChange: (iso: string) => void
+  /**
+   * The stamp once both halves parse, and `null` once both are empty.
+   *
+   * **Silent while one half is missing**: a date with no time is neither a
+   * stamp nor a clear, so the pair reports nothing at all. -> #829
+   */
+  onChange: (iso: string | null) => void
   disabled?: boolean | undefined
   id?: string | undefined
   'aria-describedby'?: string | undefined
@@ -141,8 +148,18 @@ export function DateTimeInput({
   const commit = (nextDate: string, nextTime: string) => {
     setDate(nextDate)
     setTime(nextTime)
-    onChange(joinIso(nextDate, nextTime))
+    const iso = joinIso(nextDate, nextTime)
+    if (iso !== '') onChange(iso)
+    else if (nextDate === '' && nextTime === '') onChange(null)
   }
+
+  /** What a pair with one half filled says for itself, reporting nothing. */
+  const missing =
+    date !== '' && time === ''
+      ? 'Add the time to save this.'
+      : time !== '' && date === ''
+        ? 'Add the date to save this.'
+        : ''
 
   return (
     // **`flex-wrap`, because the pair has a floor and a column need not clear
@@ -209,6 +226,13 @@ export function DateTimeInput({
         }}
       />
       <span className="shrink-0 text-xs text-ink-muted">UTC</span>
+      {missing !== '' && (
+        // `w-full` takes the whole line of the wrapping row, so the note sits
+        // under the pair rather than squeezing the time half further.
+        <p aria-live="polite" className={cn('w-full text-xs', ADVICE_INK)}>
+          {missing}
+        </p>
+      )}
     </div>
   )
 }
