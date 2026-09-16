@@ -200,7 +200,7 @@ export default tseslint.config(
      * is right about source and wrong about every one of these by
      * construction.
      */
-    files: ['**/*.test.ts', 'src/test/**', 'e2e/**'],
+    files: ['**/*.test.ts', 'test/**', 'e2e/**'],
     rules: {
       /**
        * **A fixture truncates a table on purpose**, which is the one legitimate
