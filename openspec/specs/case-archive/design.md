@@ -45,3 +45,20 @@ Evidence is stored beside the record rather than in it, so an export can find th
 What was not found is stated on the archive, and again when it is read, so the gap travels with the file rather than being discovered by whoever opens the case. Stating it only in the response that carried the download is not stating it on the archive: that answer lasts for one download, and an analyst who saved the file or was handed it opens one that looks complete.
 
 **The statement is optional and the archive version does not move for it.** An archive written before it existed carries nothing and reads as reporting none, which is what it meant. Moving the version would refuse every archive an install already holds, in exchange for a statement those archives were never able to make.
+
+## How connected the case is, told without claiming the file is damaged
+
+A dangling id in a reference list is the ordinary state of a case rather than damage. Those lists are `jsonb` and nothing scrubs them when a row is deleted, so a sound export of a case an analyst has tidied carries ids that resolve to nothing. A count presented as *the archive lost these* would be wrong for the common case and would teach an operator to ignore it.
+
+What is true whichever cause produced it is that the case names rows that are not in it, and that is what the operator is told: as a warning beside what arrived, never as a refusal, and never as a statement about the file.
+
+**Rows, counted once each, not links.** One deleted row named by two entries is one row the case is missing. Counting occurrences answers how many links broke, which is a different question and not the one the sentence asks.
+
+**Counted where the drop happens.** The remap is the only place an id fails to resolve, and it already separates the two shapes: a list is filtered, a scalar becomes null. A pass afterwards would have to re-derive which columns are references and would answer what the case holds now rather than what the archive asked for and did not get.
+
+**Scalars are counted and are expected to be zero.** Every scalar reference is a foreign key with `on delete set null`, so a deleted row leaves null rather than a dangling id. One that does dangle came from a hand-written archive or an install whose schema differs.
+
+**Two things this count deliberately excludes**, because neither is a row the case names and lacks:
+
+- A reference field this install has no column for. The referenced row may well be in the archive; what is missing is the column, so counting it would make the sentence false. It is the other-build case, and what it wants is its own answer about fields dropped rather than rows.
+- Prose carried for a report the archive does not describe. That is content arriving for a row that does not exist, the mirror of the attachment count rather than an instance of this one. It is logged where it happens.

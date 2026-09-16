@@ -156,16 +156,31 @@ const NEVER_CARRIED = new Set([
  * the list instead, which is what a deleted row already looks like there.
  *
  * A scalar that resolves to nothing becomes null, which those columns allow.
+ *
+ * **Answers which ids it dropped**, so the import can say how connected the
+ * case is. Why that is worth saying, and why it is not a claim about the file,
+ * is in `openspec/specs/case-archive/design.md`.
  */
-function remapped(value: unknown, remap: ReadonlyMap<string, string>): unknown {
+function remapped(
+  value: unknown,
+  remap: ReadonlyMap<string, string>,
+): { value: unknown; dropped: readonly string[] } {
   if (Array.isArray(value)) {
-    return value.flatMap((one) => {
+    const kept: string[] = []
+    const dropped: string[] = []
+    for (const one of value) {
       const found = typeof one === 'string' ? remap.get(one) : undefined
-      return found === undefined ? [] : [found]
-    })
+      if (found === undefined) {
+        if (typeof one === 'string') dropped.push(one)
+      } else kept.push(found)
+    }
+    return { value: kept, dropped }
   }
-  if (typeof value === 'string') return remap.get(value) ?? null
-  return value
+  if (typeof value === 'string') {
+    const found = remap.get(value)
+    return { value: found ?? null, dropped: found === undefined ? [value] : [] }
+  }
+  return { value, dropped: [] }
 }
 
 export const importResultSchema = z.object({
@@ -179,6 +194,13 @@ export const importResultSchema = z.object({
     .number()
     .int()
     .describe("Digests the archive's rows name and the archive did not carry."),
+  unresolvedReferences: z
+    .number()
+    .int()
+    .describe(
+      'Rows the case names that no row in the archive became, counted once each ' +
+        'however many times they are named. Not a refusal and not a fault in the archive.',
+    ),
 })
 
 export type ImportResult = z.infer<typeof importResultSchema>
@@ -217,6 +239,14 @@ export class ArchiveImportService {
     // first would, for the moment between, describe a file this install does
     // not hold - and a failure in between would leave exactly that.
     let missingFiles = 0
+    /**
+     * Ids the archive's rows name that no row in it became.
+     *
+     * **A set, because the count is of rows and not of links.** One deleted
+     * row named by two entries is one row the case is missing, and counting
+     * the occurrences would say two. -> #731
+     */
+    const unresolved = new Set<string>()
     const held = new Set<string>()
     for (const [name, bytes] of Object.entries(members)) {
       if (!name.startsWith(EVIDENCE_PREFIX)) continue
@@ -330,7 +360,13 @@ export class ArchiveImportService {
           // hostname goes, a number no column can hold. -> #625
           for (const [key, value] of Object.entries(checked(name, one))) {
             if (NEVER_CARRIED.has(key) || !columns.has(key)) continue
-            values[key] = REFERENCE_FIELD_NAMES.has(key) ? remapped(value, remap) : value
+            if (!REFERENCE_FIELD_NAMES.has(key)) {
+              values[key] = value
+              continue
+            }
+            const mapped = remapped(value, remap)
+            values[key] = mapped.value
+            for (const id of mapped.dropped) unresolved.add(id)
           }
           // A timestamp arrives as an ISO string and the column wants a Date.
           for (const key of Object.keys(values)) {
@@ -398,7 +434,14 @@ export class ArchiveImportService {
       }
 
       this.log.log(`imported ${String(rows)} rows as case ${caseId}`)
-      return { id: caseId, title: String(record.title), rows, attachments, missingFiles }
+      return {
+        id: caseId,
+        title: String(record.title),
+        rows,
+        attachments,
+        missingFiles,
+        unresolvedReferences: unresolved.size,
+      }
     })
   }
 
