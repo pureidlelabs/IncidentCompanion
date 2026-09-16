@@ -32,6 +32,13 @@ export interface AccountProfileSectionProps {
   /** The two characters drawn when no picture has loaded. */
   initials?: string
   hasPicture?: boolean
+  /**
+   * How many writes the server has refused.
+   *
+   * A refusal leaves the served value where it was, so a change to this is the
+   * only thing that can drop a chosen value the server did not take.
+   */
+  refusals?: number
   /** The server's words for a picture it would not store. */
   pictureRefusal?: string
   /** Omitted in the gallery, where a choice is held and sent nowhere. */
@@ -51,23 +58,25 @@ export function AccountProfileSection({
   tone,
   initials = '',
   hasPicture = false,
+  refusals = 0,
   pictureRefusal,
   writes,
 }: AccountProfileSectionProps) {
   const [chosenTone, setChosenTone] = useState<number | undefined>(tone)
   // Re-synced whenever the incoming value moves, the same shape
   // `CaseRecordForm` uses to fold a prop change back into local state without
-  // an effect.
-  const [givenTone, setGivenTone] = useState(tone)
-  if (givenTone !== tone) {
-    setGivenTone(tone)
+  // an effect. A refusal counts as a move: the served value did not change,
+  // which is exactly why the chosen one has to go.
+  const [givenTone, setGivenTone] = useState({ tone, refusals })
+  if (givenTone.tone !== tone || givenTone.refusals !== refusals) {
+    setGivenTone({ tone, refusals })
     setChosenTone(tone)
   }
 
   const [letters, setLetters] = useState(initials)
-  const [givenInitials, setGivenInitials] = useState(initials)
-  if (givenInitials !== initials) {
-    setGivenInitials(initials)
+  const [givenInitials, setGivenInitials] = useState({ initials, refusals })
+  if (givenInitials.initials !== initials || givenInitials.refusals !== refusals) {
+    setGivenInitials({ initials, refusals })
     setLetters(initials)
   }
 

@@ -7,6 +7,7 @@ import {
   useUploadAvatar,
 } from '@/api/appearance'
 import { changeOwnPassword } from '@/api/client'
+import { announcing } from '@/app/case/entryWrites'
 import type { AccountProfileWrites } from '@/components/blocks/account-profile-section'
 import { useSession } from '@/api/useSession'
 import { useGround } from '@/lib/useGround'
@@ -46,6 +47,14 @@ export function AccountContainer({
   const [passwordRefusal, setPasswordRefusal] = useState<string | undefined>(undefined)
   const [passwordChanged, setPasswordChanged] = useState(false)
   const [passwordBusy, setPasswordBusy] = useState(false)
+  const [refusals, setRefusals] = useState(0)
+
+  /** Say a refused write out loud, then draw the profile from the served values. */
+  const write = (what: string, run: () => Promise<unknown>): void => {
+    void announcing(what, run).catch(() => {
+      setRefusals((count) => count + 1)
+    })
+  }
 
   const name = session?.username ?? 'signed out'
   const mine = session ? appearances.data?.get(session.userId) : undefined
@@ -60,16 +69,18 @@ export function AccountContainer({
       })
     },
     clearPicture: () => {
-      clear.mutate()
+      write('your picture', () => clear.mutateAsync())
     },
     setTone: (tone) => {
-      save.mutate({ tone, initials: mine?.initials ?? '' })
+      write('your colour', () => save.mutateAsync({ tone, initials: mine?.initials ?? '' }))
     },
     setInitials: (initials) => {
-      save.mutate({
-        ...(mine?.tone !== undefined ? { tone: mine.tone } : {}),
-        initials,
-      })
+      write('your initials', () =>
+        save.mutateAsync({
+          ...(mine?.tone !== undefined ? { tone: mine.tone } : {}),
+          initials,
+        }),
+      )
     },
   }
 
@@ -81,6 +92,7 @@ export function AccountContainer({
       {...(mine?.tone !== undefined ? { tone: mine.tone as 0 | 1 | 2 } : {})}
       initials={mine?.initials ?? ''}
       hasPicture={mine?.avatarVersion !== undefined}
+      refusals={refusals}
       {...(pictureRefusal === undefined ? {} : { pictureRefusal })}
       profileWrites={writes}
       ground={theme}
