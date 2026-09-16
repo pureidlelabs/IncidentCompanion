@@ -10,9 +10,20 @@
  * is callable from a seeder or a migration, where there is no caller to
  * attribute; this is the layer that has a session to name.
  */
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+  UnprocessableEntityException,
+} from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
-import { NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 import type { IncomingHttpHeaders } from 'node:http'

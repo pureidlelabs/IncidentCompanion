@@ -21,24 +21,6 @@ import {
   LOCKOUT_MINUTES,
 } from '../policy/keys.js'
 
-/**
- * Failures before the account shuts, and for how long.
- *
- * **Ten and fifteen minutes, which is Better Auth's own default** for the
- * lockout it does ship, and NIST SP 800-63B's guidance is no more than 100
- * failures per account - so ten with a delay is comfortably inside it.
- *
- * A long lock is a denial-of-service an attacker can aim at a named analyst
- * during an incident: they cannot get in, and neither can the analyst. Fifteen
- * minutes costs an attacker the run and costs an analyst one coffee.
- */
-export {
-  LOCKOUT_AFTER_FAILURES,
-  LOCKOUT_CEILING_FAILURES,
-  LOCKOUT_FLOOR_MINUTES,
-  LOCKOUT_MINUTES,
-} from '../policy/keys.js'
-
 export interface LockoutPolicy {
   afterFailures: number
   minutes: number

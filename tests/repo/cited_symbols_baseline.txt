@@ -111,6 +111,7 @@ SVGAnimatedString
 SYSTEM
 TableKit
 TableMap
+ThrottlerRequest
 toLocaleDateString
 translateX
 UPDATE
