@@ -77,7 +77,7 @@ describe.skipIf(!db)('importing a CSV', () => {
 
   it('takes back the file it just wrote, into another case', async () => {
     const before = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
-    const csv = await exports_.collectionCsv(caseId, 'systems')
+    const csv = await exports_.collectionCsv(caseId, 'systems', { type: () => undefined })
 
     const { added } = await service.fromCsv('systems', emptyCaseId, csv, ME)
 
@@ -103,7 +103,7 @@ describe.skipIf(!db)('importing a CSV', () => {
       'the fixture holds one kind of entry, so this would not test the dispatch',
     ).toBeGreaterThan(1)
 
-    const csv = await exports_.collectionCsv(caseId, 'timeline')
+    const csv = await exports_.collectionCsv(caseId, 'timeline', { type: () => undefined })
     const { added } = await service.fromCsv('timeline', emptyCaseId, csv, ME)
 
     expect(added).toBe(before.length)
@@ -117,7 +117,7 @@ describe.skipIf(!db)('importing a CSV', () => {
     // every row and adds none, so the count staying put is the observation and
     // the skip count is what says the file was read rather than refused.
     const before = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
-    const csv = await exports_.collectionCsv(caseId, 'systems')
+    const csv = await exports_.collectionCsv(caseId, 'systems', { type: () => undefined })
 
     const result = await service.fromCsv('systems', caseId, csv, ME)
 
@@ -510,7 +510,7 @@ describe.skipIf(!db)('importing a CSV', () => {
     const linked = before.find((row) => row.systemId !== null)
     expect(linked, 'the demo case holds no linked impact row to round-trip').toBeDefined()
 
-    const csv = await exports_.collectionCsv(caseId, 'impact')
+    const csv = await exports_.collectionCsv(caseId, 'impact', { type: () => undefined })
 
     // **The file says what the host is called, not where it was kept.**
     const [host] = await seed!
@@ -565,7 +565,7 @@ describe.skipIf(!db)('importing a CSV', () => {
    * half of this design is about. -> #51
    */
   it('writes no row id into the timeline export, which has the most references', async () => {
-    const csv = await exports_.collectionCsv(caseId, 'timeline')
+    const csv = await exports_.collectionCsv(caseId, 'timeline', { type: () => undefined })
     const head = csv.split('\n')[0] ?? ''
 
     expect(head, 'the timeline export carries no reference column to check').toContain('system_id')

@@ -1,5 +1,6 @@
 import type { TimelineAction, TimelineEntry, TimelineEvent } from '@/api/model'
 import { isEvent } from '@/api/model'
+import { missingExpected, type Tiering } from '@/api/specs'
 import { dayKeyOf, msOf } from '@/lib/case-time'
 import { withinWindow, type TimeWindow } from '@/lib/time-window'
 import { matchesWords } from '@/lib/word-match'
@@ -139,6 +140,16 @@ export interface TimelineFilter {
   phases: readonly string[]
   /** Free text over what the row shows. */
   q: string
+  /**
+   * One expected field, keeping the entries that carry no value for it.
+   *
+   * The one dimension needing the served tiering: which fields an entry is
+   * expected to answer depends on its tactic, so it cannot be read off the
+   * entry alone.
+   */
+  missing: string
+  /** Keep only what an import left flagged for review. */
+  unreviewed: boolean
 }
 
 export const NO_TIMELINE_FILTER: TimelineFilter = {
@@ -147,6 +158,8 @@ export const NO_TIMELINE_FILTER: TimelineFilter = {
   severities: [],
   phases: [],
   q: '',
+  missing: '',
+  unreviewed: false,
 }
 
 /** Every stamp the case can place, for the brush's track and its density. */
@@ -160,7 +173,9 @@ export function isTimelineFiltered(filter: TimelineFilter): boolean {
       filter.window ||
       filter.severities.length ||
       filter.phases.length ||
-      filter.q.trim(),
+      filter.q.trim() ||
+      filter.missing ||
+      filter.unreviewed,
   )
 }
 
@@ -171,7 +186,9 @@ export function activeCount(filter: TimelineFilter): number {
     (filter.window ? 1 : 0) +
     filter.severities.length +
     filter.phases.length +
-    (filter.q.trim() ? 1 : 0)
+    (filter.q.trim() ? 1 : 0) +
+    (filter.missing ? 1 : 0) +
+    (filter.unreviewed ? 1 : 0)
   )
 }
 
@@ -193,8 +210,17 @@ function haystack(entry: TimelineEntry): string {
 
 /** AND across dimensions, OR within one. A severity filter excludes every
  *  activity, which has no severity to disagree with. */
-export function matchesTimeline(entry: TimelineEntry, filter: TimelineFilter): boolean {
+export function matchesTimeline(
+  entry: TimelineEntry,
+  filter: TimelineFilter,
+  tiering?: Tiering,
+): boolean {
   if (filter.kind && entry.kind !== filter.kind) return false
+  // Fail closed without the tiering: the entries a gap row counted cannot be
+  // told apart from the rest, and every one of them is the wrong answer.
+  if (filter.missing && !(tiering && missingExpected(tiering, entry).includes(filter.missing)))
+    return false
+  if (filter.unreviewed && !entry.unreviewed) return false
   if (!withinWindow(msOf(entry.time), filter.window)) return false
   if (filter.severities.length) {
     if (!isEvent(entry)) return false
@@ -209,8 +235,9 @@ export function matchesTimeline(entry: TimelineEntry, filter: TimelineFilter): b
 export function applyTimelineFilter(
   entries: readonly TimelineEntry[],
   filter: TimelineFilter,
+  tiering?: Tiering,
 ): TimelineEntry[] {
-  return entries.filter((entry) => matchesTimeline(entry, filter))
+  return entries.filter((entry) => matchesTimeline(entry, filter, tiering))
 }
 
 /**
@@ -223,6 +250,7 @@ export function countsFor(
   entries: readonly TimelineEntry[],
   filter: TimelineFilter,
   dimension: 'kind' | 'severity' | 'phase',
+  tiering?: Tiering,
 ): ReadonlyMap<string, number> {
   const siblings: TimelineFilter = {
     ...filter,
@@ -232,7 +260,7 @@ export function countsFor(
   }
   const counts = new Map<string, number>()
   for (const entry of entries) {
-    if (!matchesTimeline(entry, siblings)) continue
+    if (!matchesTimeline(entry, siblings, tiering)) continue
     const value =
       dimension === 'kind'
         ? entry.kind
