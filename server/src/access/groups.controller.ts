@@ -10,14 +10,23 @@
  * is callable from a seeder or a migration, where there is no caller to
  * attribute; this is the layer that has a session to name.
  */
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common'
-import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
-import { NotFoundException, UnprocessableEntityException } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UnprocessableEntityException,
+} from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
-import type { IncomingHttpHeaders } from 'node:http'
 
 import { AdminOnly } from '../auth/admin-only.js'
+import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { LEVELS } from '../db/schema/groups.js'
 import { isMissingParent } from '../db/missing-parent.js'
@@ -119,14 +128,11 @@ export class GroupsController {
   @ZodResponse({ status: 201, type: GroupMadeDto, description: 'The group was created.' })
   async create(
     @Body() body: unknown,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<{ id: string }> {
     const { name } = this.parse(createSchema, body)
     const made = await this.groups.create(name)
-    await this.activity.groupCreated({ session, headers: request.headers, request }, made.id, {
-      name,
-    })
+    await this.activity.groupCreated(caller, made.id, { name })
     return made
   }
 
@@ -136,15 +142,11 @@ export class GroupsController {
   async grant(
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() body: unknown,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<typeof DONE> {
     const { userId, level } = this.parse(grantSchema, body)
     await this.named(() => this.groups.grant(groupId, userId, level), `group ${groupId} or analyst ${userId}`)
-    await this.activity.reachGranted({ session, headers: request.headers, request }, userId, {
-      groupId,
-      level,
-    })
+    await this.activity.reachGranted(caller, userId, { groupId, level })
     return DONE
   }
 
@@ -153,13 +155,10 @@ export class GroupsController {
   async revoke(
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Param('userId') userId: string,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<typeof DONE> {
     await this.groups.revoke(groupId, userId)
-    await this.activity.reachRevoked({ session, headers: request.headers, request }, userId, {
-      groupId,
-    })
+    await this.activity.reachRevoked(caller, userId, { groupId })
     return DONE
   }
 
@@ -169,16 +168,11 @@ export class GroupsController {
   async hold(
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() body: unknown,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<typeof DONE> {
     const { customerId } = this.parse(holdSchema, body)
     await this.named(() => this.groups.hold(groupId, customerId), `group ${groupId} or customer ${customerId}`)
-    await this.activity.groupHeldCustomer(
-      { session, headers: request.headers, request },
-      customerId,
-      { groupId },
-    )
+    await this.activity.groupHeldCustomer(caller, customerId, { groupId })
     return DONE
   }
 
@@ -187,15 +181,10 @@ export class GroupsController {
   async release(
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Param('customerId', ParseUUIDPipe) customerId: string,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<typeof DONE> {
     await this.groups.release(groupId, customerId)
-    await this.activity.groupReleasedCustomer(
-      { session, headers: request.headers, request },
-      customerId,
-      { groupId },
-    )
+    await this.activity.groupReleasedCustomer(caller, customerId, { groupId })
     return DONE
   }
 }

@@ -20,13 +20,11 @@ import {
   NotFoundException,
   Param,
   Post,
-  Req,
   UnprocessableEntityException,
   Put,
   UseGuards,
 } from '@nestjs/common'
-import type { IncomingHttpHeaders } from 'node:http'
-import { AuthGuard, Session, type UserSession } from '@thallesp/nestjs-better-auth'
+import { AuthGuard } from '@thallesp/nestjs-better-auth'
 import { z } from 'zod'
 
 import {
@@ -47,6 +45,7 @@ import {
   type LibraryDocument,
 } from './document.js'
 import { LibraryService } from './library.service.js'
+import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { libraryRowSchema } from './library.service.js'
@@ -222,8 +221,7 @@ export class LibraryController {
   async apply(
     @Param('slug') slug: string,
     @Body() body: LibraryDocumentDto,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<LibraryApplied> {
     const kind = this.kind(slug)
     if (body.kind !== kind.slug) {
@@ -266,7 +264,7 @@ export class LibraryController {
 
     const applied = await this.library.applyKind(slug, body)
     await this.activity.libraryKindReplaced(
-      { session, headers: request.headers, request },
+      caller,
       slug,
       body.entries.length,
       body.disabledBuiltins?.length ?? 0,

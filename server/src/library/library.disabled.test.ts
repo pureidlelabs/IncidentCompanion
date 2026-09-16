@@ -127,8 +127,7 @@ describe.skipIf(!db)('a disabled built-in', () => {
       controller.apply(
         'templates',
         { kind: 'templates', entries: [{ name, label: 'Mine', payload: {} }] },
-        { id: 'u-1', name: 'Ada' } as never,
-        { headers: {} },
+        { session: { user: { id: 'u-1', name: 'Ada' } }, headers: {}, request: {} },
       ),
     ).rejects.toThrow()
   })

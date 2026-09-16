@@ -66,8 +66,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
   let sector: string
   let theirs: string
 
-  const caller = { user: { id: ADMIN } } as never
-  const request = { headers: {} } as never
+  const caller = { session: { user: { id: ADMIN } }, headers: {}, request: {} } as never
 
   beforeEach(async () => {
     await seed!.delete(groupMembers)
@@ -151,7 +150,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
    * way to make the group.
    */
   it('makes a group, which is what everything else here needs', async () => {
-    const made = await controller.create({ name: 'Logistics' }, caller, request)
+    const made = await controller.create({ name: 'Logistics' }, caller)
 
     const [row] = await seed!.select().from(groups).where(eq(groups.id, made.id))
     expect(row!.name).toBe('Logistics')
@@ -196,11 +195,11 @@ describe.skipIf(!db)('granting reach through a group', () => {
    * is broken. -> #287
    */
   it('refuses holding a customer that does not exist', async () => {
-    const made = await controller.create({ name: 'Holds nothing' }, caller, request)
+    const made = await controller.create({ name: 'Holds nothing' }, caller)
     const gone = '11111111-1111-4111-8111-111111111111'
 
     await expect(
-      controller.hold(made.id, { customerId: gone }, caller, request),
+      controller.hold(made.id, { customerId: gone }, caller),
     ).rejects.toMatchObject({ status: 404 })
   })
 
@@ -208,20 +207,20 @@ describe.skipIf(!db)('granting reach through a group', () => {
     const gone = '22222222-2222-4222-8222-222222222222'
 
     await expect(
-      controller.grant(gone, { userId: ANALYST, level: 'read' }, caller, request),
+      controller.grant(gone, { userId: ANALYST, level: 'read' }, caller),
     ).rejects.toMatchObject({ status: 404 })
   })
 
   it('refuses a group with no name', async () => {
-    await expect(controller.create({ name: '  ' }, caller, request)).rejects.toMatchObject({
+    await expect(controller.create({ name: '  ' }, caller)).rejects.toMatchObject({
       status: 422,
     })
     expect(written).toEqual([])
   })
 
   it('lists the groups an install holds', async () => {
-    await controller.create({ name: 'Logistics' }, caller, request)
-    await controller.create({ name: 'Incident response' }, caller, request)
+    await controller.create({ name: 'Logistics' }, caller)
+    await controller.create({ name: 'Incident response' }, caller)
 
     const { groups: listed } = await controller.list()
 
@@ -237,42 +236,42 @@ describe.skipIf(!db)('granting reach through a group', () => {
    * because it is the answer #107 turns on.
    */
   it('lets an administrator grant themselves reach through one', async () => {
-    const made = await controller.create({ name: 'Mine' }, caller, request)
-    await controller.hold(made.id, { customerId: theirs }, caller, request)
-    await controller.grant(made.id, { userId: ADMIN, level: 'delete' }, caller, request)
+    const made = await controller.create({ name: 'Mine' }, caller)
+    await controller.hold(made.id, { customerId: theirs }, caller)
+    await controller.grant(made.id, { userId: ADMIN, level: 'delete' }, caller)
 
     expect(await reach.levelFor(ADMIN, theirs)).toBe('delete')
   })
 
   it('grants a membership and reaches the customer the group holds', async () => {
-    await controller.hold(sector, { customerId: theirs }, caller, request)
+    await controller.hold(sector, { customerId: theirs }, caller)
 
-    await controller.grant(sector, { userId: ANALYST, level: 'write' }, caller, request)
+    await controller.grant(sector, { userId: ANALYST, level: 'write' }, caller)
 
     expect(await reach.levelFor(ANALYST, theirs)).toBe('write')
   })
 
   it('revokes it again', async () => {
-    await controller.hold(sector, { customerId: theirs }, caller, request)
-    await controller.grant(sector, { userId: ANALYST, level: 'write' }, caller, request)
+    await controller.hold(sector, { customerId: theirs }, caller)
+    await controller.grant(sector, { userId: ANALYST, level: 'write' }, caller)
 
-    await controller.revoke(sector, ANALYST, caller, request)
+    await controller.revoke(sector, ANALYST, caller)
 
     expect(await reach.levelFor(ANALYST, theirs)).toBeNull()
   })
 
   it('releases a customer the group held', async () => {
-    await controller.hold(sector, { customerId: theirs }, caller, request)
-    await controller.grant(sector, { userId: ANALYST, level: 'read' }, caller, request)
+    await controller.hold(sector, { customerId: theirs }, caller)
+    await controller.grant(sector, { userId: ANALYST, level: 'read' }, caller)
 
-    await controller.release(sector, theirs, caller, request)
+    await controller.release(sector, theirs, caller)
 
     expect(await reach.levelFor(ANALYST, theirs)).toBeNull()
   })
 
   it('writes an audit line naming the analyst for a grant and a revocation', async () => {
-    await controller.grant(sector, { userId: ANALYST, level: 'delete' }, caller, request)
-    await controller.revoke(sector, ANALYST, caller, request)
+    await controller.grant(sector, { userId: ANALYST, level: 'delete' }, caller)
+    await controller.revoke(sector, ANALYST, caller)
 
     expect(written.map((one) => one.kind)).toEqual(['reach_granted', 'reach_revoked'])
     expect(written.every((one) => one.subject === ANALYST)).toBe(true)
@@ -303,8 +302,8 @@ describe.skipIf(!db)('granting reach through a group', () => {
    * one is what shows the act is permitted and recorded. Neither alone.
    */
   it('names the administrator as both grantor and subject when they grant themselves', async () => {
-    await controller.hold(sector, { customerId: theirs }, caller, request)
-    await controller.grant(sector, { userId: ADMIN, level: 'delete' }, caller, request)
+    await controller.hold(sector, { customerId: theirs }, caller)
+    await controller.grant(sector, { userId: ADMIN, level: 'delete' }, caller)
 
     expect(await reach.levelFor(ADMIN, theirs), 'the self-grant did not take').toBe('delete')
 
@@ -315,8 +314,8 @@ describe.skipIf(!db)('granting reach through a group', () => {
   })
 
   it('writes a line naming the customer when a group takes one on and lets it go', async () => {
-    await controller.hold(sector, { customerId: theirs }, caller, request)
-    await controller.release(sector, theirs, caller, request)
+    await controller.hold(sector, { customerId: theirs }, caller)
+    await controller.release(sector, theirs, caller)
 
     expect(written.map((one) => one.kind)).toEqual([
       'group_held_customer',
@@ -332,7 +331,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
    */
   it('refuses a level that is not one of the three', async () => {
     await expect(
-      controller.grant(sector, { userId: ANALYST, level: 'root' }, caller, request),
+      controller.grant(sector, { userId: ANALYST, level: 'root' }, caller),
     ).rejects.toMatchObject({ status: 422 })
 
     expect(written).toEqual([])
@@ -340,7 +339,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
 
   it('refuses a grant naming nobody', async () => {
     await expect(
-      controller.grant(sector, { level: 'read' }, caller, request),
+      controller.grant(sector, { level: 'read' }, caller),
     ).rejects.toMatchObject({ status: 422 })
   })
 })

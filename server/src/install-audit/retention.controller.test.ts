@@ -45,8 +45,11 @@ function harness(current = 365) {
   }
 }
 
-const session = { user: { id: 'admin-1', name: 'Dev Analyst' } } as never
-const request = { headers: {} }
+const caller = {
+  session: { user: { id: 'admin-1', name: 'Dev Analyst' } },
+  headers: {},
+  request: {},
+} as never
 
 describe('the audit retention route', () => {
   it('states the floor, so a screen need not hard-code it', async () => {
@@ -74,7 +77,7 @@ describe('the audit retention route', () => {
        * matching that would pass on any 422 at all.
        */
       const refused = await controller
-        .set({ days }, session, request)
+        .set({ days }, caller)
         .catch((why: unknown) => why)
       expect(refused).toBeInstanceOf(UnprocessableEntityException)
       const body = (refused as UnprocessableEntityException).getResponse() as {
@@ -104,7 +107,7 @@ describe('the audit retention route', () => {
   it('records a shortening, with what it was and what it became', async () => {
     const { controller, lines, held } = harness(365)
 
-    await controller.set({ days: 30 }, session, request)
+    await controller.set({ days: 30 }, caller)
 
     expect(held()).toBe(30)
     expect(lines).toHaveLength(1)
@@ -114,7 +117,7 @@ describe('the audit retention route', () => {
   it('records a lengthening too', async () => {
     const { controller, lines } = harness(90)
 
-    await controller.set({ days: 365 }, session, request)
+    await controller.set({ days: 365 }, caller)
 
     expect(lines[0]?.detail).toEqual({ from: '90', to: '365' })
   })
@@ -127,7 +130,7 @@ describe('the audit retention route', () => {
   it('reports the old value, not the new one', async () => {
     const { controller, lines } = harness(365)
 
-    await controller.set({ days: 60 }, session, request)
+    await controller.set({ days: 60 }, caller)
 
     expect(lines[0]?.detail?.['from'], 'from must predate the write').toBe('365')
   })
