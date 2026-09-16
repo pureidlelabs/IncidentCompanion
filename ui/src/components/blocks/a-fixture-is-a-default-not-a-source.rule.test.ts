@@ -9,15 +9,10 @@ import { describe, expect, it } from 'vitest'
  * **A part holds no example content at all -- not as a source, and not as a
  * default.**
  *
- * **A default is the same leak arriving quietly**, which is what this rule
- * used to permit and the specification does not:
- *
- * > A part MUST NOT hold example content that appears when nothing is passed
- * > to it, because that content will eventually be shown to an analyst as
- * > though it were theirs.
- *
- * Its scenario is *a part is given nothing -- then it shows nothing rather
- * than the example*. -> `openspec/specs/interface/spec.md`, #237
+ * **A default is the same leak arriving quietly**, which is what this rule used
+ * to permit and the specification does not. Its scenario is *a part is given
+ * nothing -- then it shows nothing rather than the example*.
+ * -> `openspec/specs/interface/spec.md`, #237
  *
  * ## What it reads
  *

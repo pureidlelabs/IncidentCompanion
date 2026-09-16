@@ -16,9 +16,7 @@ const meta = {
   title: 'Blocks/System/Demo cases',
   component: DemosPane,
   parameters: { layout: 'padded' },
-  // **The example lives here, not in the pane.** The gallery has no server,
-  // so a fixture is the right answer in a story -- and the wrong one in a part
-  // a container may hand nothing. -> #237
+  // The example lives here, not in the pane: a gallery has no server. -> #237
   args: { demos: PICKER_DEMOS, href: (demo) => `/cases/${demo.id}/overview` },
 } satisfies Meta<typeof DemosPane>
 
