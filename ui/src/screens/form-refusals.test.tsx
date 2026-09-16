@@ -189,18 +189,28 @@ describe('the account panel', () => {
   /**
    * The picker is the browser's; storing the image is not. So the row states
    * what it holds and never that it was uploaded.
+   *
+   * **Naming a file is not holding one.** The offers beside the name answer to
+   * the served picture, and this panel is served none, so a second choice is
+   * the only thing that moves the name. -> #843
    */
   it('names the file the picture door chose', async () => {
     const user = userEvent.setup()
     render(<AccountPanel />)
 
-    const file = new File(['x'], 'avatar.png', { type: 'image/png' })
+    const file = (name: string) => new File(['x'], name, { type: 'image/png' })
     const input = document.querySelector('input[type="file"]')
     expect(input).not.toBeNull()
-    await user.upload(input as HTMLInputElement, file)
+    await user.upload(input as HTMLInputElement, file('avatar.png'))
 
     expect(screen.getByText(/avatar\.png/)).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Remove' }))
+    expect(
+      screen.queryByRole('button', { name: 'Remove' }),
+      'the row offered to remove a picture nothing had stored',
+    ).toBeNull()
+
+    await user.upload(input as HTMLInputElement, file('badge.png'))
+    expect(screen.getByText(/badge\.png/)).toBeVisible()
     expect(screen.queryByText(/avatar\.png/)).toBeNull()
   })
 })
