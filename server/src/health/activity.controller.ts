@@ -147,12 +147,7 @@ export class ActivityController {
         approximateRows: count(row.rows),
         bytes: count(row.bytes),
       })),
-      /**
-       * **Live is the states where the incident is still running**, which is
-       * not the same as the ones that are not closed: a case in write-up is
-       * over as an incident and outstanding as work, and counting it as live
-       * is what the state exists to stop. -> `domain/case.ts`
-       */
+      /** Live is stated, and is not the same as "not closed". -> `domain/case.ts` */
       cases: {
         total: caseRows.reduce((sum, row) => sum + count(row.count), 0),
         live: caseRows

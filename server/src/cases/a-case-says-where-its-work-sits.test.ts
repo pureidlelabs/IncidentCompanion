@@ -1,12 +1,6 @@
 /**
  * The state a case carries, and what it tells somebody who has not opened it.
  *
- * **The question the state answers is where the work is**: whether the SOC is
- * still handling a live incident, or whether the incident is over and what
- * remains is the write-up. Two values could not say that -- `open` covered
- * both -- so the distinction the requirement exists for was not representable.
- * -> #221
- *
  * **What this does not cover: the gate on closing.** A case must not be
  * closable while reporting or lessons it owes are outstanding, and what a case
  * owes is recorded nowhere yet, so the gate has no subject to read. Those two
@@ -35,12 +29,7 @@ describe('the states a case can be in', () => {
     expect(caseStatusSchema.options).toEqual(['respond', 'recover', 'post-incident', 'closed'])
   })
 
-  /**
-   * **Live is stated, never derived.** Every reader that wants "is the incident
-   * still going" would otherwise ask `!== 'closed'`, which counts a case in
-   * write-up as a live incident -- the exact thing the state exists to tell
-   * apart.
-   */
+  /** Live is stated, never derived. -> `domain/vocabularies.lists.ts` */
   it('says which of them mean the incident is still live', () => {
     expect([...LIVE_STATES]).toEqual(['respond', 'recover'])
     expect(LIVE_STATES, 'write-up is not a live incident').not.toContain('post-incident')
@@ -110,10 +99,7 @@ describe.skipIf(!db)('a case moving between states', () => {
     expect(stored!.closedAt, 'moving to write-up recorded a conclusion').toBeNull()
   })
 
-  /**
-   * **A handled incident resumes, and that is ordinary.** The state is a
-   * marker rather than a gate, so nothing may refuse the way back.
-   */
+  /** The state is a marker rather than a gate, so nothing refuses the way back. */
   it('returns to respond from post-incident', async () => {
     const row = await raised()
     const moved = await moveTo(row.id, row.version, 'post-incident')
