@@ -174,12 +174,7 @@ describe('what the install says about the wrapping', () => {
   /**
    * **The one thing an operator must not learn from an auditor.**
    *
-   * The application does not encrypt what it stores, deliberately: a key it
-   * managed would sit in front of storage the operator already protects, and
-   * recovery would then depend on that key surviving. What it owes in exchange
-   * is saying so, and nothing said it -- every mention of encryption in the
-   * tree was about a case archive, which is a file an analyst exports rather
-   * than the state the install keeps. -> #177
+   * Why nothing is encrypted here is on the field itself. -> #177
    *
    * **Three properties rather than the sentence**, as the notes beside it are
    * asserted: rewording is free, and dropping any of the three is not. Each

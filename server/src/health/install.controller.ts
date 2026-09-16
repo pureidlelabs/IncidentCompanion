@@ -127,11 +127,8 @@ export class InstallSettingsController {
           'Attachments are stored in individual zips under the password "infected", ' +
           'so antivirus cannot quarantine your evidence. This app does not scan them, ' +
           'and your endpoint protection cannot see inside them.',
-        // **Says whose job it is, not only that it is undone.** "Stored
-        // unencrypted" alone reads as a defect somebody should fix here; what
-        // makes it a division of responsibility is the second half. Evidence
-        // is named because it is the most sensitive thing this holds and the
-        // one an operator is likeliest to assume is treated differently.
+        // Whose job it is, not only that it is undone: "stored unencrypted"
+        // alone reads as a defect somebody should fix here.
         encryptionNote:
           'The database, the cache and the evidence store are written unencrypted by this ' +
           'application. Confidentiality at rest is whatever the storage underneath provides -- ' +
