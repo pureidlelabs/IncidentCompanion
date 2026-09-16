@@ -22,6 +22,16 @@ export const REPORT_STATES: readonly ReportState[] = ['Draft', 'Final', 'Sent']
 /** The kinds an analyst writes into. Everything else is composed at export. */
 export const WRITTEN_KINDS: readonly string[] = ['written', 'figure']
 
+/**
+ * The one kind no heading is served for.
+ *
+ * The document prints none for it either: its words are the analyst's, and a
+ * derived title would head every untitled one alike. `figure`, the other
+ * written kind, *is* named by the pack, which is what holds this to one kind.
+ * -> `report/document/resolve.ts`
+ */
+const UNHEADED_KIND = 'written'
+
 /** The lifecycle label. `sentAt` wins over the stored status, always. */
 export function stateOf(report: Report): ReportState {
   if (report.sentAt) return 'Sent'
@@ -64,7 +74,26 @@ export function blocksOf(
 export function headingOf(block: ReportBlock, pack: Readonly<Record<string, string>>): string {
   if (block.heading) return block.heading
   if (block.headingKey) return pack[block.headingKey] ?? block.headingKey
+  if (block.kind === UNHEADED_KIND) return ''
   return labelForKind(block.kind, pack)
+}
+
+/** What a section with no heading is called, wherever one must call it something. */
+export const UNTITLED_SECTION = 'untitled section'
+
+/**
+ * What to call a section where something has to name it -- a drag handle, a
+ * label, a row in the rail.
+ *
+ * **Never empty, where `headingOf` may be.** A section the analyst has not
+ * titled still has to be announced and reached by name; what it must not do is
+ * claim that name as a heading, which the document will not print.
+ */
+export function sectionNameOf(
+  block: ReportBlock,
+  pack: Readonly<Record<string, string>>,
+): string {
+  return headingOf(block, pack) || UNTITLED_SECTION
 }
 
 /** Whether the pack answered, or the key stood in for itself. */
