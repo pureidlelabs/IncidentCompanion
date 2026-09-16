@@ -94,9 +94,13 @@ test.describe('two analysts in one case', () => {
 
       try {
         await expect(await noteBody(two)).toContainText(written, { timeout: 20_000 })
-      } catch {
+      } catch (cause) {
+        // The original carries Playwright's received text and call log, and a
+        // `noteBody` throw carries its own diagnosis: replacing either with a
+        // stage verdict loses the half that says what was actually on screen.
         throw new Error(
           `the second analyst never saw what the first typed, and ${await whereItStopped(one, demo, written)}`,
+          { cause },
         )
       }
     } finally {
@@ -208,11 +212,9 @@ async function demoCaseId(page: Page): Promise<string> {
  * A prose body is a contenteditable rather than a textarea, and the screen
  * names it from the served form's label.
  *
- * **A bare timeout here says nothing.** Measured on this screen: one textbox,
- * `aria-label="Note"`, so `exact` changes no match and the locator is not the
- * question -- what a reader needs is whether the screen was empty, still
- * loading, or showing something else entirely, and none of those can be told
- * apart from *not visible* twenty seconds later.
+ * **`exact`, so a second textbox named `Notes` cannot silently become
+ * `.first()`.** On a timeout it says what the screen held: *not visible* twenty
+ * seconds later tells a reader nothing.
  */
 async function noteBody(page: Page) {
   const body = page.getByRole('textbox', { name: 'Note', exact: true }).first()
@@ -236,8 +238,13 @@ async function whatTheScreenHeld(page: Page): Promise<string> {
     const named = (el: Element) =>
       el.getAttribute('aria-label') ?? el.getAttribute('placeholder') ?? ''
     const boxes = [...document.querySelectorAll('[role="textbox"], textarea, input[type="text"]')]
+    // The body still arriving is a `role="status"` paragraph rather than a
+    // textbox, so it counts as none of them and reads exactly like an empty
+    // screen. It is the likelier of the two on a timeout.
+    const waiting = document.querySelector('[role="status"][aria-busy="true"]')
     const main = document.querySelector('main')
     return [
+      waiting ? 'still loading the body' : 'not loading',
       `textboxes=${String(boxes.length)}`,
       `named=[${boxes.map(named).filter(Boolean).join('|')}]`,
       `main=${main ? String(main.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 200) : 'absent'}`,
@@ -249,27 +256,27 @@ async function whatTheScreenHeld(page: Page): Promise<string> {
  * Which of the three stages a hand-off reached, for a failure that has to say.
  *
  * The update never left the first browser, never reached the server, or never
- * reached the second, and the three have different fixes. The assertion on the
- * second screen cannot tell them apart, which is what left #515 unanswerable
- * from its own output.
+ * reached the second, and the three have different fixes.
  *
- * **The server is polled rather than read once.** A note is persisted after a
- * quiet moment rather than per keystroke, so a single read taken the instant
- * the assertion failed reports *not reached* for a document merely not yet
- * written -- which would name the wrong stage with total confidence.
+ * **The server is polled rather than read once**, because a note is persisted
+ * after a quiet moment rather than per keystroke. A stage is named only on a
+ * positive: everything else says what it could not establish.
  */
 async function whereItStopped(
   page: Page,
   caseId: string,
   written: string,
-  waitMs = 10_000,
+  waitMs = 20_000,
 ): Promise<string> {
-  const mine = await page
-    .getByRole('textbox', { name: 'Note', exact: true })
-    .first()
-    .textContent()
-    .catch(() => null)
-  if (!mine?.includes(written)) {
+  // A read that failed and an editor that is empty are different answers, and
+  // only the second says the text never left.
+  let mine: string | null
+  try {
+    mine = await page.getByRole('textbox', { name: 'Note', exact: true }).first().textContent()
+  } catch (why) {
+    return `the first analyst's own editor could not be read, so no stage is named: ${String(why)}`
+  }
+  if (!(mine ?? '').includes(written)) {
     return 'it never left the first browser: the text is not in the first analyst\'s own editor'
   }
 
@@ -283,11 +290,8 @@ async function whereItStopped(
       last = `the notes route answered ${String(answered.status())}`
     } else {
       const body: unknown = await answered.json()
-      /**
-       * **Said rather than assumed.** A read of the wrong shape finds nothing
-       * and is indistinguishable from a note that never arrived, so it would
-       * name the second stage on every failure with total confidence.
-       */
+      // A read of the wrong shape finds nothing, which is what a note that
+      // never arrived looks like.
       if (!Array.isArray(body)) {
         last = `the notes route answered ${typeof body}, not a list of rows`
       } else if (body.some((row) => String(noteOf(row)).includes(written))) {
@@ -296,12 +300,8 @@ async function whereItStopped(
     }
     await page.waitForTimeout(500)
   }
-  /**
-   * **Only the positive is sound.** The stored row is written after a quiet
-   * moment, so its silence is either a document that never arrived or one not
-   * yet written down -- and naming the stage on that would be the same
-   * overclaim as reading the wrong shape.
-   */
+  // The row is written after a quiet moment, so its silence is two states at
+  // once and names neither.
   return `it left the first browser, and ${last} after ${String(waitMs)}ms -- so it either never reached the server or reached it and is not yet written down`
 }
 
