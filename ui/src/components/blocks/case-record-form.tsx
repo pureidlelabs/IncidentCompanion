@@ -85,8 +85,8 @@ export function CaseRecordForm({
   const root = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (focusField === undefined) return
-    // Scoped to this pane and taken from the DOM, because `Field` mints the
-    // control's id itself and a control is whatever the served kind renders.
+    // By handle rather than by ref: which control a field is drawn as is the
+    // served kind's business, not this block's.
     root.current
       ?.querySelector<HTMLElement>(
         `[data-field="${focusField}"] :is(input, textarea, select, button)`,

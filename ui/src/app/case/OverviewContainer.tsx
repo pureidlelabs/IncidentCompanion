@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useCase } from '@/api/case'
@@ -31,10 +31,18 @@ export function OverviewContainer() {
   const specs = useSpecs()
   const record = useComplianceRecord(caseId)
   const navigate = useNavigate()
-  const [address] = useSearchParams()
+  const [address, setAddress] = useSearchParams()
+  const field = (address.get('field') ?? '').trim()
   const patch = useCaseMutation(caseId)
   // Read once, so the reading holds for the mount.
   const [now] = useState(() => Date.now())
+
+  // A door is spent once the pane it named has the cursor, and the form takes
+  // it in its own effect, which runs before this one. Left in the address it is
+  // taken again every time the analyst comes back to the tab.
+  useEffect(() => {
+    if (field !== '') setAddress({}, { replace: true })
+  }, [field, setAddress])
 
   const writes: CaseWrites = {
     // The version travels from the form rather than from `kase.data`: the form
@@ -55,7 +63,7 @@ export function OverviewContainer() {
       onRetry={() => {
         void kase.refetch()
       }}
-      focusField={address.get('field') ?? undefined}
+      focusField={field === '' ? undefined : field}
       onOpen={(row) => {
         const to = casePath(caseId, row.section)
         void navigate(row.query === '' ? to : `${to}?${row.query}`)

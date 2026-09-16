@@ -81,12 +81,43 @@ describe('an open item naming a field on this screen', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('Title'))
   })
 
-  /** The address carries it, so a reload lands where the press did. */
-  it('leaves the field in the address', async () => {
+  /**
+   * A door is spent once the cursor is in the field. Left in the address it
+   * fires again on every return to the tab, taking the cursor off whatever the
+   * analyst had reached for.
+   */
+  it('clears the field from the address once the cursor is in it', async () => {
     const at = open(campaignCase)
     await at.press('Set')
 
-    expect(at.at()).toBe(`${OVERVIEW}?field=detectedAt`)
+    expect(at.at()).toBe(OVERVIEW)
+  })
+
+  it('leaves the analyst on the pane the door opened', async () => {
+    const at = open(campaignCase)
+    await at.press('Set')
+
+    expect(screen.getByRole('tab', { name: 'Key times', selected: true })).toBeInTheDocument()
+  })
+
+})
+
+describe('a door naming a field nothing serves', () => {
+  /** A hand-edited address, which is the only way either arrives. */
+  it.each([
+    ['a name no pane holds', 'zzz'],
+    ['an empty name', ''],
+  ])('stays on the landing pane for %s', (_case, field) => {
+    served = campaignCase
+    const router = createMemoryRouter(
+      [{ path: '/cases/:caseId/:section', element: <OverviewContainer /> }],
+      { initialEntries: [`${OVERVIEW}?field=${field}`] },
+    )
+    render(<RouterProvider router={router} />)
+
+    expect(screen.getByRole('region', { name: 'Open items' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Read', selected: true })).toBeInTheDocument()
+    expect(document.activeElement).toBe(document.body)
   })
 })
 

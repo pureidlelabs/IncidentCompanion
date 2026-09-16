@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 
 import { useCase } from '@/api/case'
-import { useSpecs } from '@/api/specs'
+import { fieldOf, formSpec, useSpecs } from '@/api/specs'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useBulkDelete } from '@/api/useBulkDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
@@ -38,8 +38,12 @@ export function TimelineContainer() {
     .filter((one) => one !== '')
 
   // An open item on the overview links here already narrowed to the entries it
-  // counted.
-  const missing = (address.get('missing') ?? '').trim()
+  // counted. A field the event form does not name is no narrowing: it is in no
+  // entry's expected set, so honouring it would empty the list and leave the
+  // bar naming nothing.
+  const asked = (address.get('missing') ?? '').trim()
+  const missing =
+    specs.data && fieldOf(formSpec(specs.data, 'EVENT_FIELDS'), asked) ? asked : ''
   const unreviewed = address.get('unreviewed') !== null
 
   const create = useEntryCreate(caseId, 'timeline')

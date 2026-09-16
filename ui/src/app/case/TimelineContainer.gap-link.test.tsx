@@ -9,7 +9,7 @@
  */
 import { render } from '@testing-library/react'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import type * as CaseApi from '@/api/case'
 import type * as SpecsApi from '@/api/specs'
@@ -37,21 +37,37 @@ const { TimelineContainer } = await import('./TimelineContainer')
 
 const TIMELINE = casePath(campaignCase.id, 'timeline')
 
-/** How many rows one address draws from a fresh mount of the real container. */
-function rowsAt(address: string, kase: Case = campaignCase): number {
+/** What one address draws from a fresh mount of the real container. */
+function drawnAt(address: string, kase: Case = campaignCase): {
+  rows: number
+  chips: string[]
+} {
   served = kase
   const router = createMemoryRouter(
     [{ path: '/cases/:caseId/:section', element: <TimelineContainer /> }],
     { initialEntries: [address] },
   )
   const drawn = render(<RouterProvider router={router} />)
-  const count = document.querySelectorAll('[data-part="timeline-row"]').length
+  const seen = {
+    rows: document.querySelectorAll('[data-part="timeline-row"]').length,
+    chips: [...document.querySelectorAll('[data-part="filter-chip"]')].map(
+      (chip) => chip.getAttribute('data-value') ?? '',
+    ),
+  }
   drawn.unmount()
-  return count
+  return seen
+}
+
+function rowsAt(address: string, kase: Case = campaignCase): number {
+  return drawnAt(address, kase).rows
 }
 
 describe('a gap row lands on the entries it counts', () => {
-  const whole = rowsAt(TIMELINE)
+  let whole = 0
+
+  beforeAll(() => {
+    whole = rowsAt(TIMELINE)
+  })
 
   it('has a campaign with entries on it', () => {
     expect(whole).toBeGreaterThan(0)
@@ -77,5 +93,20 @@ describe('a gap row lands on the entries it counts', () => {
 
   it('opens the whole case for an address naming no narrowing', () => {
     expect(rowsAt(TIMELINE)).toBe(whole)
+  })
+
+  /**
+   * A hand-edited address. Honouring it would empty the list, since no entry
+   * is expected to answer a field the form has never heard of -- and the bar
+   * would count a narrowing it cannot name.
+   */
+  it('ignores a field no event form names', () => {
+    const drawn = drawnAt(`${TIMELINE}?missing=zzz`)
+    expect(drawn.rows).toBe(whole)
+    expect(drawn.chips.filter((label) => label.startsWith('Missing'))).toEqual([])
+  })
+
+  it('names the gap on the bar when the field is one the form serves', () => {
+    expect(drawnAt(`${TIMELINE}?missing=severity`).chips).toContain('Missing severity')
   })
 })

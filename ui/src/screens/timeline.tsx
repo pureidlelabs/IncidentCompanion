@@ -372,6 +372,13 @@ export function TimelineScreen({
       : 'action'
     : adding
 
+  // The raw name answers while the served form is still being read: the chip
+  // has to be there whenever the list is narrowed, named as best it can be.
+  const gapName =
+    filter.missing === ''
+      ? ''
+      : fieldLabel((specs === undefined ? undefined : labelFor(specs, filter.missing)) ?? filter.missing)
+
   const narrowed = isTimelineFiltered(filter)
   const toggle = (list: readonly string[], value: string): string[] =>
     list.includes(value) ? list.filter((one) => one !== value) : [...list, value]
@@ -437,10 +444,12 @@ export function TimelineScreen({
               />
               {/* Drawn only while it holds: an arrival from an open item is
                   the one thing that sets either, and a permanent chip per
-                  expected field is the whole schema on the filter row. */}
-              {filter.missing !== '' && specs && (
+                  expected field is the whole schema on the filter row. The
+                  condition is the one `activeCount` reads, so `Clear 1` cannot
+                  count a narrowing nothing on the bar names. */}
+              {filter.missing !== '' && (
                 <Chip
-                  label={`Missing ${fieldLabel(labelFor(specs, filter.missing))}`}
+                  label={`Missing ${gapName}`}
                   count={visible.length}
                   pressed
                   onToggle={() => {

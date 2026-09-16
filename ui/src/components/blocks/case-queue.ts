@@ -199,7 +199,7 @@ export function buildQueue(kase: Case, specs: Specs): QueueRow[] {
     for (const [field, count] of gapCounts(specs, kase)) {
       rows.push({
         id: `gap-${field}`,
-        label: `${String(count)} ${count === 1 ? 'entry' : 'entries'} missing ${fieldLabel(labelFor(specs, field))}`,
+        label: `${String(count)} ${count === 1 ? 'entry' : 'entries'} missing ${fieldLabel(labelFor(specs, field) ?? field)}`,
         sub: `${String(count)} of ${String(events.length)} events`,
         action: `Review ${String(count)}`,
         section: 'timeline',
@@ -254,13 +254,19 @@ export function gapCounts(specs: Specs, kase: Case): Map<string, number> {
   return counts
 }
 
-/** Every field any event could be expected to carry, for a name lookup. */
-export function labelFor(specs: Specs, field: string): string {
+/**
+ * What a served form calls this field, or `undefined` where none names it.
+ *
+ * Undefined rather than the name back: a caller drawing a control from it has
+ * to be able to tell a field the analyst would recognise from a word somebody
+ * typed into the address.
+ */
+export function labelFor(specs: Specs, field: string): string | undefined {
   for (const form of ['EVENT_FIELDS', 'CASE_FIELDS']) {
     const entry = specs.forms[form]?.fields.find(
       (one) => 'name' in one && one.name === field,
     )
     if (entry !== undefined && 'label' in entry) return entry.label
   }
-  return field
+  return undefined
 }

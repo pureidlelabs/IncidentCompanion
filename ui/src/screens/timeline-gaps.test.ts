@@ -48,6 +48,18 @@ describe('the missing-field dimension', () => {
     )
   })
 
+  /**
+   * Fail closed: without the tiering there is no telling the counted entries
+   * from the rest, and keeping every entry answers the row with the list it
+   * was pressed to get away from.
+   */
+  it('keeps nothing when the caller passes no tiering', () => {
+    const missing = { ...NO_TIMELINE_FILTER, missing: 'severity' }
+    const gapped = applyTimelineFilter(campaignCase.timeline, missing, TIERING)
+    expect(gapped.length).toBeGreaterThan(0)
+    expect(gapped.some((entry) => matchesTimeline(entry, missing))).toBe(false)
+  })
+
   it('is one narrowing the analyst can clear', () => {
     const filter = { ...NO_TIMELINE_FILTER, missing: 'severity' }
     expect(isTimelineFiltered(filter)).toBe(true)

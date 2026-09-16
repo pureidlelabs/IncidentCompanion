@@ -79,9 +79,9 @@ export function OverviewScreen({
     const pane =
       refusal !== undefined
         ? paneHoldingLabel(fields, refusal.field)
-        : focusField !== undefined
-          ? paneHoldingName(fields, focusField)
-          : undefined
+        : focusField === undefined || focusField === ''
+          ? undefined
+          : paneHoldingName(fields, focusField)
     if (pane === undefined) return READ
     return pane === 'times' ? TIMES : PROPERTIES
   }, [fields, refusal, focusField])
@@ -94,7 +94,10 @@ export function OverviewScreen({
   const [was, setWas] = useState(wanted)
   if (was !== wanted) {
     setWas(wanted)
-    setTab(wanted)
+    // Pushed onto a pane, never pulled off one. A door is spent the moment the
+    // cursor is in the field it named, and returning to Read on that repaint
+    // would undo the press that got here.
+    if (wanted !== READ) setTab(wanted)
   }
 
   const day = dayNumber(kase?.detectedAt, kase?.openedAt, new Date(now))
