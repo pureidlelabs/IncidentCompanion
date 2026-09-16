@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -29,7 +29,7 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
  * so a rule that reached only the kit would leave two thirds of the gallery
  * carrying the defects it names.
  */
-const STORIES = glob.sync(`${SRC}/**/*.stories.tsx`)
+const STORIES = globSync('**/*.stories.tsx', { cwd: SRC, absolute: true })
 
 /** Every exported story in a file, as `[name, whatever sits directly above it]`. */
 function storiesIn(text: string): { name: string; above: string }[] {
@@ -66,8 +66,7 @@ describe('a component is documented where it is defined', () => {
   })
 
   it('keeps documentation out of a sibling `.mdx`', () => {
-    const stray = glob
-      .sync(`${SRC}/**/*.mdx`)
+    const stray = globSync('**/*.mdx', { cwd: SRC, absolute: true })
       .map((path) => relative(SRC, path).replaceAll('\\', '/'))
       .sort()
 

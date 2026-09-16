@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -41,8 +41,7 @@ const LIB = resolve(SRC, 'lib')
 const REACHES_UP = /from\s+'(?:@\/|\.\.\/)(app|screens|components)\//g
 
 describe('lib is shared, and therefore pure', () => {
-  const files = glob
-    .sync('**/*.{ts,tsx}', { cwd: LIB, absolute: true })
+  const files = globSync('**/*.{ts,tsx}', { cwd: LIB, absolute: true })
     .filter((file) => !/\.(test|stories)\.tsx?$/.test(file))
 
   it('reads the modules it is meant to hold', () => {

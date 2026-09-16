@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -63,8 +63,7 @@ const FETCHING = ['@/api/client', '@/api/case', '@/api/useEntry', '@/api/useBulk
 const HARMLESS = new Set(['ApiError'])
 
 /** Every source file in the tier, `.ts` included -- a shared projection is one too. */
-const FILES = glob
-  .sync(`${HERE}/**/*.{ts,tsx}`)
+const FILES = globSync('**/*.{ts,tsx}', { cwd: HERE, absolute: true })
   .filter((path) => !/\.(test|stories)\.tsx?$/.test(path))
 
 interface Offence {

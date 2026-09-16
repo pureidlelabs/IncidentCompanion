@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -41,8 +41,7 @@ const FILL: Readonly<Record<string, string>> = {
 }
 
 describe('the severity ramp', () => {
-  const files = glob
-    .sync('**/*.{ts,tsx}', { cwd: SRC, absolute: true })
+  const files = globSync('**/*.{ts,tsx}', { cwd: SRC, absolute: true })
     .filter((file) => !/\.(test|stories)\.tsx?$/.test(file))
 
   it('reads the tree it is meant to hold', () => {

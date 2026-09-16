@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -51,8 +51,7 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)))
 const SIZE_FLOOR = 240
 
 /** The tiers whose markup is meant to be shared. */
-const FILES = glob
-  .sync(`${SRC}/{components,screens}/**/*.tsx`)
+const FILES = globSync('{components,screens}/**/*.tsx', { cwd: SRC, absolute: true })
   .filter((path) => !/\.(test|stories)\.tsx$/.test(path))
 
 /** Comments out, whitespace flattened, so formatting is not what differs. */

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -45,8 +45,7 @@ const SRC = resolve(HERE, '../..')
  */
 const FIXTURE_MODULES = /from '(\.\/picker-rows|@\/components\/blocks\/picker-rows)'/
 
-const FILES = glob
-  .sync(`${SRC}/{components/blocks,screens}/**/*.tsx`)
+const FILES = globSync('{components/blocks,screens}/**/*.tsx', { cwd: SRC, absolute: true })
   .filter((path) => !/\.(test|stories)\.tsx$/.test(path))
 
 /**

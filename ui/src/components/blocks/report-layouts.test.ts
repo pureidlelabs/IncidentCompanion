@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 import type { ReportLayout } from '@/api/reportLayouts'
@@ -212,8 +212,8 @@ describe('nothing enumerates the registry', () => {
       ...DEMO_TLP,
     ]
     const files = [
-      ...glob.sync('screens/report-*.{ts,tsx}', { cwd: SRC, absolute: true }),
-      ...glob.sync('components/blocks/report-*.{ts,tsx}', { cwd: SRC, absolute: true }),
+      ...globSync('screens/report-*.{ts,tsx}', { cwd: SRC, absolute: true }),
+      ...globSync('components/blocks/report-*.{ts,tsx}', { cwd: SRC, absolute: true }),
     ].filter((path) => !path.endsWith('report-layouts.ts') && !path.includes('.test.'))
 
     const wrong: string[] = []

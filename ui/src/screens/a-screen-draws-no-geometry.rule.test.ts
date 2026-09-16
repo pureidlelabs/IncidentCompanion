@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { basename, dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { glob } from 'glob'
+import { globSync } from 'tinyglobby'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -50,8 +50,7 @@ const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
  */
 const KIT_CEILING = 4
 
-const FILES = glob
-  .sync(`${HERE}/*.tsx`)
+const FILES = globSync('*.tsx', { cwd: HERE, absolute: true })
   .filter((path) => !/\.(test|stories)\.tsx$/.test(path))
 
 /** Prose may name a path the code may not import -- this file's own does. */
