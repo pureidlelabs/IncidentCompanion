@@ -151,14 +151,9 @@ describe('what a section is called', () => {
   })
 
   /**
-   * **A written section has no heading key at all**, so it is the one kind
-   * whose label cannot come from the pack. It is also the common path: an
-   * analyst inserts one and does not title it.
-   *
-   * **So it claims no heading**, which is what the document does with it --
-   * and the word that keeps it scannable comes from `sectionNameOf`, which
-   * answers what to call a section rather than what heads one. An English
-   * heading invented here is one the file will not print. -> #676
+   * **A written section has no heading key at all**, so the word that keeps it
+   * scannable comes from `sectionNameOf` -- what to call a section, rather
+   * than what heads one. -> #676
    */
   it('names an untitled written section rather than drawing its slug', () => {
     const one = block({ heading: '', headingKey: '', kind: 'written' })

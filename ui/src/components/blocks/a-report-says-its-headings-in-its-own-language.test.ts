@@ -98,12 +98,10 @@ describe('a heading on the report screen', () => {
   })
 
   /**
-   * **An untitled written section claims no heading, because the document
-   * prints none for it.** `report/document/resolve.ts` returns `''` for a
-   * written block on purpose -- its words are the analyst's, and a derived
-   * title would head every one of them alike. A screen that answers `Written
-   * section` there invents a heading the file will not print, in English,
-   * whatever language the report is produced in. -> #676
+   * **An untitled written section claims no heading**, because the document
+   * prints none for it. A screen answering `Written section` there invents one
+   * the file will not print, in English whatever language the report is
+   * produced in. -> `report/document/resolve.ts`, #676
    */
   it('claims no heading for a written section the analyst has not titled', () => {
     expect(headingOf(written({}), DUTCH)).toBe('')
@@ -119,11 +117,9 @@ describe('a heading on the report screen', () => {
   })
 
   /**
-   * **The kind still has a name, and it is a different question.** The layout
-   * picker offers a chip per kind, and a kind an analyst can add has to be
-   * callable something -- `labelForKind` answers that, where `headingOf`
-   * answers what heads a section. Collapsing the two is what put an English
-   * heading on the report screen.
+   * **The kind still has a name, and it is a different question.**
+   * `labelForKind` answers what the picker calls a kind; `headingOf` answers
+   * what heads a section.
    */
   it('still names the kind for the picker, which is not a heading', () => {
     expect(labelForKind('written', DUTCH)).toBe('Written section')

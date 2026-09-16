@@ -95,10 +95,8 @@ export function ReportPreviewPane({
                 {at + 1}
               </span>
               {headingOf(block, headings) === '' ? (
-                // **Not a heading, because there is none.** The document
-                // prints no heading for this kind, so the screen claims none
-                // either -- and says so, rather than leaving the section
-                // unscannable in the outline.
+                // Named, not headed: the document prints no heading for this
+                // kind, and an unnamed row is unscannable in the outline.
                 <span className="min-w-0 text-2xs text-ink-muted">{UNTITLED_SECTION}</span>
               ) : (
                 <h2 className="min-w-0 text-lg font-semibold">{headingOf(block, headings)}</h2>
