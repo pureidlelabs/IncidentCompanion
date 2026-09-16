@@ -1,6 +1,7 @@
 import { FolderOpen, PlayCircle, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { CASE_STATES } from '@contract/vocabularies.lists'
 import type { CaseSummary } from '@/api/case'
 import { DOOR_LABELS, SECTIONS } from './case-sections'
 import { casePath } from './case-paths'
@@ -86,8 +87,12 @@ export interface CaseListProps {
   onDemoCases?: (() => void) | undefined
 }
 
-/** Open or closed, read off the row rather than off a second query. */
-const STATES = ['open', 'closed'] as const
+/**
+ * Every state a case can be in, read off the row rather than off a second
+ * query -- and from the contract rather than from a list written here, which
+ * is the copy that would go on offering two once the server serves four.
+ */
+const STATES = CASE_STATES
 
 /** One identity for the absent roster, so the memo reading it is not rebuilt per render. */
 const NONE: readonly never[] = Object.freeze([])
