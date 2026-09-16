@@ -1,23 +1,15 @@
 /**
  * **A timeline row's delete asks before it writes, from every door that offers
- * it.**
+ * it.** -> #831
  *
- * The row's trash button went straight to the write: one press and the entry
- * was gone, with no dialog and no undo. Every other collection screen confirms
- * the same act, and so did this screen's own bulk bar -- the confirm existed
- * and only the bulk path reached it. -> #831
- *
- * **Both doors, because they are two controls over one call.** The toolbar's
- * button and the row menu's item both go through the screen's `act`, so a fix
- * applied at either control leaves the other writing on one press, and the
- * menu is the one nobody presses while testing.
+ * **Both doors, because they are two controls over one call.** A fix applied at
+ * either control leaves the other writing on one press, and the menu is the one
+ * nobody presses while testing.
  *
  * **Asserted on the write, not on the row.** A row that disappears is what the
  * defect did; what separates asking from not asking is whether anything left
- * the screen before the analyst said yes.
- *
- * **The confirmed write is asserted too.** A screen that refused to delete at
- * all would satisfy every assertion about writing nothing.
+ * the screen before the analyst said yes. The confirmed write is asserted too,
+ * since a screen that refused to delete at all would satisfy the rest.
  */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

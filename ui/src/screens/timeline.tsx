@@ -337,12 +337,7 @@ export function TimelineScreen({
         editor.edit(entry)
         return
       case 'delete':
-        /**
-         * **Asked, not written.** Both doors that offer a row delete -- the
-         * toolbar's trash and the row menu's item -- arrive here, and this was
-         * the one path on the screen that wrote without asking while its own
-         * bulk bar confirmed the same act.
-         */
+        // Asked, not written. Both doors that offer a row delete arrive here.
         setDeleting([entry.id])
         return
     }
@@ -771,10 +766,19 @@ export function TimelineScreen({
               setEntries((current) => withoutTimelineEntries(current, new Set(doomed)))
             })
           }}
-          title={(count) =>
-            count === 1 ? 'Delete this entry?' : `Delete ${String(count)} entries?`
+          title={(count) => {
+            if (count !== 1) return `Delete ${String(count)} entries?`
+            // The control just pressed was `Delete <description>`, so the
+            // question uses the same words rather than asking about an entry
+            // the analyst has to work out.
+            const named = entries.find((one) => one.id === deleting?.[0])?.description
+            return named ? `Delete ${named}?` : 'Delete this entry?'
+          }}
+          consequence={
+            deleting?.length === 1
+              ? 'The entry goes; the graph and the report update to match.'
+              : 'They go in one step; the graph and the report update to match.'
           }
-          consequence="They go in one step; the graph and the report update to match."
         />
       </AsyncBoundary>
     </Section>
