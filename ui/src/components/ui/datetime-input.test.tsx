@@ -104,6 +104,27 @@ describe('the field', () => {
   })
 
   /**
+   * **A pair that reports nothing says so on screen.** Silence is what keeps a
+   * half-typed stamp out of the write, and a control that writes nothing and
+   * says nothing is indistinguishable from one that saved. -> #829
+   */
+  it('names the half it is waiting for, and stops once the pair is whole', async () => {
+    open()
+    await userEvent.type(screen.getByLabelText('Blocked at date'), '2026-08-20')
+    expect(screen.getByText('Add the time to save this.')).toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText('Blocked at time'), '19:57')
+    expect(screen.queryByText('Add the time to save this.')).toBeNull()
+  })
+
+  it('names the date when that is the half missing', async () => {
+    open()
+    await userEvent.type(screen.getByLabelText('Blocked at time'), '19:57')
+
+    expect(screen.getByText('Add the date to save this.')).toBeInTheDocument()
+  })
+
+  /**
    * **An emptied pair reports `null` and a half-emptied one reports nothing**,
    * which are the two states a single `''` cannot tell apart. -> #829
    */

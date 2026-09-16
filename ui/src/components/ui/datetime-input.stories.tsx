@@ -148,6 +148,9 @@ export const HalfTyped: Story = {
       // Half a stamp is not a stamp. Committing one would record an entry at
       // midnight that nobody said happened at midnight.
       await expect(canvas.getByText('stored: (nothing)')).toBeVisible()
+      // Said on screen, because a control that writes nothing and says nothing
+      // reads as one that saved.
+      await expect(canvas.getByText('Add the time to save this.')).toBeVisible()
     })
   },
 }

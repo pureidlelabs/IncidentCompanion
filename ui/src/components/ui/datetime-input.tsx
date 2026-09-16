@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn'
 import { Button } from './button'
 import { Calendar } from './calendar'
 import { DialogTrigger } from './dialog'
+import { ADVICE_INK } from './field'
 import { Input } from './input'
 import { Popover } from './popover'
 
@@ -152,6 +153,14 @@ export function DateTimeInput({
     else if (nextDate === '' && nextTime === '') onChange(null)
   }
 
+  /** What a pair with one half filled says for itself, reporting nothing. */
+  const missing =
+    date !== '' && time === ''
+      ? 'Add the time to save this.'
+      : time !== '' && date === ''
+        ? 'Add the date to save this.'
+        : ''
+
   return (
     // **`flex-wrap`, because the pair has a floor and a column need not clear
     // it.** `w-40` + `w-24` + the marker is 300px, and a two-column overview
@@ -217,6 +226,13 @@ export function DateTimeInput({
         }}
       />
       <span className="shrink-0 text-xs text-ink-muted">UTC</span>
+      {missing !== '' && (
+        // `w-full` takes the whole line of the wrapping row, so the note sits
+        // under the pair rather than squeezing the time half further.
+        <p aria-live="polite" className={cn('w-full text-xs', ADVICE_INK)}>
+          {missing}
+        </p>
+      )}
     </div>
   )
 }

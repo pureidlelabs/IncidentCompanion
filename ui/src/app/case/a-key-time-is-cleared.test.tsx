@@ -59,13 +59,18 @@ describe('a key time', () => {
     // The form writes on blur, so the analyst has to leave the control.
     await userEvent.tab()
 
-    expect(mutateAsync).toHaveBeenCalledWith({
+    // Once, and with the clear in it: emptying the date half crosses a blur of
+    // its own, and a write per half would send the refused `''` first.
+    expect(mutateAsync).toHaveBeenCalledExactlyOnceWith({
       version: kase.version,
       fields: { detectedAt: null },
     })
   })
 
   it('sends nothing for a date with no time', async () => {
+    // An unset stamp is served as `null`, and this measures a partial only
+    // while it is: an omitted key agrees with the draft for a second reason.
+    expect(kase.containedAt, 'the fixture stopped serving an empty stamp').toBeNull()
     await keyTimes()
 
     await userEvent.type(screen.getByLabelText('Contained at date'), '2026-08-20')
@@ -73,6 +78,8 @@ describe('a key time', () => {
     await userEvent.tab()
 
     expect(mutateAsync).not.toHaveBeenCalled()
+    // The refusal the analyst used to get, and the note they get instead.
+    expect(screen.getByText('Add the time to save this.')).toBeInTheDocument()
   })
 
   it('sends the stamp once the time completes it', async () => {
