@@ -37,11 +37,19 @@ export class GroupsService {
    * **The read the six write routes had no counterpart for.** An administrator
    * could grant and revoke membership and never see what a group contains,
    * which is the question they are answering when they look. -> #208
+   *
+   * `null` when there is no such group.
    */
   async membership(groupId: string): Promise<{
     members: { userId: string; username: string; displayName: string; level: Level }[]
     customers: { customerId: string; customerName: string }[]
-  }> {
+  } | null> {
+    const [group] = await this.db
+      .select({ id: groups.id })
+      .from(groups)
+      .where(eq(groups.id, groupId))
+    if (!group) return null
+
     const members = await this.db
       .select({
         userId: groupMembers.userId,
