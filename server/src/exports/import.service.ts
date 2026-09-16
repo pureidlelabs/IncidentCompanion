@@ -172,12 +172,8 @@ export class ImportService {
    * itself produced the only importable shape.
    */
   private shapeOf(collection: BulkTarget): CsvShape {
-    /**
-     * **Every column any of the collection's schemas names.** The timeline is
-     * judged by one of two depending on the row's `kind`, and a file exported
-     * from a real case holds both -- so the shape a file is parsed against is
-     * their union, and the row is judged by the arm its own kind names.
-     */
+    // The union: a file holds every column any of the collection's schemas
+    // names, while each row is judged by the arm its own kind names.
     const shape: Record<string, unknown> = Object.assign(
       {},
       ...importSchemasFor(collection).map((one) => one.shape),

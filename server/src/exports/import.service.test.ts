@@ -89,18 +89,12 @@ describe.skipIf(!db)('importing a CSV', () => {
   })
 
   /**
-   * **The timeline is exported and was not importable**, which is the one
-   * contract `csv-import.ts` opens by stating: the file this app hands out is
-   * a file it must be able to take back.
-   *
-   * Its schema depends on the row's kind, so it is absent from
-   * `COLLECTION_SCHEMAS` and the import door read that map to decide whether a
-   * collection exists at all -- answering that there is no such collection for
-   * one the export door had just written a file for.
+   * The contract `csv-import.ts` opens by stating: the file this app hands out
+   * is a file it must be able to take back.
    *
    * **Both kinds in one file**, because that is what an export of a real case
-   * produces and because a parser given the union of two shapes is the half
-   * most likely to be wrong.
+   * produces and a parser given the union of two shapes is the half most
+   * likely to be wrong.
    */
   it('takes back the timeline file it just wrote, both kinds of row', async () => {
     const before = await seed!.select().from(timeline).where(eq(timeline.caseId, caseId))

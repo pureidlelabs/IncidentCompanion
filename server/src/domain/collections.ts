@@ -170,11 +170,8 @@ const SUPPLIED_ELSEWHERE: Readonly<Record<string, readonly z.ZodObject[]>> = {
 /**
  * Every schema a row of an importable collection may be judged by.
  *
- * **Wider than `COLLECTION_SCHEMAS`, and that is the point.** A collection
- * whose schema depends on the row -- the timeline's, on its `kind` -- is absent
- * from that map, and the import door read it to decide whether a collection
- * exists at all. So the export wrote a file for a collection the import said
- * there was no such thing as. -> #650
+ * **Wider than `COLLECTION_SCHEMAS`**: a collection whose schema depends on the
+ * row -- the timeline's, on its `kind` -- is absent from that map. -> #650
  */
 const IMPORT_SCHEMAS: Readonly<Record<string, readonly z.ZodObject[]>> = {
   ...Object.fromEntries(Object.entries(COLLECTION_SCHEMAS).map(([name, one]) => [name, [one]])),
