@@ -178,7 +178,7 @@ export class ReachService {
    * controller so it obeys the same *most permissive applies* rule every other
    * reader does.
    */
-  async reachOf(userId: string): Promise<ReachedCustomer[]> {
+  async reachOf(userId: string): Promise<ReachedCustomer[] | null> {
     const rows = await this.db
       .select({
         customerId: groupCustomers.customerId,
@@ -197,11 +197,13 @@ export class ReachService {
       .select({ role: user.role })
       .from(user)
       .where(eq(user.id, userId))
+    // No row is nobody holding this id, which an empty reach cannot say.
+    if (!account) return null
     const fallback = await this.defaultCustomerId()
 
     const byCustomer = new Map<string, ReachedCustomer>()
     for (const [customerId, forThis] of grouped(rows, (one) => one.customerId)) {
-      const floor = customerId === fallback ? overTheDefault(account?.role ?? null) : undefined
+      const floor = customerId === fallback ? overTheDefault(account.role ?? null) : undefined
       const level = settle(forThis, floor)
       if (!level) continue
       byCustomer.set(customerId, {
@@ -223,7 +225,7 @@ export class ReachService {
       byCustomer.set(fallback, {
         customerId: fallback,
         customerName: row?.name ?? '',
-        level: overTheDefault(account?.role ?? null),
+        level: overTheDefault(account.role ?? null),
         granted: { by: 'default' },
       })
     }
@@ -238,7 +240,14 @@ export class ReachService {
    * name: *the same MUST be answerable from the other end -- for a customer,
    * who reaches it and how*.
    */
-  async reachTo(customerId: string): Promise<ReachingAnalyst[]> {
+  async reachTo(customerId: string): Promise<ReachingAnalyst[] | null> {
+    // The same, from the row rather than from the reach.
+    const [held] = await this.db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+    if (!held) return null
+
     const rows = await this.db
       .select({
         userId: groupMembers.userId,
