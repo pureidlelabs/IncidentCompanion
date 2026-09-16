@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { ukcCycle } from '@contract/killchain'
+
 import type { ActionEntry, Case, EvidenceEntry, ImpactEntry, TimelineEntry } from '@/api/model'
 import { campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
@@ -297,17 +299,24 @@ describe('the open-item queue', () => {
 })
 
 describe('kill chain coverage', () => {
+  /** Named here, this would be the copy the screen stopped holding. */
+  const outside = (specsFixture.vocabularies.ukcPhase ?? []).filter(
+    (phase) => ukcCycle(phase) === '',
+  )
+
   it('keeps the vocabulary member the chain has no stage for out of the rows', () => {
-    expect(phasesOf(specsFixture)).not.toContain('policy violation')
+    expect(outside).toHaveLength(1)
+    expect(phasesOf(specsFixture)).not.toContain(outside[0])
     expect(phasesOf(specsFixture)).toHaveLength(18)
   })
 
   it('names an entry filed there as an absence rather than losing it', () => {
     const kase = {
       ...campaignCase,
-      timeline: [event({ ukcPhase: 'policy violation', description: 'USB policy breach' })],
+      timeline: [event({ ukcPhase: outside[0] ?? '', description: 'USB policy breach' })],
     }
     const coverage = coverageOf(kase, specsFixture)
+    expect(coverage.outside).toEqual(outside)
     // The names, not the count: the door hands the analyst the entries, and a
     // length alone would pass on five copies of one entry.
     expect(coverage.notAPhase).toEqual(['USB policy breach'])

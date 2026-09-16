@@ -238,6 +238,10 @@ export default tseslint.config(
            * how the demo seeds a report document the way the server's seeder
            * does. Its closure is yjs, which the client already runs.
            *
+           * `killchain` is which phase sits in which cycle, which the coverage
+           * screen asks rather than spelling the one member that has none. Its
+           * closure is `vocabularies`, which `collections` already carries.
+           *
            * `identity` is the natural key an import is deduplicated on, and the
            * client value-imports it so the preview counts what the write will
            * do rather than a second rule that agrees until it does not. Its
@@ -252,15 +256,16 @@ export default tseslint.config(
             '!@contract/collections',
             '!@contract/identity',
             '!@contract/indicator-shape',
+            '!@contract/killchain',
             '!@contract/malware-shape',
             '!@contract/prose-authoring',
           ],
           allowTypeImports: true,
           message:
             'Types only, except @contract/*.lists, @contract/collections, ' +
-            '@contract/identity, @contract/prose-authoring and the ' +
-            '@contract/*-shape advice modules. A value import from anywhere ' +
-            'else can reach a Drizzle table.',
+            '@contract/identity, @contract/killchain, @contract/prose-authoring ' +
+            'and the @contract/*-shape advice modules. A value import from ' +
+            'anywhere else can reach a Drizzle table.',
         }],
         paths: [{
           name: 'zod',

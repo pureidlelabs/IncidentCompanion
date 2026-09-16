@@ -221,7 +221,7 @@ function Absences({ coverage }: { coverage: Coverage }) {
         'events sit outside the chain',
       ),
       names: coverage.notAPhase,
-      title: 'Recorded against policy violation, which the chain has no stage for',
+      title: `Recorded against ${coverage.outside.join(', ')}, which the chain has no stage for`,
     })
   }
   if (coverage.untagged.length > 0) {
