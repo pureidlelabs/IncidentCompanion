@@ -172,6 +172,8 @@ const INSTALL_ROUTES: ReadonlySet<string> = new Set([
   'POST /api/accounts/{username}/enable',
   'POST /api/accounts/{username}/reset',
   'POST /api/accounts/{username}/role',
+  'POST /api/accounts/{username}/sessions/end',
+  'POST /api/accounts/sessions/end',
   'POST /api/cases',
   'POST /api/cases/import',
   'POST /api/change-password',
