@@ -37,7 +37,9 @@
     "probe:prose-cost": "tsx scripts/prose-stress.ts",
     "probe:report-live": "tsx scripts/report-live-check.ts",
     "probe:report-all": "tsx scripts/report-render-all.ts",
-    "probe:word": "tsx scripts/word-check.ts"
+    "probe:word": "tsx scripts/word-check.ts",
+    "probe:prose-two-instances": "tsx scripts/prose-two-instances.ts",
+    "prune": "bash scripts/prune.sh"
   },
   "dependencies": {
     "@incidentcompanion/prose-schema": "*",

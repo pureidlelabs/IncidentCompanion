@@ -84,6 +84,7 @@ The toolbar has a **Theme** switch (light/dark) and a **Language** one that curr
 | `npm run build` | typecheck and production bundle into `ui/dist` |
 | `npm run storybook` | Storybook with live reload, port 6006 |
 | `npx tsx ../server/scripts/dump-specs.ts src/fixtures/specs.json` | refreshes the specs fixture |
+| `npx tsx ../server/scripts/dump-campaign.ts src/fixtures/campaign.json` | refreshes the campaign fixture |
 
 **The specs fixture needs no running app any more.** `./dev.sh --capture-fixture` captured it from the live Python API; `dump-specs.ts` serialises the domain schemas directly, so it needs neither a server nor a seeded case — and it is generated from the backend the client actually talks to, which the captured one was not.
 
