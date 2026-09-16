@@ -3,6 +3,7 @@ import { NOUNS } from '@contract/collections'
 import type { Case, CollectionName } from '@/api/model'
 import type { FieldToneSpec, Specs } from '@/api/specs'
 import type { ReferenceOptions } from '@/components/blocks/entity-dialog'
+import { matchesWords } from '@/lib/word-match'
 
 /**
  * The entity family's model: the kinds, the row shape one grid can hold them
@@ -307,13 +308,7 @@ export function toneOf(
  * hostname finds the asset row, not the uuid nothing on screen shows.
  */
 export function matchesEntity(row: EntityRowView, query: string): boolean {
-  if (!query.trim()) return true
-  const hay = row.identity.toLowerCase()
-  return query
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((term) => hay.includes(term))
+  return matchesWords(row.identity, query)
 }
 
 export interface EntityFilter {

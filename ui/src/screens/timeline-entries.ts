@@ -2,6 +2,7 @@ import type { TimelineAction, TimelineEntry, TimelineEvent } from '@/api/model'
 import { isEvent } from '@/api/model'
 import { dayKeyOf, msOf } from '@/lib/case-time'
 import { withinWindow, type TimeWindow } from '@/lib/time-window'
+import { matchesWords } from '@/lib/word-match'
 
 /**
  * The timeline's model: what paints a row's rail, what a run of identical
@@ -200,12 +201,7 @@ export function matchesTimeline(entry: TimelineEntry, filter: TimelineFilter): b
     if (!filter.severities.includes((entry.severity ?? '').trim().toLowerCase())) return false
   }
   if (filter.phases.length && !filter.phases.includes((entry.ukcPhase ?? '').trim())) return false
-  const words = filter.q.trim().toLowerCase().split(/\s+/).filter(Boolean)
-  if (words.length) {
-    const hay = haystack(entry)
-    if (!words.every((word) => hay.includes(word))) return false
-  }
-  return true
+  return matchesWords(haystack(entry), filter.q)
 }
 
 export function applyTimelineFilter(

@@ -9,6 +9,7 @@ import {
 import { neutralise } from '@contract/spreadsheet.lists'
 
 import type { Case } from '@/api/model'
+import { matchesWords } from '@/lib/word-match'
 
 /**
  * The indicator export, as the screen serves it.
@@ -67,18 +68,10 @@ export function nothingToPush(rows: readonly Indicator[]): boolean {
  * **The Value column and nothing else.** The badge reads `Indicator`, and the
  * table has no such column: the row *is* the indicator, and the column carrying
  * it is `Value`. The type, the disposition, the context and the source beside
- * it are their own columns and are not searched. AND across whitespace-separated
- * terms, so a second word narrows rather than widens; a blank query matches
- * every row.
+ * it are their own columns and are not searched.
  */
 export function matchesIndicator(row: Indicator, query: string): boolean {
-  const hay = row.value.toLowerCase()
-  return query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((word) => hay.includes(word))
+  return matchesWords(row.value, query)
 }
 
 /**

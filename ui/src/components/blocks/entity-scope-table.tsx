@@ -9,7 +9,7 @@ import type {
   NetworkIndicator,
   SystemEntry,
 } from '@/api/model'
-import { fieldOf, formSpec, shortLabel, type FormSpec, type Specs } from '@/api/specs'
+import { fieldOf, formSpec, type Specs } from '@/api/specs'
 import { Absent } from '@/components/ui/absent'
 import { BulkActionBar, bulkFieldsFor, type BulkField } from '@/components/blocks/bulk-actions'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
@@ -38,6 +38,7 @@ import { Button } from '@/components/ui/button'
 import { MenuItem } from '@/components/ui/menu'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/tabs'
 import { cn } from '@/lib/cn'
+import { labelled } from '@/lib/field-label'
 
 import { localId, useRowEditor } from './row-editing'
 import {
@@ -922,19 +923,6 @@ function entityColumns(
     },
     actionsColumn<EntityRowView>((row) => row.identity || 'entry'),
   ]
-}
-
-/**
- * The served label for a field, shortened, with the header this table needs.
- *
- * A form's label is the question asked while filling the field in; a column
- * header is scanned down thirty rows, so a few are named here instead.
- */
-function labelled<TData>(
-  form: FormSpec<TData>,
-  overrides: Readonly<Record<string, string>>,
-): (name: string) => string {
-  return (name) => overrides[name] ?? shortLabel(fieldOf(form, name)?.label ?? name)
 }
 
 /** A tone chip where the server maps one, plain text where it does not. */

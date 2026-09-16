@@ -111,6 +111,8 @@ const SHARED = [
   'clockFace',
   'dayNumber',
   'NOTIFY_AUTHORITY_HOURS',
+  'matchesWords',
+  'labelled',
 ]
 
 /** Prose names these functions constantly; a definition is what is refused. */
