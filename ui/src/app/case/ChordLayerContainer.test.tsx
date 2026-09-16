@@ -42,6 +42,9 @@ function mount(onSearch = vi.fn(), initial = '/cases/abc/timeline') {
               </a>
               <div role="tab" tabIndex={0} aria-label="Timeline tab" />
               <input type="checkbox" aria-label="Only mine" />
+              <div role="menu">
+                <div role="menuitem" tabIndex={0} aria-label="Export" />
+              </div>
             </>
           }
         />
@@ -93,11 +96,7 @@ describe('the chord layer', () => {
     expect(onSearch).not.toHaveBeenCalled()
   })
 
-  /**
-   * **The state an analyst is in most of the time.** Working a control leaves
-   * the focus on it, and a dialog hands the focus back to the button that
-   * opened it, so a chord suppressed here is a chord that hardly ever fires.
-   */
+  /** The state an analyst is in most of the time, argued in `chords.test.ts`. */
   it.each([
     ['a button', 'Add entry'],
     ['a link', 'Back'],
@@ -109,6 +108,22 @@ describe('the chord layer', () => {
     screen.getByLabelText(label).focus()
     await analyst.keyboard('?')
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  })
+
+  /**
+   * **A typeahead miss is silent.** A collection stops the keypress it uses,
+   * and lets the one that matches nothing through untouched -- so a chord
+   * fires on the letter the analyst meant for the list.
+   */
+  it('leaves the keyboard to an open menu whose typeahead misses', async () => {
+    const analyst = userEvent.setup()
+    const { onSearch } = mount()
+    screen.getByLabelText('Export').focus()
+    await analyst.keyboard('n')
+    await analyst.keyboard('?')
+    await analyst.keyboard('/')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(onSearch).not.toHaveBeenCalled()
   })
 
   /**

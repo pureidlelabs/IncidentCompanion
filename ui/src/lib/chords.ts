@@ -62,6 +62,9 @@ function typesInto(node: EventTarget | null): boolean {
   // The kit's select trigger is a button, and a closed one takes letters as
   // typeahead.
   if (node.getAttribute('aria-haspopup') === 'listbox') return true
+  // A collection's typeahead swallows the letters it matches and lets a miss
+  // through, so containment is the only signal a chord can read.
+  if (node.closest('[role="menu"], [role="listbox"]') !== null) return true
   // The attribute, not `isContentEditable`: jsdom leaves that undefined, so
   // the guard would read false in the only tier that tests it.
   const editable = node.getAttribute('contenteditable')

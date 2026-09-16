@@ -72,6 +72,8 @@ describe('chordFires', () => {
       'tab',
       'home',
       'end',
+      'pageup',
+      'pagedown',
       'arrowup',
       'arrowdown',
       'arrowleft',
@@ -94,6 +96,13 @@ function element(tag: string, attributes: Record<string, string> = {}): HTMLElem
   return node
 }
 
+/** The row the collection is highlighting, returned rather than its parent. */
+function within(collection: HTMLElement, role: string): HTMLElement {
+  const row = element('div', { role })
+  collection.append(row)
+  return row
+}
+
 describe('isTypingTarget', () => {
   it.each([
     ['a text box', () => element('input')],
@@ -105,6 +114,8 @@ describe('isTypingTarget', () => {
     ['a search box', () => element('div', { role: 'searchbox' })],
     // The spelling `ui/src/test/select.ts` pins, on the one button that types.
     ['a select trigger', () => element('button', { 'aria-haspopup': 'listbox' })],
+    ['an option in an open listbox', () => within(element('div', { role: 'listbox' }), 'option')],
+    ['an item in an open menu', () => within(element('div', { role: 'menu' }), 'menuitem')],
   ])('keeps the keyboard for %s', (_name, make) => {
     expect(isTypingTarget(make())).toBe(true)
   })
@@ -118,10 +129,8 @@ describe('isTypingTarget', () => {
   it.each([
     ['a button', () => element('button')],
     ['a link', () => element('a', { href: '/cases' })],
-    ['a menu item', () => element('div', { role: 'menuitem' })],
     ['a tab', () => element('div', { role: 'tab' })],
     ['a checkbox', () => element('input', { type: 'checkbox' })],
-    ['a listbox option', () => element('div', { role: 'option' })],
     ['a plain div', () => element('div')],
   ])('leaves the keyboard to the document on %s', (_name, make) => {
     expect(isTypingTarget(make())).toBe(false)
