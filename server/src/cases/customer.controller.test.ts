@@ -44,8 +44,7 @@ describe.skipIf(!db)('giving a case its customer', () => {
   let northwind: string
   let unattributed: string
 
-  const caller = { user: { id: 'somebody' } } as never
-  const request = { headers: {} } as never
+  const caller = { session: { user: { id: 'somebody' } }, headers: {}, request: {} } as never
 
   async function onboard(name: string): Promise<string> {
     const [made] = await seed!.insert(customers).values({ name }).returning({ id: customers.id })
@@ -83,7 +82,6 @@ describe.skipIf(!db)('giving a case its customer', () => {
       unattributed,
       { customerId: northwind },
       caller,
-      request,
     )
 
     const [row] = await seed!.select().from(cases).where(eq(cases.id, unattributed))
@@ -102,7 +100,7 @@ describe.skipIf(!db)('giving a case its customer', () => {
    * `test/a-case-moves-to-its-customer.test.ts`.
    */
   it('records the move against both customers', async () => {
-    await controller.attribute(unattributed, { customerId: northwind }, caller, request)
+    await controller.attribute(unattributed, { customerId: northwind }, caller)
 
     expect(written).toHaveLength(1)
     expect(written[0]!.subject, 'the line names no case a reader can identify').toBe(
@@ -112,11 +110,11 @@ describe.skipIf(!db)('giving a case its customer', () => {
   })
 
   it('names the customer it left when the case had one', async () => {
-    await controller.attribute(unattributed, { customerId: northwind }, caller, request)
+    await controller.attribute(unattributed, { customerId: northwind }, caller)
     written = []
 
     const other = await onboard('Contoso NV')
-    const answer = await controller.attribute(unattributed, { customerId: other }, caller, request)
+    const answer = await controller.attribute(unattributed, { customerId: other }, caller)
 
     expect(answer.from).toBe(northwind)
     expect(written[0]!.detail).toMatchObject({ from: northwind, to: other })
@@ -133,7 +131,6 @@ describe.skipIf(!db)('giving a case its customer', () => {
         unattributed,
         { customerId: '00000000-0000-4000-8000-000000000000' },
         caller,
-        request,
       ),
     ).rejects.toMatchObject({ status: 404 })
 
@@ -148,7 +145,6 @@ describe.skipIf(!db)('giving a case its customer', () => {
         '00000000-0000-4000-8000-000000000000',
         { customerId: northwind },
         caller,
-        request,
       ),
     ).rejects.toMatchObject({ status: 404 })
   })
@@ -158,11 +154,11 @@ describe.skipIf(!db)('giving a case its customer', () => {
    * an audit full of those is one nobody reads.
    */
   it('refuses a move to the customer it already answers for', async () => {
-    await controller.attribute(unattributed, { customerId: northwind }, caller, request)
+    await controller.attribute(unattributed, { customerId: northwind }, caller)
     written = []
 
     await expect(
-      controller.attribute(unattributed, { customerId: northwind }, caller, request),
+      controller.attribute(unattributed, { customerId: northwind }, caller),
     ).rejects.toMatchObject({ status: 422 })
     expect(written).toEqual([])
   })
@@ -182,7 +178,7 @@ describe.skipIf(!db)('giving a case its customer', () => {
       .returning()
 
     await expect(
-      controller.attribute(mine!.id, { customerId: northwind }, caller, request),
+      controller.attribute(mine!.id, { customerId: northwind }, caller),
     ).rejects.toMatchObject({ status: 409 })
 
     const [row] = await seed!.select().from(cases).where(eq(cases.id, mine!.id))
@@ -192,11 +188,11 @@ describe.skipIf(!db)('giving a case its customer', () => {
 
   it('refuses a move to the default customer', async () => {
     const theDefault = (await new CustomersService(db!).ensureDefault()).id
-    await controller.attribute(unattributed, { customerId: northwind }, caller, request)
+    await controller.attribute(unattributed, { customerId: northwind }, caller)
     written = []
 
     await expect(
-      controller.attribute(unattributed, { customerId: theDefault }, caller, request),
+      controller.attribute(unattributed, { customerId: theDefault }, caller),
     ).rejects.toMatchObject({ status: 409 })
 
     const [row] = await seed!.select().from(cases).where(eq(cases.id, unattributed))
@@ -207,7 +203,7 @@ describe.skipIf(!db)('giving a case its customer', () => {
   it('allows a move where neither case carries a reference', async () => {
     await seed!.insert(cases).values({ title: 'Theirs, unreferenced', customerId: northwind })
 
-    await controller.attribute(unattributed, { customerId: northwind }, caller, request)
+    await controller.attribute(unattributed, { customerId: northwind }, caller)
 
     const [row] = await seed!.select().from(cases).where(eq(cases.id, unattributed))
     expect(row!.customerId).toBe(northwind)
@@ -215,7 +211,7 @@ describe.skipIf(!db)('giving a case its customer', () => {
 
   it('refuses a customerId that is not one', async () => {
     await expect(
-      controller.attribute(unattributed, { customerId: 'northwind' }, caller, request),
+      controller.attribute(unattributed, { customerId: 'northwind' }, caller),
     ).rejects.toThrow()
   })
 })

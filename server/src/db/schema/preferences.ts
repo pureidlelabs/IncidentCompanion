@@ -5,17 +5,10 @@
  * Display name and password are absent - Better Auth owns the `user` row and
  * its credential.
  */
-import {
-  customType,
-  integer,
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core'
+import { integer, jsonb, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
 import { user } from './auth.js'
+import { bytea } from './columns.js'
 
 export const themeChoice = pgEnum('theme_choice', ['light', 'dark', 'system'])
 
@@ -25,10 +18,6 @@ export const themeChoice = pgEnum('theme_choice', ['light', 'dark', 'system'])
  * document has no viewer to consult.
  */
 export const clockChoice = pgEnum('clock_choice', ['local', 'utc'])
-
-const bytes = customType<{ data: Buffer; driverData: Buffer }>({
-  dataType: () => 'bytea',
-})
 
 export const preferences = pgTable('preferences', {
   /**
@@ -56,7 +45,7 @@ export const preferences = pgTable('preferences', {
    * uploaded - nothing re-encodes it, so `avatarType` is the uploader's word
    * and the read route sends `nosniff`.
    */
-  avatar: bytes('avatar'),
+  avatar: bytea('avatar'),
   avatarType: text('avatar_type'),
   /**
    * Bumped on every image write so the URL changes and the response can be

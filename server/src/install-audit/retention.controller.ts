@@ -17,16 +17,7 @@
  *   the window shortens. A setting that quietly removes evidence and leaves no
  *   trace of having done so is worse than no setting at all.
  */
-import {
-  Body,
-  Controller,
-  Get,
-  Put,
-  Req,
-  UnprocessableEntityException,
-} from '@nestjs/common'
-import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
-import type { IncomingHttpHeaders } from 'node:http'
+import { Body, Controller, Get, Put, UnprocessableEntityException } from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
@@ -35,6 +26,7 @@ import {
   OPERATIONAL_FLOOR_DAYS,
   RETENTION_FLOOR_DAYS,
 } from '../db/schema/install-activity.js'
+import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import {
   OPERATIONAL_DEFAULT_DAYS,
@@ -123,8 +115,7 @@ export class AuditRetentionController {
   })
   async set(
     @Body() body: RetentionPutDto,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<RetentionView> {
     /**
      * **The service's own sentence, as a 422.** It reads the same here as it
@@ -147,12 +138,8 @@ export class AuditRetentionController {
     const operationalBefore = Number(held[OPERATIONAL_RETENTION_KEY] ?? OPERATIONAL_DEFAULT_DAYS)
 
     if (body.days !== undefined) {
-      await this.settings.set(RETENTION_KEY, body.days, session.user.id)
-      await this.activity.retentionChanged(
-        { session, headers: request.headers, request },
-        before,
-        body.days,
-      )
+      await this.settings.set(RETENTION_KEY, body.days, caller.session.user.id)
+      await this.activity.retentionChanged(caller, before, body.days)
     }
     /**
      * **Recorded the same way, and at the same level.** Shortening the
@@ -162,12 +149,12 @@ export class AuditRetentionController {
      * next move the audit needs to have recorded.
      */
     if (body.operationalDays !== undefined) {
-      await this.settings.set(OPERATIONAL_RETENTION_KEY, body.operationalDays, session.user.id)
-      await this.activity.retentionChanged(
-        { session, headers: request.headers, request },
-        operationalBefore,
+      await this.settings.set(
+        OPERATIONAL_RETENTION_KEY,
         body.operationalDays,
+        caller.session.user.id,
       )
+      await this.activity.retentionChanged(caller, operationalBefore, body.operationalDays)
     }
 
     return {

@@ -24,10 +24,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common'
-import type { IncomingHttpHeaders } from 'node:http'
+import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 import { z } from 'zod'
@@ -198,8 +197,7 @@ export class CasesController {
   @ZodResponse({ status: 201, type: CaseDto, description: 'The case as stored.' })
   async create(
     @Body() body: CreateCaseDto,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<CaseIn> {
     const { template, openedAt, ...rest } = body as CreateCaseDto & {
       template?: string
@@ -214,12 +212,8 @@ export class CasesController {
      */
     const fields = { ...rest, ...(openedAt ? { openedAt: new Date(openedAt) } : {}) }
     if (!template) {
-      const made = await this.cases.create(fields, session.user.id)
-      await this.activity.caseCreated(
-        { session, headers: request.headers, request },
-        made.id,
-        made.title,
-      )
+      const made = await this.cases.create(fields, caller.session.user.id)
+      await this.activity.caseCreated(caller, made.id, made.title)
       return asWire(made)
     }
 
@@ -232,12 +226,8 @@ export class CasesController {
         errors: seed.error.issues,
       })
     }
-    const made = await this.cases.create(fields, session.user.id, seed.data)
-    await this.activity.caseCreated(
-        { session, headers: request.headers, request },
-        made.id,
-        made.title,
-      )
+    const made = await this.cases.create(fields, caller.session.user.id, seed.data)
+    await this.activity.caseCreated(caller, made.id, made.title)
     return asWire(made)
   }
 
@@ -296,12 +286,11 @@ export class CasesController {
   @UseGuards(CaseAccessGuard)
   async remove(
     @Param('caseId', ParseUUIDPipe) id: string,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<Record<string, never>> {
     // **Read the title before the delete**, or there is nothing left to read.
     const going = await this.cases.get(id)
-    await this.cases.remove(id, session.user.id)
+    await this.cases.remove(id, caller.session.user.id)
 
     /**
      * **Demonstration content leaves nothing, including this line.** It
@@ -310,11 +299,7 @@ export class CasesController {
      * restart, so the lines accrue on an install nobody has yet used.
      */
     if (!going?.isDemo) {
-      await this.activity.caseDeleted(
-        { session, headers: request.headers, request },
-        id,
-        going?.title ?? '',
-      )
+      await this.activity.caseDeleted(caller, id, going?.title ?? '')
     }
     return {}
   }

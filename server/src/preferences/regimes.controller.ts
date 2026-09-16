@@ -8,12 +8,11 @@
  * field belonging to a regime that is off, so a write arriving moments after a
  * switch flipped still lands.
  */
-import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common'
-import type { IncomingHttpHeaders } from 'node:http'
+import { Body, Controller, Get, Param, Post } from '@nestjs/common'
 import { BadRequestException } from '@nestjs/common'
-import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 
 import { AdminOnly } from '../auth/admin-only.js'
+import { Caller } from '../install-activity/caller.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
@@ -120,8 +119,7 @@ export class RegimesController {
   async set(
     @Param('name') name: string,
     @Body() body: SwitchDto,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<RegimesView> {
     const known = REGIMES.some((one) => one.key === name) || name === 'compliance'
     if (!known) {
@@ -130,12 +128,8 @@ export class RegimesController {
       )
     }
     const key = name === 'compliance' ? 'compliance.enabled' : `compliance.regime.${name}`
-    await this.settings.set(key, body.enabled, session.user.id)
-    await this.activity.regimeSwitched(
-      { session, headers: request.headers, request },
-      name,
-      body.enabled,
-    )
+    await this.settings.set(key, body.enabled, caller.session.user.id)
+    await this.activity.regimeSwitched(caller, name, body.enabled)
     return this.list()
   }
 }

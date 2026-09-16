@@ -22,7 +22,7 @@ import {
   Req,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { AuthService, Session, type UserSession } from '@thallesp/nestjs-better-auth'
+import { AuthService } from '@thallesp/nestjs-better-auth'
 
 import { AdminOnly } from '../auth/admin-only.js'
 import { fromNodeHeaders } from 'better-auth/node'
@@ -38,6 +38,7 @@ import { duplicateEmail, rowFor } from './rules.js'
 import { AccountLookupService } from '../auth/account-lookup.service.js'
 import { stranding, type Analyst } from '../auth/last-admin.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '../auth/password-policy.js'
+import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 
 /** `[text, level]` - the level is second, as every refusal in this app spells it. */
@@ -166,9 +167,8 @@ export class InstallAccountsController {
   @Post()
   @ZodResponse({ status: 201, type: AccountWrittenDto, description: 'The account was created.' })
   async create(
-    @Req() request: { headers: IncomingHttpHeaders },
     @Body() body: unknown,
-    @Session() session: UserSession,
+    @Caller() caller: Caller,
   ): Promise<Written> {
     const parsed = createSchema.safeParse(body ?? {})
     if (!parsed.success) {
@@ -187,7 +187,7 @@ export class InstallAccountsController {
     try {
       await this.auth.api.createUser({
         body: { email: username, password, name: displayName, role },
-        headers: this.headersOf(request),
+        headers: this.headersOf(caller),
       })
     } catch (why) {
       if (duplicateEmail(why)) refuse(`There is already an account for ${username}.`)
@@ -198,7 +198,7 @@ export class InstallAccountsController {
     // in a create hook, because that hook also fires for first-run sign-up -
     // where the person choosing the password is the person who will use it.
     await this.holds.hold(username)
-    await this.activity.accountCreated({ session, headers: request.headers, request }, username, role)
+    await this.activity.accountCreated(caller, username, role)
     return done(`${displayName} can now sign in and will set their own password.`)
   }
 
@@ -206,10 +206,9 @@ export class InstallAccountsController {
   @HttpCode(200)
   @ZodResponse({ status: 200, type: AccountWrittenDto, description: 'A new password was issued.' })
   async reset(
-    @Req() request: { headers: IncomingHttpHeaders },
     @Param('username') username: string,
     @Body() body: unknown,
-    @Session() session: UserSession,
+    @Caller() caller: Caller,
   ): Promise<Written> {
     const parsed = resetSchema.safeParse(body ?? {})
     if (!parsed.success) {
@@ -220,7 +219,7 @@ export class InstallAccountsController {
 
     await this.auth.api.setUserPassword({
       body: { userId: target.id, newPassword: parsed.data.password },
-      headers: this.headersOf(request),
+      headers: this.headersOf(caller),
     })
     // **A reset is the same situation as a create** - an admin knows the
     // password - so it takes the same hold. The property is "somebody else
@@ -237,10 +236,7 @@ export class InstallAccountsController {
     // and the table is append-only, so a line naming a spelling no row holds
     // cannot be corrected and an auditor filtering for that account never sees
     // it. -> `db/schema/install-activity.ts`
-    await this.activity.passwordReset(
-      { session, headers: request.headers, request },
-      target.email,
-    )
+    await this.activity.passwordReset(caller, target.email)
     return done(`${username} will set their own password at the next sign-in.`)
   }
 
@@ -253,9 +249,8 @@ export class InstallAccountsController {
   @HttpCode(200)
   @ZodResponse({ status: 200, type: AccountWrittenDto, description: 'The account state was changed.' })
   async disable(
-    @Req() request: { headers: IncomingHttpHeaders },
     @Param('username') username: string,
-    @Session() session: UserSession,
+    @Caller() caller: Caller,
   ): Promise<Written> {
     // **Administrators rather than a page of everybody.** `stranding` decides
     // by counting within what it is handed, and `listUsers` caps at 500 - so a
@@ -267,7 +262,7 @@ export class InstallAccountsController {
     // Compared by id, because that is what identifies an account. An address
     // is how one is reached, and a comparison of two of them is a lookup
     // wearing the shape of an identity check.
-    if (target.id === session.user.id) {
+    if (target.id === caller.session.user.id) {
       refuse('You cannot disable the account you are signed in with.')
     }
     // `null` is a disable: a demotion to nobody, asking the same question the
@@ -281,12 +276,9 @@ export class InstallAccountsController {
 
     await this.auth.api.banUser({
       body: { userId: target.id, banReason: 'Disabled from the Accounts pane.' },
-      headers: this.headersOf(request),
+      headers: this.headersOf(caller),
     })
-    await this.activity.accountDisabled(
-      { session, headers: request.headers, request },
-      target.email,
-    )
+    await this.activity.accountDisabled(caller, target.email)
     return done(`${username} can no longer sign in.`)
   }
 
@@ -294,21 +286,17 @@ export class InstallAccountsController {
   @HttpCode(200)
   @ZodResponse({ status: 200, type: AccountWrittenDto, description: 'The account state was changed.' })
   async enable(
-    @Req() request: { headers: IncomingHttpHeaders },
     @Param('username') username: string,
-    @Session() session: UserSession,
+    @Caller() caller: Caller,
   ): Promise<Written> {
     const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
 
     await this.auth.api.unbanUser({
       body: { userId: target.id },
-      headers: this.headersOf(request),
+      headers: this.headersOf(caller),
     })
-    await this.activity.accountEnabled(
-      { session, headers: request.headers, request },
-      target.email,
-    )
+    await this.activity.accountEnabled(caller, target.email)
     return done(`${username} can sign in again.`)
   }
 
@@ -322,10 +310,9 @@ export class InstallAccountsController {
   @HttpCode(200)
   @ZodResponse({ status: 200, type: AccountWrittenDto, description: 'The role was changed.' })
   async role(
-    @Req() request: { headers: IncomingHttpHeaders },
     @Param('username') username: string,
     @Body() body: unknown,
-    @Session() session: UserSession,
+    @Caller() caller: Caller,
   ): Promise<Written> {
     const parsed = roleSchema.safeParse(body ?? {})
     if (!parsed.success) {
@@ -353,14 +340,9 @@ export class InstallAccountsController {
     const from = target.role ?? ''
     await this.auth.api.setRole({
       body: { userId: target.id, role: parsed.data.role },
-      headers: this.headersOf(request),
+      headers: this.headersOf(caller),
     })
-    await this.activity.roleChanged(
-      { session, headers: request.headers, request },
-      target.email,
-      from,
-      parsed.data.role,
-    )
+    await this.activity.roleChanged(caller, target.email, from, parsed.data.role)
     const named = parsed.data.role === ADMIN_ROLE ? 'an administrator' : 'an analyst'
     return done(`${username} is now ${named}.`)
   }

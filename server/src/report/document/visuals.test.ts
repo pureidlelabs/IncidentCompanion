@@ -95,7 +95,7 @@ describe('the executive card', () => {
         containedAt: contained,
       }),
     )
-    expect(texts(nodes).toLowerCase()).toContain('4 h 0 min')
+    expect(texts(nodes).toLowerCase()).toContain('4 hr')
     expect(texts(nodes).toLowerCase()).not.toContain('ongoing')
   })
 

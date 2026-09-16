@@ -40,8 +40,11 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 const ADMIN = 'recorded-grant-admin'
 const ANALYST = 'recorded-grant-analyst'
 
-const caller = { user: { id: ADMIN, name: 'Recorded Admin' } } as never
-const request = { headers: {} } as never
+const caller = {
+  session: { user: { id: ADMIN, name: 'Recorded Admin' } },
+  headers: {},
+  request: {},
+} as never
 
 describe.skipIf(!db)('an analyst being given reach', () => {
   let controller: GroupsController
@@ -109,7 +112,7 @@ describe.skipIf(!db)('an analyst being given reach', () => {
   it('writes exactly one line, and it is the grant', async () => {
     const already = await grantLines()
     const before = new Date()
-    await controller.grant(sector, { userId: ANALYST, level: 'delete' }, caller, request)
+    await controller.grant(sector, { userId: ANALYST, level: 'delete' }, caller)
 
     const lines = await since(already)
     expect(lines, 'the grant left no line in the table at all').toHaveLength(1)
@@ -150,8 +153,8 @@ describe.skipIf(!db)('an analyst being given reach', () => {
     const [other] = await seed!.insert(groups).values({ name: 'Incident response' }).returning()
     const already = await grantLines()
 
-    await controller.grant(sector, { userId: ANALYST, level: 'read' }, caller, request)
-    await controller.grant(other!.id, { userId: ANALYST, level: 'write' }, caller, request)
+    await controller.grant(sector, { userId: ANALYST, level: 'read' }, caller)
+    await controller.grant(other!.id, { userId: ANALYST, level: 'write' }, caller)
 
     const pairs = (await since(already))
       .map((one) => {
@@ -169,7 +172,7 @@ describe.skipIf(!db)('an analyst being given reach', () => {
     const already = await grantLines()
 
     await expect(
-      controller.grant(sector, { userId: ANALYST, level: 'root' }, caller, request),
+      controller.grant(sector, { userId: ANALYST, level: 'root' }, caller),
     ).rejects.toMatchObject({ status: 422 })
 
     expect(

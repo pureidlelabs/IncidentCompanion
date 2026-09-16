@@ -65,6 +65,9 @@ describe.skipIf(!db)('writing a case', () => {
   const audited: unknown[] = []
   let present: string[]
 
+  /** `session` is only set in `beforeAll`, so the caller is built per call. */
+  const asCaller = () => ({ session, headers: {}, request: {} }) as never
+
   /** A fresh case per test - patching bumps a version every other case would read stale. */
   async function freshCase(): Promise<{ id: string; version: number }> {
     const row = await service.create({ title: 'Under test' }, session.user.id)
@@ -139,8 +142,7 @@ describe.skipIf(!db)('writing a case', () => {
 
       const row = await controller.create(
         { title: 'Seeded', template: 'ransomware' },
-        session as never,
-        { headers: {} },
+        asCaller(),
       )
 
       const seeded = await seed!.select().from(actions).where(eq(actions.caseId, row.id))
@@ -150,7 +152,7 @@ describe.skipIf(!db)('writing a case', () => {
     })
 
     it('seeds nothing when no template is named', async () => {
-      const row = await controller.create({ title: 'Bare' }, session as never, { headers: {} })
+      const row = await controller.create({ title: 'Bare' }, asCaller())
 
       expect(await seed!.select().from(actions).where(eq(actions.caseId, row.id))).toHaveLength(0)
       expect(await seed!.select().from(evidence).where(eq(evidence.caseId, row.id))).toHaveLength(0)
@@ -160,7 +162,7 @@ describe.skipIf(!db)('writing a case', () => {
       const before = (await seed!.select().from(cases)).length
 
       await expect(
-        controller.create({ title: 'Nope', template: 'not-a-template' }, session as never, { headers: {} }),
+        controller.create({ title: 'Nope', template: 'not-a-template' }, asCaller()),
       ).rejects.toThrow()
 
       expect((await seed!.select().from(cases)).length).toBe(before)
@@ -174,8 +176,7 @@ describe.skipIf(!db)('writing a case', () => {
     it('treats an empty template name as no template', async () => {
       const row = await controller.create(
         { title: 'Empty name', template: '' },
-        session as never,
-        { headers: {} },
+        asCaller(),
       )
 
       expect(await seed!.select().from(actions).where(eq(actions.caseId, row.id))).toHaveLength(0)
@@ -568,7 +569,7 @@ describe.skipIf(!db)('writing a case', () => {
       expect((await seed!.select().from(timeline).where(eq(timeline.caseId, id))).length)
         .toBeGreaterThan(0)
 
-      await controller.remove(id, session as never, { headers: {} })
+      await controller.remove(id, asCaller())
 
       expect(await seed!.select().from(cases).where(eq(cases.id, id))).toHaveLength(0)
       expect(await seed!.select().from(timeline).where(eq(timeline.caseId, id))).toHaveLength(0)
@@ -578,7 +579,7 @@ describe.skipIf(!db)('writing a case', () => {
 
     it('answers 404 for a case that does not exist', async () => {
       await expect(
-        controller.remove('00000000-0000-0000-0000-000000000000', session as never, { headers: {} }),
+        controller.remove('00000000-0000-0000-0000-000000000000', asCaller()),
       ).rejects.toMatchObject({ status: 404 })
     })
 
@@ -586,7 +587,7 @@ describe.skipIf(!db)('writing a case', () => {
       const { id } = await freshCase()
       present = ['Sam']
 
-      await expect(controller.remove(id, session as never, { headers: {} })).rejects.toMatchObject({
+      await expect(controller.remove(id, asCaller())).rejects.toMatchObject({
         status: 409,
       })
       expect(await seed!.select().from(cases).where(eq(cases.id, id))).toHaveLength(1)
@@ -596,7 +597,7 @@ describe.skipIf(!db)('writing a case', () => {
       const { id } = await freshCase()
       present = ['Sam', 'Alex']
 
-      await expect(controller.remove(id, session as never, { headers: {} })).rejects.toMatchObject({
+      await expect(controller.remove(id, asCaller())).rejects.toMatchObject({
         response: { message: expect.stringContaining('Sam') },
       })
     })
@@ -618,7 +619,7 @@ describe.skipIf(!db)('writing a case', () => {
       const { id } = await freshCase()
       present = []
 
-      await expect(controller.remove(id, session as never, { headers: {} })).resolves.toEqual({})
+      await expect(controller.remove(id, asCaller())).resolves.toEqual({})
     })
 
     /**
@@ -634,7 +635,7 @@ describe.skipIf(!db)('writing a case', () => {
       const [demo] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
       expect(demo!.isDemo).toBe(true)
 
-      await controller.remove(demo!.id, session as never, { headers: {} })
+      await controller.remove(demo!.id, asCaller())
 
       expect(await seed!.select().from(cases).where(eq(cases.id, demo!.id))).toHaveLength(0)
     })
@@ -643,7 +644,7 @@ describe.skipIf(!db)('writing a case', () => {
       const { id } = await freshCase()
       announced.length = 0
 
-      await controller.remove(id, session as never, { headers: {} })
+      await controller.remove(id, asCaller())
 
       expect(announced).toContainEqual({ caseId: id, scopes: ['cases'] })
     })
@@ -668,7 +669,7 @@ describe.skipIf(!db)('writing a case', () => {
       const row = await service.create({ title }, session.user.id)
       audited.length = 0
 
-      await controller.remove(row.id, session as never, { headers: {} })
+      await controller.remove(row.id, asCaller())
 
       expect(audited).toContainEqual(
         expect.objectContaining({

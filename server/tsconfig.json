@@ -15,7 +15,9 @@
     // full build could typecheck this project.
     "module": "node20",
     "target": "ES2023",
-    "lib": ["ES2023"],
+    // Ahead of `target` on purpose: `lib` is what the runtime has, and
+    // `package.json` pins `node >=26`.
+    "lib": ["ES2025"],
     "outDir": "./dist",
     // **`.`, not `./src`, which is what keeps `main.js` at `dist/src/`.** Nest
     // 11's swc builder emitted that layout whatever this said; Nest 12's

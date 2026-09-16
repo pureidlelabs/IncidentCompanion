@@ -20,7 +20,7 @@
  */
 import { z } from 'zod'
 
-import { field, identityReference } from '../field-spec.js'
+import { field, identityReference, text } from '../field-spec.js'
 import { optionalChoice } from '../vocabularies.js'
 
 /**
@@ -76,8 +76,6 @@ export const BLOCK_KINDS = [
   'technique_table',
   'methods',
 ] as const
-
-const text = (max: number) => z.string().trim().max(max).default('')
 
 export const reportSchema = z.object({
   label: field(z.string().trim().min(1, 'A report needs a name.').max(200), {

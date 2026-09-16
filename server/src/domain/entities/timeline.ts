@@ -12,7 +12,7 @@
 import { z } from 'zod'
 
 import { textOf } from '../text-of.js'
-import { envelopeSchema, field } from '../field-spec.js'
+import { envelopeSchema, field, ref, refs, text } from '../field-spec.js'
 import { ENTRY_COLOUR } from '../colours.lists.js'
 import { ukcCycle, ukcPhase } from '../killchain.js'
 import {
@@ -33,14 +33,6 @@ import {
  */
 export const PROVENANCE = ['typed', 'imported', 'note'] as const
 export const provenanceSchema = z.enum(PROVENANCE)
-
-// --- value builders --------------------------------------------------------
-// Each returns a new schema, so the same field can appear in both forms under
-// different labels without the registry overwriting one with the other.
-
-const text = (max: number) => z.string().trim().max(max).default('')
-const ref = () => z.uuid().nullable().default(null)
-const refs = () => z.array(z.uuid()).default([])
 
 /** Server-owned on both kinds. Omitted from the write schemas below. */
 const owned = () => ({

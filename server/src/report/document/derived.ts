@@ -10,7 +10,8 @@
  * and the GDPR triggers are the compliance tier's determination and arrive
  * through it; deriving them again is a second answer to one question.
  */
-import type { Translate } from './packs.js'
+import { Logger } from '@nestjs/common'
+
 import type * as vocabularies from '../../domain/vocabularies.lists.js'
 import { formatTimestamp } from './labels.js'
 import type { Cell, Node } from './model.js'
@@ -77,26 +78,55 @@ export function span(from: unknown, to: unknown): number | null {
   return out < 0 ? null : out
 }
 
+/** Codes already reported, so a document of fifty spans says it once. */
+const reported = new Set<string>()
+
+function reportOnce(language: string, what: string): void {
+  if (reported.has(language)) return
+  reported.add(language)
+  new Logger('ReportSpans').warn(`ICU ${what} \`${language}\`, so spans in it are English.`)
+}
+
 /**
- * A duration in the coarsest unit that still says something.
+ * A span formatter for a language code, falling back to English.
+ *
+ * A code is whatever an install uploaded, and `LANGUAGE_TAG` accepts two kinds
+ * ICU will not print in: one it refuses outright, which unguarded is a report
+ * that renders not at all rather than in English, and one it takes and holds no
+ * unit data for, which prints English under a pack reporting full coverage.
+ * Neither is visible in the document, so each is said once per code.
+ */
+function spanFormat(language: string): Intl.DurationFormat {
+  // A report that has not chosen a language is English, and is not a complaint.
+  if (language !== '') {
+    try {
+      if (Intl.DurationFormat.supportedLocalesOf([language]).length > 0) {
+        return new Intl.DurationFormat(language, { style: 'short' })
+      }
+      reportOnce(language, 'holds no unit data for')
+    } catch {
+      reportOnce(language, 'cannot read a language tag from')
+    }
+  }
+  return new Intl.DurationFormat('en', { style: 'short' })
+}
+
+/**
+ * A duration in the coarsest unit that still says something, in the language
+ * the report is written in.
  *
  * **Never "0 minutes".** A span under a minute is real and rounding it to zero
  * reads as nothing having elapsed, which on a detection figure is the opposite
  * of the truth.
  */
-export function duration(ms: number, t: Translate): string {
-  const fill = (key: string, parts: Record<string, number>): string =>
-    Object.entries(parts).reduce(
-      (text, [name, value]) => text.replace(`{${name}}`, String(value)),
-      t(key),
-    )
-
+export function duration(ms: number, language: string): string {
+  const format = spanFormat(language)
   const minutes = Math.floor(ms / 60000)
-  if (minutes < 1) return t('value.duration_under_minute')
-  if (minutes < 60) return fill('value.duration_minutes', { m: minutes })
+  if (minutes < 1) return `< ${format.format({ minutes: 1 })}`
+  if (minutes < 60) return format.format({ minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 48) return fill('value.duration_hours', { h: hours, m: minutes % 60 })
-  return fill('value.duration_days', { d: Math.floor(hours / 24), h: hours % 24 })
+  if (hours < 48) return format.format({ hours, minutes: minutes % 60 })
+  return format.format({ days: Math.floor(hours / 24), hours: hours % 24 })
 }
 
 /**
@@ -160,8 +190,8 @@ export function responseClocks(data: CaseData): ResponseClocks {
 export function dwellText(input: ReportInput, clocks: ResponseClocks): string | null {
   if (clocks.dwell === null) return null
   return clocks.ongoing
-    ? `${duration(clocks.dwell, input.t)} (${input.t('value.ongoing')})`
-    : duration(clocks.dwell, input.t)
+    ? `${duration(clocks.dwell, input.language)} (${input.t('value.ongoing')})`
+    : duration(clocks.dwell, input.language)
 }
 
 /**
@@ -239,7 +269,7 @@ export function metrics(input: ReportInput): Node[] {
 
   const clocks = responseClocks(data)
   if (clocks.toDetect !== null) {
-    rows.push([label(input.t('metric.time_to_detect')), { text: duration(clocks.toDetect, input.t) }])
+    rows.push([label(input.t('metric.time_to_detect')), { text: duration(clocks.toDetect, input.language) }])
   }
 
   const dwell = dwellText(input, clocks)
@@ -261,7 +291,7 @@ export function metrics(input: ReportInput): Node[] {
   // whether the incident is over.
   const age = span(data.openedAt, closedStamp(data) ?? new Date())
   if (age !== null) {
-    rows.push([label(input.t('metric.case_age')), { text: duration(age, input.t) }])
+    rows.push([label(input.t('metric.case_age')), { text: duration(age, input.language) }])
   }
 
   const coverage = containmentCoverage(systems)
