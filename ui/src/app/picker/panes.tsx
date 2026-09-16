@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { useCases } from '@/api/case'
 import { useImportCase } from '@/api/useImportCase'
-import { useAccounts, useAccountWrite } from '@/api/accounts'
+import { useAccountAction, useAccounts, useAccountWrite } from '@/api/accounts'
 import { useInstallActivity, type AuditLine, type AuditPage, type RangeKey, type Severity } from '@/api/installActivity'
 import { announced } from '@/app/case/entryWrites'
 import { packFromFile, useLanguageRemove, useLanguageUpload, useLanguages } from '@/api/languages'
@@ -16,6 +16,7 @@ import {
   reportImportedCase,
   reportUploadedPack,
   reportWriteFailure,
+  toast,
 } from '@/components/blocks/notify'
 import {
   connectionGauge,
@@ -26,6 +27,7 @@ import {
   uptimeLine,
 } from '@/app/picker/health'
 import { splitWritten } from '@/api/written'
+import type { Written } from '@/api/library'
 import { PickerAccountsScreen } from '@/screens/picker-accounts'
 import { PickerActivityScreen } from '@/screens/picker-activity'
 import { PickerAdministrationScreen } from '@/screens/picker-administration'
@@ -275,12 +277,61 @@ export function SnippetsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
   )
 }
 
+/**
+ * Run one account write and say whatever comes back.
+ *
+ * **Both answers, because they arrive by different routes.** `postWritten`
+ * hands a 422 back as `Written` data rather than throwing, so a handler that
+ * reads only the thrown failure drops every sentence the server wrote -- and
+ * the row's only recovery is that sentence, since the query is invalidated
+ * whether the write landed or not.
+ */
+async function acted(what: string, run: () => Promise<Written>): Promise<void> {
+  const written = await announced(what, run)
+  const problem = written?.ok === false ? splitWritten(written).problem : undefined
+  if (problem !== undefined) toast.error(problem)
+}
+
+/**
+ * The roster's four writes, bound to one mutation.
+ *
+ * **One set, because two panes draw one table.** Accounts and Administration
+ * both compose `AccountTable`, and a handler written twice is how one of them
+ * came to move its rows without telling the install.
+ */
+function accountWrites(act: ReturnType<typeof useAccountAction>) {
+  return {
+    onRole: (username: string, role: string) => {
+      void acted('the role', () =>
+        act.mutateAsync({ path: `/${encodeURIComponent(username)}/role`, body: { role } }),
+      )
+    },
+    onEndEverySession: () =>
+      acted('every session', () => act.mutateAsync({ path: '/sessions/end' })),
+    onEndSessions: (username: string) => {
+      void acted('the sessions', () =>
+        act.mutateAsync({ path: `/${encodeURIComponent(username)}/sessions/end` }),
+      )
+    },
+    // The row follows the server rather than the press: the query is
+    // invalidated either way, so what is drawn is what is stored.
+    onState: (username: string, next: AccountTableRow['state']) => {
+      void acted('the account', () =>
+        act.mutateAsync({
+          path: `/${encodeURIComponent(username)}/${next === 'disabled' ? 'disable' : 'enable'}`,
+        }),
+      )
+    },
+  }
+}
+
 export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const accounts = useAccounts()
   const analyst = useAnalyst()
   const admin = useIsAdmin()
   // `''` is the create path: `useAccountWrite` appends to `/accounts`.
   const create = useAccountWrite('')
+  const writes = accountWrites(useAccountAction())
   const refused = create.data?.ok === false ? splitWritten(create.data).problem : undefined
   return (
     <PickerAccountsScreen
@@ -295,6 +346,7 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
           },
         })
       }}
+      {...writes}
       accounts={accountRows(accounts.data?.accounts)}
       busy={accounts.isPending}
       analyst={analyst ?? ''}
@@ -315,6 +367,7 @@ export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAb
   const admin = useIsAdmin()
   const policy = usePolicy()
   const setPolicy = useSetPolicy()
+  const writes = accountWrites(useAccountAction())
   const windows = sessionBounds(
     {
       idle: policy.data?.settings[IDLE_KEY],
@@ -333,6 +386,13 @@ export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAb
   return (
     <PickerAdministrationScreen
       signIn={windows}
+      // Not `onEndEverySession`: this screen draws the table without the pane's
+      // action row, so the sweep has no control here and spreading it whole
+      // would put a prop nothing reads past a check that skips excess keys.
+      onState={writes.onState}
+      onEndSessions={writes.onEndSessions}
+      onRole={writes.onRole}
+      roles={accounts.data?.roles ?? []}
       accounts={accountRows(accounts.data?.accounts)}
       busy={accounts.isPending}
       analyst={analyst ?? ''}

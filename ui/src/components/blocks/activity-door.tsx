@@ -2,6 +2,7 @@ import { HistoryIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import type { ActivityEntry } from '@/api/activity'
+import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { Button } from '@/components/ui/button'
 import { DialogTrigger } from '@/components/ui/dialog'
 import { Popover } from '@/components/ui/popover'
@@ -18,11 +19,18 @@ import { ActivityFeed } from './activity-feed'
  *
  * `entries` arrive as a prop: a container binds the query and draws nothing, so
  * a story passes a fixture roster and the app passes what the route served.
+ *
+ * **The empty line is a claim about the case, so only an answer earns it.** A
+ * caller that withholds `busy` and `problem` has the door making that claim
+ * from a read that never landed.
  */
 export function ActivityDoor({
   entries,
   nameFor,
   seen,
+  busy = false,
+  problem,
+  onRetry,
   defaultOpen = false,
 }: {
   entries: readonly ActivityEntry[]
@@ -35,6 +43,12 @@ export function ActivityDoor({
    * first time is in - a mark on every write it has ever had says nothing.
    */
   seen?: number | undefined
+  /** The activity is still being read. No feed and no empty line while it holds. */
+  busy?: boolean
+  /** Why the read failed, if it did. */
+  problem?: unknown
+  /** Asked again when *Try again* is pressed. */
+  onRetry?: (() => void) | undefined
   /** Opens the panel on mount, for a story that wants the feed on screen. */
   defaultOpen?: boolean
 }) {
@@ -90,11 +104,19 @@ export function ActivityDoor({
       </Button>
       <Popover className="w-80">
         <ScrollArea className="max-h-96 px-3 py-3">
-          <ActivityFeed
-            entries={entries}
-            now={now}
-            {...(nameFor === undefined ? {} : { nameFor })}
-          />
+          <AsyncBoundary
+            isPending={busy}
+            isError={problem !== undefined && problem !== null}
+            error={problem}
+            skeletonRows={3}
+            {...(onRetry ? { refetch: onRetry } : {})}
+          >
+            <ActivityFeed
+              entries={entries}
+              now={now}
+              {...(nameFor === undefined ? {} : { nameFor })}
+            />
+          </AsyncBoundary>
         </ScrollArea>
       </Popover>
     </DialogTrigger>

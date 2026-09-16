@@ -135,6 +135,8 @@ export function FieldControl<TData>({
   return (
     <Field
       label={field.label}
+      // The handle a caller reaches this field by from outside.
+      data-field={field.name}
       required={field.required}
       // Advice wins the line and the schema's hint has it the rest of the
       // time: two sentences at 12px under one control compete to be read.
