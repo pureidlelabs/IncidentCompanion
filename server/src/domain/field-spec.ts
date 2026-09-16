@@ -199,8 +199,12 @@ export function identityReference<T extends z.ZodType>(schema: T, target: string
  * answers in the shape the column stores. The result round-trips for every
  * served field except the required ones, and a required field has no blank by
  * definition.
+ *
+ * **`null` wherever the column takes it**, since a body carrying `undefined`
+ * says leave this alone rather than clear it.
  */
 export function blankOf(field: z.ZodType): unknown {
+  if (field.safeParse(null).success) return null
   const absent = field.safeParse(undefined)
   return absent.success ? absent.data : undefined
 }

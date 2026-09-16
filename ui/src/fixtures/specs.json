@@ -27,6 +27,7 @@
           "name": "eventSource",
           "label": "Telemetry source",
           "kind": "select",
+          "blank": null,
           "vocabulary": "eventSource",
           "options": [
             "endpoint edr",
@@ -62,6 +63,7 @@
             "low": "#eab308",
             "informational": "#3b82f6"
           },
+          "blank": null,
           "vocabulary": "severity",
           "options": [
             "critical",
@@ -76,6 +78,7 @@
           "label": "Confidence",
           "kind": "select",
           "subordinate": true,
+          "blank": null,
           "vocabulary": "confidence",
           "options": [
             "low",
@@ -87,6 +90,7 @@
           "name": "tactic",
           "label": "MITRE ATT&CK tactic",
           "kind": "select",
+          "blank": "",
           "vocabulary": "tactic",
           "options": [
             "reconnaissance",
@@ -108,13 +112,15 @@
         {
           "name": "technique",
           "label": "ATT&CK technique (T1566.001)",
-          "kind": "text"
+          "kind": "text",
+          "blank": ""
         },
         {
           "name": "ukcOverride",
           "label": "Kill chain phase (override)",
           "kind": "select",
           "subordinate": true,
+          "blank": "",
           "vocabulary": "ukcPhase",
           "options": [
             "reconnaissance",
@@ -148,6 +154,7 @@
           "label": "Source host",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "system",
             "collection": "systems",
@@ -160,6 +167,7 @@
           "label": "Destination host",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "system",
             "collection": "systems",
@@ -172,6 +180,7 @@
           "label": "Account used",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "account",
@@ -185,6 +194,7 @@
           "label": "Cloud app",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "cloud_app",
@@ -198,6 +208,7 @@
           "label": "Network indicator",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "network",
@@ -211,6 +222,7 @@
           "label": "Malware sample",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "malware",
@@ -224,6 +236,7 @@
           "label": "Evidence",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "evidence",
@@ -242,6 +255,7 @@
           "label": "Found by",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "method",
@@ -254,19 +268,22 @@
           "name": "sourceTool",
           "label": "Source / tool",
           "kind": "autocomplete",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "author",
           "label": "Recorded by",
           "kind": "autocomplete",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "tags",
           "label": "Tags",
           "kind": "tag_select",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "section": {
@@ -276,13 +293,15 @@
         {
           "name": "notes",
           "label": "Notes",
-          "kind": "textarea"
+          "kind": "textarea",
+          "blank": ""
         },
         {
           "name": "colour",
           "label": "Colour",
           "kind": "color",
           "footerRow": true,
+          "blank": "",
           "vocabulary": "entryColour",
           "options": [
             "#ef4444",
@@ -312,13 +331,15 @@
           "name": "hideFromGraph",
           "label": "Hide on investigation graph",
           "kind": "checkbox",
-          "footerRow": true
+          "footerRow": true,
+          "blank": false
         },
         {
           "name": "followup",
           "label": "Flag for follow-up",
           "kind": "checkbox",
-          "footerRow": true
+          "footerRow": true,
+          "blank": false
         }
       ],
       "blank": {
@@ -388,6 +409,7 @@
             "evidence collected": "#8b5cf6",
             "other": "#8b5cf6"
           },
+          "blank": "",
           "vocabulary": "activityAction",
           "options": [
             "external notification sent",
@@ -411,13 +433,15 @@
           "name": "author",
           "label": "Recorded by",
           "kind": "autocomplete",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "systemId",
           "label": "Host",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "system",
             "collection": "systems",
@@ -430,6 +454,7 @@
           "label": "Account",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "account",
@@ -443,6 +468,7 @@
           "label": "Network indicator",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "network",
@@ -456,6 +482,7 @@
           "label": "Malware sample",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "malware",
@@ -469,6 +496,7 @@
           "label": "Cloud app",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "cloud_app",
@@ -482,6 +510,7 @@
           "label": "Evidence",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "evidence",
@@ -495,6 +524,7 @@
           "label": "Found by",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "method",
@@ -511,13 +541,15 @@
         {
           "name": "notes",
           "label": "Notes",
-          "kind": "textarea"
+          "kind": "textarea",
+          "blank": ""
         },
         {
           "name": "colour",
           "label": "Colour",
           "kind": "color",
           "footerRow": true,
+          "blank": "",
           "vocabulary": "entryColour",
           "options": [
             "#ef4444",
@@ -547,7 +579,8 @@
           "name": "followup",
           "label": "Flag for follow-up",
           "kind": "checkbox",
-          "footerRow": true
+          "footerRow": true,
+          "blank": false
         }
       ],
       "blank": {
@@ -591,6 +624,7 @@
           "kind": "select",
           "tier": "assessment",
           "subordinate": true,
+          "blank": "",
           "vocabulary": "systemType",
           "options": [
             "server",
@@ -617,6 +651,7 @@
           "label": "Verdict",
           "kind": "select",
           "subordinate": true,
+          "blank": "unknown",
           "default": "unknown",
           "vocabulary": "assetVerdict",
           "options": [
@@ -633,6 +668,7 @@
           "label": "Analysis status",
           "kind": "select",
           "subordinate": true,
+          "blank": "open",
           "default": "open",
           "vocabulary": "taskStatus",
           "options": [
@@ -648,6 +684,7 @@
           "label": "Zone",
           "kind": "select",
           "subordinate": true,
+          "blank": "external",
           "default": "external",
           "vocabulary": "zone",
           "options": [
@@ -665,7 +702,8 @@
           "name": "analyst",
           "label": "Analyst",
           "kind": "autocomplete",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "section": {
@@ -678,7 +716,8 @@
           "label": "Isolated",
           "kind": "checkbox",
           "tier": "detail",
-          "subordinate": true
+          "subordinate": true,
+          "blank": false
         },
         {
           "name": "isolatedAt",
@@ -686,13 +725,15 @@
           "kind": "event_datetime",
           "subordinate": true,
           "fullWidth": true,
-          "enabledBy": "isolated"
+          "enabledBy": "isolated",
+          "blank": null
         },
         {
           "name": "methodId",
           "label": "Found by",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "method",
             "collection": "methods",
@@ -705,7 +746,8 @@
           "label": "Tags",
           "kind": "tag_select",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         }
       ],
       "blank": {
@@ -735,20 +777,23 @@
         {
           "name": "domain",
           "label": "Domain",
-          "kind": "text"
+          "kind": "text",
+          "blank": ""
         },
         {
           "name": "privileges",
           "label": "Privileges",
           "kind": "text",
           "tier": "assessment",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "lastActivity",
           "label": "Last activity",
           "kind": "text",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "section": {
@@ -761,7 +806,8 @@
           "label": "Disabled",
           "kind": "checkbox",
           "tier": "detail",
-          "subordinate": true
+          "subordinate": true,
+          "blank": false
         },
         {
           "name": "disabledAt",
@@ -769,13 +815,15 @@
           "kind": "event_datetime",
           "subordinate": true,
           "fullWidth": true,
-          "enabledBy": "disabled"
+          "enabledBy": "disabled",
+          "blank": null
         },
         {
           "name": "methodId",
           "label": "Found by",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "method",
             "collection": "methods",
@@ -788,7 +836,8 @@
           "label": "Tags",
           "kind": "tag_select",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         }
       ],
       "blank": {
@@ -811,6 +860,7 @@
           "label": "Kind",
           "kind": "select",
           "tier": "identity",
+          "blank": "domain",
           "default": "domain",
           "vocabulary": "indicatorType",
           "options": [
@@ -844,20 +894,23 @@
         {
           "name": "port",
           "label": "Port",
-          "kind": "text"
+          "kind": "text",
+          "blank": ""
         },
         {
           "name": "context",
           "label": "Context",
           "kind": "textarea",
           "tier": "assessment",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "disposition",
           "label": "Disposition",
           "kind": "select",
           "subordinate": true,
+          "blank": "unknown",
           "default": "unknown",
           "vocabulary": "disposition",
           "options": [
@@ -872,6 +925,7 @@
           "label": "Triage",
           "kind": "select",
           "subordinate": true,
+          "blank": "untriaged",
           "default": "untriaged",
           "vocabulary": "triage",
           "options": [
@@ -886,6 +940,7 @@
           "kind": "device_select",
           "tier": "detail",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "system",
             "collection": "systems",
@@ -898,6 +953,7 @@
           "label": "Command-and-control for",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "malware",
             "collection": "malware",
@@ -910,6 +966,7 @@
           "label": "Found by",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "method",
             "collection": "methods",
@@ -927,7 +984,8 @@
           "name": "blocked",
           "label": "Blocked",
           "kind": "checkbox",
-          "subordinate": true
+          "subordinate": true,
+          "blank": false
         },
         {
           "name": "blockedAt",
@@ -935,14 +993,16 @@
           "kind": "event_datetime",
           "subordinate": true,
           "fullWidth": true,
-          "enabledBy": "blocked"
+          "enabledBy": "blocked",
+          "blank": null
         },
         {
           "name": "tags",
           "label": "Tags",
           "kind": "tag_select",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         }
       ],
       "blank": {
@@ -976,7 +1036,8 @@
           "name": "hash",
           "label": "Hash",
           "kind": "text",
-          "hint": "What identifies the file. A filename alone can match another binary."
+          "hint": "What identifies the file. A filename alone can match another binary.",
+          "blank": ""
         },
         {
           "section": {
@@ -989,19 +1050,22 @@
           "label": "Family",
           "kind": "text",
           "tier": "assessment",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "signature",
           "label": "Detection signature",
           "kind": "text",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "verdict",
           "label": "Verdict",
           "kind": "select",
           "subordinate": true,
+          "blank": "unknown",
           "default": "unknown",
           "vocabulary": "assetVerdict",
           "options": [
@@ -1019,6 +1083,7 @@
           "kind": "device_select",
           "tier": "detail",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "system",
             "collection": "systems",
@@ -1031,6 +1096,7 @@
           "label": "Account",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "account",
             "collection": "accounts",
@@ -1043,13 +1109,15 @@
           "label": "First seen in this case",
           "kind": "event_datetime",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": null
         },
         {
           "name": "methodId",
           "label": "Found by",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "method",
             "collection": "methods",
@@ -1062,7 +1130,8 @@
           "label": "Tags",
           "kind": "tag_select",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         }
       ],
       "blank": {
@@ -1094,6 +1163,7 @@
           "name": "category",
           "label": "Category",
           "kind": "select",
+          "blank": "",
           "vocabulary": "dataCategory",
           "options": [
             "personal data",
@@ -1110,6 +1180,7 @@
           "label": "What happened to it",
           "kind": "select",
           "tier": "assessment",
+          "blank": "unknown",
           "default": "unknown",
           "vocabulary": "dataDisposition",
           "options": [
@@ -1132,24 +1203,28 @@
           "name": "subjectCount",
           "label": "Data subjects (approximate)",
           "kind": "number",
-          "subordinate": true
+          "subordinate": true,
+          "blank": null
         },
         {
           "name": "recordCount",
           "label": "Records (approximate)",
           "kind": "number",
-          "subordinate": true
+          "subordinate": true,
+          "blank": null
         },
         {
           "name": "volumeBytes",
           "label": "Volume (bytes)",
           "kind": "number",
-          "subordinate": true
+          "subordinate": true,
+          "blank": null
         },
         {
           "name": "notes",
           "label": "Notes",
-          "kind": "textarea"
+          "kind": "textarea",
+          "blank": ""
         },
         {
           "section": {
@@ -1163,6 +1238,7 @@
           "kind": "device_select",
           "tier": "detail",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "system",
             "collection": "systems",
@@ -1175,6 +1251,7 @@
           "label": "Account involved",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "account",
             "collection": "accounts",
@@ -1187,6 +1264,7 @@
           "label": "Evidence",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "evidence",
@@ -1200,6 +1278,7 @@
           "label": "Found by",
           "kind": "multi_device_select",
           "subordinate": true,
+          "blank": [],
           "default": [],
           "ref": {
             "target": "method",
@@ -1213,7 +1292,8 @@
           "label": "Tags",
           "kind": "tag_select",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         }
       ],
       "blank": {
@@ -1246,7 +1326,8 @@
           "name": "instance",
           "label": "Instance",
           "kind": "text",
-          "hint": "Two tenants of one application are two rows."
+          "hint": "Two tenants of one application are two rows.",
+          "blank": ""
         },
         {
           "section": {
@@ -1259,19 +1340,22 @@
           "label": "Publisher",
           "kind": "text",
           "tier": "assessment",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "requestedScopes",
           "label": "Requested scopes",
           "kind": "textarea",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "consentType",
           "label": "Consent type",
           "kind": "select",
           "subordinate": true,
+          "blank": "",
           "vocabulary": "consentType",
           "options": [
             "admin",
@@ -1283,6 +1367,7 @@
           "label": "Verified publisher",
           "kind": "select",
           "subordinate": true,
+          "blank": "unknown",
           "default": "unknown",
           "vocabulary": "verifiedPublisher",
           "options": [
@@ -1297,6 +1382,7 @@
           "kind": "device_select",
           "tier": "detail",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "account",
             "collection": "accounts",
@@ -1309,6 +1395,7 @@
           "label": "Found by",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "method",
             "collection": "methods",
@@ -1321,7 +1408,8 @@
           "label": "Tags",
           "kind": "tag_select",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         }
       ],
       "blank": {
@@ -1351,6 +1439,7 @@
           "name": "type",
           "label": "Type",
           "kind": "select",
+          "blank": "",
           "vocabulary": "evidenceType",
           "options": [
             "file",
@@ -1370,7 +1459,8 @@
         {
           "name": "location",
           "label": "Location",
-          "kind": "text"
+          "kind": "text",
+          "blank": ""
         },
         {
           "section": {
@@ -1383,25 +1473,29 @@
           "label": "Collected by",
           "kind": "autocomplete",
           "tier": "assessment",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "collectedAt",
           "label": "Collected at",
           "kind": "event_datetime",
-          "subordinate": true
+          "subordinate": true,
+          "blank": null
         },
         {
           "name": "acquisitionTool",
           "label": "Acquisition tool",
           "kind": "autocomplete",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "methodId",
           "label": "Collected by method",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "method",
             "collection": "methods",
@@ -1412,7 +1506,8 @@
         {
           "name": "dataClassification",
           "label": "Data classification",
-          "kind": "text"
+          "kind": "text",
+          "blank": ""
         },
         {
           "section": {
@@ -1426,6 +1521,7 @@
           "kind": "device_select",
           "tier": "detail",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "system",
             "collection": "systems",
@@ -1438,6 +1534,7 @@
           "label": "Account",
           "kind": "device_select",
           "subordinate": true,
+          "blank": null,
           "ref": {
             "target": "account",
             "collection": "accounts",
@@ -1450,7 +1547,8 @@
           "label": "Tags",
           "kind": "tag_select",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         }
       ],
       "blank": {
@@ -1483,6 +1581,7 @@
           "name": "kind",
           "label": "Kind",
           "kind": "select",
+          "blank": "",
           "vocabulary": "methodKind",
           "options": [
             "siem query",
@@ -1501,7 +1600,8 @@
           "name": "established",
           "label": "What this established",
           "kind": "textarea",
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         },
         {
           "section": {
@@ -1513,25 +1613,29 @@
           "name": "console",
           "label": "Console",
           "kind": "autocomplete",
-          "tier": "assessment"
+          "tier": "assessment",
+          "blank": ""
         },
         {
           "name": "workspace",
           "label": "Workspace or scope",
           "kind": "autocomplete",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "runBy",
           "label": "Run by",
           "kind": "autocomplete",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "runAt",
           "label": "Run at",
           "kind": "event_datetime",
-          "subordinate": true
+          "subordinate": true,
+          "blank": null
         },
         {
           "section": {
@@ -1543,6 +1647,7 @@
           "name": "grammar",
           "label": "Grammar",
           "kind": "select",
+          "blank": "",
           "vocabulary": "queryGrammar",
           "options": [
             "kql",
@@ -1555,7 +1660,8 @@
           "name": "query",
           "label": "Query or command",
           "kind": "textarea",
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         },
         {
           "section": {
@@ -1566,25 +1672,29 @@
         {
           "name": "windowFrom",
           "label": "Window searched from",
-          "kind": "event_datetime"
+          "kind": "event_datetime",
+          "blank": null
         },
         {
           "name": "windowTo",
           "label": "Window searched to",
-          "kind": "event_datetime"
+          "kind": "event_datetime",
+          "blank": null
         },
         {
           "name": "rowsReturned",
           "label": "Rows returned (as recorded)",
           "kind": "number",
-          "hint": "The app did not run the query, so this is what a person recorded."
+          "hint": "The app did not run the query, so this is what a person recorded.",
+          "blank": null
         },
         {
           "name": "resultColumns",
           "label": "Columns returned",
           "kind": "text",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         },
         {
           "name": "resultExcerpt",
@@ -1592,14 +1702,16 @@
           "kind": "textarea",
           "hint": "Optional. Most acts have no transcript, and the row is complete without one.",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         },
         {
           "name": "tags",
           "label": "Tags",
           "kind": "tag_select",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         }
       ],
       "blank": {
@@ -1643,6 +1755,7 @@
           "kind": "select",
           "tier": "assessment",
           "subordinate": true,
+          "blank": "",
           "vocabulary": "taskType",
           "options": [
             "analysis",
@@ -1660,6 +1773,7 @@
           "label": "Status",
           "kind": "select",
           "subordinate": true,
+          "blank": "open",
           "default": "open",
           "vocabulary": "taskStatus",
           "options": [
@@ -1674,13 +1788,15 @@
           "name": "assignee",
           "label": "Assignee",
           "kind": "autocomplete",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "dateDue",
           "label": "Date due",
           "kind": "text",
-          "subordinate": true
+          "subordinate": true,
+          "blank": ""
         },
         {
           "name": "tags",
@@ -1688,7 +1804,8 @@
           "kind": "tag_select",
           "tier": "detail",
           "subordinate": true,
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         }
       ],
       "blank": {
@@ -1714,22 +1831,26 @@
         {
           "name": "customer",
           "label": "Customer",
-          "kind": "text"
+          "kind": "text",
+          "blank": null
         },
         {
           "name": "reference",
           "label": "Incident reference",
-          "kind": "text"
+          "kind": "text",
+          "blank": null
         },
         {
           "name": "analyst",
           "label": "Analyst",
-          "kind": "text"
+          "kind": "text",
+          "blank": ""
         },
         {
           "name": "status",
           "label": "Status",
           "kind": "select",
+          "blank": "respond",
           "default": "respond",
           "vocabulary": "caseStatus",
           "options": [
@@ -1743,6 +1864,7 @@
           "name": "severity",
           "label": "Severity",
           "kind": "select",
+          "blank": null,
           "vocabulary": "severity",
           "options": [
             "critical",
@@ -1756,6 +1878,7 @@
           "name": "incidentClass",
           "label": "Incident class",
           "kind": "select",
+          "blank": null,
           "vocabulary": "incidentClass",
           "options": [
             "unknown",
@@ -1771,18 +1894,21 @@
         {
           "name": "detectionSource",
           "label": "Detection source",
-          "kind": "text"
+          "kind": "text",
+          "blank": ""
         },
         {
           "name": "initialAccessVector",
           "label": "Initial access vector",
-          "kind": "text"
+          "kind": "text",
+          "blank": ""
         },
         {
           "name": "detectionGap",
           "label": "Detection gap",
           "kind": "textarea",
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         },
         {
           "section": {
@@ -1794,32 +1920,38 @@
           "name": "summary",
           "label": "Summary",
           "kind": "textarea",
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": null
         },
         {
           "name": "openedAt",
           "label": "Case opened at",
-          "kind": "event_datetime"
+          "kind": "event_datetime",
+          "blank": null
         },
         {
           "name": "detectedAt",
           "label": "Detected at",
-          "kind": "event_datetime"
+          "kind": "event_datetime",
+          "blank": null
         },
         {
           "name": "containedAt",
           "label": "Contained at",
-          "kind": "event_datetime"
+          "kind": "event_datetime",
+          "blank": null
         },
         {
           "name": "eradicatedAt",
           "label": "Eradicated at",
-          "kind": "event_datetime"
+          "kind": "event_datetime",
+          "blank": null
         },
         {
           "name": "recoveredAt",
           "label": "Recovered at",
-          "kind": "event_datetime"
+          "kind": "event_datetime",
+          "blank": null
         }
       ],
       "blank": {
@@ -1854,13 +1986,15 @@
         {
           "name": "author",
           "label": "Author",
-          "kind": "autocomplete"
+          "kind": "autocomplete",
+          "blank": ""
         },
         {
           "name": "tags",
           "label": "Tags",
           "kind": "tag_select",
-          "fullWidth": true
+          "fullWidth": true,
+          "blank": ""
         }
       ],
       "blank": {

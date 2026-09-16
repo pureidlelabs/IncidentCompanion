@@ -110,7 +110,7 @@ export interface FieldSpec<TData = Record<string, unknown>> {
    */
   applicableWhen?: { field: string; oneOf: readonly string[] }
   /**
-   * What this field holds when it is empty, served only beside a gate.
+   * What this field holds when it is empty, absent where it insists on a value.
    *
    * The server parses the column to get it, so it is in the shape the column
    * stores - `null` for a reference or a count, `''` for text, `[]` for a
@@ -611,14 +611,15 @@ export function shutFields<TData>(
 /**
  * What a shut field is emptied to: the blank its own column holds.
  *
- * **Served beside the gate rather than decided here.** A table keyed on the
- * control kind cannot answer the question, on either side of the wire: a
- * single-reference column refuses `''` and stores `null`, and a count stores
- * `null` for *not stated* where `0` is a real answer an analyst may mean. The server parses the column and puts the
- * result on the descriptor; `blankOf` in `@contract/field-spec` is the one
- * definition.
+ * **Served rather than decided here.** A table keyed on the control kind
+ * cannot answer the question, on either side of the wire: a single-reference
+ * column refuses `''` and stores `null`, and a count stores `null` for *not
+ * stated* where `0` is a real answer an analyst may mean. The server parses
+ * the column and puts the result on the descriptor; `blankOf` in
+ * `@contract/field-spec` is the one definition.
  *
- * Absent means the field declares no gate, so nothing seals it.
+ * Absent means the column insists on a value, so it has no blank to be
+ * emptied or cleared to.
  */
 export function emptyFor<TData>(field: FieldSpec<TData>): unknown {
   return field.blank

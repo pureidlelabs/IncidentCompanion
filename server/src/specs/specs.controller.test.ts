@@ -18,6 +18,7 @@ import type { z } from 'zod'
 import { describe, expect, it } from 'vitest'
 
 import { FORM_SCHEMAS, SpecsController } from './specs.controller.js'
+import { patchSchema } from '../domain/field-spec.js'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { systemSchema } from '../domain/entities/system.js'
 import { caseStatus } from '../db/schema/case.js'
@@ -392,6 +393,30 @@ describe('the specs document', () => {
       }
     }
     expect(gated, 'no served field declares a gate - this test measured nothing').not.toEqual([])
+  })
+
+  /**
+   * **Every select carries the value that clears it, and its own patch takes
+   * that value.**
+   *
+   * The blank row is in no vocabulary, so the control has to be told what to
+   * post, and both guesses available to it are wrong somewhere: `null` is
+   * refused by every `unsettable()` column and `''` by every enum. Absent, the
+   * control posts `undefined` and a PATCH reads that as no change - a clear
+   * that draws, moves the filled count and reverts on reload. -> #823
+   */
+  it.each(Object.keys(FORM_SCHEMAS))('%s serves a blank every select is cleared to', (name) => {
+    const patch = patchSchema(FORM_SCHEMAS[name]!.schema)
+    const forms = document_['forms'] as Record<string, { fields: Record<string, unknown>[] }>
+    const selects = (forms[name]?.fields ?? []).filter((one) => one['kind'] === 'select')
+    for (const entry of selects) {
+      const where = `${name}.${String(entry['name'])}`
+      expect(entry, `${where} is a select and serves no blank`).toHaveProperty('blank')
+      const cleared = patch.safeParse({ [String(entry['name'])]: entry['blank'] })
+      expect(cleared.success, `${where} cannot be cleared to ${JSON.stringify(entry['blank'])}`).toBe(
+        true,
+      )
+    }
   })
 
   /**
