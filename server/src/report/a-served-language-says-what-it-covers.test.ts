@@ -6,12 +6,9 @@ import { reportLayoutsSchema } from './views.js'
 /**
  * **Coverage reaches the control the choice is made in.**
  *
- * A pack carries any fraction of the application's words. `LanguageService`
- * knows the fraction and the languages pane draws it -- but the response
- * schema for the report screen published `{ code, label }`, so the serializer
- * dropped it on the way out and the picker an analyst actually sets a report
- * from had nothing to say. A pack at 12% and one at 100% read identically at
- * the moment that matters.
+ * A pack carries any fraction of the application's words, and a pack at 12%
+ * and one at 100% must not read identically in the picker a report is set
+ * from.
  *
  * **Asserted against the published schema rather than the handler**, because
  * the schema is what the serializer enforces: a field the handler computes and

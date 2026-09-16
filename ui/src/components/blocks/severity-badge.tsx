@@ -8,7 +8,7 @@ import {
   toneFor,
   type FieldTone,
   type SeverityTone,
-} from '@/components/blocks/severity-tones'
+} from '@/components/ui/severity-tones'
 import {
   ROLE_INK,
   ROLE_PAINT,
@@ -33,7 +33,7 @@ export type { FieldTone, FieldToneSpec, SeverityTone }
 /**
  * A severity as a chip.
  *
- * The tone tables and `toneFor` come from `blocks/severity-tones`, so a
+ * The tone tables and `toneFor` come from `ui/severity-tones`, so a
  * severity resolves the same way wherever it is drawn.
  *
  * - `variant="solid"` because `TONE_CLASS` supplies the fill.

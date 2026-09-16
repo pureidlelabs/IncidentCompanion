@@ -29,7 +29,7 @@ vi.mock('@/api/specs', async (importOriginal) => ({
   useSpecs: () => ({ data: specsFixture, isPending: false }),
 }))
 vi.mock('@/app/useCaseId', () => ({ useCaseId: () => campaignCase.id }))
-vi.mock('@/api/useEntryDelete', () => ({ useEntryDelete: () => ({ mutateAsync: vi.fn() }) }))
+vi.mock('@/api/useBulkDelete', () => ({ useBulkDelete: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('@/api/useEntryCreate', () => ({ useEntryCreate: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('@/api/useEntryMutation', () => ({ useEntryMutation: () => ({ mutateAsync: vi.fn() }) }))
 

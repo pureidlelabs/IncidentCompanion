@@ -16,7 +16,8 @@ const meta = {
   title: 'Blocks/System/Demo cases',
   component: DemosPane,
   parameters: { layout: 'padded' },
-  args: { href: (demo) => `/cases/${demo.id}/overview` },
+  // The example lives here, not in the pane: a gallery has no server. -> #237
+  args: { demos: PICKER_DEMOS, href: (demo) => `/cases/${demo.id}/overview` },
 } satisfies Meta<typeof DemosPane>
 
 export default meta
