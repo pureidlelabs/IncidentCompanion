@@ -10,20 +10,12 @@ import { openTestPool } from '../../test/database.js'
 /**
  * **The language a report is stored with is one this install can print it in.**
  *
- * `reports.language` names a vocabulary whose terms are rows rather than a
- * compiled-in list, so no schema can fix it: uploading a pack is the whole of
- * adding a language. Nothing refused an unknown code on the way in, and the
- * renderer falls back to English on the way out -- so a report stored with a
- * code no pack defines printed in English with nothing said.
- *
  * **The fallback is not the defect and is left alone.** A pack removed after a
- * report chose it should still print, which is what `translatorFor` says in as
- * many words. What is wrong is choosing one that never existed.
+ * report chose it should still print; what is wrong is choosing one that never
+ * existed.
  *
- * Three codes are served and none of them is a row alone: `''` is a report
- * that has not chosen, `en` is the source language and never a row, and a pack
- * is a row. A check that reads the table and nothing else refuses the first
- * two, which is why they are asserted here rather than left implied.
+ * The three served codes are asserted here rather than left implied, because a
+ * check reading the table alone refuses two of them. -> `language.service.ts`
  */
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
