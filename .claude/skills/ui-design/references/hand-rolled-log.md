@@ -12,7 +12,7 @@
 | `severity-badge.tsx` | `Badge` plus the severity ramp and its measured contrast pairs. | pre-policy |
 | `tags-input.tsx` | A CSV string on the wire drawn as chips. Neither library has a tags input. | pre-policy |
 | `datetime-input.tsx` | `<input type="datetime-local">` with the app's parse/format. shadcn's Date Picker is Calendar + Popover and is a different control: an analyst copies a stamp off an alert, they do not pick a day. | pre-policy |
-| `import-csv-control.tsx`, `import-csv-dialog.tsx`, `export-csv-button.tsx` | File exchange against the case API. | pre-policy |
+| `export-csv-button.tsx` | File exchange against the case API. | pre-policy |
 | `bulk-actions.tsx` | One dialog that writes a chosen value across every selected row, driven by the served field specs: a field list, what each offers, and how a choice maps onto the fields to write. Neither library ships a bulk editor. | pre-policy |
 | `async-boundary.tsx` | Query state to skeleton/error/children, with `isPending` first-load-only so a refetch never unmounts the table. | pre-policy |
 | `confirm-delete-dialog.tsx` | `alert-dialog` plus count-aware copy. Thin. | pre-policy |
