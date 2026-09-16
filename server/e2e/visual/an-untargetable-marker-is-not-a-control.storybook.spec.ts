@@ -11,11 +11,6 @@
  * **What this does not cover**: a control given `pointer-events: none` by
  * mistake. Nothing reports that. A *disabled* one keeps its geometry checked,
  * which is the other case here.
- *
- * ```bash
- * cd server && npx playwright test --config=e2e/playwright.kit.config.ts \
- *   e2e/visual/an-untargetable-marker-is-not-a-control.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

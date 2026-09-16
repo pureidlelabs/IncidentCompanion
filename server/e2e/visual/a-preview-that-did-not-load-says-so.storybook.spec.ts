@@ -9,11 +9,6 @@
  * **What it does not cover**: that a real preview failure takes this shape. The
  * fault is induced at the network, so this proves the reporting rather than the
  * cause -- the half #443 leaves open.
- *
- * ```bash
- * cd server && npx playwright test --config=e2e/playwright.kit.config.ts \
- *   e2e/visual/a-preview-that-did-not-load-says-so.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

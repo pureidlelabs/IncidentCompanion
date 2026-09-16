@@ -34,14 +34,6 @@ def tracked_markdown() -> list[str]:
 
     `[formats]` maps other extensions to markdown so Vale reads their comments,
     so a section may legitimately name a tree that holds no `.md` at all.
-    Keeping the name: what the sections select is still *pages* as far as every
-    test here is concerned.
-
-    **The extensions are read from `[formats]` rather than listed here.** A
-    literal list drifts the moment one is added, and it drifts silently in the
-    direction this file exists to refuse: the new section lints correctly and
-    the guard that checks sections cannot see the files it selects, so it
-    reports the section as dead.
     """
     # **Anchored to the line, because the file talks about itself.** A comment
     # above the section explains what `[formats]` does, so a plain string
@@ -160,11 +152,6 @@ def test_hard_wrap_is_on_for_markdown_and_off_for_source_comments() -> None:
 def test_the_prescribed_command_exists_and_matches_the_config() -> None:
     """`rules/writing-style.md` tells a reader to run something. It has to be real.
 
-    A prescription can be true on the machine it was written on and false
-    everywhere else, which is the failure `rules/claim-homes.md` names: *"a note
-    that prescribes a command has made a claim about that command, and it can be
-    false."*
-
     Asserted structurally rather than by running Vale, because CI has no Go
     binaries: the script must exist, the rule must name the script, and the
     devcontainer must install the tool the script invokes.
@@ -205,14 +192,6 @@ def test_the_lint_does_not_read_a_worktree() -> None:
     stops matching the section that scopes them: a page clean at `.claude/rules/`
     raises `KnowledgeBase.AnnouncingImportance` on the same byte one worktree
     down.
-
-    **What that costs is the every-tier check, not tidiness.** `verify.sh` runs
-    this command and reports the tier red; `test_scope.py` prints it as part of
-    what a landing owes. So the one command that is supposed to say whether the
-    tree is clean says no, over findings that are not in the tree - and it does
-    so exactly when the project's own parallel-work shape is in use, which
-    `rules/git-workflow.md` prescribes for a background job and for a live
-    second session.
     """
     globs = re.findall(r"--glob='([^']+)'", LINT_PROSE)
     assert globs, (
@@ -311,10 +290,6 @@ def test_every_rule_has_something_that_runs_it(rule: Path) -> None:
 # near-miss column is the half that matters**: every rule here was first written
 # wide enough to catch correct prose, and what it had to be narrowed to is the
 # only record of why.
-#
-# `Shared.Terminology`'s near-misses are the ones that cost something: applying
-# its alerts by span rewrote a source filename, a `[[wikilink]]` target and a
-# note's own `id`, none of which reads as damage in a diff of prose.
 #
 # **Vale is not the reason those need protecting.** It skips backticked spans
 # and fenced blocks, so a bare `redis` fires and

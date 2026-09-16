@@ -305,13 +305,6 @@ export interface SelftestResult {
  * **The demo case, named, rather than whichever the picker lists first.** The
  * probes aim at the section's filter bar, and `timeline.tsx` draws none for an
  * empty timeline -- so this needs a section with rows in it.
- *
- * **The tier's own fixture case has none.** `ensureCase` posts a case with no
- * template, so nothing seeds it: its timeline is empty from birth, and the
- * eight faults aiming at the bar reported the markup as moved. This file
- * passed only when a spec that writes a timeline row -- `writing.spec`,
- * `incident-import.spec` -- happened to have run in the same worker first,
- * which under `fullyParallel` is a race rather than an order.
  */
 export async function selftest(browser: Browser): Promise<SelftestResult[]> {
   const out: SelftestResult[] = []

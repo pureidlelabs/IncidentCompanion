@@ -31,14 +31,10 @@ from tests._must_run import declined
 from tests._repo import REPO_ROOT
 
 REPO_ROOT = REPO_ROOT
-#: **The Node stack, and it is the only one.** `docker/app/Dockerfile` is the
-#: image an analyst runs.
 COMPOSE = REPO_ROOT / "compose.yaml"
 DOCKERFILE = REPO_ROOT / "docker" / "app" / "Dockerfile"
 MAIN_TS = REPO_ROOT / "server" / "src" / "main.ts"
 
-#: The Node stack, and `docker compose up --build` against it is the whole
-#: procedure -- there is no launcher script.
 NODE_STACK = REPO_ROOT / "compose.yaml"
 
 
@@ -59,11 +55,6 @@ def test_the_node_stack_publishes_one_loopback_port_and_no_more():
         if service.get("ports")
     }
 
-    # **The edge is whichever service publishes, not a name written here.**
-    # Naming one -- `app`, say -- makes the assertion *everything other than
-    # `app` publishes nothing*, which fails the correct topology the moment
-    # something fronts it while passing the wrong one. Counting is the
-    # property: one door to the host, wherever it happens to live.
     assert len(publishing) == 1, (
         f"{len(publishing)} services publish to the host ({sorted(publishing)}), "
         f"so there is more than one door into the stack and only one of them "
@@ -77,16 +68,11 @@ def test_the_node_stack_publishes_one_loopback_port_and_no_more():
         assert len(parts) >= 3, (
             f"the port mapping {entry!r} names no host address, so Docker "
             "publishes it on every interface")
-        # The host side is an interpolation, so the address is what is
-        # asserted and the port is left alone.
         address = ipaddress.ip_address(parts[0])
         assert address.is_loopback, (
             f"the port mapping {entry!r} publishes on {address}, which is "
             f"not loopback -- {edge} would be reachable from the network")
 
-    # The app must not be the door once something fronts it: a published app
-    # port is a plaintext listener on the host, which is the one thing this
-    # whole move must not produce.
     assert "app" not in publishing or edge == "app", (
         "the app service publishes to the host alongside the edge, so the "
         "proxy can be bypassed")
@@ -152,12 +138,6 @@ def test_every_volume_is_docker_managed():
         f"things removing them was for"
     )
 
-    # The mirror of it, and **only where there is a mount point to be
-    # unwritable**: the reason is that a managed volume is created owned by the
-    # image's user, so a pinned uid cannot write it. A service that mounts
-    # nothing has no such directory, and pinning the image's own user is then
-    # the way to hold `cap_drop: [ALL]` with an empty bounding set rather than
-    # handing back SETGID and SETUID for an entrypoint to drop with. -> #620
     pinned = [
         name
         for name, service in spec.get("services", {}).items()
@@ -228,23 +208,14 @@ def test_the_published_port_is_the_one_the_base_url_names():
     spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
 
     base = str(spec["services"]["app"]["environment"]["AUTH_BASE_URL"])
-    # Read rather than indexed: `spec["services"]["nginx"]["ports"]` raises
-    # `KeyError: 'ports'` on a stack where something else became the door, and
-    # a KeyError is not a guard -- it reads as a broken test.
     edge = spec["services"].get("nginx") or {}
     published = [str(p) for p in edge.get("ports") or []]
     assert published, (
         "the nginx service publishes nothing, so no Origin the base URL names "
         "is reachable -- something else is the door, or there is no door")
 
-    # **Read from the right, because the host side contains colons of its own.**
-    # Splitting forward and taking the first field gives `'${IC_STACK_PORT'`, a
-    # fragment that appears in the base URL too -- so the assertion passes on
-    # the exact defect it is written for, and a published default at one port
-    # with the base URL left at another keeps the deployment tests green.
-    # `container:host:target` or `host:target` -- the middle field either way,
-    # and read positionally so a mapping with no host binding fails the
-    # assertion below rather than raising IndexError out of the split.
+    # Read from the right: `fields[0]` is `'${IC_STACK_PORT'`, which the base
+    # URL contains too, so it passes on the exact defect this asserts against.
     fields = published[0].split(":")
     host_side = fields[-2] if len(fields) >= 2 else ""
     assert host_side in base, (
@@ -277,12 +248,6 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
         "the edge does not overwrite X-Real-IP from the peer address, so the "
         "header auth.config.ts trusts is whatever the caller sent")
 
-    # **`$http_host`, and the difference from `$host` is the port.** `$host`
-    # drops it, and `LiveGateway.sameOrigin` compares the forwarded `Host`
-    # against the browser's `Origin`, which carries it -- so on any published
-    # port but 443 every WebSocket upgrade is refused `403 cross-origin` while
-    # every HTTP route answers perfectly, and presence, claims, the change feed
-    # and the report CRDT are dead. Nothing else constrains this vertex.
     assert re.search(r"^\s*proxy_set_header\s+Host\s+\$http_host\s*;",
                      proxy, re.MULTILINE), (
         "the edge does not forward the original Host with its port, so a "
@@ -290,11 +255,6 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
 
     conf = NGINX_CONF.read_text(encoding="utf-8")
 
-    # **The catch-all is what `$http_host` leans on.** Deleting the
-    # `default_server` block leaves the deployment tests green, and a rebuilt
-    # edge then answers `Host: evil.test` with 200 and forwards that hostname
-    # verbatim to the app. It is the protection that replaced the loopback
-    # `Host` guard when the certificate left the server.
     assert re.search(r"listen\s+8443\s+ssl\s+default_server\s*;", conf), (
         "no default_server block, so an unrecognised hostname is served by "
         "whichever server block happens to be first")
@@ -312,11 +272,6 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
     # it forwards whatever the caller sent. The second is the exemption the
     # refusal handlers need -- `error_page 429` renders them, they return a
     # literal, and no upstream is reached for a header to survive into.
-    #
-    # **Stated as one condition, not two.** Asking separately whether a
-    # location has `proxy_pass` tests nothing here: `proxy_pass` lives in the
-    # fragment, so it appears nowhere in this file and such an arm is dead the
-    # day it is written.
     stray = [name for name, body in locations
              if "ic-proxy.inc" not in body
              and not re.search(r"^\s*return\s+\d", body, re.MULTILINE)]
@@ -328,11 +283,6 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
 
 def test_the_only_published_port_belongs_to_the_tls_edge():
     """The door to the host must be the proxy, not the plaintext app.
-
-    **The sibling guard is one vertex short and this is that vertex.** It counts
-    publishers and requires loopback, so a compose file where `app` is the sole
-    publisher and nginx publishes nothing passes it -- which is exactly the
-    plaintext-listener-on-the-host this whole move exists to prevent.
     """
     spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
     publishing = {
@@ -340,16 +290,10 @@ def test_the_only_published_port_belongs_to_the_tls_edge():
         for name, service in spec.get("services", {}).items()
         if service.get("ports")
     }
-    # A real message rather than `ValueError: too many values to unpack`, which
-    # reads as a broken test instead of a refused configuration.
     assert len(publishing) == 1, (
         f"{sorted(publishing)} publish to the host; only the TLS edge may")
     [(edge, published)] = publishing.items()
 
-    # **Named, not inferred from the port.** Asserting only that the target is
-    # 443 lets `app` publish `127.0.0.1:443:443` with nginx publishing nothing --
-    # the plaintext server exposed to the host, which is exactly what this move
-    # exists to prevent, and both publish guards pass it.
     assert edge == "nginx", (
         f"the host's only door is {edge!r}, not the TLS edge -- a plaintext "
         f"server published to the host is what this whole move removes")
@@ -376,11 +320,6 @@ def test_the_workspace_is_a_volume_the_container_clones_itself():
 
     Omitting `workspaceMount` does not mean "no mount" — the devcontainers CLI
     falls back to binding whatever folder was opened at `/workspaces/<name>`,
-    which is the exact bind mount this setup exists to remove. Measured with
-    `devcontainer read-configuration`: an omitted `workspaceMount` next to a
-    set `workspaceFolder` still resolves to a host bind. So this asserts the
-    *positive* — a declared volume — rather than the absence of the old
-    spelling, which a fallback bind would also pass.
     """
     import json
 
@@ -399,7 +338,6 @@ def test_the_workspace_is_a_volume_the_container_clones_itself():
         "still being bound into the container")
     assert config.get("workspaceFolder") == fields.get("target"), (
         "workspaceFolder does not match workspaceMount's target")
-    # Documented as supported here, not substituted in practice.
     assert "${devcontainerId}" not in mount, (
         f"workspaceMount is {mount!r} -- ${{devcontainerId}} reaches Docker "
         "unsubstituted and the container never starts")
@@ -461,10 +399,6 @@ def test_the_project_memory_is_bound_into_the_container_at_the_key_it_reads():
         "the memory bind is read-only -- nothing written in the container "
         "reaches the Mac, and Claude Code writes memories rather than only "
         "reading them")
-    # **A fixed name, resolved by `host-init.sh`.** `devcontainer.json` cannot
-    # transform a string, so it cannot spell this machine's project key -- and a
-    # hardcoded one would bind somebody else's memory, `mkdir -p` creating it
-    # rather than failing. The link is what carries the key.
     assert memory["source"] == "${localEnv:HOME}/.claude/ic-project-memory", (
         f"the memory bind source is {memory['source']!r} -- it must be the fixed "
         f"name host-init.sh points at this checkout's project key")

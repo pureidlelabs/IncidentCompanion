@@ -26,12 +26,6 @@
  * first, always, and the assertion naming the defect never runs. That asserts
  * "the body is a scrollport", which is the implementation, not "the controls
  * survive", which is the behaviour.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/controls-outlast-the-scroll.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 
