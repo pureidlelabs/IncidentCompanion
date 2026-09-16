@@ -19,16 +19,18 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { user } from '../db/schema/auth.js'
 import { customers } from '../db/schema/customer.js'
-import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
+import { LEVELS, groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
 
 export type Level = 'read' | 'write' | 'delete'
 
 /**
  * Ordered weakest to strongest, which is the whole of *most permissive
- * applies*: comparing by position is the comparison, so a level added to the
- * specification is added here and nowhere else.
+ * applies*: comparing by position is the comparison.
+ *
+ * The schema's vocabulary, so a level added to the specification is added
+ * once. Its declaration order is what ranks the levels. -> `LEVELS`
  */
-export const RANK: readonly Level[] = ['read', 'write', 'delete']
+export const RANK: readonly Level[] = LEVELS
 
 const strongest = (levels: readonly Level[]): Level | null =>
   levels.length === 0 ? null : RANK[Math.max(...levels.map((one) => RANK.indexOf(one)))]!
