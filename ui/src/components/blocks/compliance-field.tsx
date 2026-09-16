@@ -116,7 +116,9 @@ export function ComplianceControl({
             label={spec.label}
             value={value}
             onChange={(iso) => {
-              onSet(spec.name, iso)
+              // `''` is what an unanswered field in this record holds, the
+              // same value its selects clear to.
+              onSet(spec.name, iso ?? '')
             }}
           />
         )}

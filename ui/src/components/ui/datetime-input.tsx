@@ -95,7 +95,13 @@ export interface DateTimeInputProps {
   label: string
   /** One ISO string, or `''`. */
   value: string
-  onChange: (iso: string) => void
+  /**
+   * The stamp once both halves parse, and `null` once both are empty.
+   *
+   * **Silent while one half is missing**: a date with no time is neither a
+   * stamp nor a clear, so the pair reports nothing at all. -> #829
+   */
+  onChange: (iso: string | null) => void
   disabled?: boolean | undefined
   id?: string | undefined
   'aria-describedby'?: string | undefined
@@ -141,7 +147,9 @@ export function DateTimeInput({
   const commit = (nextDate: string, nextTime: string) => {
     setDate(nextDate)
     setTime(nextTime)
-    onChange(joinIso(nextDate, nextTime))
+    const iso = joinIso(nextDate, nextTime)
+    if (iso !== '') onChange(iso)
+    else if (nextDate === '' && nextTime === '') onChange(null)
   }
 
   return (

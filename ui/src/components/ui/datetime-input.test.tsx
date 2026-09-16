@@ -48,7 +48,7 @@ describe('assembling the stored timestamp', () => {
 
 describe('the field', () => {
   const open = (value = '') => {
-    const onChange = vi.fn<(iso: string) => void>()
+    const onChange = vi.fn<(iso: string | null) => void>()
     render(<DateTimeInput label="Blocked at" value={value} onChange={onChange} />)
     return onChange
   }
@@ -91,16 +91,29 @@ describe('the field', () => {
     const box = screen.getByLabelText('Blocked at date')
     await userEvent.type(box, '2026-08-20')
     expect(box).toHaveValue('2026-08-20')
-    // Nothing stored yet: there is no time half.
-    expect(onChange).toHaveBeenLastCalledWith('')
+    // Nothing reported yet: there is no time half.
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('stores once both halves parse, and not before', async () => {
     const onChange = open()
     await userEvent.type(screen.getByLabelText('Blocked at date'), '2026-08-20')
-    expect(onChange).toHaveBeenLastCalledWith('')
+    expect(onChange).not.toHaveBeenCalled()
     await userEvent.type(screen.getByLabelText('Blocked at time'), '19:57')
     expect(onChange).toHaveBeenLastCalledWith('2026-08-20T19:57:00Z')
+  })
+
+  /**
+   * **An emptied pair reports `null` and a half-emptied one reports nothing**,
+   * which are the two states a single `''` cannot tell apart. -> #829
+   */
+  it('reports null once both halves are empty', async () => {
+    const onChange = open('2026-08-20T19:57:00Z')
+    await userEvent.clear(screen.getByLabelText('Blocked at date'))
+    // Half-emptied is the state in between, and it is not a clear.
+    expect(onChange).not.toHaveBeenCalled()
+    await userEvent.clear(screen.getByLabelText('Blocked at time'))
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(null)
   })
 
   /**

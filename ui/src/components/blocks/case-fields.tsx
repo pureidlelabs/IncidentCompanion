@@ -116,7 +116,18 @@ function control(
     )
   }
   if (spec.kind === 'event_datetime') {
-    return <DateTimeInput {...ids} label={spec.label} value={value} onChange={onChange} />
+    return (
+      <DateTimeInput
+        {...ids}
+        label={spec.label}
+        value={value}
+        // A door holds its fields as text and sends what is filled in, so an
+        // emptied pair is `''` here rather than the column's `null`.
+        onChange={(iso) => {
+          onChange(iso ?? '')
+        }}
+      />
+    )
   }
   if (spec.kind === 'textarea') {
     return (

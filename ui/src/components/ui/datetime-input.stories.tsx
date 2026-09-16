@@ -34,12 +34,19 @@ type Story = StoryObj<typeof meta>
 
 /** A harness, because the pair reports one ISO string back up. */
 function Live({ start = '', width, disabled = false }: { start?: string; width?: number; disabled?: boolean }) {
-  const [value, setValue] = useState(start)
+  // `null` is the pair reporting a clear, which is a different answer from the
+  // `''` it starts at: one writes nothing and the other empties the column.
+  const [value, setValue] = useState<string | null>(start)
   return (
     <div style={width === undefined ? undefined : { width }}>
-      <DateTimeInput label="Occurred" value={value} onChange={setValue} disabled={disabled} />
+      <DateTimeInput
+        label="Occurred"
+        value={value ?? ''}
+        onChange={setValue}
+        disabled={disabled}
+      />
       <p className="mt-2 font-mono text-2xs text-ink-muted">
-        stored: {value === '' ? '(nothing)' : value}
+        stored: {value === null ? '(cleared)' : value === '' ? '(nothing)' : value}
       </p>
     </div>
   )
@@ -73,19 +80,41 @@ export const Filled: Story = {
 }
 
 /**
+ * A stamp emptied on purpose. Both halves deleted reports `null`, which is the
+ * value that clears the column; deleting one half reports nothing, because a
+ * stamp being retyped is not a stamp being removed. -> #829
+ */
+export const Cleared: Story = {
+  render: () => <Live start="2026-08-20T14:32:00Z" />,
+  play: async ({ canvas, step }) => {
+    const date = canvas.getByLabelText('Occurred date')
+
+    await step('emptying one half reports nothing', async () => {
+      await userEvent.clear(date)
+      await expect(canvas.getByText(/2026-08-20T14:32/)).toBeVisible()
+    })
+
+    await step('and emptying the other clears the stamp', async () => {
+      await userEvent.clear(canvas.getByLabelText('Occurred time'))
+      await expect(canvas.getByText('stored: (cleared)')).toBeVisible()
+    })
+  },
+}
+
+/**
  * The date typed and the time not. Nothing is stored yet, and the boxes keep
  * what was typed -- type into either to watch the stamp appear.
  */
 export const HalfTyped: Story = {
   render: () => {
     const Rendered = () => {
-      const [value, setValue] = useState('')
+      const [value, setValue] = useState<string | null>('')
       return (
         <div>
           <DateTimeInput
             key="half"
             label="Occurred"
-            value={value}
+            value={value ?? ''}
             onChange={setValue}
           />
           {/* What was committed, which is the whole subject of this story: a
