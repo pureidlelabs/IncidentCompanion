@@ -76,17 +76,9 @@ describe('the reach routes', () => {
     )
   })
 
-  /**
-   * **An empty list says nothing about whether the id names anybody.** An
-   * account in no group reaches the default customer and an account that does
-   * not exist reaches nothing, and the two were the same answer -- so an
-   * administrator following a stale link was shown a reach screen for somebody
-   * who is not there, and the document's own 404 for that path described a
-   * refusal the route never made. -> #818, and #812 one controller over.
-   *
-   * The two cases above are what give these their meaning: a read that refused
-   * every id would pass here alone.
-   */
+  // The two cases above are what give these their meaning: a read that refused
+  // every id would pass here alone. -> #818
+
   it.each([
     ['ofAccount', 'u-gone'],
     ['ofCustomer', '33333333-3333-4333-8333-333333333333'],

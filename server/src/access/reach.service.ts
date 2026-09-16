@@ -197,19 +197,13 @@ export class ReachService {
       .select({ role: user.role })
       .from(user)
       .where(eq(user.id, userId))
-    /**
-     * **An account that is not there reaches nothing, and so does one in no
-     * group.** The role is read for the floor over the default customer; that
-     * it is absent is the same read answering that nobody holds this id, and
-     * answering the empty list for both makes a stale link look like a real
-     * account with no reach.
-     */
+    // No row is nobody holding this id, which an empty reach cannot say.
     if (!account) return null
     const fallback = await this.defaultCustomerId()
 
     const byCustomer = new Map<string, ReachedCustomer>()
     for (const [customerId, forThis] of grouped(rows, (one) => one.customerId)) {
-      const floor = customerId === fallback ? overTheDefault(account?.role ?? null) : undefined
+      const floor = customerId === fallback ? overTheDefault(account.role ?? null) : undefined
       const level = settle(forThis, floor)
       if (!level) continue
       byCustomer.set(customerId, {
@@ -231,7 +225,7 @@ export class ReachService {
       byCustomer.set(fallback, {
         customerId: fallback,
         customerName: row?.name ?? '',
-        level: overTheDefault(account?.role ?? null),
+        level: overTheDefault(account.role ?? null),
         granted: { by: 'default' },
       })
     }
@@ -247,9 +241,7 @@ export class ReachService {
    * who reaches it and how*.
    */
   async reachTo(customerId: string): Promise<ReachingAnalyst[] | null> {
-    // The same question the account side answers from a row it already reads:
-    // a customer nobody reaches and a customer that is not there are one
-    // answer until the row is asked for.
+    // The same, from the row rather than from the reach.
     const [held] = await this.db
       .select({ id: customers.id })
       .from(customers)

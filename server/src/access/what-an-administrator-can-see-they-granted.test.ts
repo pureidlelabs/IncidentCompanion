@@ -42,6 +42,8 @@ const SAM = 'reach-sam'
 describe.skipIf(!db)('what an administrator can see they granted', () => {
   let reach: ReachService
   let acme = ''
+  /** A customer no group holds, so nobody reaches it. */
+  let unreached = ''
   let fallback = ''
   let dayShift = ''
   /** The customers this file made, which are the only ones it may remove. */
@@ -84,6 +86,13 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
     const [one] = await db!.insert(customers).values({ name: 'Acme NV' }).returning()
     acme = one!.id
     mine.push(acme)
+
+    // **Nobody is put in a group holding this one.** It is what separates a
+    // customer with no reach from one that is not there, and without it a read
+    // answering `null` for an empty reach would pass every case here.
+    const [two] = await db!.insert(customers).values({ name: 'Unreached BV' }).returning()
+    unreached = two!.id
+    mine.push(unreached)
 
     const [group] = await db!.insert(groups).values({ name: 'Day shift' }).returning()
     dayShift = group!.id
@@ -261,15 +270,7 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
     })
   })
 
-  /**
-   * **An empty list says nothing about whether the id names anybody.** An
-   * account in no group reaches the default customer and an account that is not
-   * there reaches nothing; both answered a list, so an administrator following
-   * a stale link was shown a reach screen for somebody who is not there.
-   *
-   * The cases above are what give these their meaning: a read answering `null`
-   * for every id would pass here alone. -> #818
-   */
+  /** -> #818 */
   describe('for an id nobody holds', () => {
     it('answers that there is no such account, rather than no reach', async () => {
       expect(await reach.reachOf('u-nobody-holds-this')).toBeNull()
@@ -277,6 +278,15 @@ describe.skipIf(!db)('what an administrator can see they granted', () => {
 
     it('answers that there is no such customer, rather than nobody reaching it', async () => {
       expect(await reach.reachTo('33333333-3333-4333-8333-333333333333')).toBeNull()
+    })
+
+    /**
+     * The pin on the other side. A read that answered `null` whenever the reach
+     * came out empty would satisfy both cases above and refuse a customer that
+     * is really there, which is the defect pointing the other way.
+     */
+    it('answers a customer nobody reaches, which is not one that is gone', async () => {
+      expect(await reach.reachTo(unreached)).toEqual([])
     })
   })
 
