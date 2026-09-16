@@ -195,14 +195,17 @@ export function identityReference<T extends z.ZodType>(schema: T, target: string
  * is a real answer an analyst may mean - so `0` as the empty for a number
  * quietly records "0 data subjects affected" where the row said nothing.
  *
- * Parsing `undefined` runs the field's own defaults and preprocessors, so it
- * answers in the shape the column stores. The result round-trips for every
- * served field except the required ones, and a required field has no blank by
- * definition.
+ * `null` wherever the column takes it, and otherwise the declared default only
+ * where that default is itself empty. A column defaulting to `respond` or to
+ * `unknown` has no blank.
  */
 export function blankOf(field: z.ZodType): unknown {
+  if (field.safeParse(null).success) return null
   const absent = field.safeParse(undefined)
-  return absent.success ? absent.data : undefined
+  if (!absent.success) return undefined
+  const blank = absent.data
+  const empty = blank === '' || blank === false || (Array.isArray(blank) && blank.length === 0)
+  return empty ? blank : undefined
 }
 
 /**

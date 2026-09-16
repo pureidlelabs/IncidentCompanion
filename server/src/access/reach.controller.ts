@@ -8,7 +8,7 @@
  * are not about a group anyway: one is asked of an account and the other of a
  * customer, and a group is only ever the answer. -> #208
  */
-import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common'
+import { Controller, Get, NotFoundException, Param, ParseUUIDPipe } from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
@@ -71,7 +71,9 @@ export class ReachController {
     description: 'Every customer this account reaches, with the level and what granted it.',
   })
   async ofAccount(@Param('userId') userId: string): Promise<z.infer<typeof reachOfSchema>> {
-    return { reaches: await this.reach.reachOf(userId) }
+    const reaches = await this.reach.reachOf(userId)
+    if (reaches === null) throw new NotFoundException(`No account ${userId}.`)
+    return { reaches }
   }
 
   /**
@@ -87,6 +89,8 @@ export class ReachController {
   async ofCustomer(
     @Param('customerId', ParseUUIDPipe) customerId: string,
   ): Promise<z.infer<typeof reachToSchema>> {
-    return { reachedBy: await this.reach.reachTo(customerId) }
+    const reachedBy = await this.reach.reachTo(customerId)
+    if (reachedBy === null) throw new NotFoundException(`No customer ${customerId}.`)
+    return { reachedBy }
   }
 }

@@ -283,15 +283,19 @@ function schemaFor(resource: string | undefined): Record<string, unknown> | unde
 const json = (schema: unknown) => ({ content: { 'application/json': { schema } } })
 
 /**
- * The routes that answer with a file: pattern, media type, description, and
- * the method when it is not `get`.
+ * The routes that answer with a file: pattern, media type or types,
+ * description, and the method when it is not `get`.
  *
  * **Read off the handlers rather than guessed** - documenting one of these as
  * `application/json` is worse than leaving it bare, because a generator then
  * builds a client that parses a Word document as JSON. `format: 'binary'` is
  * how OpenAPI 3.0 spells "bytes"; without it a generator types a PDF a string.
+ *
+ * **A route that answers with more than one names them all**, because the
+ * parameter deciding between them is no use to a caller who cannot see the
+ * second.
  */
-const DOWNLOADS: ReadonlyArray<readonly [RegExp, string, string, string?]> = [
+const DOWNLOADS: ReadonlyArray<readonly [RegExp, string | readonly string[], string, string?]> = [
   [/\/report\.md$/, 'text/markdown', 'The report as Markdown.'],
   [/\/report\.pdf$/, 'application/pdf', 'The report as a PDF.'],
   [
@@ -304,10 +308,11 @@ const DOWNLOADS: ReadonlyArray<readonly [RegExp, string, string, string?]> = [
   [/\/evidence\/\{[^}]+\}\/file$/, 'application/octet-stream', 'The stored bytes.'],
   // Two formats behind one route, and they are different *sets* rather than
   // two encodings of one: `csv` is the whole inventory, `stix` the actionable
-  // subset. Declared as CSV because that is what an unqualified request serves.
+  // subset. Both are named, because `?format` is what decides and a caller
+  // reading one media type cannot see that the other exists.
   [
     /\/indicators$/,
-    'text/csv',
+    ['text/csv', 'application/json'],
     'The case\u2019s indicators. `?format=stix` serves the actionable subset as a STIX bundle instead.',
   ],
   // A download that is a POST - the export takes options in the body and
@@ -445,10 +450,19 @@ export function asDownload(operation: Operation, method: string, path: string): 
   const code = successOf(operation)
   const existing = (operation.responses[code] ?? {}) as { content?: unknown }
   if (!existing.content) {
+    const types = typeof media === 'string' ? [media] : media
     operation.responses[code] = {
       ...existing,
       description: said,
-      content: { [media]: { schema: { type: 'string', format: 'binary' } } },
+      content: Object.fromEntries(
+        // **JSON is not bytes.** `format: 'binary'` is what stops a generator
+        // typing a PDF as a string; spelling a JSON bundle the same way is the
+        // same mistake pointing the other direction.
+        types.map((one) => [
+          one,
+          { schema: one === 'application/json' ? { type: 'object' } : { type: 'string', format: 'binary' } },
+        ]),
+      ),
     }
   }
   return true
@@ -538,7 +552,12 @@ const VERSIONED_POST: ReadonlySet<string> = new Set(['/api/cases/{caseId}/eviden
  * `@nestjs/swagger` documents only what a decorator says, and this codebase
  * validates through a pipe, so nothing else describes these.
  */
-export function refusals(method: string, path: string, hasBody: boolean): Record<string, unknown> {
+export function refusals(
+  method: string,
+  path: string,
+  hasBody: boolean,
+  hasQuery = false,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   const row = /\{[^}]+\}/.test(path)
   const versioned =
@@ -551,10 +570,18 @@ export function refusals(method: string, path: string, hasBody: boolean): Record
       description: 'The body is not readable \u2014 malformed JSON, or not the media type this route takes.',
       ...json(REFUSAL),
     }
+  }
+  // **A query is refused by the same pipe and answers the same status.** A
+  // route with published parameters validates them from the schema that
+  // describes them, so a value outside what a parameter permits is read and
+  // refused exactly as a body is -- and a read with no body still has one way
+  // to be told no.
+  if (hasBody || hasQuery) {
     out['422'] = {
-      description:
-        'The body was read and refused. `message` says what was wrong; `errors` says where, ' +
-        'on routes that answer with a tree.',
+      description: hasBody
+        ? 'The body was read and refused. `message` says what was wrong; `errors` says where, ' +
+          'on routes that answer with a tree.'
+        : 'The query was read and refused. `errors` says which parameter, and why.',
       ...json(REFUSAL),
     }
   }
