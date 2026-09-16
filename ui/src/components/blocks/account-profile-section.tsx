@@ -18,10 +18,10 @@ const TONES: readonly string[] = ['bg-presence-1', 'bg-presence-2', 'bg-presence
 export interface AccountProfileWrites {
   setPicture: (file: File) => void
   clearPicture: () => void
-  /** The chosen swatch; `null` for automatic. */
-  setTone: (tone: 0 | 1 | 2 | null) => void
-  /** Committed once the field is left. */
-  setInitials: (initials: string) => void
+  /** The chosen swatch; `null` for automatic. Rejects when the write was refused. */
+  setTone: (tone: 0 | 1 | 2 | null) => Promise<void>
+  /** Committed once the field is left. Rejects when the write was refused. */
+  setInitials: (initials: string) => Promise<void>
 }
 
 export interface AccountProfileSectionProps {
@@ -45,6 +45,9 @@ export interface AccountProfileSectionProps {
  * `tone` and `initials` are the value; `writes` carries what leaves on a
  * change. Absent `writes`, a choice still redraws the preview and reaches
  * nowhere -- which is what keeps the section drawable in the gallery.
+ *
+ * A control moves on the press and goes back to the served value when the
+ * write it sent rejects, so a refused colour leaves initials being typed alone.
  */
 export function AccountProfileSection({
   name,
@@ -55,9 +58,8 @@ export function AccountProfileSection({
   writes,
 }: AccountProfileSectionProps) {
   const [chosenTone, setChosenTone] = useState<number | undefined>(tone)
-  // Re-synced whenever the incoming value moves, the same shape
-  // `CaseRecordForm` uses to fold a prop change back into local state without
-  // an effect.
+  // Re-synced whenever the incoming value moves, which folds a prop change
+  // back into local state without an effect.
   const [givenTone, setGivenTone] = useState(tone)
   if (givenTone !== tone) {
     setGivenTone(tone)
@@ -116,7 +118,9 @@ export function AccountProfileSection({
             paint="bg-muted"
             onChoose={() => {
               setChosenTone(undefined)
-              writes?.setTone(null)
+              void writes?.setTone(null).catch(() => {
+                setChosenTone(tone)
+              })
             }}
           />
           {TONES.map((paint, index) => (
@@ -127,7 +131,9 @@ export function AccountProfileSection({
               paint={paint}
               onChoose={() => {
                 setChosenTone(index)
-                writes?.setTone(index as 0 | 1 | 2)
+                void writes?.setTone(index as 0 | 1 | 2).catch(() => {
+                  setChosenTone(tone)
+                })
               }}
             />
           ))}
@@ -142,7 +148,9 @@ export function AccountProfileSection({
           value={letters}
           onChange={setLetters}
           onBlur={() => {
-            writes?.setInitials(letters)
+            void writes?.setInitials(letters).catch(() => {
+              setLetters(initials)
+            })
           }}
           className="w-40"
         />

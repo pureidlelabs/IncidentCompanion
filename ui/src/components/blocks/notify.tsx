@@ -38,6 +38,11 @@ export interface WriteFailureOptions {
    * delete whose row has gone is not retryable.
    */
   retry?: () => void
+  /**
+   * The whole title, where `<what> was not saved.` does not fit: a plural
+   * subject, or a write that removes rather than saves.
+   */
+  said?: string
 }
 
 type Tone = 'plain' | 'error' | 'warning' | 'success'
@@ -115,12 +120,13 @@ export function reportWriteFailure(
   toastQueue.add({
     // Drawn by the card, not by the region -- but React Aria labels the toast
     // from it, so a card with no `title` announces as an unnamed dialog.
-    title: `${what} was not saved.`,
+    title: options?.said ?? `${what} was not saved.`,
     tone: 'destructive',
     render: (close) => (
       <WriteFailure
         what={what}
         error={refusal}
+        {...(options?.said === undefined ? {} : { said: options.said })}
         onDismiss={close}
         {...(options?.retry === undefined
           ? {}
