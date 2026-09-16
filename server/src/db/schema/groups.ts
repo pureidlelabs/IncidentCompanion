@@ -51,6 +51,10 @@ export const groupCustomers = pgTable(
  * inside a case is the analyst's working material, and taking a wrong entry
  * out is ordinary work. `delete` is about the case as a whole and nothing
  * smaller.
+ *
+ * **Weakest first, and reordering these changes who reaches what.** The
+ * position in this array is what *most permissive applies* compares.
+ * -> `access/reach.service.ts`
  */
 export const LEVELS = ['read', 'write', 'delete'] as const
 

@@ -19,19 +19,42 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { user } from '../db/schema/auth.js'
 import { customers } from '../db/schema/customer.js'
-import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
+import { LEVELS, groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
 
 export type Level = 'read' | 'write' | 'delete'
 
 /**
  * Ordered weakest to strongest, which is the whole of *most permissive
- * applies*: comparing by position is the comparison, so a level added to the
- * specification is added here and nowhere else.
+ * applies*: comparing by position is the comparison.
+ *
+ * The schema's vocabulary, so a level added to the specification is added
+ * once. Its declaration order is what ranks the levels. -> `LEVELS`
  */
-const RANK: readonly Level[] = ['read', 'write', 'delete']
+export const RANK: readonly Level[] = LEVELS
 
 const strongest = (levels: readonly Level[]): Level | null =>
   levels.length === 0 ? null : RANK[Math.max(...levels.map((one) => RANK.indexOf(one)))]!
+
+/**
+ * The level one account settles at over one customer: every grant that reaches
+ * it, and the floor where one applies, resolved by *most permissive*.
+ *
+ * `null` where nothing grants and no floor applies, which is no reach at all
+ * rather than the weakest level.
+ */
+const settle = (rows: readonly { level: Level }[], floor?: Level): Level | null =>
+  strongest([...(floor ? [floor] : []), ...rows.map((one) => one.level)])
+
+/** The rows of one join, in first-appearance order, keyed by whose they are. */
+function grouped<Row>(rows: readonly Row[], key: (row: Row) => string): Map<string, Row[]> {
+  const byKey = new Map<string, Row[]>()
+  for (const row of rows) {
+    const held = byKey.get(key(row))
+    if (held) held.push(row)
+    else byKey.set(key(row), [row])
+  }
+  return byKey
+}
 
 /**
  * What the install itself holds over the default customer, by role.
@@ -134,8 +157,7 @@ export class ReachService {
       .innerJoin(groupCustomers, eq(groupCustomers.groupId, groupMembers.groupId))
       .where(and(eq(groupMembers.userId, userId), eq(groupCustomers.customerId, customerId)))
 
-    const granted = held.map((row) => row.level)
-    if (customerId !== (await this.defaultCustomerId())) return strongest(granted)
+    if (customerId !== (await this.defaultCustomerId())) return settle(held)
 
     // The role is read here rather than taken from a caller: this is the one
     // place reach is resolved, and a caller that supplied it could supply a
@@ -144,7 +166,7 @@ export class ReachService {
       .select({ role: user.role })
       .from(user)
       .where(eq(user.id, userId))
-    return strongest([overTheDefault(account?.role ?? null), ...granted])
+    return settle(held, overTheDefault(account?.role ?? null))
   }
 
 
@@ -178,17 +200,13 @@ export class ReachService {
     const fallback = await this.defaultCustomerId()
 
     const byCustomer = new Map<string, ReachedCustomer>()
-    for (const row of rows) {
-      const forThis = rows.filter((one) => one.customerId === row.customerId)
-      const floor = row.customerId === fallback ? overTheDefault(account?.role ?? null) : undefined
-      const level = strongest([
-        ...(floor ? [floor] : []),
-        ...forThis.map((one) => one.level),
-      ])
+    for (const [customerId, forThis] of grouped(rows, (one) => one.customerId)) {
+      const floor = customerId === fallback ? overTheDefault(account?.role ?? null) : undefined
+      const level = settle(forThis, floor)
       if (!level) continue
-      byCustomer.set(row.customerId, {
-        customerId: row.customerId,
-        customerName: row.customerName,
+      byCustomer.set(customerId, {
+        customerId,
+        customerName: forThis[0]!.customerName,
         level,
         granted: decidedBy(forThis, level, floor),
       })
@@ -256,15 +274,14 @@ export class ReachService {
       }
     }
 
-    for (const row of rows) {
-      const forThem = rows.filter((one) => one.userId === row.userId)
-      const floor = byUser.get(row.userId)?.level
-      const level = strongest([...(floor ? [floor] : []), ...forThem.map((one) => one.level)])
+    for (const [userId, forThem] of grouped(rows, (one) => one.userId)) {
+      const floor = byUser.get(userId)?.level
+      const level = settle(forThem, floor)
       if (!level) continue
-      byUser.set(row.userId, {
-        userId: row.userId,
-        username: row.username,
-        displayName: row.displayName,
+      byUser.set(userId, {
+        userId,
+        username: forThem[0]!.username,
+        displayName: forThem[0]!.displayName,
         level,
         granted: decidedBy(forThem, level, floor),
       })
