@@ -31,10 +31,10 @@ export function ComplianceControl({
   /**
    * The answer, in the shape the record stores it.
    *
-   * **Wider than `ComplianceValue`, and deliberately so.** This control emits
-   * `string[]` for the multi kinds and `null` for an emptied number or stamp,
-   * which are the stored shapes -- so a caller sends the value on unconverted
-   * rather than splitting a joined string.
+   * **Deliberately wide.** This control emits `string[]` for the multi kinds
+   * and `null` for a question taken back or an emptied number, which are the
+   * stored shapes -- so a caller sends the value on unconverted rather than
+   * splitting a joined string.
    */
   onSet: (name: string, value: unknown) => void
 }) {
@@ -133,7 +133,9 @@ export function ComplianceControl({
         // has to be a string React Aria can tell from "nothing picked".
         selectedKey={value === '' ? UNSET : value}
         onSelectionChange={(key) => {
-          onSet(spec.name, key === UNSET ? '' : String(key))
+          // **`null` on the way out, whatever the row is called on the way
+          // in.** -> #845
+          onSet(spec.name, key === UNSET ? null : String(key))
         }}
       >
         {(spec.options ?? []).map((option) => (

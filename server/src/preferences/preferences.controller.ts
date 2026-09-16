@@ -205,27 +205,31 @@ export class PreferencesController {
    * **Named, because a presence roster draws everybody's.** This is the one
    * route here that reads somebody else's row, and it serves an image and
    * nothing else - no theme, no clock, no initials.
-   *
-   * **Cached hard, because the URL carries the version.** The client appends
-   * `?v=`, which changes on every write, so a long cache cannot serve a stale
-   * face.
    */
   @Get(':userId/avatar')
-  @Header('cache-control', 'private, max-age=31536000, immutable')
   // **Kept even though the bytes are now this process's own PNG.** It costs
   // nothing, and it is the header that stops mattering last: the day someone
   // adds a second upload path, or serves an original alongside, this is already
   // in place rather than remembered.
+  //
+  // **A decorator here and the cache below**, because this one is safe on
+  // every answer and the cache is not: a decorator is applied before the body
+  // runs, so it survives whatever the body throws.
   @Header('x-content-type-options', 'nosniff')
   async avatar(
     @Param('userId') userId: string,
-    @Res({ passthrough: true }) response: { type(value: string): unknown },
+    @Res({ passthrough: true })
+    response: { type(value: string): unknown; setHeader(name: string, value: string): unknown },
   ): Promise<StreamableFile> {
     const found = await this.preferences.avatar(userId)
     // **404, not 400.** The request was well formed and the analyst is real;
     // what is absent is the image. Calling it a bad request sends whoever
     // debugs it looking at the URL.
     if (!found) throw new NotFoundException({ message: 'That analyst has no picture.' })
+    // **Cached hard, and only once there is a picture to cache.** The client
+    // appends `?v=`, which changes on every write, so a long cache cannot serve
+    // a stale face; a refusal carrying it would be kept for a year.
+    response.setHeader('cache-control', 'private, max-age=31536000, immutable')
     response.type(found.type)
     return new StreamableFile(found.bytes, { type: found.type })
   }

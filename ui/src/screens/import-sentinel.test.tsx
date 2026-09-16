@@ -7,12 +7,17 @@
  *
  * What these cannot see: any of it against a live tenant. The screen holds
  * demo rows and no provider, which is the point - a live sign-in is
- * `msalTokenProvider`'s and is tested there.
+ * `msalTokenProvider`'s and is tested there. The exception is the cancelled
+ * sign-in, where what is under test is the route between the two.
  */
+import { BrowserAuthError } from '@azure/msal-browser'
+import type { IPublicClientApplication } from '@azure/msal-browser'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
+import { armSource } from '@/api/sentinel/armSource'
+import { msalTokenProvider } from '@/api/sentinel/msalTokenProvider'
 import {
   DEMO_CANDIDATES,
   DEMO_INCIDENTS,
@@ -86,6 +91,46 @@ describe('the connect phase', () => {
     await user.click(primary())
 
     expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument()
+  })
+
+  /**
+   * **The sign-in window is closed, and the phase has to come back.** Wired
+   * through the live provider rather than a stub refusal: what was missing
+   * was not the wording but any route from a cancelled popup to it. -> #832
+   */
+  it('comes back from a cancelled sign-in with the ids still typed', async () => {
+    const user = userEvent.setup()
+    const cancelled = {
+      initialize: () => Promise.resolve(),
+      getActiveAccount: () => null,
+      getAllAccounts: () => [],
+      setActiveAccount: () => undefined,
+      addEventCallback: () => 'callback-id',
+      removeEventCallback: () => undefined,
+      acquireTokenPopup: () => Promise.reject(new BrowserAuthError('user_cancelled', '')),
+    } as unknown as IPublicClientApplication
+    const writes = {
+      connect: async (registration) =>
+        (await armSource(msalTokenProvider(registration, { application: cancelled })).connect())
+          .identity,
+      sources: () => Promise.resolve([]),
+      incidents: () => Promise.resolve([]),
+      preview: () => Promise.resolve([]),
+      commit: () => Promise.resolve({ entities: 0, timeline: 0, skippedExisting: 0 }),
+    } satisfies SentinelWrites
+
+    render(<ImportSentinelScreen {...SAMPLE} connected identity="" writes={writes} />)
+
+    await user.type(screen.getByLabelText(/Directory \(tenant\) ID/), 'contoso.example')
+    await user.type(screen.getByLabelText(/Application \(client\) ID/), 'a-guid')
+    await user.click(primary())
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sign-in was cancelled.')
+    // The reload the analyst is otherwise left with is what loses these.
+    expect(screen.getByLabelText(/Directory \(tenant\) ID/)).toHaveValue('contoso.example')
+    expect(screen.getByLabelText(/Application \(client\) ID/)).toHaveValue('a-guid')
+    expect(primary()).toHaveTextContent('Sign in')
+    expect(primary()).toBeEnabled()
   })
 
   it('puts the coordinates away once they are set, and gets them back', async () => {
