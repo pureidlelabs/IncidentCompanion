@@ -54,7 +54,7 @@ describe('the CSV import cap', () => {
     const body = aBodyOf(64)
 
     await expect(
-      route.importCsv('c-1', 'systems', undefined, body.stream, session),
+      route.importCsv('c-1', 'systems', { onDuplicate: 'skip' }, body.stream, session),
     ).rejects.toThrow(/import limit/)
 
     expect(
@@ -77,7 +77,7 @@ describe('the CSV import cap', () => {
     const body = aBodyOf(1)
 
     const refusal = await route
-      .importCsv('c-1', 'systems', undefined, body.stream, session)
+      .importCsv('c-1', 'systems', { onDuplicate: 'skip' }, body.stream, session)
       .then(() => null)
       .catch((error: unknown) => error)
 

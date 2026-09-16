@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 
 import type { Advice } from '@/api/advice'
-import { gateClosed, type FieldSpec } from '@/api/specs'
+import { emptyFor, gateClosed, type FieldSpec } from '@/api/specs'
 import type { Problems } from '@/api/validateDraft'
 import { spansRow } from '@/components/blocks/form-section'
 import { ReferenceMultiSelect } from '@/components/blocks/reference-select'
@@ -183,8 +183,13 @@ export function FieldControl<TData>({
               <VocabSelect
                 {...ids}
                 value={text}
+                // A column whose every legal value is an answer has no clear,
+                // so it is offered no row for one. -> `blankOf`
+                allowEmpty={emptyFor(field) !== undefined}
                 onValueChange={(next) => {
-                  onSet(field.name, next)
+                  // The blank row is in no vocabulary, so it posts the column's
+                  // own empty: `''` is a value every enum refuses.
+                  onSet(field.name, next === '' ? emptyFor(field) : next)
                 }}
                 options={field.options ?? []}
               />

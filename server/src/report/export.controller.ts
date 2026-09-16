@@ -10,14 +10,31 @@
  * served short**, naming every kind, because a document missing its timeline
  * reads exactly like a case that had none.
  */
-import { BadRequestException, Controller, Get, Param, ParseUUIDPipe, Query, Res, UseGuards } from '@nestjs/common'
+import { Controller, Get, Param, ParseUUIDPipe, Query, Res, UseGuards } from '@nestjs/common'
 import type { Response } from 'express'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
+import { createZodDto } from 'nestjs-zod'
+import { z } from 'zod'
+
 import { ReportRenderService } from './render.service.js'
 import { toMarkdown } from './document/markdown.js'
 import { toPdf } from './document/pdf.js'
 import { toWord } from './document/word.js'
+
+/**
+ * What the three exports take, and the only description of it.
+ *
+ * **`report` is required.** The URL names the case; which of its reports to
+ * paint is the caller's, and there is no sensible default -- a case holds
+ * several.
+ */
+const exportQuery = z.object({
+  report: z.string().describe('Which of the case\u2019s reports to export.'),
+  lang: z.string().describe('The language to assemble in. Absent is English.').optional(),
+})
+
+class ExportQueryDto extends createZodDto(exportQuery) {}
 
 function filename(title: string, extension: string): string {
   const stem = title.replace(/[^A-Za-z0-9-_ ]/g, '').trim().replace(/\s+/g, '-') || 'report'
@@ -33,10 +50,9 @@ export class ReportExportController {
   async markdown(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res() response: Response,
-    @Query('report') reportId?: string,
-    @Query('lang') lang?: string,
+    @Query() query: ExportQueryDto,
   ): Promise<void> {
-    const { document_, title } = await this.resolve(caseId, reportId, lang)
+    const { document_, title } = await this.resolve(caseId, query.report, query.lang)
     response
       .status(200)
       .type('text/markdown; charset=utf-8')
@@ -48,10 +64,9 @@ export class ReportExportController {
   async pdf(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res() response: Response,
-    @Query('report') reportId?: string,
-    @Query('lang') lang?: string,
+    @Query() query: ExportQueryDto,
   ): Promise<void> {
-    const { document_, title, images } = await this.resolve(caseId, reportId, lang)
+    const { document_, title, images } = await this.resolve(caseId, query.report, query.lang)
     const file = await toPdf(document_, images)
     response
       .status(200)
@@ -67,10 +82,9 @@ export class ReportExportController {
   async word(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res() response: Response,
-    @Query('report') reportId?: string,
-    @Query('lang') lang?: string,
+    @Query() query: ExportQueryDto,
   ): Promise<void> {
-    const { document_, title, images } = await this.resolve(caseId, reportId, lang)
+    const { document_, title, images } = await this.resolve(caseId, query.report, query.lang)
     const file = await toWord(document_, images)
     response
       .status(200)
@@ -87,10 +101,7 @@ export class ReportExportController {
    * two chances for the artefact and the preview to differ.
    * -> `render.service.ts`
    */
-  private async resolve(caseId: string, reportId?: string, lang?: string) {
-    if (!reportId) {
-      throw new BadRequestException('Which report? The export URL names one.')
-    }
+  private async resolve(caseId: string, reportId: string, lang?: string) {
     return this.render.render(caseId, reportId, lang)
   }
 }

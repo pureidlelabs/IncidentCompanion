@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto'
 
 import {
   BadRequestException,
+  UnprocessableEntityException,
   NotFoundException,
   Controller,
   Get,
@@ -87,6 +88,41 @@ export const importedSchema = z.object({
 })
 
 class CsvImportedDto extends createZodDto(importedSchema) {}
+
+/**
+ * What the indicators export takes, and the only description of it.
+ *
+ * **`format` decides the media type**, so a caller that cannot see it cannot
+ * reach the STIX bundle at all -- which is what the document did, listing
+ * `tlp` alone and calling it required. The default is here rather than on the
+ * parameter, so the document publishes the CSV a caller gets by saying nothing.
+ *
+ * **`tlp` is a marking the bundle carries**, so it is refused on a format that
+ * cannot carry one. That rule holds between two fields and no schema can state
+ * it; it is the one check left in the handler.
+ */
+const indicatorQuery = z.object({
+  format: z
+    .enum(['csv', 'stix'])
+    .describe('`csv` is the whole inventory, `stix` the actionable subset.')
+    .default('csv'),
+  tlp: z
+    .enum(TLP_NAMES)
+    .describe('The marking the STIX bundle carries. Refused on a format that carries none.')
+    .optional(),
+})
+
+class IndicatorQueryDto extends createZodDto(indicatorQuery) {}
+
+/** What `POST :collection.csv` takes beside the file. */
+const importQuery = z.object({
+  onDuplicate: z
+    .enum(['skip', 'replace'])
+    .describe('What to do with a row the case already holds.')
+    .default('skip'),
+})
+
+class ImportQueryDto extends createZodDto(importQuery) {}
 
 @UseGuards(CaseAccessGuard)
 @Controller('api/cases/:caseId')
@@ -215,7 +251,7 @@ export class ExportsController {
   async importCsv(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('collection') collection: string,
-    @Query('onDuplicate') onDuplicate: string | undefined,
+    @Query() query: ImportQueryDto,
     @Req() request: AsyncIterable<Buffer>,
     @Session() session: UserSession,
   ): Promise<ImportResult> {
@@ -231,16 +267,6 @@ export class ExportsController {
       chunks.push(chunk)
     }
 
-    /**
-     * **`skip` unless the analyst said otherwise, and an unknown value is
-     * refused rather than defaulted.** Silently reading `?onDuplicate=replaces`
-     * as skip would answer a question the analyst thought they had settled.
-     */
-    if (onDuplicate !== undefined && onDuplicate !== 'skip' && onDuplicate !== 'replace') {
-      throw new BadRequestException({
-        message: `onDuplicate is skip or replace, not ${onDuplicate}.`,
-      })
-    }
 
     // **The URL segment is checked rather than asserted.** It goes on to
     // `COLLECTION_SCHEMAS[collection]!` and `TABLES[collection]` inside
@@ -256,7 +282,7 @@ export class ExportsController {
       caseId,
       Buffer.concat(chunks).toString('utf8'),
       session.user.id,
-      onDuplicate ?? 'skip',
+      query.onDuplicate,
     )
   }
 
@@ -271,27 +297,15 @@ export class ExportsController {
   async indicators(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res({ passthrough: true }) response: { type(value: string): unknown },
-    /**
-     * **`format` on the wire, `fmt` in here.** Binding the internal name is what
-     * makes `?format=stix` unread: the STIX export serves CSV, and
-     * `?format=stix&tlp=amber` answers 400 saying *"Format csv carries no TLP
-     * marking"* - the message naming the wrong format is the only tell. A test
-     * that calls this method passes the value in and cannot see it.
-     */
-    @Query('format') fmt = 'csv',
-    @Query('tlp') tlp?: string,
+    @Query() query: IndicatorQueryDto,
   ): Promise<string> {
-    if (fmt !== 'csv' && fmt !== 'stix') {
-      throw new BadRequestException({ message: `No indicator format ${fmt}. Available: csv, stix.` })
-    }
+    const { format: fmt, tlp } = query
+    // **422 rather than 400**, the split the rest of the app keeps: the query
+    // was read without trouble and refused on a rule between two of its keys,
+    // which no schema can state. -> `wire/refusals.ts`
     if (tlp && fmt !== 'stix') {
-      throw new BadRequestException({
+      throw new UnprocessableEntityException({
         message: `Format ${fmt} carries no TLP marking. Formats that do: stix.`,
-      })
-    }
-    if (tlp && !TLP_NAMES.includes(tlp.toLowerCase())) {
-      throw new BadRequestException({
-        message: `No TLP marking ${tlp}. Available: ${TLP_NAMES.join(', ')}.`,
       })
     }
 
