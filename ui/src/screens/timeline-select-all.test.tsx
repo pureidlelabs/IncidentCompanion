@@ -33,4 +33,28 @@ describe('the timeline select-all caption', () => {
       screen.getByText(`${String(campaignCase.timeline.length)} selected`),
     ).toBeVisible()
   })
+
+  /**
+   * A caption counting the whole case reads correctly on an unfiltered screen
+   * and is wrong on every other one.
+   *
+   * The count is entries and the list draws runs, so the two agree only where
+   * nothing folds -- which holds under this search and does not over the whole
+   * case. The selection is the assertion that survives either way: a caption
+   * naming a number the box does not honour is the same defect.
+   */
+  it('counts what the filter left, and the tick honours that count', async () => {
+    const user = userEvent.setup()
+    render(<TimelineScreen kase={campaignCase} specs={specsFixture} search="file" />)
+
+    const words = screen.getByText(/^Select all \d+ shown$/)
+    const shown = Number(/\d+/.exec(words.textContent)?.[0])
+    expect(shown).toBeGreaterThan(0)
+    expect(shown).toBeLessThan(campaignCase.timeline.length)
+    expect(document.querySelectorAll('[data-part="timeline-row"]').length).toBe(shown)
+
+    await user.click(words)
+
+    expect(screen.getByText(`${String(shown)} selected`)).toBeVisible()
+  })
 })

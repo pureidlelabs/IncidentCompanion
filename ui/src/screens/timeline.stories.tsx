@@ -34,7 +34,6 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The select-all caption, which is also the box's name. */
 const SELECT_ALL = /^Select all \d+ shown$/
 
 /** 88 entries over a week: 83 events and the 5 activities the SOC recorded. */
@@ -147,10 +146,7 @@ export const SomeSelected: Story = {
   },
 }
 
-/**
- * Every row ticked by pressing the caption rather than the box: the words are
- * the label, so the hit target is the sentence.
- */
+/** Every row ticked by pressing the caption rather than the box. */
 export const AllSelected: Story = {
   name: 'Selection: every row ticked',
   args: { newestFirst: false },

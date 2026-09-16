@@ -285,11 +285,9 @@ export function TimelineScreen({
     () => [
       selectionColumn<TimelineEntry>(
         (row) => `Select ${row.description || 'entry'}`,
-        // Counted off the table rather than closed over: a count in the
+        // Handed the count rather than closing over it: a count in the
         // dependency list rebuilds the columns the selection is keyed to.
-        (all) => (
-          <span className="text-xs">{`Select all ${String(all.getRowModel().rows.length)} shown`}</span>
-        ),
+        (shown) => <span className="text-xs">{`Select all ${String(shown)} shown`}</span>,
       ),
     ],
     [],
