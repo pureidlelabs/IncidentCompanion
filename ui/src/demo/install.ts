@@ -10,9 +10,9 @@ import { setTransport } from '@/api/client'
 
 import { mountDemoChrome } from './chrome'
 import { handle, DEMO_ANALYST } from './handler'
-import { LoopbackSocket, forgetProse, seedLoopback } from './loopback'
+import { LoopbackSocket, forgetProse, seedLoopback, seedNote } from './loopback'
 import { landingPath } from './landing'
-import type { DemoState } from './state'
+import { seedReportProse, type DemoState } from './state'
 import { load, reset, save } from './store'
 
 /**
@@ -45,9 +45,10 @@ function answerSockets(state: DemoState): void {
     return rows?.find((row) => row.id === match[1])
   }
   seedLoopback({
-    seedOf: (field) => {
+    seedInto: (doc, field) => {
       const note = noteOf(field)?.note
-      return typeof note === 'string' ? note : null
+      if (typeof note === 'string' && note !== '') seedNote(doc, note)
+      else seedReportProse(state, doc, field)
     },
     onText: (field, text) => {
       const row = noteOf(field)

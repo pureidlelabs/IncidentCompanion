@@ -82,6 +82,19 @@ export function english(): Translate {
   return translatorFor(undefined)
 }
 
+/**
+ * Every section heading the pack answers for, in the language asked for, with
+ * the keys it has no words for dropped.
+ *
+ * A constant of the tree in English, which is what lets
+ * `server/scripts/demo-catalogue.mts` capture it for a build with no server.
+ */
+export function headingPack(t: Translate): { key: string; label: string }[] {
+  return EN_KEYS.filter((key) => key.startsWith('heading.'))
+    .map((key) => ({ key, label: t(key) }))
+    .filter((pair) => pair.label !== pair.key)
+}
+
 export interface LanguageEntry {
   code: string
   label: string

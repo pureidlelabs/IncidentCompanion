@@ -26,7 +26,7 @@ vi.mock('./store', () => ({
   },
 }))
 
-import { LoopbackSocket, forgetProse, seedLoopback, textOf } from './loopback'
+import { LoopbackSocket, forgetProse, seedLoopback, seedNote, textOf } from './loopback'
 
 const FIELD = 'reports:r1:document:block-1'
 const NOTE = 'casenotes:n1:document'
@@ -147,7 +147,9 @@ describe('the loopback socket', () => {
   it('seeds a note from its column and tells the column what was typed', async () => {
     const told: string[] = []
     seedLoopback({
-      seedOf: (field) => (field === NOTE ? 'First line.\nSecond line.' : null),
+      seedInto: (doc, field) => {
+        if (field === NOTE) seedNote(doc, 'First line.\nSecond line.')
+      },
       onText: (field, text) => {
         if (field === NOTE) told.push(text)
       },

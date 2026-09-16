@@ -1,0 +1,165 @@
+{
+  "layouts": [],
+  "stages": [
+    "",
+    "NIS2 early warning",
+    "NIS2 notification",
+    "NIS2 intermediate",
+    "NIS2 final"
+  ],
+  "tlp": [
+    "",
+    "TLP:CLEAR",
+    "TLP:GREEN",
+    "TLP:AMBER",
+    "TLP:AMBER+STRICT",
+    "TLP:RED"
+  ],
+  "languages": [],
+  "headings": [
+    {
+      "key": "heading.exec_summary",
+      "label": "Executive summary"
+    },
+    {
+      "key": "heading.analysis",
+      "label": "Analysis"
+    },
+    {
+      "key": "heading.analyst_notes",
+      "label": "Analyst notes"
+    },
+    {
+      "key": "heading.recommendations",
+      "label": "Recommendations"
+    },
+    {
+      "key": "heading.root_cause",
+      "label": "Root cause"
+    },
+    {
+      "key": "heading.what_happened",
+      "label": "What happened"
+    },
+    {
+      "key": "heading.what_we_did",
+      "label": "What we did"
+    },
+    {
+      "key": "heading.what_we_recommend",
+      "label": "What we recommend"
+    },
+    {
+      "key": "heading.what_is_still_open",
+      "label": "What is still open"
+    },
+    {
+      "key": "heading.initial_assessment",
+      "label": "Initial assessment"
+    },
+    {
+      "key": "heading.status_update",
+      "label": "Status update"
+    },
+    {
+      "key": "heading.cross_border_impact",
+      "label": "Cross-border impact"
+    },
+    {
+      "key": "heading.narrative",
+      "label": "Incident narrative"
+    },
+    {
+      "key": "heading.figure",
+      "label": "Figure"
+    },
+    {
+      "key": "heading.killchain",
+      "label": "Kill chain coverage"
+    },
+    {
+      "key": "heading.exec_card",
+      "label": "Summary"
+    },
+    {
+      "key": "heading.case_header",
+      "label": "Case"
+    },
+    {
+      "key": "heading.metrics",
+      "label": "Response metrics"
+    },
+    {
+      "key": "heading.timeline",
+      "label": "Timeline of events"
+    },
+    {
+      "key": "heading.entities",
+      "label": "Assets, accounts and indicators"
+    },
+    {
+      "key": "heading.ribbon",
+      "label": "Attack progression"
+    },
+    {
+      "key": "heading.glossary",
+      "label": "Terms used in this report"
+    },
+    {
+      "key": "heading.evidence",
+      "label": "Evidence"
+    },
+    {
+      "key": "heading.methods",
+      "label": "Methods"
+    },
+    {
+      "key": "heading.actions",
+      "label": "Response actions"
+    },
+    {
+      "key": "heading.impact",
+      "label": "Impact"
+    },
+    {
+      "key": "heading.techniques",
+      "label": "Techniques and sub-techniques"
+    },
+    {
+      "key": "heading.technique_table",
+      "label": "Techniques observed"
+    },
+    {
+      "key": "heading.indicators",
+      "label": "Indicators of compromise"
+    },
+    {
+      "key": "heading.applied",
+      "label": "Applied measures"
+    },
+    {
+      "key": "heading.outstanding",
+      "label": "Outstanding measures"
+    },
+    {
+      "key": "heading.assets",
+      "label": "Assets"
+    },
+    {
+      "key": "heading.accounts",
+      "label": "Accounts"
+    },
+    {
+      "key": "heading.network_indicators",
+      "label": "Network indicators"
+    },
+    {
+      "key": "heading.malware",
+      "label": "Malware"
+    },
+    {
+      "key": "heading.cloud_apps",
+      "label": "Cloud applications"
+    }
+  ]
+}
