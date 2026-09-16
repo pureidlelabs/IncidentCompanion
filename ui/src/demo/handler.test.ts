@@ -239,6 +239,14 @@ describe('a route answers at its own depth and no other', () => {
   })
 })
 
+describe('what the demo has no store for', () => {
+  it('refuses the case activity rather than answering an empty feed', async () => {
+    const answer = await ask(`/cases/${caseId()}/activity`)
+    expect(answer.status).toBe(501)
+    expect(answer.body.message).toMatch(/demo/i)
+  })
+})
+
 describe("a collection's own verbs are not row ids", () => {
   it('refuses a bulk edit rather than calling it a missing entry', async () => {
     const answer = await ask(`/cases/${caseId()}/timeline/bulk`, {
