@@ -58,10 +58,12 @@ export interface PickerFrameProps {
  * What the rail's top card opens.
  *
  * **Not the workspace's case switcher.** There is nothing to switch between
- * here, so the rows are the install's own: the two facts an analyst opens
- * once, and never a case.
+ * here, so the rows are the install's own facts, and never a case.
+ *
+ * No `onHealth` draws no Health row: the pane is one this account may not
+ * reach.
  */
-const productMenuRows = (onAbout: () => void, onHealth: () => void) => (
+const productMenuRows = (onAbout: () => void, onHealth: (() => void) | undefined) => (
   <>
     <MenuLabel>IncidentCompanion</MenuLabel>
     <MenuSeparator />
@@ -70,10 +72,12 @@ const productMenuRows = (onAbout: () => void, onHealth: () => void) => (
         <Info />
         About this install
       </MenuItem>
-      <MenuItem id="health" onAction={onHealth}>
-        <Activity />
-        Health
-      </MenuItem>
+      {onHealth !== undefined && (
+        <MenuItem id="health" onAction={onHealth}>
+          <Activity />
+          Health
+        </MenuItem>
+      )}
     </MenuSectionGroup>
   </>
 )
@@ -94,7 +98,8 @@ export function PickerFrame({
   const go = (next: PickerPane) => () => {
     onPane?.(next)
   }
-
+  const groups = panesFor({ admin: admin === true })
+  const offersHealth = groups.some((group) => group.rows.some((row) => row.pane === 'health'))
 
   return (
     <AppShell
@@ -108,7 +113,7 @@ export function PickerFrame({
             mark: <Mark className="size-5" />,
             name: 'IncidentCompanion',
             caption: 'Local investigation workspace',
-            menu: productMenuRows(onAbout, go('health')),
+            menu: productMenuRows(onAbout, offersHealth ? go('health') : undefined),
           }}
           user={{
             person: { name: analyst, you: true },
@@ -137,7 +142,7 @@ export function PickerFrame({
           </RailList>
           </RailGroup>
 
-          {panesFor({ admin: admin === true }).map((group) => (
+          {groups.map((group) => (
             <RailGroup
               key={group.label}
               label={group.label}
