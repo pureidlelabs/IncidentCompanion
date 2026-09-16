@@ -3,22 +3,11 @@
 **GDPR Article 33(1) gives 72 hours, and this repository counts them twice.**
 The server's `compliance/gdpr.ts` computes the deadline the assessment rests on;
 the client's `lib/statutory-clock.ts` computes the clock the analyst reads on the
-case queue. They are separate code in separate workspaces, and the client says
-so itself:
-
-    `NOTIFY_AUTHORITY_HOURS`, `deadline` and `hoursRemaining` carry the GDPR
-    ...
-    `hours_remaining` is `gdpr_aware_at + 72h - now`, and the 72 is written into
-
+case queue. They are separate code in separate workspaces.
 Nothing held them together. The failure is quiet and it is the worst shape a
 compliance defect can take: the analyst reads one number on the screen and the
 assessment is decided by another, so a case reported as having time left is
 overdue -- or the reverse, which is the one that gets explained to a regulator.
-
-**The server's own `hoursRemaining` is called by nothing but its own test**,
-measured, so the number a person actually sees comes from the client's copy
-alone. That makes the agreement asserted here the only thing standing between
-the two.
 
 **Read off the source rather than executed**, because the two live in separate
 workspaces and neither suite can import the other. What has no home but this

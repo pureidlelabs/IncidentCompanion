@@ -39,33 +39,10 @@ REPO_ROOT = REPO_ROOT
 #: Host profile -> whether the app's own 0700/0600 modes are expected to be
 #: visible on the *host* side of a bind mount, and whether that was measured
 #: rather than assumed.
-#:
-#: **Ownership and modes are two different questions, and only ownership is
-#: remapped.** Measured on Docker Desktop 29.6.2 / macOS: a directory the
-#: container creates at 0700 reads 700 on the host, while its uid 1000 reads
-#: back as the host user (501). Reading that as "modes are not visible either"
-#: skips the assertion on macOS for a reason that is really about ownership --
-#: a check silently not running, which is the failure this whole file is
-#: arranged against.
 HOST_PROFILES = {
     "linux": {"host_sees_modes": True, "measured": True},
     "docker-desktop-macos": {"host_sees_modes": True, "measured": True},
-    # Measured on Colima 0.10.3 / Docker 29.5.2 / vz + virtiofs: a
-    # directory the container creates at 0700 under a *reachable* source reads
-    # 700 on the host and its uid reads back as the host user -- the same two
-    # answers as Docker Desktop. What differs is not the expectation but which
-    # sources are reachable at all; see `_daemon_can_see`.
     "colima-macos": {"host_sees_modes": True, "measured": True},
-    # **Probed rather than guessed.** A directory the container creates at
-    # 0700 under a reachable source reads back 700, so OrbStack gives the same
-    # answer as Docker Desktop and Colima.
-    #
-    # **Probed from inside the dev container, which is the caveat.** The mode is
-    # read through this container's own bind of the same macOS path rather than
-    # by `stat` on macOS itself -- one virtiofs hop either way, and the question
-    # is whether the container's 0700 reached the host filesystem at all, which
-    # it did. A reading taken on the Mac would be strictly better and is not
-    # available from here.
     "orbstack-macos": {"host_sees_modes": True, "measured": True},
     # Unmeasured: no WSL2 host available. False so a wrong assertion cannot
     # fire, and `measured` says why the skip is not a verdict -- the first
@@ -77,23 +54,9 @@ HOST_PROFILES = {
 #: Daemon-name **prefix** -> the macOS profile it selects. A prefix because
 #: `colima start --profile work` names the instance `colima-work`, which is
 #: what `docker info` reports; an exact match fails a supported setup.
-#:
-#: **One rule, not two.** A literal copy of this mapping in the test looked
-#: like independence and was a second rule to keep in step -- it matched
-#: exactly while the detector matched by prefix, so a named Colima profile
-#: went red with a repair note that would have made the table wrong. The test
-#: asserts the mapping's *application* over named cases below instead, which is
-#: data rather than a restatement of the rule.
 MACOS_RUNTIMES = {
     "colima": "colima-macos",
     "docker-desktop": "docker-desktop-macos",
-    # `docker info`'s `Name` is the *daemon host's hostname*, which for
-    # OrbStack is its single Linux VM. `orbstack` is the expected spelling and
-    # was **not** confirmed against a running daemon -- this move was written
-    # on Linux. If it is wrong, `detect_host_profile` raises naming what the
-    # daemon actually said, which is the loud failure this table is arranged
-    # to produce rather than a silent mis-selection. Confirm with
-    # `docker info --format '{{.Name}}'` on the Mac.
     "orbstack": "orbstack-macos",
 }
 
@@ -108,23 +71,11 @@ def macos_profile_for(name: str) -> str | None:
 def detect_host_profile() -> str:
     """Which row of `HOST_PROFILES` applies, or raise.
 
-    Raising rather than returning a default is the point: an unknown host
-    silently taking the most permissive expectations is the failure mode this
-    whole file is arranged against.
-
     **On macOS the host OS does not identify the runtime, so the daemon is
     asked.** `platform.system()` says `Darwin` for Docker Desktop and for
     Colima alike; returning the Docker Desktop row for both is a mis-detection
     of exactly the kind the paragraph above rejects. `docker info` reports
     `Name` as `docker-desktop` or `colima` respectively.
-
-    **And the daemon is asked on every host, not only on Darwin, because the
-    profile describes the daemon's host rather than the client's.** Those are
-    the same machine only until the repository is opened in a dev container:
-    the client is Debian and the daemon is OrbStack on the Mac, so a
-    client-first branch answers `linux` — `{host_sees_modes: True, measured:
-    True}` — where the truth is `orbstack-macos`, which says the opposite and
-    says it is unmeasured.
 
     A native Linux host falls through rather than raising: `docker info` names
     the daemon host's *hostname* there, which matches no `MACOS_RUNTIMES`
@@ -154,11 +105,6 @@ def detect_host_profile() -> str:
 
 def _docker_daemon_name() -> str:
     """The daemon's own name, or raise -- never a default.
-
-    Returning `""` for a daemon that did not answer collapses "this runtime is
-    unknown" into "the daemon is down", and the caller reports the first: an
-    analyst reads `unrecognised macOS container runtime ''`. That is the same
-    conflation `_daemon_can_see` is built to avoid, so it may not be made here.
     """
     result = subprocess.run(["docker", "info", "--format", "{{.Name}}"],
                             capture_output=True, text=True)
@@ -187,10 +133,6 @@ pytestmark = [
         reason="no Docker daemon is reachable"),
 ]
 
-#: **The tag `compose.yaml` gives the app service**, not one this tier
-#: chooses. Compose owns the build, so a private tag would mean either a
-#: second build of the same Dockerfile or a name nothing produces, which the
-#: daemon reports as `pull access denied` and reads as a registry problem.
 IMAGE = "incidentcompanion-node:local"
 
 
@@ -209,15 +151,6 @@ def test_the_host_profile_is_recognised_and_named(capsys):
 def test_an_unanswering_daemon_is_not_reported_as_an_unknown_runtime(
         monkeypatch):
     """The `raise` in `_docker_daemon_name`, which nothing else reaches.
-
-    `_docker_available()` skips the whole tier when the daemon is down, so the
-    clause is unreachable by any ordinary run -- **deleting it leaves the tier
-    green**, which is why this test exists rather than a note saying the
-    branch was covered. The reachable path is a daemon that dies between the
-    skip check and this call, and the failure it prevents is a diagnostic one:
-    `""` would be reported as `unrecognised macOS container runtime ''`,
-    sending the reader to add a HOST_PROFILES row for a daemon that is merely
-    not running.
     """
     def dead_daemon(*args, **kwargs):
         return subprocess.CompletedProcess(
@@ -242,10 +175,6 @@ def test_the_daemons_host_decides_the_profile_not_the_clients_os(monkeypatch):
     deliberately carries the opposite -- so the tier runs the inverted
     expectation and calls it measured. That is exactly the silent
     mis-selection this file's docstring is arranged against.
-
-    Not merged with the parametrized cases below: those assert the *name to
-    row* mapping, which was already right. This asserts that the mapping is
-    consulted at all when the client is not a Mac.
     """
     monkeypatch.setattr(platform, "system", lambda: "Linux")
     monkeypatch.setattr(
@@ -298,12 +227,6 @@ def test_a_bind_source_is_offered_inside_the_repository():
         "container every other candidate is container-only, and the daemon "
         "silently creates an unreachable source in its VM instead of failing")
 
-    # **And it must be the main checkout, not a worktree.** `.claude/worktrees`
-    # is a named volume mounted only inside the container, so a candidate under
-    # it is exactly as invisible as `/tmp` — measured, VISIBLE from the main
-    # checkout and HIDDEN from a worktree in the same probe run. Spelling this
-    # `REPO_ROOT` passes from the main checkout and fails from every worktree,
-    # which is where this tier is usually run.
     for root in inside:
         assert ".claude/worktrees" not in str(root), (
             f"the candidate {root} is inside a worktree, whose parent is a "
@@ -317,8 +240,6 @@ def test_a_bind_source_is_offered_inside_the_repository():
     # exact-match spelling of this test fails here while the detector passes.
     ("colima-work", "colima-macos"),
     ("docker-desktop", "docker-desktop-macos"),
-    # OrbStack has no profile concept, so there is no `orbstack-<name>` case to
-    # pair with `colima-work` -- one instance is all it runs.
     ("orbstack", "orbstack-macos"),
 ])
 def test_the_macos_runtime_name_selects_its_profile(
@@ -328,10 +249,6 @@ def test_the_macos_runtime_name_selects_its_profile(
     Re-deriving the answer with the production predicate proves only that
     `detect_host_profile` consulted it. These are data: the mapping has to land
     on these names whatever the rule is spelled like.
-
-    `docker-desktop` is asserted from the name alone -- Docker Desktop is not
-    installed on the machine this was written on, so the row it selects remains
-    measured only by the earlier Docker Desktop run recorded in `HOST_PROFILES`.
     """
     monkeypatch.setattr(platform, "system", lambda: "Darwin")
     monkeypatch.setattr(sys.modules[__name__], "_docker_daemon_name",
@@ -371,11 +288,6 @@ def test_an_unknown_macos_runtime_fails_rather_than_taking_a_row(monkeypatch):
 def test_the_detected_profile_names_the_runtime_the_daemon_reports():
     """The live machine, against the daemon rather than against a constant.
 
-    `test_the_host_profile_is_recognised_and_named` passes for a
-    `detect_host_profile` that ignores the machine entirely -- and did: every
-    macOS host took the Docker Desktop row, so Colima ran another runtime's
-    expectations while the tier printed a profile it was not measuring.
-
     **The macOS arm is the one asserted here**, because it is the only one
     where the host OS does not name the runtime. The Linux and WSL2 arms are
     covered by the cases above only as far as the rule is spelled correctly --
@@ -403,11 +315,6 @@ PORT = 18443
 
 def _compose(*args, env=None, **kwargs):
     """`docker compose` against this tier's own project and file.
-
-    **Through one helper, so nothing addresses a container by an assembled
-    name.** `<project>-app-1` reproduces compose's naming convention by hand in
-    the one place that already knows how to ask compose properly, and it would
-    break silently the day that convention changes.
     """
     return subprocess.run(
         ["docker", "compose", "-p", PROJECT, "-f", str(STACK), *args],
@@ -431,8 +338,6 @@ def built_image():
     from the bind-mounted volumes and is read by nothing: `compose.yaml` names
     it nowhere.
     """
-    # `--profile migrate`, or the one-shot is out of the selection and the
-    # schema push below builds on first use instead.
     build = _compose("--profile", "migrate", "build",
                      env={"IC_DATA": "/tmp/incidentcompanion-build-unused"})
     assert build.returncode == 0, f"docker build failed:\n{build.stderr[-4000:]}"
@@ -441,15 +346,6 @@ def built_image():
 
 def _daemon_can_see(directory: Path) -> bool:
     """Does a bind mount of `directory` reach the host, or land in the VM?
-
-    **A source the daemon cannot reach does not fail -- it is silently created
-    inside the VM**, so the container writes succeed, the host side stays
-    empty, and nothing names the mount. Measured on Colima 0.10.3, which mounts
-    `$HOME` and nothing else: pytest's `tmp_path` (`/var/folders/...` via
-    `TMPDIR`) is unreachable, the VM-local directory is root-owned, and a
-    `--user` container hits `PermissionError: /data/cases` at startup. That
-    surfaced as `Connection refused` on the published port -- three layers from
-    the cause.
 
     Probed rather than tabulated: the reachable set is a property of the user's
     VM configuration, not of the runtime, so a table row would be wrong the
@@ -519,10 +415,6 @@ def _bind_mount_roots() -> list[Path]:
         # same-host-path.** That makes it the one path spelled identically on
         # both sides of the boundary, so a bind source under it resolves for a
         # daemon that resolves against macOS while the client is Debian.
-        # Without it this tier cannot run from inside the container at all:
-        # `tmp_path` and `$HOME` are both container-only, the daemon creates
-        # the missing source inside its VM rather than failing, and the tier
-        # reports that it can bind-mount neither.
         _workspace_root() / ".container-test-tmp",
         # `pwd`, not `Path.home()` or `$HOME`: the fixtures monkeypatch
         # `Path.home` to a per-test directory for isolation, so the obvious
@@ -585,11 +477,6 @@ def running_container(built_image):
     that starts the services in order, polls for a connection and applies the
     roles is standing in for the thing under test: these tests then pass
     identically whether the `depends_on` chain works or is entirely broken.
-
-    **A poll for real TCP readiness is the same mistake one layer down** -- it
-    cannot observe a healthcheck that goes green on the unix socket while the
-    port is still refused, which is what takes the chain down on a cold start
-    under load.
 
     **Needs no environment**: every volume is Docker-managed, so a fresh one is
     initialised from the image whoever started it.
@@ -682,7 +569,6 @@ def test_docker_stop_shuts_down_gracefully_rather_than_being_killed(
         f"the stop took {elapsed:.1f}s of a 20s grace period, so the signal "
         "was waited out rather than handled")
 
-    # The container id from compose rather than an assembled name.
     listed = _compose("ps", "-a", "-q", "app", env={"IC_DATA": "unused"})
     container = listed.stdout.strip().splitlines()
     assert container, "compose reports no app container to inspect"
@@ -696,13 +582,6 @@ def test_docker_stop_shuts_down_gracefully_rather_than_being_killed(
         "the container exited 137, which is SIGKILL after the grace period -- "
         "SIGTERM never reached node, so the shutdown hooks did not close the "
         "pool. A shell or an npm between tini and node is the usual cause")
-    # **143 exactly, and `in (0, 143)` was wrong.** 0 is unreachable here via a
-    # handled SIGTERM -- Nest re-raises the signal after its hooks -- so the 0
-    # arm bought nothing and admitted the one failure this cannot otherwise
-    # see: a container that had already exited on its own before the stop
-    # landed. Proved on a throwaway container that exits 0 by itself and never
-    # receives SIGTERM: every other assertion here passed with the property
-    # entirely absent.
     assert state["ExitCode"] == 143, (
         f"the container exited {state['ExitCode']} rather than 143 (128+15, "
         "SIGTERM) -- a 0 here means it was already stopped before the signal, "
@@ -737,11 +616,6 @@ def test_the_container_writes_its_install_volume(running_container):
     **The install is not reachable as a host path, deliberately.** The install
     and the evidence are reached through the app and the API, and a volume is
     still openable in an emergency.
-
-    **The property underneath that did not go with it.** A fresh managed volume
-    is initialised from the image, so if the image's ownership at that mount
-    point were wrong the entrypoint would fail on `/install/secret` before node
-    started. That is a container-side fact, so it is asserted there.
     """
     env = running_container
     _wait_for_app(HEALTH)
@@ -757,11 +631,6 @@ def test_the_container_writes_its_install_volume(running_container):
 
 def test_the_edge_keeps_the_private_key_owner_only(running_container):
     """0600 on the key, asserted where the key now lives.
-
-    **Asserted inside the container, because the host cannot see the key.** The app mints no certificate any
-    more -- nginx does, into its own volume -- so the file and the reader both
-    moved, and with them the old test's one host-varying expectation about
-    whether the daemon's mode bits reach the host at all.
 
     The mint runs `umask 077` *and* an explicit `chmod 600`, because they cover
     different windows: the umask closes the creation window, and a truncating
@@ -785,13 +654,6 @@ def test_the_edge_keeps_the_private_key_owner_only(running_container):
 
 def _upgrade(origin: str, path: str, host: str | None = None) -> int:
     """A raw WebSocket handshake through the edge, returning the status code.
-
-    **The only probe that holds both ends of the origin check at once.** The
-    app-side unit tests pass whatever nginx forwards, and the config assertion
-    reads a file -- neither notices a proxy that strips the port from `Host`,
-    which refuses every upgrade with 403 while every HTTP route answers
-    perfectly.
-
     Raw rather than a websocket client: no dependency, and the status line is
     the whole answer.
     """
@@ -892,13 +754,6 @@ def _status(url: str) -> int:
 def test_the_api_reference_boots_through_the_edge(running_container):
     """The reference viewer is the one page whose design is about headers.
 
-    Redoc is vendored and its boot code is a *served file* rather than an inline
-    script, precisely so the page survives a strict content policy. nginx now
-    sits in front of all of that, and neither half's own tests can see the
-    combination: `docs.controller.test.ts` asserts the HTML names
-    `src="/api/docs/boot.js"`, which stays true whatever the edge does to the
-    request for it.
-
     So this asks the only question that matters -- does the browser get the
     script -- by fetching it the way the page will. A viewer that renders an
     empty frame answers 200 on the page and 404 on the script, and every other
@@ -975,16 +830,8 @@ def test_the_edge_tells_a_refused_caller_when_to_come_back_on_the_credential_pat
         running_container):
     """*It is refused, AND told when it may try again* -- where the edge is the
     only limiter a deployment is guaranteed.
-
-    `throttle/tiers.ts` says why: the app's guard never runs on `/api/auth/*`
-    because Better Auth is middleware, its own limiter is production-gated, and
-    a deployment without it "has nginx's `ic_auth` zone and nothing else".
-
     **A path the app does not serve**, so no credential attempt is spent:
     `ic_auth` counts the request whatever the app would have answered.
-
-    Break-verified by removing this location's `error_page 429`: every edge
-    refusal arrives with no `Retry-After`. -> #142
     """
     _wait_for_app(HEALTH)
     answers = _storm(f"https://127.0.0.1:{PORT}/api/auth/not-a-real-route", _AUTH_STORM)
