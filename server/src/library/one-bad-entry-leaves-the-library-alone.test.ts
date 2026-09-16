@@ -39,8 +39,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 /** Nothing is recorded here; the write is what is on trial. */
 const noActivity = { libraryKindReplaced: () => Promise.resolve(undefined) } as never
-const asAdmin = { user: { id: 'library-operator' } } as never
-const noHeaders = { headers: {} }
+const asAdmin = { session: { user: { id: 'library-operator' } }, headers: {}, request: {} } as never
 
 /**
  * A payload no kind can accept, whatever its fields are.
@@ -94,7 +93,7 @@ describe.skipIf(!db)('a library document with one bad entry', () => {
       }
 
       await expect(
-        controller.apply(slug, document_ as never, asAdmin, noHeaders),
+        controller.apply(slug, document_ as never, asAdmin),
         `${slug}: a document carrying an invalid entry was accepted`,
       ).rejects.toThrow(/a-bad-entry/)
 

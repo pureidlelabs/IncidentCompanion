@@ -7,13 +7,12 @@
  * not asked for, and what that permits, is
  * `openspec/specs/cases/design.md`.
  */
-import { Body, Controller, Param, ParseUUIDPipe, Put, Req, UseGuards } from '@nestjs/common'
-import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
+import { Body, Controller, Param, ParseUUIDPipe, Put, UseGuards } from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
-import type { IncomingHttpHeaders } from 'node:http'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
+import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { CasesService } from './cases.service.js'
 
@@ -46,18 +45,12 @@ export class CaseCustomerController {
   async attribute(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Body() body: AttributeBodyDto,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<{ done: true; from: string | null }> {
     const { customerId } = attributeSchema.parse(body)
-    const { from, title } = await this.cases.attribute(caseId, customerId, session.user.id)
+    const { from, title } = await this.cases.attribute(caseId, customerId, caller.session.user.id)
 
-    await this.activity.caseAttributed(
-      { session, headers: request.headers, request },
-      caseId,
-      title,
-      { from, to: customerId },
-    )
+    await this.activity.caseAttributed(caller, caseId, title, { from, to: customerId })
     return { done: true, from }
   }
 }

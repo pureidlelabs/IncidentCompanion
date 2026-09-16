@@ -48,8 +48,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   let written: Line[]
   let theDefault: string
 
-  const caller = { user: { id: ADMIN } } as never
-  const request = { headers: {} } as never
+  const caller = { session: { user: { id: ADMIN } }, headers: {}, request: {} } as never
 
   beforeEach(async () => {
     await seed!.delete(cases)
@@ -137,7 +136,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   it('creates a customer and records it', async () => {
-    const made = await controller.create({ name: 'Northwind BV' }, caller, request)
+    const made = await controller.create({ name: 'Northwind BV' }, caller)
 
     const [row] = await seed!.select().from(customers).where(eq(customers.id, made.id))
     expect(row!.name).toBe('Northwind BV')
@@ -158,7 +157,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     'refuses an explicit null for %s rather than letting the database refuse it',
     async (field) => {
       await expect(
-        controller.create({ name: 'Northwind BV', [field]: null }, caller, request),
+        controller.create({ name: 'Northwind BV', [field]: null }, caller),
       ).rejects.toMatchObject({ status: 422 })
     },
   )
@@ -170,19 +169,19 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     ['outsideEuReach', 'yes'],
   ])('refuses %s given as %o', async (field, value) => {
     await expect(
-      controller.create({ name: 'Northwind BV', [field]: value }, caller, request),
+      controller.create({ name: 'Northwind BV', [field]: value }, caller),
     ).rejects.toMatchObject({ status: 422 })
   })
 
   it('refuses a field it does not know rather than stripping it', async () => {
     await expect(
-      controller.create({ name: 'Northwind BV', competentAuthorty: 'RDI' }, caller, request),
+      controller.create({ name: 'Northwind BV', competentAuthorty: 'RDI' }, caller),
     ).rejects.toMatchObject({ status: 422 })
   })
 
   it('refuses a name longer than the column holds', async () => {
     await expect(
-      controller.create({ name: 'x'.repeat(500) }, caller, request),
+      controller.create({ name: 'x'.repeat(500) }, caller),
     ).rejects.toMatchObject({ status: 422 })
   })
 
@@ -191,17 +190,17 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   it('refuses a customer with no name', async () => {
-    await expect(controller.create({ name: '  ' }, caller, request)).rejects.toMatchObject({
+    await expect(controller.create({ name: '  ' }, caller)).rejects.toMatchObject({
       status: 422,
     })
     expect(written).toEqual([])
   })
 
   it('renames without moving the identity', async () => {
-    const made = await controller.create({ name: 'Northwind BV' }, caller, request)
+    const made = await controller.create({ name: 'Northwind BV' }, caller)
     written.length = 0
 
-    await controller.change(made.id, { name: 'Northwind B.V.' }, caller, request)
+    await controller.change(made.id, { name: 'Northwind B.V.' }, caller)
 
     const [row] = await seed!.select().from(customers).where(eq(customers.id, made.id))
     expect(row!.id).toBe(made.id)
@@ -210,7 +209,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   it('lists what the install holds, the default among them', async () => {
-    await controller.create({ name: 'Northwind BV' }, caller, request)
+    await controller.create({ name: 'Northwind BV' }, caller)
 
     const { customers: listed } = await controller.list()
 
@@ -219,11 +218,11 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   it('passes the refusal through when cases stand behind a customer', async () => {
-    const made = await controller.create({ name: 'Has cases' }, caller, request)
+    const made = await controller.create({ name: 'Has cases' }, caller)
     await seed!.insert(cases).values({ title: 'One', customerId: made.id })
     written.length = 0
 
-    await expect(controller.remove(made.id, caller, request)).rejects.toMatchObject({
+    await expect(controller.remove(made.id, caller)).rejects.toMatchObject({
       status: 409,
       response: { message: expect.stringContaining('1 case') },
     })
@@ -231,10 +230,10 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   it('removes a customer nothing stands behind, and records it', async () => {
-    const made = await controller.create({ name: 'Nothing behind it' }, caller, request)
+    const made = await controller.create({ name: 'Nothing behind it' }, caller)
     written.length = 0
 
-    await controller.remove(made.id, caller, request)
+    await controller.remove(made.id, caller)
 
     const [gone] = await seed!.select().from(customers).where(eq(customers.id, made.id))
     expect(gone).toBeUndefined()
@@ -243,7 +242,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   it('refuses to remove the default', async () => {
-    await expect(controller.remove(theDefault, caller, request)).rejects.toMatchObject({
+    await expect(controller.remove(theDefault, caller)).rejects.toMatchObject({
       status: 409,
     })
   })
@@ -258,20 +257,20 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     const absent = '00000000-0000-4000-8000-000000000000'
     const call =
       act === 'change'
-        ? controller.change(absent, { name: 'Renamed' }, caller, request)
-        : controller.remove(absent, caller, request)
+        ? controller.change(absent, { name: 'Renamed' }, caller)
+        : controller.remove(absent, caller)
 
     await expect(call).rejects.toMatchObject({ status: 404 })
     expect(written, 'an act that refused was recorded as one that happened').toEqual([])
   })
 
   it('merges one record into another, and records it against the survivor', async () => {
-    const losing = await controller.create({ name: 'Northwind BV' }, caller, request)
-    const surviving = await controller.create({ name: 'Northwind B.V.' }, caller, request)
+    const losing = await controller.create({ name: 'Northwind BV' }, caller)
+    const surviving = await controller.create({ name: 'Northwind B.V.' }, caller)
     await seed!.insert(cases).values({ title: 'Came across', customerId: losing.id })
     written.length = 0
 
-    await controller.merge(surviving.id, { losing: losing.id, choices: {} }, caller, request)
+    await controller.merge(surviving.id, { losing: losing.id, choices: {} }, caller)
 
     const [gone] = await seed!.select().from(customers).where(eq(customers.id, losing.id))
     expect(gone).toBeUndefined()
@@ -285,8 +284,8 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   it('passes a disagreement back rather than choosing', async () => {
-    const losing = await controller.create({ name: 'A' }, caller, request)
-    const surviving = await controller.create({ name: 'B' }, caller, request)
+    const losing = await controller.create({ name: 'A' }, caller)
+    const surviving = await controller.create({ name: 'B' }, caller)
     await seed!
       .update(customers)
       .set({ competentAuthority: 'RDI' })
@@ -294,7 +293,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     written.length = 0
 
     await expect(
-      controller.merge(surviving.id, { losing: losing.id, choices: {} }, caller, request),
+      controller.merge(surviving.id, { losing: losing.id, choices: {} }, caller),
     ).rejects.toMatchObject({
       status: 409,
       response: { message: expect.stringContaining('competentAuthority') },

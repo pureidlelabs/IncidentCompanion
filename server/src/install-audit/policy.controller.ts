@@ -13,13 +13,12 @@
  * against the registry rather than passed through, or this route is a way to
  * write arbitrary rows into the settings table.
  */
-import { Body, Controller, Get, Put, Req, UnprocessableEntityException } from '@nestjs/common'
-import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
-import type { IncomingHttpHeaders } from 'node:http'
+import { Body, Controller, Get, Put, UnprocessableEntityException } from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
 import { AdminOnly } from '../auth/admin-only.js'
+import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { POLICY_SETTINGS, type PolicyKey } from '../policy/keys.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
@@ -93,8 +92,7 @@ export class InstallPolicyController {
   })
   async set(
     @Body() body: PolicyPutDto,
-    @Session() session: UserSession,
-    @Req() request: { headers: IncomingHttpHeaders },
+    @Caller() caller: Caller,
   ): Promise<PolicyView> {
     const bound = POLICY_SETTINGS[body.key]
     /**
@@ -118,13 +116,8 @@ export class InstallPolicyController {
 
     // Read before writing, or the line cannot say what it changed from.
     const before = Number((await this.settings.all())[body.key] ?? bound.fallback)
-    await this.settings.set(body.key, body.value, session.user.id)
-    await this.activity.settingChanged(
-      { session, headers: request.headers, request },
-      body.key,
-      before,
-      body.value,
-    )
+    await this.settings.set(body.key, body.value, caller.session.user.id)
+    await this.activity.settingChanged(caller, body.key, before, body.value)
 
     return this.read()
   }
