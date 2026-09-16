@@ -1,21 +1,11 @@
 /**
  * The severity ramp as classes, and the words that resolve onto it.
  *
- * Holds no component and imports no kit, so a surface drawing a severity
- * reads this ramp rather than keeping its own.
- *
- * The colour is a token per severity and never a literal. A colour in the DOM
- * and the same colour in an SVG export are two decisions - an export has no
- * theme to consult, so nothing here is reused by one.
+ * A token per severity, never a literal. An SVG export has no theme to
+ * consult, so nothing here is reused by one.
  */
 
-/**
- * The fill per severity.
- *
- * **Apart from the ink because not every surface wants both.** A chip is
- * filled and lettered; the list box's dot is filled and has nothing written on
- * it, and it kept its own copy of this table for want of the halves.
- */
+/** The fill per severity, apart from the ink: a dot wants one and not both. */
 export const SEVERITY_FILL = {
   critical: 'bg-severity-critical',
   high: 'bg-severity-high',

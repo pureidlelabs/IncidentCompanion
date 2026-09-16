@@ -22,11 +22,9 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 /**
  * `@/blocks`, `@/features`, `@/screens` and the rest read the same way.
  *
- * **`components/` is named too, and the omission was the whole hole.** The app
- * tier's directories sit under it -- `@/components/blocks/...` is where a
- * screen's own pieces live -- and a pattern anchored at `@/` alone let every
- * one of them through while the test went on claiming the kit imports nothing
- * app-specific. -> #713
+ * **`components/` is optional in the middle**, because the app tier's
+ * directories also sit under it: `@/components/blocks/...` is a screen's own
+ * pieces, and a pattern anchored at `@/` alone matches neither. -> #713
  */
 const APP_TIER =
   /from\s*['"]@\/(?:components\/)?(api|fixtures|features|screens|blocks)(?:\/[^'"]*)?['"]/

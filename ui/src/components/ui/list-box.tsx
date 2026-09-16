@@ -151,10 +151,7 @@ export type ListBoxItemTone =
   | 'investigate'
 
 /**
- * **The severities come from the ramp; the three action tones are the kit's.**
- *
- * This file kept its own table of both, with `low`'s ink reasoned out a second
- * time -- so a level moving in the ramp moved here only if somebody remembered.
+ * The severities come from the ramp; the three action tones are the kit's own.
  * -> `severity-tones.ts`, #713
  */
 const TONE_FILL = {

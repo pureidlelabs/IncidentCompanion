@@ -54,18 +54,8 @@ export async function announced<T>(what: string, run: () => Promise<T>): Promise
 /**
  * Delete a selection of one collection's rows, as one act.
  *
- * **One request, because order would otherwise decide the outcome.** The route
- * counts references against what survives the call, which no loop here can
- * express -- and a loop half-deletes, stopping at the first refusal with the
- * earlier rows already gone. -> `api/useBulkDelete.ts`, #665
- *
- * **The version each row was read at travels with it.** The bulk route takes
- * one per row, so a row another analyst edited is refused rather than deleted,
- * and the whole selection is refused with it. -> #682
- *
- * Exported because three write paths delete a selection and only one of them
- * is `entryWrites`: evidence and the timeline each assemble their own `writes`
- * for reasons that are about saving, not about deleting. -> #686
+ * All or nothing: each row travels with the version it was read at, so a row
+ * another analyst has edited refuses the whole selection. -> #682
  */
 export async function removeSelection(
   bulkDelete: { mutateAsync: (vars: BulkDeleteVars) => Promise<BulkDeleted> },
@@ -83,9 +73,8 @@ export async function removeSelection(
   const written = await announcing(many, () =>
     bulkDelete.mutateAsync({ targets: { [collection]: rows } }),
   )
-  // **Told, not discarded.** A row another analyst had already deleted comes
-  // back under `missing`, and an analyst who selected six and lost two
-  // silently has no way to know which case they are looking at.
+  // A row another analyst had already deleted comes back under `missing`,
+  // and is told rather than discarded.
   reportBulkMissing(
     written.missing.map((row) => row.id),
     many,

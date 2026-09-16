@@ -220,10 +220,8 @@ const OWNED: Readonly<Record<string, string>> = {
 /**
  * The severity and field-tone tables, which are not parts of any one block.
  *
- * They are the kit's own data rather than a block's: `list-box` draws a dot
- * from the severity halves, `severity-badge` draws a chip from the whole, and
- * `screens/timeline-entry-row` keys its rail by `SeverityTone`. A rule
- * counting only block importers cannot see the first of those. -> #713
+ * The kit's own data: they are read from outside `blocks/` too, which a rule
+ * counting only block importers cannot see. -> #713
  */
 const TONE_TABLES = [
   'FIELD_TONE_SEVERITY',

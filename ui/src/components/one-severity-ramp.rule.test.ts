@@ -8,10 +8,6 @@ import { describe, expect, it } from 'vitest'
 /**
  * **One severity ramp, and every chip draws from it.**
  *
- * The colour per severity is a token, and a surface that keeps its own copy of
- * the mapping drifts from the rest the first time a level moves -- which is
- * how `low` came to need its own ink in two places and be documented in one.
- *
  * **A map keyed by the severity names, not any use of the tokens.** A
  * kill-chain position drawn in `bg-severity-medium` and a row highlighted in
  * `bg-severity-info/10` are the palette being reused for something that is not
@@ -32,9 +28,8 @@ const THE_RAMP = 'components/ui/severity-tones.ts'
 /**
  * Every severity the ramp names, with the fill a copy would have to give it.
  *
- * Written out whole rather than built from a prefix, because a bare
- * `bg-severity-` is not a colour the theme publishes and
- * `styles/every-name-resolves.rule.test.ts` reads this file too.
+ * Whole rather than built from a prefix: `styles/every-name-resolves.rule.test.ts`
+ * reads this file, and a bare `bg-severity-` is not a colour the theme publishes.
  */
 const FILL: Readonly<Record<string, string>> = {
   critical: 'bg-severity-critical',

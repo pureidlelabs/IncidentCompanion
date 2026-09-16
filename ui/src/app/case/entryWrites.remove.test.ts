@@ -11,17 +11,9 @@ const { entryWrites } = await import('./entryWrites')
 /**
  * **A selection is deleted in one request, whichever screen deletes it.**
  *
- * `useBulkDelete` says why a loop cannot work: the route counts references
- * against what survives the call, so a loop's outcome depends on the order the
- * client happened to send -- and a loop half-deletes, stopping at the first
- * refusal with the earlier rows already gone. #665 moved the Entities screen
- * onto the route and left this helper looping, which is every other collection
- * screen: Actions, Impact and Methods share it.
- *
- * **The reason each loop gave is no longer true.** *One at a time, because the
- * version check is per row* was the trade while the bulk route carried no
- * version check. #682 gave it one, so the route now refuses a row that moved
- * and takes the whole selection or none of it.
+ * A loop cannot: the route counts references against what survives the call,
+ * so a loop's outcome depends on the order the client happened to send, and it
+ * half-deletes when a row is refused. -> `api/useBulkDelete.ts`
  *
  * **What this does not cover:** what the route counts as a reference, which is
  * the server's.
