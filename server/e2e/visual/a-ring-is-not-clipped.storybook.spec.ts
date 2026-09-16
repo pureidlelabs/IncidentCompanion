@@ -18,12 +18,6 @@
  * - **A visually-hidden input is not a visible control.** React Aria paints
  *   the real `<input>` into a 1x1 `clip-path: inset(50%)` span and styles a
  *   sibling. Its ring is clipped by design and no reader ever sees it.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/a-ring-is-not-clipped.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

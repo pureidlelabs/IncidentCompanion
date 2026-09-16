@@ -56,10 +56,10 @@ const NONE_DISABLED = PICKER_ACCOUNTS.filter((one) => one.state !== 'disabled')
  * permanent `0 disabled` is a number nobody acts on.
  */
 export const Roster: Story = {
-  name: 'Every state the chip has a tone for',
+  name: 'Both states an account is served in',
   args: { accounts: PICKER_ACCOUNTS },
   play: async ({ canvas }) => {
-    await expect(canvas.getByText('5 accounts \u00b7 1 administrator \u00b7 1 disabled')).toBeVisible()
+    await expect(canvas.getByText('5 accounts \u00b7 1 administrator \u00b7 2 disabled')).toBeVisible()
   },
 }
 
@@ -86,7 +86,7 @@ export const DisablingRewritesTheCount: Story = {
   name: 'Disabling an account rewrites the count line',
   args: { accounts: NONE_DISABLED },
   play: async ({ canvas, step, userEvent, args }) => {
-    await expect(canvas.getByText('4 accounts \u00b7 1 administrator')).toBeVisible()
+    await expect(canvas.getByText('3 accounts \u00b7 1 administrator')).toBeVisible()
 
     await step('disable an account from its row menu', async () => {
       await userEvent.click(canvas.getByRole('button', { name: 'More for Tomas Brennan' }))
@@ -95,7 +95,7 @@ export const DisablingRewritesTheCount: Story = {
     })
 
     await expect(
-      await canvas.findByText('4 accounts \u00b7 1 administrator \u00b7 1 disabled'),
+      await canvas.findByText('3 accounts \u00b7 1 administrator \u00b7 1 disabled'),
     ).toBeVisible()
     await expect(args.onState).toHaveBeenCalledWith('a2', 'disabled')
   },

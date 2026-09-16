@@ -45,14 +45,19 @@ import {
 import { CaseChannel } from '../live/case-channel.service.js'
 import type { ClosedRowGuard } from '../report/freeze.js'
 
-function groupByCollection(
-  targets: { collection: BulkTarget; id: string }[],
-): [BulkTarget, string[]][] {
-  const grouped = new Map<BulkTarget, string[]>()
-  for (const { collection, id } of targets) {
-    const ids = grouped.get(collection)
-    if (ids) ids.push(id)
-    else grouped.set(collection, [id])
+/** One row of a selection: which collection it is in, and what it was read at. */
+interface BulkRow {
+  collection: BulkTarget
+  id: string
+  version: number
+}
+
+function groupByCollection(targets: BulkRow[]): [BulkTarget, BulkRow[]][] {
+  const grouped = new Map<BulkTarget, BulkRow[]>()
+  for (const target of targets) {
+    const rows = grouped.get(target.collection)
+    if (rows) rows.push(target)
+    else grouped.set(target.collection, [target])
   }
   return [...grouped]
 }
@@ -114,6 +119,14 @@ export interface CollectionDefinition {
    * asks `freezeGuardFor` instead. -> `report/freeze.ts`
    */
   readonly refuseIfClosed?: ClosedRowGuard
+
+  /**
+   * A term this row names that the install does not serve.
+   *
+   * Separate from `refuseIfClosed`, which asks whether the row may be written
+   * at all rather than whether what it says is a thing.
+   */
+  readonly refuseUnservedTerm?: ClosedRowGuard
 }
 
 @Injectable()
@@ -213,12 +226,25 @@ export class CollectionService {
    * `report_blocks`, so a selection cannot name one.
    * -> `collections/registry.ts`
    *
-   * **No version check**, matching the client's contract, which sends ids
-   * only. The reference check in front of this is the guard that matters here.
+   * **Every row carries the version it was read at, and one that moved since
+   * is refused rather than deleted.** A selection is a read followed by a
+   * write, so it has the window a single write closes with `?version=`; the
+   * specification asks that acting in bulk carry every guarantee a single act
+   * carries. -> #682, and #62/#65 on the bulk patch path.
+   *
+   * **One stale row refuses the whole selection**, with 409 and the rows that
+   * moved, and nothing is written. Per row it would delete part of the
+   * selection, and the reference check in front of this waves through a
+   * reference whose holder is *in* the selection -- on the grounds that the
+   * holder is about to go. A refusal that keeps the holder and drops its
+   * target turns that reasoning into a blanked column nobody was told about,
+   * because the keys are `on delete set null` by design.
+   * -> `bulk-delete.service.ts`, and the specification: where speed and the
+   * guarantees conflict, the guarantees win.
    */
   async removeMany(
     caseId: string,
-    targets: { collection: BulkTarget; id: string }[],
+    targets: BulkRow[],
     actorId: string,
   ): Promise<{
     deleted: { collection: string; id: string }[]
@@ -226,14 +252,25 @@ export class CollectionService {
   }> {
     const outcome = await withCase(this.db, caseId, async (tx) => {
       const deleted: { collection: string; id: string }[] = []
+      const refused: string[] = []
 
-      for (const [collection, ids] of groupByCollection(targets)) {
+      for (const [collection, rows] of groupByCollection(targets)) {
         const table = TABLES[collection]
         const id = columnOf(table, 'id')
+        const version = columnOf(table, 'version')
+
+        // **The version travels in the statement, not in a read before it**,
+        // which would leave open the window this check exists to close.
+        const pairs = rows.map((row) => sql`(${row.id}::uuid, ${row.version})`)
         const gone = (await tx
           .delete(table)
-          .where(and(inArray(id, ids), eq(columnOf(table, 'caseId'), caseId)))
-          .returning({ id })) as { id: string }[]
+          .where(
+            and(
+              eq(columnOf(table, 'caseId'), caseId),
+              sql`(${id}, ${version}) IN (${sql.join(pairs, sql`, `)})`,
+            ),
+          )
+          .returning({ id, version })) as { id: string; version: number }[]
 
         for (const row of gone) deleted.push({ collection, id: row.id })
 
@@ -244,22 +281,53 @@ export class CollectionService {
               entity: collection,
               entityId: row.id,
               op: 'delete' as const,
-              version: 0,
+              // The version the row held when it went, so a listener can tell
+              // this delete from one that removed a different edit of the row.
+              version: row.version,
               actorId,
               fields: [],
             })),
           )
         }
+
+        // A named row that did not go is either still here under a version the
+        // caller did not have, or not here at all. One read answers which.
+        // **Distinct, because the caller may name an id twice** and a count of
+        // refusals is what an analyst is shown.
+        const removed = new Set(gone.map((row) => row.id))
+        const rest = [...new Set(rows.filter((row) => !removed.has(row.id)).map((row) => row.id))]
+        if (rest.length > 0) {
+          const here = (await tx
+            .select({ id })
+            .from(table)
+            .where(and(inArray(id, rest), eq(columnOf(table, 'caseId'), caseId)))) as {
+            id: string
+          }[]
+          for (const one of here) refused.push(one.id)
+        }
       }
 
-      const removed = new Set(deleted.map((row) => `${row.collection}:${row.id}`))
+      // **Thrown inside the transaction, so none of the deletes above stand.**
+      // The single-row door answers a moved row this way and writes nothing.
+      if (refused.length > 0) {
+        const count = refused.length
+        throw new ConflictException({
+          message:
+            count === 1
+              ? 'One of those changed since you read it, so nothing was deleted.'
+              : `${String(count)} of those changed since you read them, so nothing was deleted.`,
+          refused,
+        })
+      }
+
+      const answered = new Set(deleted.map((row) => `${row.collection}:${row.id}`))
       return {
         deleted,
         // Reported rather than dropped: an id that matched nothing is either
         // already gone or belongs to another case, and both are worth the
         // caller knowing before it tells the analyst everything was removed.
         missing: targets
-          .filter((t) => !removed.has(`${t.collection}:${t.id}`))
+          .filter((t) => !answered.has(`${t.collection}:${t.id}`))
           .map((t) => ({ collection: t.collection, id: t.id })),
       }
     })
@@ -301,6 +369,7 @@ export class CollectionService {
     actorId: string,
   ): Promise<unknown> {
     await def.refuseIfClosed?.(this.db, caseId, { rows: [values] })
+    await def.refuseUnservedTerm?.(this.db, caseId, { rows: [values] })
 
     const written = await withCase(this.db, caseId, async (tx) => {
       await refuseDanglingReferences(tx, def, values)
@@ -357,6 +426,7 @@ export class CollectionService {
   ): Promise<{ ids: string[]; unlinked: number }> {
     if (rows.length === 0) return { ids: [], unlinked: 0 }
     await def.refuseIfClosed?.(on, caseId, { rows })
+    await def.refuseUnservedTerm?.(on, caseId, { rows })
 
     let unlinked = 0
     const ids = await withCase(on, caseId, async (tx) => {
@@ -454,6 +524,7 @@ export class CollectionService {
     if (wanted.length === 0) return { ids: {}, unlinked: 0 }
     for (const group of wanted) {
       await group.def.refuseIfClosed?.(on, caseId, { rows: group.rows })
+      await group.def.refuseUnservedTerm?.(on, caseId, { rows: group.rows })
     }
 
     let unlinked = 0
@@ -512,6 +583,7 @@ export class CollectionService {
     const cols = columns(def)
     const order = columnOf(def.table, def.position)
     await def.refuseIfClosed?.(this.db, caseId, { ids, rows: [] })
+    await def.refuseUnservedTerm?.(this.db, caseId, { ids, rows: [] })
 
     const result = await withCase(this.db, caseId, async (tx) => {
       const scope = def.orderWithin ? columnOf(def.table, def.orderWithin) : undefined
@@ -627,6 +699,7 @@ export class CollectionService {
     if (rows.length === 0) return { updated: [], missing: [], refused: [] }
     const ids = rows.map((row) => row.id)
     await def.refuseIfClosed?.(this.db, caseId, { ids, rows: [fields] })
+    await def.refuseUnservedTerm?.(this.db, caseId, { ids, rows: [fields] })
     const cols = columns(def)
 
     const result = await withCase(this.db, caseId, async (tx) => {
@@ -720,6 +793,7 @@ export class CollectionService {
     // **The patch as well as the row.** A patch may name a *different* parent -
     // moving a block into a sent report is a write to that report.
     await def.refuseIfClosed?.(this.db, caseId, { ids: [id], rows: [patch] })
+    await def.refuseUnservedTerm?.(this.db, caseId, { ids: [id], rows: [patch] })
     await this.refuseIfHeldByAnother(caseId, def.name, id, actorId)
 
     /**
@@ -761,6 +835,7 @@ export class CollectionService {
     actorId: string,
   ): Promise<boolean> {
     await def.refuseIfClosed?.(this.db, caseId, { ids: [id] })
+    await def.refuseUnservedTerm?.(this.db, caseId, { ids: [id] })
     const cols = columns(def)
     const removed = await withCase(this.db, caseId, async (tx) => {
       const deleted = (await tx

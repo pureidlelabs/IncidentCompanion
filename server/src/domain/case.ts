@@ -29,7 +29,7 @@
 import { z } from 'zod'
 
 import { envelopeSchema, field, patchSchema, readStamp } from './field-spec.js'
-import { SEVERITY } from './vocabularies.js'
+import { LIVE_STATES, SEVERITY, caseStatusSchema, type CaseStatus } from './vocabularies.js'
 import { VERIS_ACTIONS } from './vocabularies/compliance.js'
 
 /**
@@ -42,6 +42,11 @@ import { VERIS_ACTIONS } from './vocabularies/compliance.js'
  * and the report's action agreeing.
  */
 export const INCIDENT_CLASS = ['unknown', ...VERIS_ACTIONS] as const
+
+/** Where a case's work sits, and which of those states are a live incident. */
+export { LIVE_STATES, caseStatusSchema, type CaseStatus }
+
+
 
 const stamp = (label: string) =>
   /**
@@ -85,7 +90,7 @@ export const caseFormSchema = z.object({
     kind: 'text',
   }),
 
-  status: field(z.enum(['open', 'closed']).default('open'), {
+  status: field(caseStatusSchema.default('respond'), {
     label: 'Status',
     kind: 'select',
     vocabulary: 'caseStatus',

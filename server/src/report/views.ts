@@ -86,7 +86,10 @@ export const reportLayoutsSchema = z.object({
   ),
   stages: z.array(z.string()).describe('Leading empty entry: "no stage" is a real choice.'),
   tlp: z.array(z.string()).describe('Leading empty entry, for the same reason as stages.'),
-  languages: z.array(z.object({ code: z.string(), label: z.string() })),
+  /** **Coverage crosses with the name**, or the picker cannot draw it. -> #688 */
+  languages: z.array(
+    z.object({ code: z.string(), label: z.string(), coverage: z.number().min(0).max(1) }),
+  ),
   /**
    * Every heading key the pack resolves, in the language asked for: the pack
    * stays on the server, and what crosses is what it resolved.

@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest'
 import type { Case } from '@/api/model'
 import { campaignCase } from '@/fixtures/campaign'
 
-import { searchCase } from './case-search'
+import { CASE_COLLECTIONS } from '@contract/collections'
+
+import { searchCase, SEARCHED } from './case-search'
 
 /**
  * The matcher two screens share, attacked rather than demonstrated.
@@ -97,6 +99,37 @@ describe('a case-wide search', () => {
   it('matches whatever case the value is stored in', () => {
     expect(count(searchCase(campaignCase, 'dc-01'))).toBe(count(searchCase(campaignCase, 'DC-01')))
     expect(count(searchCase(campaignCase, 'dc-01'))).toBeGreaterThan(0)
+  })
+
+  /**
+   * **A collection the rail offers and the search does not is a dead end.**
+   *
+   * `SOURCES` is hand-kept while the palette's destinations derive from the
+   * rail, so the two drift apart in one direction only: a section gains a row
+   * an analyst can walk to and cannot search for. Methods is the one that had
+   * -- it is a case collection with a rail destination and a `name` no method
+   * may leave blank. -> #666
+   */
+  it('finds a method by its name', () => {
+    const groups = searchCase(campaignCase, 'Sentinel proxy sweep')
+
+    expect(groups.map((group) => group.label)).toContain('Methods')
+    expect(groups.find((group) => group.label === 'Methods')?.key).toBe('methods')
+  })
+
+  /**
+   * Named against the rail rather than against a list of its own, so a
+   * collection added to one and not the other fails here instead of going
+   * quiet. Reports and blocks are the two the palette deliberately does not
+   * search -- a report is drawn from the rows this searches rather than
+   * holding its own.
+   */
+  it('searches every case collection the analyst can reach', () => {
+    const unsearched = CASE_COLLECTIONS.filter(
+      (key) => !SEARCHED.has(key) && key !== 'reports' && key !== 'reportBlocks',
+    )
+
+    expect(unsearched, 'these hold rows an analyst can open and cannot find').toEqual([])
   })
 
   /**

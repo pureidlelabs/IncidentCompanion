@@ -1,4 +1,4 @@
-import { Download, Share2 } from 'lucide-react'
+import { Share2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { sectionPathFor } from '@/api/entityTargets'
@@ -6,6 +6,7 @@ import type { Case } from '@/api/model'
 import type { Specs } from '@/api/specs'
 import { Collection } from '@/components/blocks/collection'
 import { useEntityTable, type EntityColumn } from '@/components/blocks/data-table'
+import { ExportCsvButton } from '@/components/blocks/export-csv-button'
 import { useFilters } from '@/components/blocks/filter-set'
 import { FieldToneBadge } from '@/components/blocks/severity-badge'
 import { TlpChip } from '@/components/blocks/tlp-chip'
@@ -215,16 +216,7 @@ export function IndicatorsScreen({
             ))}
           </Select>
           <div className="flex items-center gap-2">
-            <ButtonLink
-              variant="outline"
-              size="sm"
-              href={csvHref}
-              download={csvName}
-              data-part="export-csv"
-            >
-              <Download aria-hidden />
-              CSV
-            </ButtonLink>
+            <ExportCsvButton href={csvHref} filename={csvName} label="CSV" />
             <ButtonLink
               variant="outline"
               size="sm"

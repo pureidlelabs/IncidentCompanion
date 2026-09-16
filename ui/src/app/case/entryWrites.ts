@@ -5,6 +5,7 @@ import {
 } from '@/components/blocks/notify'
 
 import type { CollectionEntry, CollectionName, GenericCreateCollectionName } from '@/api/model'
+import type { BulkDeleteVars, BulkDeleted } from '@/api/useBulkDelete'
 
 /**
  * The write path every collection container shares.
@@ -50,6 +51,36 @@ export async function announced<T>(what: string, run: () => Promise<T>): Promise
   }
 }
 
+/**
+ * Delete a selection of one collection's rows, as one act.
+ *
+ * All or nothing: each row travels with the version it was read at, so a row
+ * another analyst has edited refuses the whole selection. -> #682
+ */
+export async function removeSelection(
+  bulkDelete: { mutateAsync: (vars: BulkDeleteVars) => Promise<BulkDeleted> },
+  collection: CollectionName,
+  ids: readonly string[],
+  rowsNow: () => readonly { id: string; version: number }[],
+  many: string,
+): Promise<void> {
+  if (ids.length === 0) return
+  const now = rowsNow()
+  const rows = ids.map((id) => ({
+    id,
+    version: now.find((one) => one.id === id)?.version ?? 0,
+  }))
+  const written = await announcing(many, () =>
+    bulkDelete.mutateAsync({ targets: { [collection]: rows } }),
+  )
+  // A row another analyst had already deleted comes back under `missing`,
+  // and is told rather than discarded.
+  reportBulkMissing(
+    written.missing.map((row) => row.id),
+    many,
+  )
+}
+
 /** What a container hands this helper: the four mutations, already bound. */
 export interface EntryMutations<N extends CollectionName> {
   create: { mutateAsync: (vars: { fields: Partial<CollectionEntry[N]> }) => Promise<CollectionEntry[N]> }
@@ -72,6 +103,7 @@ export interface EntryMutations<N extends CollectionName> {
     }>
   }
   remove: { mutateAsync: (vars: { entryId: string; version: number }) => Promise<unknown> }
+  bulkDelete: { mutateAsync: (vars: BulkDeleteVars) => Promise<BulkDeleted> }
 }
 
 /**
@@ -80,12 +112,14 @@ export interface EntryMutations<N extends CollectionName> {
  * delete and a bulk patch each have to name, and for reading a bulk patch's
  * answer back.
  * @param reread - the case, re-fetched, because `PATCH bulk` answers with ids.
+ * @param collection - the table a delete names, which the bulk route groups by.
  */
 export function entryWrites<N extends GenericCreateCollectionName>(
   mutations: EntryMutations<N>,
   noun: { one: string; many: string },
   rowsNow: () => readonly CollectionEntry[N][],
   reread: () => Promise<readonly CollectionEntry[N][]>,
+  collection: CollectionName,
 ) {
   return {
     save: (entry: CollectionEntry[N] | null, fields: Partial<CollectionEntry[N]>) =>
@@ -129,18 +163,13 @@ export function entryWrites<N extends GenericCreateCollectionName>(
       )
     },
 
-    remove: async (ids: readonly string[]) => {
-      // One at a time: the version check is per row, so a delete naming none
-      // would take a row somebody had just changed.
-      for (const id of ids) {
-        const row = rowsNow().find((one) => (one as { id: string }).id === id)
-        await announcing(noun.one, () =>
-          mutations.remove.mutateAsync({
-            entryId: id,
-            version: (row as { version?: number } | undefined)?.version ?? 0,
-          }),
-        )
-      }
-    },
+    remove: (ids: readonly string[]) =>
+      removeSelection(
+        mutations.bulkDelete,
+        collection,
+        ids,
+        rowsNow,
+        noun.many,
+      ),
   }
 }

@@ -1730,10 +1730,12 @@
           "name": "status",
           "label": "Status",
           "kind": "select",
-          "default": "open",
+          "default": "respond",
           "vocabulary": "caseStatus",
           "options": [
-            "open",
+            "respond",
+            "recover",
+            "post-incident",
             "closed"
           ]
         },
@@ -1825,7 +1827,7 @@
         "customer": "",
         "reference": "",
         "analyst": "",
-        "status": "open",
+        "status": "respond",
         "severity": "",
         "incidentClass": "",
         "detectionSource": "",
@@ -1877,7 +1879,9 @@
       "informational"
     ],
     "caseStatus": [
-      "open",
+      "respond",
+      "recover",
+      "post-incident",
       "closed"
     ],
     "incidentClass": [
@@ -2425,6 +2429,16 @@
             "name": "annual_turnover_eur"
           },
           {
+            "kind": "check",
+            "label": "Reaches outside the EU",
+            "name": "outside_eu_reach"
+          },
+          {
+            "kind": "text",
+            "label": "Countries outside the EU",
+            "name": "outside_eu_countries"
+          },
+          {
             "kind": "text",
             "label": "Competent authority",
             "name": "competent_authority"
@@ -2520,6 +2534,11 @@
             "name": "service_downtime_complete"
           },
           {
+            "kind": "text",
+            "label": "Users affected (description)",
+            "name": "users_affected"
+          },
+          {
             "kind": "number",
             "label": "Users or recipients affected",
             "name": "users_affected_count"
@@ -2528,6 +2547,11 @@
             "kind": "number",
             "label": "Total users of the service",
             "name": "users_total_count"
+          },
+          {
+            "kind": "text",
+            "label": "Financial impact",
+            "name": "financial_impact"
           },
           {
             "kind": "number",
@@ -3208,6 +3232,16 @@
       "ENTITY_COMMON_FIELDS": {
         "fields": [
           {
+            "kind": "check",
+            "label": "Reaches outside the EU",
+            "name": "outside_eu_reach"
+          },
+          {
+            "kind": "text",
+            "label": "Countries outside the EU",
+            "name": "outside_eu_countries"
+          },
+          {
             "kind": "text",
             "label": "Competent authority",
             "name": "competent_authority"
@@ -3276,6 +3310,16 @@
             "kind": "number",
             "label": "Annual turnover (EUR)",
             "name": "annual_turnover_eur"
+          },
+          {
+            "kind": "check",
+            "label": "Reaches outside the EU",
+            "name": "outside_eu_reach"
+          },
+          {
+            "kind": "text",
+            "label": "Countries outside the EU",
+            "name": "outside_eu_countries"
           },
           {
             "kind": "text",
@@ -3437,6 +3481,11 @@
             "name": "service_downtime_complete"
           },
           {
+            "kind": "text",
+            "label": "Users affected (description)",
+            "name": "users_affected"
+          },
+          {
             "kind": "number",
             "label": "Users or recipients affected",
             "name": "users_affected_count"
@@ -3445,6 +3494,11 @@
             "kind": "number",
             "label": "Total users of the service",
             "name": "users_total_count"
+          },
+          {
+            "kind": "text",
+            "label": "Financial impact",
+            "name": "financial_impact"
           },
           {
             "kind": "number",

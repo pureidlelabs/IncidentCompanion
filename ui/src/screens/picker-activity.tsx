@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react'
-import { ActivityLog, type AuditRow } from '@/components/blocks/activity-log'
+import type { ReactNode } from 'react'
+import { ActivityLog, type ActivityReading, type AuditRow } from '@/components/blocks/activity-log'
 import { PickerFrame } from '@/components/blocks/picker-frame'
 import type { PickerPane } from '@/components/blocks/picker-panes'
 
@@ -7,10 +7,12 @@ import type { PickerPane } from '@/components/blocks/picker-panes'
 export interface PickerActivityScreenProps {
   /** Lines in the installation's own log. Absent draws an empty list. */
   audit: readonly AuditRow[] | undefined
-  /** Milliseconds, for the range the log is read over. Defaults to the clock. */
-  now?: number | undefined
+  /** What the pane asked for, and how the log reports a press. */
+  reading: ActivityReading
   /** Who is signed in, at the rail's foot. */
   analyst: string
+  /** Whether to offer the rail rows only an administrator may use. */
+  admin?: boolean | undefined
   /** Opens the About door from the rail's head. */
   onAbout: () => void
   /** Where a rail row goes. Without it the rows are inert. */
@@ -31,23 +33,21 @@ export function PickerActivityScreen({
   onAbout,
   audit: auditGiven,
   analyst,
+  admin,
   onPane,
   onImportArchive,
   userMenu,
   problem,
   onRetry,
   busy,
-  now,
+  reading,
 }: PickerActivityScreenProps) {
-  // Read once on mount rather than on every render: a clock call in the render
-  // body is impure, and a relative time that shifts when the pane happens to
-  // re-render is a different number for no reason the analyst caused.
-  const [mounted] = useState(() => Date.now())
   const audit = auditGiven ?? []
   return (
     <PickerFrame
       pane="activity"
       analyst={analyst}
+      admin={admin}
       {...(onPane ? { onPane } : {})}
       {...(onImportArchive ? { onImportArchive } : {})}
       userMenu={userMenu}
@@ -56,7 +56,7 @@ export function PickerActivityScreen({
       {...(onRetry ? { onRetry } : {})}
       {...(busy ? { busy } : {})}
     >
-      <ActivityLog audit={audit} now={now ?? mounted} />
+      <ActivityLog audit={audit} reading={reading} />
     </PickerFrame>
   )
 }

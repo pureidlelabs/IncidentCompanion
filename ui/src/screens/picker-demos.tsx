@@ -10,6 +10,8 @@ export interface PickerDemosScreenProps {
   demos?: readonly DemoRow[]
   /** Who is signed in, at the rail's foot. */
   analyst: string
+  /** Whether to offer the rail rows only an administrator may use. */
+  admin?: boolean | undefined
   /** Opens the About door from the rail's head. */
   onAbout: () => void
   /** Where a rail row goes. Without it the rows are inert. */
@@ -28,11 +30,12 @@ export interface PickerDemosScreenProps {
   href: (demo: DemoRow) => string
 }
 
-export function PickerDemosScreen({ onAbout, demos, analyst, onPane, onImportArchive, userMenu, problem, onRetry, busy, href }: PickerDemosScreenProps) {
+export function PickerDemosScreen({ onAbout, demos, analyst, admin, onPane, onImportArchive, userMenu, problem, onRetry, busy, href }: PickerDemosScreenProps) {
   return (
     <PickerFrame
       pane="demos"
       analyst={analyst}
+      admin={admin}
       {...(onPane ? { onPane } : {})}
       {...(onImportArchive ? { onImportArchive } : {})}
       userMenu={userMenu}
@@ -41,7 +44,10 @@ export function PickerDemosScreen({ onAbout, demos, analyst, onPane, onImportArc
       {...(onRetry ? { onRetry } : {})}
       {...(busy ? { busy } : {})}
     >
-      <DemosPane href={href} {...(demos ? { demos } : {})} />
+      {/* **`?? []` rather than omitting the prop.** The screen having no list
+          yet is what an install with none looks like from here, and the pane
+          says so; passing nothing used to mean the pane answered for it. */}
+      <DemosPane href={href} demos={demos ?? []} />
     </PickerFrame>
   )
 }

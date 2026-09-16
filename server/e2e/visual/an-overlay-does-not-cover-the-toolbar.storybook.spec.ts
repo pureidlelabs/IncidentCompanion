@@ -19,12 +19,6 @@
  * finds every one of these by role whatever is stacked over it. A story `play`
  * cannot see it either: `userEvent` dispatches at the element it was given
  * rather than at a point, so it never asks what is actually under the pointer.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/an-overlay-does-not-cover-the-toolbar.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

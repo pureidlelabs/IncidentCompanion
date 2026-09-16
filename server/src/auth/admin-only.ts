@@ -13,7 +13,7 @@ import { applyDecorators } from '@nestjs/common'
 import { ApiForbiddenResponse } from '@nestjs/swagger'
 import { Roles } from '@thallesp/nestjs-better-auth'
 
-import { ADMIN_ROLE } from './auth.config.js'
+import { ADMIN_ROLE } from '../domain/analyst-account.js'
 
 export function AdminOnly(): MethodDecorator & ClassDecorator {
   return applyDecorators(

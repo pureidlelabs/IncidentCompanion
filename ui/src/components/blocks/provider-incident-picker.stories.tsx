@@ -4,11 +4,11 @@ import { expect } from 'storybook/test'
 import {
   NO_DIALS,
   ProviderIncidentPicker,
-  type RemoteIncident,
+  type PickerIncident,
 } from '@/components/blocks/provider-incident-picker'
 
 /** Six demo incidents, deliberately not in date order. */
-const INCIDENTS: readonly RemoteIncident[] = [
+const INCIDENTS: readonly PickerIncident[] = [
   {
     id: 'INC-88214',
     number: '88214',

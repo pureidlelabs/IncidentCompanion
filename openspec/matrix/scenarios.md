@@ -4,11 +4,11 @@
 
 | | |
 | --- | --- |
-| Scenarios | 492 |
-| Demonstrated | 390 |
+| Scenarios | 500 |
+| Demonstrated | 404 |
 | Undemonstrable | 1 |
-| Unbuilt | 86 |
-| Undemonstrated | 15 |
+| Unbuilt | 81 |
+| Undemonstrated | 14 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -33,6 +33,10 @@
 | An account is provisioned, never self-created | Two claims arrive together | undemonstrated | |
 | An account is provisioned, never self-created | The claim is attempted twice | demonstrated | server/test/a-second-claim-is-refused-and-recorded.test.ts |
 | An account is provisioned, never self-created | A new account reaches nothing | demonstrated | server/test/a-new-account-reaches-only-the-default-customer.test.ts |
+| An address names one account, whatever case it is spelled in | An account is created in a second spelling of an address already held | demonstrated | server/test/an-account-is-administered-by-any-spelling-of-its-address.test.ts |
+| An address names one account, whatever case it is spelled in | Two administrators create the same account at the same moment | demonstrated | server/test/an-account-is-administered-by-any-spelling-of-its-address.test.ts |
+| An address names one account, whatever case it is spelled in | An account is administered by a differently cased spelling | demonstrated | server/test/an-account-is-administered-by-any-spelling-of-its-address.test.ts |
+| An address names one account, whatever case it is spelled in | A lockout is cleared | demonstrated | server/src/auth/an-address-names-one-account-whatever-its-case.test.ts |
 | Managing the install and reaching case data are separate grants | An administrator has granted themselves no data access | demonstrated | server/src/access/an-administrator-reaches-no-case-by-being-one.test.ts |
 | Managing the install and reaching case data are separate grants | An analyst with wide data access administers nothing | demonstrated | server/test/wide-reach-administers-nothing.test.ts |
 | Managing the install and reaching case data are separate grants | An administrator grants themselves access | demonstrated | server/src/access/groups.controller.test.ts |
@@ -141,6 +145,7 @@
 | Reading an archive creates a case; it never overwrites one | An archive is read in | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is attributed | demonstrated | server/src/case-archive/round-trip.test.ts |
+| Reading an archive creates a case; it never overwrites one | An archive states where its rows came from | demonstrated | server/src/case-archive/round-trip.test.ts |
 | An archive's rows are checked against what this install can hold | An archive states a term outside a fixed set | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
 | An archive's rows are checked against what this install can hold | An archive states a value of the wrong shape | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
 | An archive's rows are checked against what this install can hold | An archive states a value the store cannot hold | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
@@ -157,11 +162,11 @@
 | A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | demonstrated | server/src/cases/customer.controller.test.ts |
 | A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case is identified by what an analyst recognises it by | A case gains its reference later | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
-| A case says where its work sits | An analyst scans the case list | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
-| A case says where its work sits | The incident ends before the case does | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
-| A case says where its work sits | A case is closed with reporting outstanding | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
-| A case says where its work sits | A case owes nothing | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
-| A case says where its work sits | A handled incident resumes | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
+| A case says where its work sits | An analyst scans the case list | demonstrated | ui/src/components/blocks/case-list.test.tsx |
+| A case says where its work sits | The incident ends before the case does | demonstrated | server/src/cases/a-case-says-where-its-work-sits.test.ts |
+| A case says where its work sits | A case is closed with reporting outstanding | unbuilt | Not built: closing is gated on what a case owes, and what a case owes is recorded nowhere. -> #188 |
+| A case says where its work sits | A case owes nothing | unbuilt | Not built: closing is gated on what a case owes, and what a case owes is recorded nowhere. -> #188 |
+| A case says where its work sits | A handled incident resumes | demonstrated | server/src/cases/a-case-says-where-its-work-sits.test.ts |
 | A case's destruction is itself a record | An analyst deletes a case | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
 | A case's destruction is itself a record | The install is asked what happened to a case | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
 | A case's destruction is itself a record | A demonstration case is removed | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
@@ -220,6 +225,8 @@
 | A threshold is quoted, never chosen | A quoted figure drifts from its source | demonstrated | server/src/compliance/oj.test.ts |
 | The application assesses; the organisation reports | An assessment finds a notification is owed | demonstrated | server/src/compliance/the-organisation-reports.test.ts |
 | The application assesses; the organisation reports | A notification was made | demonstrated | server/src/compliance/the-organisation-reports.test.ts |
+| A determination the analyst records is the one the assessment carries | An analyst records the determination | demonstrated | server/src/compliance/lenses.test.ts |
+| A determination the analyst records is the one the assessment carries | A recorded determination does not put an entity in scope | demonstrated | server/src/compliance/lenses.test.ts |
 | A regime that does not apply is not assessed | A customer is outside a regime | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
 | A regime that does not apply is not assessed | A case moves to a customer under different regimes | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
 | A regime that does not apply is not assessed | The analyst adopts the new customer's regimes | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
@@ -407,7 +414,7 @@
 | A screen draws; it does not fetch, and it does not place itself | A screen is placed somewhere else | demonstrated | ui/src/screens/a-screen-does-not-place-itself.rule.test.ts |
 | Every part can be seen on its own, in the states that matter | A part that presents data is shown in isolation | undemonstrated | |
 | Every part can be seen on its own, in the states that matter | A part that presents no data is shown in isolation | undemonstrated | |
-| Every part can be seen on its own, in the states that matter | A part is given nothing | undemonstrated | |
+| Every part can be seen on its own, in the states that matter | A part is given nothing | demonstrated | ui/src/components/blocks/a-fixture-is-a-default-not-a-source.rule.test.ts |
 | The interface has one vocabulary, and it is not invented per screen | A screen needs a value the set does not have | demonstrated | ui/src/motion-scale.rule.test.ts |
 | The interface has one vocabulary, and it is not invented per screen | A name does not resolve | demonstrated | ui/src/styles/every-name-resolves.rule.test.ts |
 | The interface has one vocabulary, and it is not invented per screen | An analyst has asked for less motion | undemonstrated | |
@@ -510,8 +517,8 @@
 | Sending stamps and preserves in one act | A report is sent | demonstrated | server/src/report/lifecycle.service.test.ts |
 | Sending stamps and preserves in one act | The document cannot be produced | demonstrated | server/src/report/a-report-that-cannot-be-produced-is-not-sent.test.ts |
 | Sending stamps and preserves in one act | The case changes after sending | demonstrated | server/src/report/lifecycle.service.test.ts |
-| A correction is a new report, not an edit | A sent report is wrong | unbuilt | Not built: `reports` carries no link to what a report supersedes. -> #182 |
-| A correction is a new report, not an edit | Two corrections race | unbuilt | Not built: `reports` carries no link to what a report supersedes. -> #182 |
+| A correction is a new report, not an edit | A sent report is wrong | demonstrated | server/src/report/lifecycle.service.test.ts |
+| A correction is a new report, not an edit | Two corrections race | demonstrated | server/src/report/lifecycle.service.test.ts |
 | The destination decides what a part may be | A report is exported | demonstrated | server/src/report/document/every-kind-survives-every-format.test.ts |
 | The destination decides what a part may be | A part cannot be drawn by a format | demonstrated | server/src/report/document/figure.test.ts |
 | A report says what is missing before it is sent | A report is checked before sending | demonstrated | server/src/report/lifecycle.service.test.ts |
@@ -569,6 +576,7 @@
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | The same artefact arrives twice | demonstrated | server/src/evidence/store.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | demonstrated | server/src/health/install.controller.test.ts |
+| Evidence is wrapped, and the wrapping is containment rather than confidentiality | An operator asks what protects the state at rest | demonstrated | server/src/health/install.controller.test.ts |
 | What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | demonstrated | server/src/health/an-install-says-what-it-cannot-find.test.ts |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |

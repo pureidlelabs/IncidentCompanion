@@ -17,6 +17,7 @@ import { cpus, freemem, loadavg, totalmem } from 'node:os'
 
 import type { Env } from '../config/env.js'
 import { availableMemory, cgroupMemory } from './available-memory.js'
+import { AdminOnly } from '../auth/admin-only.js'
 
 /**
  * **The schema is the source; the type is inferred from it.** The reference
@@ -125,6 +126,15 @@ export async function diskSnapshot(
   }
 }
 
+/**
+ * **What the install is made of is an operator's, not an analyst's.** This
+ * reports the host and the database rather than anything a case holds, and
+ * `GET /api/accounts` is already refused to an analyst -- while `pg_stat`
+ * hands back how many rows the account table has to anybody who can reach
+ * here. Every other System pane's controller is gated the same way.
+ * -> `test/analyst-privilege.test.ts`
+ */
+@AdminOnly()
 @Controller('api/health')
 export class ResourcesController {
   /** The previous read, which is what makes a CPU percentage possible at all. */

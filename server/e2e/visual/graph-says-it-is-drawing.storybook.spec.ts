@@ -12,12 +12,6 @@
  * **Only this tier can hold that window open.** The story tier gets the engine
  * immediately, so the state under test never occurs there; here the chunk is
  * delayed deliberately.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/graph-says-it-is-drawing.storybook.spec.ts
- * ```
  */
 import { expect, test } from '@playwright/test'
 

@@ -28,7 +28,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
-import { ArchiveImportService } from './import.service.js'
+import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
 import { CASE_NAME, MANIFEST_NAME, pack, readArchive } from '../archive/format.js'
 import { cases, cloudApps, systems, timeline, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
@@ -117,7 +117,7 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
       // no archive in this repository carried an action row -- so returning the
       // event schema for both left the whole dispatch untested.
       kind: 'action',
-      actionType: 'contain',
+      actionType: 'containment action',
       description: 'Host isolated',
       time: new Date(),
       createdBy: actorId,
@@ -219,6 +219,28 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
   })
 
   /**
+   * **The same door, on the collection whose schema is chosen by the row.** A
+   * timeline row is judged by the arm its `kind` names, so a refusal proved on
+   * `systems` says nothing about the two schemas reached through that dispatch.
+   * -> #675
+   */
+  it('refuses a vocabulary value no schema defines on a timeline action', async () => {
+    const hostile = await tamperedWith(await exported(), 'timeline', [
+      {
+        id: 'tl-v',
+        kind: 'action',
+        description: 'Host isolated',
+        time: new Date().toISOString(),
+        actionType: 'contain',
+      },
+    ])
+
+    await expect(importer.load(hostile, '', actorId)).rejects.toThrow(
+      'this archive states a actionType in timeline that this install cannot read',
+    )
+  })
+
+  /**
    * **An array in a text column was stored as `{"a","b"}`** -- Postgres array
    * literal syntax, written into a hostname by a JavaScript array reaching a
    * column that takes a string.
@@ -301,21 +323,24 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
     const [row] = await seed!.select().from(timeline).where(eq(timeline.caseId, result.id))
     expect(row?.kind).toBe('action')
     expect(row?.actionType, 'the action arm was not the schema the row was judged by').toBe(
-      'contain',
+      'containment action',
     )
   })
 
   /**
-   * **A column the write schema does not carry still travels.** `source` says
-   * where a row came from, and dropping it silently rewrites an imported row's
-   * provenance to `manual` -- a claim about the analyst's own work.
+   * **An imported row never claims to be the analyst's own work.** The column
+   * defaults to `manual`, so a door that neither carries nor stamps writes
+   * that claim over every row it brings in.
+   *
+   * **Stamped rather than carried, which is the narrower of the two answers**,
+   * and what is lost with it is recorded. -> #727
    */
-  it('carries a column no analyst writes', async () => {
+  it('names the door the row came through here, not the one it came through there', async () => {
     const built = await exported()
     const result = await importer.load(built, '', actorId)
 
     const [row] = await seed!.select().from(systems).where(eq(systems.caseId, result.id))
-    expect(row?.source).toBe('sentinel')
+    expect(row?.source).toBe(ARCHIVE_IMPORT)
   })
 
   /**

@@ -14,6 +14,7 @@ import {
 import { focusRing } from './rac'
 
 import { tv } from '@/lib/cn'
+import { SEVERITY_FILL, SEVERITY_INK } from './severity-tones'
 
 const listBox = tv({
   extend: focusRing,
@@ -149,27 +150,19 @@ export type ListBoxItemTone =
   | 'contain'
   | 'investigate'
 
+/**
+ * The severities come from the ramp; the three action tones are the kit's own.
+ * -> `severity-tones.ts`, #713
+ */
 const TONE_FILL = {
-  critical: 'bg-severity-critical',
-  high: 'bg-severity-high',
-  medium: 'bg-severity-medium',
-  low: 'bg-severity-low',
-  info: 'bg-severity-info',
-  none: 'bg-severity-none',
+  ...SEVERITY_FILL,
   notify: 'bg-action-notify',
   contain: 'bg-action-contain',
   investigate: 'bg-action-investigate',
 } as const satisfies Record<ListBoxItemTone, string>
 
-// `low` is the one level light enough that the shared foreground fails on it,
-// so it carries its own ink. The rest read off `--on-severity`.
 const TONE_INK = {
-  critical: 'text-on-severity',
-  high: 'text-on-severity',
-  medium: 'text-on-severity',
-  low: 'text-on-severity-low',
-  info: 'text-on-severity',
-  none: 'text-on-severity',
+  ...SEVERITY_INK,
   notify: 'text-on-severity',
   contain: 'text-on-severity',
   investigate: 'text-on-severity',

@@ -6,34 +6,26 @@ import { glob } from 'glob'
 import { describe, expect, it } from 'vitest'
 
 /**
- * **A fixture may be the default of a prop. It may not be what a surface
- * reads.**
+ * **A part holds no example content at all -- not as a source, and not as a
+ * default.**
  *
- * A block that reads `PICKER_SERVING` in its body draws the same install
- * whatever it is handed, and there is no prop to hand it anything. The gallery
- * is green and right -- a story has no server, so the fixture is the correct
- * answer there -- and nothing else looks until a container tries to pass real
- * data and finds nowhere to put it.
- *
- * A pane that reads its fixtures and takes no props reports an install that
- * does not exist -- an outage belonging to nobody, a list of fictional cases --
- * with a passing story, a passing pixel sweep and a passing suite.
+ * **A default is the same leak arriving quietly**, which is what this rule used
+ * to permit and the specification does not. Its scenario is *a part is given
+ * nothing -- then it shows nothing rather than the example*.
+ * -> `openspec/specs/interface/spec.md`, #237
  *
  * ## What it reads
  *
- * Every block and screen that imports a fixture. For each fixture identifier
- * imported, the file must use it **only** as a default in a destructuring
- * parameter -- `serving = PICKER_SERVING`. Any other mention is a read.
- *
- * A `const` derived from a fixture at module scope is the same defect wearing
- * a different hat, so it is refused too.
+ * Every block and screen that imports a collection fixture. Any mention at all
+ * outside the import line is refused, a default parameter included. A `const`
+ * derived from one at module scope is the same defect wearing a different hat.
  *
  * ## What it cannot see
  *
- * A prop that exists and is ignored: `HealthPane({ serving })` that goes on
- * reading the fixture would pass, because the identifier does appear as a
- * default. That is what `panes-draw-what-they-are-given.test.tsx` is for --
- * this test makes the seam exist, and that one makes it carry.
+ * A prop that exists and is ignored: `HealthPane({ serving })` that went on
+ * reading real data from somewhere else would pass. That is what
+ * `panes-draw-what-they-are-given.test.tsx` is for -- this test makes the seam
+ * exist, and that one makes it carry.
  */
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
@@ -115,18 +107,15 @@ describe('a fixture is a default, never a source', () => {
       const mentions = [...body.matchAll(new RegExp(`\\b${fixture}\\b`, 'g'))]
       if (mentions.length === 0) continue
 
-      // A default in a destructuring parameter: `name = FIXTURE`.
-      const asDefault = [...body.matchAll(new RegExp(`[\\w\\]]\\s*=\\s*${fixture}\\b`, 'g'))].length
-      if (asDefault < mentions.length) {
-        offenders.push(fixture)
-      }
+      offenders.push(fixture)
     }
 
     expect(
       offenders,
-      `${relative(SRC, path)} reads ${offenders.join(', ')} rather than taking it as a prop ` +
-        `whose default it is. A surface that reads a fixture draws the same install whatever ` +
-        `a container hands it, and no story can tell.`,
+      `${relative(SRC, path)} holds ${offenders.join(', ')}. A part that reads a fixture draws ` +
+        `the same install whatever a container hands it, and one that defaults to a fixture ` +
+        `does the same the moment a container passes nothing -- which is what a container whose ` +
+        `data has not arrived does. The example belongs in the story.`,
     ).toEqual([])
   })
 })

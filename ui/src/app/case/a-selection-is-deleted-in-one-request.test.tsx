@@ -41,7 +41,7 @@ vi.mock('@/app/useCaseId', () => ({ useCaseId: () => CASE }))
 vi.mock('@/api/client', () => ({
   request: (path: string, init?: { body?: unknown }) => {
     sent.calls.push({ path, body: init?.body })
-    return Promise.resolve({ deleted: [], missing: [] })
+    return Promise.resolve({ deleted: [], missing: [], refused: [] })
   },
 }))
 vi.mock('@/api/case', () => ({
@@ -126,8 +126,8 @@ describe('deleting a selection that spans tables', () => {
     // every key of a request body, so `network_indicators` as a key arrives
     // as `networkIndicators` and is refused by the enum.
     expect((only?.body as { targets?: unknown[] }).targets).toEqual([
-      { collection: 'systems', ids: ['sys-1'] },
-      { collection: 'malware', ids: ['mal-1'] },
+      { collection: 'systems', rows: [{ id: 'sys-1', version: 1 }] },
+      { collection: 'malware', rows: [{ id: 'mal-1', version: 1 }] },
     ])
   })
 

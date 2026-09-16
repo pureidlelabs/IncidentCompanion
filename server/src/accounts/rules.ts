@@ -6,25 +6,8 @@
  * parts worth testing. Everything else there is Better Auth's admin plugin
  * called once and its answer passed on.
  */
-import { DEFAULT_ROLE, ROLES } from '../auth/auth.config.js'
+import { DEFAULT_ROLE, ROLES, type AnalystAccount, type Role } from '../domain/analyst-account.js'
 import type { Analyst } from '../auth/last-admin.js'
-
-type Role = (typeof ROLES)[number]
-
-export interface AccountRow {
-  username: string
-  displayName: string
-  /**
-   * **The closed vocabulary, not `string`.** Better Auth types the column
-   * loosely, so an unrecognised value reaches the screen as a role the picker
-   * cannot offer and leaves the response schema unable to name the enum it
-   * publishes. Anything unknown reads as the default.
-   */
-  role: Role
-  state: 'active' | 'disabled'
-  tone: 'positive' | 'negative'
-  disabled: boolean
-}
 
 /**
  * One row as the pane draws it. `state` and `tone` are resolved here and never
@@ -32,7 +15,7 @@ export interface AccountRow {
  *
  * A missing role reads as `DEFAULT_ROLE`, never as nothing.
  */
-export function rowFor(user: Analyst): AccountRow {
+export function rowFor(user: Analyst): AnalystAccount {
   const disabled = user.banned === true
   return {
     username: user.email,

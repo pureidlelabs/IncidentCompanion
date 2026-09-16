@@ -11,7 +11,7 @@
  *
  * Install-level, so no `caseId` and no row-level policy.
  */
-import { boolean, jsonb, pgTable, real, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
 export const reportLanguage = pgTable(
   'report_language',
@@ -36,17 +36,6 @@ export const reportLanguage = pgTable(
 
     /** Key to string. Sparse on purpose - what is absent falls back to English. */
     strings: jsonb('strings').notNull().$type<Record<string, string>>(),
-
-    /**
-     * How much of English this pack carried when it was written, 0 to 1.
-     *
-     * **Stored rather than computed on read.** It is what an analyst decides
-     * from before sending, so it has to be cheap enough to put in a list; and
-     * recomputing it on every read would make an *old* pack's figure move when
-     * English gains a key, which is a number changing under a document nobody
-     * edited.
-     */
-    coverage: real('coverage').notNull(),
 
     /**
      * Shipped with the app, and upserted on every boot.

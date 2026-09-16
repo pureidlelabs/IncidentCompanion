@@ -16,12 +16,6 @@
  * Asserted as equality with the band rather than as a pair of numbers. A test
  * holding `top === 16` re-fails the day the row's padding changes, and the
  * claim was never about 16.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/time-brush-align.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

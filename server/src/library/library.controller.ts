@@ -145,8 +145,6 @@ export const libraryListingSchema = z.object({
 
 class LibraryListingDto extends createZodDto(libraryListingSchema) {}
 
-class WrittenDto extends createZodDto(writtenSchema) {}
-
 class EditorDocumentDto extends createZodDto(editorDocumentSchema) {}
 
 /**
@@ -162,6 +160,8 @@ const editorResultSchema = writtenSchema.extend({ editor: editorDocumentSchema }
 type EditorResult = z.infer<typeof editorResultSchema>
 
 class EditorResultDto extends createZodDto(editorResultSchema) {}
+
+class LibraryWrittenDto extends createZodDto(writtenSchema) {}
 
 @UseGuards(AuthGuard)
 @Controller('api/library')
@@ -233,25 +233,29 @@ export class LibraryController {
     }
 
     /**
-     * **A library with no payload schema refuses a document, exactly as it
-     * refuses a New.** Validating only where a schema exists makes the one
-     * kind without one the one kind nothing checks: an entry of any shape is
-     * written with a 200, and the route serving that kind then answers 500 on
-     * every case until somebody removes the row. `create` refuses that kind
-     * with a sentence, and this door has to refuse it too.
-     */
-    const schema = kind.payload
-    if (!schema) {
-      throw new BadRequestException(`A ${kind.noun} cannot be written here yet.`)
-    }
-
-    /**
      * **Every payload is checked against the kind before anything is written.**
      * The transaction would roll a bad one back, but the refusal names the
      * entry rather than the transaction - an operator applying forty snippets
      * needs to know which one is wrong.
+     *
+     * **A library with no payload schema refuses an *entry*, exactly as it
+     * refuses a New.** Validating only where a schema exists would make the
+     * one kind without one the one kind nothing checks: an entry of any shape
+     * written with a 200, and the route serving that kind answering 500 on
+     * every case until somebody removes the row.
+     *
+     * **What it does not refuse is a document carrying no entries**, which
+     * asks nothing of the schema. Switching a shipped entry off install-wide
+     * is the one thing this route can do that the per-entry routes cannot, and
+     * every report layout is a built-in -- so a refusal that read the kind
+     * rather than the entries left that column with no reachable writer.
+     * -> #646
      */
+    const schema = kind.payload
     for (const entry of body.entries) {
+      if (!schema) {
+        throw new BadRequestException(`A ${kind.noun} cannot be written here yet.`)
+      }
       const verdict = schema.safeParse(entry.payload)
       if (!verdict.success) {
         throw new UnprocessableEntityException(
@@ -315,7 +319,7 @@ export class LibraryController {
   })
   @ZodResponse({
     status: 200,
-    type: WrittenDto,
+    type: LibraryWrittenDto,
     description: 'A sentence for the analyst, and the name it was given.',
   })
   async create(@Param('slug') slug: string, @Body() body: unknown): Promise<Written> {
@@ -507,7 +511,7 @@ export class LibraryController {
   @Delete(':slug/:name')
   @ZodResponse({
     status: 200,
-    type: WrittenDto,
+    type: LibraryWrittenDto,
     description: 'A sentence confirming what was removed.',
   })
   async remove(@Param('slug') slug: string, @Param('name') name: string): Promise<Written> {

@@ -329,7 +329,7 @@ interface LoginResponse {
    * send the analyst.
    */
   mustChangePassword?: boolean
-  /** `auth.config.ts`'s `ROLES`. `null` where the username names no account. */
+  /** `analyst-account.ts`'s `ROLES`. `null` where the username names no account. */
   role?: string | null
 }
 
@@ -372,9 +372,20 @@ export async function signIn(
  * name is optional and not unique.
  */
 export function identityFrom(
-  user: { id: string; name?: string | null; email: string; demo?: boolean },
+  user: {
+    id: string
+    name?: string | null
+    email: string
+    demo?: boolean
+    role?: string | null
+  },
 ): Session {
-  const identity = { userId: user.id, username: user.name?.trim() || user.email }
+  const identity = {
+    userId: user.id,
+    username: user.name?.trim() || user.email,
+    // The column is nullable, so anything but `admin` is an analyst.
+    ...(user.role === 'admin' ? { admin: true as const } : {}),
+  }
   // The evaluation build's session probe marks its analyst, and the mark has
   // to survive the boot adopting the probed identity over the stored hint.
   return user.demo === true ? { ...identity, demo: true } : identity

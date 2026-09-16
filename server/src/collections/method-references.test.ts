@@ -38,14 +38,24 @@ describe('every collection that cites a method declares it', () => {
     referenceFieldsOf(schema).filter((one) => one.target === 'methods')
 
   it('declares it on BOTH timeline arms, not just the event', () => {
-    expect(targetsOf(eventWriteSchema)).toEqual([{ field: 'methodIds', target: 'methods' }])
-    expect(targetsOf(actionWriteSchema)).toEqual([{ field: 'methodIds', target: 'methods' }])
+    expect(targetsOf(eventWriteSchema)).toEqual([
+      { field: 'methodIds', target: 'methods', many: true },
+    ])
+    expect(targetsOf(actionWriteSchema)).toEqual([
+      { field: 'methodIds', target: 'methods', many: true },
+    ])
   })
 
   it('declares it on evidence, systems and impact', () => {
-    expect(targetsOf(evidenceSchema)).toEqual([{ field: 'methodId', target: 'methods' }])
-    expect(targetsOf(systemSchema)).toEqual([{ field: 'methodId', target: 'methods' }])
-    expect(targetsOf(impactSchema)).toEqual([{ field: 'methodIds', target: 'methods' }])
+    expect(targetsOf(evidenceSchema)).toEqual([
+      { field: 'methodId', target: 'methods', many: false },
+    ])
+    expect(targetsOf(systemSchema)).toEqual([
+      { field: 'methodId', target: 'methods', many: false },
+    ])
+    expect(targetsOf(impactSchema)).toEqual([
+      { field: 'methodIds', target: 'methods', many: true },
+    ])
   })
 
   /**

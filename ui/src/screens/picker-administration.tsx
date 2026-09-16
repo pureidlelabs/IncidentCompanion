@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import type { AccountRow } from '@/components/blocks/account-table'
+import type { AccountTableRow } from '@/components/blocks/account-table'
 import type { BoundRow } from '@/components/blocks/picker-rows'
 import { AdministrationPane } from '@/components/blocks/administration-pane'
 import { PickerFrame } from '@/components/blocks/picker-frame'
@@ -9,9 +9,11 @@ import type { PickerPane } from '@/components/blocks/picker-panes'
 /** The picker, on Administration: what this install is set to, and who may reach it. */
 export interface PickerAdministrationScreenProps {
   /** Accounts this install holds. Absent draws an empty list. */
-  accounts: readonly AccountRow[] | undefined
+  accounts: readonly AccountTableRow[] | undefined
   /** Who is signed in, at the rail's foot. */
   analyst: string
+  /** Whether to offer the rail rows only an administrator may use. */
+  admin?: boolean | undefined
   /** The sign-in windows this install sets. Absent draws none. */
   signIn?: readonly BoundRow[] | undefined
   /** Opens the About door from the rail's head. */
@@ -34,6 +36,7 @@ export function PickerAdministrationScreen({
   onAbout,
   accounts: accountsGiven,
   analyst,
+  admin,
   signIn,
   onPane,
   onImportArchive,
@@ -44,7 +47,7 @@ export function PickerAdministrationScreen({
 }: PickerAdministrationScreenProps) {
   // **The screen owns the roster.** The table it ends up in draws its tabs
   // from the same list this pane counts, so neither may hold its own copy.
-  const [accounts, setAccounts] = useState<readonly AccountRow[]>(accountsGiven ?? [])
+  const [accounts, setAccounts] = useState<readonly AccountTableRow[]>(accountsGiven ?? [])
   const [given, setGiven] = useState(accountsGiven)
   if (given !== accountsGiven) {
     setGiven(accountsGiven)
@@ -54,6 +57,7 @@ export function PickerAdministrationScreen({
     <PickerFrame
       pane="administration"
       analyst={analyst}
+      admin={admin}
       {...(onPane ? { onPane } : {})}
       {...(onImportArchive ? { onImportArchive } : {})}
       userMenu={userMenu}

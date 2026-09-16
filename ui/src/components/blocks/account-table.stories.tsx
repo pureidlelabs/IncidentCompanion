@@ -4,7 +4,7 @@ import { expect, fn, screen, within } from 'storybook/test'
 
 import {
   AccountTable,
-  type AccountRow,
+  type AccountTableRow,
   type AccountTableProps,
 } from '@/components/blocks/account-table'
 import { PICKER_ACCOUNTS } from '@/components/blocks/picker-rows'
@@ -62,7 +62,7 @@ type Story = StoryObj<typeof meta>
  * back to the username.
  */
 export const Roster: Story = {
-  name: 'Every state the chip has a tone for',
+  name: 'Both states an account is served in',
   args: { accounts: PICKER_ACCOUNTS },
 }
 
@@ -120,7 +120,7 @@ export const TabAndSearchCompose: Story = {
     })
 
     // The tab's own narrowing, asserted before the search can account for it:
-    // the locked-out and disabled rows are the two it drops.
+    // the two disabled rows are the ones it drops.
     await expect(await canvas.findByText('Tomas Brennan')).toBeVisible()
     await expect(canvas.queryByText('Margot Delacroix')).not.toBeInTheDocument()
     await expect(canvas.queryByText('d.novak')).not.toBeInTheDocument()
@@ -134,11 +134,9 @@ export const TabAndSearchCompose: Story = {
   },
 }
 
-/** One of the three states, by position, so the generated roster holds all of them. */
-function stateFor(i: number): AccountRow['state'] {
-  if (i % 3 === 1) return 'disabled'
-  if (i % 3 === 2) return 'locked out'
-  return 'active'
+/** Both states, by position, so the generated roster holds each of them. */
+function stateFor(i: number): AccountTableRow['state'] {
+  return i % 3 === 1 ? 'disabled' : 'active'
 }
 
 /**
@@ -181,7 +179,7 @@ export const DisablingMovesTheCount: Story = {
   args: { accounts: PICKER_ACCOUNTS },
   play: async ({ canvas, step, userEvent, args }) => {
     await expect(canvas.getByRole('tab', { name: /active/i })).toHaveTextContent('3')
-    await expect(canvas.getByRole('tab', { name: /disabled/i })).toHaveTextContent('1')
+    await expect(canvas.getByRole('tab', { name: /disabled/i })).toHaveTextContent('2')
 
     await step('disable an active account from its row menu', async () => {
       await userEvent.click(canvas.getByRole('button', { name: 'More for Rachel Okonkwo' }))
@@ -191,7 +189,7 @@ export const DisablingMovesTheCount: Story = {
     })
 
     await expect(canvas.getByRole('tab', { name: /active/i })).toHaveTextContent('2')
-    await expect(canvas.getByRole('tab', { name: /disabled/i })).toHaveTextContent('2')
+    await expect(canvas.getByRole('tab', { name: /disabled/i })).toHaveTextContent('3')
     await expect(args.onState).toHaveBeenCalledWith('a1', 'disabled')
   },
 }

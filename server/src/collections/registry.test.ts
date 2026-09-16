@@ -13,11 +13,14 @@ import type { z } from 'zod'
 import {
   BULK_TARGETS,
   COLLECTIONS,
+  REFERENCE_HOLDERS,
   REFERENCE_TABLES,
   REVIEWABLE,
   TABLES,
   type Collection,
 } from './registry.js'
+import { importSchemaFor } from '../domain/collections.js'
+import { columnOf } from '../db/column-access.js'
 import {
   COLLECTION_SCHEMAS,
   IMPORTABLE,
@@ -81,7 +84,11 @@ describe('every map is a total slice of the registry', () => {
   it('validates with a schema for exactly the collections that declare one', () => {
     const withSchema = NAMES.filter((name) => 'schema' in COLLECTIONS[name])
     expect(Object.keys(COLLECTION_SCHEMAS)).toEqual(withSchema)
-    expect(IMPORTABLE).toEqual(withSchema)
+  })
+
+  /** Importable is every bulk target, which is wider than `COLLECTION_SCHEMAS`. -> #650 */
+  it('takes a file back for every collection it writes one for', () => {
+    expect([...IMPORTABLE].sort()).toEqual([...BULK_TARGETS].sort())
   })
 
   it('names a screen key and a noun for every collection a picker points at', () => {
@@ -107,17 +114,58 @@ describe('every map is a total slice of the registry', () => {
   })
 })
 
+/**
+ * **`many` decides the SQL, so it is held to the column rather than trusted.**
+ *
+ * The reference check sends `inArray` at a single-valued column and
+ * `jsonb_exists` at a list one, and takes which from the schema: a field is
+ * list-valued if it accepts the empty list. That is true of every reference
+ * declared today because they are all written the same two ways, and nothing
+ * makes the next one follow. A required multi-select (`refs().min(1)`) reads
+ * as single-valued and sends `inArray` at jsonb; a scalar wrapped in
+ * `.catch(null)` reads as list-valued and sends `jsonb_exists` at a uuid.
+ * Either is a 500 on the delete path rather than a miscount, and neither is
+ * visible in the declaration.
+ */
+describe('a reference field says which shape it is', () => {
+  it('agrees with the column the query is sent at', () => {
+    const wrong = REFERENCE_HOLDERS.flatMap(({ collection, field, many }) => {
+      const column = columnOf(REVIEWABLE[collection]!, field)
+      const isJsonb = column.columnType === 'PgJsonb'
+      return many === isJsonb ? [] : [`${collection}.${field}: many=${String(many)} column=${column.columnType}`]
+    })
+
+    expect(
+      wrong,
+      'the reference check would send list SQL at a single column, or the reverse',
+    ).toEqual([])
+  })
+
+  it('finds the fields to check, so an empty walk cannot pass', () => {
+    expect(REFERENCE_HOLDERS.length).toBeGreaterThan(20)
+    expect(REFERENCE_HOLDERS.some((one) => one.many)).toBe(true)
+    expect(REFERENCE_HOLDERS.some((one) => !one.many)).toBe(true)
+  })
+})
+
 describe('the deliberate gaps', () => {
   /**
-   * **`timeline` has a table and no schema on purpose.** Its patchable fields
-   * depend on the row's `kind`, so a single schema would let an import write an
-   * action's fields onto an event. Named here so the gap is a decision rather
-   * than an omission somebody closes by guessing.
+   * **`timeline` has a table and no single schema on purpose.** One schema
+   * would let an import write an action's fields onto an event. Named here so
+   * the gap stays a decision rather than an omission somebody closes by
+   * guessing. -> `domain/collections.ts`, #650
    */
-  it('leaves timeline out of the schemas, because its shape depends on the row', () => {
+  it('leaves timeline out of the schemas, and judges its rows by kind instead', () => {
     expect(COLLECTION_SCHEMAS['timeline']).toBeUndefined()
-    expect(IMPORTABLE).not.toContain('timeline')
     expect(TABLES['timeline']).toBeDefined()
+
+    const asEvent = importSchemaFor('timeline', { kind: 'event' })
+    const asAction = importSchemaFor('timeline', { kind: 'action' })
+    expect(asEvent).toBeDefined()
+    expect(asAction).toBeDefined()
+    expect(asEvent, 'one schema for both kinds is the thing this gap exists to refuse').not.toBe(
+      asAction,
+    )
   })
 
   /**

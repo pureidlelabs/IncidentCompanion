@@ -15,6 +15,12 @@ import { describe, expect, it } from 'vitest'
 
 import { caseCompliance } from '../db/schema/case-compliance.js'
 import { COMPLIANCE, complianceFieldNames } from './compliance-form.js'
+import { caseComplianceSchema } from './entities/case-compliance.js'
+import {
+  DORA_ROOT_CAUSE_DETAILED,
+  DORA_ROOT_CAUSE_HIGH,
+} from './vocabularies/compliance.js'
+import { formSpec } from './field-spec.js'
 
 /** Python's spelling to the column's, the same conversion the client applies. */
 function toCamel(name: string): string {
@@ -70,5 +76,73 @@ describe('the compliance forms', () => {
       .filter((field) => field.computed_from !== undefined)
     expect(computed.length).toBeGreaterThan(0)
     for (const field of computed) expect(field.options).toBeUndefined()
+  })
+
+  /**
+   * The other direction, and the one that had drifted.
+   *
+   * `formSpec` projects every field declared with `field()` -- which is what
+   * "meant to be drawn" means for every other collection -- so a field the
+   * schema validates and no card draws is a control an analyst cannot reach.
+   * It validates, it stores, and no screen offers it.
+   *
+   * **The sibling above cannot see this.** It walks the served names looking
+   * for a column, so a field missing from the form is missing from its walk
+   * too, and the absence reads as nothing to check.
+   *
+   * **Counted over the forms a card names, not over `forms`.** `ALL_FIELDS`
+   * holds every field and no card reaches it, so a field sitting only there
+   * is served by this document and drawn by nothing -- which is the state
+   * being tested for, and `complianceFieldNames()` would report it as served.
+   */
+  it('draws every field the schema declares a control for', () => {
+    const drawn = new Set(
+      COMPLIANCE.cards
+        .flatMap((card) => [card.form, card.form_off])
+        .filter((form): form is string => form !== null)
+        .flatMap((form) => COMPLIANCE.forms[form]?.fields.map((one) => toCamel(one.name)) ?? []),
+    )
+    const unreachable = formSpec(caseComplianceSchema)
+      .map((field) => field.name)
+      .filter((name) => !drawn.has(name))
+
+    expect(unreachable, 'these validate and store, and no card draws them').toEqual([])
+  })
+
+  /**
+   * A picker offers the vocabulary it is drawn from, all of it, in its order.
+   *
+   * `vocabularies/compliance.ts` opens by saying it is the only copy, and this
+   * document restated each DORA list in both places it builds a form. Three
+   * copies agree until one is edited, and the one that reaches a regulator is
+   * whichever the screen happened to send.
+   *
+   * **The order is asserted, not just the set.** These are pickers a regulator
+   * reads back, and a list reordered between the two copies is a different
+   * screen for the same field.
+   *
+   * **A computed field is not here**, and the case above is why: 4.3's terms
+   * are the ones this case's own 4.2 causes offer, so a static list of all
+   * eighteen would offer causes the case does not owe.
+   */
+  it('offers every term of the vocabulary each DORA picker draws from', () => {
+    const owed: Record<string, readonly string[]> = {
+      dora_root_cause_high: DORA_ROOT_CAUSE_HIGH,
+      dora_root_cause_detailed: Object.values(DORA_ROOT_CAUSE_DETAILED).flat(),
+    }
+
+    const wrong: string[] = []
+    for (const [name, form] of Object.entries(COMPLIANCE.forms)) {
+      for (const field of form.fields) {
+        const want = owed[field.name]
+        if (!want) continue
+        const got = field.options ?? []
+        if (got.length !== want.length || got.some((term, at) => term !== want[at])) {
+          wrong.push(`${name}.${field.name}: offers ${String(got.length)} of ${String(want.length)}`)
+        }
+      }
+    }
+
+    expect(wrong.sort(), 'a picker disagreeing with the only copy of its list').toEqual([])
   })
 })

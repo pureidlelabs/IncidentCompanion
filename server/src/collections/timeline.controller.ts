@@ -10,6 +10,7 @@
  * which is what a merge review needs to tell the analyst what they were about
  * to write over.
  */
+import { CreatedIdsDto, DeletedDto } from './acknowledged.js'
 import {
   UnprocessableEntityException,
   Body,
@@ -31,6 +32,7 @@ import { z } from 'zod'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { CollectionService, type CollectionDefinition } from './collection.service.js'
+import { importStamp } from '../db/import-stamp.js'
 import { ConflictsService } from './conflicts.service.js'
 import { timeline } from '../db/schema/timeline.js'
 import {
@@ -44,6 +46,7 @@ import {
 } from '../domain/entities/timeline.js'
 import { patchSchema } from '../domain/field-spec.js'
 import type { TimelineRow } from '../domain/wire.js'
+import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * **Exported because the import door writes timeline rows too.** Rebuilding it
@@ -102,17 +105,9 @@ const validateEntry = new RefusingPipe(timelineWriteSchema)
 const BULK_LIMIT = 1000
 
 const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
-class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {}
 
-/**
- * What the server asserts about a row it was handed by an importer.
- *
- * **Exported because two doors write imported entries** -- this controller's
- * bulk route and `incident-import`'s commit -- and a stamp duplicated in both
- * is one that drifts. A caller able to assert `imported` could forge an
- * evidentiary claim, which is why the write schemas omit both fields.
- */
-export const IMPORTED_STAMP = { provenance: 'imported' as const, unreviewed: true }
+/** What this door calls itself. -> `db/import-stamp.ts` */
+const BULK_IMPORT = 'Bulk import'
 
 function parsed(schema: z.ZodType, body: unknown): Record<string, unknown> {
   const answer = schema.safeParse(body)
@@ -153,7 +148,7 @@ const PATCH_SCHEMAS = {
 } as const
 
 /** Only `version` is validated by the pipe; the rest needs the row's kind. */
-const versionSchema = z.object({ version: z.int().nonnegative() }).catchall(z.unknown())
+const versionSchema = z.object({ version: rowVersion() }).catchall(z.unknown())
 const validatePatch = new ZodValidationPipe(versionSchema)
 
 /**
@@ -168,7 +163,20 @@ const validatePatch = new ZodValidationPipe(versionSchema)
  */
 const TimelineRowDto = createZodDto(timelineRowSchema)
 const TimelineRowsDto = createZodDto(z.array(timelineRowSchema))
-class DeletedDto extends createZodDto(z.object({ deleted: z.literal(true) })) {}
+
+/**
+ * **Named, because `createZodDto` returns a class called `AugmentedZodDto`.**
+ * `const x = <call>` infers no name, so both of these carried that one and the
+ * document keyed both under it: whichever registered last described all four
+ * timeline routes, and the list was published as a single row.
+ *
+ * The name is set on the class rather than through `ApiSchema`, because
+ * `nestjs-zod` derives the serialised DTO's own name from it -- `Output` is
+ * built as `${this.name}_Output`, which metadata the outer class carries does
+ * not reach. -> #649
+ */
+Object.defineProperty(TimelineRowDto, 'name', { value: 'TimelineRowDto' })
+Object.defineProperty(TimelineRowsDto, 'name', { value: 'TimelineRowsDto' })
 
 /**
  * **Guarded at the class**, so a handler added later cannot forget it - the
@@ -279,7 +287,7 @@ export class TimelineController {
         // stamping them client-side has every row refused. A caller able to
         // claim `imported` is the reason the omission exists, and this is the
         // downstream that has to apply it.
-        ...IMPORTED_STAMP,
+        ...importStamp(BULK_IMPORT, DEFINITION.table),
       }
     })
 
@@ -361,7 +369,7 @@ export class TimelineController {
     @Session() session: UserSession,
   ) {
     const expected = Number(version)
-    if (!Number.isInteger(expected)) {
+    if (!rowVersion().safeParse(expected).success) {
       throw new ConflictException({ message: 'A delete has to name the version it read.' })
     }
     const removed = await this.collections.remove(

@@ -30,7 +30,8 @@ import type { IncomingHttpHeaders } from 'node:http'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
-import { ADMIN_ROLE, DEFAULT_ROLE, ROLES, type Auth } from '../auth/auth.config.js'
+import { ACCOUNT_STATES, ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
+import { type Auth } from '../auth/auth.config.js'
 import { PasswordHoldService } from '../auth/password-hold.service.js'
 import { LockoutClearService } from '../auth/lockout-clear.service.js'
 import { duplicateEmail, rowFor } from './rules.js'
@@ -107,11 +108,12 @@ const accountRowSchema = z.object({
   username: z.string(),
   displayName: z.string(),
   role: z.enum(ROLES),
-  state: z.enum(['active', 'disabled']),
+  state: z.enum(ACCOUNT_STATES),
   tone: z.enum(['positive', 'negative']),
   disabled: z.boolean(),
 })
 
+class AccountWrittenDto extends createZodDto(writtenSchema) {}
 class AccountsDto extends createZodDto(
   z.object({
     accounts: z.array(accountRowSchema),
@@ -119,7 +121,6 @@ class AccountsDto extends createZodDto(
     defaultRole: z.enum(ROLES),
   }),
 ) {}
-class WrittenDto extends createZodDto(writtenSchema) {}
 
 @AdminOnly()
 @Controller('api/accounts')
@@ -163,7 +164,7 @@ export class InstallAccountsController {
   }
 
   @Post()
-  @ZodResponse({ status: 201, type: WrittenDto, description: 'The account was created.' })
+  @ZodResponse({ status: 201, type: AccountWrittenDto, description: 'The account was created.' })
   async create(
     @Req() request: { headers: IncomingHttpHeaders },
     @Body() body: unknown,
@@ -203,7 +204,7 @@ export class InstallAccountsController {
 
   @Post(':username/reset')
   @HttpCode(200)
-  @ZodResponse({ status: 200, type: WrittenDto, description: 'A new password was issued.' })
+  @ZodResponse({ status: 200, type: AccountWrittenDto, description: 'A new password was issued.' })
   async reset(
     @Req() request: { headers: IncomingHttpHeaders },
     @Param('username') username: string,
@@ -250,7 +251,7 @@ export class InstallAccountsController {
    */
   @Post(':username/disable')
   @HttpCode(200)
-  @ZodResponse({ status: 200, type: WrittenDto, description: 'The account state was changed.' })
+  @ZodResponse({ status: 200, type: AccountWrittenDto, description: 'The account state was changed.' })
   async disable(
     @Req() request: { headers: IncomingHttpHeaders },
     @Param('username') username: string,
@@ -291,7 +292,7 @@ export class InstallAccountsController {
 
   @Post(':username/enable')
   @HttpCode(200)
-  @ZodResponse({ status: 200, type: WrittenDto, description: 'The account state was changed.' })
+  @ZodResponse({ status: 200, type: AccountWrittenDto, description: 'The account state was changed.' })
   async enable(
     @Req() request: { headers: IncomingHttpHeaders },
     @Param('username') username: string,
@@ -319,7 +320,7 @@ export class InstallAccountsController {
    */
   @Post(':username/role')
   @HttpCode(200)
-  @ZodResponse({ status: 200, type: WrittenDto, description: 'The role was changed.' })
+  @ZodResponse({ status: 200, type: AccountWrittenDto, description: 'The role was changed.' })
   async role(
     @Req() request: { headers: IncomingHttpHeaders },
     @Param('username') username: string,

@@ -5,18 +5,11 @@
  * everything the regime asks for. Undetermined is a gap; `false` is not.
  */
 import { DORA_ROOT_CAUSE_ADDITIONAL } from '../domain/vocabularies/compliance.js'
-import * as dora from './dora.js'
 import * as gdpr from './gdpr.js'
 import * as nis2 from './nis2.js'
+import { REGIMES, regimesInPlay, type RegimeKey } from './regimes.js'
 import type { Policy } from '../domain/compliance-policy.js'
 import type { ComplianceRow } from './compliance.service.js'
-
-/** Regime key to the label a screen shows. A closed set: a regime is law. */
-export const REGIMES: Record<string, string> = {
-  nis2: 'NIS2 (Article 23)',
-  gdpr: 'GDPR (Articles 33 and 34)',
-  dora: 'DORA (Articles 17 to 20)',
-}
 
 export interface Readiness {
   regime: string
@@ -46,7 +39,8 @@ function summarise(
   const line = untracked
     ? `${head}; ${untracked} more Annex II fields are filed outside this app`
     : head
-  return { regime, label: REGIMES[regime]!, gaps, tracked, untracked, ready: gaps.length === 0, line }
+  const reading = REGIMES.find((one) => one.key === regime)?.reading ?? regime
+  return { regime, label: reading, gaps, tracked, untracked, ready: gaps.length === 0, line }
 }
 
 /**
@@ -118,7 +112,11 @@ function needsAdditional(detailed: readonly string[]): boolean {
 }
 
 /**
- * DORA's gaps: the Article 6 gate and the tracked Annex II fields left empty.
+ * DORA's gaps: the tracked Annex II fields left empty.
+ *
+ * **Not the Article 6 gate.** A line exists only for a regime in play, and DORA
+ * is in play once that gate has an answer, so a gap asking for it could reach
+ * nobody. -> `regimes.ts`, #693
  *
  * **No stage filter yet, and it is owed.** Three of the four are final-report
  * fields; at the initial notification they are not late, they are not yet
@@ -128,9 +126,6 @@ function needsAdditional(detailed: readonly string[]): boolean {
  */
 function doraReadiness(row: ComplianceRow): Readiness {
   const gaps: string[] = []
-  if (dora.inScope(row).met === null) {
-    gaps.push('whether critical services were affected (Article 6)')
-  }
   for (const [number, column, title] of TRACKED_ITS_FIELDS) {
     const value = row[column]
     const empty = Array.isArray(value) ? value.length === 0 : !value
@@ -138,29 +133,31 @@ function doraReadiness(row: ComplianceRow): Readiness {
     if (number === '4.3' && !needsAdditional(row.doraRootCauseDetailed ?? [])) continue
     gaps.push(`${number} ${title}`)
   }
-  // The four Annex II fields plus the Article 6 gate, which is an RTS
-  // criterion and not an Annex II field - so `untracked` is not a subtraction
-  // from `tracked`.
+  // The four Annex II fields plus the Article 6 gate, which is an RTS criterion
+  // and not an Annex II field - so `untracked` is not a subtraction from
+  // `tracked`. The gate counts as tracked and stated: a line exists only once
+  // it is answered.
   return summarise('dora', gaps, TRACKED_ITS_FIELDS.length + 1, ANNEX_II_FIELDS - TRACKED_ITS_FIELDS.length)
+}
+
+/** What each regime counts as its own gaps. Exhaustive over `RegimeKey`. */
+const LINE: Record<RegimeKey, (row: ComplianceRow, policy: Policy) => Readiness> = {
+  nis2: (row) => nis2Readiness(row),
+  gdpr: (row, policy) => gdprReadiness(row, policy),
+  dora: (row) => doraReadiness(row),
 }
 
 /**
  * One line per regime that is switched on **and in play**.
  *
- * Keyed on the same conditions the verdict rows are, so a regime showing no
- * verdict shows no readiness line either - a case owing nothing under GDPR
- * should not be told it is three GDPR facts short.
+ * The same set the verdict rows are built from, so a regime showing no verdict
+ * shows no readiness line either - a case owing nothing under GDPR should not
+ * be told it is three GDPR facts short. -> `regimes.ts`
  */
 export function readiness(
   row: ComplianceRow,
   enabled: Record<string, boolean>,
   policy: Policy,
 ): Readiness[] {
-  const out: Readiness[] = []
-  if (enabled.nis2 && (row.nis2EntityClass === 'essential' || row.nis2EntityClass === 'important')) {
-    out.push(nis2Readiness(row))
-  }
-  if (enabled.gdpr && row.personalDataInvolved === 'yes') out.push(gdprReadiness(row, policy))
-  if (enabled.dora) out.push(doraReadiness(row))
-  return out
+  return regimesInPlay(row, enabled).map((regime) => LINE[regime.key](row, policy))
 }

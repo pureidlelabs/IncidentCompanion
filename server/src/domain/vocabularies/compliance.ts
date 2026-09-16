@@ -31,7 +31,7 @@ export const RSIT_CLASSES = [
   { value: 'test', label: 'Test' },
 ] as const
 
-export const RSIT_TYPES: Record<string, { value: string; label: string }[]> = {
+export const RSIT_TYPES = {
   'abusive-content': [
     { value: 'spam', label: 'Spam' },
     { value: 'harmful-speech', label: 'Harmful Speech' },
@@ -94,7 +94,7 @@ export const RSIT_TYPES: Record<string, { value: string; label: string }[]> = {
     { value: 'undetermined', label: 'Undetermined' },
   ],
   test: [{ value: 'test', label: 'Test' }],
-}
+} as const satisfies Record<string, readonly { value: string; label: string }[]>
 
 /** ENISA severity, the bands a GDPR breach is scored into. */
 export const GDPR_SEVERITY_BANDS = ['low', 'medium', 'high', 'very high'] as const
@@ -237,7 +237,7 @@ export const DORA_ROOT_CAUSE_HIGH = [
 ] as const
 
 /** The detailed causes each high-level cause offers. */
-export const DORA_ROOT_CAUSE_DETAILED: Record<string, readonly string[]> = {
+export const DORA_ROOT_CAUSE_DETAILED = {
   'malicious actions': [
     'malicious actions: deliberate internal actions',
     'malicious actions: deliberate physical damage/manipulation/theft',
@@ -253,7 +253,7 @@ export const DORA_ROOT_CAUSE_DETAILED: Record<string, readonly string[]> = {
     'Process failure: inadequate ICT systems acquisition, development, and maintenance',
     'process failure: other (please specify)',
   ],
-  'system failure': [
+  'system failure / malfunction': [
     'system failure: hardware capacity and performance',
     'system failure: hardware maintenance',
     'system failure: hardware obsolescence/ageing',
@@ -276,10 +276,10 @@ export const DORA_ROOT_CAUSE_DETAILED: Record<string, readonly string[]> = {
     'external event: third-party failures',
     'external event: other (please specify)',
   ],
-}
+} as const satisfies Record<string, readonly string[]>
 
 /** And the additional causes each detailed cause offers. */
-export const DORA_ROOT_CAUSE_ADDITIONAL: Record<string, readonly string[]> = {
+export const DORA_ROOT_CAUSE_ADDITIONAL = {
   'process failure: insufficient monitoring or failure of monitoring and control': [
     'monitoring of policy adherence',
     'monitoring of third-party service providers',
@@ -306,4 +306,4 @@ export const DORA_ROOT_CAUSE_ADDITIONAL: Record<string, readonly string[]> = {
     'inadequate ICT systems acquisition, development, and maintenance',
     'insufficient or failure of software testing',
   ],
-}
+} as const satisfies Record<string, readonly string[]>

@@ -64,7 +64,7 @@ export function execCard(input: ReportInput): Node[] {
   const figures: [string, string][] = [
     [
       input.t('metric.time_to_detect'),
-      clocks.toDetect === null ? missing : duration(clocks.toDetect),
+      clocks.toDetect === null ? missing : duration(clocks.toDetect, input.t),
     ],
     [input.t('metric.dwell'), dwell ?? missing],
     [

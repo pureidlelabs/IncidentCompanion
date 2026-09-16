@@ -4,9 +4,7 @@
  * **The tier's skips are per-spec, so it could report success having run almost
  * none of itself.** `requireServedApp` skips when no app answers and each
  * `*.storybook.spec.ts` skips when no Storybook does -- both correct for a
- * developer without a stack, and both invisible in an exit code. Against a
- * stack started without Storybook, most of the tier skipped and the reason
- * appeared nowhere in the summary.
+ * developer without a stack, and both invisible in an exit code.
  *
  * So the same split the rest of the repository already makes is made once here:
  * a skip is right when exploring, and a failure when the run claims to certify.
@@ -17,10 +15,6 @@
  * things: the app tier drives Nest, Postgres and Vite, and the kit tier drives
  * Storybook and reaches no server at all. A single check demanding both made a
  * component run wait on a database it never opens.
- *
- * Probing rather than trusting the launcher: `test.sh` and `verify.sh` both
- * checked the API port while `baseURL` resolves to Vite's, so a dead front end
- * passed their check and reached Playwright as a screen that would not draw.
  */
 import type { FullConfig } from '@playwright/test'
 

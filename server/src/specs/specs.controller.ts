@@ -13,7 +13,7 @@
 import { Controller, Get } from '@nestjs/common'
 import { z } from 'zod'
 
-import { CASE_WRITABLE, INCIDENT_CLASS, caseFormSchema } from '../domain/case.js'
+import { CASE_WRITABLE, INCIDENT_CLASS, caseFormSchema, caseStatusSchema } from '../domain/case.js'
 import {
   ACTION_TYPE_COLOUR,
   ENTRY_COLOUR,
@@ -45,9 +45,9 @@ import { COMPLIANCE } from '../domain/compliance-form.js'
 import * as compliance from '../domain/vocabularies/compliance.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 
-const VOCABULARIES: Record<string, readonly string[]> = {
+export const VOCABULARIES: Record<string, readonly string[]> = {
   severity: vocab.SEVERITY,
-  caseStatus: ['open', 'closed'],
+  caseStatus: [...caseStatusSchema.options],
   incidentClass: INCIDENT_CLASS,
   confidence: vocab.CONFIDENCE,
   disposition: vocab.DISPOSITION,

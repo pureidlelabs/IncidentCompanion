@@ -15,7 +15,9 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
+from tests._repo import REPO_ROOT
+
+ROOT = REPO_ROOT
 OPENSPEC = ROOT / "openspec"
 SPECS = sorted(OPENSPEC.glob("specs/*/spec.md"))
 CONSTITUTION = OPENSPEC / "constitution.md"
@@ -226,4 +228,68 @@ def test_the_matrix_scope_line_names_the_chapters_it_actually_cites() -> None:
     assert claimed == cited, (
         f"the matrix cites {sorted(cited, key=lambda v: int(v[1:]))} and its scope line "
         f"names {sorted(claimed, key=lambda v: int(v[1:]))}"
+    )
+
+
+#: Changes already half folded into `specs/` when this check arrived, with what is
+#: missing. A mixture is always a mistake, but which way to resolve one is the
+#: owning branch's call: fold the rest in, or take the landed half back out.
+#: -> #691
+HALF_LANDED = {
+    "a-composed-write-announces-when-its-act-commits": "3 of 5 collections scenarios absent",
+    "a-feed-carries-the-restriction-the-analyst-chose": "1 of 6 data-exchange scenarios absent",
+}
+
+SCENARIO_HEAD = re.compile(r"^#### Scenario:\s*(.+?)\s*$", re.MULTILINE)
+
+
+def half_landed() -> dict[str, list[str]]:
+    """Each in-flight change whose delta scenarios are partly in `specs/`, and which.
+
+    A change with no landed spec for its capability is wholly absent rather than a
+    mixture: that is what a delta introducing a capability looks like.
+    """
+    found: dict[str, list[str]] = {}
+    changes = OPENSPEC / "changes"
+    for delta in sorted(changes.glob("*/specs/**/spec.md")):
+        change = delta.relative_to(changes).parts[0]
+        if change == "archive":
+            continue
+        capability = delta.parent.relative_to(changes / change / "specs")
+        names = SCENARIO_HEAD.findall(delta.read_text(encoding="utf-8"))
+        landed = OPENSPEC / "specs" / capability / "spec.md"
+        if not names or not landed.is_file():
+            continue
+        body = landed.read_text(encoding="utf-8")
+        absent = [one for one in names if f"#### Scenario: {one}" not in body]
+        if absent and len(absent) != len(names):
+            found.setdefault(change, []).extend(absent)
+    return found
+
+
+def test_a_change_is_wholly_landed_or_wholly_in_flight() -> None:
+    """A delta half folded into `specs/` is neither the landed truth nor a clean delta.
+
+    `openspec validate` reads each artefact's own shape and the ledger reads
+    `specs/` alone, so a scenario sitting in `changes/` while its requirement's
+    prose has landed is counted by nothing: not present, not missing, not
+    undemonstrated. The requirement then states behaviour whose demonstrating
+    scenario is nowhere. -> `rules/git-workflow.md` 7a, #691
+
+    **What this does not decide** is which way a mixture should be resolved.
+    """
+    unexpected = {k: v for k, v in half_landed().items() if k not in HALF_LANDED}
+    assert not unexpected, (
+        "these changes are half folded into specs/ -- their requirement prose landed "
+        "and these scenarios did not:\n  "
+        + "\n  ".join(f"{change}: {', '.join(names)}" for change, names in unexpected.items())
+    )
+
+
+def test_the_half_landed_list_holds_only_changes_that_still_are() -> None:
+    """The other direction, or the list outlives what it describes and reads as coverage."""
+    stale = sorted(set(HALF_LANDED) - set(half_landed()))
+    assert not stale, (
+        f"these are no longer half folded into specs/ -- resolved, or archived. "
+        f"Remove them from HALF_LANDED: {stale}"
     )

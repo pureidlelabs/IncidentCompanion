@@ -46,7 +46,8 @@ describe('the picker when its list does not arrive', () => {
   it('keeps every other destination reachable', () => {
     render(<PickerCasesScreen cases={undefined} analyst="r.okonkwo" userMenu={null} onAbout={() => undefined} problem="The case list could not be read." onRetry={() => undefined} />)
 
-    expect(within(rail()).getByText('Accounts')).toBeTruthy()
+    // Two groups, so the claim is about the rail rather than one group's rows.
+    expect(within(rail()).getByText('Report languages')).toBeTruthy()
     expect(within(rail()).getByText('Demo cases')).toBeTruthy()
   })
 

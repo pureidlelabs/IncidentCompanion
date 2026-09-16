@@ -303,6 +303,25 @@ describe.skipIf(!db)('reading the audit', () => {
     expect(marks, `${String(READ_IS_ONE_VISIT_FOR_MINUTES)} minutes is one visit`).toHaveLength(1)
   })
 
+  /**
+   * **Counted across the table, filtered on the page.** This reader already
+   * counts outcomes over every line -- its own docstring says counting them in
+   * JavaScript would count "outcomes on the page while channels are counted on
+   * the table" -- and then had no way to narrow by one, so the screen did it
+   * client-side over whatever page it held. -> #663
+   */
+  it('narrows to lines with the asked outcome, and still counts both', async () => {
+    const all = await reads.page({ limit: 200 }, session, {})
+    expect(Object.keys(all.outcomes).length, 'nothing to narrow').toBeGreaterThan(0)
+
+    const failures = await reads.page({ outcome: 'failure', limit: 200 }, session, {})
+
+    expect(failures.events.every((one) => one.outcome === 'failure')).toBe(true)
+    // The chip row needs both counts whichever one is being shown, the same
+    // way the channel row does.
+    expect(Object.keys(failures.outcomes)).toEqual(Object.keys(all.outcomes))
+  })
+
   it('narrows to one log and counts the rest', async () => {
     const page = await reads.page({ channel: 'authentication', limit: 50 }, session, {})
 

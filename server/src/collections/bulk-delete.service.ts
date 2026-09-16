@@ -11,52 +11,40 @@
  * So the count is taken first, and a non-empty answer refuses the whole
  * selection.
  */
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql, type SQL } from 'drizzle-orm'
 
 import { columnOf } from '../db/column-access.js'
 import type { Database } from '../db/client.js'
 import { withCase } from '../db/scope.js'
-import { TABLES, type BulkTarget } from './registry.js'
+import { REFERENCE_HOLDERS, REVIEWABLE } from './registry.js'
+import { reports } from '../db/schema/report.js'
+import type { BulkTarget, Collection } from '../domain/collections.js'
 
 /**
- * Every column that can name a row of a given collection.
+ * Rows whose reference an analyst could still release, per holder collection.
  *
- * **Written out rather than read off the foreign keys**, because half of them
- * are not foreign keys: the timeline's many-sided references are jsonb arrays,
- * which Postgres does not constrain and `getTableColumns` cannot classify.
- * Deriving the scalar half and hand-writing the array half would hide that
- * split behind something that looks complete.
- */
-const SCALAR_REFS: { table: keyof typeof TABLES; column: string; target: BulkTarget }[] = [
-  { table: 'malware', column: 'systemId', target: 'systems' },
-  { table: 'malware', column: 'accountId', target: 'accounts' },
-  { table: 'network_indicators', column: 'systemId', target: 'systems' },
-  { table: 'network_indicators', column: 'malwareId', target: 'malware' },
-  { table: 'impact', column: 'systemId', target: 'systems' },
-  { table: 'impact', column: 'accountId', target: 'accounts' },
-  { table: 'cloud_apps', column: 'accountId', target: 'accounts' },
-  { table: 'evidence', column: 'systemId', target: 'systems' },
-  { table: 'evidence', column: 'accountId', target: 'accounts' },
-  { table: 'timeline', column: 'systemId', target: 'systems' },
-  { table: 'timeline', column: 'sourceSystemId', target: 'systems' },
-]
-
-/**
- * The many-sided references, which are jsonb arrays of ids.
+ * **A reference nobody can remove is not one worth refusing over.** A block in
+ * a sent report cannot be deleted or edited -- `refuseWritesToSentReport`
+ * turns both away -- so counting it leaves the analyst with a delete that is
+ * refused, a holder they cannot reach, and no way out. The reference is inert
+ * besides: a sent report is painted from its frozen tree and its figure is
+ * fetched by hash from the evidence store, so the row being refused over is
+ * not what the export reads. -> `report/render.service.ts`
  *
- * **Carries its table, because the timeline is not the only one.**
- * `impact.evidenceIds` is a second, and a scan hardcoded to the timeline
- * answers *zero* for it rather than failing -- the delete then succeeds and
- * leaves a row citing evidence that is gone.
+ * A block in a *draft* report is the opposite on every count, and is still
+ * counted -- which is why the collection is scoped rather than dropped.
+ *
+ * Only the report tier has rows that close, so this is one entry rather than a
+ * table. -> `collection.service.ts`, which says the same of `refuseIfClosed`.
  */
-const ARRAY_REFS: { table: keyof typeof TABLES; column: string; target: BulkTarget }[] = [
-  { table: 'timeline', column: 'accountIds', target: 'accounts' },
-  { table: 'timeline', column: 'malwareIds', target: 'malware' },
-  { table: 'timeline', column: 'networkIndicatorIds', target: 'network_indicators' },
-  { table: 'timeline', column: 'cloudAppIds', target: 'cloud_apps' },
-  { table: 'timeline', column: 'evidenceIds', target: 'evidence' },
-  { table: 'impact', column: 'evidenceIds', target: 'evidence' },
-]
+function releasable(collection: Collection): SQL | undefined {
+  if (collection !== 'report_blocks') return undefined
+  return sql`not exists (
+    select 1 from ${reports}
+    where ${reports.id} = ${columnOf(REVIEWABLE['report_blocks']!, 'reportId')}
+      and ${reports.sentAt} is not null
+  )`
+}
 
 /**
  * How many surviving rows name each id in the selection.
@@ -86,47 +74,40 @@ export async function referenceCounts(
   // of them with nothing outside this case, so a reference count cannot be
   // inflated by another customer's rows. -> `db/scope.ts`
   await withCase(db, caseId, async (tx) => {
-    for (const { table, column, target } of SCALAR_REFS) {
+    for (const { collection, field, target, many } of REFERENCE_HOLDERS) {
       const ids = byTarget.get(target)
       if (!ids?.length) continue
-      const holder = TABLES[table]
-      const ref = columnOf(holder, column)
+      const holder = REVIEWABLE[collection]
+      // A collection the registry names and this install has no table for is a
+      // wiring fault, not a row with no references: answering zero would be the
+      // silent miss this whole derivation exists to end.
+      if (!holder) throw new Error(`no table for ${collection}, which declares a reference`)
       const rowId = columnOf(holder, 'id')
-      const rows = (await tx
-        .select({ ref, id: rowId })
-        .from(holder)
-        .where(and(eq(columnOf(holder, 'caseId'), caseId), inArray(ref, ids)))) as {
-        ref: string
-        id: string
-      }[]
-      for (const row of rows) {
-        if (doomed.has(`${table}:${row.id}`)) continue
-        bump(row.ref, 1)
-      }
-    }
+      const held = columnOf(holder, field)
+      const inCase = and(eq(columnOf(holder, 'caseId'), caseId), releasable(collection))
 
-    for (const { table, column, target } of ARRAY_REFS) {
-      const ids = byTarget.get(target)
-      if (!ids?.length) continue
-      const holder = TABLES[table]
-      const rowId = columnOf(holder, 'id')
-      const held = columnOf(holder, column)
+      if (!many) {
+        const rows = (await tx
+          .select({ ref: held, id: rowId })
+          .from(holder)
+          .where(and(inCase, inArray(held, ids)))) as { ref: string; id: string }[]
+        for (const row of rows) {
+          if (doomed.has(`${collection}:${row.id}`)) continue
+          bump(row.ref, 1)
+        }
+        continue
+      }
+
       for (const id of ids) {
         // `jsonb_exists`, not the `?` operator: `?` is node-postgres's own
         // placeholder character and the driver rewrites it out of the query.
         const rows = (await tx
           .select({ id: rowId })
           .from(holder)
-          .where(
-            and(
-              eq(columnOf(holder, 'caseId'), caseId),
-              sql`jsonb_exists(${held}, ${id})`,
-            ),
-          )) as { id: string }[]
-        bump(id, rows.filter((row) => !doomed.has(`${table}:${row.id}`)).length)
+          .where(and(inCase, sql`jsonb_exists(${held}, ${id})`))) as { id: string }[]
+        bump(id, rows.filter((row) => !doomed.has(`${collection}:${row.id}`)).length)
       }
     }
-
   })
 
   return counts

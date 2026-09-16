@@ -19,7 +19,7 @@ import subprocess
 
 import pytest
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+from tests._repo import REPO_ROOT
 
 #: The trees whose comments make citations worth resolving.
 TREES = (

@@ -15,11 +15,12 @@ outcome column is what tells them apart.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
+from tests._repo import REPO_ROOT
+
+ROOT = REPO_ROOT
 SCHEMA = ROOT / "server" / "src" / "db" / "schema" / "install-activity.ts"
 OCSF = ROOT / "server" / "src" / "install-activity" / "ocsf.ts"
 

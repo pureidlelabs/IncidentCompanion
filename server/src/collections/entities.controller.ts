@@ -11,6 +11,7 @@
  * The timeline keeps its own file because it genuinely differs - a
  * discriminated union, and per-kind patch validation.
  */
+import { CreatedIdsDto, DeletedDto } from './acknowledged.js'
 import {
   Inject,
   UnprocessableEntityException,
@@ -62,7 +63,9 @@ import { actionSchema } from '../domain/entities/action.js'
 import { caseNoteSchema } from '../domain/entities/case-note.js'
 import { reportBlockSchema, reportSchema } from '../domain/entities/report.js'
 import { refuseWritesToSentReport } from '../report/freeze.js'
+import { refuseUnservedLanguage } from '../report/language.service.js'
 import { caseOwnedRowSchema, patchSchema } from '../domain/field-spec.js'
+import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * Rows one request may carry, because the door is reachable from a script:
@@ -99,7 +102,6 @@ const entityRowSchema = caseOwnedRowSchema
 
 class EntityRowDto extends createZodDto(entityRowSchema) {}
 class EntityRowsDto extends createZodDto(z.array(entityRowSchema)) {}
-class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {}
 
 /**
  * What a reorder takes: every id in the scope, once each, in the order wanted.
@@ -119,7 +121,6 @@ class UpdatedManyDto extends createZodDto(
     refused: z.array(z.uuid()),
   }),
 ) {}
-class DeletedDto extends createZodDto(z.object({ deleted: z.literal(true) })) {}
 
 /**
  * A row out of the generic service, as the wire declares it.
@@ -245,7 +246,7 @@ abstract class EntityReads {
       z
         .object({
           ids: z
-            .array(z.object({ id: z.uuid(), version: z.int().nonnegative() }).strict())
+            .array(z.object({ id: z.uuid(), version: rowVersion() }).strict())
             .max(BULK_LIMIT),
           fields: z.record(z.string(), z.unknown()),
         })
@@ -316,7 +317,7 @@ abstract class EntityReads {
       base,
       ...rest
     } = (body ?? {}) as { version?: unknown; base?: unknown } & Record<string, unknown>
-    if (!Number.isInteger(version)) {
+    if (!rowVersion().safeParse(version).success) {
       throw new UnprocessableEntityException({ message: 'A patch has to name the version it read.' })
     }
     const patch = this.parse(patchSchema(this.schema), rest)
@@ -385,7 +386,7 @@ abstract class EntityReads {
     @Session() session: UserSession,
   ) {
     const expected = Number(version)
-    if (!Number.isInteger(expected)) {
+    if (!rowVersion().safeParse(expected).success) {
       throw new UnprocessableEntityException({ message: 'A delete has to name the version it read.' })
     }
     const removed = await this.collections.remove(
@@ -513,6 +514,7 @@ export class CaseNotesController extends EntityReads {
 export const REPORTS_COLLECTION: CollectionDefinition = {
   ...ordered('reports', reports),
   refuseIfClosed: refuseWritesToSentReport('id'),
+  refuseUnservedTerm: refuseUnservedLanguage(),
 }
 
 export const REPORT_BLOCKS_COLLECTION: CollectionDefinition = {

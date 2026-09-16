@@ -16,24 +16,16 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 
+import type { AnalystAccount } from '@contract/analyst-account'
+
 import type { ApiError } from './client'
 import { request } from './client'
 import type { Written } from './library'
 import { keys } from './queryKeys'
 import { postWritten } from './written'
 
-export interface AccountRow {
-  username: string
-  displayName: string
-  role: string
-  /** `"active"` or `"disabled"`, resolved by the server, never derived here. */
-  state: string
-  tone: string
-  disabled: boolean
-}
-
 export interface AccountsView {
-  accounts: AccountRow[]
+  accounts: AnalystAccount[]
   roles: string[]
   defaultRole: string
 }

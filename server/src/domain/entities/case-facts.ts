@@ -22,7 +22,7 @@
 import { z } from 'zod'
 
 import { field, readStamp } from '../field-spec.js'
-import { severitySchema } from '../vocabularies.js'
+import { rsitTypeSchema, severitySchema, unsettable } from '../vocabularies.js'
 import { RSIT_CLASSES, VERIS_ACTIONS } from '../vocabularies/compliance.js'
 
 const text = (max: number) => z.string().trim().max(max).default('')
@@ -61,7 +61,7 @@ export const caseFactsSchema = z.object({
     },
   }),
 
-  rsitType: field(text(64), {
+  rsitType: field(unsettable(rsitTypeSchema), {
     label: 'RSIT type',
     kind: 'select',
     vocabulary: 'rsitType',

@@ -12,12 +12,6 @@
  * height. What is asserted is the relationship rather than either number: the
  * document's bottom edge sits at the pane's bottom edge, whatever the chrome
  * above it happens to measure.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/document-fills-its-pane.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

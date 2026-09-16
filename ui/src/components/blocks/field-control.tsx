@@ -18,8 +18,13 @@ import { cn } from '@/lib/cn'
 /** What a draft holds, by field name. */
 export type Draft = Record<string, unknown>
 
-/** Values a field offers as you type, by field name. */
-export type Suggestions = Record<string, readonly string[]>
+/**
+ * Values a field offers as you type, by field name.
+ *
+ * `Readonly`, because the only caller builds one from the case it is drawing:
+ * a control that sorted or spliced it in place would edit the case's own rows.
+ */
+export type Suggestions = Readonly<Record<string, readonly string[]>>
 
 /** The id bundle `Field` hands its control, plus the gate every arm honours. */
 export interface ControlIds {

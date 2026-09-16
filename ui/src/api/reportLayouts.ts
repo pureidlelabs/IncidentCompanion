@@ -56,7 +56,7 @@ export interface ReportLayoutListing {
   stages: string[]
   /** `domain/entities/report.ts`'s `TLP_LABELS`, leading empty for "unmarked". */
   tlp: string[]
-  languages: { code: string; label: string }[]
+  languages: { code: string; label: string; coverage: number }[]
   /** Every heading key the pack resolves, in the language asked for. */
   headings: { key: string; label: string }[]
 }

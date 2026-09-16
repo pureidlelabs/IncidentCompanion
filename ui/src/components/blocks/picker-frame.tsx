@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 import { AppShell } from '@/components/blocks/app-shell'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
-import { PICKER_GROUPS, type PickerPane } from '@/components/blocks/picker-panes'
+import { panesFor, type PickerPane } from '@/components/blocks/picker-panes'
 import { RailGroup, NavRow } from '@/components/blocks/rail-nav'
 import { NavRail } from '@/components/blocks/rail'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,8 @@ export interface PickerFrameProps {
   userMenu: ReactNode
   /** Who is signed in, at the rail's foot. */
   analyst: string
+  /** Handed in rather than read, so the gallery can draw either rail. */
+  admin?: boolean | undefined
   /** Opens the About door. The dialog is the route's, not this frame's. */
   onAbout: () => void
   /**
@@ -82,6 +84,7 @@ export function PickerFrame({
   onImportArchive,
   userMenu,
   analyst,
+  admin,
   problem,
   busy = false,
   onRetry,
@@ -134,7 +137,7 @@ export function PickerFrame({
           </RailList>
           </RailGroup>
 
-          {PICKER_GROUPS.map((group) => (
+          {panesFor({ admin: admin === true }).map((group) => (
             <RailGroup
               key={group.label}
               label={group.label}

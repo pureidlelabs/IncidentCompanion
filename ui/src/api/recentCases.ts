@@ -12,6 +12,7 @@
 
 import { useEffect } from 'react'
 
+import type { CaseStatus } from '@contract/vocabularies'
 import { request } from './client'
 
 export interface RecentCase {
@@ -19,7 +20,7 @@ export interface RecentCase {
   title: string
   reference: string | null
   customer: string | null
-  status: 'open' | 'closed'
+  status: CaseStatus
   /** The rail section they were last in, or null if they never reached one. */
   section: string | null
   visitedAt: string

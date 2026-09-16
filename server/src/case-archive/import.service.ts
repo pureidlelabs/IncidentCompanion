@@ -23,6 +23,7 @@ import { BadArchive, CASE_NAME, EVIDENCE_PREFIX, PROSE_PREFIX, readArchive } fro
 import { MalformedEnvelope, WrongPassphrase, isSealed, open } from '../archive/envelope.js'
 import { PolicyService } from '../policy/policy.service.js'
 import { REFERENCE_FIELD_NAMES } from '../domain/collections.js'
+import { importStamp } from '../db/import-stamp.js'
 import { archiveRowSchema } from './rows.js'
 import { z } from 'zod'
 import {
@@ -119,7 +120,20 @@ function checked(collection: string, row: Record<string, unknown>): Record<strin
   )
 }
 
-/** Columns an import never carries over, whatever the archive says. */
+/**
+ * What this door calls itself on a row that can record where it came from.
+ *
+ * -> `db/import-stamp.ts`
+ */
+export const ARCHIVE_IMPORT = 'Case archive'
+
+/**
+ * Columns an import never carries over, whatever the archive says.
+ *
+ * Identity and attribution are this install's to mint, and where a row came
+ * from is this door's to state: an archive answers about the install that
+ * wrote it, and every one of these is about the install reading it.
+ */
 const NEVER_CARRIED = new Set([
   'id',
   'caseId',
@@ -128,6 +142,9 @@ const NEVER_CARRIED = new Set([
   'updatedAt',
   'createdBy',
   'updatedBy',
+  'source',
+  'provenance',
+  'unreviewed',
 ])
 
 /**
@@ -300,7 +317,12 @@ export class ArchiveImportService {
         // no columns at all - the shape is not part of Drizzle's contract.
         const columns = new Set(Object.keys(getTableColumns(table)))
         for (const one of incoming as Record<string, unknown>[]) {
-          const values: Record<string, unknown> = { caseId, createdBy: actorId, updatedBy: actorId }
+          const values: Record<string, unknown> = {
+            caseId,
+            createdBy: actorId,
+            updatedBy: actorId,
+            ...importStamp(ARCHIVE_IMPORT, table),
+          }
           // **Judged before it is written, not filtered by column name.** The
           // key was checked against the column list and the value against
           // nothing, so an archive reached typed columns with whatever it

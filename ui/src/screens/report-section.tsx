@@ -11,6 +11,7 @@ import { useProseSync } from '@/api/proseSync'
 import { ReportWorkspace } from '@/components/blocks/report-workspace'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { useCommandRequest } from '@/lib/command-request'
+import type { LanguageChoice } from '@/components/blocks/report-workspace'
 
 /**
  * The report section whole: the case's documents on the rail, and the one that
@@ -116,7 +117,7 @@ export interface ReportSectionScreenProps {
    */
   onReorder?: ((ids: string[]) => void) | undefined
   /** What the install can produce a report in. Absent, no control is drawn. */
-  languages?: readonly { code: string; label: string }[] | undefined
+  languages?: readonly LanguageChoice[] | undefined
   /** Absent on a report nobody may edit; the workspace greys the control. */
   onLanguage?: ((report: Report, code: string) => void) | undefined
   /**

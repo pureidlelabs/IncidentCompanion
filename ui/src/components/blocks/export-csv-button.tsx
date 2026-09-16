@@ -15,17 +15,20 @@ import { ButtonLink } from '@/components/ui/button'
  * announces as a button while it navigates like a link is the failure to
  * avoid.
  */
-export function ExportCsvButton({ href, filename }: { href: string; filename: string }) {
+export function ExportCsvButton({
+  href,
+  filename,
+  label = 'Export CSV',
+}: {
+  href: string
+  filename: string
+  /** Shortened where a neighbouring control already says what is exported. */
+  label?: string
+}) {
   return (
-    <ButtonLink
-      variant="outline"
-      size="sm"
-      href={href}
-      download={filename}
-      data-part="export-csv"
-    >
-      <Download aria-hidden className="size-4" />
-      Export CSV
+    <ButtonLink variant="outline" size="sm" href={href} download={filename} data-part="export-csv">
+      <Download aria-hidden />
+      {label}
     </ButtonLink>
   )
 }

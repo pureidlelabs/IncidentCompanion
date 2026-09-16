@@ -7,31 +7,19 @@
  */
 
 import type { CaseSummary } from '@/api/case'
-import type { AccountRow } from '@/components/blocks/account-table'
-import type { AuditRow } from '@/components/blocks/activity-log'
+import type { AccountTableRow } from '@/components/blocks/account-table'
+import type { ActivityReading, AuditRow } from '@/components/blocks/activity-log'
 import type { LibraryRow } from '@/components/blocks/library-collection'
 import { matchesWords } from '@/lib/word-match'
 
-/** A roster carrying every state the chip has a tone for. */
-export const PICKER_ACCOUNTS: readonly AccountRow[] = [
+/** A roster carrying both states an account is served in. */
+export const PICKER_ACCOUNTS: readonly AccountTableRow[] = [
   { id: 'a1', username: 'r.okonkwo', displayName: 'Rachel Okonkwo', role: 'admin', state: 'active' },
   { id: 'a2', username: 't.brennan', displayName: 'Tomas Brennan', role: 'analyst', state: 'active' },
   { id: 'a3', username: 's.iqbal', displayName: 'Sana Iqbal', role: 'analyst', state: 'active' },
-  { id: 'a4', username: 'm.delacroix', displayName: 'Margot Delacroix', role: 'analyst', state: 'locked out' },
+  { id: 'a4', username: 'm.delacroix', displayName: 'Margot Delacroix', role: 'analyst', state: 'disabled' },
   { id: 'a5', username: 'd.novak', displayName: '', role: 'analyst', state: 'disabled' },
 ]
-
-/**
- * The instant `PICKER_AUDIT` is read against, carried beside the rows so the
- * two cannot drift apart.
- *
- * `ActivityLog` defaults its range to the last seven days and takes `now` as a
- * prop precisely so a caller can fix it. A caller that passes the wall clock
- * instead gets a table that empties itself seven days after these dates,
- * without a commit and without warning: two runs of identical code, one either
- * side of the moment the newest row falls out of the window, disagree.
- */
-export const PICKER_AUDIT_NOW = Date.parse('2026-08-24T15:00:00.000Z')
 
 /** Newest first, and wide enough that the pager has a second page to offer. */
 export const PICKER_AUDIT: readonly AuditRow[] = [
@@ -137,10 +125,9 @@ export interface LanguageRow {
  * A key count for a story to draw, and nothing else.
  *
  * **Not what a complete pack carries.** The install answers that on the same
- * response as the packs, and it answered 139 while this said 412. A number in
- * the bundle under that name is a claim about the product that drifts the
- * first time a string is added; this one is a fixture value the way
- * `PICKER_LANGUAGES` is.
+ * response as the packs, and the two part the moment a string is added. A
+ * number in the bundle under that name is a claim about the product; this one
+ * is a fixture value the way `PICKER_LANGUAGES` is.
  */
 export const SOME_KEY_COUNT = 139
 
@@ -476,11 +463,39 @@ function caseRow(
 
 /** A roster wide enough to sort, narrow and run out of room in. */
 export const PICKER_CASES: readonly CaseSummary[] = [
-  caseRow('1ee22e6d', 'Meridian Logistics ransomware', 'Meridian Logistics', 'INC-2026-0447', 'open', '2026-08-13T06:12:00.000Z', false),
-  caseRow('7c1a4b90', 'Finance mailbox compromise', 'Northwind Freight', 'INC-2026-0431', 'open', '2026-08-11T14:40:00.000Z', false),
-  caseRow('2b55e173', 'Payroll credential stuffing', 'Kestrel Health', 'INC-2026-0424', 'open', '2026-08-09T08:05:00.000Z', false),
+  caseRow('1ee22e6d', 'Meridian Logistics ransomware', 'Meridian Logistics', 'INC-2026-0447', 'respond', '2026-08-13T06:12:00.000Z', false),
+  caseRow('7c1a4b90', 'Finance mailbox compromise', 'Northwind Freight', 'INC-2026-0431', 'recover', '2026-08-11T14:40:00.000Z', false),
+  caseRow('2b55e173', 'Payroll credential stuffing', 'Kestrel Health', 'INC-2026-0424', 'post-incident', '2026-08-09T08:05:00.000Z', false),
   caseRow('9f0c33ad', 'Supplier invoice fraud', 'Meridian Logistics', 'INC-2026-0410', 'closed', '2026-07-30T16:22:00.000Z', false),
   caseRow('4d8e21bf', 'Stolen laptop, unencrypted', 'Kestrel Health', 'INC-2026-0398', 'closed', '2026-07-24T09:15:00.000Z', false),
   caseRow('6a3f7c52', 'Exposed S3 bucket', 'Northwind Freight', null, 'closed', '2026-07-18T11:47:00.000Z', false),
-  caseRow('0e91d4c8', 'Worked example: ransomware campaign', 'Demo Customer', 'DEMO-0001', 'open', '2026-08-13T12:16:00.000Z', true),
+  caseRow('0e91d4c8', 'Worked example: ransomware campaign', 'Demo Customer', 'DEMO-0001', 'respond', '2026-08-13T12:16:00.000Z', true),
 ]
+
+/**
+ * A reading whose controls do nothing.
+ *
+ * The range, the chips and the page are the pane's questions, so a screen
+ * drawn without the app has nobody to ask.
+ */
+export function inertReading(): ActivityReading {
+  const nothing = () => undefined
+  return {
+    range: '7d',
+    onRange: nothing,
+    filters: {
+      selection: {},
+      chosen: () => [],
+      one: () => undefined,
+      narrowed: false,
+      applied: [],
+      clear: nothing,
+      controls: { dimensions: [], selection: {}, onChange: nothing },
+    },
+    pageNumber: 1,
+    hasPrevious: false,
+    hasNext: false,
+    onPrevious: nothing,
+    onNext: nothing,
+  }
+}

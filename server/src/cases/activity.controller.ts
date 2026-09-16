@@ -24,6 +24,7 @@ import { withCase } from '../db/scope.js'
 import { changeFeed, user } from '../db/schema/index.js'
 import { z } from 'zod'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
+import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * How many entries the feed answers with.
@@ -51,7 +52,7 @@ const activitySchema = z.object({
   entity: z.string().describe('The collection written to.'),
   entityId: z.string(),
   op: z.string().describe('insert, update or delete.'),
-  version: z.number().int(),
+  version: rowVersion(),
   by: z.string().describe('The analyst who wrote it, by display name.'),
   at: z.number().describe('Seconds since the epoch.'),
   fields: z
@@ -61,7 +62,7 @@ const activitySchema = z.object({
 
 type ActivityRecord = z.infer<typeof activitySchema>
 
-class ActivityDto extends createZodDto(z.object({ rows: z.array(activitySchema) })) {}
+class CaseActivityDto extends createZodDto(z.object({ rows: z.array(activitySchema) })) {}
 
 @UseGuards(CaseAccessGuard)
 @Controller('api/cases/:caseId/activity')
@@ -70,7 +71,7 @@ export class ActivityController {
 
   @ZodResponse({
     status: 200,
-    type: ActivityDto,
+    type: CaseActivityDto,
     description: 'Recent writes on the case, newest first, with the analyst who made each.',
   })
   @Get()

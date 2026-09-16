@@ -48,10 +48,6 @@ export function deciding(determination: Determination): Criterion[] {
   return criteria.filter((one) => one.met === met)
 }
 
-export function unanswered(determination: Determination): Criterion[] {
-  return determination.criteria.filter((one) => one.met === null)
-}
-
 /**
  * Every criterion must be met.
  *
