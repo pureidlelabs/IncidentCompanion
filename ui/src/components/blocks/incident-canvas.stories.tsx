@@ -51,6 +51,35 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 /**
+ * The status line, which no other story draws.
+ *
+ * **It sits over a canvas that repaints under it.** The graph pans, zooms and
+ * re-lays-out beneath this corner, so text with nothing behind it is read
+ * against whatever the drawing happens to be doing -- edges, node labels, the
+ * reveal sweeping past. The toolbar and the legend each sit on a surface for
+ * the same reason; this slot is the one that did not. -> #196
+ *
+ * **Asserted as a computed colour rather than as a class.** The unit tier has
+ * no styles to compute, so a class-name check there would pass on a token that
+ * resolves to nothing. This project runs a browser, which is the only place
+ * the question can actually be asked.
+ */
+export const WithStatus: Story = {
+  name: 'A status over the drawing',
+  args: { status: <span>3 recorded, in no entry</span> },
+  play: async ({ canvasElement }) => {
+    const slot = canvasElement.querySelector('[data-part="canvas-status"]')
+    await expect(slot).not.toBeNull()
+    const ground = getComputedStyle(slot!).backgroundColor
+    await expect(
+      ground,
+      'the status line has no ground, so the canvas repaints behind its text',
+    ).not.toBe('rgba(0, 0, 0, 0)')
+    await expect(ground).not.toBe('transparent')
+  },
+}
+
+/**
  * The whole campaign, laid out and fitted to the pane.
  *
  * The transport holds its own cursor here, as the screen does: pressing play
