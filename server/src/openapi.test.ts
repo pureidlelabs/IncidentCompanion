@@ -887,8 +887,9 @@ describe('a tuple lowered for OpenAPI 3.0', () => {
  */
 describe('a nullable scalar is published as one, not as an array', () => {
   /**
-   * The schemas the routes hand `@ZodResponse`, taken from the registry so a
-   * collection added tomorrow is walked without touching this list.
+   * The schemas the routes hand `@ZodResponse`: four named here, and the rest
+   * from the collection registry, so a collection added tomorrow is walked
+   * without touching this list.
    */
   const PUBLISHED: [string, z.ZodObject][] = [
     ['CaseRead', caseReadSchema],
@@ -921,13 +922,23 @@ describe('a nullable scalar is published as one, not as an array', () => {
     await app.close()
   }, 30_000)
 
+  // A collection dropped from the registry would shorten the walk in silence.
+  it('walks the four named schemas and every registered collection', () => {
+    expect(PUBLISHED).toHaveLength(14)
+  })
+
   it('says string or null for a field a deleted analyst leaves behind', () => {
     expect(components['CaseOwnedRow_Output']?.properties?.['createdBy']).toEqual({
       type: ['string', 'null'],
     })
   })
 
-  it.each(PUBLISHED)('%s publishes an array only where its Zod source is one', (name, schema) => {
+  /**
+   * The whole `type`, not only whether it says `array`: a restored union that
+   * invented a member reads as an ordinary nullable scalar to any check
+   * looking for the array alone.
+   */
+  it.each(PUBLISHED)('%s publishes the type its Zod source declares', (name, schema) => {
     const published = components[`${name}_Output`]?.properties ?? {}
     const source = (
       z.toJSONSchema(schema, { io: 'output' }) as {
@@ -939,9 +950,7 @@ describe('a nullable scalar is published as one, not as an array', () => {
     expect(Object.keys(published)).toEqual(Object.keys(source))
 
     for (const [key, value] of Object.entries(published)) {
-      expect({ [key]: value.type === 'array' }).toEqual({
-        [key]: source[key]?.type === 'array',
-      })
+      expect({ [key]: value.type }).toEqual({ [key]: source[key]?.type })
     }
   })
 })

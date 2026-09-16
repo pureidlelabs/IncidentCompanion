@@ -85,10 +85,7 @@ const EMPTY_TYPE = 'x-nestjs_zod-empty-type'
  * `@nestjs/swagger` read as its own array shorthand.
  *
  * `type: [String]` is how `@ApiProperty` spells *array of String*, and Zod 4
- * emits `z.string().nullable()` as `type: ['string', 'null']`. Only the first
- * member survives the flattening, so the second is taken to be `null`: a
- * nullable scalar is the one union Zod emits this way, and everything else -
- * a nullable array or object included - arrives as `anyOf` and is untouched.
+ * emits `z.string().nullable()` as `type: ['string', 'null']`.
  */
 function withoutArrayShorthand(node: unknown): void {
   if (Array.isArray(node)) {
@@ -104,6 +101,10 @@ function withoutArrayShorthand(node: unknown): void {
     schema['type'] === 'array' &&
     typeof items?.['type'] === 'string'
   ) {
+    // ponytail: only the first member survives the flattening, so the second
+    // is assumed to be `null`. A scalar union that is not nullable -
+    // `z.union([z.string(), z.number()])` - restores as `['string', 'null']`;
+    // thread the Zod schema in per component if one is ever declared.
     schema['type'] = [items['type'], 'null']
     delete schema['items']
   }
