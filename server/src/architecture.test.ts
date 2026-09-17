@@ -77,10 +77,13 @@ const MAY_IMPORT: Record<string, string[]> = {
    * import `report`. Importing nothing, it can never be the near end of a
    * cycle, so an edge into it is as free as one into `domain`.
    *
-   * Where a pack is *stored* is not here: that reads the database and stays
-   * with the feature that owns the table.
+   * **`db` because where a pack is stored belongs here too.** A pack is a row,
+   * and the alternative -- a service in one folder and the table's meaning in
+   * another -- is what put this under `report/` in the first place. It reaches
+   * no feature, so it stays a near-leaf: the only edges out are the ones every
+   * folder has.
    */
-  languages: [],
+  languages: ['db', 'config'],
   db: ['config'],
   config: [],
   // `customers` for the same reason `cases` has it: a demo raises cases, and a

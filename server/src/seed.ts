@@ -27,7 +27,7 @@ import { AuthService } from '@thallesp/nestjs-better-auth'
 import type { Auth } from './auth/auth.config'
 import { CustomersService } from './customers/customers.service'
 import { LibraryService } from './library/library.service'
-import { LanguageService } from './report/language.service'
+import { LanguageService } from './languages/language.service.js'
 
 async function seed(): Promise<void> {
   const env = loadEnv()

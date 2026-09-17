@@ -15,7 +15,7 @@ import { openTestPool } from '../../test/database.js'
  * existed.
  *
  * The three served codes are asserted here rather than left implied, because a
- * check reading the table alone refuses two of them. -> `language.service.ts`
+ * check reading the table alone refuses two of them. -> `languages/language.service.ts`
  */
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null

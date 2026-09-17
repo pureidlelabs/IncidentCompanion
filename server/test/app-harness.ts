@@ -177,7 +177,7 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
    * deployment, so a test that reads it says so with `seedDemoContent`.
    */
   const { LibraryService } = await import('../src/library/library.service.js')
-  const { LanguageService } = await import('../src/report/language.service.js')
+  const { LanguageService } = await import('../src/languages/language.service.js')
   await app.get(LibraryService, { strict: false }).seedBuiltIns()
   await app.get(LanguageService, { strict: false }).seedBuiltIn()
 
