@@ -33,6 +33,6 @@
     "eslint": "10.10.0"
   },
   "overrides": {
-    "multer": "2.3.0"
+    "multer": "2.4.0"
   }
 }
