@@ -944,3 +944,107 @@ describe('a socket that goes before the join has finished', () => {
     expect(left, 'nothing is listening for a socket that errors rather than closing').toHaveLength(1)
   })
 })
+
+/**
+ * **The browser speaks first, and the gateway was not listening yet.**
+ *
+ * `handleUpgrade` writes the 101 before `open` runs, so the socket is live in
+ * the browser while the gateway is still joining the roster over Redis.
+ * `ProseChannel` sends its state request from `onConnected`, which fires on
+ * that open -- and the client leaves `'opening'` only when the server answers
+ * it. A `ws` socket whose `message` listener is not attached yet drops the
+ * frame: an EventEmitter with no listener has nowhere to put it. The editor is
+ * then never built and the notes screen holds its loading paragraph. -> #515
+ */
+describe('a frame that arrives while the socket is still joining', () => {
+  /** The channel from `connected`, with the join held open as `joining` does. */
+  function midJoin(document: Y.Doc) {
+    const claimed: string[] = []
+    const order: string[] = []
+    let finish: () => void = () => undefined
+    const channel = {
+      join: () =>
+        new Promise<void>((resolve) => {
+          finish = () => {
+            order.push('join')
+            resolve()
+          }
+        }),
+      leave: () => Promise.resolve(),
+      prose: () => undefined,
+      claim: (_member: unknown, table: string, id: string) => {
+        order.push('claim')
+        claimed.push(`${table}/${id}`)
+        return Promise.resolve()
+      },
+    }
+    const prose = {
+      resolve: () => Promise.resolve({ reportId: REPORT, sentAt: null }),
+      open: () => Promise.resolve(document),
+      release: () => Promise.resolve(),
+      applySync: codec.applySync.bind(codec),
+      frameUpdate: codec.frameUpdate.bind(codec),
+      isStateRequest: codec.isStateRequest.bind(codec),
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      {} as never,
+      caseWithNoCustomer,
+      prose as never,
+      audit as never,
+      holding('write'),
+    )
+    return { gateway, claimed, order, finish: () => { finish() } }
+  }
+
+  it('answers a state request that beat the roster, so the editor is built', async () => {
+    const document = new Y.Doc({ gc: false })
+    document.getXmlFragment('block-1').insert(0, [new Y.XmlText('what was already written')])
+    const { gateway, finish } = midJoin(document)
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    // Delivered before the roster answers, which is where the browser's first
+    // frame lands: `open` has run as far as its await and no further.
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
+    await settle()
+    finish()
+    await opening
+    await settle()
+
+    expect(
+      live.frames('prose.sync'),
+      'the state request was dropped, so the editor never leaves its loading state',
+    ).not.toEqual([])
+  })
+
+  /**
+   * The same door, with nothing prose about it: what is lost is every frame
+   * sent before the roster answered, not the sync path in particular.
+   *
+   * **The order is asserted as well as the call.** `CaseChannel.claim`
+   * announces the roster, and until the join returns this member is in neither
+   * the local room nor the subscription -- so a claim taken inline would
+   * publish a roster missing its own author, to a socket not yet listening for
+   * it. Holding the frame until the join is what makes that unreachable.
+   */
+  it('takes a claim that beat the roster, and not before the roster has it', async () => {
+    const { gateway, claimed, order, finish } = midJoin(new Y.Doc({ gc: false }))
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.receive({ type: 'claim', table: 'casenotes', id: 'note-1' })
+    await settle()
+    finish()
+    await opening
+    await settle()
+
+    expect(claimed, 'the claim was dropped, so two analysts hold one row').toEqual([
+      'casenotes/note-1',
+    ])
+    expect(order, 'the claim was announced before the roster held its author').toEqual([
+      'join',
+      'claim',
+    ])
+  })
+})
