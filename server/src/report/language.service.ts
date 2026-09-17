@@ -27,9 +27,9 @@ import {
   packFrom,
   translatorFor,
   unknownKeysIn,
-} from './document/packs.js'
-import type { Translate } from './document/packs.js'
-import { NL } from './document/labels.nl.js'
+} from '../languages/packs.js'
+import type { Translate } from '../languages/packs.js'
+import { NL } from '../languages/labels.nl.js'
 
 /** English's own entry, which is never a row. */
 const ENGLISH = { code: 'en', label: 'English' }

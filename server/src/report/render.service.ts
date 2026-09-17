@@ -23,7 +23,7 @@ import { reportBlocks, reports } from '../db/schema/report.js'
 import { withCase } from '../db/scope.js'
 import type { CaseData } from './document/sections.js'
 import { documentSchema, type Document, type FigureNode, type Images } from './document/model.js'
-import type { Translate } from './document/packs.js'
+import type { Translate } from '../languages/packs.js'
 import { CONTENT_PT } from './document/pdf.js'
 import { EvidenceStore } from '../evidence/store.js'
 

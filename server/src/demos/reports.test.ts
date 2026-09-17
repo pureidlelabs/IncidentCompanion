@@ -12,7 +12,7 @@ import { DEMO_CASES } from './catalogue.js'
 import { DEMO_REPORTS } from './reports.js'
 import { BUILTIN_REPORT_LAYOUTS } from '../library/builtins/report-layouts.js'
 import { BLOCK_KINDS, REPORT_STAGES } from '../domain/entities/report.js'
-import { EN_KEYS } from '../report/document/packs.js'
+import { EN_KEYS } from '../languages/packs.js'
 
 const everyReport = Object.entries(DEMO_REPORTS).flatMap(([reference, reports]) =>
   reports.map((report) => ({ reference, ...report })),

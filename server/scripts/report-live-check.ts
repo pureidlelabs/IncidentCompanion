@@ -18,7 +18,7 @@ import { CasesService } from '../src/cases/cases.service.js'
 import { toMarkdown } from '../src/report/document/markdown.js'
 import { resolveReport } from '../src/report/document/resolve.js'
 import type { CaseData } from '../src/report/document/sections.js'
-import { english } from '../src/report/document/packs.js'
+import { english } from '../src/languages/packs.js'
 
 async function main(): Promise<void> {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? '' })

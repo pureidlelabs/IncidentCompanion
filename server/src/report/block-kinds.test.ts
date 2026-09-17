@@ -15,8 +15,8 @@ import {
   kindsWithoutAGroup,
 } from './block-kinds.js'
 import { BLOCK_KINDS } from '../domain/entities/report.js'
-import { EN_KEYS } from './document/packs.js'
-import { EN } from './document/labels.en.js'
+import { EN_KEYS } from '../languages/packs.js'
+import { EN } from '../languages/labels.en.js'
 import { RESOLVERS } from './document/resolve.js'
 
 describe('the sections a report can hold', () => {

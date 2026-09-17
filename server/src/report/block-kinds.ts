@@ -9,7 +9,7 @@
  * rather than derived from the slug.
  */
 import { BLOCK_KINDS } from '../domain/entities/report.js'
-import { EN } from './document/labels.en.js'
+import { EN } from '../languages/labels.en.js'
 
 /**
  * What the *menu button* says, where it differs from the heading.

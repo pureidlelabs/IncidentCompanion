@@ -13,7 +13,7 @@ import * as Y from 'yjs'
 import { toMarkdown } from './markdown.js'
 import { RESOLVERS, UnresolvableSections, resolveReport, type ReportInput } from './resolve.js'
 import type { Node } from './model.js'
-import { english, packFrom, translatorFor } from './packs.js'
+import { english, packFrom, translatorFor } from '../../languages/packs.js'
 import { BLOCK_KINDS } from '../../domain/entities/report.js'
 
 function block(over: Partial<ReportInput['blocks'][number]> = {}) {

@@ -24,7 +24,7 @@ import { ProseService, reportDocument } from '../src/prose/prose.service.js'
 import { resolveReport } from '../src/report/document/resolve.js'
 import { toMarkdown } from '../src/report/document/markdown.js'
 import { reportBlocks, reports } from '../src/db/schema/report.js'
-import { english } from '../src/report/document/packs.js'
+import { english } from '../src/languages/packs.js'
 
 /**
  * A report of this many written sections. Nine is typical; the default here is

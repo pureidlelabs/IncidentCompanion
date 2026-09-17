@@ -16,10 +16,10 @@ import { Logger } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 
 import { duration, metrics } from './derived.js'
-import { NL } from './labels.nl.js'
+import { NL } from '../../languages/labels.nl.js'
 import { narrative } from './narrative.js'
 import type { Node, TableNode } from './model.js'
-import { english, translatorFor } from './packs.js'
+import { english, translatorFor } from '../../languages/packs.js'
 import type { ReportInput } from './resolve.js'
 
 /**

@@ -4,7 +4,7 @@ import { narrative } from './narrative.js'
 import { RESPONSE } from './palette.js'
 import type { Node, TableNode } from './model.js'
 import type { ReportInput } from './resolve.js'
-import { english } from './packs.js'
+import { english } from '../../languages/packs.js'
 
 /**
  * **Built, not cast.** `as unknown as ReportInput` over the whole fixture lets

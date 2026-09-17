@@ -19,7 +19,7 @@ import {
 } from './sections.js'
 import type { MinorHeadNode, Node, ProseNode, TableNode } from './model.js'
 import type { ReportInput } from './resolve.js'
-import { english } from './packs.js'
+import { english } from '../../languages/packs.js'
 
 function input(caseData: Partial<CaseData>): ReportInput {
   return {

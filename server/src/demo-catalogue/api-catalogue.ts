@@ -11,7 +11,7 @@ import { join } from 'node:path'
 import { DEMO_REPORTS } from '../demos/reports.js'
 import { REPORT_STAGES, TLP_LABELS } from '../domain/entities/report.js'
 import { AboutController } from '../health/about.controller.js'
-import { english, headingPack } from '../report/document/packs.js'
+import { english, headingPack } from '../languages/packs.js'
 import { CollectionsController } from '../specs/collections.controller.js'
 import { SpecsController } from '../specs/specs.controller.js'
 

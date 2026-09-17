@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { orderedLanguages } from './document/packs.js'
+import { orderedLanguages } from '../languages/packs.js'
 import { reportLayoutsSchema } from './views.js'
 
 /**

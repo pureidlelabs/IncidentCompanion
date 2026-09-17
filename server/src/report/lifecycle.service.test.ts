@@ -22,7 +22,7 @@ import { ReportRenderService } from './render.service.js'
 import { ProseService, reportDocument } from '../prose/prose.service.js'
 import { cases, library, reportBlocks, reports, timeline, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
-import { english } from './document/packs.js'
+import { english } from '../languages/packs.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
 

@@ -17,7 +17,7 @@ import {
   packFrom,
   translatorFor,
   unknownKeysIn,
-} from './packs.js'
+} from '../../languages/packs.js'
 
 const someKey = EN_KEYS[0]!
 const otherKey = EN_KEYS[1]!

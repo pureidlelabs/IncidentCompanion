@@ -19,7 +19,7 @@ import { resolveReport } from '../src/report/document/resolve.js'
 import { toPdf } from '../src/report/document/pdf.js'
 import { toWord } from '../src/report/document/word.js'
 import type { CaseData } from '../src/report/document/sections.js'
-import { english } from '../src/report/document/packs.js'
+import { english } from '../src/languages/packs.js'
 
 async function main(): Promise<void> {
   const out = process.argv[2] ?? '/tmp/report.docx'
