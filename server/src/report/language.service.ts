@@ -6,7 +6,7 @@
  *
  * **English is synthesised rather than stored**: always present, always 1, and
  * an upload naming it is refused, because every other pack's coverage is a
- * fraction of its key set. -> `document/packs.ts`
+ * fraction of its key set. -> `languages/packs.ts`
  *
  * Dutch is a seeded row, upserted on boot like the report layouts, so what the
  * app ships and what an install adds are the same kind of thing.
