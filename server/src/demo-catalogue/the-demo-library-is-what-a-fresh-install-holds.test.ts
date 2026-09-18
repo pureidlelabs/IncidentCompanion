@@ -7,9 +7,10 @@
  * from the same fields, with the same verdicts the pane draws.
  *
  * The failure this is written against is a capture that reads one field name
- * for all three kinds. It publishes a pane of labelled rows whose second line
- * is empty, which reads as content somebody forgot to write rather than as a
- * capture taking the wrong column.
+ * for all three kinds. The Library pane draws Name, Key and Source, so it would
+ * look untouched; what empties is the line under each title on the card a New
+ * form offers them from, which reads as content somebody forgot to write
+ * rather than as a capture taking the wrong column.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -67,8 +68,8 @@ describe('the library the demo serves', () => {
   })
 
   it('leaves no entry with an empty second line', () => {
-    // The shape the failure above takes on the pane, asserted where a reader
-    // would see it rather than only at the one entry the case above names.
+    // The shape the failure above takes on the card, asserted across every
+    // kind rather than only at the one entry the case above names.
     const blank = Object.values(held)
       .flatMap((listing) => listing.entries)
       .filter((entry) => entry.description.trim() === '')

@@ -20,9 +20,11 @@ import {
   firstMoment,
   milestonesOf,
   MILESTONES,
+  laneOf,
+  runsCrossing,
   runsSpanning,
   silenceHeight,
-  SPAN_FLOOR_MS,
+  spans,
   type CascadeMetric,
   type CascadeRun,
 } from './cascade-rows'
@@ -84,15 +86,54 @@ const SPINE =
  */
 const STAMP_CENTRE = 13
 
-/** How far lane `index` of `count` concurrent tracks sits from the spine. */
 const LANE_GAP = 6
-function laneLeft(index: number, count: number): string {
-  return `calc(50% + ${String((index - (count - 1) / 2) * LANE_GAP)}px)`
+
+/** What a piece of track is: which run, and the box it paints in its row. */
+interface SpanPiece {
+  run: CascadeRun
+  box: { top: number; bottom?: number; height?: number }
 }
 
-/** Whether a run lasted long enough for the axis to draw it as a stretch. */
-function lasts(run: CascadeRun): boolean {
-  return run.end - run.start >= SPAN_FLOOR_MS
+/** Where a run's track sits, as a `left` for a bar centred by a half-translate. */
+function laneLeft(run: CascadeRun, lanes: { lane: Map<string, number>; count: number }): string {
+  const index = lanes.lane.get(`${run.key}@${String(run.start)}`) ?? 0
+  return `calc(50% + ${String((index - (lanes.count - 1) / 2) * LANE_GAP)}px)`
+}
+
+/**
+ * The track a run paints across a row it is still running through.
+ *
+ * **Drawn on every kind of row, not only on moments.** A day heading and a
+ * stage rule both fall between two moments, so a run crossing midnight had its
+ * track stop above the heading and restart below it - a break at the one place
+ * the drawing is asserting that nothing was interrupted.
+ */
+function SpanTrack({
+  pieces,
+  lanes,
+}: {
+  pieces: readonly SpanPiece[]
+  lanes: { lane: Map<string, number>; count: number }
+}) {
+  return (
+    <>
+      {pieces.map((piece) => (
+        <span
+          key={`${piece.run.key}@${String(piece.run.start)}`}
+          aria-hidden
+          data-part="cascade-span"
+          data-severity={piece.run.tone}
+          className={cn(
+            'absolute w-1 -translate-x-1/2 rounded-full',
+            piece.run.track === 'response'
+              ? 'bg-action-contain'
+              : TONE_FILL[piece.run.tone],
+          )}
+          style={{ left: laneLeft(piece.run, lanes), opacity: 0.55, ...piece.box }}
+        />
+      ))}
+    </>
+  )
 }
 
 export function TimelineGraphScreen({
@@ -105,6 +146,10 @@ export function TimelineGraphScreen({
   const runs = useMemo(() => (kase ? buildCascade(kase) : []), [kase])
   const milestones = useMemo(() => (kase ? milestonesOf(kase) : []), [kase])
   const rows = useMemo(() => cascadeRows(runs, { milestones }), [runs, milestones])
+  const lanes = useMemo(() => laneOf(runs), [runs])
+  /** Full-height track for every run still going across a row that is not a moment. */
+  const crossing = (at: number): SpanPiece[] =>
+    runsCrossing(runs, at).map((run) => ({ run, box: { top: 0, bottom: 0 } }))
   const longest = Math.max(0, ...rows.map((row) => (row.kind === 'silence' ? row.span : 0)))
   const silences = rows.filter((row) => row.kind === 'silence').length
   const metrics = kase ? metricsOf(kase, silences) : []
@@ -216,8 +261,9 @@ export function TimelineGraphScreen({
                     <li
                       key={row.key}
                       data-part="cascade-day"
-                      className="flex items-center gap-3 py-4 text-2xs font-semibold uppercase tracking-micro text-ink-muted"
+                      className="relative flex items-center gap-3 py-4 text-2xs font-semibold uppercase tracking-micro text-ink-muted"
                     >
+                      <SpanTrack pieces={crossing(row.at)} lanes={lanes} />
                       <span className="shrink-0 bg-surface pr-2">
                         {dayLabelOf(new Date(row.at).toISOString())}
                       </span>
@@ -233,8 +279,9 @@ export function TimelineGraphScreen({
                     <li
                       key={row.key}
                       data-part="cascade-milestone"
-                      className="flex items-center gap-3 py-3 text-2xs text-action-contain"
+                      className="relative flex items-center gap-3 py-3 text-2xs text-action-contain"
                     >
+                      <SpanTrack pieces={crossing(row.at)} lanes={lanes} />
                       <span
                         aria-hidden
                         className="h-0 flex-1 border-t border-dashed border-current"
@@ -296,12 +343,12 @@ export function TimelineGraphScreen({
                  * top edge breaks the track exactly where the drawing is
                  * making its claim.
                  */
-                const pieces = [
+                const pieces: SpanPiece[] = [
                   ...runsSpanning(runs, row.at).map((run) => ({
                     run,
                     box: { top: -space, bottom: 0 },
                   })),
-                  ...row.runs.filter(lasts).map((run) => ({
+                  ...row.runs.filter(spans).map((run) => ({
                     run,
                     box: { top: STAMP_CENTRE, bottom: 0 },
                   })),
@@ -321,25 +368,7 @@ export function TimelineGraphScreen({
                         by its own duration, and an action at the same instant
                         as a long-running event was drawn at the far end of
                         that event's bar, reading as an hour later. */}
-                    {pieces.map((piece, lane) => (
-                      <span
-                        key={`${piece.run.key}-${String(lane)}`}
-                        aria-hidden
-                        data-part="cascade-span"
-                        data-severity={piece.run.tone}
-                        className={cn(
-                          'absolute w-1 -translate-x-1/2 rounded-full',
-                          piece.run.track === 'response'
-                            ? 'bg-action-contain'
-                            : TONE_FILL[piece.run.tone],
-                        )}
-                        style={{
-                          left: laneLeft(lane, pieces.length),
-                          opacity: 0.55,
-                          ...piece.box,
-                        }}
-                      />
-                    ))}
+                    <SpanTrack pieces={pieces} lanes={lanes} />
                     <span className="flex flex-col items-end gap-1.5">
                       {observed.map((run) => (
                         <span

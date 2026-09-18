@@ -42,7 +42,7 @@ export const SILENCE_FLOOR_MS = 60 * 60 * 1000
 export const SPAN_FLOOR_MS = 60 * 1000
 
 /** Whether a run covers enough time for the axis to draw it as a stretch. */
-function spans(run: CascadeRun): boolean {
+export function spans(run: CascadeRun): boolean {
   return run.end - run.start >= SPAN_FLOOR_MS
 }
 
@@ -271,19 +271,52 @@ export function cascadeRows(
       ends: moment.ends,
       // Nothing after a band: the band already draws that interval, and
       // charged twice a detection sits a canyon from the alert that raised it.
-      // **Nothing before a moment that only ends things.** The track marking a
-      // run stops at the row before its end marker, so any space above that
-      // marker is untinted - a gap between a run and its own ending, drawn at
-      // exactly the place the axis is making its claim.
-      spaceBefore:
-        previous === null || broke || (moment.runs.length === 0 && moment.ends.length > 0)
-          ? 0
-          : momentSpace(at - previous),
+      //
+      // **A moment that only ends things is spaced like any other.** It is the
+      // one place the elapsed time of a run is drawn at all: zeroed, four
+      // hours of beaconing take no lane while the half hour after them takes
+      // 42px, so a four-hour run and a two-minute one are the same picture -
+      // and the silence band that used to state those four hours is gone, by
+      // `quiet()` above, because the case was not quiet. The track's own end
+      // piece reaches back over this space, so nothing is left untinted.
+      spaceBefore: previous === null || broke ? 0 : momentSpace(at - previous),
     })
     previous = at
   }
   for (const one of pending) rows.push(rule(one))
   return rows
+}
+
+/**
+ * A lane per lasting run, held for the whole drawing rather than per row.
+ *
+ * **The offset has to come from the run, not from where it sits in a row's
+ * array.** Taking the index and the count from one row moves a track sideways
+ * wherever the number of concurrent runs changes: a run alone on its start row
+ * and paired on the next is centred, then 3px left, then centred again, so one
+ * continuous duration draws with a kink in it at every neighbour's start.
+ *
+ * Lanes are reused once a run has ended - the lowest one free at that moment -
+ * so a case with twenty sequential bursts still draws them all on the spine
+ * rather than spreading twenty lanes wide.
+ */
+export function laneOf(runs: readonly CascadeRun[]): { lane: Map<string, number>; count: number } {
+  const lane = new Map<string, number>()
+  /** When each open lane frees up. */
+  const until: number[] = []
+  for (const run of [...runs].filter(spans).sort((left, right) => left.start - right.start)) {
+    // **Keyed with the start**, because `buildCascade` gives two runs of one
+    // kind the same `key` when a silence splits them.
+    let at = until.findIndex((end) => end <= run.start)
+    if (at === -1) {
+      at = until.length
+      until.push(run.end)
+    } else {
+      until[at] = run.end
+    }
+    lane.set(`${run.key}@${String(run.start)}`, at)
+  }
+  return { lane, count: Math.max(1, until.length) }
 }
 
 /**
@@ -301,6 +334,21 @@ export function cascadeRows(
 export function runsSpanning(runs: readonly CascadeRun[], at: number): CascadeRun[] {
   return runs.filter(
     (run) => spans(run) && minuteOf(run.start) < at && minuteOf(run.end) > at,
+  )
+}
+
+/**
+ * Every run still going across a row that is not a moment of its own.
+ *
+ * **Inclusive of the end, where `runsSpanning` is strict.** A day heading and a
+ * stage rule take the timestamp of the moment they sit above, so when that
+ * moment is a run's end, the strict question answers "not running" about a row
+ * the run is physically still crossing - and the track breaks by the height of
+ * the heading, directly above the stamp saying where it stopped.
+ */
+export function runsCrossing(runs: readonly CascadeRun[], at: number): CascadeRun[] {
+  return runs.filter(
+    (run) => spans(run) && minuteOf(run.start) < at && minuteOf(run.end) >= at,
   )
 }
 

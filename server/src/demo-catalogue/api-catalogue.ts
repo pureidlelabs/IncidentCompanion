@@ -33,8 +33,9 @@ interface CapturedEntry {
  *
  * **A layout's description is its `summary` and a snippet's is its payload
  * `hint`**, neither of which is called `description` on the built-in - so a
- * capture reading one field name for all three publishes two empty columns
- * that look like content nobody wrote.
+ * capture reading one field name for all three publishes entries whose second
+ * line is empty on the card a New form offers them from. The Library pane
+ * itself draws Name, Key and Source, so nothing there would look wrong.
  *
  * It throws on a kind it does not know, which is what makes a library added to
  * `LIBRARY_KINDS` fail the build rather than reach the demo as an empty pane.

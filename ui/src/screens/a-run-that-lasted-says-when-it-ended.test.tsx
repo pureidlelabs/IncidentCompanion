@@ -4,7 +4,13 @@ import { describe, expect, it } from 'vitest'
 import type { Case, TimelineEntry } from '@/api/model'
 import { campaignCase } from '@/fixtures/campaign'
 
-import { cascadeRows, runsSpanning, type CascadeRun } from './cascade-rows'
+import {
+  cascadeRows,
+  laneOf,
+  runsCrossing,
+  runsSpanning,
+  type CascadeRun,
+} from './cascade-rows'
 import { TimelineGraphScreen } from './timeline-graph'
 
 /**
@@ -73,14 +79,17 @@ describe('a run that covers a stretch of time', () => {
     expect(ends[0]?.runs).toEqual([])
   })
 
-  it('leaves no space above that end, so the track meets its own marker', () => {
-    // The tint stops at the row before the end marker, so any space above the
-    // marker is untinted - and what that draws is a gap between a run and its
-    // own ending, at exactly the place the drawing is making its claim.
-    const rows = cascadeRows([burst(39)])
-    const ends = moments(rows).filter((row) => row.ends.length > 0)
+  it('spaces that end by how long the run took', () => {
+    // **The one place a run's duration is drawn at all.** Zeroed, four hours of
+    // beaconing take no lane while the half hour after them takes 42px, so a
+    // four-hour run and a two-minute one are the same picture - and the silence
+    // band that used to state those four hours is gone, correctly, because the
+    // case was not quiet.
+    const brief = moments(cascadeRows([burst(2)])).filter((row) => row.ends.length > 0)
+    const long = moments(cascadeRows([burst(240)])).filter((row) => row.ends.length > 0)
 
-    expect(ends[0]?.spaceBefore).toBe(0)
+    expect(brief[0]?.spaceBefore ?? 0).toBeGreaterThan(0)
+    expect(long[0]?.spaceBefore ?? 0).toBeGreaterThan(brief[0]?.spaceBefore ?? 0)
   })
 
   it('is not a silence, however long it ran', () => {
@@ -204,5 +213,58 @@ describe('the drawing of a run that lasted', () => {
     draw(beaconCase())
 
     expect(document.querySelectorAll('[data-part="cascade-run"]')).toHaveLength(1)
+  })
+})
+
+describe('the track across a row that is not a moment', () => {
+  it('carries a run over the day heading it crosses', () => {
+    // A day rule falls between two moments, so a beacon run crossing midnight
+    // had its track stop above the heading and restart below it - a break at
+    // the one place the drawing asserts nothing was interrupted.
+    const overnight = run({
+      start: Date.parse('2026-08-13T23:30:00.000Z'),
+      end: Date.parse('2026-08-14T00:30:00.000Z'),
+      count: 12,
+    })
+    const rows = cascadeRows([overnight])
+    const day = rows.find((row) => row.kind === 'day' && row.at > overnight.start)
+
+    expect(day?.kind, 'the run does not cross a day boundary').toBe('day')
+    const at = day?.kind === 'day' ? day.at : 0
+    expect(runsCrossing([overnight], at)).toEqual([overnight])
+  })
+
+  it('gives one run the same lane wherever it is drawn', () => {
+    // The offset came from the run's position in a row's array, so a run alone
+    // on its start row and paired on the next drew centred, then 3px left, then
+    // centred again: one continuous duration with a kink at every neighbour.
+    const long = burst(120, { key: 'observed:beacon', entryId: 'e-a' })
+    const brief = run({
+      key: 'observed:exfil',
+      start: Date.parse('2026-08-13T13:00:00.000Z'),
+      end: Date.parse('2026-08-13T13:30:00.000Z'),
+      entryId: 'e-b',
+    })
+    draw(beaconCase())
+
+    // Held on the layout rather than the paint: jsdom gives every bar a zero
+    // box, so the lane is only readable as the assignment behind it.
+    const lanes = laneOf([long, brief])
+    expect(lanes.count).toBe(2)
+    expect(lanes.lane.get(`${long.key}@${String(long.start)}`)).toBe(0)
+    expect(lanes.lane.get(`${brief.key}@${String(brief.start)}`)).toBe(1)
+  })
+
+  it('reuses a lane once the run holding it has ended', () => {
+    // Twenty sequential bursts must not spread twenty lanes wide.
+    const first = burst(30, { entryId: 'e-1' })
+    const later = run({
+      key: 'observed:second',
+      start: Date.parse('2026-08-13T15:00:00.000Z'),
+      end: Date.parse('2026-08-13T15:30:00.000Z'),
+      entryId: 'e-2',
+    })
+
+    expect(laneOf([first, later]).count).toBe(1)
   })
 })
