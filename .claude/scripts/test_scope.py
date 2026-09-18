@@ -314,7 +314,13 @@ def _reachable(port: int) -> bool:
 
 
 
-_LANDING_BASES = ("@{upstream}", "origin/HEAD")
+#: The branch the work lands on, never the branch's own remote copy.
+#:
+#: `@{upstream}` was tried first and is the wrong ref: after `git push -u`,
+#: which `rules/git-workflow.md` §9 asks for after every commit, it names the
+#: branch itself -- so the range is empty and every tier is skipped, in the
+#: direction that lets a branch land unrun. -> #759
+_LANDING_BASES = ("origin/HEAD", "origin/main")
 
 
 def _landing_base(given: str | None) -> str:
@@ -338,7 +344,11 @@ def main() -> int:
         # one produces `a..b..HEAD`, which git rejects with 128 -- and the
         # traceback names git rather than this line.
         base = _landing_base(given)
-        paths = changed(base if ".." in base else f"{base}..HEAD")
+        # **Three dots: what the branch did, not what has happened since.**
+        # `git diff a..HEAD` compares the two commits, so a trunk that moved
+        # while the branch was open reports its own later files as this
+        # branch's -- widening the scope with tiers the diff never touched.
+        paths = changed(base if ".." in base else f"{base}...HEAD")
         found, why = decide(paths)
         why = f"landing -- {why}"
     else:
