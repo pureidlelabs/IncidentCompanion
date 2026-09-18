@@ -207,10 +207,21 @@ test('the rail offers an analyst none of the panes that would refuse them', asyn
     const offered = await panes(page)
 
     expect(offered.length, 'the analyst rail offered almost nothing').toBeGreaterThan(5)
+
+    /**
+     * **The difference, not the subset.** Asserting only that the analyst is
+     * offered none of the four leaves the list to go stale in silence: a fifth
+     * admin-only pane added later is invisible here, so a refactor dropping its
+     * `admin: true` hands an analyst a pane every route of which refuses them
+     * while the test written for exactly that stays green.
+     *
+     * Read as a difference it fails the moment a fifth appears, which is the
+     * moment somebody should be adding it to this list.
+     */
     expect(
-      offered.filter((slug) => ADMIN_ONLY.includes(slug)),
-      'the analyst was offered a pane every route of which refuses them',
-    ).toEqual([])
+      offeredToAdmin.filter((slug) => !offered.includes(slug)).sort(),
+      'the panes an administrator has and an analyst does not are no longer these',
+    ).toEqual([...ADMIN_ONLY].sort())
 
     // Its `@Get()` is open and only the upload and the delete are admin, so
     // hiding the pane would take away a list an analyst may read.
