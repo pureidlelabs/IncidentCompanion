@@ -168,32 +168,53 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
 }
 
 /**
- * **The one pane an analyst may open and not use.**
+ * **The rail an analyst is served, read off the shipped bundle.**
  *
- * Kept as its own test because the sweep above can only find this by
- * *pressing* a retry button, so a pane that stops offering one takes the
- * detection with it. What the analyst must see is a plain statement and nothing to
- * press: the server is right to refuse, and a button that will refuse every
- * time invites them to keep pressing it.
+ * Three System panes are served entirely by `@AdminOnly` controllers and
+ * Health's two routes were gated when it turned out a per-table row count
+ * answers how many accounts exist. The rail stopped drawing all four, and what
+ * replaced the old refusal is an absence -- which is the harder thing to hold,
+ * because a rail that failed to render is also an absence.
+ *
+ * So both halves are asserted against one another: the administrator is
+ * offered every one of them, and the analyst none, from the same page object
+ * on the same build. `picker-panes.test.ts` holds the same rule over
+ * `panesFor`, and cannot see whether the rail it feeds ever reached the screen.
  */
-test('an analyst is told Accounts is not theirs, without being offered a retry', async ({
-  browser,
-}) => {
+const ADMIN_ONLY = ['accounts', 'activity', 'administration', 'health']
+
+test('the rail offers an analyst none of the panes that would refuse them', async ({ browser }) => {
   test.setTimeout(120_000)
+
+  const asAdmin = await asPersona(browser, ADMIN)
+  let offeredToAdmin: string[]
+  try {
+    offeredToAdmin = await panes(asAdmin.page)
+  } finally {
+    await asAdmin.context.close()
+  }
+
+  // **The control, and it is what makes the assertion below mean anything.** A
+  // rail that drew nothing at all satisfies "the analyst is offered none of
+  // them" perfectly, and so does a slug that was renamed on both sides.
+  expect(
+    ADMIN_ONLY.filter((slug) => !offeredToAdmin.includes(slug)),
+    'an administrator was not offered these, so the names or the rail have moved',
+  ).toEqual([])
+
   const { context, page } = await asPersona(browser, ANALYST)
   try {
-    await openPane(page, 'accounts')
+    const offered = await panes(page)
 
-    const said = await page.locator('main').innerText()
-    expect(said, 'the analyst was not told why Accounts is empty').toMatch(/permission/i)
+    expect(offered.length, 'the analyst rail offered almost nothing').toBeGreaterThan(5)
+    expect(
+      offered.filter((slug) => ADMIN_ONLY.includes(slug)),
+      'the analyst was offered a pane every route of which refuses them',
+    ).toEqual([])
 
-    await expect(
-      page.locator('main').getByRole('button', { name: /try again/i }),
-      'a refusal offered a retry that can never succeed',
-    ).toHaveCount(0)
-
-    // Stated, not alarmed: a refusal is not a fault in the app.
-    await expect(page.locator('main [role="alert"]')).toHaveCount(0)
+    // Its `@Get()` is open and only the upload and the delete are admin, so
+    // hiding the pane would take away a list an analyst may read.
+    expect(offered, 'the analyst lost a pane they may use').toContain('languages')
   } finally {
     await context.close()
   }
