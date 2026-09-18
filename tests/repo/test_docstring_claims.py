@@ -179,22 +179,40 @@ def resolves_directory(cited: str, dirs: set[str]) -> bool:
             or archived_as(bare, dirs) is not None)
 
 
-def git_ignores(paths: set[str]) -> set[str]:
+def git_ignores(paths: set[str], root: pathlib.Path = REPO_ROOT) -> set[str]:
     """Which of these directories git excludes, and so are absent on purpose.
 
     A child path is what the query takes: a pattern ending in `/` matches a
     directory, and the answer cannot tell that a path which is not there is one.
     An ignore file sits in the tree it governs as well as at the root, so each
     citation is asked about under every top-level tree as well as bare.
+
+    **A refused path answers for itself rather than for the batch.** git aborts
+    a whole `--stdin` run over one pathspec it will not resolve, and the empty
+    output that comes back is indistinguishable from none of the paths being
+    ignored. The retry asks one at a time, so a refusal costs one answer.
+
+    A path git refuses as *beyond a symbolic link* counts as excluded: the link
+    is how a worktree supplies a directory it did not install, which is the
+    case the caller is asking about.
     """
     if not paths:
         return set()
     probes = {f'{one}/x': one for one in paths}
     probes.update({f'{tree.split("/")[0]}/{one}/x': one
                    for one in paths for tree in TREES})
-    answer = subprocess.run(['git', 'check-ignore', '--stdin'], cwd=REPO_ROOT,
+    answer = subprocess.run(['git', 'check-ignore', '--stdin'], cwd=root,
                             input='\n'.join(probes), capture_output=True, text=True)
-    return {probes[one] for one in answer.stdout.split() if one in probes}
+    if answer.returncode in (0, 1):
+        return {probes[one] for one in answer.stdout.split() if one in probes}
+
+    found: set[str] = set()
+    for probe, bare in probes.items():
+        one = subprocess.run(['git', 'check-ignore', '-q', probe], cwd=root,
+                             capture_output=True, text=True)
+        if one.returncode == 0 or 'beyond a symbolic link' in one.stderr:
+            found.add(bare)
+    return found
 
 
 def test_a_citation_written_from_the_reader_resolves() -> None:
