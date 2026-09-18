@@ -107,7 +107,11 @@ export function Slider<T extends number | number[]>({
       {...props}
       className={composeClassName(
         props.className,
-        'flex flex-col gap-2 orientation-horizontal:w-full orientation-vertical:h-40 orientation-vertical:w-auto orientation-vertical:items-center',
+        // **`w-full` unprefixed, so a caller's width can replace it.** As
+        // `orientation-horizontal:w-full` it was a different variant from a
+        // bare `w-64`, so the merge kept both and the attribute selector
+        // outranked the caller. Standing up still wins, by the same rule.
+        'flex flex-col gap-2 w-full orientation-vertical:h-40 orientation-vertical:w-auto orientation-vertical:items-center',
       )}
     >
       {/* **`sr-only` on the vertical row, never `hidden`.** React Aria points
