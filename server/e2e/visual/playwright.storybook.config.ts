@@ -1,7 +1,5 @@
 import { defineConfig } from '@playwright/test'
 
-import { densityProjects } from './densities.js'
-
 /**
  * `npm run visual:storybook` -- the probe over every Storybook story.
  *
@@ -29,7 +27,11 @@ export default defineConfig({
   // which `playwright.kit.config.ts` runs.** Unanchored, the pattern reads as
   // one filename and selects all sixteen.
   testMatch: /(?:^|[\\/])storybook\.spec\.ts$/,
-  projects: densityProjects(),
+  // **One density.** `probe.js` reads the DOM, and the walk's single capture
+  // is hashed to pair stories that render alike inside one run -- so a second
+  // ratio re-measures the same numbers. `test_visual_runs_at_retina.py` holds
+  // the exemption to that staying true.
+
   // One worker: the probe measures rendered geometry, and a second browser
   // competing for the machine is how a settled reading stops being one.
   workers: 1,
