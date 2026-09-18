@@ -228,6 +228,15 @@ export function DialogBody({ children }: { children: ReactNode }) {
     // demoted to `hidden`, so the box stays a scroll container that draws no
     // bar. What that withholds is the ring room, never a row: the wizard's own
     // content box ends 27px inside this one.
+    //
+    // **Said on the shared body rather than on the one dialog that overflows**,
+    // because sideways is not an axis a dialog scrolls in this kit: anything
+    // wide enough to need one carries its own scroller, as the importer's
+    // listing does at `scroll="box"`. Counted before widening it that far -
+    // `import-sentinel` is the only one of the fourteen call sites holding a
+    // `Section fills`, which is the construct that bleeds, and none holds a
+    // table directly. So nothing else is clipped today, and a future dialog
+    // wide enough to be is a layout to fix rather than one to scroll.
     <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pt-2 pb-4">
       {children}
     </div>
