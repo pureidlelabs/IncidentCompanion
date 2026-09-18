@@ -208,6 +208,10 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
             "a colour or a hit area, and it exits 0 whether it found nothing or a hundred "
             "things -- read the findings it prints, because the pass says only that it "
             "could look"))
+        out.append((
+            "(cd ui && npm run storybook &) && (cd server && npm run e2e:kit)",
+            "the component checks over the same Storybook -- a ring that is not clipped, "
+            "a sticky head, a row handing over its actions. Unlike the walk, these assert"))
     return out
 
 

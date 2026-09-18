@@ -72,6 +72,16 @@ const WIDTHS = (process.env['VISUAL_WIDTHS'] ?? '1440,720')
 const GROUNDS = (process.env['VISUAL_GROUNDS'] ?? 'light,dark')
   .split(',')
   .filter(Boolean) as Ground[]
+/**
+ * **Refused here rather than asserted in a test.** Both axes filter to empty
+ * on an empty string, and they are the loop heads that declare the tests -- so
+ * `VISUAL_GROUNDS=$UNSET` declares none, and an assertion inside a test that
+ * does not exist cannot fire. Playwright's own answer is `No tests found`,
+ * which does not name the variable that emptied.
+ */
+if (GROUNDS.length === 0) throw new Error('VISUAL_GROUNDS named no ground to walk')
+if (WIDTHS.length === 0) throw new Error('VISUAL_WIDTHS named no width to walk')
+
 const ONLY = process.env['STORYBOOK_STORIES']?.split(',').filter(Boolean)
 const SHOTS = process.env['STORYBOOK_SHOTS']
 
@@ -180,12 +190,19 @@ test.afterEach(() => {
     for (const { where, line } of report.found) say(`  ! ${where} - ${line}`)
   }
 
-  const clusters = duplicateClusters(report.frames)
-  if (clusters.length === 0) {
-    say(whole ? '\nno duplicate frames' : `\nno duplicate frames${over} -- a partial walk cannot find them`)
-  } else {
-    say(`\n${String(clusters.length)} group(s) of sibling stories render identical pixels:`)
-    for (const cluster of clusters) say(`  = ${sayCluster(cluster)}`)
+  // **Only the shard that captured frames speaks about them.** The oracle is
+  // fed at the primary width alone, so the others hold none -- and
+  // `duplicateClusters([])` is empty for want of input rather than for want of
+  // duplicates, which printed as `no duplicate frames` from a shard that never
+  // looked.
+  if (report.frames.length > 0) {
+    const clusters = duplicateClusters(report.frames)
+    if (clusters.length === 0) {
+      say(whole ? '\nno duplicate frames' : `\nno duplicate frames${over} -- a partial walk cannot find them`)
+    } else {
+      say(`\n${String(clusters.length)} group(s) of sibling stories render identical pixels:`)
+      for (const cluster of clusters) say(`  = ${sayCluster(cluster)}`)
+    }
   }
 })
 
@@ -218,10 +235,6 @@ for (const ground of GROUNDS) {
 
   // A run over nothing is the failure mode a reporting tier hides best.
   expect(stories.length, 'the index matched no story').toBeGreaterThan(0)
-  // The same failure on the other two axes: both filter to empty on an empty
-  // string, so `VISUAL_GROUNDS=$UNSET` walks nothing and passes green.
-  expect(GROUNDS.length, 'VISUAL_GROUNDS named no ground to walk').toBeGreaterThan(0)
-  expect(WIDTHS.length, 'VISUAL_WIDTHS named no width to walk').toBeGreaterThan(0)
 
   report.expected = stories.length
 

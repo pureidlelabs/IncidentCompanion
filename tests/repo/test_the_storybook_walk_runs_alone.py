@@ -37,7 +37,7 @@ def test_the_walk_config_selects_the_walk_alone() -> None:
 
     The pattern is matched against every spec beside it rather than eyeballed:
     an unanchored `storybook\\.spec\\.ts` reads as one filename and selects
-    thirteen.
+    all sixteen.
     """
     found = TEST_MATCH.search(WALK_CONFIG.read_text(encoding="utf-8"))
     assert found is not None
