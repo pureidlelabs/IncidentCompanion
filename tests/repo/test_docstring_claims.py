@@ -188,13 +188,11 @@ def git_ignores(paths: set[str], root: pathlib.Path = REPO_ROOT) -> set[str]:
     citation is asked about under every top-level tree as well as bare.
 
     **A refused path answers for itself rather than for the batch.** git aborts
-    a whole `--stdin` run over one pathspec it will not resolve, and the empty
-    output that comes back is indistinguishable from none of the paths being
-    ignored. The retry asks one at a time, so a refusal costs one answer.
-
-    A path git refuses as *beyond a symbolic link* counts as excluded: the link
-    is how a worktree supplies a directory it did not install, which is the
-    case the caller is asking about.
+    a whole `--stdin` run over one pathspec it will not resolve -- a worktree's
+    linked `node_modules` is one -- and the empty output that comes back is
+    indistinguishable from none of the paths being ignored. The retry asks one
+    at a time, so a refusal costs one answer rather than every answer, and the
+    probes under each tree reach the same pattern without crossing the link.
     """
     if not paths:
         return set()
@@ -208,9 +206,10 @@ def git_ignores(paths: set[str], root: pathlib.Path = REPO_ROOT) -> set[str]:
 
     found: set[str] = set()
     for probe, bare in probes.items():
-        one = subprocess.run(['git', 'check-ignore', '-q', probe], cwd=root,
+        # `--` so a citation beginning with a dash is a path rather than a switch.
+        one = subprocess.run(['git', 'check-ignore', '-q', '--', probe], cwd=root,
                              capture_output=True, text=True)
-        if one.returncode == 0 or 'beyond a symbolic link' in one.stderr:
+        if one.returncode == 0:
             found.add(bare)
     return found
 

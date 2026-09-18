@@ -1,17 +1,22 @@
-"""`git_ignores` answers about a directory that is supplied as a symbolic link.
+"""One refused pathspec does not cost `git_ignores` every answer.
 
-A worktree links its dependencies from the main checkout rather than
-installing them, and `git check-ignore` refuses a pathspec that reaches
-through a link -- aborting the whole batch, whose empty output reads as none
-of the paths being ignored.
+git aborts a whole `check-ignore --stdin` run over a single pathspec it will
+not resolve, and the empty output reads as none of the paths being ignored. A
+worktree reaches that by linking its dependencies rather than installing them.
 
-Built in a temporary repository rather than asserted against this one: the
-condition depends on whether the checkout running the test happens to have a
-link there, which is true of a worktree and false in CI.
+**These pin the per-path retry, not the handling of links.** The probes under
+each tree reach the same pattern without crossing the link, so the answer for
+a linked directory comes from a sibling probe once the batch stops swallowing
+it.
+
+Built in a temporary repository rather than asserted against this one: whether
+a checkout has a link there is true of a worktree and false in CI, so a test
+against the real tree would pass in CI without reproducing anything.
 """
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -30,8 +35,13 @@ def build(root: Path) -> None:
 
 
 def test_the_batch_probe_is_refused_by_the_link(tmp_path: Path) -> None:
-    """The condition itself, so a git that stopped refusing retires this file."""
+    """The condition itself, so a git that stopped refusing retires this file.
+
+    The message is asserted as well as the code, because 128 is also what a
+    dubious-ownership refusal and a path outside the repository return.
+    """
     build(tmp_path)
+    # `LC_ALL=C`, because git translates this message and the assertion reads it.
     done = subprocess.run(
         ["git", "check-ignore", "--stdin"],
         cwd=tmp_path,
@@ -39,10 +49,13 @@ def test_the_batch_probe_is_refused_by_the_link(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
         check=False,
+        env={**os.environ, "LC_ALL": "C"},
     )
-    assert done.returncode == 128, (
-        "git no longer refuses a pathspec that reaches through a symbolic link, so "
-        f"the failure this file is about is gone: rc={done.returncode} {done.stderr!r}"
+    assert done.returncode == 128 and "beyond a symbolic link" in done.stderr, (
+        "git no longer refuses a pathspec that reaches through a symbolic link, so the "
+        f"failure this file is about is gone: rc={done.returncode} {done.stderr!r}. A "
+        "return code alone would not do here: 128 also covers a dubious-ownership "
+        "refusal and a path outside the repository."
     )
 
 
