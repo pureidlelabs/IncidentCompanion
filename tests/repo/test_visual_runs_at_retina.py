@@ -63,15 +63,52 @@ def test_the_density_set_covers_fractional_scaling() -> None:
     )
 
 
+#: The Storybook walk, whose readings are the same at every density.
+#:
+#: A density answers for what somebody looks at: a seam rounds differently per
+#: ratio, and the sweeps capture frames a reader reads. The walk reports what
+#: `probe.js` measures through the DOM, and hashes its one capture only to pair
+#: stories that render alike within a single run. Rendering it four times over
+#: is four identical readings. -> #885
+GEOMETRY_ONLY = {"playwright.storybook.config.ts"}
+
+PROBE = VISUAL / "probe.js"
+
+#: What would make a reading move with the ratio. The exemption above holds
+#: only while the probe names none of them.
+DENSITY_AWARE = ("devicePixelRatio", "deviceScaleFactor")
+
+
 def test_every_visual_config_takes_the_shared_density_set() -> None:
     """One source for the set: three configs with three opinions is three answers."""
     # `projects:` fed by the call, not merely the import: a config that imports
     # it and then declares `projects: []` renders at Playwright's default, and
     # a check for the bare name passes on exactly that.
     wired = re.compile(r"projects:\s*densityProjects\(")
-    short = [path.name for path in CONFIGS if not wired.search(path.read_text(encoding="utf-8"))]
+    short = [
+        path.name
+        for path in CONFIGS
+        if path.name not in GEOMETRY_ONLY and not wired.search(path.read_text(encoding="utf-8"))
+    ]
     assert not short, (
         "these visual configs do not take the shared density set, so they render at "
         "whatever Playwright defaults to and cannot see a seam that exists at one "
         "scaling only: " + ", ".join(short)
+    )
+
+
+def test_the_exempt_config_measures_nothing_the_ratio_moves() -> None:
+    """The exemption is only as good as the probe staying blind to the ratio.
+
+    A probe that starts reading the device ratio measures something a single
+    density cannot see, and the config owes the shared set again.
+    """
+    assert PROBE.is_file(), f"{PROBE} is gone, so the exemption rests on nothing"
+    text = PROBE.read_text(encoding="utf-8")
+    named = [one for one in DENSITY_AWARE if one in text]
+    assert not named, (
+        f"{PROBE.name} now reads {named}, so its readings can move with the device "
+        "ratio. Either drop the exemption and give "
+        f"{', '.join(sorted(GEOMETRY_ONLY))} the shared density set, or establish "
+        "that the new reading is ratio-invariant."
     )

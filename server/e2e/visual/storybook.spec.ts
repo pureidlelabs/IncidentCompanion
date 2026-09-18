@@ -72,6 +72,16 @@ const WIDTHS = (process.env['VISUAL_WIDTHS'] ?? '1440,720')
 const GROUNDS = (process.env['VISUAL_GROUNDS'] ?? 'light,dark')
   .split(',')
   .filter(Boolean) as Ground[]
+/**
+ * **Refused here rather than asserted in a test.** Both axes filter to empty
+ * on an empty string, and they are the loop heads that declare the tests -- so
+ * `VISUAL_GROUNDS=$UNSET` declares none, and an assertion inside a test that
+ * does not exist cannot fire. Playwright's own answer is `No tests found`,
+ * which does not name the variable that emptied.
+ */
+if (GROUNDS.length === 0) throw new Error('VISUAL_GROUNDS named no ground to walk')
+if (WIDTHS.length === 0) throw new Error('VISUAL_WIDTHS named no width to walk')
+
 const ONLY = process.env['STORYBOOK_STORIES']?.split(',').filter(Boolean)
 const SHOTS = process.env['STORYBOOK_SHOTS']
 
@@ -106,6 +116,7 @@ async function storyIndex(): Promise<Entry[] | null> {
  * worker out of memory still print nothing.
  */
 const report: {
+  at: string
   probed: number
   expected: number
   died: string | null
@@ -113,13 +124,14 @@ const report: {
   plays: string[]
   found: { where: string; line: string }[]
   frames: FrameRecord[]
-} = { probed: 0, expected: 0, died: null, failures: [], plays: [], found: [], frames: [] }
+} = { at: '', probed: 0, expected: 0, died: null, failures: [], plays: [], found: [], frames: [] }
 
 // **Reset per test rather than trusted to be fresh.** The config runs this
 // file once per density project, and module state outlives a single test in a
 // worker that serves more than one.
 test.beforeEach(() => {
   Object.assign(report, {
+    at: '',
     probed: 0,
     expected: 0,
     died: null,
@@ -145,7 +157,7 @@ test.afterEach(() => {
   const whole = report.probed === report.expected
   say(
     `\nprobed ${String(report.probed)} of ${String(report.expected)} story renders` +
-      ` (${GROUNDS.join(', ')} at ${WIDTHS.map((one) => String(one)).join(', ')}px)`,
+      ` (${report.at})`,
   )
 
   // Reconciled: #286 records `probed 1788 of 2800` with the arithmetic
@@ -178,18 +190,42 @@ test.afterEach(() => {
     for (const { where, line } of report.found) say(`  ! ${where} - ${line}`)
   }
 
-  const clusters = duplicateClusters(report.frames)
-  if (clusters.length === 0) {
-    say(whole ? '\nno duplicate frames' : `\nno duplicate frames${over} -- a partial walk cannot find them`)
-  } else {
-    say(`\n${String(clusters.length)} group(s) of sibling stories render identical pixels:`)
-    for (const cluster of clusters) say(`  = ${sayCluster(cluster)}`)
+  // **Only the shard that captured frames speaks about them.** The oracle is
+  // fed at the primary width alone, so the others hold none -- and
+  // `duplicateClusters([])` is empty for want of input rather than for want of
+  // duplicates, which printed as `no duplicate frames` from a shard that never
+  // looked.
+  if (report.frames.length > 0) {
+    const clusters = duplicateClusters(report.frames)
+    if (clusters.length === 0) {
+      say(whole ? '\nno duplicate frames' : `\nno duplicate frames${over} -- a partial walk cannot find them`)
+    } else {
+      say(`\n${String(clusters.length)} group(s) of sibling stories render identical pixels:`)
+      for (const cluster of clusters) say(`  = ${sayCluster(cluster)}`)
+    }
   }
 })
 
-test('probes every Storybook story and reports what it measured', async ({ browser }) => {
-  // Long: every story, three probe passes each, times the grounds.
+/**
+ * One test per ground and width, each with its own budget and its own summary.
+ *
+ * **A test's timeout is the budget for one test**, and one walk over every
+ * axis asks a single budget to cover the whole gallery several times over.
+ * Each shard's summary printing as it lands is also the only progress this
+ * tier can show, since `list` prints nothing until a test ends.
+ *
+ * The frame oracle is unaffected: `duplicateClusters` buckets by ground and
+ * component group, so no cluster ever spanned two grounds.
+ */
+for (const ground of GROUNDS) {
+ for (const width of WIDTHS) {
+  // The width is named only where it is not the primary, so the usual run
+  // reads as it always did and a narrow finding stands out as narrow.
+  const primary = width === WIDTHS[0]
+
+  test(`probes every Storybook story at ${ground}, ${String(width)}px`, async ({ browser }) => {
   test.setTimeout(30 * 60_000)
+  report.at = `${ground} at ${String(width)}px`
 
   const all = await storyIndex()
   test.skip(all === null, `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`)
@@ -199,18 +235,10 @@ test('probes every Storybook story and reports what it measured', async ({ brows
 
   // A run over nothing is the failure mode a reporting tier hides best.
   expect(stories.length, 'the index matched no story').toBeGreaterThan(0)
-  // The same failure on the other two axes: both filter to empty on an empty
-  // string, so `VISUAL_GROUNDS=$UNSET` walks nothing and passes green.
-  expect(GROUNDS.length, 'VISUAL_GROUNDS named no ground to walk').toBeGreaterThan(0)
-  expect(WIDTHS.length, 'VISUAL_WIDTHS named no width to walk').toBeGreaterThan(0)
 
-  report.expected = stories.length * GROUNDS.length * WIDTHS.length
+  report.expected = stories.length
 
-
-  for (const ground of GROUNDS) {
-   for (const width of WIDTHS) {
     const viewport = { width, height: DEFAULT_VIEWPORT.height }
-    const primary = width === WIDTHS[0]
     const context = await browser.newContext({
       viewport,
       colorScheme: ground === 'dark' ? 'dark' : 'light',
@@ -220,8 +248,6 @@ test('probes every Storybook story and reports what it measured', async ({ brows
     await armStoryFinished(page)
 
     for (const story of stories) {
-      // The width is named only where it is not the primary, so the usual run
-      // reads as it always did and a narrow finding stands out as narrow.
       const at = primary ? '' : ` @${String(width)}`
       const where = `${ground}${at} ${story.title} / ${story.name}`
       try {
@@ -292,10 +318,6 @@ test('probes every Storybook story and reports what it measured', async ({ brows
     }
 
     await context.close()
-    if (report.died !== null) break
-   }
-   if (report.died !== null) break
-  }
 
   // The one thing this tier asserts: it could look. A story that will not
   // render is a fact about the tree, and a reporting run that quietly probed
@@ -310,4 +332,6 @@ test('probes every Storybook story and reports what it measured', async ({ brows
   // Asserted after the failures, and both after the hook has already printed
   // everything the walk saw.
   expect(report.died, 'the sweep did not finish').toBeNull()
-})
+  })
+ }
+}

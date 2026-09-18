@@ -1,7 +1,5 @@
 import { defineConfig } from '@playwright/test'
 
-import { densityProjects } from './densities.js'
-
 /**
  * `npm run visual:storybook` -- the probe over every Storybook story.
  *
@@ -25,20 +23,30 @@ import { densityProjects } from './densities.js'
  */
 export default defineConfig({
   testDir: '.',
-  testMatch: /storybook\.spec\.ts/,
-  projects: densityProjects(),
+  // **Anchored: every `*.storybook.spec.ts` beside the walk is the kit tier,
+  // which `playwright.kit.config.ts` runs.** Unanchored, the pattern reads as
+  // one filename and selects all sixteen.
+  testMatch: /(?:^|[\\/])storybook\.spec\.ts$/,
+  // **One density, and it is 2.** `probe.js` reads the DOM, and the capture is
+  // hashed to pair stories that render alike inside one run, so a second ratio
+  // re-measures the same numbers -- `test_visual_runs_at_retina.py` holds the
+  // exemption to that staying true. The ratio still decides what
+  // `STORYBOOK_SHOTS` writes, which is read by eye, and four density projects
+  // wrote that file four times with the last one winning.
+  use: { deviceScaleFactor: 2 },
+
   // One worker: the probe measures rendered geometry, and a second browser
   // competing for the machine is how a settled reading stops being one.
   workers: 1,
   fullyParallel: false,
   reporter: [['list']],
-  // The whole sweep is one test that walks every story, so the per-test
-  // timeout is the run's timeout. `storybook.spec.ts` sets its own.
+  // A ceiling over the shard timeout `storybook.spec.ts` sets for itself,
+  // which is the one that decides.
   timeout: 45 * 60_000,
   /**
-   * **The walk is one test, so a cold Storybook's compile lands inside its
-   * timer**, and a run killed there used to print nothing at all. Warming
-   * happens before the timer starts. -> #286
+   * **A cold Storybook's compile would otherwise land inside the first
+   * shard's timer**, and a run killed there used to print nothing at all.
+   * Warming happens before any shard starts. -> #286
    */
   globalSetup: require.resolve('./storybook-warm.ts'),
 })

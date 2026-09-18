@@ -35,7 +35,10 @@ Thumbs.db
 # Build-time only. Not a licence problem -- dev dependencies do not ship, and
 # the runtimes are MIT, which AGPL-3.0 accepts. The cost is that a tree
 # committed once cannot be taken back out of history.
-node_modules/
+# Slashless, so it matches the link a worktree puts here as well as the
+# directory an install puts here: a trailing slash matches directories only,
+# and git sees a symbolic link as a file. -> #888
+node_modules
 
 # A generated TLS pair. **Never committed**: a private key in history cannot
 # be taken back out, and this one is minted per checkout on first start.

@@ -413,3 +413,22 @@ def test_the_probe_says_its_exit_code_carries_no_verdict() -> None:
     why = " ".join(r for c, r in found if "visual:storybook" in c)
     assert why, found
     assert "exits 0" in why, why
+
+
+def test_a_component_change_names_the_kit_tier_as_well_as_the_walk() -> None:
+    """Both Storybook tiers, because they answer different questions.
+
+    The walk probes every story for what `probe.js` can measure; the kit specs
+    beside it assert component behaviour -- a ring that is not clipped, a
+    sticky head, a row handing over its actions. They ran together only because
+    the walk's config selected them by accident, and nothing else prescribes
+    them. -> #885
+    """
+    commands = only(["ui/src/components/ui/button.tsx"])
+    walk = [one for one in commands if "visual:storybook" in one]
+    kit = [one for one in commands if "e2e:kit" in one]
+    assert walk, commands
+    assert kit, (
+        "a component change prescribes the walk but not the kit tier, which is the "
+        f"only other thing that runs the *.storybook.spec.ts checks locally: {commands}"
+    )
