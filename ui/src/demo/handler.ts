@@ -15,6 +15,7 @@ import {
 
 import about from './catalogue/about.json'
 import collections from './catalogue/collections.json'
+import libraryListings from './catalogue/library.json'
 import reportLayouts from './catalogue/report-layouts.json'
 import specs from './catalogue/specs.json'
 
@@ -385,6 +386,22 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
     if (at[0] === 'report-layouts') return json(reportLayouts)
     if (at[0] === 'demos') return json(demoCards())
     if (at[0] === 'recent-cases') return json(recentCases(state))
+  }
+
+  /**
+   * `/api/library/<slug>`, from the capture of what a fresh install holds.
+   *
+   * **Two segments, and an unknown slug refuses.** Matching the first alone
+   * would answer `/library/<slug>/<name>/editor` with the listing, which is a
+   * body the editor cannot read and would draw as an empty form rather than a
+   * refusal.
+   *
+   * Writing is not served: a built-in cannot be edited on an install either,
+   * and every row here is one.
+   */
+  if (at[0] === 'library' && at.length === 2 && method === 'GET') {
+    const listing = (libraryListings as Record<string, unknown>)[at[1] ?? '']
+    return listing === undefined ? refuse(404, 'No such library.') : json(listing)
   }
 
   // The landing screen records a visit as the analyst opens a case, and pins or
