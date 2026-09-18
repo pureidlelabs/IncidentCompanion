@@ -5,7 +5,7 @@ import { ChoiceRows } from '@/components/blocks/choice-row'
 import { Section } from '@/components/blocks/section'
 
 /**
- * Where a case starts: two doors, then the same five fields.
+ * Where a case starts: three doors, then the same five fields.
  *
  * The form itself opens over this pane rather than replacing it, so nothing is
  * drawn here for it - backing out of a wizard the analyst had not started once
@@ -33,7 +33,12 @@ export function StartCasePane({ onBlank, onImport, onLiveSource }: StartCasePane
         // the pane is the width of the screen. Three, so the last one is not
         // an orphan on a row of its own.
         columns={3}
-        className="max-w-4xl"
+        // **The cap holds the card's width, not the row's.** Three doors under
+        // the two-door cap draw at 285px, which is a list row wearing a
+        // border: the glyph, the title and the line under it stop reading as
+        // one object somewhere above that. Widened, each door is 376px - the
+        // width two of them had, which is the width they were judged at.
+        className="max-w-6xl"
         choices={[
           {
             title: 'Blank case',

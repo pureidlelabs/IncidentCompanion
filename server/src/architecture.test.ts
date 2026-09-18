@@ -166,7 +166,9 @@ const MAY_IMPORT: Record<string, string[]> = {
    *
    * Nothing in `src/` imports this one, so the edges cannot become cycles.
    */
-  'demo-catalogue': ['domain', 'demos', 'health', 'report', 'specs'],
+  // `library` for the built-ins: the demo's library is what a fresh install
+  // holds, and those are constants in that folder rather than rows in a table.
+  'demo-catalogue': ['domain', 'demos', 'health', 'library', 'report', 'specs'],
   /**
    * Above the features, and the edges say why: it maps a vendor payload onto
    * `domain` schemas, writes through `collections`, and opens a new case

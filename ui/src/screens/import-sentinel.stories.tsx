@@ -154,6 +154,36 @@ export const Review: Story = {
 }
 
 /**
+ * The same wizard as the picker's door draws it: inside its own dialog.
+ *
+ * **`create` is what chooses this shape**, so every story above renders the
+ * bare screen and none of them renders the frame an analyst starting a case
+ * actually meets. That left the door's own geometry photographed by nothing:
+ * the frame is a fixed 1080px box with 16px of padding, narrower than any pane
+ * the other stories mount in, and the section inside it bleeds ring room and a
+ * scrollbar gutter past both.
+ *
+ * The phase is the one carrying the widest thing the wizard draws - five dials
+ * over a six-column listing - because a frame is only proved by what fills it.
+ */
+export const InItsOwnDialog: Story = {
+  name: 'The door that starts a case',
+  args: {
+    connected: true,
+    phase: 'incidents',
+    selected: [DEMO_INCIDENTS[0]?.id ?? ''],
+    writes: {
+      connect: () => Promise.resolve('analyst@example.test'),
+      sources: () => Promise.resolve(DEMO_SOURCES),
+      incidents: () => Promise.resolve(DEMO_INCIDENTS),
+      preview: () => Promise.resolve(DEMO_CANDIDATES),
+      create: () => Promise.resolve({ caseId: 'case-1' }),
+      commit: () => Promise.resolve({ entities: 0, timeline: 0, skippedExisting: 0 }),
+    },
+  },
+}
+
+/**
  * A review with nothing in it.
  *
  * Every row these incidents carry is already in the case, unchanged - which is

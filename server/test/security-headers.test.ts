@@ -210,7 +210,14 @@ describe.skipIf(!runnable)('what a browser may keep', () => {
       headers: { cookie: admin.cookie },
     })
     const { rows } = (await roster.json()) as { rows: { userId: string; avatarVersion?: number }[] }
-    const withAvatar = rows.find((one) => one.avatarVersion)
+    // **This admin's own row, not the first row carrying a version.** The
+    // roster is every account on a shared install, so `find` by the field
+    // alone returns whichever account another suite happened to give a picture
+    // to - and that one's avatar is not on this harness, so the route 404s and
+    // the assertion reads the refusal's `no-store` as a missing header. It
+    // fails only when the scheduler runs the right pair together, which is a
+    // test file being added anywhere in the tier.
+    const withAvatar = rows.find((one) => one.userId === admin.id && one.avatarVersion)
     expect(withAvatar, 'the avatar was accepted and the roster does not carry it').toBeDefined()
 
     const cache = await cacheOf(`/api/appearance/${withAvatar!.userId}/avatar`)

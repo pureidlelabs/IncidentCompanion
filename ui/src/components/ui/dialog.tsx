@@ -214,7 +214,33 @@ export function DialogHeader({
 
 /** The scrolling middle. The header and footer stay put. */
 export function DialogBody({ children }: { children: ReactNode }) {
-  return <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-4">{children}</div>
+  return (
+    // **Said, because CSS decides this axis if nothing else does.** A box
+    // scrolling one axis has the other promoted from `visible` to `auto`, so
+    // any child bleeding a pixel sideways draws a scrollbar the width of the
+    // dialog. `Section fills` always bleeds - ring room each side, plus the
+    // gutter its own scrollport reserves on the right - which measured 2px
+    // past this box on the importer's door.
+    //
+    // Padding is the wrong lever: that gutter is the platform's, and a wider
+    // scrollbar makes the overflow worse rather than better. `clip` is what
+    // this wants and not what it gets - beside `overflow-y: auto` it is
+    // demoted to `hidden`, so the box stays a scroll container that draws no
+    // bar. What that withholds is the ring room, never a row: the wizard's own
+    // content box ends 27px inside this one.
+    //
+    // **Said on the shared body rather than on the one dialog that overflows**,
+    // because sideways is not an axis a dialog scrolls in this kit: anything
+    // wide enough to need one carries its own scroller, as the importer's
+    // listing does at `scroll="box"`. Counted before widening it that far -
+    // `import-sentinel` is the only one of the fourteen call sites holding a
+    // `Section fills`, which is the construct that bleeds, and none holds a
+    // table directly. So nothing else is clipped today, and a future dialog
+    // wide enough to be is a layout to fix rather than one to scroll.
+    <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pt-2 pb-4">
+      {children}
+    </div>
+  )
 }
 
 /** Action row, right-aligned on its own ground. One filled button at most. */

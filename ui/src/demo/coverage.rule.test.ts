@@ -127,6 +127,7 @@ const SERVED = new Set([
   'collections',
   'about',
   'report-layouts',
+  'library',
 ])
 
 /**
@@ -139,7 +140,6 @@ const SERVED = new Set([
 const REFUSED = new Set([
   // Read the store, so they are not constants a build can capture.
   'regimes',
-  'library',
   'report-block-kinds',
   // `/report/languages`, which is the packs this install holds.
   'report',
