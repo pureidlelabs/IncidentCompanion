@@ -33,6 +33,20 @@ export interface CascadeRun {
 export const SILENCE_FLOOR_MS = 60 * 60 * 1000
 
 /**
+ * A run lasting this or more is a duration on the axis rather than an instant.
+ *
+ * A minute, because the stamps read `HH:MM`: anything shorter has one place on
+ * this axis, and a second stamp for it prints the same clock twice under a
+ * label saying it ended.
+ */
+export const SPAN_FLOOR_MS = 60 * 1000
+
+/** Whether a run covers enough time for the axis to draw it as a stretch. */
+function spans(run: CascadeRun): boolean {
+  return run.end - run.start >= SPAN_FLOOR_MS
+}
+
+/**
  * A description with the case's own names blanked out.
  *
  * Two entries differing only in which host they name are one kind of event,
@@ -98,11 +112,28 @@ export type CascadeRow =
   | { kind: 'day'; key: string; at: number }
   | { kind: 'silence'; key: string; span: number }
   | { kind: 'milestone'; key: string; label: string; at: number }
+  /**
+   * One minute of the incident: what began in it, and what ended in it.
+   *
+   * **The spine carries moments, and a run's end is one of them.** Drawn only
+   * at its start, a run that lasted an hour leaves the silence after it
+   * measured from a time nothing on the drawing shows - so `09:23`, `1h 14m`
+   * and `11:43` read as arithmetic that does not add up, because the `10:29`
+   * it was measured from is invisible.
+   *
+   * The end is a stamp and never a card: the card belongs to the moment the
+   * thing started. It is also why the end cannot be drawn inside the start's
+   * own row - placed there it prints `13:15` above the `12:50` that genuinely
+   * came next.
+   */
   | {
       kind: 'moment'
       key: string
       at: number
+      /** Runs beginning here. Their cards draw on this row. */
       runs: CascadeRun[]
+      /** Runs ending here. A stamp only. */
+      ends: CascadeRun[]
       /** Pixels of empty lane above this moment. */
       spaceBefore: number
     }
@@ -147,9 +178,9 @@ export interface CascadeRowOptions {
  * The runs as a list of rows: a day heading, a silence band, a stage rule, or
  * a moment carrying everything that started at it.
  *
- * A run is placed by its start. Where it ends is on the card, because two
- * rows for one run is a second thing to read for a fact the first already
- * carries.
+ * A run is placed by its start, and a run that lasted is placed again by its
+ * end - the axis is time, so a stretch of it has two ends and the drawing owes
+ * both. The second row carries no card.
  *
  * **A silence and a day change are two rows, not a choice between them.** The
  * gap that crosses midnight is the one most worth drawing, and it is exactly
@@ -159,11 +190,36 @@ export function cascadeRows(
   runs: readonly CascadeRun[],
   { milestones = [] }: CascadeRowOptions = {},
 ): CascadeRow[] {
-  const byStart = new Map<number, CascadeRun[]>()
-  for (const run of runs) {
-    const at = minuteOf(run.start)
-    byStart.set(at, [...(byStart.get(at) ?? []), run])
+  const moments = new Map<number, { at: number; runs: CascadeRun[]; ends: CascadeRun[] }>()
+  const slot = (at: number) => {
+    const key = minuteOf(at)
+    const found = moments.get(key)
+    if (found) return found
+    const made = { at: key, runs: [] as CascadeRun[], ends: [] as CascadeRun[] }
+    moments.set(key, made)
+    return made
   }
+  for (const run of runs) {
+    slot(run.start).runs.push(run)
+    if (spans(run)) slot(run.end).ends.push(run)
+  }
+
+  /**
+   * Was anything still running across this stretch?
+   *
+   * **A run's own duration is not a silence.** With the end drawn as its own
+   * moment, the hour between a run's two stamps is a gap wide enough to
+   * qualify - so a burst that ran for three hours is labelled quiet while it
+   * was the thing that was happening.
+   *
+   * Floored on both sides, because a moment is a minute: comparing a run's raw
+   * stamp against a floored moment makes `12:37:13 <= 12:37:00` false, and the
+   * guard never fires.
+   */
+  const quiet = (from: number, to: number) =>
+    !runs.some(
+      (run) => spans(run) && minuteOf(run.start) <= from && minuteOf(run.end) >= to,
+    )
 
   const pending = [...milestones].sort((left, right) => left.at - right.at)
   const rule = (one: CascadeMilestone): CascadeRow => ({
@@ -186,14 +242,15 @@ export function cascadeRows(
 
   let previous: number | null = null
   let day = ''
-  for (const at of [...byStart.keys()].sort((left, right) => left - right)) {
+  for (const moment of [...moments.values()].sort((left, right) => left.at - right.at)) {
+    const at = moment.at
     // Anything already past goes above the band; anything inside the quiet
     // stretch waits for it, or a detection at the end of a silence sorts above
     // the silence it was measured through.
     if (previous !== null) flush(previous, false)
 
     let broke = false
-    if (previous !== null && at - previous >= SILENCE_FLOOR_MS) {
+    if (previous !== null && at - previous >= SILENCE_FLOOR_MS && quiet(previous, at)) {
       broke = true
       rows.push({ kind: 'silence', key: `gap-${String(at)}`, span: at - previous })
     }
@@ -210,15 +267,41 @@ export function cascadeRows(
       kind: 'moment',
       key: `at-${String(at)}`,
       at,
-      runs: byStart.get(at) ?? [],
+      runs: moment.runs,
+      ends: moment.ends,
       // Nothing after a band: the band already draws that interval, and
       // charged twice a detection sits a canyon from the alert that raised it.
-      spaceBefore: previous === null || broke ? 0 : momentSpace(at - previous),
+      // **Nothing before a moment that only ends things.** The track marking a
+      // run stops at the row before its end marker, so any space above that
+      // marker is untinted - a gap between a run and its own ending, drawn at
+      // exactly the place the axis is making its claim.
+      spaceBefore:
+        previous === null || broke || (moment.runs.length === 0 && moment.ends.length > 0)
+          ? 0
+          : momentSpace(at - previous),
     })
     previous = at
   }
   for (const one of pending) rows.push(rule(one))
   return rows
+}
+
+/**
+ * Every run still going at a given moment - plural, since concurrent runs need
+ * one lane each.
+ *
+ * **Strictly between its own two stamps.** The track paints whole rows, so
+ * including either end row runs it past the stamp it should stop at: a nub
+ * above the start time, and a tail under the end marker. Those two rows draw
+ * their own piece, from their stamp outward.
+ *
+ * Lives here rather than in the drawing so a test can hold it: the demo case
+ * has no overlapping durations, so nothing on screen exercises the plural.
+ */
+export function runsSpanning(runs: readonly CascadeRun[], at: number): CascadeRun[] {
+  return runs.filter(
+    (run) => spans(run) && minuteOf(run.start) < at && minuteOf(run.end) > at,
+  )
 }
 
 /**

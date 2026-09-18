@@ -20,7 +20,9 @@ import {
   firstMoment,
   milestonesOf,
   MILESTONES,
+  runsSpanning,
   silenceHeight,
+  SPAN_FLOOR_MS,
   type CascadeMetric,
   type CascadeRun,
 } from './cascade-rows'
@@ -73,6 +75,25 @@ const LANE = 'grid grid-cols-[1fr_5.5rem_1fr] items-start gap-x-3'
 const SPINE =
   'linear-gradient(to right, transparent calc(50% - 0.5px), var(--border) calc(50% - 0.5px),' +
   ' var(--border) calc(50% + 0.5px), transparent calc(50% + 0.5px))'
+
+/**
+ * Where a moment's stamp sits inside its row, in pixels from the row's top.
+ *
+ * The connector is drawn at this height, so a track meeting the stamp has to
+ * stop here or run under the clock it is pointing at.
+ */
+const STAMP_CENTRE = 13
+
+/** How far lane `index` of `count` concurrent tracks sits from the spine. */
+const LANE_GAP = 6
+function laneLeft(index: number, count: number): string {
+  return `calc(50% + ${String((index - (count - 1) / 2) * LANE_GAP)}px)`
+}
+
+/** Whether a run lasted long enough for the axis to draw it as a stretch. */
+function lasts(run: CascadeRun): boolean {
+  return run.end - run.start >= SPAN_FLOOR_MS
+}
 
 export function TimelineGraphScreen({
   kase,
@@ -258,12 +279,67 @@ export function TimelineGraphScreen({
                 }
                 const observed = row.runs.filter((run) => run.track === 'observed')
                 const response = row.runs.filter((run) => run.track === 'response')
+                // A moment that only ends things is a stamp: no card, and the
+                // clock reads dimmer than one where something happened.
+                const endOnly = row.runs.length === 0 && row.ends.length > 0
+                const space = Math.round(row.spaceBefore)
+                /**
+                 * The three pieces of one track, laned together.
+                 *
+                 * **They are disjoint by construction** - a run spanning this
+                 * moment neither starts nor ends at it - so one lane index
+                 * across the three is what keeps two concurrent durations
+                 * side by side instead of one hiding the other.
+                 *
+                 * **Each reaches into its own row's space above.** That space
+                 * is the elapsed time, so a piece stopping at the row's own
+                 * top edge breaks the track exactly where the drawing is
+                 * making its claim.
+                 */
+                const pieces = [
+                  ...runsSpanning(runs, row.at).map((run) => ({
+                    run,
+                    box: { top: -space, bottom: 0 },
+                  })),
+                  ...row.runs.filter(lasts).map((run) => ({
+                    run,
+                    box: { top: STAMP_CENTRE, bottom: 0 },
+                  })),
+                  ...row.ends.map((run) => ({
+                    run,
+                    box: { top: -space, height: space + STAMP_CENTRE },
+                  })),
+                ]
                 return (
                   <li
                     key={row.key}
-                    className={LANE}
-                    style={{ marginTop: Math.round(row.spaceBefore) }}
+                    className={cn(LANE, 'relative')}
+                    style={{ marginTop: space }}
                   >
+                    {/* **Out of flow, so the track decorates and never
+                        displaces.** In flow it pushed everything after it down
+                        by its own duration, and an action at the same instant
+                        as a long-running event was drawn at the far end of
+                        that event's bar, reading as an hour later. */}
+                    {pieces.map((piece, lane) => (
+                      <span
+                        key={`${piece.run.key}-${String(lane)}`}
+                        aria-hidden
+                        data-part="cascade-span"
+                        data-severity={piece.run.tone}
+                        className={cn(
+                          'absolute w-1 -translate-x-1/2 rounded-full',
+                          piece.run.track === 'response'
+                            ? 'bg-action-contain'
+                            : TONE_FILL[piece.run.tone],
+                        )}
+                        style={{
+                          left: laneLeft(lane, pieces.length),
+                          opacity: 0.55,
+                          ...piece.box,
+                        }}
+                      />
+                    ))}
                     <span className="flex flex-col items-end gap-1.5">
                       {observed.map((run) => (
                         <span
@@ -289,10 +365,23 @@ export function TimelineGraphScreen({
                       />
                       <span
                         data-part="cascade-stamp"
-                        className="relative z-10 rounded-sm bg-surface px-1.5 font-mono text-2xs tabular-nums text-ink-muted"
+                        className={cn(
+                          'relative z-10 rounded-sm bg-surface px-1.5 font-mono text-2xs tabular-nums',
+                          endOnly ? 'text-ink-muted/70' : 'text-ink-muted',
+                        )}
                       >
                         {clockOf(new Date(row.at).toISOString())}
                       </span>
+                      {endOnly && (
+                        // Said, because a bare second stamp under a card reads
+                        // as another event with its description missing.
+                        <span
+                          data-part="cascade-ends"
+                          className="relative z-10 mt-0.5 bg-surface px-1.5 text-2xs text-ink-muted/70"
+                        >
+                          {row.ends.length === 1 ? 'ends' : `${String(row.ends.length)} end`}
+                        </span>
+                      )}
                     </span>
                     <span className="flex flex-col items-start gap-1.5">
                       {response.map((run) => (
