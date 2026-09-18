@@ -25,7 +25,10 @@ import { densityProjects } from './densities.js'
  */
 export default defineConfig({
   testDir: '.',
-  testMatch: /storybook\.spec\.ts/,
+  // **Anchored: every `*.storybook.spec.ts` beside the walk is the kit tier,
+  // which `playwright.kit.config.ts` runs.** Unanchored, the pattern reads as
+  // one filename and selects all sixteen.
+  testMatch: /(?:^|[\\/])storybook\.spec\.ts$/,
   projects: densityProjects(),
   // One worker: the probe measures rendered geometry, and a second browser
   // competing for the machine is how a settled reading stops being one.
