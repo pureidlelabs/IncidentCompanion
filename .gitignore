@@ -36,6 +36,10 @@ Thumbs.db
 # the runtimes are MIT, which AGPL-3.0 accepts. The cost is that a tree
 # committed once cannot be taken back out of history.
 node_modules/
+# A worktree links this rather than installing it, and a link is a file to git:
+# `node_modules/` matches a directory and never the link, so `git add -A` in a
+# worktree commits it. -> #888
+node_modules
 
 # A generated TLS pair. **Never committed**: a private key in history cannot
 # be taken back out, and this one is minted per checkout on first start.
