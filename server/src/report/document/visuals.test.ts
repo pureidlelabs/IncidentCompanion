@@ -17,7 +17,7 @@ import { execCard, killchain } from './visuals.js'
 import { HIGH, INK, LOW, MEDIUM } from './palette.js'
 import type { Cell, Node, TableNode } from './model.js'
 import type { ReportInput } from './resolve.js'
-import { english } from './packs.js'
+import { english } from '../../languages/packs.js'
 
 /**
  * **Built, not cast.** `as unknown as ReportInput` over the whole fixture lets

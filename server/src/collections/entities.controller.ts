@@ -64,7 +64,7 @@ import { actionSchema } from '../domain/entities/action.js'
 import { caseNoteSchema } from '../domain/entities/case-note.js'
 import { reportBlockSchema, reportSchema } from '../domain/entities/report.js'
 import { refuseWritesToSentReport } from '../report/freeze.js'
-import { refuseUnservedLanguage } from '../report/language.service.js'
+import { refuseUnservedLanguage } from '../report/unserved-language.js'
 import { caseOwnedRowSchema, patchSchema } from '../domain/field-spec.js'
 import { rowVersion } from '../domain/column-bounds.js'
 

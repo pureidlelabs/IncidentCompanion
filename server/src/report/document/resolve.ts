@@ -12,7 +12,7 @@
 import * as Y from 'yjs'
 
 import { WRITTEN_BLOCK } from '../block-kinds.js'
-import type { Translate } from './packs.js'
+import type { Translate } from '../../languages/packs.js'
 import { nodesFromFragment } from './fragment.js'
 import {
   actions,

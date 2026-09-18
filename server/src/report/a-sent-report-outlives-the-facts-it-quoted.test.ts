@@ -31,7 +31,7 @@ import { cases, impact, reportBlocks, reports, timeline, user } from '../db/sche
 import { ProseService } from '../prose/prose.service.js'
 import { ReportLifecycleService } from './lifecycle.service.js'
 import { ReportRenderService } from './render.service.js'
-import { english } from './document/packs.js'
+import { english } from '../languages/packs.js'
 import { openTestPool } from '../../test/database.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'

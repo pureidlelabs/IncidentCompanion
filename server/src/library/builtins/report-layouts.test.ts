@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 
 import { BUILTIN_CASE_TEMPLATES } from './case-templates.js'
 import { BUILTIN_REPORT_LAYOUTS } from './report-layouts.js'
-import { EN_KEYS } from '../../report/document/packs.js'
+import { EN_KEYS } from '../../languages/packs.js'
 import { WRITTEN_BLOCK } from '../../report/block-kinds.js'
 import { BLOCK_KINDS } from '../../domain/entities/report.js'
 import { RESOLVERS } from '../../report/document/resolve.js'

@@ -3,8 +3,8 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { reportLanguage } from '../db/schema/language.js'
-import { EN_KEYS } from './document/packs.js'
-import { LanguageService } from './language.service.js'
+import { EN_KEYS } from '../languages/packs.js'
+import { LanguageService } from '../languages/language.service.js'
 import { openTestPool } from '../../test/database.js'
 
 /**

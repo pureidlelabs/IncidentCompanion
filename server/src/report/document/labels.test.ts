@@ -8,8 +8,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { formatTimestamp } from './labels.js'
-import { NL } from './labels.nl.js'
-import { unknownKeysIn } from './packs.js'
+import { NL } from '../../languages/labels.nl.js'
+import { unknownKeysIn } from '../../languages/packs.js'
 
 describe('printing a timestamp', () => {
   it('answers empty for a value that is not there', () => {

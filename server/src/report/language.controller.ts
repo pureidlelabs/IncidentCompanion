@@ -25,10 +25,10 @@ import { z } from 'zod'
 
 import { languageTag } from '../domain/language-tag.js'
 
-import { LanguageService } from './language.service.js'
+import { LanguageService } from '../languages/language.service.js'
 import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
-import { EN_KEYS } from './document/packs.js'
+import { EN_KEYS } from '../languages/packs.js'
 
 /**
  * A pack as it arrives.

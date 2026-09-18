@@ -19,7 +19,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { RESOLVERS, resolveReport, type ReportInput } from './resolve.js'
-import { english } from './packs.js'
+import { english } from '../../languages/packs.js'
 import type { Node, TableNode } from './model.js'
 import type { CaseData } from './sections.js'
 

@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { methods } from './sections.js'
-import { EN } from './labels.en.js'
+import { EN } from '../../languages/labels.en.js'
 import type { Node } from './model.js'
 import type { ReportInput } from './resolve.js'
 

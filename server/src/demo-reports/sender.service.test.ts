@@ -21,7 +21,7 @@ import { reports } from '../db/schema/report.js'
 import { openTestPool } from '../../test/database.js'
 
 import { DemoReportSender } from './sender.service.js'
-import { LanguageService } from '../report/language.service.js'
+import { LanguageService } from '../languages/language.service.js'
 import { ReportLifecycleService } from '../report/lifecycle.service.js'
 import { ReportRenderService } from '../report/render.service.js'
 import { EvidenceStore } from '../evidence/store.js'

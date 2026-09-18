@@ -28,7 +28,7 @@ import { cases, evidence, reportBlocks, reports, user } from '../db/schema/index
 import { EvidenceStore } from '../evidence/store.js'
 import { ProseService } from '../prose/prose.service.js'
 import { ReportRenderService } from './render.service.js'
-import { english } from './document/packs.js'
+import { english } from '../languages/packs.js'
 import { openTestPool } from '../../test/database.js'
 import type { FigureNode } from './document/model.js'
 import { defaultPolicy } from '../policy/read.js'

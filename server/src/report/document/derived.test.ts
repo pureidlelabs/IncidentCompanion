@@ -13,7 +13,7 @@ import { glossary, impact, metrics, ribbon, rootCause, techniqueTable, technique
 import type { Cell, Node, TableNode } from './model.js'
 import type { CaseData } from './sections.js'
 import type { ReportInput } from './resolve.js'
-import { english } from './packs.js'
+import { english } from '../../languages/packs.js'
 import { PHASE_SEVERITY } from './palette.js'
 
 function input(data: Partial<CaseData>): ReportInput {

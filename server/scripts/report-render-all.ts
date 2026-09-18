@@ -25,7 +25,7 @@ import { toPdf } from '../src/report/document/pdf.js'
 import { toWord } from '../src/report/document/word.js'
 import type { Document } from '../src/report/document/model.js'
 import type { CaseData } from '../src/report/document/sections.js'
-import { english } from '../src/report/document/packs.js'
+import { english } from '../src/languages/packs.js'
 
 const BLOCKS = [
   { id: 'h', kind: 'case_header', heading: 'Case', headingKey: '', position: 0 },

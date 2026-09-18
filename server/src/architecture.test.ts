@@ -69,6 +69,21 @@ describe('every relative import resolves', () => {
  */
 const MAY_IMPORT: Record<string, string[]> = {
   domain: [],
+  /**
+   * **A leaf, and the second reason for one.** A language pack is the strings
+   * an install has for a set of keys, plus how a pack falls back and what
+   * counts as carried. It was under `report/` because a report was the first
+   * thing to print one; the reference is the second, and `specs` may not
+   * import `report`. Importing nothing, it can never be the near end of a
+   * cycle, so an edge into it is as free as one into `domain`.
+   *
+   * **`db` because where a pack is stored belongs here too.** A pack is a row,
+   * and the alternative -- a service in one folder and the table's meaning in
+   * another -- is what put this under `report/` in the first place. It reaches
+   * no feature, so it stays a near-leaf: the only edges out are the ones every
+   * folder has.
+   */
+  languages: ['db', 'config'],
   db: ['config'],
   config: [],
   // `customers` for the same reason `cases` has it: a demo raises cases, and a
@@ -147,6 +162,7 @@ const MAY_IMPORT: Record<string, string[]> = {
   // serves them has to know which regimes the install assesses. -> #200
   report: [
     'domain',
+    'languages',
     'library',
     'db',
     'access',
@@ -166,7 +182,7 @@ const MAY_IMPORT: Record<string, string[]> = {
    *
    * Nothing in `src/` imports this one, so the edges cannot become cycles.
    */
-  'demo-catalogue': ['domain', 'demos', 'health', 'report', 'specs'],
+  'demo-catalogue': ['domain', 'demos', 'health', 'languages', 'report', 'specs'],
   /**
    * Above the features, and the edges say why: it maps a vendor payload onto
    * `domain` schemas, writes through `collections`, and opens a new case
