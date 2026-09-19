@@ -629,7 +629,16 @@ export function TimelineScreen({
                 onRequestDelete={setDeleting}
               />
             </div>
-            <ol aria-label="Timeline entries" className="rounded-sm border border-border">
+            <ol
+              aria-label="Timeline entries"
+              // **Clipped rather than `overflow-hidden`.** The day heading
+              // carries a ground and square corners, so it paints over the
+              // corners this radius removes; clipping keeps the box from
+              // becoming a scrollport, which is what a bleed or a sticky child
+              // would then have to clear. The kit does the same for a table,
+              // `ui/src/components/ui/table.tsx`. -> #900
+              className="rounded-sm border border-border [clip-path:inset(0_round_var(--radius-sm))]"
+            >
               {runs.map((run, at) => {
                 const previous = runs[at - 1]?.lead
                 const dayChanged =
