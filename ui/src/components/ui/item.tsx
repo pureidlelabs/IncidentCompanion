@@ -63,7 +63,7 @@ export function ItemGroup({ className, ...props }: ItemGroupProps) {
       {...props}
       className={cn(
         'group/item-group flex w-full flex-col gap-4',
-        'has-data-[size=sm]:gap-2.5 has-data-[size=xs]:gap-2',
+        'has-data-[size=xs]:gap-2',
         className,
       )}
     />
@@ -82,7 +82,7 @@ const itemMedia = tv({
       icon: 'text-ink-muted icon-4',
       image: [
         'size-10 overflow-hidden rounded-sm [&_img]:size-full [&_img]:object-cover',
-        'group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6',
+        'group-data-[size=xs]/item:size-6',
       ],
     },
   },
