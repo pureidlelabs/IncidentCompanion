@@ -1,44 +1,70 @@
-"""Vite is told where a worktree's dependencies really live.
+"""Vite will serve a worktree's linked dependencies, and still serve its root.
 
 A worktree links `node_modules` from the main checkout rather than installing
 its own, so a module resolves to a path outside the client root and Vite's file
 server refuses it. The story tier reaches that first, and the refusal arrives as
 every `*.stories.tsx` failing to import its setup file.
 
-**Structural, because the tier that proves it cannot run where this does.** The
-condition needs a `node_modules` that is a symbolic link, which is true of a
-worktree and false of CI and of the main checkout -- so a behavioural test here
-would pass without reproducing anything. What it guards is that the mechanism
-is still wired: the allow list is fed by a resolver that follows links, not by
-a literal somebody can quietly delete. -> #894
+**Asked of Vite rather than of the file.** `server.fs.allow` replaces rather
+than extends -- `allow: raw?.fs?.allow ?? [workspaceRoot]` -- so a config that
+names the linked directories and nothing else drops the root, and a check that
+matched the source text passed with the whole declaration commented out. This
+resolves the config and reads the list Vite actually computed. -> #894
 """
 
 from __future__ import annotations
 
-import re
+import json
+import os
+import subprocess
+from pathlib import Path
+
+import pytest
 
 from tests._repo import REPO_ROOT
 
-CONFIG = REPO_ROOT / "ui" / "vite.config.ts"
+UI = REPO_ROOT / "ui"
+
+#: Resolve the config the way Vite does when it serves, and hand back the list.
+READ_THE_ALLOW_LIST = """
+import { resolveConfig } from 'vite'
+const config = await resolveConfig({ configFile: 'vite.config.ts' }, 'serve')
+console.log(JSON.stringify(config.server.fs.allow))
+"""
 
 
-def test_the_file_server_takes_an_allow_list() -> None:
-    """`server.fs.allow`, fed by the resolved list rather than by a literal."""
-    text = CONFIG.read_text(encoding="utf-8")
-    wired = re.compile(r"fs:\s*\{\s*allow:\s*\[\s*\.\.\.LINKED_DEPENDENCIES")
-    assert wired.search(text) is not None, (
-        f"{CONFIG.name} no longer feeds `server.fs.allow` from the resolved dependency "
-        "list, so a worktree's linked node_modules is outside what Vite will serve and "
-        "every story file fails to import its setup."
+def allow_list() -> list[str]:
+    """What Vite computes for `server.fs.allow`, or a skip when it cannot run."""
+    if not (UI / "node_modules").exists():
+        pytest.skip("ui/node_modules is absent, so vite cannot be loaded to answer")
+    done = subprocess.run(
+        ["node", "--input-type=module", "-e", READ_THE_ALLOW_LIST],
+        cwd=UI, capture_output=True, text=True, check=False, timeout=180,
+    )
+    assert done.returncode == 0, f"vite could not resolve the config:\n{done.stderr}"
+    return [os.path.realpath(one) for one in json.loads(done.stdout)]
+
+
+def test_a_linked_node_modules_is_servable() -> None:
+    """The directory behind the link, which is what a module resolves to."""
+    behind = os.path.realpath(REPO_ROOT / "node_modules")
+    assert behind in allow_list(), (
+        f"vite will not serve {behind}, so in a worktree every story file fails to "
+        "import its setup and the story tier cannot run at all"
     )
 
 
-def test_the_list_follows_the_link() -> None:
-    """`realpathSync`, which is the whole point: a link's own path is not servable."""
-    text = CONFIG.read_text(encoding="utf-8")
-    assert "LINKED_DEPENDENCIES" in text, f"{CONFIG.name} no longer declares the list"
-    declared = text.split("const LINKED_DEPENDENCIES", 1)[1].split("\n\n", 1)[0]
-    assert "realpathSync" in declared, (
-        "the dependency list no longer resolves the link, so in a worktree it names the "
-        f"link's own path and Vite refuses the directory behind it:\n{declared}"
+def test_the_client_root_is_still_servable() -> None:
+    """Declaring the list replaces Vite's own entry, so the root must be named.
+
+    Without this, a file under the root is served only where the module graph
+    already reached it -- the app and the story tier stay green while a cold
+    request for a source file, a sourcemap or an aliased path answers 403.
+    """
+    allowed = allow_list()
+    root = os.path.realpath(REPO_ROOT)
+    assert any(one == root or root.startswith(one + os.sep) or one.startswith(root + os.sep)
+               for one in allowed), (
+        f"no entry in {allowed} covers the project root {root}, so `searchForWorkspaceRoot` "
+        "is no longer in the allow list and Vite's own default was dropped with it"
     )

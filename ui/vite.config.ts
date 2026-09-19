@@ -9,7 +9,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
 import { chromium } from 'playwright'
-import { defineConfig, type Plugin, type ProxyOptions } from 'vite'
+import { defineConfig, searchForWorkspaceRoot, type Plugin, type ProxyOptions } from 'vite'
 import type { Reporter, TestModule, Vitest } from 'vitest/node'
 
 /**
@@ -26,6 +26,14 @@ import type { Reporter, TestModule, Vitest } from 'vitest/node'
  * does not check for it, so the `existsSync` is the whole test - a browsers
  * directory holding only last release's build answers a path that is not there.
  */
+const STORY_TIER = ((): boolean => {
+  try {
+    return existsSync(chromium.executablePath())
+  } catch {
+    return false
+  }
+})()
+
 /**
  * The real directories behind `node_modules`, for `server.fs.allow`.
  *
@@ -37,14 +45,6 @@ const LINKED_DEPENDENCIES: string[] = ['node_modules', '../node_modules']
   .map((one) => resolve(import.meta.dirname, one))
   .filter((one) => existsSync(one))
   .map((one) => realpathSync(one))
-
-const STORY_TIER = ((): boolean => {
-  try {
-    return existsSync(chromium.executablePath())
-  } catch {
-    return false
-  }
-})()
 
 if (!STORY_TIER) {
   console.warn(
@@ -294,10 +294,13 @@ export default defineConfig({
      * it. The story tier is what reaches it first, and the refusal arrives as
      * every story file failing to import its setup. -> #894
      *
-     * Resolved rather than written down: in an ordinary checkout these are the
-     * directories already inside the root, and the entries are inert.
+     * **`searchForWorkspaceRoot` first, because declaring this replaces rather
+     * than extends.** `allow: raw?.fs?.allow ?? [workspaceRoot]` -- a nullish
+     * coalesce, so naming the linked directories alone drops the root Vite
+     * would have found, and a file under it is then served only if the module
+     * graph already reached it.
      */
-    fs: { allow: [...LINKED_DEPENDENCIES] },
+    fs: { allow: [searchForWorkspaceRoot(import.meta.dirname), ...LINKED_DEPENDENCIES] },
 
     /**
      * **Plaintext, and the cookie rule that forced https here is what permits
