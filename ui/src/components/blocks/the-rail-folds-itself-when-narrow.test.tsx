@@ -114,6 +114,21 @@ describe('the rail folds itself when the viewport is narrow', () => {
     expect(folded(), 'the rail kept its width when the window no longer had room').toBe(true)
   })
 
+  /** And the other direction: room returning is as much a change as room going. */
+  it('unfolds when the window widens over it', () => {
+    const media = mockMatchMedia(true)
+    viewportIsNarrow(true)
+    draw()
+    expect(folded()).toBe(true)
+
+    viewportIsNarrow(false)
+    act(() => {
+      media.fireChange(false)
+    })
+
+    expect(folded(), 'the rail stayed folded once the window had room again').toBe(false)
+  })
+
   /** And a press still outranks the width, in both directions. */
   it('keeps an answer the analyst gave when the window narrows', () => {
     const media = mockMatchMedia(false)
