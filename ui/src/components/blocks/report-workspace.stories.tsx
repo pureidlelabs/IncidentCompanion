@@ -394,18 +394,21 @@ export const SectionKindChosen: Story = {
 }
 
 /**
- * A 760px pane: the rail and the page both fold away, and the column keeps its
- * measure.
+ * An 820px pane in paper: the rail and the page both fold, and the column
+ * keeps its measure.
  *
  * A narrow pane needs the measure more than it needs the index, and it answers
  * to the pane rather than to the window -- a browser wide enough around a pane
  * this narrow used to draw all three columns. -> #952
+ *
+ * The width is the one `NarrowComposeKeepsTheRail` uses, so the pair is what
+ * says the two views fold at different panes rather than at one.
  */
 export const Narrow: Story = {
   name: 'A narrow pane folds the rail and the page',
   args: { view: 'paper' },
   render: (args) => (
-    <div className="flex h-dvh w-[760px] flex-col overflow-y-auto border-r border-dashed border-border">
+    <div className="flex h-dvh w-[820px] flex-col overflow-y-auto border-r border-dashed border-border">
       <ReportWorkspace {...args} />
     </div>
   ),
@@ -416,13 +419,33 @@ export const Narrow: Story = {
     const rail = await canvas.findByTestId('report-section-rail')
     await expect(
       drawn(rail),
-      'a 760px pane drew the rail, so the columns came from the window',
+      'an 820px pane drew the rail, so the columns came from the window',
     ).toBe(false)
     const paper = canvasElement.querySelector('[aria-label="The printed page"]')
     await expect(
       paper === null || !drawn(paper as HTMLElement),
-      'a 760px pane drew the printed page, which has nowhere beside the column to go',
+      'an 820px pane drew the printed page, which has nowhere beside the column to go',
     ).toBe(true)
+  },
+}
+
+/**
+ * The same 820px pane in compose, which keeps its index.
+ *
+ * Compose has two columns where paper has three, so it comes back at a pane
+ * the paper view cannot hold. Charging it the paper view's threshold takes the
+ * index off a laptop with room for it. -> `FOLD`
+ */
+export const NarrowComposeKeepsTheRail: Story = {
+  name: 'A narrow pane keeps the index in compose',
+  render: (args) => (
+    <div className="flex h-dvh w-[820px] flex-col overflow-y-auto border-r border-dashed border-border">
+      <ReportWorkspace {...args} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const rail = await canvas.findByTestId('report-section-rail')
+    await expect(drawn(rail), 'an 820px compose pane folded the index away').toBe(true)
   },
 }
 

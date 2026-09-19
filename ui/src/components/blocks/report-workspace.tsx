@@ -161,6 +161,29 @@ const VIEWS: readonly { id: ViewMode; label: string; icon: typeof FileText }[] =
   { id: 'preview', label: 'Document', icon: FileText },
 ]
 
+/**
+ * Where the columns come back, per view.
+ *
+ * **The rail and the printed page do not fold together.** The page needs a
+ * 26rem column beside the measure, so the three-column view cannot come back
+ * until the pane can hold all three; compose has two columns and comes back
+ * sooner, and charging it the page's threshold takes the index off a laptop
+ * that has room for it. Each literal is written out because Tailwind reads the
+ * source rather than the value. `@3xl` is 48rem and `@5xl` is 64rem.
+ */
+const FOLD = {
+  paper: {
+    grid: '@5xl:grid-cols-[13rem_minmax(0,1fr)_minmax(0,26rem)]',
+    column: '@5xl:col-start-2',
+    rail: '@5xl:block',
+  },
+  compose: {
+    grid: '@3xl:grid-cols-[13rem_minmax(0,1fr)]',
+    column: '@3xl:col-start-2',
+    rail: '@3xl:block',
+  },
+} as const
+
 export function ReportWorkspace({
   report,
   blocks: blocksGiven,
@@ -177,6 +200,7 @@ export function ReportWorkspace({
 }: ReportWorkspaceProps) {
   const blocks = blocksGiven ?? []
   const [mode, setMode] = useState<ViewMode>(view)
+  const fold = FOLD[mode === 'paper' ? 'paper' : 'compose']
   // The section holding the caret. Empty until somebody writes or jumps.
   const [here, setHere] = useState('')
   /**
@@ -258,18 +282,8 @@ export function ReportWorkspace({
          * element it measures. `@5xl` is 64rem, which is what `lg` was. -> #952
          */
         <div className="@container flex min-h-0 flex-1">
-          <div
-            className={cn(
-              'grid min-h-0 w-full flex-1',
-              // The rail folds away below `@5xl` rather than shrinking: at
-              // 13rem it is already the narrowest it reads at, and a narrow
-              // pane needs the measure more than it needs the index.
-              mode === 'paper'
-                ? '@5xl:grid-cols-[13rem_minmax(0,1fr)_minmax(0,26rem)]'
-                : '@5xl:grid-cols-[13rem_minmax(0,1fr)]',
-            )}
-          >
-            <SectionRail sections={rail} here={here} onJump={jump} />
+          <div className={cn('grid min-h-0 w-full flex-1', fold.grid)}>
+            <SectionRail sections={rail} here={here} onJump={jump} className={fold.rail} />
 
             {/* **Sharing the section column's cell, not taking one of its own.**
               A bare grid item lands in the next free cell, which is the
@@ -277,7 +291,7 @@ export function ReportWorkspace({
               report under the rail at 208px. One channel serves every section,
               so the refusal is the document's and is stated once;
               `prose-body.tsx` owns the read-only half, which is per body. */}
-            <div className="flex min-h-0 min-w-0 flex-col @5xl:col-start-2">
+            <div className={cn('flex min-h-0 min-w-0 flex-col', fold.column)}>
               <div className="px-4 pt-3 empty:hidden">
                 <ProseRefusal channel={sync?.channel ?? null} status={sync?.status} />
               </div>
@@ -579,13 +593,16 @@ function SectionRail({
   sections,
   here,
   onJump,
+  className,
 }: {
   sections: readonly RailSection[]
   here: string
   onJump: (id: string) => void
+  /** Which pane width brings the rail back. -> `FOLD` */
+  className: string
 }) {
   return (
-    <div className="hidden border-r border-border py-3 @5xl:block">
+    <div className={cn('hidden border-r border-border py-3', className)}>
       <nav
         // **Not "Sections".** The case rail already carries that name, and two
         // navigation landmarks with one label are ambiguous to a screen reader
