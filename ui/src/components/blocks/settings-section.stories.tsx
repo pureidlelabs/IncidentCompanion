@@ -1,11 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent } from 'storybook/test'
 
-import {
-  AbsentRow,
-  SettingsRow,
-  SettingsSection,
-} from '@/components/blocks/settings-section'
+import { AbsentRow, SettingsRow, SettingsSection } from '@/components/blocks/settings-section'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { TextField } from '@/components/ui/text-field'
@@ -38,8 +34,12 @@ export const Rows: Story = {
     summary: 'How long an analyst stays signed in.',
     children: (
       <>
-        <SettingsRow label="Stay signed in" description="Until the browser is closed.">
-          <Switch defaultSelected />
+        <SettingsRow
+          label="Stay signed in"
+          description="Until the browser is closed."
+          htmlFor="settings-stay-signed-in"
+        >
+          <Switch id="settings-stay-signed-in" defaultSelected />
         </SettingsRow>
         <SettingsRow label="Sign out everywhere" description="Ends every other session.">
           <Button variant="outline" size="sm" className="w-fit">
@@ -65,11 +65,11 @@ export const Bare: Story = {
     title: 'Appearance',
     children: (
       <>
-        <SettingsRow label="Dense tables">
-          <Switch />
+        <SettingsRow label="Dense tables" htmlFor="settings-dense-tables">
+          <Switch id="settings-dense-tables" />
         </SettingsRow>
-        <SettingsRow label="Show the kill chain rail">
-          <Switch defaultSelected />
+        <SettingsRow label="Show the kill chain rail" htmlFor="settings-kill-chain-rail">
+          <Switch id="settings-kill-chain-rail" defaultSelected />
         </SettingsRow>
       </>
     ),
@@ -95,11 +95,7 @@ export const BoundToAControl: Story = {
         description="Shown beside every row you write."
         htmlFor="settings-display-name"
       >
-        <TextField
-          id="settings-display-name"
-          aria-label="Display name"
-          defaultValue="R. Okonkwo"
-        />
+        <TextField id="settings-display-name" aria-label="Display name" defaultValue="R. Okonkwo" />
       </SettingsRow>
     ),
   },
@@ -176,8 +172,12 @@ export const Disabled: Story = {
     summary: 'Set by the operator, not by an analyst.',
     children: (
       <>
-        <SettingsRow label="Keep closed cases" description="Fixed at ninety days.">
-          <Switch defaultSelected isDisabled />
+        <SettingsRow
+          label="Keep closed cases"
+          description="Fixed at ninety days."
+          htmlFor="settings-keep-closed"
+        >
+          <Switch id="settings-keep-closed" defaultSelected isDisabled />
         </SettingsRow>
         <SettingsRow
           label="Retention window"
@@ -213,8 +213,8 @@ export const ALongDescription: Story = {
       <SettingsRow
         label="Announce which section you are reading"
         description={
-          'Every analyst with this case open sees the section you are on and the row you '
-          + 'are editing, which is what stops two people writing the same field at once.'
+          'Every analyst with this case open sees the section you are on and the row you ' +
+          'are editing, which is what stops two people writing the same field at once.'
         }
       >
         <Switch defaultSelected />
