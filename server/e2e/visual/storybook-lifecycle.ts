@@ -260,7 +260,33 @@ export interface StoryLoad {
  * genuinely finished -- `play` included -- applying its `viewport` global
  * along the way. Leaves probing and capturing to the caller.
  */
+/**
+ * What a module that did not arrive says, in either of Vite's two wordings.
+ *
+ * **A fetch that failed is about the server, not the story.** The dev server
+ * compiles a story's module graph on demand and re-optimises when it changes,
+ * and a page asking for a URL from before that leaves the browser holding a
+ * module it cannot fetch. The story is fine; the request was.
+ */
+const MODULE_DID_NOT_ARRIVE = /(?:Failed to fetch|error loading) dynamically imported module/
+
 export async function loadStory(
+  page: Page,
+  storybookUrl: string,
+  storyId: string,
+  ground: string,
+): Promise<StoryLoad> {
+  const first = await attemptStory(page, storybookUrl, storyId, ground)
+  // **Asked again once, and only for a module that did not arrive.** A story
+  // that renders an error, or whose `play` threw, is answering about itself
+  // and a second reading of it says the same thing. A `storyFinished` that
+  // never fires is deliberately not here: it costs twenty seconds, and on a
+  // server that is answering it means the story really did not finish.
+  if (first.broke === null || !MODULE_DID_NOT_ARRIVE.test(first.broke)) return first
+  return attemptStory(page, storybookUrl, storyId, ground)
+}
+
+async function attemptStory(
   page: Page,
   storybookUrl: string,
   storyId: string,
