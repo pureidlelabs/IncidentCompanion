@@ -99,7 +99,9 @@ export async function armStoryFinished(page: Page): Promise<void> {
         // its first throw.
         channel.on('playFunctionThrewException', (thrown) => {
           window.__frameOraclePlayError ??=
-            typeof thrown.message === 'string' ? thrown.message : 'play threw a value with no message'
+            typeof thrown.message === 'string'
+              ? thrown.message
+              : 'play threw a value with no message'
         })
         channel.once('storyFinished', resolve)
       }
@@ -169,7 +171,9 @@ async function currentViewportGlobal(page: Page): Promise<string | null> {
  * widening support past `MINIMAL_VIEWPORTS`' four pixel-only entries has
  * nothing here to prove it against.
  */
-export async function applyStoryViewport(page: Page): Promise<{ width: number; height: number } | null> {
+export async function applyStoryViewport(
+  page: Page,
+): Promise<{ width: number; height: number } | null> {
   const value = await currentViewportGlobal(page)
   if (value === null || !isKnownViewport(value)) return null
   const { styles } = MINIMAL_VIEWPORTS[value]
@@ -211,7 +215,7 @@ async function whyThePreviewScriptFailed(page: Page): Promise<string> {
       // itself perfectly serveable.
       return answer.ok
         ? `the entry script re-fetched ${String(answer.status)}, so the failure is either ` +
-          'in a module it imports or was transient -- read the preview console'
+            'in a module it imports or was transient -- read the preview console'
         : `re-fetched ${String(answer.status)} ${answer.statusText}`
     } catch (thrown) {
       // The budget is named: `signal timed out` is Chromium's wording for our
@@ -270,6 +274,30 @@ export interface StoryLoad {
  * nothing can reach.
  */
 const MODULE_DID_NOT_ARRIVE = /Failed to fetch dynamically imported module/
+
+/**
+ * What a `storyFinished` that never fires says, in Playwright's wording.
+ *
+ * The same stale module graph reaches the walk this way too: the preview never
+ * finishes because the module it is waiting on never arrives. Measured on one
+ * story reporting both shapes across two runs of an unchanged tree. -> #887
+ */
+const NEVER_FINISHED = /storyFinished never fired/
+
+/**
+ * Whether a failure is about the server that served the story, not the story.
+ *
+ * A dev Storybook compiles a story's module graph on demand and re-optimises
+ * when it changes, so a long-lived one hands the browser URLs from before the
+ * last re-optimisation. What comes back names the component, which is what
+ * makes it read as a breakage in the tree.
+ *
+ * Both shapes survive the one retry `loadStory` makes, so this is what the
+ * report classifies by rather than what it retries on.
+ */
+export function fromAStaleServer(failure: string): boolean {
+  return MODULE_DID_NOT_ARRIVE.test(failure) || NEVER_FINISHED.test(failure)
+}
 
 /**
  * Loads one story, asking a second time for a module that did not arrive.
