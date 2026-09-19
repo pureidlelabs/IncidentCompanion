@@ -199,7 +199,13 @@ export function MenuSectionGroup<T extends object>({
   return (
     <MenuSection {...props}>
       {title !== undefined && (
-        <Header className="px-1.5 py-1 text-xs font-medium text-ink-muted">
+        <Header
+          // `Header` renders a `header`, which is a banner and not a child
+          // `role="menu"` allows. The section still names itself from it.
+          // -> #932
+          role="presentation"
+          className="px-1.5 py-1 text-xs font-medium text-ink-muted"
+        >
           {title}
         </Header>
       )}
@@ -216,7 +222,9 @@ export function MenuSectionGroup<T extends object>({
  */
 export function MenuLabel({ children }: { children: ReactNode }) {
   return (
-    <Header className="px-1.5 py-1 text-xs font-medium text-ink-muted">{children}</Header>
+    <Header role="presentation" className="px-1.5 py-1 text-xs font-medium text-ink-muted">
+      {children}
+    </Header>
   )
 }
 

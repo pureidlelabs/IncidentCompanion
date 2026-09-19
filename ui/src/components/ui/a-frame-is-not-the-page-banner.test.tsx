@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
+import { Calendar } from './calendar'
 import { Frame, FrameHeader, FrameTitle } from './frame'
 
 /**
@@ -38,6 +39,12 @@ describe('a frame is not the page banner', () => {
    */
   it('claims no banner for several frames on one screen', () => {
     draw(3)
+    expect(screen.queryAllByRole('banner')).toHaveLength(0)
+  })
+
+  /** The calendar's month strip is the same shape, one component over. -> #932 */
+  it('claims no banner for the calendar month strip', () => {
+    render(<Calendar aria-label="Containment date" />)
     expect(screen.queryAllByRole('banner')).toHaveLength(0)
   })
 })
