@@ -407,6 +407,31 @@ export const Narrow: Story = {
   ),
 }
 
+/**
+ * The three-column layout answers to the pane, not to the window.
+ *
+ * `lg:` is a viewport breakpoint, so a browser wide enough gave this 760px
+ * pane three columns and squeezed the index column to 135px -- and the block
+ * rows inside it to 75px. The rail folds for a narrow pane now, which is what
+ * its own comment always said it did. -> #952
+ */
+export const NarrowKeepsOneColumn: Story = {
+  name: 'A narrow pane folds the rail',
+  args: { view: 'paper' },
+  render: (args) => (
+    <div className="flex h-dvh w-[760px] flex-col overflow-y-auto border-r border-dashed border-border">
+      <ReportWorkspace {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const rail = canvasElement.querySelector('[aria-label="Sections of this report"]')
+    await expect(
+      rail === null || rail.getBoundingClientRect().width === 0,
+      'a 760px pane still drew the section rail, so the columns came from the window',
+    ).toBe(true)
+  },
+}
+
 /** A label and a heading past the room they have. */
 export const Overlong: Story = {
   name: 'A label too long for the strip',
