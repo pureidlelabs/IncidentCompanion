@@ -93,6 +93,7 @@ export function ReportPaperPage({
         ref={box}
         // The scroller itself takes focus: arrow keys move the focused
         // element's nearest scrollable ancestor. -> #929
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
         tabIndex={0}
         className="sticky top-14 h-(--document-viewport-h) overflow-y-auto p-4"
       >

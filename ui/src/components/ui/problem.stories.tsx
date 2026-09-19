@@ -116,11 +116,11 @@ export const BeforeAndAfter: Story = {
     <div className="flex gap-8">
       {[null, 'That host is already on the case.'].map((message, index) => (
         <div key={index} className="flex w-64 flex-col gap-1 rounded-lg border p-3">
-          <label className="text-sm" htmlFor={`before-after-host-${index}`}>
+          <label className="text-sm" htmlFor={`before-after-host-${String(index)}`}>
             Host
           </label>
           <Input
-            id={`before-after-host-${index}`}
+            id={`before-after-host-${String(index)}`}
             defaultValue="FIN-WS-04"
             {...(message ? { 'aria-invalid': true } : {})}
           />

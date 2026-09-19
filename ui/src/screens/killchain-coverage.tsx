@@ -139,6 +139,7 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
     // need about 36rem to letter; below that the abbreviations lose characters
     // with no ellipsis to say so, which is a phase name that reads as a
     // different phase. The pane scrolls the page, so the scroller is here.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
     <div tabIndex={0} className="overflow-x-auto">
       <ol
         data-part="killchain-ribbon"

@@ -30,7 +30,7 @@ describe('a table names its selection column', () => {
     draw(mode)
     const named = screen
       .getAllByRole('columnheader')
-      .map((header) => header.getAttribute('aria-label') ?? header.textContent?.trim() ?? '')
+      .map((header) => header.getAttribute('aria-label') ?? header.textContent.trim())
     expect(named, 'a column header reaches a reader with nothing to announce').not.toContain('')
   })
 })
