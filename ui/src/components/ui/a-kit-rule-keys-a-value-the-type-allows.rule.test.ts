@@ -23,11 +23,25 @@ const KIT_DIR = dirname(fileURLToPath(import.meta.url))
 /** `data-[size=sm]`, `group-data-[size=sm]/item`, `has-data-[state=open]`. */
 const KEYED = /data-\[([a-z-]+)=([a-z0-9-]+)\]/g
 
-/** `size?: 'default' | 'xs'`, on one line, which is how this kit writes them. */
-const union = (source: string, attribute: string): string[] | undefined => {
-  const found = new RegExp(`\\b${attribute}\\?:\\s*([^\\n]+)`).exec(source)
-  const literals = found?.[1]?.match(/'([a-z0-9-]+)'/g)
-  return literals?.map((one) => one.slice(1, -1))
+/**
+ * Every value the file's own declarations of `attribute` allow.
+ *
+ * **All of them, not the first.** A kit file often declares one prop name
+ * twice for two components -- `toggle-button.tsx` has `variant?: 'outline' |
+ * 'ghost'` and `variant?: 'segmented' | 'spaced'` -- so reading the first
+ * would refuse a rule keyed on the second's value, which is correct code.
+ *
+ * **A declaration carrying no literal is not a union.** An alias
+ * (`variant?: RadioVariant`) or a union wrapped past the print width yields
+ * nothing here, and the attribute goes unchecked rather than wrongly refused:
+ * guessing at what an alias resolves to would make this rule wrong instead of
+ * strict.
+ */
+const union = (source: string, attribute: string): string[] => {
+  const found = [...source.matchAll(new RegExp(`\\b${attribute}\\?:\\s*([^\\n]+)`, 'g'))]
+  return found.flatMap((one) =>
+    (one[1]?.match(/'([a-z0-9-]+)'/g) ?? []).map((literal) => literal.slice(1, -1)),
+  )
 }
 
 describe('a kit rule keys a value the type allows', () => {
@@ -38,8 +52,10 @@ describe('a kit rule keys a value the type allows', () => {
     .map((name) => join(KIT_DIR, name))
 
   it('walks the kit it claims to walk', () => {
-    // A glob that matches nothing passes every assertion below it.
-    expect(files.length).toBeGreaterThan(30)
+    // A directory read that matches nothing passes every assertion below it.
+    // The floor is the sibling rule's, over the same file set.
+    // -> `a-composition-is-a-block.rule.test.ts`
+    expect(files.length).toBeGreaterThan(50)
   })
 
   it('leaves no rule keyed on a value nothing can write', () => {
@@ -49,7 +65,7 @@ describe('a kit rule keys a value the type allows', () => {
       for (const [, attribute, value] of source.matchAll(KEYED)) {
         if (attribute === undefined || value === undefined) continue
         const allowed = union(source, attribute)
-        if (allowed === undefined || allowed.length === 0) continue
+        if (allowed.length === 0) continue
         if (!allowed.includes(value)) {
           const where = file.slice(KIT_DIR.length + 1)
           dead.push(`${where} keys data-${attribute}=${value}, which is not ${allowed.join(' | ')}`)
