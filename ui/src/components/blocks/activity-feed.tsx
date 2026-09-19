@@ -70,9 +70,9 @@ export function ActivityFeed({
             {index < groups.length - 1 && (
               <TimelineSeparator
                 className={cn(
-                  'group-data-[orientation=vertical]/timeline:-left-6',
-                  'group-data-[orientation=vertical]/timeline:top-7',
-                  'group-data-[orientation=vertical]/timeline:h-[calc(100%-1.75rem)]',
+                  // Plain classes: the kit emits its own unprefixed now, so
+                  // these outrank nothing and simply merge. -> #897
+                  'top-7 h-[calc(100%-1.75rem)]',
                   // `--border`, not the kit's completed `--primary`. A feed is
                   // not a progress run: every entry here is a write that
                   // already happened, so the kit's done colour applies to all
