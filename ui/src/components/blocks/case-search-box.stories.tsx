@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { useState } from 'react'
 
 import { campaignCase } from '@/fixtures/campaign'
@@ -35,4 +36,34 @@ export const Empty: Story = { name: 'Nothing typed' }
 export const Typed: Story = {
   name: 'A hostname typed',
   render: () => <Typing initial="dc-01" />,
+}
+
+/**
+ * A press away from the list closes it.
+ *
+ * React Aria wires no outside press for a non-modal popover -- `usePopover`
+ * passes `isDismissable: !isNonModal` -- so this is the box's own, and the
+ * browser is where it has to hold: jsdom and chromium route a pointer press
+ * differently. -> #908
+ */
+export const PressedAway: Story = {
+  name: 'Pressed away from the list',
+  render: () => (
+    <div className="flex flex-col gap-4">
+      <Typing initial="dc-01" />
+      <p data-testid="elsewhere">Chrome with nothing to focus.</p>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // The surface portals to `body`, so it is not inside the canvas: a query
+    // scoped to the canvas misses it and reads as a list that never opened.
+    await expect(await screen.findByRole('listbox')).toBeInTheDocument()
+
+    await userEvent.click(canvas.getByTestId('elsewhere'))
+
+    await waitFor(async () => {
+      await expect(screen.queryByRole('listbox')).toBeNull()
+    })
+  },
 }

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 
 import type { Case } from '@/api/model'
 import { PaletteResults } from '@/components/blocks/palette-results'
@@ -43,6 +43,9 @@ export interface CaseSearchBoxProps {
  *
  * The list is non-modal, so the caret never leaves the field.
  */
+/** The results surface, named so an outside press can tell it from the page. */
+const RESULTS_PART = 'case-search-results'
+
 export function CaseSearchBox({
   kase,
   query,
@@ -54,6 +57,32 @@ export function CaseSearchBox({
 }: CaseSearchBoxProps) {
   const anchor = useRef<HTMLDivElement>(null)
   const [dismissed, setDismissed] = useState(false)
+  const open = query.trim() !== '' && !dismissed
+
+  /**
+   * The outside press React Aria does not wire.
+   *
+   * `usePopover` passes `isDismissable: !isNonModal`, so a non-modal popover
+   * gets no interact-outside handler at all, and its blur path returns early
+   * when the press leaves no `relatedTarget` -- which is every press on plain
+   * chrome. Capturing, so a handler that stops propagation cannot keep the
+   * list open over the case. -> #908
+   */
+  useEffect(() => {
+    if (!open) return
+    const closeOnOutside = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (anchor.current?.contains(target)) return
+      if (target.closest(`[data-part="${RESULTS_PART}"]`)) return
+      setDismissed(true)
+    }
+    document.addEventListener('pointerdown', closeOnOutside, true)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutside, true)
+    }
+  }, [open])
+
   const groups = useMemo(
     () => asPaletteGroups(paletteRows(query, { commands, sections, kase })),
     [query, commands, sections, kase],
@@ -84,8 +113,9 @@ export function CaseSearchBox({
           {...(inputRef === undefined ? {} : { inputRef })}
         />
         <Popover
+          data-part={RESULTS_PART}
           triggerRef={anchor}
-          isOpen={query.trim() !== '' && !dismissed}
+          isOpen={open}
           onOpenChange={(open) => {
             if (!open) setDismissed(true)
           }}

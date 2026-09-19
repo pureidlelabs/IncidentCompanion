@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -47,6 +47,48 @@ describe('the case omnibox', () => {
     await user.type(screen.getByRole('searchbox', { name: FIELD }), '   ')
 
     expect(screen.queryByRole('listbox')).toBeNull()
+  })
+
+  /**
+   * An outside press closes the list.
+   *
+   * Both shapes, because React Aria takes them down different paths: a press
+   * on something focusable leaves a `relatedTarget`, and one on plain chrome
+   * leaves none, which is the case its blur handler returns early on. -> #908
+   */
+  it.each([
+    ['a button beside the field', 'button'],
+    ['plain chrome with nothing to focus', 'chrome'],
+  ])('closes the list on a press outside it: %s', async (_what, kind) => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <Controlled initial="" />
+        {kind === 'button' ? (
+          <button type="button">elsewhere</button>
+        ) : (
+          <div data-testid="elsewhere">elsewhere</div>
+        )}
+      </>,
+    )
+    await user.type(screen.getByRole('searchbox', { name: FIELD }), 'a')
+    expect(await screen.findByRole('listbox')).toBeInTheDocument()
+
+    await user.click(
+      kind === 'button'
+        ? screen.getByRole('button', { name: 'elsewhere' })
+        : screen.getByTestId('elsewhere'),
+    )
+
+    // `waitFor`, because the surface animates out: it is still in the document
+    // for the frame after the press, and asserting synchronously reads that
+    // frame rather than the outcome.
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('listbox'),
+        'the list stays open over the case after the analyst pressed away from it',
+      ).toBeNull()
+    })
   })
 
   it('opens the list once the query holds something', async () => {
