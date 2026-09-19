@@ -325,9 +325,7 @@ export function StepperSeparator({ className, ...props }: React.ComponentProps<'
         // attribute selector and outranks a caller's bare one whatever the
         // merge does. The stepper's context carries its orientation, so the
         // size is chosen here instead. -> #897
-        orientation === 'horizontal'
-          ? 'h-0.5 flex-1'
-          : ['h-12 w-0.5', 'group-data-[orientation=vertical]/stepper-nav:ms-3'],
+        orientation === 'horizontal' ? 'h-0.5 flex-1' : 'ms-3 h-12 w-0.5',
         className,
       )}
       {...props}

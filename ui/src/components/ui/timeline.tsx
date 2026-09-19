@@ -36,7 +36,9 @@ export interface TimelineProps extends React.ComponentProps<'div'> {
  *
  * - Steps are 1-based. An item is `data-completed` while `step <= value`.
  * - Presentational: nothing here is focusable and no part is a control.
- * - `orientation` is read by every part through a group selector.
+ * - `orientation` reaches most parts through a group selector, and the
+ *   separator through the context: a prefixed class outranks a caller's bare
+ *   one, so the part a caller sizes picks for itself. -> #897
  */
 export function Timeline({
   defaultValue = 1,

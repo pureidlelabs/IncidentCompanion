@@ -20,6 +20,9 @@ import { Timeline, TimelineItem, TimelineSeparator } from './timeline'
 const sizes = (el: Element, axis: 'h' | 'w') =>
   el.className.split(/\s+/).filter((one) => new RegExp(`(^|:)${axis}-`).test(one))
 
+/** Every class the part drew, so a branch rendering the other axis is visible. */
+const drawn = (el: Element) => new Set(el.className.split(/\s+/).filter(Boolean))
+
 describe('a caller outranks the kit on size', () => {
   it.each([
     ['vertical', 'h'],
@@ -38,12 +41,17 @@ describe('a caller outranks the kit on size', () => {
       sizes(separator, axis),
       'the kit keeps a size of its own beside the one the caller asked for',
     ).toEqual([`${axis}-4`])
+
+    // The axis the caller did not set. Asserting only their own leaves a
+    // branch rendering the other orientation's classes entirely green.
+    const other = orientation === 'vertical' ? 'w-0.5' : 'h-0.5'
+    expect(drawn(separator), `the ${orientation} line drew the other axis`).toContain(other)
   })
 
   it.each([
-    ['vertical', 'h'],
-    ['horizontal', 'h'],
-  ] as const)('lets a caller set the stepper separator size, %s', (orientation, axis) => {
+    ['vertical', 'h', 'w-0.5'],
+    ['horizontal', 'h', 'flex-1'],
+  ] as const)('lets a caller set the stepper separator size, %s', (orientation, axis, other) => {
     const { container } = render(
       <Stepper orientation={orientation}>
         <StepperNav>
@@ -56,5 +64,6 @@ describe('a caller outranks the kit on size', () => {
     const separator = container.querySelector('[data-part="stepper-separator"]')!
 
     expect(sizes(separator, axis)).toEqual([`${axis}-4`])
+    expect(drawn(separator), `the ${orientation} line drew the other axis`).toContain(other)
   })
 })
