@@ -13,6 +13,7 @@ import { REPORT_STAGES, TLP_LABELS } from '../domain/entities/report.js'
 import { AboutController } from '../health/about.controller.js'
 import { BUILTIN_CASE_TEMPLATES } from '../library/builtins/case-templates.js'
 import { BUILTIN_REPORT_LAYOUTS } from '../library/builtins/report-layouts.js'
+import { offeredLayouts, shippedAssesses } from '../report/offered-layouts.js'
 import { BUILTIN_REPORT_SNIPPETS } from '../library/builtins/report-snippets.js'
 import { LIBRARY_KINDS, REPORT_LAYOUTS } from '../library/kinds.js'
 import { english, headingPack } from '../report/document/packs.js'
@@ -121,14 +122,30 @@ function captured(): Record<string, unknown> {
     collections: new CollectionsController().listing(),
     about: new AboutController().read(),
     /**
-     * `/api/report-layouts`, less the two members that are not constants.
+     * `/api/report-layouts`, less the languages, which are the store's.
      *
-     * The controller reads the library for its layouts and the store for its
-     * languages, so neither can be captured; the heading pack is what a client
-     * resolves `heading.exec_summary` through, and it is English's own keys.
+     * **The layouts are the route's own answer for a shipped install**, not a
+     * second list written here: `offeredLayouts` is what the controller
+     * calls, and `assesses` reads the fallbacks in `SETTINGS` rather than
+     * naming regimes. A regulatory layout dropped in, or a fallback flipped,
+     * reaches the demo without anybody editing this file. -> #884
+     *
+     * The heading pack is what a client resolves `heading.exec_summary`
+     * through, and it is English's own keys.
      */
     'report-layouts': {
-      layouts: [],
+      layouts: offeredLayouts(
+        BUILTIN_REPORT_LAYOUTS.map((one) => ({
+          name: one.name,
+          label: one.label,
+          summary: one.summary,
+          builtin: true,
+          ...(one.requiresFeature === undefined ? {} : { requiresFeature: one.requiresFeature }),
+          blocks: one.blocks,
+        })),
+        english(),
+        shippedAssesses,
+      ),
       stages: ['', ...REPORT_STAGES],
       tlp: ['', ...TLP_LABELS],
       languages: [],
@@ -151,13 +168,15 @@ function captured(): Record<string, unknown> {
     'report-prose': Object.fromEntries(
       Object.entries(DEMO_REPORTS).map(([reference, listed]) => [
         reference,
-        Object.fromEntries(listed.map((report) => {
-          // The label is the key the demo finds a body by, so a second report
-          // wearing it drops the first's prose in silence.
-          if (listed.filter((one) => one.label === report.label).length > 1)
-            throw new Error(`${reference} has two reports labelled ${report.label}`)
-          return [report.label, report.blocks.map((block) => block.body ?? '')]
-        })),
+        Object.fromEntries(
+          listed.map((report) => {
+            // The label is the key the demo finds a body by, so a second report
+            // wearing it drops the first's prose in silence.
+            if (listed.filter((one) => one.label === report.label).length > 1)
+              throw new Error(`${reference} has two reports labelled ${report.label}`)
+            return [report.label, report.blocks.map((block) => block.body ?? '')]
+          }),
+        ),
       ]),
     ),
   }
