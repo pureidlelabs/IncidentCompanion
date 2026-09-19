@@ -18,7 +18,10 @@ export interface ScrollAreaLook {
   orientation?: 'vertical' | 'horizontal' | 'both'
 }
 
-export interface ScrollAreaProps extends React.ComponentProps<'div'>, ScrollAreaLook {}
+export interface ScrollAreaProps extends React.ComponentProps<'div'>, ScrollAreaLook {
+  /** Names the region, which makes it one. Omitted, it is a focus stop and no landmark. */
+  label?: string | undefined
+}
 
 /**
  * A region that scrolls, with the app's scrollbar rather than the platform's.
@@ -31,16 +34,20 @@ export interface ScrollAreaProps extends React.ComponentProps<'div'>, ScrollArea
  *   nothing overflows and it renders as a plain `div`.
  * - `overscroll-contain`: a scroll reaching the end does not chain to the page
  *   behind it, which matters inside a popover.
- * - Not focusable. Pass `tabIndex={0}` where the region must be reachable by
- *   keyboard on its own -- it has to land on the scrolling element itself,
- *   because arrow keys move the focused element's nearest scrollable
- *   ancestor. A region holding focusable content already reaches. -> #929
+ * - Focusable, because arrow keys move the focused element's nearest
+ *   scrollable ancestor: a wrapper around the scroller scrolls the page
+ *   instead. Pass `tabIndex={-1}` where the content already takes focus and a
+ *   second stop is noise.
+ * - `label` makes it a named region. Without a name it stays a focus stop and
+ *   claims no landmark, since an unnamed one announces nothing. -> #929
  */
-export function ScrollArea({ orientation, className, ...props }: ScrollAreaProps) {
+export function ScrollArea({ orientation, className, label, ...props }: ScrollAreaProps) {
   return (
     <div
       data-part="scroll-area"
       data-orientation={orientation ?? 'vertical'}
+      tabIndex={0}
+      {...(label === undefined ? {} : { role: 'region', 'aria-label': label })}
       className={cn(scrollArea({ orientation }), className)}
       {...props}
     />

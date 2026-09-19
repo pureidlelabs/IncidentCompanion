@@ -89,7 +89,13 @@ export function ReportPaperPage({
       aria-label="The printed page"
       className="hidden min-w-0 border-l border-border bg-muted/30 lg:block"
     >
-      <div ref={box} className="sticky top-14 h-(--document-viewport-h) overflow-y-auto p-4">
+      <div
+        ref={box}
+        // The scroller itself takes focus: arrow keys move the focused
+        // element's nearest scrollable ancestor. -> #929
+        tabIndex={0}
+        className="sticky top-14 h-(--document-viewport-h) overflow-y-auto p-4"
+      >
         <div className="mx-auto w-full max-w-[26rem] bg-paper px-8 py-9 text-paper-ink shadow-lg">
           {report.tlp !== null && (
             <div className="-mx-7 -mt-8 mb-6 bg-paper-banner py-1 text-center font-mono text-micro font-semibold tracking-micro text-paper-banner-ink">

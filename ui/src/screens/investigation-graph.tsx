@@ -255,7 +255,12 @@ export function InvestigationGraphScreen({
                 : `${String(figure.disconnected.length)} entities no entry names.`}
             </p>
           </div>
-          <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto rounded-sm border border-border p-2">
+          <ul
+            // Stays a `ul` rather than becoming a `ScrollArea`, which would cost
+            // the list its semantics. -> #929
+            tabIndex={0}
+            className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto rounded-sm border border-border p-2"
+          >
             {[...entities]
               .sort((left, right) => left.label.localeCompare(right.label))
               .map((node) => (

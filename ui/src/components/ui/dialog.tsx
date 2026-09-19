@@ -142,8 +142,7 @@ export interface DialogLook {
 }
 
 export interface DialogProps
-  extends Omit<ModalOverlayProps, 'children' | MotionCollidingProps>,
-    DialogLook {
+  extends Omit<ModalOverlayProps, 'children' | MotionCollidingProps>, DialogLook {
   children: ReactNode
   /** Passed to the inner `Dialog`, for `aria-label` and the like. */
   dialogProps?: Omit<AriaDialogProps, 'children'>
@@ -172,10 +171,7 @@ export function Dialog({ children, size = 'compact', dialogProps, ...props }: Di
         variants={overlayMotion}
         className={(renderProps) => modal({ ...renderProps, size })}
       >
-        <AriaDialog
-          {...dialogProps}
-          className="flex min-h-0 flex-1 flex-col outline-hidden"
-        >
+        <AriaDialog {...dialogProps} className="flex min-h-0 flex-1 flex-col outline-hidden">
           {children}
         </AriaDialog>
       </MotionModal>
@@ -199,9 +195,7 @@ export function DialogHeader({
         <Heading slot="title" className="text-base leading-none font-medium">
           {title}
         </Heading>
-        {description !== undefined && (
-          <p className="text-sm text-ink-muted">{description}</p>
-        )}
+        {description !== undefined && <p className="text-sm text-ink-muted">{description}</p>}
       </div>
       {onClose !== undefined && (
         <Button variant="ghost" size="icon-sm" aria-label="Close" onPress={onClose}>
@@ -237,7 +231,12 @@ export function DialogBody({ children }: { children: ReactNode }) {
     // `Section fills`, which is the construct that bleeds, and none holds a
     // table directly. So nothing else is clipped today, and a future dialog
     // wide enough to be is a layout to fix rather than one to scroll.
-    <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pt-2 pb-4">
+    <div
+      // The scroller takes focus itself: a body of plain prose overflows and
+      // holds nothing else to reach it by. -> #929
+      tabIndex={0}
+      className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pt-2 pb-4"
+    >
       {children}
     </div>
   )

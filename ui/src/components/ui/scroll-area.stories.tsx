@@ -37,7 +37,7 @@ type Story = StoryObj<typeof meta>
  */
 export const Vertical: Story = {
   render: () => (
-    <ScrollArea tabIndex={0} className="max-h-64 w-72 rounded-md border border-border p-3">
+    <ScrollArea className="max-h-64 w-72 rounded-md border border-border p-3">
       <ul className="flex flex-col gap-2 text-sm">
         {lines(30, 'Row').map((line) => (
           <li key={line}>{line}</li>
@@ -70,11 +70,7 @@ export const Vertical: Story = {
  */
 export const Horizontal: Story = {
   render: () => (
-    <ScrollArea
-      tabIndex={0}
-      orientation="horizontal"
-      className="w-72 rounded-md border border-border p-3"
-    >
+    <ScrollArea orientation="horizontal" className="w-72 rounded-md border border-border p-3">
       <div className="flex w-max gap-2 text-sm">
         {lines(20, 'Column').map((line) => (
           <span key={line} className="rounded-sm bg-muted px-2 py-1 whitespace-nowrap">
@@ -105,11 +101,7 @@ export const Horizontal: Story = {
 export const Both: Story = {
   name: 'Both axes',
   render: () => (
-    <ScrollArea
-      tabIndex={0}
-      orientation="both"
-      className="size-64 rounded-md border border-border p-3"
-    >
+    <ScrollArea orientation="both" className="size-64 rounded-md border border-border p-3">
       <div className="w-max">
         {lines(30, 'Row').map((row) => (
           <p key={row} className="whitespace-nowrap text-sm">
@@ -146,7 +138,7 @@ export const Both: Story = {
 export const NothingToScroll: Story = {
   name: 'Content fits \u2014 no scrollbar',
   render: () => (
-    <ScrollArea tabIndex={0} className="max-h-64 w-72 rounded-md border border-border p-3">
+    <ScrollArea className="max-h-64 w-72 rounded-md border border-border p-3">
       <p className="text-sm">Two lines, well inside the height.</p>
       <p className="text-sm">So the region never overflows.</p>
     </ScrollArea>
