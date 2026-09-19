@@ -273,16 +273,18 @@ export const NarrowPaintedColumns: Story = {
 export const Reading: Story = {
   name: 'The read has not come back',
   args: { kase: undefined, busy: true },
-  parameters: {
-    /**
-     * While the read is pending the tablist is drawn from the section's head
-     * and its panel is not, so the selected tab's `aria-controls` names an id
-     * that is not there. Fixing it moves the list out of the head, which is a
-     * restructure rather than a line. -> #937
-     */
-    a11y: { config: { rules: [{ id: 'aria-valid-attr-value', enabled: false }] } },
-  },
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step }) => {
+    await step('the tab that is selected names a panel that is there', async () => {
+      // The panel wraps the section rather than sitting in its children, so
+      // the read replacing the body cannot take it away. -> #937
+      const selected = canvasElement.querySelector('[role="tab"][aria-selected="true"]')
+      const named = selected?.getAttribute('aria-controls') ?? ''
+      await expect(named).not.toBe('')
+      await expect(
+        canvasElement.ownerDocument.getElementById(named),
+        `the selected tab names ${named}, which is not in the document`,
+      ).not.toBeNull()
+    })
     await step('the wait is drawn rather than a count of nothing', async () => {
       await expect(canvas.getByRole('status')).toBeInTheDocument()
       // `0 rows` is an answer, and nobody has one yet. The badge is what the
