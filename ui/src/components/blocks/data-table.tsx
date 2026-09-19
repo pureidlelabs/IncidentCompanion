@@ -464,9 +464,17 @@ export function DataTable<TData extends { id: string }>({
 
     const number = () => {
       grid.setAttribute('aria-rowcount', String(rows.length + 1))
-      for (const row of grid.querySelectorAll('[data-row-index]:not([aria-rowindex])')) {
+      // The header is the first row, and a grid that numbers some of its rows
+      // and not others is worse than one that numbers none.
+      grid.querySelector('thead tr')?.setAttribute('aria-rowindex', '1')
+      for (const row of grid.querySelectorAll('[data-row-index]')) {
         const at = row.getAttribute('data-row-index')
-        if (at !== null) row.setAttribute('aria-rowindex', at)
+        // Set every time rather than only where it is missing: React Aria
+        // rebuilds its rows today, so a stale number cannot survive a scroll,
+        // and nothing here should depend on it going on doing that.
+        if (at !== null && row.getAttribute('aria-rowindex') !== at) {
+          row.setAttribute('aria-rowindex', at)
+        }
       }
     }
 

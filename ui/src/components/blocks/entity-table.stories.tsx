@@ -386,10 +386,18 @@ export const Windowed: Story = {
       numbered.every((one, at) => at === 0 || one === (numbered[at - 1] ?? 0) + 1),
       'the drawn rows are not numbered consecutively',
     ).toBe(true)
+    const declared = Number(grid!.getAttribute('aria-rowcount'))
     await expect(
-      Math.max(...numbered) <= 301 && Math.min(...numbered) >= 2,
+      Math.max(...numbered) <= declared && Math.min(...numbered) >= 2,
       'a row is numbered outside the count the table declares',
     ).toBe(true)
+
+    // The header is row one. A grid that numbers its body and not its head
+    // leaves a reader counting from something that has no number.
+    await expect(
+      grid!.querySelector('thead tr')?.getAttribute('aria-rowindex'),
+      'the header row is not numbered, so the rows below it count from nothing',
+    ).toBe('1')
 
     // **The spacer is not a row a reader meets, at either end.** It carries
     // the height of what is not drawn, and React Aria drops an `aria-hidden`
