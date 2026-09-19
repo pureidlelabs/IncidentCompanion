@@ -256,11 +256,54 @@ export interface StoryLoad {
 }
 
 /**
- * Navigates to one story's standalone preview and waits until it has
- * genuinely finished -- `play` included -- applying its `viewport` global
- * along the way. Leaves probing and capturing to the caller.
+ * What a module that did not arrive says, in Chromium's wording.
+ *
+ * **A fetch that failed is about the server, not the story.** The dev server
+ * compiles a story's module graph on demand and re-optimises when it changes,
+ * and a page asking for a URL from before that leaves the browser holding a
+ * module it cannot fetch. The story is fine and the request was not.
+ *
+ * The browser writes this, not Vite -- neither string appears anywhere under
+ * `node_modules/vite` or `node_modules/@storybook` -- and this tier declares
+ * one project, `chromium`. Gecko's wording for the same failure is *error
+ * loading dynamically imported module*, and matching it here would be surface
+ * nothing can reach.
+ */
+const MODULE_DID_NOT_ARRIVE = /Failed to fetch dynamically imported module/
+
+/**
+ * Loads one story, asking a second time for a module that did not arrive.
+ *
+ * Leaves probing and capturing to the caller.
  */
 export async function loadStory(
+  page: Page,
+  storybookUrl: string,
+  storyId: string,
+  ground: string,
+): Promise<StoryLoad> {
+  const first = await attemptStory(page, storybookUrl, storyId, ground)
+  // **Asked again once, and only for a module that did not arrive.** A story
+  // that renders an error, or whose `play` threw, is answering about itself
+  // and a second reading of it says the same thing.
+  //
+  // **A `storyFinished` that never fires is left alone for its cost, and for
+  // nothing else.** It can be the same stale server -- #887 measured one story
+  // reporting both shapes across two runs of the same tree -- but this path
+  // returns before the wait, so a refused module costs ~300ms while that one
+  // costs twenty seconds, twice. The preview script's own failure
+  // (`vite-app.js`) is transient too and also left alone: it is one fact about
+  // the run rather than one per story. -> #887
+  if (first.broke === null || !MODULE_DID_NOT_ARRIVE.test(first.broke)) return first
+  return attemptStory(page, storybookUrl, storyId, ground)
+}
+
+/**
+ * Navigates to one story's standalone preview and waits until it has
+ * genuinely finished -- `play` included -- applying its `viewport` global
+ * along the way.
+ */
+async function attemptStory(
   page: Page,
   storybookUrl: string,
   storyId: string,
