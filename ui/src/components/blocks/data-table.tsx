@@ -163,6 +163,11 @@ function shown(value: unknown): string {
   return ''
 }
 
+/** Takes the row a spacer's filler sits in out of the tree and the focus order. */
+const inertRow = (node: HTMLElement | null) => {
+  node?.closest('[role="row"]')?.setAttribute('inert', '')
+}
+
 /**
  * The entity table every screen renders, on the kit's React Aria `Table`.
  *
@@ -180,8 +185,8 @@ function shown(value: unknown): string {
  * - **Turned off** for `renderExpanded` (a detail row is a variable height
  *   the spacers cannot account for), `scroll: 'page'` (this block does not
  *   own the pane), and a row model shorter than `virtualizeFrom`.
- * - Windowed, browser find reaches only the drawn rows, and arrow-key
- *   navigation crosses the two spacer rows.
+ * - Windowed, browser find reaches only the drawn rows. The spacer rows are
+ *   inert, so neither the reader nor the keyboard meets them.
  * - No table-wide right-click menu -- the kit's `ContextMenuTarget` is a
  *   button and cannot wrap a table. A sortable header carries the column's
  *   own sort button, so `Column` sets no `aria-sort`.
@@ -442,29 +447,28 @@ export function DataTable<TData extends { id: string }>({
   /**
    * A row that draws nothing and holds the height of the rows above or below.
    *
-   * **Taken out of the tree by the node, not by the prop.** React Aria builds a
-   * `Row`'s attributes from its collection and drops an `aria-hidden` passed to
-   * it -- measured, along with `role="presentation"`, which it overrides the
-   * same way. So a spacer sat in the accessibility tree as a real row with an
-   * empty row header: one phantom row at the end of every windowed table, and
-   * a row count one too many. -> #933
+   * **`inert`, set on the node.** React Aria builds a `Row`'s attributes from
+   * its collection and drops an `aria-hidden` passed to it -- measured, along
+   * with `role="presentation"` -- so a spacer sat in the accessibility tree as
+   * a row with an empty header: one phantom row at the end of every windowed
+   * table.
    *
-   * The ref is written fresh on each render so the attribute is reapplied: a
-   * spacer's height changes as the window scrolls, and an attribute React does
-   * not manage is one it will not put back.
+   * `aria-hidden` alone would leave it focusable, and the collection does put
+   * focus there -- a page-down lands on the bottom spacer, which ARIA forbids
+   * inside a hidden subtree. `inert` takes it out of the tree and out of the
+   * focus order together, so a page-down stops at the last real row.
+   *
+   * **Not `isDisabled` with `disabledBehavior="all"`**, which would be the
+   * collection's own way to do it: rows already carry `isDisabled` for what
+   * cannot be selected, and that switch would make every one of those
+   * unreachable by keyboard too. -> #933
    */
   const spacer = (which: 'top' | 'bottom', height: number) =>
     height > 0 ? (
       <Row key={`--pad-${which}`} id={`--pad-${which}`} style={{ height }}>
         <Cell colSpan={headers.length} className="border-b-0 p-0" style={{ height }}>
-          {/* The row takes no ref, so the attribute is reached from inside it.
-              A zero-height block adds nothing to a cell that draws nothing. */}
-          <span
-            className="block h-0"
-            ref={(node) => {
-              node?.closest('[role="row"]')?.setAttribute('aria-hidden', 'true')
-            }}
-          />
+          {/* A `Row` takes no ref, so the attribute is reached from inside it. */}
+          <span className="block h-0" ref={inertRow} />
         </Cell>
       </Row>
     ) : null

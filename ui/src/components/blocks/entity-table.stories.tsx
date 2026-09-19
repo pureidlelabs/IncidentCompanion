@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, userEvent } from 'storybook/test'
+import { expect, userEvent, waitFor } from 'storybook/test'
 
 import { DataTable, actionsColumn, selectionColumn } from '@/components/blocks/data-table'
 import {
@@ -355,20 +355,36 @@ export const Windowed: Story = {
     await expect(drawn).toBeLessThan(300)
     await expect(canvas.getByText(/300 rows, windowed from/)).toBeVisible()
 
-    // **The spacer is not a row a reader meets.** It carries the height of
-    // what is not drawn, and React Aria drops an `aria-hidden` passed to a
-    // `Row` -- so without the attribute reaching the node, every windowed
-    // table ends in a phantom row with an empty header. Asserted here as well
-    // as by axe, so the guard does not rest on one rule's name. -> #933
-    const pads = canvasElement.querySelectorAll('[data-key^="--pad"]')
-    await expect(pads.length, 'no spacer to check, so the window drew everything').toBeGreaterThan(
-      0,
-    )
-    for (const pad of pads) {
+    // **The spacer is not a row a reader meets, at either end.** It carries
+    // the height of what is not drawn, and React Aria drops an `aria-hidden`
+    // passed to a `Row` -- so without the attribute reaching the node, every
+    // windowed table ends in a phantom row with an empty header.
+    //
+    // **Scrolled first, because the window decides which spacers exist.** At
+    // rest there is only a bottom one: a check here that reads `pads` and
+    // loops passes with the top spacer left in the tree, which is half the
+    // fix and reads like all of it. -> #933
+    const scroller = canvasElement.querySelector('[data-part="table-scroll"]')
+    await expect(scroller, 'no scrollport, so the window cannot be moved').not.toBeNull()
+    scroller!.scrollTop = Math.round(scroller!.scrollHeight / 2)
+    await waitFor(async () => {
       await expect(
-        pad.getAttribute('aria-hidden'),
-        'a spacer row is in the accessibility tree, which adds an empty row to the table',
-      ).toBe('true')
+        canvasElement.querySelectorAll('[data-key^="--pad"]').length,
+        'scrolling to the middle drew no top spacer, so only one end is under test',
+      ).toBe(2)
+    })
+
+    for (const pad of canvasElement.querySelectorAll('[data-key^="--pad"]')) {
+      await expect(
+        pad.hasAttribute('inert'),
+        `${pad.getAttribute('data-key') ?? '?'} is in the accessibility tree, which adds an empty row to the table`,
+      ).toBe(true)
+    }
+
+    // `inert` and not `aria-hidden`, because the collection puts focus here:
+    // a row hidden from the reader but still focusable is what ARIA forbids.
+    for (const pad of canvasElement.querySelectorAll('[data-key^="--pad"]')) {
+      await expect(pad.getAttribute('aria-hidden'), 'hidden without being inert').toBeNull()
     }
   },
 }
