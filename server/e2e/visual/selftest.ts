@@ -48,6 +48,15 @@ const LABEL = '[data-part="rail-row"] span.truncate'
 interface Fault {
   kind: FindingKind
   why: string
+  /**
+   * The injection must leave the kind **absent** rather than present.
+   *
+   * A fault list of nothing but faults certifies that a rule can fire and says
+   * nothing about what else sets it off -- and a rule that reports a correct
+   * page is worse than one that reports nothing, because the findings are read
+   * by somebody who then stops believing them. -> #910
+   */
+  quiet?: boolean
   break: (selectors: { row: string; label: string }) => void
 }
 
@@ -308,11 +317,60 @@ const FAULTS: Fault[] = [
       toolbar.appendChild(label)
     },
   },
+  {
+    // **A clipping parent with nothing to lend.** The bleed is the whole point
+    // of a negative margin -- a focus ring, a rule, a sticky band reaching the
+    // full width of what encloses it -- and it works only where some ancestor
+    // carries padding to spend. Injected with `overflow:hidden` and `padding:0`
+    // so the room is provably absent rather than merely small.
+    kind: 'bleed-cut',
+    why: 'a negative-margin child inside an ancestor that clips and has no padding to lend it',
+    break: ({ row }) => {
+      const toolbar = document.querySelector(row)
+      if (!toolbar) throw new Error(`no element for ${row}`)
+      const clipper = document.createElement('div')
+      clipper.style.cssText =
+        'position:relative;width:120px;height:60px;overflow:hidden;padding:0;background:#123'
+      const bleeder = document.createElement('div')
+      bleeder.style.cssText = 'width:120px;height:40px;margin-left:-24px;background:#abc'
+      clipper.appendChild(bleeder)
+      toolbar.appendChild(clipper)
+    },
+  },
+  {
+    // **Room the rule has to credit, not a fault.** A `clip-path` with no box
+    // named cuts to the *border* box, so the ancestor's border and its padding
+    // are both room the bleed may spend. Reading the padding box for this --
+    // which is right for `overflow` and wrong here -- reports a card sitting
+    // flush inside its own cut as cut by the width of its border, which is the
+    // shape three of the kit's surfaces already have. -> #910
+    kind: 'bleed-cut',
+    why: 'a negative-margin child with border and padding to spend inside a `clip-path` ancestor',
+    quiet: true,
+    break: ({ row }) => {
+      const toolbar = document.querySelector(row)
+      if (!toolbar) throw new Error(`no element for ${row}`)
+      const clipper = document.createElement('div')
+      clipper.style.cssText =
+        'position:relative;width:160px;height:60px;border:4px solid #345;padding:6px;' +
+        'clip-path:inset(0 round 8px);background:#123'
+      const bleeder = document.createElement('div')
+      // **Past the padding and inside the border**, which is the only width
+      // that tells the two readings apart: 10px of room to the border box and
+      // 6px to the padding box, so an 8px bleed is comfortable against the
+      // first and 2px over the second.
+      bleeder.style.cssText = 'width:100%;height:30px;margin-left:-8px;margin-right:-8px;background:#abc'
+      clipper.appendChild(bleeder)
+      toolbar.appendChild(clipper)
+    },
+  },
 ]
 
 export interface SelftestResult {
   kind: FindingKind
   why: string
+  /** True where the injection is one the rule must stay silent about. */
+  quiet: boolean
   fired: boolean
   error?: string
 }
@@ -377,6 +435,7 @@ export async function selftest(browser: Browser): Promise<SelftestResult[]> {
         out.push({
           kind: fault.kind,
           why: fault.why,
+          quiet: fault.quiet === true,
           fired: false,
           error: `the fault would not apply: ${String(cause)}`,
         })
@@ -388,6 +447,7 @@ export async function selftest(browser: Browser): Promise<SelftestResult[]> {
       out.push({
         kind: fault.kind,
         why: fault.why,
+        quiet: fault.quiet === true,
         fired: found.filter((one) => one.kind === fault.kind).length > alreadyThere(fault.kind),
       })
     }
