@@ -1,14 +1,15 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url'
 
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
 import { chromium } from 'playwright'
-import { defineConfig, type Plugin, type ProxyOptions } from 'vite'
+import { defineConfig, searchForWorkspaceRoot, type Plugin, type ProxyOptions } from 'vite'
 import type { Reporter, TestModule, Vitest } from 'vitest/node'
 
 /**
@@ -32,6 +33,18 @@ const STORY_TIER = ((): boolean => {
     return false
   }
 })()
+
+/**
+ * The real directories behind `node_modules`, for `server.fs.allow`.
+ *
+ * A link is followed here so the served path matches what a module resolves
+ * to; a directory that is not a link answers itself, and a missing one is left
+ * out rather than throwing.
+ */
+const LINKED_DEPENDENCIES: string[] = ['node_modules', '../node_modules']
+  .map((one) => resolve(import.meta.dirname, one))
+  .filter((one) => existsSync(one))
+  .map((one) => realpathSync(one))
 
 if (!STORY_TIER) {
   console.warn(
@@ -274,6 +287,21 @@ export default defineConfig({
   },
 
   server: {
+    /**
+     * **Where a worktree's dependencies really live.** A worktree links
+     * `node_modules` from the main checkout rather than installing its own, so
+     * a module resolves to a path outside this root and Vite refuses to serve
+     * it. The story tier is what reaches it first, and the refusal arrives as
+     * every story file failing to import its setup. -> #894
+     *
+     * **`searchForWorkspaceRoot` first, because declaring this replaces rather
+     * than extends.** `allow: raw?.fs?.allow ?? [workspaceRoot]` -- a nullish
+     * coalesce, so naming the linked directories alone drops the root Vite
+     * would have found, and a file under it is then served only if the module
+     * graph already reached it.
+     */
+    fs: { allow: [searchForWorkspaceRoot(import.meta.dirname), ...LINKED_DEPENDENCIES] },
+
     /**
      * **Plaintext, and the cookie rule that forced https here is what permits
      * it.** Better Auth names the cookie `__Secure-` from its *base URL*, and
