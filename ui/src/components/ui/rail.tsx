@@ -423,9 +423,14 @@ export function RailSwitcher({
 }: RailSwitcherProps) {
   const { folded } = useRail()
 
+  // Folded, the label is not drawn, so the switcher reaches a reader with
+  // only its mark -- the same hole `RailRow` had. -> #935
+  const name = props['aria-label'] ?? (folded ? tooltip : undefined)
+
   const button = (
     <AriaButton
       data-part="rail-switcher"
+      {...(name === undefined ? {} : { 'aria-label': name })}
       {...props}
       className={composeRenderProps(className, (resolved) =>
         cn(

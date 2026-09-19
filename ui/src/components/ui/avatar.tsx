@@ -90,15 +90,27 @@ export interface AvatarProps extends Omit<ComponentProps<'span'>, 'children'>, A
   initials?: string | undefined
 }
 
-export function Avatar({ name, src, initials, shape, size, tone, className, ...props }: AvatarProps) {
+export function Avatar({
+  name,
+  src,
+  initials,
+  shape,
+  size,
+  tone,
+  className,
+  ...props
+}: AvatarProps) {
   const [failed, setFailed] = useState(false)
+  const named = name.trim()
   const showImage = src !== undefined && src !== '' && !failed
 
   return (
     <span
       data-part="avatar"
-      role="img"
-      aria-label={name}
+      // A blank name is decoration rather than an unnamed image: there is
+      // nothing for a reader to announce, and an analyst who clears the field
+      // sends whitespace rather than an empty string. -> #935
+      {...(named === '' ? { 'aria-hidden': true } : { role: 'img', 'aria-label': named })}
       {...props}
       className={avatar({ shape, size, tone, className })}
     >
