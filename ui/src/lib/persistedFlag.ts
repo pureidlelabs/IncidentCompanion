@@ -17,26 +17,28 @@ import { useCallback, useState } from 'react'
  * visit's open rail; only the analyst's own press is theirs to be remembered.
  */
 export function usePersistedFlag(key: string, fallback: boolean) {
-  const [value, setValue] = useState<boolean>(() => {
+  // `null` until the analyst presses, so a fallback that changes -- the
+  // viewport's width -- keeps being read rather than frozen at mount.
+  const [answered, setAnswered] = useState<boolean | null>(() => {
     try {
       const stored = window.localStorage.getItem(key)
-      return stored === null ? fallback : stored === 'true'
+      return stored === null ? null : stored === 'true'
     } catch {
-      return fallback
+      return null
     }
   })
 
+  const value = answered ?? fallback
+
   const toggle = useCallback(() => {
-    setValue((current) => {
-      const next = !current
-      try {
-        window.localStorage.setItem(key, String(next))
-      } catch {
-        // A store that refuses a write still has to leave the rail usable.
-      }
-      return next
-    })
-  }, [key])
+    const next = !value
+    try {
+      window.localStorage.setItem(key, String(next))
+    } catch {
+      // A store that refuses a write still has to leave the rail usable.
+    }
+    setAnswered(next)
+  }, [key, value])
 
   return [value, toggle] as const
 }
