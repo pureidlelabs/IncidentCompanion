@@ -27,6 +27,7 @@ const regulatory: LayoutSource = {
   summary: 'The first of the three.',
   builtin: true,
   requiresFeature: 'nis2',
+  stage: 'NIS2 early warning',
   blocks: [{ kind: 'exec_summary', heading: 'Early warning' }],
 }
 
@@ -126,6 +127,7 @@ describe('the layouts an install offers', () => {
       summary: 'The first of the three.',
       builtin: true,
       nis2: true,
+      stage: 'NIS2 early warning',
       blocks: [
         {
           kind: 'exec_summary',
@@ -136,6 +138,23 @@ describe('the layouts an install offers', () => {
         },
       ],
     })
+  })
+
+  /**
+   * **A stage is carried, never inferred.** The four filings are told apart by
+   * which step of the obligation they are, and no label implies it: `NIS2
+   * final report` is not a value the vocabulary holds. A route that drops the
+   * field answers `''` for every filing, which is what the New report dialog
+   * then writes. -> #954
+   */
+  it('answers with no stage for a layout that files no regulatory step', () => {
+    const [offered] = offeredLayouts(
+      [plain],
+      (key) => key,
+      () => true,
+    )
+
+    expect(offered?.stage, 'an ordinary layout claimed a step of an obligation').toBe('')
   })
 
   it.each([

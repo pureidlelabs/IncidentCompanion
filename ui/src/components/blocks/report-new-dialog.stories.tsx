@@ -163,6 +163,7 @@ export const OneDroppedIn: Story = {
         summary: '',
         builtin: false,
         nis2: false,
+        stage: '',
         blocks: [
           { kind: 'case_header', position: 0, heading: '', headingKey: '', label: 'Case' },
           { kind: 'written', position: 1, heading: 'Wat er gebeurd is', headingKey: '',

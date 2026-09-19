@@ -13,7 +13,7 @@ import { BUILTIN_CASE_TEMPLATES } from './case-templates.js'
 import { BUILTIN_REPORT_LAYOUTS } from './report-layouts.js'
 import { EN_KEYS } from '../../report/document/packs.js'
 import { WRITTEN_BLOCK } from '../../report/block-kinds.js'
-import { BLOCK_KINDS } from '../../domain/entities/report.js'
+import { BLOCK_KINDS, REPORT_STAGES } from '../../domain/entities/report.js'
 import { RESOLVERS } from '../../report/document/resolve.js'
 
 const everyBlock = BUILTIN_REPORT_LAYOUTS.flatMap((layout) =>
@@ -161,6 +161,36 @@ describe('the line a layout is picked by', () => {
       .map((layout) => layout.name)
       .sort()
     expect(silent, 'a shipped layout with no line under its title').toEqual([])
+  })
+
+  /**
+   * **A layout under a regime says which step of it the report is.**
+   *
+   * The stage is what distinguishes the four filings an obligation asks for,
+   * and the label cannot stand in for it: `NIS2 final report` is not a value
+   * `REPORT_STAGES` holds, so matching on the label would set three stages and
+   * drop the one that closes the obligation. -> #954
+   */
+  it('gives every regulatory layout a stage the vocabulary holds', () => {
+    const known = new Set<string>(REPORT_STAGES)
+    const wrong = BUILTIN_REPORT_LAYOUTS
+      .filter((layout) => layout.requiresFeature !== undefined)
+      .filter((layout) => layout.stage === undefined || !known.has(layout.stage))
+      .map((layout) => `${layout.name} -> ${layout.stage ?? '(none)'}`)
+      .sort()
+    expect(wrong, 'a filing that cannot say which step of the obligation it is').toEqual([])
+  })
+
+  /**
+   * A layout under no regime names no step, because there is no obligation for
+   * it to be a step of.
+   */
+  it('gives an ordinary layout no stage', () => {
+    const claimed = BUILTIN_REPORT_LAYOUTS
+      .filter((layout) => layout.requiresFeature === undefined && layout.stage !== undefined)
+      .map((layout) => layout.name)
+      .sort()
+    expect(claimed, 'a layout claiming a regulatory step it does not belong to').toEqual([])
   })
 
   it('says who reads the report rather than what is in it', () => {

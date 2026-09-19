@@ -102,6 +102,14 @@ export class LibraryService {
      * inert.
      */
     for (const layout of BUILTIN_REPORT_LAYOUTS) {
+      // Built once and used by both branches: an upsert that writes the
+      // payload twice can gain a field on one side, and the update branch is
+      // the one every restart after the first takes. -> #954
+      const payload = {
+        blocks: layout.blocks,
+        ...(layout.requiresFeature ? { requiresFeature: layout.requiresFeature } : {}),
+        ...(layout.stage ? { stage: layout.stage } : {}),
+      }
       await this.seed
         .insert(library)
         .values({
@@ -113,10 +121,7 @@ export class LibraryService {
           description: layout.summary,
           position: layout.position,
           builtin: true,
-          payload: {
-            blocks: layout.blocks,
-            ...(layout.requiresFeature ? { requiresFeature: layout.requiresFeature } : {}),
-          },
+          payload,
         })
         .onConflictDoUpdate({
           target: [library.kind, library.name],
@@ -124,10 +129,7 @@ export class LibraryService {
             label: layout.label,
             description: layout.summary,
             position: layout.position,
-            payload: {
-              blocks: layout.blocks,
-              ...(layout.requiresFeature ? { requiresFeature: layout.requiresFeature } : {}),
-            },
+            payload,
             updatedAt: new Date(),
           },
         })

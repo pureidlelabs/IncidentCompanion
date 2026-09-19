@@ -141,6 +141,7 @@ function captured(): Record<string, unknown> {
           summary: one.summary,
           builtin: true,
           ...(one.requiresFeature === undefined ? {} : { requiresFeature: one.requiresFeature }),
+          ...(one.stage === undefined ? {} : { stage: one.stage }),
           blocks: one.blocks,
         })),
         english(),

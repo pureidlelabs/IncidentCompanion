@@ -345,6 +345,7 @@ export class ReportController {
           const payload = (row.payload ?? {}) as {
             blocks?: { kind: string; heading?: string; headingKey?: string }[]
             requiresFeature?: string
+            stage?: string
           }
           return {
             name: row.name,
@@ -357,6 +358,7 @@ export class ReportController {
             ...(payload.requiresFeature === undefined
               ? {}
               : { requiresFeature: payload.requiresFeature }),
+            ...(payload.stage === undefined ? {} : { stage: payload.stage }),
             blocks: payload.blocks ?? [],
           }
         }),
