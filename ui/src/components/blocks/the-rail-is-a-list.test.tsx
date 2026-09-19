@@ -17,6 +17,16 @@ import { CaseFrame } from './case-frame'
  * `a11y: { test: 'todo' }` and fails on nothing, so a rule firing there is not
  * a gate. -> #917, #916
  */
+/**
+ * Both levels, because the rail nests.
+ *
+ * Scoped to `rail-item` and `rail-list` alone, these read half the rail: the
+ * frame draws a sub-list under the Report row, and the same fault there would
+ * pass green.
+ */
+const ROWS = 'li[data-part="rail-item"], li[data-part="rail-subitem"]'
+const LISTS = 'ul[data-part="rail-list"], ul[data-part="rail-sublist"]'
+
 function rail() {
   const { container } = render(
     <MemoryRouter initialEntries={['/cases/one/report']}>
@@ -29,8 +39,17 @@ function rail() {
 }
 
 describe('the rail the frame draws', () => {
+  it('draws both levels, so the two assertions below are over something', () => {
+    const drawn = rail()
+    const rows = drawn.querySelectorAll(ROWS).length
+    const sub = drawn.querySelectorAll('li[data-part="rail-subitem"]').length
+
+    expect(rows, 'the rail drew no rows, so the checks below pass over nothing').toBeGreaterThan(10)
+    expect(sub, 'the rail drew no sub-rows, so the nested half is unchecked').toBeGreaterThan(0)
+  })
+
   it('puts every row in the list that holds it', () => {
-    const orphans = [...rail().querySelectorAll('li[data-part="rail-item"]')]
+    const orphans = [...rail().querySelectorAll(ROWS)]
       .filter((row) => {
         const holder = row.parentElement
         return holder === null || !['UL', 'OL'].includes(holder.tagName)
@@ -45,7 +64,7 @@ describe('the rail the frame draws', () => {
   })
 
   it('puts nothing but rows directly in the list', () => {
-    const strays = [...rail().querySelectorAll('ul[data-part="rail-list"]')]
+    const strays = [...rail().querySelectorAll(LISTS)]
       .flatMap((list) => [...list.children])
       .filter((child) => child.tagName !== 'LI')
       .map((child) => child.tagName.toLowerCase())
