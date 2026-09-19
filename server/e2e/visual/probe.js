@@ -531,6 +531,48 @@ export function probe([rootSel, excludeSel]) {
         }
     }
 
+    // **A negative margin is a bleed, and a bleed needs room.** The kit reaches
+    // past its own box in a dozen places so a rule, a ring or a sticky band can
+    // run the full width of what encloses it -- and each one is correct only
+    // because some ancestor happens to carry padding to spend. The margin and
+    // the padding are declared in different files, so nothing relates them.
+    //
+    // The first ancestor that clips is the one that decides. Its clip rectangle
+    // is the padding box, which is `clientLeft`/`clientWidth` rather than the
+    // border box a rect reports, and a bleed reaching past it is cut -- along
+    // with whatever it existed to let through. -> #910
+    for (const el of root.querySelectorAll('*')) {
+        if (portal(el) || !visible(el)) continue;
+        const ms = getComputedStyle(el);
+        const bleeds = [['left', parseFloat(ms.marginLeft)], ['right', parseFloat(ms.marginRight)],
+                        ['top', parseFloat(ms.marginTop)], ['bottom', parseFloat(ms.marginBottom)]]
+                       .filter(([, m]) => m < -0.5);
+        if (!bleeds.length) continue;
+        let clip = el.parentElement;
+        while (clip && clip !== document.documentElement) {
+            const cs = getComputedStyle(clip);
+            if (cs.overflow !== 'visible' || cs.clipPath !== 'none') break;
+            clip = clip.parentElement;
+        }
+        if (!clip || clip === document.documentElement) continue;
+        const cr = clip.getBoundingClientRect();
+        // The padding box, which is what an ancestor clips to.
+        const pad = {left: cr.left + clip.clientLeft, top: cr.top + clip.clientTop};
+        pad.right = pad.left + clip.clientWidth;
+        pad.bottom = pad.top + clip.clientHeight;
+        const er = el.getBoundingClientRect();
+        for (const [side, m] of bleeds) {
+            const over = side === 'left' ? pad.left - er.left
+                       : side === 'right' ? er.right - pad.right
+                       : side === 'top' ? pad.top - er.top
+                       : er.bottom - pad.bottom;
+            if (over > 0.5)
+                out.push({kind: 'bleed-cut', what: name(el),
+                          detail: `bleeds ${Math.abs(Math.round(m))}px ${side} and is cut by `
+                              + `${Math.round(over)}px at ${name(clip)}, which clips`});
+        }
+    }
+
     const clickable = 'button, a[href], input, select, textarea, [role="button"], [role="tab"]';
     const owns = (lab, el) => lab && (!lab.htmlFor || lab.htmlFor === el.id)
                   && lab.querySelectorAll('input, select, textarea').length === 1;

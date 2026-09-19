@@ -308,6 +308,26 @@ const FAULTS: Fault[] = [
       toolbar.appendChild(label)
     },
   },
+  {
+    // **A clipping parent with nothing to lend.** The bleed is the whole point
+    // of a negative margin -- a focus ring, a rule, a sticky band reaching the
+    // full width of what encloses it -- and it works only where some ancestor
+    // carries padding to spend. Injected with `overflow:hidden` and `padding:0`
+    // so the room is provably absent rather than merely small.
+    kind: 'bleed-cut',
+    why: 'a negative-margin child inside an ancestor that clips and has no padding to lend it',
+    break: ({ row }) => {
+      const toolbar = document.querySelector(row)
+      if (!toolbar) throw new Error(`no element for ${row}`)
+      const clipper = document.createElement('div')
+      clipper.style.cssText =
+        'position:relative;width:120px;height:60px;overflow:hidden;padding:0;background:#123'
+      const bleeder = document.createElement('div')
+      bleeder.style.cssText = 'width:120px;height:40px;margin-left:-24px;background:#abc'
+      clipper.appendChild(bleeder)
+      toolbar.appendChild(clipper)
+    },
+  },
 ]
 
 export interface SelftestResult {

@@ -39,8 +39,8 @@ test.describe('the geometry probes', () => {
     // kinds* below is what holds every rule covered.
     expect(
       results,
-      'twelve faults: two small-target, two overlap, two size-overridden',
-    ).toHaveLength(12)
+      'thirteen faults: two small-target, two overlap, two size-overridden',
+    ).toHaveLength(13)
     expect(
       new Set(results.map((one) => one.kind)),
       'every probe rule needs a fault: a rule with none is a rule nothing proves alive',
@@ -55,6 +55,7 @@ test.describe('the geometry probes', () => {
         'off-centre',
         'size-overridden',
         'paints-past-the-corner',
+        'bleed-cut',
       ]),
     )
 
