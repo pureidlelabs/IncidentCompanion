@@ -28,12 +28,22 @@ describe('a clipped badge says it was cut', () => {
   })
 
   it('still clips, so the ellipsis has something to mark', () => {
-    // The pair only works together: `text-ellipsis` draws nothing without an
-    // overflow to mark, and the overflow alone is the silent cut.
+    // The three only work together: `text-ellipsis` draws nothing without an
+    // overflow to mark, the overflow alone is the silent cut, and neither
+    // fires at all unless `max-w-full` lets a container cap the badge.
     render(<Badge>post-incident</Badge>)
     const classes = screen.getByText('post-incident').className.split(/\s+/)
 
     expect(classes).toContain('overflow-hidden')
     expect(classes).toContain('whitespace-nowrap')
+    expect(classes).toContain('max-w-full')
+  })
+
+  it.each(['xs', 'sm'] as const)('says it at %s, which is what a table draws', (size) => {
+    // The default is `sm` and every table uses `xs`, so asserting the default
+    // alone leaves the size the defect was found at untested.
+    render(<Badge size={size}>post-incident</Badge>)
+
+    expect(screen.getByText('post-incident').className.split(/\s+/)).toContain('text-ellipsis')
   })
 })
