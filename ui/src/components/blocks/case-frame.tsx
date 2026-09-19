@@ -321,28 +321,36 @@ function Row({
         // idea: a row reached through another. The registry declares these and
         // the case carries those, which is the only difference an analyst must
         // never see.
-        <div className="relative flex items-center">
-          <div className="min-w-0 flex-1">
-            <NavRow
-              icon={identity.icon}
-              label={identity.title}
-              to={hrefFor(row.slug)}
-              active={row.slug === section}
-              alsoActive={holdsSection}
-              // Only while the child is on screen to carry it: folded, the row
-              // that would have been marked is not drawn, and the rail stops
-              // saying where the analyst is at all. And only when a child is
-              // the one being stood on - the parent is a section itself, so
-              // deferring on its own page marks nothing at all.
-              deferToChild={!folded && holdsSection}
-              reserveRight
-              {...(count === undefined
-                ? {}
-                : { count, countLabel: `${String(count)} in ${identity.title}` })}
+        <RailItem>
+          <div className="relative flex items-center">
+            <div className="min-w-0 flex-1">
+              <NavRow
+                bare
+                icon={identity.icon}
+                label={identity.title}
+                to={hrefFor(row.slug)}
+                active={row.slug === section}
+                alsoActive={holdsSection}
+                // Only while the child is on screen to carry it: folded, the row
+                // that would have been marked is not drawn, and the rail stops
+                // saying where the analyst is at all. And only when a child is
+                // the one being stood on - the parent is a section itself, so
+                // deferring on its own page marks nothing at all.
+                deferToChild={!folded && holdsSection}
+                reserveRight
+                {...(count === undefined
+                  ? {}
+                  : { count, countLabel: `${String(count)} in ${identity.title}` })}
+              />
+            </div>
+            <RailFold
+              open={!folded}
+              title={identity.title}
+              slug={row.slug}
+              onToggle={toggleFolded}
             />
           </div>
-          <RailFold open={!folded} title={identity.title} slug={row.slug} onToggle={toggleFolded} />
-        </div>
+        </RailItem>
       )}
       {folded
         ? null
