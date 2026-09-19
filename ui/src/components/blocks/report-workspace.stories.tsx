@@ -418,10 +418,14 @@ export const Narrow: Story = {
 
     for (const row of rows) {
       const heading = row.querySelector('[data-part="report-index-heading"]')
+      // **At least the gutter the number sits in.** A floor of zero is met by
+      // one glyph and an ellipsis, which is not keeping the name of anything;
+      // the number's own 20px is a width already on the row to compare to.
+      const gutter = row.firstElementChild?.getBoundingClientRect().width ?? 0
       await expect(
         heading?.getBoundingClientRect().width ?? 0,
-        'the row dropped the only part that says which block it is',
-      ).toBeGreaterThan(0)
+        `the row gives its name less room than its number: ${String(gutter)}px`,
+      ).toBeGreaterThanOrEqual(gutter)
     }
   },
 }

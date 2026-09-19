@@ -673,7 +673,10 @@ function WrittenSection({
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-surface px-3 py-3">
-      <div className="flex items-center gap-2">
+      {/* The same order as a generated row: the heading is the last thing
+          dropped, because it is the only part saying which section this is.
+          -> #949 */}
+      <div data-part="report-index-row" className="@container flex items-center gap-2">
         <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">
           {number}
         </span>
@@ -681,19 +684,27 @@ function WrittenSection({
           // **Not a heading, because there is none.** The document prints none
           // for this kind either, so the card says what the section is rather
           // than inventing what it is called.
-          <span className="min-w-0 flex-1 truncate text-2xs text-ink-muted">
+          <span
+            data-part="report-index-heading"
+            className="min-w-0 flex-1 truncate text-2xs text-ink-muted"
+          >
             {UNTITLED_SECTION}
           </span>
         ) : (
-          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">
+          <h2
+            data-part="report-index-heading"
+            className="min-w-0 flex-1 truncate text-sm font-semibold"
+          >
             {headingOf(block, headings)}
           </h2>
         )}
         {!headingIsFinal(block, headings) && (
-          <span className="shrink-0 text-2xs text-ink-muted">heading not final</span>
+          <span className="hidden shrink-0 text-2xs text-ink-muted @3xs:inline">
+            heading not final
+          </span>
         )}
         {blank && (
-          <Badge variant="soft" size="xs">
+          <Badge variant="soft" size="xs" className="hidden @2xs:inline-flex">
             empty
           </Badge>
         )}
