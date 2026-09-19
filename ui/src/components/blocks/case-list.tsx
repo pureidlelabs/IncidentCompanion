@@ -394,6 +394,11 @@ function caseColumns(
     {
       accessorKey: 'status',
       header: 'State',
+      // **Fixed, so the state is never cut.** `CASE_STATES` is closed and four
+      // long, so the column has a ceiling nothing can raise; the width comes
+      // from the longest of them drawn as a badge, plus the cell's own
+      // padding. A vocabulary that is not closed does not get this. -> #896
+      meta: { className: 'w-[7.5rem]' },
       cell: ({ row: one }) => (
         <Badge variant="soft" size="xs">
           {one.original.status}
