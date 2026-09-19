@@ -5,6 +5,7 @@ import { expect } from 'storybook/test'
 
 import { Badge } from './badge'
 import { Button } from './button'
+import { IconTile } from './icon-tile'
 import {
   Item,
   ItemActions,
@@ -16,8 +17,7 @@ import {
 } from './item'
 
 // A 1x1 transparent GIF, inline: a story may not reach the network.
-const PIXEL =
-  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
 /**
  * A dense list row: media, a title and a description, and an action slot.
@@ -217,6 +217,81 @@ export const Media: Story = {
         Math.round(title.getBoundingClientRect().left),
       )
       await expect(new Set(edges).size).toBe(3)
+    })
+  },
+}
+
+/**
+ * A stack of small rows draws tight.
+ *
+ * The rows carry the size and the group reads it, so the spacing between them
+ * answers to what they are rather than to a class the caller has to remember.
+ */
+export const GroupOfSmallRows: Story = {
+  render: () => (
+    <ItemGroup className="max-w-lg">
+      <Item role="listitem" variant="outline" size="xs">
+        <ItemContent>
+          <ItemTitle>WKS-4417</ItemTitle>
+        </ItemContent>
+      </Item>
+      <Item role="listitem" variant="outline" size="xs">
+        <ItemContent>
+          <ItemTitle>d.okoro</ItemTitle>
+        </ItemContent>
+      </Item>
+    </ItemGroup>
+  ),
+  play: async ({ canvasElement, step }) => {
+    await step('the stack tightens for the rows it holds', async () => {
+      const group = canvasElement.querySelector('[data-part="item-group"]')
+      await expect(
+        group === null ? '' : getComputedStyle(group).rowGap,
+        'a stack of xs rows drew the roomy gap',
+      ).toBe('8px')
+    })
+  },
+}
+
+/**
+ * A tile nested in a row does not tighten the stack around it.
+ *
+ * `ItemGroup` tightens to `gap-2` for a stack of `xs` rows. The selector used
+ * to key on the attribute alone, and `IconTile` writes the same one -- so a
+ * tile dropped inside a row of ordinary size pulled the whole stack tight,
+ * for a reason nobody writing that markup would look for. -> #951
+ */
+export const GroupIgnoresANestedSize: Story = {
+  render: () => (
+    <ItemGroup className="max-w-lg">
+      <Item role="listitem">
+        <ItemMedia variant="icon">
+          <IconTile size="xs">
+            <Monitor />
+          </IconTile>
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle>WKS-4417</ItemTitle>
+          <ItemDescription>Windows workstation</ItemDescription>
+        </ItemContent>
+      </Item>
+      <Item role="listitem">
+        <ItemContent>
+          <ItemTitle>d.okoro</ItemTitle>
+        </ItemContent>
+      </Item>
+    </ItemGroup>
+  ),
+  play: async ({ canvasElement, step }) => {
+    await step('the stack keeps the gap its own rows ask for', async () => {
+      const group = canvasElement.querySelector('[data-part="item-group"]')
+      await expect(group).not.toBeNull()
+      // 16px is `gap-4`, which is what a stack of default rows is. The tight
+      // 8px belongs to a stack whose own rows are `xs`.
+      await expect(
+        group === null ? '' : getComputedStyle(group).rowGap,
+        'a tile nested in a row pulled the stack to the tight gap',
+      ).toBe('16px')
     })
   },
 }
