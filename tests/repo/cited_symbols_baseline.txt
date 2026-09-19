@@ -16,6 +16,7 @@ ClassName_methodName
 ColumnMeta
 DataTransfer
 dateAdded
+DEFAULT_VIEWPORT_DIMENSIONS
 DEL
 deleteCachedUserSessions
 deleteSession
@@ -118,8 +119,8 @@ TableKit
 TableMap
 ThrottlerRequest
 toLocaleDateString
-treeifyError
 translateX
+treeifyError
 UPDATE
 useAsyncList
 useComboBoxState
