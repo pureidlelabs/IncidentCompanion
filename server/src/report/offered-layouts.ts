@@ -39,6 +39,8 @@ export interface LayoutSource {
   builtin: boolean
   /** The feature an install must assess before this layout is offered at all. */
   requiresFeature?: string | undefined
+  /** The step of that regime's obligation this layout files, where it is one. */
+  stage?: string | undefined
   blocks: readonly { kind: string; heading?: string; headingKey?: string }[]
 }
 
@@ -49,6 +51,8 @@ export interface OfferedLayout {
   summary: string
   builtin: boolean
   nis2: boolean
+  /** Empty for a layout that files no regulatory step. */
+  stage: string
   blocks: { kind: string; position: number; heading: string; headingKey: string; label: string }[]
 }
 
@@ -80,6 +84,9 @@ export function offeredLayouts(
         // Whether the layout is a regulatory one, which is what decides
         // whether a stage applies to it. Declared by the layout itself.
         nis2: one.requiresFeature === 'nis2',
+        // Declared by the layout too, because no label implies it: `NIS2
+        // final report` is not a value the stage vocabulary holds. -> #954
+        stage: one.stage ?? '',
         blocks: one.blocks.map((block, position) => ({
           kind: block.kind,
           position,
@@ -95,6 +102,7 @@ export function offeredLayouts(
       summary: 'No sections. Start from nothing and add what the case needs.',
       builtin: true,
       nis2: false,
+      stage: '',
       blocks: [],
     },
   ]

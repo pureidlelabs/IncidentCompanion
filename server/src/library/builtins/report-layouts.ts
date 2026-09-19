@@ -47,6 +47,14 @@ export interface BuiltinLayout {
    * it to decide whether to show a stage.
    */
   requiresFeature?: string
+  /**
+   * The step of that regime's obligation this layout files.
+   *
+   * A value of `REPORT_STAGES`. The label cannot stand in for it -- `NIS2
+   * final report` is not one -- so a report created from this layout takes
+   * the stage from here or takes none. -> #954
+   */
+  stage?: string
   blocks: LayoutBlock[]
 }
 
@@ -161,6 +169,7 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
     summary: 'Article 23, filed within 24 hours: whether the incident looks malicious, and whether it crosses a border.',
     position: 38,
     requiresFeature: 'nis2',
+    stage: 'NIS2 early warning',
     blocks: [
       { kind: 'case_header', required: true },
       { kind: 'written', headingKey: 'heading.initial_assessment', required: true },
@@ -172,6 +181,7 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
     summary: 'Filed at 72 hours and superseding the early warning: an initial assessment of severity and impact.',
     position: 39,
     requiresFeature: 'nis2',
+    stage: 'NIS2 notification',
     blocks: [
       { kind: 'case_header', required: true },
       { kind: 'impact', required: true },
@@ -185,6 +195,7 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
     summary: 'A progress update while the incident is still open: where it stands, and what is still unanswered.',
     position: 40,
     requiresFeature: 'nis2',
+    stage: 'NIS2 intermediate',
     blocks: [
       { kind: 'case_header', required: true },
       { kind: 'timeline' },
@@ -198,6 +209,7 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
     summary: 'The closing filing: root cause, the impact as measured, and the measures taken.',
     position: 41,
     requiresFeature: 'nis2',
+    stage: 'NIS2 final',
     blocks: [
       { kind: 'case_header', required: true },
       { kind: 'impact', required: true },

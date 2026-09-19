@@ -32,6 +32,7 @@ function layout(over: Partial<ReportLayout>): ReportLayout {
     summary: '',
     builtin: false,
     nis2: false,
+    stage: '',
     blocks: [],
     ...over,
   }

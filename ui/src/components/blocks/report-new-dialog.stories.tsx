@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { DEMO_TLP } from './report-layouts'
 
 import { Button } from '@/components/ui/button'
@@ -93,12 +93,14 @@ export const NoRegime: Story = {
 
 /**
  * A filing picked. The stage is the layout, so nothing asks for it a second
- * time -- what this holds is that picking one still names it on the document.
+ * time -- what this holds is that picking one still names it on the document,
+ * and that the step reaches what is created rather than stopping at the band.
  */
 export const Filing: Story = {
   name: 'A filing, which has a stage',
   parameters: openInFrame('820px'),
-  play: async ({ canvasElement }) => {
+  args: { nis2Enabled: true, onCreate: fn() },
+  play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement.ownerDocument.body)
     const filing = DEMO_LAYOUTS.find((one) => one.nis2)
     await expect(filing).toBeDefined()
@@ -113,6 +115,17 @@ export const Filing: Story = {
         filing.label,
       )
     })
+
+    // The step is what distinguishes one filing from the next, and the layout
+    // declares it rather than the analyst being asked -- so what proves it is
+    // what leaves, not what the band drew. -> #954
+    await userEvent.click(canvas.getByRole('button', { name: 'Create' }))
+    await waitFor(async () => {
+      await expect(args.onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ layout: filing.name, stage: filing.stage }),
+      )
+    })
+    await expect(filing.stage, 'the fixture offers no filing with a step').not.toBe('')
   },
 }
 
@@ -123,7 +136,8 @@ export const Filing: Story = {
 export const SeedsNothing: Story = {
   name: 'Starting from nothing',
   parameters: openInFrame('820px'),
-  play: async ({ canvasElement }) => {
+  args: { nis2Enabled: true, onCreate: fn() },
+  play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement.ownerDocument.body)
     const blank = DEMO_LAYOUTS.find((one) => one.blocks.length === 0)
     await expect(blank).toBeDefined()
@@ -131,6 +145,15 @@ export const SeedsNothing: Story = {
     await userEvent.click(await canvas.findByText(blank.label))
     await waitFor(async () => {
       await expect(canvas.getByText(summarise(blank))).toBeVisible()
+    })
+
+    // An install that assesses the regime still writes no step for a layout
+    // that files none -- the step follows the layout, not the install. -> #954
+    await userEvent.click(canvas.getByRole('button', { name: 'Create' }))
+    await waitFor(async () => {
+      await expect(args.onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ layout: blank.name, stage: '' }),
+      )
     })
   },
 }
@@ -163,10 +186,16 @@ export const OneDroppedIn: Story = {
         summary: '',
         builtin: false,
         nis2: false,
+        stage: '',
         blocks: [
           { kind: 'case_header', position: 0, heading: '', headingKey: '', label: 'Case' },
-          { kind: 'written', position: 1, heading: 'Wat er gebeurd is', headingKey: '',
-            label: 'Wat er gebeurd is' },
+          {
+            kind: 'written',
+            position: 1,
+            heading: 'Wat er gebeurd is',
+            headingKey: '',
+            label: 'Wat er gebeurd is',
+          },
         ],
       },
     ],
@@ -210,4 +239,3 @@ function manyLayouts() {
     })),
   )
 }
-

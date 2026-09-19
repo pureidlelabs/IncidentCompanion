@@ -117,7 +117,8 @@ export function ReportNewDialog({
   // The first shape, until the analyst says otherwise: the grid always has one
   // card chosen, so Create is never a control that quietly does nothing.
   const chosen = offered.find((one) => one.name === picked) ?? offered[0]
-  // Derived, not asked: the four NIS2 layouts are the four stages.
+  // Declared by the layout and not asked for: a title is not a step, and
+  // one of the four filings is titled differently from the one it files.
   const stage = stageOf(chosen, nis2Enabled)
 
   /**

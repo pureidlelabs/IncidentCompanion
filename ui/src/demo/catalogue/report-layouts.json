@@ -6,6 +6,7 @@
       "summary": "The full account, written for the customer. Your own sections sit between the derived ones.",
       "builtin": true,
       "nis2": false,
+      "stage": "",
       "blocks": [
         {
           "kind": "case_header",
@@ -85,6 +86,7 @@
       "summary": "One page for a management audience: the figures and the shape of the attack, and nothing to look up.",
       "builtin": true,
       "nis2": false,
+      "stage": "",
       "blocks": [
         {
           "kind": "exec_card",
@@ -129,6 +131,7 @@
       "summary": "Everything, in the order an investigator would re-walk it. For another analyst to check your work.",
       "builtin": true,
       "nis2": false,
+      "stage": "",
       "blocks": [
         {
           "kind": "case_header",
@@ -201,6 +204,7 @@
       "summary": "Every query and collection step behind the findings, with its window and what it returned.",
       "builtin": true,
       "nis2": false,
+      "stage": "",
       "blocks": [
         {
           "kind": "case_header",
@@ -238,6 +242,7 @@
       "summary": "Article 23, filed within 24 hours: whether the incident looks malicious, and whether it crosses a border.",
       "builtin": true,
       "nis2": true,
+      "stage": "NIS2 early warning",
       "blocks": [
         {
           "kind": "case_header",
@@ -261,6 +266,7 @@
       "summary": "Filed at 72 hours and superseding the early warning: an initial assessment of severity and impact.",
       "builtin": true,
       "nis2": true,
+      "stage": "NIS2 notification",
       "blocks": [
         {
           "kind": "case_header",
@@ -298,6 +304,7 @@
       "summary": "A progress update while the incident is still open: where it stands, and what is still unanswered.",
       "builtin": true,
       "nis2": true,
+      "stage": "NIS2 intermediate",
       "blocks": [
         {
           "kind": "case_header",
@@ -335,6 +342,7 @@
       "summary": "The closing filing: root cause, the impact as measured, and the measures taken.",
       "builtin": true,
       "nis2": true,
+      "stage": "NIS2 final",
       "blocks": [
         {
           "kind": "case_header",
@@ -407,6 +415,7 @@
       "summary": "No sections. Start from nothing and add what the case needs.",
       "builtin": true,
       "nis2": false,
+      "stage": "",
       "blocks": []
     }
   ],

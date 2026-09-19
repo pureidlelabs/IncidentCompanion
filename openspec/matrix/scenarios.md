@@ -554,6 +554,9 @@
 | A case's reports are navigation, and are reachable from every section | A case holds no reports | demonstrated | ui/src/screens/report-section.stories.tsx |
 | A case's reports are navigation, and are reachable from every section | The address names a report the case no longer holds | demonstrated | ui/src/components/blocks/case-frame.test.tsx |
 | A case's reports are navigation, and are reachable from every section | The analyst leaves the section that draws a report | demonstrated | ui/src/components/blocks/case-frame.test.tsx |
+| A report filed under a regime records which step of it the report is | A filing is created from the layout that files it | demonstrated | ui/src/components/blocks/report-new-dialog.stories.tsx |
+| A report filed under a regime records which step of it the report is | A layout whose title is not the name of a step | demonstrated | server/src/library/builtins/report-layouts.test.ts |
+| A report filed under a regime records which step of it the report is | An ordinary layout | demonstrated | ui/src/components/blocks/report-new-dialog.stories.tsx |
 
 ## state
 
