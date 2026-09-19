@@ -14,7 +14,7 @@
  * implements neither: without a stub every query answers `false` and a shell
  * that never folds passes a test that says it does.
  */
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -22,6 +22,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NavRail } from '@/components/blocks/rail'
 import { NavRow } from '@/components/blocks/rail-nav'
 import { RailList } from '@/components/ui/rail'
+
+import { mockMatchMedia } from '@/test/matchMedia'
 
 import { AppShell } from './app-shell'
 
@@ -92,6 +94,39 @@ describe('the rail folds itself when the viewport is narrow', () => {
     draw()
     await userEvent.click(screen.getByTestId('rail-trigger'))
     expect(folded()).toBe(false)
+  })
+
+  /**
+   * An analyst who has said nothing has no preference to honour, so the width
+   * governs -- and it governs while it changes, not only at mount.
+   */
+  it('folds when the window narrows under it', () => {
+    const media = mockMatchMedia(false)
+    viewportIsNarrow(false)
+    draw()
+    expect(folded()).toBe(false)
+
+    viewportIsNarrow(true)
+    act(() => {
+      media.fireChange(true)
+    })
+
+    expect(folded(), 'the rail kept its width when the window no longer had room').toBe(true)
+  })
+
+  /** And a press still outranks the width, in both directions. */
+  it('keeps an answer the analyst gave when the window narrows', () => {
+    const media = mockMatchMedia(false)
+    window.localStorage.setItem('ic-test-rail', 'false')
+    viewportIsNarrow(false)
+    draw()
+
+    viewportIsNarrow(true)
+    act(() => {
+      media.fireChange(true)
+    })
+
+    expect(folded(), 'the width overruled an analyst who had already answered').toBe(false)
   })
 
   /**
