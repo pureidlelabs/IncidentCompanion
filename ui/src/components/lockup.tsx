@@ -7,10 +7,8 @@ const NAME = { sm: 'text-xl', lg: 'text-2xl' } as const
 /**
  * The mark and the name, set together.
  *
- * The wordmark takes `currentColor`, so the caller decides the tone: the
- * unauthenticated screens set it muted against their field, the About dialog
- * sets it in the foreground because there it is the subject rather than a
- * watermark.
+ * The wordmark takes `currentColor`, so the caller decides the tone. The mark
+ * beside it does not, and keeps its own two colours on any ground.
  *
  * **The name is type here, not an asset.** `wordmark-light.png` and
  * `wordmark-dark.png` copy this treatment as a raster - the README uses them,
