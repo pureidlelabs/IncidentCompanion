@@ -94,6 +94,10 @@ export const Scoped: Story = {
     // rather than navigating, and the kit's tabs are what carry the travelling
     // underline, the rail beneath the row and a focus ring sized for a tab --
     // none of which a row of buttons drawing its own border has.
+    await step('the tab that is selected names a panel that is there', async () => {
+      await panelHoldsTheSection(canvasElement)
+    })
+
     await step('the scope row is the kit`s tabs', async () => {
       await expect(canvas.getByRole('tablist', { name: 'Scope' })).toBeInTheDocument()
       await expect(canvas.getByRole('tab', { name: /^Assets/ })).toHaveAttribute(
@@ -262,6 +266,33 @@ export const NarrowPaintedColumns: Story = {
 }
 
 /**
+ * The selected tab names a panel, and that panel encloses the section.
+ *
+ * **Both halves, because the id resolving is the weaker claim.** A panel
+ * hoisted out from around the section, or emptied, still carries the id the
+ * tab names -- so an id that resolves says only that something answers to the
+ * name, not that the read cannot take the panel away. -> #937
+ */
+async function panelHoldsTheSection(root: HTMLElement) {
+  const selected = root.querySelector('[role="tab"][aria-selected="true"]')
+  const named = selected?.getAttribute('aria-controls') ?? ''
+  await expect(named).not.toBe('')
+
+  const panel = root.ownerDocument.getElementById(named)
+  await expect(
+    panel,
+    `the selected tab names ${named}, which is not in the document`,
+  ).not.toBeNull()
+
+  const head = root.querySelector('[data-part="section-head"]')
+  await expect(head, 'the section drew no head, so there is nothing to enclose').not.toBeNull()
+  await expect(
+    panel !== null && head !== null && panel.contains(head),
+    'the panel does not enclose the section, so a read replacing the body takes the panel with it',
+  ).toBe(true)
+}
+
+/**
  * The read has not come back.
  *
  * **The state this block had no story for**, and the one where its head can
@@ -273,22 +304,34 @@ export const NarrowPaintedColumns: Story = {
 export const Reading: Story = {
   name: 'The read has not come back',
   args: { kase: undefined, busy: true },
-  parameters: {
-    /**
-     * While the read is pending the tablist is drawn from the section's head
-     * and its panel is not, so the selected tab's `aria-controls` names an id
-     * that is not there. Fixing it moves the list out of the head, which is a
-     * restructure rather than a line. -> #937
-     */
-    a11y: { config: { rules: [{ id: 'aria-valid-attr-value', enabled: false }] } },
-  },
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step }) => {
+    await step('the tab that is selected names a panel that is there', async () => {
+      await panelHoldsTheSection(canvasElement)
+    })
     await step('the wait is drawn rather than a count of nothing', async () => {
       await expect(canvas.getByRole('status')).toBeInTheDocument()
       // `0 rows` is an answer, and nobody has one yet. The badge is what the
       // eye lands on beside the title, so it is the one asserted rather than
       // every zero the skeleton happens to draw.
       await expect(canvas.queryByText('0 rows')).toBeNull()
+    })
+  },
+}
+
+/**
+ * The read came back as a failure.
+ *
+ * **The boundary's other replacement.** A failed read swaps the section's
+ * children for the refusal exactly as a pending one swaps them for the
+ * skeleton, so the tablist has the same way of pointing at nothing -- and no
+ * story set `problem`, which left that half drawn by nothing. -> #937
+ */
+export const ReadFailed: Story = {
+  name: 'The read came back as a failure',
+  args: { kase: undefined, problem: new Error('the case could not be read') },
+  play: async ({ canvasElement, step }) => {
+    await step('the tab that is selected names a panel that is there', async () => {
+      await panelHoldsTheSection(canvasElement)
     })
   },
 }

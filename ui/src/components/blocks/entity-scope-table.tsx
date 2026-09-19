@@ -348,7 +348,10 @@ export function EntityScopeTable({
   return (
     <>
       <Tabs
-        className="flex min-h-0 flex-1 flex-col"
+        // `gap-3` over the kit's `gap-4`: the list used to sit in the section's
+        // own column, and a scope row spaced unlike every other row in the
+        // block reads as belonging to something else.
+        className="flex min-h-0 flex-1 flex-col gap-3"
         // **Arrowing moves the focus and does not commit.** React Aria's default
         // is `automatic`, which re-scopes the table on every arrow press: with
         // one tab stop for the whole list, reaching the last kind by keyboard
@@ -359,56 +362,64 @@ export function EntityScopeTable({
           chooseScope(next as EntityScope)
         }}
       >
-        <Section
-          title={label}
-          fills
-          scrolls={false}
-          // **Withheld while the read is out, not drawn as nothing.** The body is
-          // gated behind the boundary and the head is not, so a count derived from
-          // rows that have not arrived says `0 rows` beside the title -- and a case
-          // still loading reads exactly like a case holding none.
-          {...(busy
-            ? {}
-            : { meta: <CountMeta shown={visible.length} total={scopeRows.length} noun="row" /> })}
-          actions={
-            kind ? (
-              <AddAction label={addLabel(kind)} onPress={editor.add} />
-            ) : (
-              <AddSplitAction
-                // The first kind is the one the button adds. `ENTITY_KINDS` is
-                // in rail order, which puts assets first, and reordering it
-                // moves this with it rather than leaving a second opinion here.
-                label={ENTITY_KINDS[0] ? addLabel(ENTITY_KINDS[0]) : 'Add entity'}
-                menuLabel="Add another kind"
-                onPress={() => {
-                  const first = ENTITY_KINDS[0]
-                  if (first) setAddKind(first)
-                  editor.add()
-                }}
-              >
-                {ENTITY_KINDS.map((entry) => {
-                  const Icon = SECTIONS[entry.slug]?.icon
-                  return (
-                    <MenuItem
-                      key={entry.slug}
-                      onAction={() => {
-                        setAddKind(entry)
-                        editor.add()
-                      }}
-                    >
-                      {Icon ? <Icon aria-hidden /> : null}
-                      {/* Title case: a menu row is a name, where the button's
+        {/* **Above the section, not in its toolbar.** The section's children are
+            replaced while the read is out, so a panel drawn among them leaves the
+            list naming an id that is not there; a `tablist` may not sit inside the
+            `tabpanel` either, which rules out wrapping both. -> #937 */}
+        <ScopeRow counts={searched} />
+
+        {/* One panel, carrying the selected tab's own id: React Aria puts
+            `aria-controls` on the selected tab alone, so the id it names is
+            always this one. */}
+        <TabPanel key={scope} id={scope} still>
+          <Section
+            title={label}
+            fills
+            scrolls={false}
+            // **Withheld while the read is out, not drawn as nothing.** The body is
+            // gated behind the boundary and the head is not, so a count derived from
+            // rows that have not arrived says `0 rows` beside the title -- and a case
+            // still loading reads exactly like a case holding none.
+            {...(busy
+              ? {}
+              : { meta: <CountMeta shown={visible.length} total={scopeRows.length} noun="row" /> })}
+            actions={
+              kind ? (
+                <AddAction label={addLabel(kind)} onPress={editor.add} />
+              ) : (
+                <AddSplitAction
+                  // The first kind is the one the button adds. `ENTITY_KINDS` is
+                  // in rail order, which puts assets first, and reordering it
+                  // moves this with it rather than leaving a second opinion here.
+                  label={ENTITY_KINDS[0] ? addLabel(ENTITY_KINDS[0]) : 'Add entity'}
+                  menuLabel="Add another kind"
+                  onPress={() => {
+                    const first = ENTITY_KINDS[0]
+                    if (first) setAddKind(first)
+                    editor.add()
+                  }}
+                >
+                  {ENTITY_KINDS.map((entry) => {
+                    const Icon = SECTIONS[entry.slug]?.icon
+                    return (
+                      <MenuItem
+                        key={entry.slug}
+                        onAction={() => {
+                          setAddKind(entry)
+                          editor.add()
+                        }}
+                      >
+                        {Icon ? <Icon aria-hidden /> : null}
+                        {/* Title case: a menu row is a name, where the button's
                           `Add asset` is a sentence. */}
-                      {nounOf(entry)}
-                    </MenuItem>
-                  )
-                })}
-              </AddSplitAction>
-            )
-          }
-          toolbar={
-            <>
-              <ScopeRow counts={searched} />
+                        {nounOf(entry)}
+                      </MenuItem>
+                    )
+                  })}
+                </AddSplitAction>
+              )
+            }
+            toolbar={
               <TableToolbar
                 className="z-20"
                 searchColumn="Entity"
@@ -423,26 +434,23 @@ export function EntityScopeTable({
                 }}
                 filters={<FilterControls {...filters.controls} />}
               />
-            </>
-          }
-          read={{
-            isPending: busy,
-            isError: problem !== undefined,
-            error: problem,
-            ...(onRetry ? { refetch: onRetry } : {}),
-          }}
-        >
-          {refusal && (
-            <MergeReview field={refusal.field} by={refusal.by} row={refusal.row} className="mb-3" />
-          )}
+            }
+            read={{
+              isPending: busy,
+              isError: problem !== undefined,
+              error: problem,
+              ...(onRetry ? { refetch: onRetry } : {}),
+            }}
+          >
+            {refusal && (
+              <MergeReview
+                field={refusal.field}
+                by={refusal.by}
+                row={refusal.row}
+                className="mb-3"
+              />
+            )}
 
-          {/* One panel, carrying the selected tab's own id: React Aria puts
-            `aria-controls` on the selected tab alone, so the id it names is
-            always this one. */}
-          {/* The panel is drawn whether or not its body can be: a tablist
-            whose selected tab names a panel that is not there leaves
-            `aria-controls` pointing at nothing. -> #937 */}
-          <TabPanel key={scope} id={scope} still>
             {source && specs && (
               <ScopeBody
                 scope={scope}
@@ -484,8 +492,8 @@ export function EntityScopeTable({
                 }}
               />
             )}
-          </TabPanel>
-        </Section>
+          </Section>
+        </TabPanel>
       </Tabs>
 
       {/* **Outside `Tabs`, not merely outside the panel.** React Aria builds
