@@ -23,9 +23,17 @@ const item = tv({
     // a rung resolving to the same classes as another hands a caller asking
     // for the denser row the normal one, and the only way to find out is by
     // measuring.
+    /**
+     * **The row's size reaches its slots as values, not as rules.** A variant
+     * compiles to an attribute selector, so a slot styling itself on the row's
+     * `data-size` outranks the caller's own class whatever `cn` merges -- the
+     * class is accepted and does nothing. Declaring the measurement here and
+     * reading it unprefixed in the slot puts the two at equal specificity,
+     * where the merge decides and the caller wins. -> #897
+     */
     size: {
-      default: 'gap-2.5 px-3 py-2.5',
-      xs: 'gap-2 px-2.5 py-2',
+      default: 'gap-2.5 px-3 py-2.5 [--item-content-gap:0.25rem] [--item-media:2.5rem]',
+      xs: 'gap-2 px-2.5 py-2 [--item-content-gap:0px] [--item-media:1.5rem]',
     },
   },
   defaultVariants: { variant: 'default', size: 'default' },
@@ -86,8 +94,8 @@ const itemMedia = tv({
       default: 'bg-transparent text-ink-muted',
       icon: 'text-ink-muted icon-4',
       image: [
-        'size-10 overflow-hidden rounded-sm [&_img]:size-full [&_img]:object-cover',
-        'group-data-[size=xs]/item:size-6',
+        'size-[var(--item-media,2.5rem)] overflow-hidden rounded-sm',
+        '[&_img]:size-full [&_img]:object-cover',
       ],
     },
   },
@@ -120,7 +128,7 @@ export function ItemContent({ className, ...props }: ComponentProps<'div'>) {
       data-part="item-content"
       {...props}
       className={cn(
-        'flex flex-1 flex-col gap-1 group-data-[size=xs]/item:gap-0',
+        'flex flex-1 flex-col gap-[var(--item-content-gap,0.25rem)]',
         '[&+[data-part=item-content]]:flex-none',
         className,
       )}

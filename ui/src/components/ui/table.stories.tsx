@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+
+import { cn } from '@/lib/cn'
 import type { ComponentProps } from 'react'
 import { useState } from 'react'
 import type { SortDescriptor } from 'react-aria-components'
@@ -429,6 +431,44 @@ export const Resizing: Story = {
       </Table>
     </ResizableTableContainer>
   ),
+}
+
+/**
+ * The handle's drag width is a value, not a rule.
+ *
+ * `resizing:w-0.5` was an attribute selector, so it outranked a caller's own
+ * `w-*` -- accepted and ignored. The drag state sets a measurement now and the
+ * width class stays plain, so the two meet at equal specificity. jsdom cannot
+ * see it: what decides is what the selectors compile to. -> #897
+ */
+export const ResizerWidthIsACallersToTake: Story = {
+  ...Resizing,
+  play: async ({ canvasElement, step }) => {
+    const resizer = canvasElement.querySelector('[data-part="table-column-resizer"]')
+    await expect(resizer, 'no resizer to measure').not.toBeNull()
+    if (resizer === null) return
+
+    await step('the drag state still thickens it', async () => {
+      await expect(
+        getComputedStyle(resizer).width,
+        'the handle drew its dragging width at rest',
+      ).toBe('1px')
+      resizer.setAttribute('data-resizing', 'true')
+      await expect(
+        getComputedStyle(resizer).width,
+        'the drag state stopped thickening the handle',
+      ).toBe('2px')
+    })
+
+    await step('and a caller can take it back, which the merge is what decides', async () => {
+      // **Through `cn`, not by adding a class to the element.** Two plain
+      // classes are equal specificity, so the stylesheet's own order settles
+      // them and the caller can lose -- what makes the caller win is that
+      // tailwind-merge now recognises the pair as one utility and drops the
+      // component's. Adding the class to the DOM skips exactly that.
+      await expect(cn('w-[var(--resizer-w,1px)]', 'w-1')).toBe('w-1')
+    })
+  },
 }
 
 /**
