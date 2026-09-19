@@ -65,7 +65,7 @@ export const Radii: Story = {
   render: (args) => (
     <div className="flex gap-3">
       {(['sm', 'md', 'lg'] as const).map((radius) => (
-        <Plate {...args} key={radius} radius={radius} />
+        <Plate key={radius} {...args} radius={radius} />
       ))}
     </div>
   ),
@@ -80,7 +80,7 @@ export const Tones: Story = {
   render: (args) => (
     <div className="flex gap-3">
       {(['surface', 'muted', 'none'] as const).map((tone) => (
-        <Plate {...args} key={tone} tone={tone} />
+        <Plate key={tone} {...args} tone={tone} />
       ))}
     </div>
   ),
@@ -89,24 +89,23 @@ export const Tones: Story = {
 /**
  * `clip={false}`, for a child that has to reach outside the box.
  *
- * A sticky head, a focus ring and a menu drawn beyond the edge are each a
- * reason not to cut. The corner goes to `0px` rather than the box going away,
- * so the plate still draws its border and the tree does not change shape.
+ * A sticky head, or a control whose focus ring sits outside its own edge.
+ * The declaration is dropped rather than zeroed: `inset(0px round 0px)` is
+ * still a cut to the border box and still opens a stacking context, so a
+ * zeroed corner escapes nothing.
+ *
+ * **Nothing grounded in the corner here, deliberately.** An uncut plate with
+ * a square-edged band at its top is the defect itself, and `probe.js` would
+ * report it on every walk of the kit, indistinguishable from a regression.
  */
 export const Escaping: Story = {
   args: {
     clip: false,
     className: 'w-72',
-    children: (
-      <>
-        <Band>Not cut</Band>
-        <p className="px-3 py-3 text-sm text-ink">A child here may paint past the corner.</p>
-      </>
-    ),
+    children: <p className="px-3 py-3 text-sm text-ink">A child here may paint past the corner.</p>,
   },
   play: async ({ canvasElement }) => {
     const content = canvasElement.querySelector('[data-part="plate-content"]')
-    // `inset(0px)` with no radius: still a clip, and it cuts nothing.
-    await expect(getComputedStyle(content!).clipPath).not.toContain('round')
+    await expect(getComputedStyle(content!).clipPath).toBe('none')
   },
 }

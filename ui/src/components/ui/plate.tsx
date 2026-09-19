@@ -21,7 +21,7 @@ const plate = tv({
      */
     clip: {
       true: '[--plate-corner:calc(var(--plate-radius)-1px)]',
-      false: '[--plate-corner:0px]',
+      false: '',
     },
   },
   defaultVariants: { radius: 'sm', tone: 'none', clip: true },
@@ -29,20 +29,39 @@ const plate = tv({
 
 /** The look this component takes. Spelled out so the docs generator can read it. */
 export interface PlateLook {
-  /** The corner the plate draws, and the one its content is cut to. */
+  /**
+   * The corner the plate draws, and the one its content is cut to.
+   *
+   * Set it here rather than with `rounded-*` in `className`: the two travel
+   * together, and a class overriding one leaves the other where it was, which
+   * is a border arc and a cut arc of different sizes.
+   */
   radius?: 'sm' | 'md' | 'lg'
   /** The plate's own ground. `none` leaves it to whatever it sits on. */
   tone?: 'surface' | 'muted' | 'none'
   /**
-   * Whether the content is cut to the corner. Pass `false` where a child has
-   * to reach outside the box -- a sticky head, a focus ring, a menu.
+   * Whether the content is cut to the corner.
+   *
+   * `false` drops the declaration rather than zeroing it, because
+   * `inset(0px round 0px)` still cuts to the border box and still opens a
+   * stacking context. Pass it where a child paints outside the box: a sticky
+   * head, or a control whose focus ring sits outside its own edge.
+   *
+   * An overlay React Aria portals out of the tree was never cut and needs
+   * nothing here.
    */
   clip?: boolean
 }
 
 export interface PlateProps extends Omit<ComponentProps<'div'>, 'children'>, PlateLook {
   children: ReactNode
-  /** Classes for the inner box that carries the cut, rather than for the plate. */
+  /**
+   * Classes for the inner box that carries the cut.
+   *
+   * The plate holds exactly one child, so anything in `className` addressing
+   * children -- `divide-y`, `space-y-*`, `gap-*`, `*:`, a sibling selector --
+   * reaches the content box and not the content. Those go here.
+   */
   contentClassName?: string
 }
 
@@ -58,8 +77,13 @@ export interface PlateProps extends Omit<ComponentProps<'div'>, 'children'>, Pla
  *   would cut its own border in half at every edge, and `overflow` there makes
  *   it the scrollport any sticky child sticks to. `table.tsx` settled the same
  *   question the same way.
- * - `clip={false}` takes the corner to `0px` rather than removing the box, so
- *   a child that has to escape still sits in the same tree.
+ * - `clip={false}` drops the cut and keeps the box, so a child that has to
+ *   escape still sits in the same tree.
+ * - **A cut plate cuts a positive outline offset.** The kit's focus ring is
+ *   `outline-offset-2`, which paints outside the border box, so a control
+ *   flush against the edge loses the outer edge of its ring. `table.tsx`
+ *   answers this with `-outline-offset-2` on what it clips, and a caller
+ *   putting controls against a plate's edge owes the same.
  *
  * The browser tier is what can see whether the paint stops at the arc:
  * `probe.js` reports it as `paints-past-the-corner`.
@@ -78,7 +102,11 @@ export function Plate({
       <div
         data-part="plate-content"
         className={cn(
-          'flex min-w-0 flex-1 flex-col [clip-path:inset(0_round_var(--plate-corner))]',
+          'flex min-h-0 min-w-0 flex-1 flex-col',
+          // **Dropped, not zeroed.** `inset(0px round 0px)` is still a clip to
+          // the border box and still opens a stacking context, so a zeroed
+          // corner cuts everything a real one does.
+          clip === false ? '' : '[clip-path:inset(0_round_var(--plate-corner))]',
           contentClassName,
         )}
       >

@@ -22,12 +22,27 @@ const plateOf = (ui: React.ReactElement) => {
 }
 
 describe('a plate clips its own corner', () => {
-  it('declares the corner its content is cut to', () => {
-    const className = plateOf(<Plate>content</Plate>).className
-    expect(className).toMatch(/\[--plate-corner:/)
-    // A plate that declares `0px` while claiming to clip cuts nothing, and
-    // reads identical to one that clips at every other assertion here.
-    expect(className, 'the plate clips to nothing').not.toContain('[--plate-corner:0px]')
+  it('cuts inside the stroke rather than across it', () => {
+    // The whole expression, not a prefix: dropping the `-1px` clips at the
+    // outer arc, so the content's ground covers the border it sits inside --
+    // which is the defect this component exists to answer, one pixel smaller.
+    expect(plateOf(<Plate>content</Plate>).className).toContain(
+      '[--plate-corner:calc(var(--plate-radius)-1px)]',
+    )
+  })
+
+  it.each([
+    ['sm', 'rounded-sm'],
+    ['md', 'rounded-md'],
+    ['lg', 'rounded-lg'],
+  ] as const)('pairs the %s radius with the token the cut reads', (radius, rounded) => {
+    // The arc the border draws and the arc the content is cut to come from
+    // two classes. Paired wrongly, or with the token missing, `calc` fails to
+    // substitute, `clip-path` computes to `none`, and the cut is gone with no
+    // class changing.
+    const className = plateOf(<Plate radius={radius}>content</Plate>).className
+    expect(className).toContain(rounded)
+    expect(className).toContain(`[--plate-radius:var(--radius-${radius})]`)
   })
 
   it('cuts the content rather than the plate, so the border still draws itself', () => {
@@ -41,17 +56,22 @@ describe('a plate clips its own corner', () => {
     expect(content?.className).toContain('[clip-path:inset(0_round_var(--plate-corner))]')
   })
 
-  it('takes the corner to zero for a child that has to escape', () => {
-    // A sticky head, a focus ring, a menu drawn outside the box: each is a
-    // reason the content must not be cut, and the border stays either way.
+  it('drops the cut entirely for a child that has to escape', () => {
+    // Not a zeroed corner: `inset(0px round 0px)` is still a clip to the
+    // border box and still opens a stacking context, so it cuts everything a
+    // real corner does. The box and its border stay either way.
     const plate = plateOf(<Plate clip={false}>content</Plate>)
-    expect(plate.className).toContain('[--plate-corner:0px]')
+    const content = plate.querySelector('[data-part="plate-content"]')
+    expect(content?.className, 'the escape hatch still cuts').not.toContain('clip-path')
   })
 
   it('keeps the radius and the border on the plate itself', () => {
     const plate = plateOf(<Plate>content</Plate>)
-    expect(plate.className).toMatch(/\brounded-/)
-    expect(plate.className).toMatch(/\bborder\b/)
+    // Whole classes: `/\bborder\b/` matches inside `border-border`, so a
+    // plate with `border-0` passed that assertion with no border at all.
+    const classes = plate.className.split(/\s+/)
+    expect(classes).toContain('border')
+    expect(classes.some((one) => /^rounded-(sm|md|lg)$/.test(one))).toBe(true)
   })
 
   it('draws what it is given', () => {
