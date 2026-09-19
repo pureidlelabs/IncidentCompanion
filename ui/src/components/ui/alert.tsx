@@ -12,7 +12,8 @@ import { cn, tv } from '@/lib/cn'
 const alert = tv({
   base: [
     'group/alert relative grid w-full gap-0.5 rounded-lg border border-border px-2.5 py-2 text-left text-sm',
-    'has-[>svg]:gap-x-2',
+    'gap-x-[var(--alert-gap-x,0.125rem)]',
+    'has-[>svg]:[--alert-gap-x:0.5rem]',
     // **The action takes a column, declared only where there is one.** A fixed
     // band is overhung by a `sm` button, and whether that shows depends on
     // where the description happens to wrap - right in every screenshot and

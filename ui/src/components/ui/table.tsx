@@ -130,9 +130,8 @@ const columnContent = tv({
 const columnResizer = tv({
   extend: focusRing,
   base: [
-    // The width is a value the drag state sets rather than a rule it writes:
-    // `resizing:w-0.5` is an attribute selector and outranks a caller's own
-    // `w-*`, which is then accepted and ignored. -> #897
+    // The drag state sets the width as a value rather than writing it as a
+    // rule. -> `a-kit-size-is-not-a-variant.rule.test.ts`
     'box-content h-4 w-[var(--resizer-w,1px)] shrink-0 cursor-col-resize rounded-xs px-1',
     'bg-border bg-clip-content forced-colors:bg-[ButtonBorder]',
     'resizing:[--resizer-w:0.125rem] resizing:bg-ring forced-colors:resizing:bg-[Highlight]',

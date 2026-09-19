@@ -15,7 +15,7 @@ const skeleton = tv({
   variants: {
     shape: {
       block: 'w-full rounded-md',
-      text: 'h-3 w-full rounded-md last:w-2/3',
+      text: 'h-3 w-[var(--skeleton-w,100%)] rounded-md last:[--skeleton-w:66.666667%]',
       circle: 'aspect-square rounded-full',
     },
     /** `pulse` is a plain opacity throb; `shimmer` runs a highlight across it. */
@@ -37,7 +37,8 @@ export interface SkeletonLook {
 }
 
 export interface SkeletonProps
-  extends Omit<React.ComponentProps<'div'>, 'onAnimationStart' | 'onDrag' | 'onDragStart' | 'onDragEnd'>,
+  extends
+    Omit<React.ComponentProps<'div'>, 'onAnimationStart' | 'onDrag' | 'onDragStart' | 'onDragEnd'>,
     SkeletonLook {}
 
 /**

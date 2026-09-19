@@ -461,12 +461,23 @@ export const ResizerWidthIsACallersToTake: Story = {
     })
 
     await step('and a caller can take it back, which the merge is what decides', async () => {
-      // **Through `cn`, not by adding a class to the element.** Two plain
-      // classes are equal specificity, so the stylesheet's own order settles
-      // them and the caller can lose -- what makes the caller win is that
-      // tailwind-merge now recognises the pair as one utility and drops the
-      // component's. Adding the class to the DOM skips exactly that.
-      await expect(cn('w-[var(--resizer-w,1px)]', 'w-1')).toBe('w-1')
+      // **Read off the rendered handle, not written out here.** A literal
+      // copy of the component's own class asserts the copy: editing
+      // `columnResizer` would leave it green. What is under test is that the
+      // width the component emits and a caller's own are one utility to
+      // tailwind-merge, so the component's is dropped rather than kept and
+      // outranked -- which is what adding a class to the element would skip.
+      const emitted = resizer.className
+      await expect(emitted, 'the handle stopped emitting a width at all').toMatch(/(^|\s)w-/)
+      await expect(
+        cn(emitted, 'w-1')
+          .split(/\s+/)
+          // `(^|:)` so a variant-prefixed width counts: `resizing:w-0.5` is
+          // exactly the survivor this looks for, and a filter anchored at the
+          // start of the class misses it and passes.
+          .filter((one) => /(^|:)w-/.test(one)),
+        'the handle kept a width of its own beside the caller`s',
+      ).toEqual(['w-1'])
     })
   },
 }

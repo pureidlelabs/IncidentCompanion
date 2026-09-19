@@ -222,6 +222,45 @@ export const Media: Story = {
 }
 
 /**
+ * A row inside a row takes the measurement it inherits.
+ *
+ * The row's size reaches its slots as a custom property, and a property
+ * inherits -- so a default row nested inside an `xs` one is measured by the
+ * `xs` one, which is what the old `group-data-[size=xs]/item:` variant did
+ * too: it matched any ancestor. Only `xs` declares, so nothing resets it on
+ * the way down. -> #897
+ */
+export const ANestedRowInheritsTheSize: Story = {
+  render: () => (
+    <ItemGroup className="max-w-lg">
+      <Item role="listitem" size="xs">
+        <ItemContent>
+          {/* No `listitem` role: this row is content inside the row above,
+              not a second entry in the same list. */}
+          <Item data-testid="nested-default">
+            <ItemMedia variant="image" data-testid="nested-media">
+              <img alt="" src={PIXEL} />
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle>chrome.exe</ItemTitle>
+            </ItemContent>
+          </Item>
+        </ItemContent>
+      </Item>
+    </ItemGroup>
+  ),
+  play: async ({ canvas, step }) => {
+    await step('the row it sits in decides, not the one it is', async () => {
+      const media = await canvas.findByTestId('nested-media')
+      await expect(
+        getComputedStyle(media).width,
+        'a default row nested in an xs row stopped inheriting the xs measurement',
+      ).toBe('24px')
+    })
+  },
+}
+
+/**
  * A caller's size beats the one the row's size implies.
  *
  * An `xs` row shrinks its media, and a caller asking for something else has to
@@ -249,7 +288,9 @@ export const CallerOutranksTheRowSize: Story = {
   play: async ({ canvas, step }) => {
     await step('the row decides for a slot that asks for nothing', async () => {
       const own = await canvas.findByTestId('left-to-the-row')
-      await expect(getComputedStyle(own).width, 'an xs row stopped shrinking its media').toBe('24px')
+      await expect(getComputedStyle(own).width, 'an xs row stopped shrinking its media').toBe(
+        '24px',
+      )
     })
 
     await step('and the caller decides for one that asks', async () => {

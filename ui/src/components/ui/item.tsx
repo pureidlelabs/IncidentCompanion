@@ -23,16 +23,13 @@ const item = tv({
     // a rung resolving to the same classes as another hands a caller asking
     // for the denser row the normal one, and the only way to find out is by
     // measuring.
-    /**
-     * **The row's size reaches its slots as values, not as rules.** A variant
-     * compiles to an attribute selector, so a slot styling itself on the row's
-     * `data-size` outranks the caller's own class whatever `cn` merges -- the
-     * class is accepted and does nothing. Declaring the measurement here and
-     * reading it unprefixed in the slot puts the two at equal specificity,
-     * where the merge decides and the caller wins. -> #897
-     */
+    //
+    // **Declared here and read plainly in the slot**, so the row's size and a
+    // caller's own class meet at equal specificity. Only `xs` declares, and
+    // the value inherits: a row nested in a denser one is measured by it.
+    // -> `a-kit-size-is-not-a-variant.rule.test.ts`
     size: {
-      default: 'gap-2.5 px-3 py-2.5 [--item-content-gap:0.25rem] [--item-media:2.5rem]',
+      default: 'gap-2.5 px-3 py-2.5',
       xs: 'gap-2 px-2.5 py-2 [--item-content-gap:0px] [--item-media:1.5rem]',
     },
   },
@@ -70,13 +67,13 @@ export function ItemGroup({ className, ...props }: ItemGroupProps) {
       role="list"
       {...props}
       className={cn(
-        'group/item-group flex w-full flex-col gap-4',
+        'group/item-group flex w-full flex-col gap-[var(--item-group-gap,1rem)]',
         // **A direct child, and the part and the size on one element.**
         // `has-data-[size=xs]` was an unscoped `:has()`, so anything nested
         // writing `data-size` answered for the group -- and naming the part
         // alone leaves a nested `ItemGroup`'s rows answering for this one.
         // -> #951
-        'has-[>[data-part=item][data-size=xs]]:gap-2',
+        'has-[>[data-part=item][data-size=xs]]:[--item-group-gap:0.5rem]',
         className,
       )}
     />
