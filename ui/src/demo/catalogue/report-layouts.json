@@ -1,5 +1,415 @@
 {
-  "layouts": [],
+  "layouts": [
+    {
+      "name": "standard",
+      "label": "Customer RCA",
+      "summary": "The full account, written for the customer. Your own sections sit between the derived ones.",
+      "builtin": true,
+      "nis2": false,
+      "blocks": [
+        {
+          "kind": "case_header",
+          "position": 0,
+          "heading": "",
+          "headingKey": "",
+          "label": "Case"
+        },
+        {
+          "kind": "written",
+          "position": 1,
+          "heading": "",
+          "headingKey": "heading.exec_summary",
+          "label": "Executive summary"
+        },
+        {
+          "kind": "ribbon",
+          "position": 2,
+          "heading": "",
+          "headingKey": "",
+          "label": "Attack progression"
+        },
+        {
+          "kind": "techniques",
+          "position": 3,
+          "heading": "",
+          "headingKey": "",
+          "label": "Techniques and sub-techniques"
+        },
+        {
+          "kind": "root_cause",
+          "position": 4,
+          "heading": "",
+          "headingKey": "",
+          "label": "Root cause"
+        },
+        {
+          "kind": "written",
+          "position": 5,
+          "heading": "",
+          "headingKey": "heading.analysis",
+          "label": "Analysis"
+        },
+        {
+          "kind": "timeline",
+          "position": 6,
+          "heading": "",
+          "headingKey": "",
+          "label": "Timeline of events"
+        },
+        {
+          "kind": "technique_table",
+          "position": 7,
+          "heading": "",
+          "headingKey": "",
+          "label": "Techniques observed"
+        },
+        {
+          "kind": "entities",
+          "position": 8,
+          "heading": "",
+          "headingKey": "",
+          "label": "Assets, accounts and indicators"
+        },
+        {
+          "kind": "written",
+          "position": 9,
+          "heading": "",
+          "headingKey": "heading.recommendations",
+          "label": "Recommendations"
+        }
+      ]
+    },
+    {
+      "name": "executive",
+      "label": "Executive briefing",
+      "summary": "One page for a management audience: the figures and the shape of the attack, and nothing to look up.",
+      "builtin": true,
+      "nis2": false,
+      "blocks": [
+        {
+          "kind": "exec_card",
+          "position": 0,
+          "heading": "",
+          "headingKey": "",
+          "label": "Summary"
+        },
+        {
+          "kind": "written",
+          "position": 1,
+          "heading": "",
+          "headingKey": "heading.what_happened",
+          "label": "What happened"
+        },
+        {
+          "kind": "ribbon",
+          "position": 2,
+          "heading": "",
+          "headingKey": "",
+          "label": "Attack progression"
+        },
+        {
+          "kind": "written",
+          "position": 3,
+          "heading": "",
+          "headingKey": "heading.what_we_did",
+          "label": "What we did"
+        },
+        {
+          "kind": "written",
+          "position": 4,
+          "heading": "",
+          "headingKey": "heading.what_we_recommend",
+          "label": "What we recommend"
+        }
+      ]
+    },
+    {
+      "name": "technical",
+      "label": "Technical appendix",
+      "summary": "Everything, in the order an investigator would re-walk it. For another analyst to check your work.",
+      "builtin": true,
+      "nis2": false,
+      "blocks": [
+        {
+          "kind": "case_header",
+          "position": 0,
+          "heading": "",
+          "headingKey": "",
+          "label": "Case"
+        },
+        {
+          "kind": "narrative",
+          "position": 1,
+          "heading": "",
+          "headingKey": "",
+          "label": "Incident narrative"
+        },
+        {
+          "kind": "root_cause",
+          "position": 2,
+          "heading": "",
+          "headingKey": "",
+          "label": "Root cause"
+        },
+        {
+          "kind": "killchain",
+          "position": 3,
+          "heading": "",
+          "headingKey": "",
+          "label": "Kill chain coverage"
+        },
+        {
+          "kind": "timeline",
+          "position": 4,
+          "heading": "",
+          "headingKey": "",
+          "label": "Timeline of events"
+        },
+        {
+          "kind": "entities",
+          "position": 5,
+          "heading": "",
+          "headingKey": "",
+          "label": "Assets, accounts and indicators"
+        },
+        {
+          "kind": "methods",
+          "position": 6,
+          "heading": "",
+          "headingKey": "",
+          "label": "Methods"
+        },
+        {
+          "kind": "glossary",
+          "position": 7,
+          "heading": "",
+          "headingKey": "",
+          "label": "Terms used in this report"
+        },
+        {
+          "kind": "written",
+          "position": 8,
+          "heading": "",
+          "headingKey": "heading.analyst_notes",
+          "label": "Analyst notes"
+        }
+      ]
+    },
+    {
+      "name": "methods-pack",
+      "label": "Methods pack",
+      "summary": "Every query and collection step behind the findings, with its window and what it returned.",
+      "builtin": true,
+      "nis2": false,
+      "blocks": [
+        {
+          "kind": "case_header",
+          "position": 0,
+          "heading": "",
+          "headingKey": "",
+          "label": "Case"
+        },
+        {
+          "kind": "methods",
+          "position": 1,
+          "heading": "",
+          "headingKey": "",
+          "label": "Methods"
+        },
+        {
+          "kind": "evidence",
+          "position": 2,
+          "heading": "",
+          "headingKey": "",
+          "label": "Evidence"
+        },
+        {
+          "kind": "written",
+          "position": 3,
+          "heading": "",
+          "headingKey": "heading.analyst_notes",
+          "label": "Analyst notes"
+        }
+      ]
+    },
+    {
+      "name": "nis2-early-warning",
+      "label": "NIS2 early warning",
+      "summary": "Article 23, filed within 24 hours: whether the incident looks malicious, and whether it crosses a border.",
+      "builtin": true,
+      "nis2": true,
+      "blocks": [
+        {
+          "kind": "case_header",
+          "position": 0,
+          "heading": "",
+          "headingKey": "",
+          "label": "Case"
+        },
+        {
+          "kind": "written",
+          "position": 1,
+          "heading": "",
+          "headingKey": "heading.initial_assessment",
+          "label": "Initial assessment"
+        }
+      ]
+    },
+    {
+      "name": "nis2-notification",
+      "label": "NIS2 notification",
+      "summary": "Filed at 72 hours and superseding the early warning: an initial assessment of severity and impact.",
+      "builtin": true,
+      "nis2": true,
+      "blocks": [
+        {
+          "kind": "case_header",
+          "position": 0,
+          "heading": "",
+          "headingKey": "",
+          "label": "Case"
+        },
+        {
+          "kind": "impact",
+          "position": 1,
+          "heading": "",
+          "headingKey": "",
+          "label": "Impact"
+        },
+        {
+          "kind": "written",
+          "position": 2,
+          "heading": "",
+          "headingKey": "heading.initial_assessment",
+          "label": "Initial assessment"
+        },
+        {
+          "kind": "indicators",
+          "position": 3,
+          "heading": "",
+          "headingKey": "",
+          "label": "Indicators of compromise"
+        }
+      ]
+    },
+    {
+      "name": "nis2-intermediate",
+      "label": "NIS2 intermediate",
+      "summary": "A progress update while the incident is still open: where it stands, and what is still unanswered.",
+      "builtin": true,
+      "nis2": true,
+      "blocks": [
+        {
+          "kind": "case_header",
+          "position": 0,
+          "heading": "",
+          "headingKey": "",
+          "label": "Case"
+        },
+        {
+          "kind": "timeline",
+          "position": 1,
+          "heading": "",
+          "headingKey": "",
+          "label": "Timeline of events"
+        },
+        {
+          "kind": "written",
+          "position": 2,
+          "heading": "",
+          "headingKey": "heading.status_update",
+          "label": "Status update"
+        },
+        {
+          "kind": "written",
+          "position": 3,
+          "heading": "",
+          "headingKey": "heading.what_is_still_open",
+          "label": "What is still open"
+        }
+      ]
+    },
+    {
+      "name": "nis2-final",
+      "label": "NIS2 final report",
+      "summary": "The closing filing: root cause, the impact as measured, and the measures taken.",
+      "builtin": true,
+      "nis2": true,
+      "blocks": [
+        {
+          "kind": "case_header",
+          "position": 0,
+          "heading": "",
+          "headingKey": "",
+          "label": "Case"
+        },
+        {
+          "kind": "impact",
+          "position": 1,
+          "heading": "",
+          "headingKey": "",
+          "label": "Impact"
+        },
+        {
+          "kind": "root_cause",
+          "position": 2,
+          "heading": "",
+          "headingKey": "",
+          "label": "Root cause"
+        },
+        {
+          "kind": "written",
+          "position": 3,
+          "heading": "",
+          "headingKey": "heading.analysis",
+          "label": "Analysis"
+        },
+        {
+          "kind": "timeline",
+          "position": 4,
+          "heading": "",
+          "headingKey": "",
+          "label": "Timeline of events"
+        },
+        {
+          "kind": "actions",
+          "position": 5,
+          "heading": "",
+          "headingKey": "",
+          "label": "Response actions"
+        },
+        {
+          "kind": "entities",
+          "position": 6,
+          "heading": "",
+          "headingKey": "",
+          "label": "Assets, accounts and indicators"
+        },
+        {
+          "kind": "evidence",
+          "position": 7,
+          "heading": "",
+          "headingKey": "",
+          "label": "Evidence"
+        },
+        {
+          "kind": "written",
+          "position": 8,
+          "heading": "",
+          "headingKey": "heading.cross_border_impact",
+          "label": "Cross-border impact"
+        }
+      ]
+    },
+    {
+      "name": "__blank__",
+      "label": "Blank",
+      "summary": "No sections. Start from nothing and add what the case needs.",
+      "builtin": true,
+      "nis2": false,
+      "blocks": []
+    }
+  ],
   "stages": [
     "",
     "NIS2 early warning",
