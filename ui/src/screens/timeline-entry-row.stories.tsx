@@ -3,11 +3,7 @@ import { expect, within } from 'storybook/test'
 
 import type { TimelineEntry } from '@/api/model'
 import { BLANK_ACTION, BLANK_EVENT } from './timeline-entries'
-import {
-  TimelineEntryRow,
-  TimelineGapMark,
-  type TimelineRunLike,
-} from './timeline-entry-row'
+import { TimelineEntryRow, TimelineGapMark, type TimelineRunLike } from './timeline-entry-row'
 
 const NAMES = {
   system: new Map([['s1', 'WKS-FINANCE01']]),
@@ -100,6 +96,9 @@ export const AnEvent: Story = {
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelectorAll('[data-part="timeline-row"]')).toHaveLength(1)
     await expect(canvasElement.querySelector('[data-part="timeline-rail"]')).not.toBeNull()
+    // `EVENT` carries `high`, and nothing else asserted that a row draws the
+    // severity it was given at all -- only what an absent one reads as.
+    await expect(within(canvasElement).getByText('high')).toBeVisible()
     // Nothing to unfold, so nothing offers to.
     await expect(within(canvasElement).queryByRole('button', { name: /more/i })).toBeNull()
   },
@@ -187,6 +186,31 @@ export const GapMark: Story = {
   render: () => (
     <ol className="rounded-sm border border-border">
       <TimelineGapMark span={3 * 3600 * 1000} />
+    </ol>
+  ),
+}
+
+/**
+ * An event whose severity never arrived.
+ *
+ * The word is written out rather than taken from `severityLabel`: the helper
+ * returns the same string, so asserting through it can only ever track the
+ * implementation and go quiet with it. -> #979
+ */
+export const SeverityNeverArrived: Story = {
+  name: 'An event with no severity',
+  args: {
+    run: {
+      lead: { ...BLANK_EVENT, id: 'e3', time: EVENT.time, description: 'Something was seen' },
+      members: [{ ...BLANK_EVENT, id: 'e3', time: EVENT.time, description: 'Something was seen' }],
+    },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('unset')).toBeVisible()
+  },
+  render: (args) => (
+    <ol className="rounded-sm border border-border">
+      <TimelineEntryRow {...args} />
     </ol>
   ),
 }

@@ -5,6 +5,7 @@ import { type EntityNames } from '@/components/blocks/entity-scope'
 import { RowActions } from '@/components/blocks/row-actions'
 import { RowMenuItems, type RowMenuGroup } from '@/components/blocks/row-menu'
 import { TONE_INK, toneFor, type SeverityTone } from '@/components/blocks/severity-badge'
+import { severityLabel } from '@/components/ui/severity-tones'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PersonAvatar } from '@/components/blocks/presence'
@@ -185,7 +186,7 @@ export function TimelineEntryRow({
               size="xs"
               className={cn('shrink-0', TONE_INK[toneFor(entry.severity)])}
             >
-              {(entry.severity ?? '').trim() || 'unset'}
+              {severityLabel(entry.severity)}
             </Badge>
           ) : (
             <Badge

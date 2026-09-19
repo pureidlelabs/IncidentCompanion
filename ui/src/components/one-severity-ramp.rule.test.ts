@@ -41,8 +41,9 @@ const FILL: Readonly<Record<string, string>> = {
 }
 
 describe('the severity ramp', () => {
-  const files = globSync('**/*.{ts,tsx}', { cwd: SRC, absolute: true })
-    .filter((file) => !/\.(test|stories)\.tsx?$/.test(file))
+  const files = globSync('**/*.{ts,tsx}', { cwd: SRC, absolute: true }).filter(
+    (file) => !/\.(test|stories)\.tsx?$/.test(file),
+  )
 
   it('reads the tree it is meant to hold', () => {
     expect(files.length).toBeGreaterThan(200)
@@ -65,6 +66,26 @@ describe('the severity ramp', () => {
     expect(
       copies.sort(),
       'these say what severity is what colour, and the ramp already does',
+    ).toEqual([])
+  })
+
+  /**
+   * The word an empty severity reads as, which `severityLabel` answers.
+   *
+   * A screen spelling it again is how the same entry comes to read two ways
+   * in one case, and a story cannot see the screen that has not been written
+   * yet. Matched on the fallback rather than on the word alone, so a chip
+   * *displaying* the string stays allowed. -> #979
+   */
+  it('names the word for an empty severity in one module and nowhere else', () => {
+    const spelt = files
+      .map((file) => relative(SRC, file).replaceAll('\\', '/'))
+      .filter((where) => where !== THE_RAMP)
+      .filter((where) => /\|\|\s*'unset'/.test(readFileSync(resolve(SRC, where), 'utf8')))
+
+    expect(
+      spelt.sort(),
+      'these spell the empty-severity fallback themselves; call `severityLabel`',
     ).toEqual([])
   })
 })
