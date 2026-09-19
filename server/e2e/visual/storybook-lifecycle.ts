@@ -256,11 +256,6 @@ export interface StoryLoad {
 }
 
 /**
- * Navigates to one story's standalone preview and waits until it has
- * genuinely finished -- `play` included -- applying its `viewport` global
- * along the way. Leaves probing and capturing to the caller.
- */
-/**
  * What a module that did not arrive says, in either of Vite's two wordings.
  *
  * **A fetch that failed is about the server, not the story.** The dev server
@@ -270,6 +265,11 @@ export interface StoryLoad {
  */
 const MODULE_DID_NOT_ARRIVE = /(?:Failed to fetch|error loading) dynamically imported module/
 
+/**
+ * Loads one story, asking a second time for a module that did not arrive.
+ *
+ * Leaves probing and capturing to the caller.
+ */
 export async function loadStory(
   page: Page,
   storybookUrl: string,
@@ -286,6 +286,11 @@ export async function loadStory(
   return attemptStory(page, storybookUrl, storyId, ground)
 }
 
+/**
+ * Navigates to one story's standalone preview and waits until it has
+ * genuinely finished -- `play` included -- applying its `viewport` global
+ * along the way.
+ */
 async function attemptStory(
   page: Page,
   storybookUrl: string,
