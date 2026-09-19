@@ -120,24 +120,25 @@ export function ImportSentinelContainer({
   /**
    * What the provider already knows about the case, for the create call.
    *
-   * Verbatim, because this module does not map: the reference is the
-   * incident's own number and the time is the one the provider compares on,
-   * not the formatted one the table draws. Both are dropped when absent rather
-   * than sent empty -- the wire refuses `''` as a datetime, and the refusal
-   * would be of the whole create.
+   * Verbatim, because this module does not map: the time is the one the
+   * provider compares on, not the formatted one the table draws. It is dropped
+   * when absent rather than sent empty -- the wire refuses `''` as a datetime,
+   * and the refusal would be of the whole create.
    *
-   * Severity is not among them, and is not lost either: it rides in the
+   * **The incident's number is not among them.** A reference is unique within
+   * its customer, so seeding one from the number let that incident start
+   * exactly one case and refused every later attempt as the case was written.
+   * The number rides with the imported rows as their own provenance. -> #882
+   *
+   * Severity is not among them either, and is not lost: it rides in the
    * payload as the provider's own word, and the server maps it onto the case
    * vocabulary. Translating a platform's words is the server's job in this
    * capability rather than the browser's.
    */
-  const seedFrom = (
-    incidentIds: readonly string[],
-  ): { reference?: string; detectedAt?: string } => {
+  const seedFrom = (incidentIds: readonly string[]): { detectedAt?: string } => {
     const first = incidentIds.map((id) => listing.current.get(id)).find((one) => one !== undefined)
     if (first === undefined) return {}
     return {
-      ...(first.number ? { reference: first.number } : {}),
       ...(first.firstActivity ? { detectedAt: first.firstActivity } : {}),
     }
   }

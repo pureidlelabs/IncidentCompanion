@@ -506,7 +506,7 @@ describe('the Sentinel import container', () => {
       expect(starts[0]?.approved).not.toContain('SEN-1001')
     })
 
-    it('sends the title it was given, and the incident`s own reference and time', async () => {
+    it('sends the title it was given, and the incident`s own time', async () => {
       const held = await readyToStart()
 
       await held.create!(WORKSPACE.key, ['SEN-1001'], { title: 'From an incident' }, EVERY_ROW)
@@ -514,8 +514,33 @@ describe('the Sentinel import container', () => {
       expect(starts[0]?.kase.title).toBe('From an incident')
       // The provider's, not the browser's clock: a case opened at `now` loses
       // when the incident actually started.
-      expect(starts[0]?.kase.reference).toBe(INCIDENT.number)
       expect(starts[0]?.kase.detectedAt).toBe(INCIDENT.firstActivity)
+    })
+
+    /**
+     * **A second case from one incident, which the door refused by
+     * construction.** A reference is unique within its customer, so seeding it
+     * from the incident's own number let that incident start exactly one case
+     * -- every later attempt refused as the case was written, after the
+     * analyst had reviewed the rows, and naming a field the wizard does not
+     * offer.
+     *
+     * The number is not lost: it rides with the imported rows as their own
+     * provenance, which is where an analyst looks for where a row came from.
+     * -> #882
+     */
+    it('seeds no reference, so one incident can start a second case', async () => {
+      const held = await readyToStart()
+
+      await held.create!(WORKSPACE.key, ['SEN-1001'], { title: 'From an incident' }, EVERY_ROW)
+
+      expect(
+        starts[0]?.kase.reference,
+        `the case carries ${String(starts[0]?.kase.reference)}, which the next case from this incident cannot also carry`,
+      ).toBeUndefined()
+      // The incident has a number, so the assertion above is about the seeding
+      // rather than about a fixture with nothing to seed from.
+      expect(INCIDENT.number, 'the fixture has no number, so nothing was withheld').toBeTruthy()
     })
 
     /**
