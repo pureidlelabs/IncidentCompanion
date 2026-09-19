@@ -19,6 +19,7 @@ import { RowMenuItems, type RowMenuGroup } from '@/components/blocks/row-menu'
 import { GraphCanvas, type GraphViewport } from '@/components/ui/graph-canvas'
 import { Transport } from './transport'
 import { cn } from '@/lib/cn'
+import { Plate } from '@/components/ui/plate'
 import { tokenColour } from '@/lib/tokenColour'
 
 import { heldBackAt, type IncidentGraph, type IncidentNode } from './incident-graph'
@@ -752,12 +753,14 @@ export function IncidentCanvas({
   const groups = [...(menuFor?.(menuNode) ?? []), viewGroup].filter((group) => group.length > 0)
 
   return (
-    <div
+    <Plate
       data-part="canvas"
-      className={cn(
-        'relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-surface',
-        className,
-      )}
+      tone="surface"
+      // **Cut rather than `overflow-hidden`.** The two look the same here and
+      // are not: `overflow` makes this the scrollport anything sticky inside
+      // sticks to, and the graph's own furniture is positioned against it.
+      // -> #914
+      className={cn('isolate min-h-0 min-w-0 flex-1', className)}
     >
       <div data-part="canvas-surface" className="relative min-h-0 min-w-0 flex-1">
         {/* Sized, never positioned: cytoscape adds `__________cytoscape_container`
@@ -973,7 +976,7 @@ export function IncidentCanvas({
       {onCursor !== undefined && (
         <IncidentTransport nodes={graph.nodes} cursor={cursor} onCursor={onCursor} />
       )}
-    </div>
+    </Plate>
   )
 }
 

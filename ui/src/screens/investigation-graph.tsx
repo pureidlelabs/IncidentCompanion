@@ -8,6 +8,7 @@ import { Chip, FilterBar, FilterGroup } from '@/components/blocks/filter-bar'
 import { Section } from '@/components/blocks/section'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Link } from '@/components/ui/link'
+import { Plate } from '@/components/ui/plate'
 
 import { timelinePath } from '@/components/blocks/case-paths'
 import { IncidentCanvas, type CanvasViewport } from '@/components/blocks/incident-canvas'
@@ -255,47 +256,55 @@ export function InvestigationGraphScreen({
                 : `${String(figure.disconnected.length)} entities no entry names.`}
             </p>
           </div>
-          <ul
-            // Stays a `ul` rather than becoming a `ScrollArea`, which would cost
-            // the list its semantics. -> #929
-            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
-            tabIndex={0}
-            className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto rounded-sm border border-border p-2"
-          >
-            {[...entities]
-              .sort((left, right) => left.label.localeCompare(right.label))
-              .map((node) => (
-                <li key={node.id} className="flex items-baseline gap-2 px-2 py-1">
+          {/* **Uncut, because the list itself takes the focus.** The ring sits
+            outside the element's own box, and the list fills the plate -- so a
+            plate that cut its content would take the ring with it. -> #914 */}
+          <Plate clip={false} className="min-h-0 flex-1">
+            <ul
+              // Stays a `ul` rather than becoming a `ScrollArea`, which would cost
+              // the list its semantics. -> #929
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
+              tabIndex={0}
+              className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2"
+            >
+              {[...entities]
+                .sort((left, right) => left.label.localeCompare(right.label))
+                .map((node) => (
+                  <li key={node.id} className="flex items-baseline gap-2 px-2 py-1">
+                    <span className="truncate font-mono text-data">{node.label}</span>
+                    <span className="text-2xs text-ink-muted">
+                      {KIND_LABEL[node.kind] ?? node.kind}
+                    </span>
+                  </li>
+                ))}
+              {figure.disconnected.map((node) => (
+                // **Set back as a whole, rather than by taking the token off
+                // the kind.** The row dims so it reads as put aside, and the
+                // kind inside it stays the muted token so the row keeps the same
+                // two-step shape as a connected one. A deeper set-back compounds
+                // the pair and drops the kind under the contrast floor; taking
+                // the token off the kind fixes that and costs the shape -- in
+                // dark it makes a set-aside row's kind *brighter* than a
+                // connected row's.
+                <li key={node.id} className="flex items-baseline gap-2 px-2 py-1 opacity-75">
                   <span className="truncate font-mono text-data">{node.label}</span>
                   <span className="text-2xs text-ink-muted">
-                    {KIND_LABEL[node.kind] ?? node.kind}
+                    {`${KIND_LABEL[node.kind] ?? node.kind} \u00b7 in no entry`}
                   </span>
                 </li>
               ))}
-            {figure.disconnected.map((node) => (
-              // **Set back as a whole, rather than by taking the token off
-              // the kind.** The row dims so it reads as put aside, and the
-              // kind inside it stays the muted token so the row keeps the same
-              // two-step shape as a connected one. A deeper set-back compounds
-              // the pair and drops the kind under the contrast floor; taking
-              // the token off the kind fixes that and costs the shape -- in
-              // dark it makes a set-aside row's kind *brighter* than a
-              // connected row's.
-              <li key={node.id} className="flex items-baseline gap-2 px-2 py-1 opacity-75">
-                <span className="truncate font-mono text-data">{node.label}</span>
-                <span className="text-2xs text-ink-muted">
-                  {`${KIND_LABEL[node.kind] ?? node.kind} \u00b7 in no entry`}
-                </span>
-              </li>
-            ))}
-          </ul>
+            </ul>
+          </Plate>
         </div>
       ) : specs ? (
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <IncidentCanvas
             toolbar={
               <>
-                <div className="flex min-w-0 items-center gap-2 rounded-sm border border-border bg-surface px-2 py-1">
+                <Plate
+                  tone="surface"
+                  contentClassName="min-w-0 flex-row items-center gap-2 px-2 py-1"
+                >
                   <p className="w-72 max-w-full min-w-0 truncate text-xs text-ink-muted">
                     {naming
                       ? [
@@ -326,10 +335,10 @@ export function InvestigationGraphScreen({
                     <List aria-hidden />
                     {`Nodes (${String(entities.length)})`}
                   </Button>
-                </div>
+                </Plate>
                 {/* Its own cluster, and the last thing on the row: it acts on the
                   viewport rather than on the case. */}
-                <div className="flex items-center gap-1 rounded-sm border border-border bg-surface px-1 py-1">
+                <Plate tone="surface" contentClassName="flex-row items-center gap-1 px-1 py-1">
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -360,7 +369,7 @@ export function InvestigationGraphScreen({
                   >
                     <Maximize2 aria-hidden />
                   </Button>
-                </div>
+                </Plate>
               </>
             }
             status={
