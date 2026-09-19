@@ -40,7 +40,12 @@ function sourceFiles(dir: string): string[] {
  * class names and colours, neither of which contains one.
  */
 function code(text: string): string {
-  return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  // **A trailing comment counts as a comment.** Stripping only the ones that
+  // start a line left `'slider.tsx', // ... -> #897` in the scanned text, and
+  // `#897` is three hex digits: an issue reference read as a literal colour,
+  // reported against the file that cited it. `(?<!:)` keeps a `https://` in a
+  // string from being read as the start of one.
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(?<!:)\/\/.*$/gm, '')
 }
 
 const SOURCE = sourceFiles(SRC)
@@ -74,9 +79,7 @@ function themeColours(): Map<string, string> {
 function republished(): Set<string> {
   const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(INDEX)
   if (!block) throw new Error('index.css has no `@theme inline` block')
-  return new Set(
-    [...block[1]!.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1]!),
-  )
+  return new Set([...block[1]!.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1]!))
 }
 
 /**
@@ -133,9 +136,7 @@ function declared(block: string): Set<string> {
 function consoleColourRoles(scheme: 'light' | 'dark'): Set<string> {
   const blocks = [...TOKENS.matchAll(/\{([^}]*)\}/g)].map((m) => m[1]!)
   const block = blocks.find((b) => b.includes(`color-scheme: ${scheme}`))!
-  return new Set(
-    [...block.matchAll(/^\s*(--[a-z0-9-]+):\s*oklch/gm)].map((m) => m[1]!),
-  )
+  return new Set([...block.matchAll(/^\s*(--[a-z0-9-]+):\s*oklch/gm)].map((m) => m[1]!))
 }
 
 describe('the token layer', () => {
@@ -180,7 +181,8 @@ describe('the token layer', () => {
   it('reaches every value it declares', () => {
     const reachable = republished()
     const unreachable = declaredTokens().filter(
-      (token) => !reachable.has(token) && !READ_ONLY_AT_RUNTIME.has(token) && !reachableInSource(token),
+      (token) =>
+        !reachable.has(token) && !READ_ONLY_AT_RUNTIME.has(token) && !reachableInSource(token),
     )
     expect(unreachable).toEqual([])
   })
@@ -191,7 +193,9 @@ describe('the token layer', () => {
     const named = [...READ_ONLY_AT_RUNTIME].filter(
       (token) => republished().has(token) || reachableInSource(token),
     )
-    expect(named.sort(), 'these are named in the tree, so the check above can reach them').toEqual([])
+    expect(named.sort(), 'these are named in the tree, so the check above can reach them').toEqual(
+      [],
+    )
   })
 
   it('excuses nothing that has stopped being declared', () => {
@@ -217,7 +221,10 @@ describe('the token layer', () => {
     const suffixes = [...block.matchAll(/^\s*--spacing-([a-z0-9-]+):/gm)].map((m) => m[1]!)
     expect(suffixes.length).toBeGreaterThan(0)
     const unused = suffixes.filter(
-      (suffix) => !SOURCE.some(({ path, text }) => !path.includes(`${sep}styles${sep}`) && text.includes(`-${suffix}`)),
+      (suffix) =>
+        !SOURCE.some(
+          ({ path, text }) => !path.includes(`${sep}styles${sep}`) && text.includes(`-${suffix}`),
+        ),
     )
     expect(unused).toEqual([])
   })
@@ -253,7 +260,9 @@ describe('the token layer', () => {
     const pairs = Object.keys(declared)
       .filter((name) => name.endsWith('-l'))
       .map((left) => ({ left, right: `${left.slice(0, -2)}-r` }))
-      .filter(({ left, right }) => declared[right] !== undefined && declared[right] === declared[left])
+      .filter(
+        ({ left, right }) => declared[right] !== undefined && declared[right] === declared[left],
+      )
     expect(pairs).toEqual([])
   })
 
@@ -369,7 +378,10 @@ describe('the token layer', () => {
     const counts = new Map<string, number>()
     for (const name of named) counts.set(name, (counts.get(name) ?? 0) + 1)
     expect(
-      [...counts].filter(([, n]) => n > 1).map(([name, n]) => `${name} x${String(n)}`).sort(),
+      [...counts]
+        .filter(([, n]) => n > 1)
+        .map(([name, n]) => `${name} x${String(n)}`)
+        .sort(),
       'a document has no theme to consult, so these are declared once and never per ground',
     ).toEqual([])
   })
@@ -392,7 +404,9 @@ describe('the token layer', () => {
     for (const scheme of ['light', 'dark'] as const) {
       const blocks = [...TOKENS.matchAll(/\{([^}]*)\}/g)].map((m) => m[1]!)
       const block = blocks.find((b) => b.includes(`color-scheme: ${scheme}`))!
-      const hues = [...block.matchAll(/^\s*(--[a-z0-9-]+):\s*oklch\(([\d.]+)\s+([\d.]+)\s+([\d.]+)/gm)]
+      const hues = [
+        ...block.matchAll(/^\s*(--[a-z0-9-]+):\s*oklch\(([\d.]+)\s+([\d.]+)\s+([\d.]+)/gm),
+      ]
         .map((m) => ({ name: m[1]!, chroma: Number(m[3]), hue: Number(m[4]) }))
         .filter(({ chroma }) => chroma >= CHROMATIC)
       const presence = hues.filter(({ name }) => name.startsWith('--presence-'))
@@ -406,7 +420,10 @@ describe('the token layer', () => {
       const tooClose = presence.flatMap((disc) =>
         rest
           .filter((role) => apart(disc.hue, role.hue) < SEPARATION)
-          .map((role) => `${scheme}: ${disc.name} (${String(disc.hue)}) is ${String(apart(disc.hue, role.hue))} from ${role.name} (${String(role.hue)})`),
+          .map(
+            (role) =>
+              `${scheme}: ${disc.name} (${String(disc.hue)}) is ${String(apart(disc.hue, role.hue))} from ${role.name} (${String(role.hue)})`,
+          ),
       )
       expect(
         tooClose.sort(),
@@ -570,20 +587,27 @@ describe('no component carries a visual value', () => {
   it('still scans our own components, which is what the exclusion could break', () => {
     // The guard on the exclusion: a wrong separator or an over-broad match
     // would empty the scan, and an empty scan passes every assertion below.
-    expect(components.some(({ path }) => path.includes(`${sep}components${sep}ui${sep}`))).toBe(true)
+    expect(components.some(({ path }) => path.includes(`${sep}components${sep}ui${sep}`))).toBe(
+      true,
+    )
   })
-
 
   it('reads the directories that ship a colour', () => {
     // The guard on the guard: a missing directory leaves the scan green,
     // which is exactly what a scan over nothing looks like.
     for (const dir of ['/components/', '/app/', '/lib/']) {
-      expect(components.some(({ path }) => path.includes(dir)), dir).toBe(true)
+      expect(
+        components.some(({ path }) => path.includes(dir)),
+        dir,
+      ).toBe(true)
     }
     // And the one exemption still names a file that is read, so moving the
     // boundary cannot leave a live-looking exemption over nothing.
     for (const exempt of [...PAINTS_ITS_OWN, ...COLOUR_IS_DATA]) {
-      expect(components.some(({ path }) => path === exempt), exempt).toBe(true)
+      expect(
+        components.some(({ path }) => path === exempt),
+        exempt,
+      ).toBe(true)
     }
   })
 
@@ -599,7 +623,9 @@ describe('no component carries a visual value', () => {
   it('uses no literal colour', () => {
     const offenders = components
       .filter(({ path }) => !PAINTS_ITS_OWN.includes(path) && !COLOUR_IS_DATA.includes(path))
-      .filter(({ text }) => LITERAL_COLOUR.test(text.replace(MASK_STOP, '').replace(TRANSPARENT, '')))
+      .filter(({ text }) =>
+        LITERAL_COLOUR.test(text.replace(MASK_STOP, '').replace(TRANSPARENT, '')),
+      )
     expect(offenders.map((o) => o.path)).toEqual([])
   })
 
@@ -737,7 +763,10 @@ describe('the retired shadcn spellings', () => {
 
   it('scans our own tiers, which is what a wrong exclusion would empty', () => {
     for (const dir of ['components', 'screens', 'app']) {
-      expect(ours.some(({ path }) => path.includes(`${sep}${dir}${sep}`)), dir).toBe(true)
+      expect(
+        ours.some(({ path }) => path.includes(`${sep}${dir}${sep}`)),
+        dir,
+      ).toBe(true)
     }
   })
 
@@ -755,9 +784,7 @@ describe('the retired shadcn spellings', () => {
     // The map itself, held against the file: a typo here would excuse the
     // exact call site the ratchet exists to catch.
     const declared = new Set(declaredTokens())
-    expect(
-      Object.values(RETIRED_ROLES).filter((name) => !declared.has(`--${name}`)),
-    ).toEqual([])
+    expect(Object.values(RETIRED_ROLES).filter((name) => !declared.has(`--${name}`))).toEqual([])
   })
 })
 
@@ -768,7 +795,8 @@ const LITERAL_DURATION = /(^|[\s'"`:])duration-(?!\(--duration-)\S/
 
 describe('motion answers the preference from the token layer', () => {
   const durations = [...TOKENS.matchAll(/^\s+(--duration-[a-z]+):/gm)].map((one) => one[1]!)
-  const reduced = /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/.exec(TOKENS)?.[1] ?? ''
+  const reduced =
+    /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/.exec(TOKENS)?.[1] ?? ''
 
   it('has transitions to reach, so an emptied tree does not pass this', () => {
     expect(durations.length, 'no --duration-* token declared').toBeGreaterThan(2)
@@ -785,16 +813,22 @@ describe('motion answers the preference from the token layer', () => {
 
   it('runs every animation only when motion is safe', () => {
     const offenders = SOURCE.filter(({ text }) => BARE_ANIMATION.test(text)).map(({ path }) => path)
-    expect(offenders, 'write motion-safe:animate-*, and say the state in words beside it').toEqual([])
+    expect(offenders, 'write motion-safe:animate-*, and say the state in words beside it').toEqual(
+      [],
+    )
   })
 
   it('sets every duration from a token, which is the only way the media query reaches it', () => {
-    const offenders = SOURCE.filter(({ text }) => LITERAL_DURATION.test(text)).map(({ path }) => path)
+    const offenders = SOURCE.filter(({ text }) => LITERAL_DURATION.test(text)).map(
+      ({ path }) => path,
+    )
     expect(offenders, 'use duration-(--duration-fast|base|slow)').toEqual([])
   })
 
   it('handles the preference nowhere but the token layer', () => {
-    const offenders = SOURCE.filter(({ text }) => text.includes('motion-reduce:')).map(({ path }) => path)
+    const offenders = SOURCE.filter(({ text }) => text.includes('motion-reduce:')).map(
+      ({ path }) => path,
+    )
     expect(
       offenders,
       'a per-component motion-reduce: is a second answer to a question tokens.css settles',
