@@ -202,7 +202,18 @@ const preview: Preview = {
        * `role="img"` nodes label themselves elsewhere, and axe reads them as
        * unlabelled images.
        */
-      context: { exclude: [['[data-live-announcer]']] },
+      context: {
+        exclude: [
+          ['[data-live-announcer]'],
+          /**
+           * React Aria's `useMeter` hardcodes `role="meter progressbar"` and
+           * merges it last, so no caller can override it. Axe reads the token
+           * list as neither role and refuses the value attributes both allow
+           * on their own. -> #925
+           */
+          ['[data-part="meter"]'],
+        ],
+      },
     },
   },
 }
