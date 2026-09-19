@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 
 import type { TimelineEntry } from '@/api/model'
-import { severityLabel } from '@/components/ui/severity-tones'
 import { BLANK_ACTION, BLANK_EVENT } from './timeline-entries'
 import { TimelineEntryRow, TimelineGapMark, type TimelineRunLike } from './timeline-entry-row'
 
@@ -97,6 +96,9 @@ export const AnEvent: Story = {
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelectorAll('[data-part="timeline-row"]')).toHaveLength(1)
     await expect(canvasElement.querySelector('[data-part="timeline-rail"]')).not.toBeNull()
+    // `EVENT` carries `high`, and nothing else asserted that a row draws the
+    // severity it was given at all -- only what an absent one reads as.
+    await expect(within(canvasElement).getByText('high')).toBeVisible()
     // Nothing to unfold, so nothing offers to.
     await expect(within(canvasElement).queryByRole('button', { name: /more/i })).toBeNull()
   },
@@ -191,11 +193,9 @@ export const GapMark: Story = {
 /**
  * An event whose severity never arrived.
  *
- * **Asserted against `severityLabel` rather than against the word**, because
- * the defect is two screens disagreeing rather than any particular word being
- * wrong: a row that spelled its own fallback would pass a check written
- * against a literal and still read differently from the chip beside it.
- * `severity-badge.stories.tsx` is where the word itself is pinned. -> #979
+ * The word is written out rather than taken from `severityLabel`: the helper
+ * returns the same string, so asserting through it can only ever track the
+ * implementation and go quiet with it. -> #979
  */
 export const SeverityNeverArrived: Story = {
   name: 'An event with no severity',
@@ -206,7 +206,7 @@ export const SeverityNeverArrived: Story = {
     },
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByText(severityLabel(''))).toBeVisible()
+    await expect(canvas.getByText('unset')).toBeVisible()
   },
   render: (args) => (
     <ol className="rounded-sm border border-border">

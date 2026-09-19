@@ -84,8 +84,7 @@ export function toneFor(severity: string | null | undefined): SeverityTone {
  * blank chip.
  *
  * Beside `toneFor` because the two answer the same question about the same
- * value, and a screen that asked one of them somewhere else is how the same
- * entry came to read two ways on two screens.
+ * value.
  */
 export function severityLabel(severity: string | null | undefined): string {
   return (severity ?? '').trim() || 'unset'
