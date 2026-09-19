@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { BLANK_LAYOUT } from './block-kinds.js'
-import { offeredLayouts, type LayoutSource } from './offered-layouts.js'
+import { offeredLayouts, shippedAssesses, type LayoutSource } from './offered-layouts.js'
 
 /**
  * Which layouts an install offers, and which it must not.
@@ -186,5 +186,18 @@ describe('the layouts an install offers', () => {
       ['one', 0],
       ['two', 1],
     ])
+  })
+})
+
+describe('what a shipped install assesses', () => {
+  it.each(['nis2', 'gdpr', 'dora'])('assesses %s, which every fallback turns on', (feature) => {
+    expect(shippedAssesses(feature)).toBe(true)
+  })
+
+  it('assesses a feature it has never heard of not at all', () => {
+    // The cast makes the optional chain look unnecessary to the compiler, so
+    // this is what keeps it: without it an unknown feature is a TypeError
+    // rather than a refusal, and the route answers `false` here too.
+    expect(shippedAssesses('ccpa')).toBe(false)
   })
 })

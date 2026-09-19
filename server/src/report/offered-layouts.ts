@@ -1,3 +1,5 @@
+import { SETTINGS } from '../preferences/install.service.js'
+
 import { BLANK_LAYOUT } from './block-kinds.js'
 
 /**
@@ -97,3 +99,19 @@ export function offeredLayouts(
     },
   ]
 }
+
+/**
+ * What an install assesses out of the box, read from the fallbacks rather than
+ * from a list written here.
+ *
+ * **Here rather than in the capture that wants it.** `demo-catalogue` may not
+ * reach `preferences` -- `architecture.test.ts` says so -- and `report` may,
+ * so the predicate belongs beside the function it is passed to.
+ *
+ * A feature `SETTINGS` has no entry for is not assessed, which is the same
+ * answer the route gives: `settings.all()` only ever fills the keys
+ * `SETTINGS` declares. -> #884
+ */
+export const shippedAssesses = (feature: string): boolean =>
+  SETTINGS['compliance.enabled'].fallback === true &&
+  SETTINGS[`compliance.regime.${feature}` as keyof typeof SETTINGS]?.fallback === true

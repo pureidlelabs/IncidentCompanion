@@ -13,8 +13,7 @@ import { REPORT_STAGES, TLP_LABELS } from '../domain/entities/report.js'
 import { AboutController } from '../health/about.controller.js'
 import { BUILTIN_CASE_TEMPLATES } from '../library/builtins/case-templates.js'
 import { BUILTIN_REPORT_LAYOUTS } from '../library/builtins/report-layouts.js'
-import { SETTINGS } from '../preferences/install.service.js'
-import { offeredLayouts } from '../report/offered-layouts.js'
+import { offeredLayouts, shippedAssesses } from '../report/offered-layouts.js'
 import { BUILTIN_REPORT_SNIPPETS } from '../library/builtins/report-snippets.js'
 import { LIBRARY_KINDS, REPORT_LAYOUTS } from '../library/kinds.js'
 import { english, headingPack } from '../report/document/packs.js'
@@ -116,17 +115,6 @@ function libraryListings(): Record<string, unknown> {
     }),
   )
 }
-
-/**
- * What an install assesses out of the box, read from the fallbacks rather than
- * listed here.
- *
- * A demo has no store, and the answer a shipped install gives is the one in
- * `SETTINGS`. Flipping a fallback moves the demo with it. -> #884
- */
-const shippedAssesses = (feature: string): boolean =>
-  SETTINGS['compliance.enabled'].fallback === true &&
-  SETTINGS[`compliance.regime.${feature}` as keyof typeof SETTINGS]?.fallback === true
 
 function captured(): Record<string, unknown> {
   return {
