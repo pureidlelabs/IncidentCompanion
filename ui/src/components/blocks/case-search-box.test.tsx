@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -17,13 +17,10 @@ import { CaseSearchBox } from './case-search-box'
  * A field that swallows Escape is a keyboard trap, and it reads exactly like
  * a field that does not.
  *
- * **The fourth decision, that typing reopens a dismissed list, is not asserted
- * anywhere.** `dismissed` is only ever set by the popover reporting itself
- * closed, and an outside press does not do that -- measured in jsdom and again
- * in chromium, where the listbox is still in the document after pressing a
- * button beside the field. Escape closes it, and empties the field in the same
- * stroke, so the list would have closed for the empty query alone. Whether
- * `dismissed` is reachable at all is the open question. -> #906
+ * **An outside press is the box's own.** React Aria wires none for a
+ * non-modal popover, so the dismissal below is hand-rolled, and what these
+ * assert is each guard it carries rather than that some listener exists.
+ * -> #908
  */
 function Controlled({ initial, onAction }: { initial: string; onAction?: (id: string) => void }) {
   const [query, setQuery] = useState(initial)
@@ -39,6 +36,18 @@ function Controlled({ initial, onAction }: { initial: string; onAction?: (id: st
 
 const FIELD = 'Search this case, or run a command'
 
+/**
+ * The list is still there once an exit would have finished.
+ *
+ * The surface animates out, so it is in the document for the frames after a
+ * press that dismissed it -- asserting presence straight away passes whether
+ * the press was ignored or acted on.
+ */
+async function staysOpen(why: string) {
+  await new Promise((resolve) => setTimeout(resolve, 400))
+  expect(screen.queryByRole('listbox'), why).toBeInTheDocument()
+}
+
 describe('the case omnibox', () => {
   it('keeps the list closed for a query that is only spaces', async () => {
     const user = userEvent.setup()
@@ -47,6 +56,81 @@ describe('the case omnibox', () => {
     await user.type(screen.getByRole('searchbox', { name: FIELD }), '   ')
 
     expect(screen.queryByRole('listbox')).toBeNull()
+  })
+
+  /**
+   * An outside press closes the list, and each guard is asserted apart.
+   *
+   * The press on plain chrome is the case React Aria's own blur route could
+   * never have covered: virtual focus keeps the caret in the field, which is
+   * outside the surface, so focus is never within it to leave.
+   */
+  it('closes the list on a press outside it', async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <Controlled initial="" />
+        <div data-testid="elsewhere">elsewhere</div>
+      </>,
+    )
+    await user.type(screen.getByRole('searchbox', { name: FIELD }), 'a')
+    expect(await screen.findByRole('listbox')).toBeInTheDocument()
+
+    await user.click(screen.getByTestId('elsewhere'))
+
+    // `waitFor`, because the surface animates out: it is still in the document
+    // for the frame after the press.
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('listbox'),
+        'the list stays open over the case after the analyst pressed away from it',
+      ).toBeNull()
+    })
+  })
+
+  it('leaves the list open for a press on the field that opened it', async () => {
+    const user = userEvent.setup()
+    render(<Controlled initial="" />)
+    const field = screen.getByRole('searchbox', { name: FIELD })
+    await user.type(field, 'a')
+    expect(await screen.findByRole('listbox')).toBeInTheDocument()
+
+    await user.click(field)
+
+    await staysOpen('pressing the field closed the list it opens')
+  })
+
+  it('leaves the list open for a press on a row', async () => {
+    const user = userEvent.setup()
+    render(<Controlled initial="" />)
+    await user.type(screen.getByRole('searchbox', { name: FIELD }), 'a')
+    const rows = await screen.findAllByRole('option')
+
+    await user.click(rows[0]!)
+
+    // The guard that keeps the surface out of "outside": without it the row
+    // is taken away by the same press that is choosing it.
+    await staysOpen('a press on a row closed the list under it')
+  })
+
+  it('leaves the list open for a press that is not the primary button', async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <Controlled initial="" />
+        <div data-testid="elsewhere">elsewhere</div>
+      </>,
+    )
+    await user.type(screen.getByRole('searchbox', { name: FIELD }), 'a')
+    expect(await screen.findByRole('listbox')).toBeInTheDocument()
+
+    // Raw, because `userEvent` sends no click for a secondary press. A menu
+    // opening over the case is not the analyst leaving the list.
+    screen
+      .getByTestId('elsewhere')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, button: 2 }))
+
+    await staysOpen('a right-click anywhere on the page closed the list')
   })
 
   it('opens the list once the query holds something', async () => {
