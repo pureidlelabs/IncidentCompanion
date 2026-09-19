@@ -413,9 +413,9 @@ export const Narrow: Story = {
     </div>
   ),
   play: async ({ canvas, canvasElement }) => {
-    // Both, because folding one and not the other is the state that looks
-    // right in a wide window: the rail goes and the page drops to a full-width
-    // band under the document rather than beside it.
+    // Both folds, because folding one and not the other is the state that
+    // looks right in a wide window: the rail goes and the page drops to a
+    // full-width band under the document rather than beside it.
     const rail = await canvas.findByTestId('report-section-rail')
     await expect(
       drawn(rail),
@@ -426,6 +426,23 @@ export const Narrow: Story = {
       paper === null || !drawn(paper as HTMLElement),
       'an 820px pane drew the printed page, which has nowhere beside the column to go',
     ).toBe(true)
+
+    // The row's heading is the only part saying which block it is, and it is
+    // the part built to give way. -> #949
+    const rows = canvasElement.querySelectorAll('[data-part="report-index-row"]')
+    await expect(rows.length).toBeGreaterThan(0)
+
+    for (const row of rows) {
+      const heading = row.querySelector('[data-part="report-index-heading"]')
+      // **At least the gutter the number sits in.** A floor of zero is met by
+      // one glyph and an ellipsis, which is not keeping the name of anything;
+      // the number's own 20px is a width already on the row to compare to.
+      const gutter = row.firstElementChild?.getBoundingClientRect().width ?? 0
+      await expect(
+        heading?.getBoundingClientRect().width ?? 0,
+        `the row gives its name less room than its number: ${String(gutter)}px`,
+      ).toBeGreaterThanOrEqual(gutter)
+    }
   },
 }
 

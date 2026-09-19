@@ -18,7 +18,8 @@ import {
 } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 
-import { BLANK_LAYOUT, blockKindGroups } from './block-kinds.js'
+import { blockKindGroups } from './block-kinds.js'
+import { offeredLayouts } from './offered-layouts.js'
 import { LibraryService } from '../library/library.service.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
 import { reportSnippetSchema } from '../library/kinds.js'
@@ -61,38 +62,6 @@ const langQuery = z.object({
 })
 
 class LangQueryDto extends createZodDto(langQuery) {}
-
-
-
-
-
-/**
- * What a layout's chip says for one block.
- *
- * **A literal wins, then the pack, then the kind.** A key the pack has no entry
- * for resolves to itself -- `heading.exec_summary` on a chip is the key leaking
- * onto a screen, so the kind is what shows instead. The document makes the same
- * choice; this is the screen's copy of it, and the only one the client sees.
- */
-function labelFor(
-  block: { kind: string; heading?: string; headingKey?: string },
-  t: (key: string) => string,
-): string {
-  if (block.heading) return block.heading
-  if (block.headingKey) {
-    const resolved = t(block.headingKey)
-    if (resolved !== block.headingKey) return resolved
-  }
-  /**
-   * **The kind, through the pack, exactly as the document titles it.**
-   * Prettifying the slug instead is always English, so a layout chip in the New
-   * report dialog reads "Exec card" where the document it describes prints
-   * "Samenvatting". -> `document/resolve.ts`
-   */
-  const derived = t(`heading.${block.kind}`)
-  if (derived !== `heading.${block.kind}`) return derived
-  return block.kind.replace(/_/g, ' ').replace(/^./, (first) => first.toUpperCase())
-}
 
 /**
  * What the report lifecycle routes answer with.
@@ -203,7 +172,11 @@ export class ReportController {
    */
   @UseGuards(CaseAccessGuard)
   @Get('cases/:caseId/reports/:id/missing-sections')
-  @ZodResponse({ status: 200, type: MissingSectionsDto, description: 'Required sections the draft still lacks.' })
+  @ZodResponse({
+    status: 200,
+    type: MissingSectionsDto,
+    description: 'Required sections the draft still lacks.',
+  })
   async missingSections(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('id', ParseUUIDPipe) id: string,
@@ -247,7 +220,11 @@ export class ReportController {
    */
   @UseGuards(CaseAccessGuard)
   @Post('cases/:caseId/reports/:id/send')
-  @ZodResponse({ status: 201, type: SentDto, description: 'The report was frozen and stamped as sent.' })
+  @ZodResponse({
+    status: 201,
+    type: SentDto,
+    description: 'The report was frozen and stamped as sent.',
+  })
   @HttpCode(200)
   async send(
     @Param('caseId', ParseUUIDPipe) caseId: string,
@@ -266,7 +243,11 @@ export class ReportController {
    */
   @UseGuards(CaseAccessGuard)
   @Post('cases/:caseId/reports/:id/supersede')
-  @ZodResponse({ status: 201, type: SupersededDto, description: 'The successor draft, and what it carried over.' })
+  @ZodResponse({
+    status: 201,
+    type: SupersededDto,
+    description: 'The successor draft, and what it carried over.',
+  })
   async supersede(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('id', ParseUUIDPipe) id: string,
@@ -355,14 +336,12 @@ export class ReportController {
     const assesses = (feature: string): boolean =>
       held['compliance.enabled'] === true &&
       held[`compliance.regime.${feature}` as keyof typeof held] === true
-    const layouts = stored.filter((row) => {
-      const needs = ((row.payload ?? {}) as { requiresFeature?: string }).requiresFeature
-      return needs === undefined || assesses(needs)
-    })
 
     return {
-      layouts: [
-        ...layouts.map((row) => {
+      layouts: offeredLayouts(
+        // The withholding lives in `offeredLayouts`, which the demo capture
+        // calls too, so the two cannot answer differently. -> #884
+        stored.map((row) => {
           const payload = (row.payload ?? {}) as {
             blocks?: { kind: string; heading?: string; headingKey?: string }[]
             requiresFeature?: string
@@ -375,33 +354,15 @@ export class ReportController {
             // its title is the shape that handles.
             summary: row.description,
             builtin: row.origin === 'built-in',
-            // Whether the layout is a regulatory one, which is what decides
-            // whether a stage applies to it. Declared by the layout itself.
-            nis2: payload.requiresFeature === 'nis2',
-            /**
-             * **Described, not named.** The client draws `block.kind` and
-             * `block.label` for each one, so bare kind strings leave every chip
-             * in the New report dialog empty.
-             */
-            blocks: (payload.blocks ?? []).map((block, position) => ({
-              kind: block.kind,
-              position,
-              heading: block.heading ?? '',
-              headingKey: block.headingKey ?? '',
-              label: labelFor(block, t),
-            })),
+            ...(payload.requiresFeature === undefined
+              ? {}
+              : { requiresFeature: payload.requiresFeature }),
+            blocks: payload.blocks ?? [],
           }
         }),
-        // Last, so a real layout is what the form lands on when there is one.
-        {
-          name: BLANK_LAYOUT,
-          label: 'Blank',
-          summary: 'No sections. Start from nothing and add what the case needs.',
-          builtin: true,
-          nis2: false,
-          blocks: [],
-        },
-      ],
+        t,
+        assesses,
+      ),
       // **A leading empty entry on both**, because "no stage" and "unmarked"
       // are real choices rather than the absence of one - a select with no
       // empty member makes the first option the default by accident.
