@@ -63,10 +63,12 @@ export function ItemGroup({ className, ...props }: ItemGroupProps) {
       {...props}
       className={cn(
         'group/item-group flex w-full flex-col gap-4',
-        // The part and the size on one element: `has-data-[size=xs]` is an
-        // unscoped `:has()`, so any nested component writing `data-size`
-        // answered for the group. -> #951
-        'has-[[data-part=item][data-size=xs]]:gap-2',
+        // **A direct child, and the part and the size on one element.**
+        // `has-data-[size=xs]` was an unscoped `:has()`, so anything nested
+        // writing `data-size` answered for the group -- and naming the part
+        // alone leaves a nested `ItemGroup`'s rows answering for this one.
+        // -> #951
+        'has-[>[data-part=item][data-size=xs]]:gap-2',
         className,
       )}
     />
