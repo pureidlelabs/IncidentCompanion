@@ -222,7 +222,12 @@ export function TimelineGraphScreen({
           ))}
         </dl>
 
-        <div className="flex flex-col rounded-sm border border-border bg-surface">
+        {/* Clipped to its own radius: the readout below is opaque and
+            square-cornered, so without this it paints over the corners the
+            border curves away from. `clip-path` rather than `overflow-hidden`
+            because the readout is sticky, and a scrollport is what a sticky
+            child positions against. -> #912 */}
+        <div className="flex flex-col rounded-sm border border-border bg-surface [clip-path:inset(0_round_var(--radius-sm))]">
           {/* Opaque, because it is stuck over rows that scroll under it: a
               tinted bar lets the card beneath read through the readout. */}
           <p
