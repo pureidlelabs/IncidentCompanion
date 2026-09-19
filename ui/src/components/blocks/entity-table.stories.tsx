@@ -134,13 +134,22 @@ export const Sorted: Story = {
     }
     return <Rendered />
   },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     // Descending on a word column is alphabetical, so Unreviewed leads and
     // Clean trails. A table that ignored `initialSorting` would open on the
     // arrival order, where the first verdict is Compromised.
     const [, first] = canvas.getAllByRole('row')
     await expect(first).toHaveTextContent('Unreviewed')
     await expect(canvas.getAllByRole('row').at(-1)).toHaveTextContent('Clean')
+
+    // **Every row is in the document, so the browser counts them and nothing
+    // here should.** A hand-written number is a second answer that a sort can
+    // put out of step with the first: a sort reorders rows the collection
+    // already holds, which is a change to no node's children. -> #974
+    await expect(
+      canvasElement.querySelectorAll('[aria-rowindex], [aria-rowcount]').length,
+      'an unwindowed table numbers its own rows, so a sort can leave the numbers behind',
+    ).toBe(0)
   },
 }
 
@@ -355,50 +364,6 @@ export const Windowed: Story = {
     await expect(drawn).toBeLessThan(300)
     await expect(canvas.getByText(/300 rows, windowed from/)).toBeVisible()
 
-    // **The table says how many rows it has, not how many it drew.** A
-    // windowed table holds a slice of the model, so a reader counting the
-    // document counts the window -- 48 where the analyst has 300, changing as
-    // they scroll. `aria-rowcount` and `aria-rowindex` are what say otherwise,
-    // and the header row counts as one of them. -> #974
-    // `[role="grid"]`, not `table`: a hidden measuring table sits before the
-    // real one in the document, and a selector list takes whichever comes
-    // first.
-    const grid = canvasElement.querySelector('[role="grid"]')
-    await expect(grid, 'no grid to ask').not.toBeNull()
-    await expect(
-      grid!.getAttribute('aria-rowcount'),
-      'the table does not say how many rows it has, so a reader counts the window',
-    ).toBe('301')
-
-    const drawnRows = [...canvasElement.querySelectorAll('[data-row-id]')]
-    await expect(drawnRows.length, 'no drawn rows to number').toBeGreaterThan(1)
-
-    const numbered = drawnRows.map((row) => Number(row.getAttribute('aria-rowindex')))
-    await expect(
-      numbered.every((one) => Number.isFinite(one) && one > 0),
-      'a drawn row does not say where it sits in the model',
-    ).toBe(true)
-    // Consecutive, and inside the count: the numbers are positions in the
-    // model rather than positions in the document. Not pinned to start at 2 --
-    // the window has been scrolled by the step above, which is the state where
-    // the two would differ.
-    await expect(
-      numbered.every((one, at) => at === 0 || one === (numbered[at - 1] ?? 0) + 1),
-      'the drawn rows are not numbered consecutively',
-    ).toBe(true)
-    const declared = Number(grid!.getAttribute('aria-rowcount'))
-    await expect(
-      Math.max(...numbered) <= declared && Math.min(...numbered) >= 2,
-      'a row is numbered outside the count the table declares',
-    ).toBe(true)
-
-    // The header is row one. A grid that numbers its body and not its head
-    // leaves a reader counting from something that has no number.
-    await expect(
-      grid!.querySelector('thead tr')?.getAttribute('aria-rowindex'),
-      'the header row is not numbered, so the rows below it count from nothing',
-    ).toBe('1')
-
     // **The spacer is not a row a reader meets, at either end.** It carries
     // the height of what is not drawn, and React Aria drops an `aria-hidden`
     // passed to a `Row` -- so without the attribute reaching the node, every
@@ -430,5 +395,116 @@ export const Windowed: Story = {
     for (const pad of canvasElement.querySelectorAll('[data-key^="--pad"]')) {
       await expect(pad.getAttribute('aria-hidden'), 'hidden without being inert').toBeNull()
     }
+
+    // **The table says how many rows it has, not how many it drew.** A
+    // windowed table holds a slice of the model, so a reader counting the
+    // document counts the window -- 48 where the analyst has 300, changing as
+    // they scroll. `aria-rowcount` and `aria-rowindex` are what say otherwise,
+    // and the header row counts as one of them. -> #974
+    //
+    // **After the scroll, because at rest the window starts at the top.** A
+    // row numbered by its place in the *document* is indistinguishable from
+    // one numbered by its place in the model until the two differ, and the
+    // first drawn row is row two in both until something moves.
+    //
+    // `[role="grid"]`, not `table`: a hidden measuring table sits before the
+    // real one in the document, and a selector list takes whichever comes
+    // first.
+    const grid = canvasElement.querySelector('[role="grid"]')
+    await expect(grid, 'no grid to ask').not.toBeNull()
+    await expect(
+      grid!.getAttribute('aria-rowcount'),
+      'the table does not say how many rows it has, so a reader counts the window',
+    ).toBe('301')
+
+    const numbered = [...canvasElement.querySelectorAll('[data-row-id]')].map((row) =>
+      Number(row.getAttribute('aria-rowindex')),
+    )
+    await expect(numbered.length, 'no drawn rows to number').toBeGreaterThan(1)
+    await expect(
+      numbered[0],
+      'the first drawn row is numbered two, so the number is its place in the window rather than in the model',
+    ).toBeGreaterThan(2)
+    await expect(
+      numbered.every((one, at) => at === 0 || one === (numbered[at - 1] ?? 0) + 1),
+      'the drawn rows are not numbered consecutively',
+    ).toBe(true)
+    await expect(
+      Math.max(...numbered) <= Number(grid!.getAttribute('aria-rowcount')),
+      'a row is numbered past the count the table declares',
+    ).toBe(true)
+
+    // The header is row one. A grid that numbers its body and not its head
+    // leaves a reader counting from something that has no number.
+    await expect(
+      grid!.querySelector('thead tr')?.getAttribute('aria-rowindex'),
+      'the header row is not numbered, so the rows below it count from nothing',
+    ).toBe('1')
+  },
+}
+
+/**
+ * A windowed table filtered down below the threshold, which stops the
+ * windowing without replacing the table.
+ *
+ * The count is written to the grid node by hand, so the one state no
+ * assertion about a windowed table can reach is the table that *stops* being
+ * one: a `301` left on a grid holding ten rows is a wrong answer where no
+ * answer is the right one. -> #974
+ */
+export const NarrowedOutOfTheWindow: Story = {
+  name: 'Filtered below the threshold, the count goes',
+  render: () => {
+    const Rendered = () => {
+      const [count, setCount] = useState(300)
+      const table = useEntityTable<System>({
+        data: Array.from({ length: count }, (_, index) => ({
+          id: `sys-${String(index)}`,
+          hostname: `FIN-WS-${String(index).padStart(3, '0')}`,
+          role: ROLES[index % ROLES.length]!,
+          verdict: VERDICTS[index % VERDICTS.length]!,
+        })),
+        columns,
+        meta: { pendingIds: new Set() },
+      })
+      return (
+        <>
+          <button
+            type="button"
+            className="mb-2 rounded-md border border-border px-2 py-1 text-xs"
+            onClick={() => {
+              setCount(10)
+            }}
+          >
+            Narrow to ten
+          </button>
+          <DataTable table={table} label="Systems" scroll="box" />
+        </>
+      )
+    }
+    return <Rendered />
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const grid = canvasElement.querySelector('[role="grid"]')
+    await expect(grid, 'no grid to ask').not.toBeNull()
+    await expect(grid!.getAttribute('aria-rowcount'), 'the windowed table is uncounted').toBe('301')
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Narrow to ten' }))
+
+    await waitFor(async () => {
+      await expect(
+        canvasElement.querySelectorAll('[data-row-id]').length,
+        'the filter drew no fewer rows',
+      ).toBe(10)
+    })
+    // The same grid node, so nothing has cleared what was written on it.
+    await expect(
+      canvasElement.querySelector('[role="grid"]')?.getAttribute('aria-rowcount'),
+      'the table still says it holds three hundred rows, and it holds ten',
+    ).toBeNull()
+    await expect(
+      canvasElement.querySelectorAll('[data-row-id][aria-rowindex]').length,
+      'a row still says where it sat in a window the table no longer has',
+    ).toBe(0)
   },
 }

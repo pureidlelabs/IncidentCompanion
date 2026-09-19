@@ -450,15 +450,20 @@ export function DataTable<TData extends { id: string }>({
    * on the grid and `aria-rowindex` per row are what say otherwise, with the
    * header counting as the first row.
    *
+   * **Windowed only.** A table holding every row in the document is counted
+   * correctly by the browser, so numbering one by hand adds a second answer
+   * that can disagree with the first.
+   *
    * **Written to the nodes, and watched rather than written once.** React Aria
-   * builds both from its own collection and drops either passed as a prop --
-   * measured, the same way it drops `aria-hidden` on a `Row`. It also commits
-   * its rows after this component's effects run: an effect alone reached 32 of
-   * 48 rows on the first render and none at all after a scroll. The index
-   * rides in as `data-row-index`, which React Aria does carry, and an observer
-   * copies it onto whatever rows exist. -> #974
+   * drops either attribute passed to a `Row` as a prop -- measured, the same
+   * way it drops `aria-hidden`. It also commits its rows after this
+   * component's effects run: an effect alone reached 32 of 48 rows on the
+   * first render and none at all after a scroll. The index rides in as
+   * `data-row-index`, which React Aria does carry, and an observer copies it
+   * onto whatever rows exist. -> #974
    */
   useEffect(() => {
+    if (!windowed) return
     const grid = scrollRef.current?.querySelector('[role="grid"]')
     if (grid === null || grid === undefined) return
 
@@ -469,9 +474,6 @@ export function DataTable<TData extends { id: string }>({
       grid.querySelector('thead tr')?.setAttribute('aria-rowindex', '1')
       for (const row of grid.querySelectorAll('[data-row-index]')) {
         const at = row.getAttribute('data-row-index')
-        // Set every time rather than only where it is missing: React Aria
-        // rebuilds its rows today, so a stale number cannot survive a scroll,
-        // and nothing here should depend on it going on doing that.
         if (at !== null && row.getAttribute('aria-rowindex') !== at) {
           row.setAttribute('aria-rowindex', at)
         }
@@ -480,11 +482,27 @@ export function DataTable<TData extends { id: string }>({
 
     number()
     const watching = new MutationObserver(number)
-    watching.observe(grid, { childList: true, subtree: true })
+    // `attributeFilter` and not `attributes`, on two counts. A sort that
+    // reorders rows the collection already holds adds and removes nothing, so
+    // `childList` alone never fires and every row keeps its pre-sort number.
+    // And filtering to the attribute being read means the `aria-rowindex`
+    // written above is not itself a mutation this observer hears.
+    watching.observe(grid, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-row-index'],
+    })
     return () => {
       watching.disconnect()
+      // Filtering three hundred rows down to ten stops the windowing without
+      // replacing the grid, and a count left behind is then a wrong one.
+      grid.removeAttribute('aria-rowcount')
+      for (const row of grid.querySelectorAll('[aria-rowindex]')) {
+        row.removeAttribute('aria-rowindex')
+      }
     }
-  }, [rows.length])
+  }, [rows.length, windowed])
 
   if (rows.length === 0 && empty) return <>{empty}</>
 
