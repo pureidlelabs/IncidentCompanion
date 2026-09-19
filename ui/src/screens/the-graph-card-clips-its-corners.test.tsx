@@ -13,9 +13,9 @@ import { TimelineGraphScreen } from './timeline-graph'
  * `overflow-hidden`**: a scrollport is what a sticky child positions against,
  * so hiding overflow here would move the thing it is meant to leave alone.
  *
- * jsdom has no geometry. What the clip does is measured in the commit that
- * added it -- nothing escapes the card, the nearest focusable sits 17px from
- * an edge, and the walk's corner findings for this card go from 16 to 0.
+ * jsdom has no geometry, and a `clip-path` is paint-only, so nothing in this
+ * suite can see the clip cut. What it does, and what it is worth, are measured
+ * in the commit that added it.
  */
 describe('the cascade card', () => {
   function card(): HTMLElement {
