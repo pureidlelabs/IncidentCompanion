@@ -348,7 +348,10 @@ export function EntityScopeTable({
   return (
     <>
       <Tabs
-        className="flex min-h-0 flex-1 flex-col"
+        // `gap-3` over the kit's `gap-4`: the list used to sit in the section's
+        // own column, and a scope row spaced unlike every other row in the
+        // block reads as belonging to something else.
+        className="flex min-h-0 flex-1 flex-col gap-3"
         // **Arrowing moves the focus and does not commit.** React Aria's default
         // is `automatic`, which re-scopes the table on every arrow press: with
         // one tab stop for the whole list, reaching the last kind by keyboard
@@ -368,7 +371,7 @@ export function EntityScopeTable({
         {/* One panel, carrying the selected tab's own id: React Aria puts
             `aria-controls` on the selected tab alone, so the id it names is
             always this one. */}
-        <TabPanel key={scope} id={scope} still className="flex min-h-0 flex-1 flex-col">
+        <TabPanel key={scope} id={scope} still>
           <Section
             title={label}
             fills
@@ -417,22 +420,20 @@ export function EntityScopeTable({
               )
             }
             toolbar={
-              <>
-                <TableToolbar
-                  className="z-20"
-                  searchColumn="Entity"
-                  placeholder="Name or value"
-                  value={query}
-                  onValue={setQuery}
-                  applied={filters.applied}
-                  narrowed={narrowed}
-                  onClear={() => {
-                    setQuery('')
-                    filters.clear()
-                  }}
-                  filters={<FilterControls {...filters.controls} />}
-                />
-              </>
+              <TableToolbar
+                className="z-20"
+                searchColumn="Entity"
+                placeholder="Name or value"
+                value={query}
+                onValue={setQuery}
+                applied={filters.applied}
+                narrowed={narrowed}
+                onClear={() => {
+                  setQuery('')
+                  filters.clear()
+                }}
+                filters={<FilterControls {...filters.controls} />}
+              />
             }
             read={{
               isPending: busy,
