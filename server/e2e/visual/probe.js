@@ -532,44 +532,76 @@ export function probe([rootSel, excludeSel]) {
     }
 
     // **A negative margin is a bleed, and a bleed needs room.** The kit reaches
-    // past its own box in a dozen places so a rule, a ring or a sticky band can
-    // run the full width of what encloses it -- and each one is correct only
-    // because some ancestor happens to carry padding to spend. The margin and
-    // the padding are declared in different files, so nothing relates them.
+    // past its own box so a rule, a ring or a sticky band can run the full
+    // width of what encloses it, and each one is correct only because some
+    // ancestor carries room to spend. The margin and the room are declared in
+    // different files, so nothing relates them. -> #910
     //
-    // The first ancestor that clips is the one that decides. Its clip rectangle
-    // is the padding box, which is `clientLeft`/`clientWidth` rather than the
-    // border box a rect reports, and a bleed reaching past it is cut -- along
-    // with whatever it existed to let through. -> #910
+    // **The reference box depends on why the ancestor clips, and the two are
+    // not the same rectangle.** `overflow` clips to the padding box; a
+    // `clip-path` with no box named clips to the *border* box, so the
+    // ancestor's border and padding are both room the bleed may spend. Reading
+    // the padding box for both reports a card that sits flush against its own
+    // `clip-path` as cut by the width of its border.
+    //
+    // **A scrollable ancestor is not a clipper.** Past the edge of something
+    // that scrolls is reachable rather than cut, which is the distinction
+    // `inScroller` above draws for the same reason.
+    //
+    // **Sides are asked one at a time**, because `overflow` differs per axis --
+    // `overflow-x: hidden` computes as the pair `hidden auto` -- and because a
+    // bleed's two sides can meet different ancestors.
     for (const el of root.querySelectorAll('*')) {
         if (portal(el) || !visible(el)) continue;
+        // `sr-only` is `margin: -1px` by construction, so every one of them
+        // bleeds on four sides. `clipped-text` skips it for the same reason.
+        if (el.closest('.sr-only')) continue;
         const ms = getComputedStyle(el);
         const bleeds = [['left', parseFloat(ms.marginLeft)], ['right', parseFloat(ms.marginRight)],
                         ['top', parseFloat(ms.marginTop)], ['bottom', parseFloat(ms.marginBottom)]]
                        .filter(([, m]) => m < -0.5);
         if (!bleeds.length) continue;
-        let clip = el.parentElement;
-        while (clip && clip !== document.documentElement) {
-            const cs = getComputedStyle(clip);
-            if (cs.overflow !== 'visible' || cs.clipPath !== 'none') break;
-            clip = clip.parentElement;
-        }
-        if (!clip || clip === document.documentElement) continue;
-        const cr = clip.getBoundingClientRect();
-        // The padding box, which is what an ancestor clips to.
-        const pad = {left: cr.left + clip.clientLeft, top: cr.top + clip.clientTop};
-        pad.right = pad.left + clip.clientWidth;
-        pad.bottom = pad.top + clip.clientHeight;
         const er = el.getBoundingClientRect();
         for (const [side, m] of bleeds) {
-            const over = side === 'left' ? pad.left - er.left
-                       : side === 'right' ? er.right - pad.right
-                       : side === 'top' ? pad.top - er.top
-                       : er.bottom - pad.bottom;
-            if (over > 0.5)
-                out.push({kind: 'bleed-cut', what: name(el),
+            const sideways = side === 'left' || side === 'right';
+            let clip = el.parentElement;
+            let cs = null;
+            while (clip && clip !== document.documentElement) {
+                const s = getComputedStyle(clip);
+                const ov = sideways ? s.overflowX : s.overflowY;
+                if (s.clipPath !== 'none' || ov === 'hidden' || ov === 'clip') { cs = s; break; }
+                if (ov === 'auto' || ov === 'scroll') break;
+                clip = clip.parentElement;
+            }
+            if (cs === null || !clip || clip === document.documentElement) continue;
+            const cr = clip.getBoundingClientRect();
+            let edge;
+            if (cs.clipPath !== 'none') {
+                edge = {left: cr.left, top: cr.top, right: cr.right, bottom: cr.bottom};
+            } else {
+                // `clientWidth` is 0 on an inline or `display: contents` box and
+                // the *border*-box size on a `<table>`, so neither yields a
+                // padding box. Unmeasurable is passed over rather than guessed.
+                if (clip.tagName === 'TABLE' || !clip.clientWidth || !clip.clientHeight) continue;
+                edge = {left: cr.left + clip.clientLeft, top: cr.top + clip.clientTop};
+                edge.right = edge.left + clip.clientWidth;
+                edge.bottom = edge.top + clip.clientHeight;
+            }
+            const over = side === 'left' ? edge.left - er.left
+                       : side === 'right' ? er.right - edge.right
+                       : side === 'top' ? edge.top - er.top
+                       : er.bottom - edge.bottom;
+            // **A whole pixel, not half of one.** `clientLeft` and
+            // `clientWidth` are integers and a rect is fractional, so the two
+            // together carry up to a pixel of disagreement -- and the kit has
+            // bleeds sitting a fifth of a pixel inside their room.
+            if (over > 1)
+                // The side is in `what` because the agreement filter keys on
+                // it: an `-mx` bleed meets its two sides separately, and one
+                // named only by element would overwrite the other.
+                out.push({kind: 'bleed-cut', what: `${name(el)} ${side}`,
                           detail: `bleeds ${Math.abs(Math.round(m))}px ${side} and is cut by `
-                              + `${Math.round(over)}px at ${name(clip)}, which clips`});
+                              + `${Math.round(over)}px at ${name(clip)}`});
         }
     }
 
