@@ -130,9 +130,11 @@ const columnContent = tv({
 const columnResizer = tv({
   extend: focusRing,
   base: [
-    'box-content h-4 w-px shrink-0 cursor-col-resize rounded-xs px-1',
+    // The drag state sets the width as a value rather than writing it as a
+    // rule. -> `a-kit-size-is-not-a-variant.rule.test.ts`
+    'box-content h-4 w-[var(--resizer-w,1px)] shrink-0 cursor-col-resize rounded-xs px-1',
     'bg-border bg-clip-content forced-colors:bg-[ButtonBorder]',
-    'resizing:w-0.5 resizing:bg-ring forced-colors:resizing:bg-[Highlight]',
+    'resizing:[--resizer-w:0.125rem] resizing:bg-ring forced-colors:resizing:bg-[Highlight]',
     '-outline-offset-2',
   ],
 })

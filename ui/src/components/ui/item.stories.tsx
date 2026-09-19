@@ -222,6 +222,94 @@ export const Media: Story = {
 }
 
 /**
+ * A row inside a row takes the measurement it inherits.
+ *
+ * The row's size reaches its slots as a custom property, and a property
+ * inherits -- so a default row nested inside an `xs` one is measured by the
+ * `xs` one, which is what the old `group-data-[size=xs]/item:` variant did
+ * too: it matched any ancestor. Only `xs` declares, so nothing resets it on
+ * the way down. -> #897
+ */
+export const ANestedRowInheritsTheSize: Story = {
+  render: () => (
+    <ItemGroup className="max-w-lg">
+      <Item role="listitem" size="xs">
+        <ItemContent>
+          {/* No `listitem` role: this row is content inside the row above,
+              not a second entry in the same list. */}
+          <Item data-testid="nested-default">
+            <ItemMedia variant="image" data-testid="nested-media">
+              <img alt="" src={PIXEL} />
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle>chrome.exe</ItemTitle>
+            </ItemContent>
+          </Item>
+        </ItemContent>
+      </Item>
+    </ItemGroup>
+  ),
+  play: async ({ canvas, step }) => {
+    await step('the row it sits in decides, not the one it is', async () => {
+      const media = await canvas.findByTestId('nested-media')
+      await expect(
+        getComputedStyle(media).width,
+        'a default row nested in an xs row stopped inheriting the xs measurement',
+      ).toBe('24px')
+    })
+  },
+}
+
+/**
+ * A caller's size beats the one the row's size implies.
+ *
+ * An `xs` row shrinks its media, and a caller asking for something else has to
+ * be able to win -- a class that is silently ignored is worse than one that is
+ * refused. jsdom cannot see it: what decides is the specificity two selectors
+ * compile to. -> #897
+ */
+export const CallerOutranksTheRowSize: Story = {
+  render: () => (
+    <ItemGroup className="max-w-lg">
+      <Item role="listitem" size="xs">
+        <ItemMedia variant="image" data-testid="left-to-the-row">
+          <img alt="" src={PIXEL} />
+        </ItemMedia>
+        <ItemMedia variant="image" className="size-8" data-testid="asked-for">
+          <img alt="" src={PIXEL} />
+        </ItemMedia>
+        <ItemContent className="gap-3" data-testid="content">
+          <ItemTitle>WKS-4417</ItemTitle>
+          <ItemDescription>Windows workstation</ItemDescription>
+        </ItemContent>
+      </Item>
+    </ItemGroup>
+  ),
+  play: async ({ canvas, step }) => {
+    await step('the row decides for a slot that asks for nothing', async () => {
+      const own = await canvas.findByTestId('left-to-the-row')
+      await expect(getComputedStyle(own).width, 'an xs row stopped shrinking its media').toBe(
+        '24px',
+      )
+    })
+
+    await step('and the caller decides for one that asks', async () => {
+      const asked = await canvas.findByTestId('asked-for')
+      await expect(
+        getComputedStyle(asked).width,
+        'the row outranked the size the caller asked for, so the class did nothing',
+      ).toBe('32px')
+
+      const content = await canvas.findByTestId('content')
+      await expect(
+        getComputedStyle(content).rowGap,
+        'the row outranked the gap the caller asked for',
+      ).toBe('12px')
+    })
+  },
+}
+
+/**
  * A stack inside a stack keeps its own spacing.
  *
  * `:has()` matches a descendant, so naming the part is not enough on its own:

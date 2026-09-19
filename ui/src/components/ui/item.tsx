@@ -23,9 +23,14 @@ const item = tv({
     // a rung resolving to the same classes as another hands a caller asking
     // for the denser row the normal one, and the only way to find out is by
     // measuring.
+    //
+    // **Declared here and read plainly in the slot**, so the row's size and a
+    // caller's own class meet at equal specificity. Only `xs` declares, and
+    // the value inherits: a row nested in a denser one is measured by it.
+    // -> `a-kit-size-is-not-a-variant.rule.test.ts`
     size: {
       default: 'gap-2.5 px-3 py-2.5',
-      xs: 'gap-2 px-2.5 py-2',
+      xs: 'gap-2 px-2.5 py-2 [--item-content-gap:0px] [--item-media:1.5rem]',
     },
   },
   defaultVariants: { variant: 'default', size: 'default' },
@@ -62,13 +67,13 @@ export function ItemGroup({ className, ...props }: ItemGroupProps) {
       role="list"
       {...props}
       className={cn(
-        'group/item-group flex w-full flex-col gap-4',
+        'group/item-group flex w-full flex-col gap-[var(--item-group-gap,1rem)]',
         // **A direct child, and the part and the size on one element.**
         // `has-data-[size=xs]` was an unscoped `:has()`, so anything nested
         // writing `data-size` answered for the group -- and naming the part
         // alone leaves a nested `ItemGroup`'s rows answering for this one.
         // -> #951
-        'has-[>[data-part=item][data-size=xs]]:gap-2',
+        'has-[>[data-part=item][data-size=xs]]:[--item-group-gap:0.5rem]',
         className,
       )}
     />
@@ -86,8 +91,8 @@ const itemMedia = tv({
       default: 'bg-transparent text-ink-muted',
       icon: 'text-ink-muted icon-4',
       image: [
-        'size-10 overflow-hidden rounded-sm [&_img]:size-full [&_img]:object-cover',
-        'group-data-[size=xs]/item:size-6',
+        'size-[var(--item-media,2.5rem)] overflow-hidden rounded-sm',
+        '[&_img]:size-full [&_img]:object-cover',
       ],
     },
   },
@@ -120,7 +125,7 @@ export function ItemContent({ className, ...props }: ComponentProps<'div'>) {
       data-part="item-content"
       {...props}
       className={cn(
-        'flex flex-1 flex-col gap-1 group-data-[size=xs]/item:gap-0',
+        'flex flex-1 flex-col gap-[var(--item-content-gap,0.25rem)]',
         '[&+[data-part=item-content]]:flex-none',
         className,
       )}

@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+
+import { cn } from '@/lib/cn'
 import type { ComponentProps } from 'react'
 import { useState } from 'react'
 import type { SortDescriptor } from 'react-aria-components'
@@ -429,6 +431,55 @@ export const Resizing: Story = {
       </Table>
     </ResizableTableContainer>
   ),
+}
+
+/**
+ * The handle's drag width is a value, not a rule.
+ *
+ * `resizing:w-0.5` was an attribute selector, so it outranked a caller's own
+ * `w-*` -- accepted and ignored. The drag state sets a measurement now and the
+ * width class stays plain, so the two meet at equal specificity. jsdom cannot
+ * see it: what decides is what the selectors compile to. -> #897
+ */
+export const ResizerWidthIsACallersToTake: Story = {
+  ...Resizing,
+  play: async ({ canvasElement, step }) => {
+    const resizer = canvasElement.querySelector('[data-part="table-column-resizer"]')
+    await expect(resizer, 'no resizer to measure').not.toBeNull()
+    if (resizer === null) return
+
+    await step('the drag state still thickens it', async () => {
+      await expect(
+        getComputedStyle(resizer).width,
+        'the handle drew its dragging width at rest',
+      ).toBe('1px')
+      resizer.setAttribute('data-resizing', 'true')
+      await expect(
+        getComputedStyle(resizer).width,
+        'the drag state stopped thickening the handle',
+      ).toBe('2px')
+    })
+
+    await step('and a caller can take it back, which the merge is what decides', async () => {
+      // **Read off the rendered handle, not written out here.** A literal
+      // copy of the component's own class asserts the copy: editing
+      // `columnResizer` would leave it green. What is under test is that the
+      // width the component emits and a caller's own are one utility to
+      // tailwind-merge, so the component's is dropped rather than kept and
+      // outranked -- which is what adding a class to the element would skip.
+      const emitted = resizer.className
+      await expect(emitted, 'the handle stopped emitting a width at all').toMatch(/(^|\s)w-/)
+      await expect(
+        cn(emitted, 'w-1')
+          .split(/\s+/)
+          // `(^|:)` so a variant-prefixed width counts: `resizing:w-0.5` is
+          // exactly the survivor this looks for, and a filter anchored at the
+          // start of the class misses it and passes.
+          .filter((one) => /(^|:)w-/.test(one)),
+        'the handle kept a width of its own beside the caller`s',
+      ).toEqual(['w-1'])
+    })
+  },
 }
 
 /**
