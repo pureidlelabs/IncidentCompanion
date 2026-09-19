@@ -10,6 +10,7 @@ export type FindingKind =
   | 'off-centre'
   | 'size-overridden'
   | 'paints-past-the-corner'
+  | 'bleed-cut'
 
 export interface Finding {
   kind: FindingKind
