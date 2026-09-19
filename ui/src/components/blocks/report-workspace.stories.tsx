@@ -466,6 +466,55 @@ export const NarrowComposeKeepsTheRail: Story = {
   },
 }
 
+/**
+ * A row narrow enough that its count and badge give way.
+ *
+ * **Boxed directly rather than reached through a pane.** The row hides its
+ * count below `@3xs` and its badge below `@2xs` -- 16rem and 18rem of the
+ * row's own width -- and the layout no longer produces a row that narrow: the
+ * grid answers to the pane now, so the narrowest a row gets in the workspace
+ * is the measure beside a 13rem index. An assertion reached that way passes on
+ * room it never had to fight for, and would stay green with the hiding
+ * deleted. -> #957
+ */
+export const ANarrowRowGivesWay: Story = {
+  name: 'A row with no room for its count',
+  render: (args) => (
+    <div className="flex h-dvh w-[240px] flex-col overflow-y-auto border-r border-dashed border-border">
+      <ReportWorkspace {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const rows = canvasElement.querySelectorAll('[data-part="report-index-row"]')
+    await expect(rows.length, 'no rows to measure').toBeGreaterThan(0)
+
+    for (const row of rows) {
+      // The row is what the query answers to, so the width asserted is its
+      // own rather than the box it was put in.
+      await expect(
+        row.getBoundingClientRect().width,
+        'the row is not narrow enough for the thresholds this is about',
+      ).toBeLessThan(256)
+
+      const heading = row.querySelector('[data-part="report-index-heading"]')
+      await expect(heading, 'a row drew no heading at all').not.toBeNull()
+      await expect(
+        (heading as HTMLElement).getBoundingClientRect().width,
+        'the row dropped its name, which is the one part that says which section it is',
+      ).toBeGreaterThan(0)
+
+      for (const gave of [...row.children].filter(
+        (one) => one !== heading && one !== row.firstElementChild,
+      )) {
+        await expect(
+          getComputedStyle(gave as HTMLElement).display,
+          'a row this narrow still drew something beside its number and its name',
+        ).toBe('none')
+      }
+    }
+  },
+}
+
 /** A label and a heading past the room they have. */
 export const Overlong: Story = {
   name: 'A label too long for the strip',
