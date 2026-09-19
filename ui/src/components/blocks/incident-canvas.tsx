@@ -756,11 +756,13 @@ export function IncidentCanvas({
     <Plate
       data-part="canvas"
       tone="surface"
-      // **Cut rather than `overflow-hidden`.** The two look the same here and
-      // are not: `overflow` makes this the scrollport anything sticky inside
-      // sticks to, and the graph's own furniture is positioned against it.
-      // -> #914
-      className={cn('isolate min-h-0 min-w-0 flex-1', className)}
+      // **`clip` rather than `hidden`, and the cut as well as either.** The
+      // plate's cut stops the paint at the corner and contains nothing, so an
+      // oversized descendant would inflate the pane's scrollable overflow from
+      // inside the box meant to have clipped it -- the defect `section.tsx`
+      // documents. `overflow: clip` contains it without making this a
+      // scrollport, which `hidden` would. -> #914
+      className={cn('isolate min-h-0 min-w-0 flex-1 overflow-clip', className)}
     >
       <div data-part="canvas-surface" className="relative min-h-0 min-w-0 flex-1">
         {/* Sized, never positioned: cytoscape adds `__________cytoscape_container`

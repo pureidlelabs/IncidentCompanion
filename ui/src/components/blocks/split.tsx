@@ -47,7 +47,6 @@ export function Split({
   detailHead,
   placeholder,
   measure = 'default',
-  className,
 }: {
   /**
    * The rows. Scrolls inside the list pane.
@@ -68,8 +67,6 @@ export function Split({
   placeholder?: ReactNode | undefined
   /** How wide the list pane runs. */
   measure?: SplitMeasure
-  /** Utilities for where the split sits. */
-  className?: string | undefined
 }) {
   /**
    * One head means two cells, and no head means no row.
@@ -96,7 +93,6 @@ export function Split({
         // leaves it at 797px. The floor belongs on the track, where one
         // declaration covers both cells.
         heads ? 'grid-rows-[auto_minmax(0,1fr)]' : 'grid-rows-[minmax(0,1fr)]',
-        className,
       )}
     >
       {heads && (
@@ -110,10 +106,7 @@ export function Split({
         </>
       )}
 
-      <div
-        data-part="split-list"
-        className="flex min-h-0 min-w-0 flex-col border-r border-border"
-      >
+      <div data-part="split-list" className="flex min-h-0 min-w-0 flex-col border-r border-border">
         <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2 [scrollbar-gutter:stable]">
           {list}
         </div>

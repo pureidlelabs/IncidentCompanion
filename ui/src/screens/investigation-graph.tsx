@@ -256,16 +256,17 @@ export function InvestigationGraphScreen({
                 : `${String(figure.disconnected.length)} entities no entry names.`}
             </p>
           </div>
-          {/* **Uncut, because the list itself takes the focus.** The ring sits
-            outside the element's own box, and the list fills the plate -- so a
-            plate that cut its content would take the ring with it. -> #914 */}
-          <Plate clip={false} className="min-h-0 flex-1">
+          {/* The list fills the plate and takes the focus itself, so its ring would
+            be cut away entirely. `-outline-offset-2` draws it inside the edge
+            instead, which is what `table.tsx` does with the same problem and
+            what `plate.tsx` asks a caller in this position to do. -> #914 */}
+          <Plate className="min-h-0 flex-1">
             <ul
               // Stays a `ul` rather than becoming a `ScrollArea`, which would cost
               // the list its semantics. -> #929
               // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
               tabIndex={0}
-              className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2"
+              className="-outline-offset-2 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2"
             >
               {[...entities]
                 .sort((left, right) => left.label.localeCompare(right.label))
