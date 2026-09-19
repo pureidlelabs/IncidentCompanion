@@ -10,11 +10,7 @@
  */
 import { expect, test } from '@playwright/test'
 
-import { ADMIN, ANALYST, asPersona, ensureAnalyst, settle } from './support/app.js'
-
-test.beforeAll(async ({ browser, baseURL }) => {
-  await ensureAnalyst(browser, baseURL ?? '')
-})
+import { ADMIN, asPersona, settle } from './support/app.js'
 
 test('the health pane reports the install, from both routes', async ({ browser }) => {
   test.setTimeout(120_000)
@@ -93,26 +89,15 @@ test('the health pane reports the install, from both routes', async ({ browser }
       () => document.documentElement.scrollWidth > window.innerWidth + 1,
     )
     expect(sideways, 'the health pane scrolls sideways').toBe(false)
-  } finally {
-    await context.close()
-  }
-})
 
-/**
- * **An analyst sees it too, and that is a decision rather than an oversight.**
- * Nothing here is an install secret: the disk figure carries no path, the
- * dependency roster is what the banner already tells everyone, and an analyst
- * who can see the app is unwell stops filing tickets about a slow screen.
- */
-test('an analyst can read it, and it holds no path', async ({ browser }) => {
-  test.setTimeout(120_000)
-  const { context, page } = await asPersona(browser, ANALYST)
-  try {
-    await page.getByRole('button', { name: 'Health' }).click()
-    await settle(page, 8000)
-
-    await expect(page.locator('[role~="meter"]').first()).toBeVisible()
-
+    /**
+     * **No filesystem path, on the pane that reports the disk.**
+     *
+     * It reached here from the analyst's own case, which went when the pane
+     * did: the figures are the app server's host, and the one thing an
+     * operator's screen still may not print is where on that host the install
+     * lives. Nothing else in the tier asks.
+     */
     const shown = await page.locator('main').innerText()
     expect(shown, 'the health pane leaked a filesystem path').not.toMatch(/\/(Users|home|var)\//)
   } finally {
