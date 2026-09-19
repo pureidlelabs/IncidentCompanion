@@ -675,6 +675,9 @@ export function ImportSentinelScreen({
     <Dialog
       isOpen
       size="workbench"
+      // The dialog draws no header of its own -- the body carries the
+      // `Section` -- so nothing else names it. -> #937
+      dialogProps={{ 'aria-label': 'Start a case from an incident' }}
       onOpenChange={(next) => {
         onOpenChange?.(next)
       }}

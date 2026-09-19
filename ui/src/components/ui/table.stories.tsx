@@ -299,6 +299,10 @@ export const LoadingRows: Story = {
           {[0, 1, 2, 3].map((index) => (
             <Row key={index} id={`placeholder-${String(index)}`}>
               <Cell>
+                {/* The row header names the row, and a skeleton is not text.
+                    Without this the placeholder row reaches a reader with
+                    nothing to announce. */}
+                <span className="sr-only">Loading</span>
                 <Skeleton className="h-4 w-24" />
               </Cell>
               <Cell>
