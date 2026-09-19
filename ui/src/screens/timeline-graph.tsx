@@ -465,10 +465,14 @@ function RunCard({ run }: { run: CascadeRun }) {
         className={cn(
           'h-auto w-full shrink items-stretch justify-start gap-0 whitespace-normal',
           'rounded-md border-border bg-surface p-0 text-left font-normal',
-          // Painted by the button, so the radius clips it. A child cannot be
-          // clipped here: the clip would cut the button's own focus ring. -> #915
+          // Painted by the button, so the radius clips it. Clipping a child
+          // stripe instead is what `probe.js` skips rather than reads. -> #915
           response
-            ? 'flex-row-reverse [--tone-stripe:var(--action-contain)] [background-image:linear-gradient(to_left,var(--tone-stripe)_0_4px,transparent_4px)]'
+            ? cn(
+                'flex-row-reverse',
+                TONE_STRIPE.done,
+                '[background-image:linear-gradient(to_left,var(--tone-stripe)_0_4px,transparent_4px)]',
+              )
             : cn(
                 TONE_STRIPE[run.tone],
                 '[background-image:linear-gradient(to_right,var(--tone-stripe)_0_4px,transparent_4px)]',
