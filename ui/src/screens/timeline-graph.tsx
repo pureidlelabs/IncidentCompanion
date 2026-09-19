@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import type { Case } from '@/api/model'
 import { DetailGrid, Fact } from '@/components/blocks/detail-grid'
 import { EmptyState } from '@/components/blocks/empty-state'
-import { SeverityBadge, TONE_FILL } from '@/components/blocks/severity-badge'
+import { SeverityBadge, TONE_FILL, TONE_STRIPE } from '@/components/blocks/severity-badge'
 import { Section } from '@/components/blocks/section'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -125,9 +125,7 @@ function SpanTrack({
           data-severity={piece.run.tone}
           className={cn(
             'absolute w-1 -translate-x-1/2 rounded-full',
-            piece.run.track === 'response'
-              ? 'bg-action-contain'
-              : TONE_FILL[piece.run.tone],
+            piece.run.track === 'response' ? 'bg-action-contain' : TONE_FILL[piece.run.tone],
           )}
           style={{ left: laneLeft(piece.run, lanes), opacity: 0.55, ...piece.box }}
         />
@@ -363,11 +361,7 @@ export function TimelineGraphScreen({
                   })),
                 ]
                 return (
-                  <li
-                    key={row.key}
-                    className={cn(LANE, 'relative')}
-                    style={{ marginTop: space }}
-                  >
+                  <li key={row.key} className={cn(LANE, 'relative')} style={{ marginTop: space }}>
                     {/* **Out of flow, so the track decorates and never
                         displaces.** In flow it pushed everything after it down
                         by its own duration, and an action at the same instant
@@ -471,16 +465,21 @@ function RunCard({ run }: { run: CascadeRun }) {
         className={cn(
           'h-auto w-full shrink items-stretch justify-start gap-0 whitespace-normal',
           'rounded-md border-border bg-surface p-0 text-left font-normal',
-          response && 'flex-row-reverse',
+          // Painted by the button, so the radius clips it. Clipping a child
+          // stripe instead is what `probe.js` skips rather than reads. -> #915
+          response
+            ? cn(
+                'flex-row-reverse',
+                TONE_STRIPE.done,
+                '[background-image:linear-gradient(to_left,var(--tone-stripe)_0_4px,transparent_4px)]',
+              )
+            : cn(
+                TONE_STRIPE[run.tone],
+                '[background-image:linear-gradient(to_right,var(--tone-stripe)_0_4px,transparent_4px)]',
+              ),
         )}
       >
-        <span
-          aria-hidden
-          className={cn(
-            'w-1 shrink-0 self-stretch',
-            response ? 'bg-action-contain' : TONE_FILL[run.tone],
-          )}
-        />
+        <span aria-hidden className="w-1 shrink-0 self-stretch" />
         <span className="min-w-0 flex-1 px-2.5 py-1.5">
           {/* Clamped rather than wrapped without limit: at a narrow measure a
               long description becomes a tower and sets the rhythm for the

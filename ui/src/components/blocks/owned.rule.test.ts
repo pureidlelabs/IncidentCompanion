@@ -197,6 +197,7 @@ const TONE_TABLES = [
   'TONE_CLASS',
   'TONE_FILL',
   'TONE_INK',
+  'TONE_STRIPE',
   'SEVERITY_FILL',
   'SEVERITY_INK',
 ]
