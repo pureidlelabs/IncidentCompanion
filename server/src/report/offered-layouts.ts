@@ -1,4 +1,8 @@
+import type { z } from 'zod'
+
 import { SETTINGS } from '../preferences/install.service.js'
+
+import { reportLayoutsSchema } from './views.js'
 
 import { BLANK_LAYOUT } from './block-kinds.js'
 
@@ -44,17 +48,18 @@ export interface LayoutSource {
   blocks: readonly { kind: string; heading?: string; headingKey?: string }[]
 }
 
-/** One layout as `/api/report-layouts` serves it. */
-export interface OfferedLayout {
-  name: string
-  label: string
-  summary: string
-  builtin: boolean
-  nis2: boolean
-  /** Empty for a layout that files no regulatory step. */
-  stage: string
-  blocks: { kind: string; position: number; heading: string; headingKey: string; label: string }[]
-}
+/**
+ * One layout as `/api/report-layouts` serves it.
+ *
+ * **Inferred from the schema rather than declared beside it.** The answer is
+ * parsed through `reportLayoutsSchema` before it leaves, and a Zod object drops
+ * a key it does not declare -- so a second description of this shape can gain a
+ * field the schema never hears about, and the field is deleted on the way out
+ * with nothing reporting it. Nothing above the wire can see that happen: the
+ * handler's return type is the schema's own inference, and an array is not
+ * excess-property checked. -> #961
+ */
+export type OfferedLayout = z.infer<typeof reportLayoutsSchema>['layouts'][number]
 
 /**
  * The layouts an install offers, and the blank one it always offers.
