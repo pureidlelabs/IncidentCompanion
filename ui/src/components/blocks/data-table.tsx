@@ -73,7 +73,12 @@ const OVERSCAN = 8
  */
 function rowWindow(
   count: number,
-  { top, height, rowHeight, headerHeight }: {
+  {
+    top,
+    height,
+    rowHeight,
+    headerHeight,
+  }: {
     top: number
     height: number
     rowHeight: number
@@ -379,9 +384,7 @@ export function DataTable<TData extends { id: string }>({
     }
   }, [windowed, measure, rows.length])
 
-  const { start, end } = windowed
-    ? rowWindow(rows.length, metrics)
-    : { start: 0, end: rows.length }
+  const { start, end } = windowed ? rowWindow(rows.length, metrics) : { start: 0, end: rows.length }
   const drawnRows = windowed ? rows.slice(start, end) : rows
   const padTop = windowed ? start * metrics.rowHeight : 0
   const padBottom = windowed ? (rows.length - end) * metrics.rowHeight : 0
@@ -407,9 +410,7 @@ export function DataTable<TData extends { id: string }>({
     }
   }, [highlightId])
 
-  const highlightIndex = highlightId
-    ? rows.findIndex((row) => row.id === highlightId)
-    : -1
+  const highlightIndex = highlightId ? rows.findIndex((row) => row.id === highlightId) : -1
 
   useEffect(() => {
     if (!highlightId) return
@@ -438,11 +439,33 @@ export function DataTable<TData extends { id: string }>({
 
   if (rows.length === 0 && empty) return <>{empty}</>
 
-  /** A row that draws nothing and holds the height of the rows above or below. */
+  /**
+   * A row that draws nothing and holds the height of the rows above or below.
+   *
+   * **Taken out of the tree by the node, not by the prop.** React Aria builds a
+   * `Row`'s attributes from its collection and drops an `aria-hidden` passed to
+   * it -- measured, along with `role="presentation"`, which it overrides the
+   * same way. So a spacer sat in the accessibility tree as a real row with an
+   * empty row header: one phantom row at the end of every windowed table, and
+   * a row count one too many. -> #933
+   *
+   * The ref is written fresh on each render so the attribute is reapplied: a
+   * spacer's height changes as the window scrolls, and an attribute React does
+   * not manage is one it will not put back.
+   */
   const spacer = (which: 'top' | 'bottom', height: number) =>
     height > 0 ? (
-      <Row key={`--pad-${which}`} id={`--pad-${which}`} style={{ height }} aria-hidden>
-        <Cell colSpan={headers.length} className="border-b-0 p-0" style={{ height }} />
+      <Row key={`--pad-${which}`} id={`--pad-${which}`} style={{ height }}>
+        <Cell colSpan={headers.length} className="border-b-0 p-0" style={{ height }}>
+          {/* The row takes no ref, so the attribute is reached from inside it.
+              A zero-height block adds nothing to a cell that draws nothing. */}
+          <span
+            className="block h-0"
+            ref={(node) => {
+              node?.closest('[role="row"]')?.setAttribute('aria-hidden', 'true')
+            }}
+          />
+        </Cell>
       </Row>
     ) : null
 
@@ -502,10 +525,7 @@ export function DataTable<TData extends { id: string }>({
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <Cell
-                    key={cell.id}
-                    className={cn('py-1', cell.column.columnDef.meta?.className)}
-                  >
+                  <Cell key={cell.id} className={cn('py-1', cell.column.columnDef.meta?.className)}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </Cell>
                 ))}
@@ -544,7 +564,8 @@ export function DataTable<TData extends { id: string }>({
       // event too, at the focused element, so the keyboard route is the same
       // code.
       onContextMenu={(event) => {
-        const within = event.target instanceof Element ? event.target.closest('[data-row-id]') : null
+        const within =
+          event.target instanceof Element ? event.target.closest('[data-row-id]') : null
         const id = within?.getAttribute('data-row-id')
         const row = id === null || id === undefined ? undefined : rows.find((one) => one.id === id)
         // No row, or a row with nothing to offer: the browser's own menu is a
@@ -789,9 +810,7 @@ export function actionsColumn<TData extends { id: string }>(
                   },
                 }
               : {})}
-            {...(groups.length > 0
-              ? { menu: <RowMenuItems groups={groups} as="dropdown" /> }
-              : {})}
+            {...(groups.length > 0 ? { menu: <RowMenuItems groups={groups} as="dropdown" /> } : {})}
           />
         </div>
       )

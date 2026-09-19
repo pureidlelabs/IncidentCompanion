@@ -213,13 +213,6 @@ const preview: Preview = {
            */
           ['[data-part="meter"]'],
           /**
-           * The spacer rows a windowed table carries its height in. React Aria
-           * drops `aria-hidden` and overrides `role` on a `Row`, so neither
-           * takes them out of the tree, and moving off spacer rows was
-           * measured and refused. -> #933
-           */
-          ['[data-key^="--pad"]'],
-          /**
            * React Aria's overlay containers. Both scroll and neither takes
            * focus: the combobox popover is driven from its input through
            * `aria-activedescendant`, and the hover card from its trigger.

@@ -73,11 +73,15 @@ function useRows(initial: System[]) {
   return {
     // A new array identity per refetch, which is what a query result gives.
     rows: generation === 0 ? rows : [...rows],
-    refetch: () => { setGeneration((was) => was + 1) },
+    refetch: () => {
+      setGeneration((was) => was + 1)
+    },
     commit: (id: string, fields: Partial<System>) => {
       setRows((current) => current.map((row) => (row.id === id ? { ...row, ...fields } : row)))
     },
-    remove: (id: string) => { setRows((current) => current.filter((row) => row.id !== id)) },
+    remove: (id: string) => {
+      setRows((current) => current.filter((row) => row.id !== id))
+    },
   }
 }
 
@@ -342,7 +346,7 @@ export const Windowed: Story = {
     }
     return <Rendered />
   },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     // Windowing is the whole claim: three hundred rows in the model and a
     // fraction of them in the document. A table that drew all three hundred
     // would look identical and cost a second of layout per keystroke.
@@ -350,5 +354,21 @@ export const Windowed: Story = {
     await expect(drawn).toBeGreaterThan(1)
     await expect(drawn).toBeLessThan(300)
     await expect(canvas.getByText(/300 rows, windowed from/)).toBeVisible()
+
+    // **The spacer is not a row a reader meets.** It carries the height of
+    // what is not drawn, and React Aria drops an `aria-hidden` passed to a
+    // `Row` -- so without the attribute reaching the node, every windowed
+    // table ends in a phantom row with an empty header. Asserted here as well
+    // as by axe, so the guard does not rest on one rule's name. -> #933
+    const pads = canvasElement.querySelectorAll('[data-key^="--pad"]')
+    await expect(pads.length, 'no spacer to check, so the window drew everything').toBeGreaterThan(
+      0,
+    )
+    for (const pad of pads) {
+      await expect(
+        pad.getAttribute('aria-hidden'),
+        'a spacer row is in the accessibility tree, which adds an empty row to the table',
+      ).toBe('true')
+    }
   },
 }
