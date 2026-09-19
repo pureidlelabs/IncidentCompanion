@@ -355,6 +355,42 @@ export const Windowed: Story = {
     await expect(drawn).toBeLessThan(300)
     await expect(canvas.getByText(/300 rows, windowed from/)).toBeVisible()
 
+    // **The table says how many rows it has, not how many it drew.** A
+    // windowed table holds a slice of the model, so a reader counting the
+    // document counts the window -- 48 where the analyst has 300, changing as
+    // they scroll. `aria-rowcount` and `aria-rowindex` are what say otherwise,
+    // and the header row counts as one of them. -> #974
+    // `[role="grid"]`, not `table`: a hidden measuring table sits before the
+    // real one in the document, and a selector list takes whichever comes
+    // first.
+    const grid = canvasElement.querySelector('[role="grid"]')
+    await expect(grid, 'no grid to ask').not.toBeNull()
+    await expect(
+      grid!.getAttribute('aria-rowcount'),
+      'the table does not say how many rows it has, so a reader counts the window',
+    ).toBe('301')
+
+    const drawnRows = [...canvasElement.querySelectorAll('[data-row-id]')]
+    await expect(drawnRows.length, 'no drawn rows to number').toBeGreaterThan(1)
+
+    const numbered = drawnRows.map((row) => Number(row.getAttribute('aria-rowindex')))
+    await expect(
+      numbered.every((one) => Number.isFinite(one) && one > 0),
+      'a drawn row does not say where it sits in the model',
+    ).toBe(true)
+    // Consecutive, and inside the count: the numbers are positions in the
+    // model rather than positions in the document. Not pinned to start at 2 --
+    // the window has been scrolled by the step above, which is the state where
+    // the two would differ.
+    await expect(
+      numbered.every((one, at) => at === 0 || one === (numbered[at - 1] ?? 0) + 1),
+      'the drawn rows are not numbered consecutively',
+    ).toBe(true)
+    await expect(
+      Math.max(...numbered) <= 301 && Math.min(...numbered) >= 2,
+      'a row is numbered outside the count the table declares',
+    ).toBe(true)
+
     // **The spacer is not a row a reader meets, at either end.** It carries
     // the height of what is not drawn, and React Aria drops an `aria-hidden`
     // passed to a `Row` -- so without the attribute reaching the node, every

@@ -442,6 +442,42 @@ export function DataTable<TData extends { id: string }>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightId, highlightIndex, rows.length, windowed, measure])
 
+  /**
+   * The count the analyst has, and the place each drawn row holds in it.
+   *
+   * **Windowed, the document holds a slice**, so a reader counting rows counts
+   * the window and hears a total that changes as they scroll. `aria-rowcount`
+   * on the grid and `aria-rowindex` per row are what say otherwise, with the
+   * header counting as the first row.
+   *
+   * **Written to the nodes, and watched rather than written once.** React Aria
+   * builds both from its own collection and drops either passed as a prop --
+   * measured, the same way it drops `aria-hidden` on a `Row`. It also commits
+   * its rows after this component's effects run: an effect alone reached 32 of
+   * 48 rows on the first render and none at all after a scroll. The index
+   * rides in as `data-row-index`, which React Aria does carry, and an observer
+   * copies it onto whatever rows exist. -> #974
+   */
+  useEffect(() => {
+    const grid = scrollRef.current?.querySelector('[role="grid"]')
+    if (grid === null || grid === undefined) return
+
+    const number = () => {
+      grid.setAttribute('aria-rowcount', String(rows.length + 1))
+      for (const row of grid.querySelectorAll('[data-row-index]:not([aria-rowindex])')) {
+        const at = row.getAttribute('data-row-index')
+        if (at !== null) row.setAttribute('aria-rowindex', at)
+      }
+    }
+
+    number()
+    const watching = new MutationObserver(number)
+    watching.observe(grid, { childList: true, subtree: true })
+    return () => {
+      watching.disconnect()
+    }
+  }, [rows.length])
+
   if (rows.length === 0 && empty) return <>{empty}</>
 
   /**
@@ -506,13 +542,17 @@ export function DataTable<TData extends { id: string }>({
       >
         {[
           spacer('top', padTop),
-          ...drawnRows.flatMap((row) => {
+          ...drawnRows.flatMap((row, at) => {
             const action = rowAction(row, table, actionsMeta, setOpenMenuRowId)
             const drawn = [
               <Row
                 key={row.id}
                 id={row.id}
                 data-row-id={row.id}
+                // Carried as data because React Aria builds a row's own ARIA
+                // attributes and drops one passed to it. Copied onto the node
+                // below. -> #974
+                data-row-index={start + at + 2}
                 {...(row.id === arrived ? { 'data-arrived': 'true' } : {})}
                 // Not `data-selected`: React Aria owns and overwrites that
                 // one. This selection is TanStack's.
