@@ -55,7 +55,7 @@ export function FieldRow({
         problem !== undefined && PROBLEM_RAIL,
       )}
     >
-      <DisclosureHeader level={4} className="h-auto py-2 text-sm font-normal">
+      <DisclosureHeader level={3} className="h-auto py-2 text-sm font-normal">
         <span className="flex min-w-0 flex-1 items-center gap-3">
           <span className={cn(LABEL_WIDTH, 'shrink-0 truncate text-ink-muted')}>
             {label}

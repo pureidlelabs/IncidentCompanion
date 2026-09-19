@@ -212,12 +212,13 @@ export const ALongDescription: Story = {
     children: (
       <SettingsRow
         label="Announce which section you are reading"
+        htmlFor="settings-announce-section"
         description={
           'Every analyst with this case open sees the section you are on and the row you ' +
           'are editing, which is what stops two people writing the same field at once.'
         }
       >
-        <Switch defaultSelected />
+        <Switch id="settings-announce-section" defaultSelected />
       </SettingsRow>
     ),
   },
@@ -248,8 +249,12 @@ export const Narrow: Story = {
     summary: 'How the workspace draws itself.',
     children: (
       <>
-        <SettingsRow label="Dense tables" description="More rows, less padding.">
-          <Switch />
+        <SettingsRow
+          label="Dense tables"
+          description="More rows, less padding."
+          htmlFor="settings-appearance-dense"
+        >
+          <Switch id="settings-appearance-dense" />
         </SettingsRow>
         <SettingsRow
           label="Display name"

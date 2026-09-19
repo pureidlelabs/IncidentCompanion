@@ -71,7 +71,12 @@ export function FormSection({
 
   return (
     <Tag
-      {...(title === '' ? {} : { 'aria-label': title })}
+      data-part="form-section"
+      // Named only where no heading is drawn. Naming a `section` makes it a
+      // region landmark, and the vocabulary lets two groups carry one title --
+      // which collided as a single landmark wherever the heading already
+      // named them. -> #936
+      {...(title !== '' && hideTitle ? { 'aria-label': title } : {})}
       className={cn(
         'flex flex-col',
         compact ? 'px-3' : 'gap-3',
