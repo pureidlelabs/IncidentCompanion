@@ -212,6 +212,13 @@ const preview: Preview = {
            * on their own. -> #925
            */
           ['[data-part="meter"]'],
+          /**
+           * The spacer rows a windowed table carries its height in. React Aria
+           * drops `aria-hidden` and overrides `role` on a `Row`, so neither
+           * takes them out of the tree, and moving off spacer rows was
+           * measured and refused. -> #933
+           */
+          ['[data-key^="--pad"]'],
         ],
       },
     },
