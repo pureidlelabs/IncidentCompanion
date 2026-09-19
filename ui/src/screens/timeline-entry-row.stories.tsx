@@ -2,12 +2,9 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 
 import type { TimelineEntry } from '@/api/model'
+import { severityLabel } from '@/components/ui/severity-tones'
 import { BLANK_ACTION, BLANK_EVENT } from './timeline-entries'
-import {
-  TimelineEntryRow,
-  TimelineGapMark,
-  type TimelineRunLike,
-} from './timeline-entry-row'
+import { TimelineEntryRow, TimelineGapMark, type TimelineRunLike } from './timeline-entry-row'
 
 const NAMES = {
   system: new Map([['s1', 'WKS-FINANCE01']]),
@@ -187,6 +184,33 @@ export const GapMark: Story = {
   render: () => (
     <ol className="rounded-sm border border-border">
       <TimelineGapMark span={3 * 3600 * 1000} />
+    </ol>
+  ),
+}
+
+/**
+ * An event whose severity never arrived.
+ *
+ * **Asserted against `severityLabel` rather than against the word**, because
+ * the defect is two screens disagreeing rather than any particular word being
+ * wrong: a row that spelled its own fallback would pass a check written
+ * against a literal and still read differently from the chip beside it.
+ * `severity-badge.stories.tsx` is where the word itself is pinned. -> #979
+ */
+export const SeverityNeverArrived: Story = {
+  name: 'An event with no severity',
+  args: {
+    run: {
+      lead: { ...BLANK_EVENT, id: 'e3', time: EVENT.time, description: 'Something was seen' },
+      members: [{ ...BLANK_EVENT, id: 'e3', time: EVENT.time, description: 'Something was seen' }],
+    },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText(severityLabel(''))).toBeVisible()
+  },
+  render: (args) => (
+    <ol className="rounded-sm border border-border">
+      <TimelineEntryRow {...args} />
     </ol>
   ),
 }

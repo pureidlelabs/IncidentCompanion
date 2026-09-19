@@ -5,6 +5,7 @@ import { type EntityNames } from '@/components/blocks/entity-scope'
 import { RowActions } from '@/components/blocks/row-actions'
 import { RowMenuItems, type RowMenuGroup } from '@/components/blocks/row-menu'
 import { TONE_INK, toneFor, type SeverityTone } from '@/components/blocks/severity-badge'
+import { severityLabel } from '@/components/ui/severity-tones'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PersonAvatar } from '@/components/blocks/presence'
@@ -65,7 +66,10 @@ export function TimelineGapMark({ span }: { span: number }) {
       data-part="timeline-gap"
       className="flex items-center gap-3 border-b border-border px-4 py-1.5"
     >
-      <span aria-hidden className="ml-timeline-gutter h-px flex-1 border-t border-dashed border-severity-info/60" />
+      <span
+        aria-hidden
+        className="ml-timeline-gutter h-px flex-1 border-t border-dashed border-severity-info/60"
+      />
       <span className="shrink-0 text-2xs text-severity-info">
         {`${durationText(span)} with nothing recorded`}
       </span>
@@ -160,7 +164,11 @@ export function TimelineEntryRow({
         {clockOf(entry.time)}
       </time>
 
-      <span data-part="timeline-rail" aria-hidden className={cn('h-full min-h-4 rounded-full', railOf(entry))} />
+      <span
+        data-part="timeline-rail"
+        aria-hidden
+        className={cn('h-full min-h-4 rounded-full', railOf(entry))}
+      />
 
       <div className="min-w-0">
         <p className="flex flex-wrap items-baseline gap-x-2">
@@ -173,7 +181,9 @@ export function TimelineEntryRow({
               className="-my-1 py-1 align-baseline text-xs font-normal text-ink-muted"
               onPress={onToggle}
             >
-              {open ? 'Group these again' : `\u00d7${String(count)}${span ? ` \u00b7 ${span}` : ''}`}
+              {open
+                ? 'Group these again'
+                : `\u00d7${String(count)}${span ? ` \u00b7 ${span}` : ''}`}
             </Button>
           )}
         </p>
@@ -185,7 +195,7 @@ export function TimelineEntryRow({
               size="xs"
               className={cn('shrink-0', TONE_INK[toneFor(entry.severity)])}
             >
-              {(entry.severity ?? '').trim() || 'unset'}
+              {severityLabel(entry.severity)}
             </Badge>
           ) : (
             <Badge
@@ -247,18 +257,13 @@ export function TimelineEntryRow({
           arrive on hover and on keyboard focus. */}
       <span className="flex shrink-0 items-center gap-1">
         {entry.author.trim() !== '' && (
-          <PersonAvatar
-            person={{ name: entry.author, you: false }}
-            size="xs"
-          />
+          <PersonAvatar person={{ name: entry.author, you: false }} size="xs" />
         )}
         <RowActions
           label={entry.description || 'entry'}
           {...(onEdit ? { onEdit } : {})}
           {...(onDelete ? { onDelete } : {})}
-          {...(menu.length > 0
-            ? { menu: <RowMenuItems groups={menu} as="dropdown" /> }
-            : {})}
+          {...(menu.length > 0 ? { menu: <RowMenuItems groups={menu} as="dropdown" /> } : {})}
         />
       </span>
     </li>
@@ -284,7 +289,15 @@ function originOf(entry: TimelineEntry): string {
  * `technique -` says which field is outstanding; a hole says only that the
  * row is short of something.
  */
-function Absent({ name, value, mono }: { name: string; value?: string | undefined; mono?: boolean }) {
+function Absent({
+  name,
+  value,
+  mono,
+}: {
+  name: string
+  value?: string | undefined
+  mono?: boolean
+}) {
   const text = (value ?? '').trim()
   if (text === '') {
     return <span className="text-ink-muted/70">{`${name} \u2014`}</span>
@@ -297,9 +310,7 @@ function Entities({ entry, names }: { entry: TimelineEntry; names: EntityNames }
   const hosts = [entry.sourceSystemId, entry.systemId]
     .map((id) => (typeof id === 'string' ? (names.system.get(id) ?? '') : ''))
     .filter(Boolean)
-  const accounts = entry.accountIds
-    .map((id) => names.account.get(id) ?? '')
-    .filter(Boolean)
+  const accounts = entry.accountIds.map((id) => names.account.get(id) ?? '').filter(Boolean)
   if (hosts.length === 0 && accounts.length === 0) return null
 
   return (

@@ -6,6 +6,7 @@ import {
   TONE_FILL,
   TONE_INK,
   TONE_STRIPE,
+  severityLabel,
   toneFor,
   type FieldTone,
   type SeverityTone,
@@ -52,7 +53,7 @@ export function SeverityBadge({
 }) {
   return (
     <Badge variant="solid" className={cn(TONE_CLASS[toneFor(severity)], className)}>
-      {severity.trim() || 'unset'}
+      {severityLabel(severity)}
     </Badge>
   )
 }

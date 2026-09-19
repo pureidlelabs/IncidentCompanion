@@ -80,6 +80,18 @@ export function toneFor(severity: string | null | undefined): SeverityTone {
 }
 
 /**
+ * What a severity reads as, which for an empty one is a word rather than a
+ * blank chip.
+ *
+ * Beside `toneFor` because the two answer the same question about the same
+ * value, and a screen that asked one of them somewhere else is how the same
+ * entry came to read two ways on two screens.
+ */
+export function severityLabel(severity: string | null | undefined): string {
+  return (severity ?? '').trim() || 'unset'
+}
+
+/**
  * The severity ramp, plus the one tone a *lifecycle* needs and the ramp cannot
  * give it.
  *
