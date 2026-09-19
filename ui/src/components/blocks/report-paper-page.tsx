@@ -87,7 +87,7 @@ export function ReportPaperPage({
       // **Not "Paper".** That is the control's name, and the control you press
       // and the region it opens are different objects.
       aria-label="The printed page"
-      className="hidden min-w-0 border-l border-border bg-muted/30 lg:block"
+      className="hidden min-w-0 border-l border-border bg-muted/30 @5xl:block"
     >
       <div
         ref={box}

@@ -179,7 +179,8 @@ export const AnUntitledSection: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rail = await canvas.findByTestId('report-section-rail')
-    // Below lg the rail is not drawn; the document is reached by scrolling.
+    // Under 64rem of pane the rail is not drawn; the document is reached by
+    // scrolling.
     if (!drawn(rail)) {
       await expect(rail).not.toBeVisible()
       return
@@ -200,7 +201,8 @@ export const RailFollowsTheCaret: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rail = await canvas.findByTestId('report-section-rail')
-    // Below lg the rail is not drawn; the document is reached by scrolling.
+    // Under 64rem of pane the rail is not drawn; the document is reached by
+    // scrolling.
     if (!drawn(rail)) {
       await expect(rail).not.toBeVisible()
       return
@@ -231,11 +233,11 @@ export const BesideThePage: Story = {
     await expect(firstWritten).toBeDefined()
     if (firstWritten === undefined) return
     const page = await canvas.findByLabelText('The printed page')
-    // Below lg the page is not drawn beside the column.
-    if (!drawn(page)) {
-      await expect(page).not.toBeVisible()
-      return
-    }
+    // Asserted rather than guarded: this pane is the full tier width, so a
+    // page that is not drawn here is a threshold nothing else would catch.
+    await expect(drawn(page), 'the default pane stopped drawing the page beside the column').toBe(
+      true,
+    )
     const body = await canvas.findByRole('textbox', {
       name: headingOf(firstWritten, DEMO_HEADINGS),
     })
@@ -392,42 +394,34 @@ export const SectionKindChosen: Story = {
 }
 
 /**
- * A 760px window: the rail and the page both fold away, and the column keeps
- * its measure.
+ * A 760px pane: the rail and the page both fold away, and the column keeps its
+ * measure.
  *
- * A narrow window needs the measure more than it needs the index.
+ * A narrow pane needs the measure more than it needs the index, and it answers
+ * to the pane rather than to the window -- a browser wide enough around a pane
+ * this narrow used to draw all three columns. -> #952
  */
 export const Narrow: Story = {
-  name: 'A narrow window',
+  name: 'A narrow pane folds the rail and the page',
   args: { view: 'paper' },
   render: (args) => (
     <div className="flex h-dvh w-[760px] flex-col overflow-y-auto border-r border-dashed border-border">
       <ReportWorkspace {...args} />
     </div>
   ),
-}
-
-/**
- * The three-column layout answers to the pane, not to the window.
- *
- * `lg:` is a viewport breakpoint, so a browser wide enough gave this 760px
- * pane three columns and squeezed the index column to 135px -- and the block
- * rows inside it to 75px. The rail folds for a narrow pane now, which is what
- * its own comment always said it did. -> #952
- */
-export const NarrowKeepsOneColumn: Story = {
-  name: 'A narrow pane folds the rail',
-  args: { view: 'paper' },
-  render: (args) => (
-    <div className="flex h-dvh w-[760px] flex-col overflow-y-auto border-r border-dashed border-border">
-      <ReportWorkspace {...args} />
-    </div>
-  ),
-  play: async ({ canvasElement }) => {
-    const rail = canvasElement.querySelector('[aria-label="Sections of this report"]')
+  play: async ({ canvas, canvasElement }) => {
+    // Both, because folding one and not the other is the state that looks
+    // right in a wide window: the rail goes and the page drops to a full-width
+    // band under the document rather than beside it.
+    const rail = await canvas.findByTestId('report-section-rail')
     await expect(
-      rail === null || rail.getBoundingClientRect().width === 0,
-      'a 760px pane still drew the section rail, so the columns came from the window',
+      drawn(rail),
+      'a 760px pane drew the rail, so the columns came from the window',
+    ).toBe(false)
+    const paper = canvasElement.querySelector('[aria-label="The printed page"]')
+    await expect(
+      paper === null || !drawn(paper as HTMLElement),
+      'a 760px pane drew the printed page, which has nowhere beside the column to go',
     ).toBe(true)
   },
 }
@@ -476,10 +470,10 @@ export const Dense: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rail = await canvas.findByTestId('report-section-rail')
-    if (!drawn(rail)) {
-      await expect(rail).not.toBeVisible()
-      return
-    }
+    // Asserted rather than guarded, for the same reason the page is in
+    // `BesideThePage`: this pane is the full tier width, so a rail folded here
+    // is a threshold that has moved.
+    await expect(drawn(rail), 'the default pane stopped drawing the section rail').toBe(true)
     await expect(within(rail).getAllByRole('button').length).toBeGreaterThan(20)
   },
 }
