@@ -1,7 +1,8 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url'
 
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import tailwindcss from '@tailwindcss/vite'
@@ -25,6 +26,18 @@ import type { Reporter, TestModule, Vitest } from 'vitest/node'
  * does not check for it, so the `existsSync` is the whole test - a browsers
  * directory holding only last release's build answers a path that is not there.
  */
+/**
+ * The real directories behind `node_modules`, for `server.fs.allow`.
+ *
+ * A link is followed here so the served path matches what a module resolves
+ * to; a directory that is not a link answers itself, and a missing one is left
+ * out rather than throwing.
+ */
+const LINKED_DEPENDENCIES: string[] = ['node_modules', '../node_modules']
+  .map((one) => resolve(import.meta.dirname, one))
+  .filter((one) => existsSync(one))
+  .map((one) => realpathSync(one))
+
 const STORY_TIER = ((): boolean => {
   try {
     return existsSync(chromium.executablePath())
@@ -274,6 +287,18 @@ export default defineConfig({
   },
 
   server: {
+    /**
+     * **Where a worktree's dependencies really live.** A worktree links
+     * `node_modules` from the main checkout rather than installing its own, so
+     * a module resolves to a path outside this root and Vite refuses to serve
+     * it. The story tier is what reaches it first, and the refusal arrives as
+     * every story file failing to import its setup. -> #894
+     *
+     * Resolved rather than written down: in an ordinary checkout these are the
+     * directories already inside the root, and the entries are inert.
+     */
+    fs: { allow: [...LINKED_DEPENDENCIES] },
+
     /**
      * **Plaintext, and the cookie rule that forced https here is what permits
      * it.** Better Auth names the cookie `__Secure-` from its *base URL*, and
