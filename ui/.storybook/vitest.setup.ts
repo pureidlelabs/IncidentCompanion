@@ -34,19 +34,6 @@ const project = setProjectAnnotations([a11yAnnotations, previewAnnotations])
 beforeAll(project.beforeAll)
 
 /**
- * A React warning fails the story that printed it.
- *
- * The story tier renders every story in a real browser and asserts whatever
- * its `play` asserts, which for a story with no `play` is nothing at all. A
- * render warning is the one defect class that surface still emits: React
- * reports a nullish `key`, a bad prop, a nested `<p>` and an act violation
- * through `console.error`, and a tier that only watches for thrown errors
- * counts every one of them as a pass.
- *
- * The message is attached with the story's own name because the console line
- * has already scrolled past by the time the run summarises.
- */
-/**
  * React's `act(...)` warning, exempted for the three Base UI internals that
  * emit it and for nothing else.
  *
@@ -80,6 +67,19 @@ function isExemptActWarning(args: unknown[]): boolean {
   )
 }
 
+/**
+ * Every `console.error` this story printed, which fails it at the end.
+ *
+ * The story tier renders every story in a real browser and asserts whatever
+ * its `play` asserts, which for a story with no `play` is nothing at all. A
+ * render warning is the one defect class that surface still emits: React
+ * reports a nullish `key`, a bad prop, a nested `<p>` and an act violation
+ * through `console.error`, and a tier that only watches for thrown errors
+ * counts every one of them as a pass.
+ *
+ * Collected rather than thrown where it happens, because the console line has
+ * already scrolled past by the time the run summarises.
+ */
 const seen: string[] = []
 let realError: typeof console.error | undefined
 

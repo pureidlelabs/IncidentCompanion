@@ -245,9 +245,10 @@ function demoPolicy(): Plugin {
 
 export default defineConfig({
   /**
-   * The prefix, and it must equal `app/react_ui.py`'s `MOUNT_PREFIX` or every
-   * asset is requested from a path the mount does not cover.
-   * `tests/test_react_ui_serving.py` reads both and fails when they disagree.
+   * The prefix every asset is requested from, which is the root.
+   *
+   * `platform.ts` serves the built bundle with no prefix, so an asset asked
+   * for anywhere below the root is asked for from a path nothing serves.
    *
    * It applies to `vite dev` too, so both ways of running share one address
    * shape, and the router's basename comes off `import.meta.env.BASE_URL` so
@@ -319,7 +320,7 @@ export default defineConfig({
       // be served by Vite as the SPA index - a 200 that advances no clock and
       // signs the analyst out after the idle window with nothing to show why.
       '/activity': proxied,
-      // `index.html`'s `<link>` is root-scoped to match `app/main.py`'s
+      // `index.html`'s `<link>` is root-scoped to match `brand.controller.ts`'s
       // `/favicon.svg`, which `ui/public/` does not carry - unproxied, Vite
       // answers the SPA index for it under history-fallback and the tab shows
       // a broken-image glyph, not the browser's own default icon.
@@ -391,6 +392,16 @@ export default defineConfig({
     // survives being here: a `.ts` config evaluates it, and on a Node without
     // the global no flag is passed.
     /**
+     * **Two workers, not one per core.** A jsdom worker is a React
+     * environment, and Vitest's default is the core count -- a throughput
+     * default that assumes memory to spend. Two rather than one because the
+     * client tier is fast, and one worker makes a full run tedious enough
+     * that people skip it. `server` sets `fileParallelism: false` for the
+     * same reason.
+     */
+    maxWorkers: 2,
+
+    /**
      * Two projects over one runner, and the second is what the stories are for.
      *
      * **`storybook` is not a second test tool.** `storybookTest` is a *Vitest*
@@ -409,16 +420,6 @@ export default defineConfig({
      * browser tier does, so it is a local gate rather than a guarantee.
      * `npx playwright install chromium` is what it wants.
      */
-    /**
-     * **Two workers, not one per core.** A jsdom worker is a React
-     * environment, and Vitest's default is the core count -- a throughput
-     * default that assumes memory to spend. Two rather than one because the
-     * client tier is fast, and one worker makes a full run tedious enough
-     * that people skip it. `server` sets `fileParallelism: false` for the
-     * same reason.
-     */
-    maxWorkers: 2,
-
     projects: [
       {
         extends: true,
