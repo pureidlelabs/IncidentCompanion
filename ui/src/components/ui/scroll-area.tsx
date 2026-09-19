@@ -1,10 +1,7 @@
-
 import { cn, tv } from '@/lib/cn'
 
 const scrollArea = tv({
-  base: [
-    'relative min-h-0 overflow-auto overscroll-contain',
-  ],
+  base: ['relative min-h-0 overflow-auto overscroll-contain'],
   variants: {
     orientation: {
       vertical: 'overflow-x-hidden',
@@ -34,8 +31,10 @@ export interface ScrollAreaProps extends React.ComponentProps<'div'>, ScrollArea
  *   nothing overflows and it renders as a plain `div`.
  * - `overscroll-contain`: a scroll reaching the end does not chain to the page
  *   behind it, which matters inside a popover.
- * - Not focusable. Wrap in a `tabIndex={0}` element where the region must be
- *   reachable by keyboard on its own.
+ * - Not focusable. Pass `tabIndex={0}` where the region must be reachable by
+ *   keyboard on its own -- it has to land on the scrolling element itself,
+ *   because arrow keys move the focused element's nearest scrollable
+ *   ancestor. A region holding focusable content already reaches. -> #929
  */
 export function ScrollArea({ orientation, className, ...props }: ScrollAreaProps) {
   return (
