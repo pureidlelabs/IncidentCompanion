@@ -336,13 +336,12 @@ export class ReportController {
     const assesses = (feature: string): boolean =>
       held['compliance.enabled'] === true &&
       held[`compliance.regime.${feature}` as keyof typeof held] === true
-    // The withholding lives in `offeredLayouts`, which the demo capture calls
-    // too, so the two cannot answer differently. -> #884
-    const layouts = stored
 
     return {
       layouts: offeredLayouts(
-        layouts.map((row) => {
+        // The withholding lives in `offeredLayouts`, which the demo capture
+        // calls too, so the two cannot answer differently. -> #884
+        stored.map((row) => {
           const payload = (row.payload ?? {}) as {
             blocks?: { kind: string; heading?: string; headingKey?: string }[]
             requiresFeature?: string

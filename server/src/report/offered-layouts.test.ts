@@ -30,6 +30,24 @@ const regulatory: LayoutSource = {
   blocks: [{ kind: 'exec_summary', heading: 'Early warning' }],
 }
 
+/** A layout an analyst dropped in, and one under a regime that is not NIS2. */
+const dropped: LayoutSource = {
+  name: 'house-style',
+  label: 'House style',
+  summary: 'What this team writes.',
+  builtin: false,
+  blocks: [],
+}
+
+const otherRegime: LayoutSource = {
+  name: 'dora-incident',
+  label: 'DORA incident report',
+  summary: 'The one DORA asks for.',
+  builtin: true,
+  requiresFeature: 'dora',
+  blocks: [],
+}
+
 describe('the layouts an install offers', () => {
   it('withholds a layout whose feature the install does not assess', () => {
     const offered = offeredLayouts(
@@ -67,14 +85,84 @@ describe('the layouts an install offers', () => {
     expect(asked).toEqual(['nis2'])
   })
 
-  it('marks the regulatory one and nothing else', () => {
+  it('marks the NIS2 one and not another regime\u2019s', () => {
+    // `dora-incident` names a feature too, so a mapping asking whether a
+    // feature exists rather than which one would mark it as well.
     const offered = offeredLayouts(
-      [plain, regulatory],
+      [plain, regulatory, otherRegime],
       (key) => key,
       () => true,
     )
 
     expect(offered.filter((one) => one.nis2).map((one) => one.name)).toEqual(['nis2-early'])
+  })
+
+  it('says which layouts the install ships and which an analyst wrote', () => {
+    const offered = offeredLayouts(
+      [plain, dropped],
+      (key) => key,
+      () => true,
+    )
+
+    expect(offered.map((one) => [one.name, one.builtin])).toEqual([
+      ['standard', true],
+      ['house-style', false],
+      ['__blank__', true],
+    ])
+  })
+
+  it('carries every field the route answers with', () => {
+    // The shape, not only the names: each of these was unasserted, so a
+    // mapping that dropped a summary or flattened a heading read as correct.
+    const [offered] = offeredLayouts(
+      [regulatory],
+      (key) => key,
+      () => true,
+    )
+
+    expect(offered).toEqual({
+      name: 'nis2-early',
+      label: 'NIS2 early warning',
+      summary: 'The first of the three.',
+      builtin: true,
+      nis2: true,
+      blocks: [
+        {
+          kind: 'exec_summary',
+          position: 0,
+          heading: 'Early warning',
+          headingKey: '',
+          label: 'Early warning',
+        },
+      ],
+    })
+  })
+
+  it.each([
+    [
+      'the block`s own heading, over everything',
+      { kind: 'k', heading: 'Written', headingKey: 'heading.k' },
+      'Written',
+    ],
+    [
+      'its heading key through the pack',
+      { kind: 'k', headingKey: 'heading.named' },
+      'Named in the pack',
+    ],
+    ['its kind through the pack, where nothing else names it', { kind: 'known' }, 'Known by kind'],
+    ['the kind prettified, where the pack does not know it', { kind: 'un_named' }, 'Un named'],
+  ] as const)('labels a block by %s', (_what, block, expected) => {
+    const pack: Record<string, string> = {
+      'heading.named': 'Named in the pack',
+      'heading.known': 'Known by kind',
+    }
+    const [offered] = offeredLayouts(
+      [{ ...plain, blocks: [block] }],
+      (key) => pack[key] ?? key,
+      () => true,
+    )
+
+    expect(offered?.blocks[0]?.label).toBe(expected)
   })
 
   it('always ends with the blank layout, so a form has something to land on', () => {
@@ -87,7 +175,7 @@ describe('the layouts an install offers', () => {
     ).toEqual([BLANK_LAYOUT])
   })
 
-  it('numbers a layout`s blocks in the order it declares them', () => {
+  it('numbers a layout\u2019s blocks in the order it declares them', () => {
     const offered = offeredLayouts(
       [{ ...plain, blocks: [{ kind: 'one' }, { kind: 'two' }] }],
       (key) => key,
