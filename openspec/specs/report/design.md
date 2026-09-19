@@ -58,3 +58,17 @@ What was named and not resolved is recorded with the send, beside the stamp the 
 **Moving between reports replaces rather than adds.** Reading is a walk, and a history entry per report turns leaving the section into a walk back out of it. What precedes the section in the history is where the analyst came from, and that is what Back owes them.
 
 **A search parameter is not a navigation, and a fragment is.** Anything walking the interface and asking whether pressing a control left the section reads the path and the fragment, because a nested section is addressed by fragment; the search string is where a section keeps its own state, and moving it means the analyst is where they were.
+
+## A step is declared, never read off a title
+
+**A title is written for a reader and a step is matched against a vocabulary**, so the two answer to different things and only one of them is a value. A title is content an operator edits, an analyst's own layout carries whatever they called it, and a title that is a step today stops being one the moment somebody makes it read better.
+
+Reading a step off a title fails in the shape that is hardest to notice: the titles that match set their step and the one that does not sets nothing, so most of the obligation appears to work. The step that goes missing is whichever one somebody retitled, and the loss is silent at every layer -- a report with no step is a valid report.
+
+So the layout states its step as a value, beside the regime it belongs to. One place says which obligation a layout belongs to and which step of it, and neither is derived from the other.
+
+## What a route answers with is what its schema declares
+
+The layout list is serialized through a schema before it leaves. A field the answer carries and the schema does not is dropped on the way out, and nothing above the wire can see it happen: the route's own return type is that schema's inference, so the typecheck agrees with the schema rather than with the answer, and a test calling the function instead of the route never meets the serializer at all.
+
+**So a field is added to the answer and to the schema together, and what holds them together is a test over the parsed result rather than over the built one.** The equality is whole-object, so a field added later is covered without anybody remembering this.

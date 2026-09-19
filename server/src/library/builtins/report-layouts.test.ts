@@ -182,6 +182,29 @@ describe('the line a layout is picked by', () => {
   })
 
   /**
+   * **At least one shipped filing is titled differently from the step it
+   * files.** The test above passes whether or not any label differs, so on its
+   * own it says nothing about the case the defect turned on: three of the four
+   * titles are a stage word for word, and reading a step off a title set those
+   * three and dropped the fourth. -> #954
+   */
+  it('ships a filing whose title is not the name of its step', () => {
+    const known = new Set<string>(REPORT_STAGES)
+    const differing = BUILTIN_REPORT_LAYOUTS.filter(
+      (layout) => layout.stage !== undefined && layout.label !== layout.stage,
+    )
+
+    expect(
+      differing.map((layout) => layout.name),
+      'every title is its own step, so nothing here can tell a declared step from a derived one',
+    ).not.toEqual([])
+    expect(
+      differing.filter((layout) => !known.has(layout.stage ?? '')).map((layout) => layout.name),
+      'a layout whose title differs from its step, and whose step is not a value the vocabulary holds',
+    ).toEqual([])
+  })
+
+  /**
    * A layout under no regime names no step, because there is no obligation for
    * it to be a step of.
    */

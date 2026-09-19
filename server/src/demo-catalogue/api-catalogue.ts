@@ -127,23 +127,19 @@ function captured(): Record<string, unknown> {
      * **The layouts are the route's own answer for a shipped install**, not a
      * second list written here: `offeredLayouts` is what the controller
      * calls, and `assesses` reads the fallbacks in `SETTINGS` rather than
-     * naming regimes. A regulatory layout dropped in, or a fallback flipped,
-     * reaches the demo without anybody editing this file. -> #884
+     * naming regimes. A regulatory layout dropped in, a fallback flipped or a
+     * field the layouts gain all reach the demo without anybody editing this
+     * file. -> #884
      *
      * The heading pack is what a client resolves `heading.exec_summary`
      * through, and it is English's own keys.
      */
     'report-layouts': {
       layouts: offeredLayouts(
-        BUILTIN_REPORT_LAYOUTS.map((one) => ({
-          name: one.name,
-          label: one.label,
-          summary: one.summary,
-          builtin: true,
-          ...(one.requiresFeature === undefined ? {} : { requiresFeature: one.requiresFeature }),
-          ...(one.stage === undefined ? {} : { stage: one.stage }),
-          blocks: one.blocks,
-        })),
+        // Spread rather than copied field by field: `offeredLayouts` picks
+        // what it serves, so a field the builtins gain reaches the capture
+        // without this list being the one place that forgets it. -> #954
+        BUILTIN_REPORT_LAYOUTS.map((one) => ({ ...one, builtin: true })),
         english(),
         shippedAssesses,
       ),

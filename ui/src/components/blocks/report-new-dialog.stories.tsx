@@ -116,9 +116,9 @@ export const Filing: Story = {
       )
     })
 
-    // The step is what distinguishes one filing from the next, and it is
-    // derived rather than asked for -- so what proves it is what leaves,
-    // not what the band drew. -> #954
+    // The step is what distinguishes one filing from the next, and the layout
+    // declares it rather than the analyst being asked -- so what proves it is
+    // what leaves, not what the band drew. -> #954
     await userEvent.click(canvas.getByRole('button', { name: 'Create' }))
     await waitFor(async () => {
       await expect(args.onCreate).toHaveBeenCalledWith(
@@ -136,7 +136,8 @@ export const Filing: Story = {
 export const SeedsNothing: Story = {
   name: 'Starting from nothing',
   parameters: openInFrame('820px'),
-  play: async ({ canvasElement }) => {
+  args: { nis2Enabled: true, onCreate: fn() },
+  play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement.ownerDocument.body)
     const blank = DEMO_LAYOUTS.find((one) => one.blocks.length === 0)
     await expect(blank).toBeDefined()
@@ -144,6 +145,15 @@ export const SeedsNothing: Story = {
     await userEvent.click(await canvas.findByText(blank.label))
     await waitFor(async () => {
       await expect(canvas.getByText(summarise(blank))).toBeVisible()
+    })
+
+    // An install that assesses the regime still writes no step for a layout
+    // that files none -- the step follows the layout, not the install. -> #954
+    await userEvent.click(canvas.getByRole('button', { name: 'Create' }))
+    await waitFor(async () => {
+      await expect(args.onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ layout: blank.name, stage: '' }),
+      )
     })
   },
 }
