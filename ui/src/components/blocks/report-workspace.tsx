@@ -176,6 +176,7 @@ const FOLD = {
     grid: '@5xl:grid-cols-[13rem_minmax(0,1fr)_minmax(0,26rem)]',
     column: '@5xl:col-start-2',
     rail: '@5xl:block',
+    page: '@5xl:block',
   },
   compose: {
     grid: '@3xl:grid-cols-[13rem_minmax(0,1fr)]',
@@ -338,6 +339,7 @@ export function ReportWorkspace({
                 report={report}
                 here={here}
                 headings={headings}
+                className={cn('hidden', FOLD.paper.page)}
               />
             )}
           </div>
