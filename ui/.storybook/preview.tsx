@@ -219,6 +219,15 @@ const preview: Preview = {
            * measured and refused. -> #933
            */
           ['[data-key^="--pad"]'],
+          /**
+           * React Aria's overlay containers. Both scroll and neither takes
+           * focus: the combobox popover is driven from its input through
+           * `aria-activedescendant`, and the hover card from its trigger.
+           * A panel's own name is held by the compiler instead, which
+           * requires `aria-label` on `HoverCardPanel`. -> #929
+           */
+          ['[data-combobox-portal]'],
+          ['[data-part="hover-card-panel"]'],
         ],
       },
     },
