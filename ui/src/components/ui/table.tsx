@@ -175,8 +175,7 @@ export interface TableContainerLook {
 }
 
 export interface ResizableTableContainerProps
-  extends Omit<AriaResizableTableContainerProps, 'className'>,
-    TableContainerLook {
+  extends Omit<AriaResizableTableContainerProps, 'className'>, TableContainerLook {
   /** Utilities on the scroller. Not a render prop: React Aria types this one as a string. */
   className?: string | undefined
 }
@@ -269,7 +268,11 @@ export type TableHeaderProps<T extends object> = AriaTableHeaderProps<T>
  * `toggle`, with a select-all checkbox where the mode is `multiple`. Pass
  * `columns` and a render function for a dynamic set.
  */
-export function TableHeader<T extends object>({ columns, children, ...props }: TableHeaderProps<T>) {
+export function TableHeader<T extends object>({
+  columns,
+  children,
+  ...props
+}: TableHeaderProps<T>) {
   const { selectionBehavior, selectionMode } = useTableOptions()
   return (
     <AriaTableHeader
@@ -286,6 +289,11 @@ export function TableHeader<T extends object>({ columns, children, ...props }: T
           className={cn(columnHeader(), 'px-3 py-2')}
           data-part="table-selection-column"
         >
+          {/* The checkbox contributes no text and `single` has no checkbox at
+              all, so the column reached a reader unnamed. `aria-label` does not
+              survive to the `th`; this is the idiom `data-table` already uses
+              for its actions column. -> #930 */}
+          <span className="sr-only">Select</span>
           {selectionMode === 'multiple' ? <Checkbox slot="selection" /> : null}
         </AriaColumn>
       ) : null}
@@ -327,11 +335,7 @@ export function Column({ allowsResizing, ...props }: ColumnProps) {
             {/* Truncation is a text concern: a span with `overflow-hidden`
                 around a control clips its focus ring, which is 3px on three
                 sides for a header checkbox. */}
-            {typeof children === 'string' ? (
-              <span className="truncate">{children}</span>
-            ) : (
-              children
-            )}
+            {typeof children === 'string' ? <span className="truncate">{children}</span> : children}
             {allowsSorting ? (
               <span
                 aria-hidden
@@ -369,8 +373,10 @@ export function ColumnResizer(props: ColumnResizerProps) {
   )
 }
 
-export interface TableBodyProps<T extends object>
-  extends Omit<AriaTableBodyProps<T>, 'renderEmptyState'> {
+export interface TableBodyProps<T extends object> extends Omit<
+  AriaTableBodyProps<T>,
+  'renderEmptyState'
+> {
   renderEmptyState?: ((props: { isEmpty: boolean; isDropTarget: boolean }) => ReactNode) | undefined
 }
 
