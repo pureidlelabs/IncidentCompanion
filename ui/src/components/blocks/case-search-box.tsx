@@ -32,6 +32,9 @@ export interface CaseSearchBoxProps {
   inputRef?: RefObject<HTMLInputElement | null> | undefined
 }
 
+/** Marks the results surface, so an outside press can tell it from the page. */
+const RESULTS_MARK = 'data-omnibox-results'
+
 /**
  * The case's omnibox: commands, sections and the case's own rows under one
  * field.
@@ -43,9 +46,6 @@ export interface CaseSearchBoxProps {
  *
  * The list is non-modal, so the caret never leaves the field.
  */
-/** The results surface, named so an outside press can tell it from the page. */
-const RESULTS_PART = 'case-search-results'
-
 export function CaseSearchBox({
   kase,
   query,
@@ -62,24 +62,30 @@ export function CaseSearchBox({
   /**
    * The outside press React Aria does not wire.
    *
-   * `usePopover` passes `isDismissable: !isNonModal`, so a non-modal popover
-   * gets no interact-outside handler at all, and its blur path returns early
-   * when the press leaves no `relatedTarget` -- which is every press on plain
-   * chrome. Capturing, so a handler that stops propagation cannot keep the
-   * list open over the case. -> #908
+   * A non-modal popover is given no interact-outside handler at all, and the
+   * blur path cannot stand in: virtual focus keeps the caret in the field,
+   * which is outside the surface, so focus is never within it to leave.
+   *
+   * On `click` rather than the press that starts it, which is what React Aria
+   * does: closing on `pointerdown` takes the row out from under a press that
+   * has not finished choosing it. Capturing, so a handler that stops
+   * propagation cannot keep the list open over the case. -> #908
    */
   useEffect(() => {
     if (!open) return
-    const closeOnOutside = (event: PointerEvent) => {
+    const closeOnOutside = (event: MouseEvent) => {
+      // The primary button only. A secondary or middle press opens a menu or
+      // a tab and is not the analyst leaving the list.
+      if (event.button > 0) return
       const target = event.target
       if (!(target instanceof Element)) return
       if (anchor.current?.contains(target)) return
-      if (target.closest(`[data-part="${RESULTS_PART}"]`)) return
+      if (target.closest(`[${RESULTS_MARK}]`)) return
       setDismissed(true)
     }
-    document.addEventListener('pointerdown', closeOnOutside, true)
+    document.addEventListener('click', closeOnOutside, true)
     return () => {
-      document.removeEventListener('pointerdown', closeOnOutside, true)
+      document.removeEventListener('click', closeOnOutside, true)
     }
   }, [open])
 
@@ -113,7 +119,7 @@ export function CaseSearchBox({
           {...(inputRef === undefined ? {} : { inputRef })}
         />
         <Popover
-          data-part={RESULTS_PART}
+          {...{ [RESULTS_MARK]: '' }}
           triggerRef={anchor}
           isOpen={open}
           onOpenChange={(open) => {
