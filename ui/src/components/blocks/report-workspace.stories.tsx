@@ -405,6 +405,25 @@ export const Narrow: Story = {
       <ReportWorkspace {...args} />
     </div>
   ),
+  /**
+   * The row keeps the name of the thing it lists.
+   *
+   * Its heading is the only part saying which block the row is, and it is the
+   * part built to give way -- so at this width it gave way entirely, leaving a
+   * number and a badge that says the same word on every line. -> #949
+   */
+  play: async ({ canvasElement }) => {
+    const rows = canvasElement.querySelectorAll('[data-part="report-index-row"]')
+    await expect(rows.length).toBeGreaterThan(0)
+
+    for (const row of rows) {
+      const heading = row.querySelector('[data-part="report-index-heading"]')
+      await expect(
+        heading?.getBoundingClientRect().width ?? 0,
+        'the row dropped the only part that says which block it is',
+      ).toBeGreaterThan(0)
+    }
+  },
 }
 
 /** A label and a heading past the room they have. */

@@ -243,10 +243,7 @@ export function ReportWorkspace({
             {...(editable && onAddSection !== undefined
               ? {
                   action: (
-                    <ReportAddSectionMenu
-                      onAddSection={onAddSection}
-                      groups={blockKinds ?? []}
-                    />
+                    <ReportAddSectionMenu onAddSection={onAddSection} groups={blockKinds ?? []} />
                   ),
                 }
               : {})}
@@ -556,10 +553,7 @@ function DocumentStrip({
           ))}
         </ToggleButtonGroup>
         {onAddSection !== undefined && (
-          <ReportAddSectionMenu
-            onAddSection={onAddSection}
-            groups={blockKinds ?? []}
-          />
+          <ReportAddSectionMenu onAddSection={onAddSection} groups={blockKinds ?? []} />
         )}
       </div>
     </div>
@@ -769,11 +763,25 @@ function GeneratedSection({
   headings: Readonly<Record<string, string>>
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-dashed border-border px-3 py-2">
+    /**
+     * **The heading is the row, so it is the last thing dropped.** Every other
+     * part is fixed width, so a narrow pane spent the whole row on them and
+     * squeezed the one part that says which block this is to nothing. The
+     * badge goes first -- it says the same word on every row -- then the
+     * count. -> #949
+     */
+    <div
+      data-part="report-index-row"
+      className="@container flex items-center gap-2 rounded-md border border-dashed border-border px-3 py-2"
+    >
       <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">{number}</span>
-      <span className="min-w-0 flex-1 truncate text-sm">{headingOf(block, headings)}</span>
-      {facts !== '' && <span className="shrink-0 text-2xs text-ink-muted">{facts}</span>}
-      <Badge variant="soft" size="xs">
+      <span data-part="report-index-heading" className="min-w-0 flex-1 truncate text-sm">
+        {headingOf(block, headings)}
+      </span>
+      {facts !== '' && (
+        <span className="hidden shrink-0 text-2xs text-ink-muted @3xs:inline">{facts}</span>
+      )}
+      <Badge variant="soft" size="xs" className="hidden @2xs:inline-flex">
         generated
       </Badge>
     </div>
