@@ -59,6 +59,48 @@ export const Typed: Story = {
 }
 
 /**
+ * The arrow keys walk the rows and the caret stays in the field.
+ *
+ * **Both halves, because either one alone is a different control.** A list
+ * that takes the focus is a menu the analyst has to leave to keep typing; one
+ * the keyboard cannot reach is a list for the pointer only. The box is built
+ * as a non-modal popover to get both, and nothing held either. -> #963
+ *
+ * jsdom cannot answer it: which element has the focus after a key, and what a
+ * press does once it is there, are facts about a browser.
+ */
+export const KeyboardWalksTheRows: Story = {
+  name: 'The arrows walk, the caret stays',
+  render: () => <Choosing onAction={fn()} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // The surface portals to `body`, so a canvas-scoped query misses it.
+    const rows = await screen.findAllByRole('option')
+    await expect(rows.length, 'no rows to walk').toBeGreaterThan(1)
+
+    const field = canvas.getByRole('searchbox')
+    await userEvent.click(field)
+    await userEvent.keyboard('{ArrowDown}')
+
+    await expect(field, 'the list took the focus, so typing would go to it').toHaveFocus()
+    await waitFor(async () => {
+      await expect(
+        canvasElement.ownerDocument.querySelector('[role="option"][data-focused="true"]'),
+        'the arrow key moved nothing, so the keyboard cannot reach a row',
+      ).not.toBeNull()
+    })
+
+    await userEvent.keyboard('{Enter}')
+    await waitFor(async () => {
+      await expect(
+        canvas.getByTestId('chosen'),
+        'Enter on a walked row chose nothing',
+      ).toHaveTextContent(/^.+$/)
+    })
+  },
+}
+
+/**
  * A press away from the list closes it.
  *
  * React Aria wires no outside press for a non-modal popover, so this is the
