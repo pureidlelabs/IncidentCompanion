@@ -442,6 +442,58 @@ export function DataTable<TData extends { id: string }>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightId, highlightIndex, rows.length, windowed, measure])
 
+  /**
+   * The count the analyst has, and the place each drawn row holds in it.
+   *
+   * **Windowed, the document holds a slice**, so a reader counting rows counts
+   * the window and hears a total that changes as they scroll. `aria-rowcount`
+   * on the grid and `aria-rowindex` per row are what say otherwise, with the
+   * header counting as the first row.
+   *
+   * **Windowed only.** A table holding every row in the document is counted
+   * correctly by the browser, so numbering one by hand adds a second answer
+   * that can disagree with the first.
+   *
+   * **Written to the nodes, and watched rather than written once.** React Aria
+   * drops either attribute passed to a `Row` as a prop -- measured, the same
+   * way it drops `aria-hidden`. It also commits its rows after this
+   * component's effects run: an effect alone reached 32 of 48 rows on the
+   * first render and none at all after a scroll. The index rides in as
+   * `data-row-index`, which React Aria does carry, and an observer copies it
+   * onto whatever rows exist. -> #974
+   */
+  useEffect(() => {
+    if (!windowed) return
+    const grid = scrollRef.current?.querySelector('[role="grid"]')
+    if (grid === null || grid === undefined) return
+
+    const number = () => {
+      grid.setAttribute('aria-rowcount', String(rows.length + 1))
+      // The header is the first row, and a grid that numbers some of its rows
+      // and not others is worse than one that numbers none.
+      grid.querySelector('thead tr')?.setAttribute('aria-rowindex', '1')
+      for (const row of grid.querySelectorAll('[data-row-index]')) {
+        const at = row.getAttribute('data-row-index')
+        if (at !== null && row.getAttribute('aria-rowindex') !== at) {
+          row.setAttribute('aria-rowindex', at)
+        }
+      }
+    }
+
+    number()
+    const watching = new MutationObserver(number)
+    watching.observe(grid, { childList: true, subtree: true })
+    return () => {
+      watching.disconnect()
+      // Filtering three hundred rows down to ten stops the windowing without
+      // replacing the grid, and a count left behind is then a wrong one.
+      grid.removeAttribute('aria-rowcount')
+      for (const row of grid.querySelectorAll('[aria-rowindex]')) {
+        row.removeAttribute('aria-rowindex')
+      }
+    }
+  }, [rows.length, windowed])
+
   if (rows.length === 0 && empty) return <>{empty}</>
 
   /**
@@ -506,13 +558,17 @@ export function DataTable<TData extends { id: string }>({
       >
         {[
           spacer('top', padTop),
-          ...drawnRows.flatMap((row) => {
+          ...drawnRows.flatMap((row, at) => {
             const action = rowAction(row, table, actionsMeta, setOpenMenuRowId)
             const drawn = [
               <Row
                 key={row.id}
                 id={row.id}
                 data-row-id={row.id}
+                // Carried as data because React Aria builds a row's own ARIA
+                // attributes and drops one passed to it. Copied onto the node
+                // below. -> #974
+                data-row-index={start + at + 2}
                 {...(row.id === arrived ? { 'data-arrived': 'true' } : {})}
                 // Not `data-selected`: React Aria owns and overwrites that
                 // one. This selection is TanStack's.

@@ -84,6 +84,18 @@ const seen: string[] = []
 let realError: typeof console.error | undefined
 
 beforeEach(() => {
+  /**
+   * **The surface a story starts on, which is otherwise the last story's.**
+   * Every story here runs in one browser, so what one writes is still there
+   * for the next. The shell persists the rail's fold, and a folded rail draws
+   * no sub-list -- so a story about a rail row can fail on state a different
+   * file put there, and what the tier asserts depends on the order it ran in.
+   * The unit tier clears the same storage for the same reason, per file.
+   * `sessionStorage` is not cleared: nothing in the tree writes one.
+   * -> #527
+   */
+  localStorage.clear()
+
   seen.length = 0
   realError = console.error
   console.error = (...args: unknown[]) => {
