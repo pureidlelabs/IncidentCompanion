@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
@@ -66,10 +66,16 @@ export const Writing: Story = {
   name: 'Writing a new note',
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'New note' }))
+    // **Waited for, not read.** The screen mounts an editor, so the control is
+    // not on the page the instant the story starts; a query that reads for it
+    // fails in the time it takes to ask rather than in the time it takes to
+    // draw -- which is what a whole-tier run has less of. -> #944
+    await userEvent.click(await canvas.findByRole('button', { name: 'New note' }))
 
-    const field = canvas.getByRole('textbox', { name: 'Note' })
-    await expect(field).toHaveFocus()
+    const field = await canvas.findByRole('textbox', { name: 'Note' })
+    await waitFor(async () => {
+      await expect(field).toHaveFocus()
+    })
     await expect(canvas.queryByRole('dialog')).toBeNull()
 
     const written = 'Proxy logs for the staging window pulled; nothing in the 03:00 band.'
@@ -77,10 +83,12 @@ export const Writing: Story = {
 
     // The index, not the field: the claim is that what was typed is what the
     // screen kept, and a field holding its own text proves nothing.
-    const index = canvas.getByRole('navigation', { name: 'Case notes' })
-    await expect(within(index).getAllByTestId('note-row')[0]).toHaveTextContent(
-      'Proxy logs for the staging window',
-    )
+    const index = await canvas.findByRole('navigation', { name: 'Case notes' })
+    await waitFor(async () => {
+      await expect(within(index).getAllByTestId('note-row')[0]).toHaveTextContent(
+        'Proxy logs for the staging window',
+      )
+    })
   },
 }
 
@@ -94,15 +102,17 @@ export const Editing: Story = {
   name: 'Editing an existing note',
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const field = canvas.getByRole('textbox', { name: 'Note' })
+    const field = await canvas.findByRole('textbox', { name: 'Note' })
 
     await userEvent.clear(field)
     await userEvent.type(field, 'Re-read after the NTDS finding: assume full domain compromise.')
 
-    const index = canvas.getByRole('navigation', { name: 'Case notes' })
-    await expect(within(index).getAllByTestId('note-row')[0]).toHaveTextContent(
-      'Re-read after the NTDS finding',
-    )
+    const index = await canvas.findByRole('navigation', { name: 'Case notes' })
+    await waitFor(async () => {
+      await expect(within(index).getAllByTestId('note-row')[0]).toHaveTextContent(
+        'Re-read after the NTDS finding',
+      )
+    })
   },
 }
 
@@ -118,16 +128,18 @@ export const Deleting: Story = {
   args: { writes: { create: fn(), remove: fn() } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const before = canvas.getAllByTestId('note-row').length
+    const before = (await canvas.findAllByTestId('note-row')).length
 
-    await userEvent.click(canvas.getByTestId('delete-note'))
+    await userEvent.click(await canvas.findByTestId('delete-note'))
 
     const dialog = await screen.findByRole('alertdialog')
     await expect(dialog).toHaveTextContent('Delete this note?')
     await userEvent.click(within(dialog).getByRole('button', { name: /delete/i }))
 
     // The index is the surface the answer shows on, not the dialog.
-    await expect(canvas.getAllByTestId('note-row')).toHaveLength(before - 1)
+    await waitFor(async () => {
+      await expect(canvas.getAllByTestId('note-row')).toHaveLength(before - 1)
+    })
   },
 }
 
