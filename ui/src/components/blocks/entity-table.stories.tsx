@@ -143,9 +143,8 @@ export const Sorted: Story = {
     await expect(canvas.getAllByRole('row').at(-1)).toHaveTextContent('Clean')
 
     // **Every row is in the document, so the browser counts them and nothing
-    // here should.** A hand-written number is a second answer that a sort can
-    // put out of step with the first: a sort reorders rows the collection
-    // already holds, which is a change to no node's children. -> #974
+    // here should.** A hand-written number is a second answer, free to
+    // disagree with the one the reader is already being given. -> #974
     await expect(
       canvasElement.querySelectorAll('[aria-rowindex], [aria-rowcount]').length,
       'an unwindowed table numbers its own rows, so a sort can leave the numbers behind',
@@ -417,14 +416,26 @@ export const Windowed: Story = {
       'the table does not say how many rows it has, so a reader counts the window',
     ).toBe('301')
 
-    const numbered = [...canvasElement.querySelectorAll('[data-row-id]')].map((row) =>
-      Number(row.getAttribute('aria-rowindex')),
-    )
+    const drawnRows = [...canvasElement.querySelectorAll('[data-row-id]')]
+    const numbered = drawnRows.map((row) => Number(row.getAttribute('aria-rowindex')))
     await expect(numbered.length, 'no drawn rows to number').toBeGreaterThan(1)
     await expect(
       numbered[0],
       'the first drawn row is numbered two, so the number is its place in the window rather than in the model',
     ).toBeGreaterThan(2)
+
+    // **Each number against the row it is on, not just against its
+    // neighbours.** Consecutive, inside the count and past the header are all
+    // properties of the *shape* of the numbering, and a whole sequence shifted
+    // by one keeps every one of them. The ids run `sys-0` up, so the row's own
+    // name is the only thing here that knows where it belongs.
+    for (const [at, row] of drawnRows.entries()) {
+      const id = row.getAttribute('data-row-id') ?? ''
+      await expect(
+        numbered[at],
+        `${id} is numbered ${String(numbered[at])}, and it is row ${String(Number(id.slice(4)) + 2)} of the model`,
+      ).toBe(Number(id.slice(4)) + 2)
+    }
     await expect(
       numbered.every((one, at) => at === 0 || one === (numbered[at - 1] ?? 0) + 1),
       'the drawn rows are not numbered consecutively',

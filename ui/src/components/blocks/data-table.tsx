@@ -482,17 +482,7 @@ export function DataTable<TData extends { id: string }>({
 
     number()
     const watching = new MutationObserver(number)
-    // `attributeFilter` and not `attributes`, on two counts. A sort that
-    // reorders rows the collection already holds adds and removes nothing, so
-    // `childList` alone never fires and every row keeps its pre-sort number.
-    // And filtering to the attribute being read means the `aria-rowindex`
-    // written above is not itself a mutation this observer hears.
-    watching.observe(grid, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['data-row-index'],
-    })
+    watching.observe(grid, { childList: true, subtree: true })
     return () => {
       watching.disconnect()
       // Filtering three hundred rows down to ten stops the windowing without
