@@ -71,7 +71,12 @@ export function FormSection({
 
   return (
     <Tag
-      {...(title === '' ? {} : { 'aria-label': title })}
+      data-part="form-section"
+      // Named only where no heading is drawn. Naming a `section` makes it a
+      // region landmark, and the vocabulary lets two groups carry one title --
+      // which collided as a single landmark wherever the heading already
+      // named them. -> #936
+      {...(title !== '' && hideTitle ? { 'aria-label': title } : {})}
       className={cn(
         'flex flex-col',
         compact ? 'px-3' : 'gap-3',
@@ -98,7 +103,7 @@ export function FormSection({
                 <Icon className="size-3.5" />
               </span>
             )}
-            <h3 className="text-micro uppercase tracking-micro text-ink-muted">{title}</h3>
+            <h2 className="text-micro uppercase tracking-micro text-ink-muted">{title}</h2>
             {chip !== undefined && (
               <Badge variant="soft" size="xs" uppercase={false}>
                 {chip}
@@ -132,7 +137,9 @@ export function FormSection({
         </div>
       )}
       {children !== undefined &&
-        (layout === 'plain' ? children : (
+        (layout === 'plain' ? (
+          children
+        ) : (
           <div data-part="form-grid" data-columns={columns} className={grid}>
             {children}
           </div>
@@ -158,10 +165,7 @@ export function FormSection({
  * The chip owns progress when there is one, so the two never state the same
  * fraction twice.
  */
-function foldLabel(
-  count: { total: number; set: number } | undefined,
-  hasChip: boolean,
-): string {
+function foldLabel(count: { total: number; set: number } | undefined, hasChip: boolean): string {
   if (count === undefined) return 'More'
   if (count.set > 0 && !hasChip) return `${String(count.set)} of ${String(count.total)} set`
   return `${String(count.total)} more`

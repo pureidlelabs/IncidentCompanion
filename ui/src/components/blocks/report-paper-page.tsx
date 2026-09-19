@@ -91,6 +91,10 @@ export function ReportPaperPage({
     >
       <div
         ref={box}
+        // The scroller itself takes focus: arrow keys move the focused
+        // element's nearest scrollable ancestor. -> #929
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
+        tabIndex={0}
         className="sticky top-14 h-(--document-viewport-h) overflow-y-auto p-4"
       >
         <div className="mx-auto w-full max-w-[26rem] bg-paper px-8 py-9 text-paper-ink shadow-lg">
@@ -101,10 +105,10 @@ export function ReportPaperPage({
           )}
           {blocks.map((block, at) => (
             <div key={block.id} id={paperDomId(block.id)}>
-              <h4 className="mt-5 flex items-baseline gap-2 border-b border-paper-accent pb-1 font-sans text-sm font-semibold text-paper-accent first:mt-0">
+              <h3 className="mt-5 flex items-baseline gap-2 border-b border-paper-accent pb-1 font-sans text-sm font-semibold text-paper-accent first:mt-0">
                 <span className="font-mono text-2xs">{String(at + 1).padStart(2, '0')}</span>
                 {headingOf(block, headings)}
-              </h4>
+              </h3>
               {WRITTEN_KINDS.includes(block.kind) ? (
                 <div
                   // The schema is the sanitiser. -> `markdownToHtml`

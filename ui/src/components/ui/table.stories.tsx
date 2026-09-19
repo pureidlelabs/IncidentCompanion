@@ -5,15 +5,7 @@ import type { SortDescriptor } from 'react-aria-components'
 import { expect, within } from 'storybook/test'
 
 import { Skeleton } from './skeleton'
-import {
-  Cell,
-  Column,
-  ResizableTableContainer,
-  Row,
-  Table,
-  TableBody,
-  TableHeader,
-} from './table'
+import { Cell, Column, ResizableTableContainer, Row, Table, TableBody, TableHeader } from './table'
 
 interface Host {
   id: string
@@ -68,10 +60,7 @@ const meta = {
           <Column id="severity">Severity</Column>
           <Column id="seen">First seen</Column>
         </TableHeader>
-        <TableBody
-          items={rows}
-          renderEmptyState={() => 'No host has been added to this case yet'}
-        >
+        <TableBody items={rows} renderEmptyState={() => 'No host has been added to this case yet'}>
           {(item) => (
             <Row id={item.id}>
               <Cell>{item.host}</Cell>
@@ -97,7 +86,11 @@ export const Default: Story = {}
  * appears and a click moves the selection rather than adding to it.
  */
 export const SingleSelection: Story = {
-  args: { selectionMode: 'single', defaultSelectedKeys: ['ws112'] },
+  args: {
+    selectionMode: 'single',
+    selectionBehavior: 'replace',
+    defaultSelectedKeys: ['ws112'],
+  },
   play: async ({ canvas, step, userEvent }) => {
     await step('The row named as selected is the one marked', async () => {
       await expect(canvas.getByRole('row', { name: /WS-112/ })).toHaveAttribute(
@@ -306,6 +299,10 @@ export const LoadingRows: Story = {
           {[0, 1, 2, 3].map((index) => (
             <Row key={index} id={`placeholder-${String(index)}`}>
               <Cell>
+                {/* The row header names the row, and a skeleton is not text.
+                    Without this the placeholder row reaches a reader with
+                    nothing to announce. */}
+                <span className="sr-only">Loading</span>
                 <Skeleton className="h-4 w-24" />
               </Cell>
               <Cell>

@@ -439,8 +439,11 @@ export function EntityScopeTable({
           {/* One panel, carrying the selected tab's own id: React Aria puts
             `aria-controls` on the selected tab alone, so the id it names is
             always this one. */}
-          {source && specs && (
-            <TabPanel key={scope} id={scope} still>
+          {/* The panel is drawn whether or not its body can be: a tablist
+            whose selected tab names a panel that is not there leaves
+            `aria-controls` pointing at nothing. -> #937 */}
+          <TabPanel key={scope} id={scope} still>
+            {source && specs && (
               <ScopeBody
                 scope={scope}
                 kase={source}
@@ -480,8 +483,8 @@ export function EntityScopeTable({
                   }
                 }}
               />
-            </TabPanel>
-          )}
+            )}
+          </TabPanel>
         </Section>
       </Tabs>
 

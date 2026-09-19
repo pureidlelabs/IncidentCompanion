@@ -70,10 +70,7 @@ export const Vertical: Story = {
  */
 export const Horizontal: Story = {
   render: () => (
-    <ScrollArea
-      orientation="horizontal"
-      className="w-72 rounded-md border border-border p-3"
-    >
+    <ScrollArea orientation="horizontal" className="w-72 rounded-md border border-border p-3">
       <div className="flex w-max gap-2 text-sm">
         {lines(20, 'Column').map((line) => (
           <span key={line} className="rounded-sm bg-muted px-2 py-1 whitespace-nowrap">

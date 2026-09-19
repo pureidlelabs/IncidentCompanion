@@ -44,6 +44,12 @@ export interface HoverCardPanelLook {
 
 export interface HoverCardPanelProps extends PopoverProps, HoverCardPanelLook {
   children: ReactNode
+  /**
+   * Names the panel, which React Aria gives `role="dialog"` and nothing else
+   * names. Required rather than optional: a dialog with no name announces
+   * itself as a dialog and stops. -> #931
+   */
+  'aria-label': string
 }
 
 /** The surface a `HoverCard` opens. A `Popover` carrying the preview's padding. */

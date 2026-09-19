@@ -43,7 +43,7 @@ export const Open: Story = {
       {'The mailbox rule was created by '}
       <HoverCard defaultOpen>
         <Link href="#">j.okonkwo@example.org</Link>
-        <HoverCardPanel size="lg">
+        <HoverCardPanel size="lg" aria-label="Host preview">
           <div className="flex items-start gap-3">
             <span className="flex size-(--control-h-md) shrink-0 items-center justify-center rounded-full bg-muted text-ink-muted">
               <ShieldAlert aria-hidden className="size-4" />
@@ -116,7 +116,7 @@ export const Overflowing: Story = {
       {'Traffic reached '}
       <HoverCard defaultOpen>
         <Link href="#">198.51.100.24</Link>
-        <HoverCardPanel size="lg">
+        <HoverCardPanel size="lg" aria-label="Host preview">
           <p className="font-medium">198.51.100.24</p>
           {/* Enough to overflow the height a popover is given, which twenty
               lines did not: the story's whole subject is the state past that. */}
@@ -148,11 +148,9 @@ export const OnHover: Story = {
       {'Traffic reached '}
       <HoverCard>
         <Link href="#">198.51.100.24</Link>
-        <HoverCardPanel>
+        <HoverCardPanel aria-label="Host preview">
           <p className="font-medium">198.51.100.24</p>
-          <p className="text-ink-muted">
-            Hosting provider, Frankfurt. Seen in 2 other cases.
-          </p>
+          <p className="text-ink-muted">Hosting provider, Frankfurt. Seen in 2 other cases.</p>
         </HoverCardPanel>
       </HoverCard>
       {' twice.'}
@@ -171,7 +169,7 @@ export const Sizes: Story = {
       {(['sm', 'default', 'lg'] as const).map((size) => (
         <HoverCard key={size} defaultOpen>
           <Link href="#" standalone>{`Preview at ${size}`}</Link>
-          <HoverCardPanel size={size}>
+          <HoverCardPanel size={size} aria-label="Host preview">
             <p className="font-medium">E2E-0001</p>
             <p className="text-ink-muted">Opened 2026-08-20 by Dev Analyst.</p>
           </HoverCardPanel>

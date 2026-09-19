@@ -772,8 +772,7 @@ export function IncidentCanvas({
              only one of the three is somebody's cue to go and add an event.
              The failure below says its own thing for the same reason. */
           <p data-part="canvas-empty" className="p-4 text-sm text-ink-muted">
-            Nothing to draw yet. A case gets a graph once its timeline has
-            entries.
+            Nothing to draw yet. A case gets a graph once its timeline has entries.
           </p>
         ) : failed ? (
           /* Only the drawing is replaced. The strip stays: the Nodes list is
@@ -1014,11 +1013,10 @@ function IncidentLegend() {
     },
   ]
   return (
-    <Disclosure
-      data-part="graph-legend"
-      className="rounded-md border border-border bg-surface"
-    >
-      <DisclosureHeader className="text-2xs tracking-micro uppercase">Legend</DisclosureHeader>
+    <Disclosure data-part="graph-legend" className="rounded-md border border-border bg-surface">
+      <DisclosureHeader level={2} className="text-2xs tracking-micro uppercase">
+        Legend
+      </DisclosureHeader>
       <DisclosurePanel>
         <ul className="flex flex-col gap-2">
           {rows.map((row) => (

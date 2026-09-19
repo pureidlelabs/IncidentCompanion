@@ -1,10 +1,7 @@
-
 import { cn, tv } from '@/lib/cn'
 
 const scrollArea = tv({
-  base: [
-    'relative min-h-0 overflow-auto overscroll-contain',
-  ],
+  base: ['relative min-h-0 overflow-auto overscroll-contain'],
   variants: {
     orientation: {
       vertical: 'overflow-x-hidden',
@@ -21,7 +18,10 @@ export interface ScrollAreaLook {
   orientation?: 'vertical' | 'horizontal' | 'both'
 }
 
-export interface ScrollAreaProps extends React.ComponentProps<'div'>, ScrollAreaLook {}
+export interface ScrollAreaProps extends React.ComponentProps<'div'>, ScrollAreaLook {
+  /** Names the region, which makes it one. Omitted, it is a focus stop and no landmark. */
+  label?: string | undefined
+}
 
 /**
  * A region that scrolls, with the app's scrollbar rather than the platform's.
@@ -34,14 +34,21 @@ export interface ScrollAreaProps extends React.ComponentProps<'div'>, ScrollArea
  *   nothing overflows and it renders as a plain `div`.
  * - `overscroll-contain`: a scroll reaching the end does not chain to the page
  *   behind it, which matters inside a popover.
- * - Not focusable. Wrap in a `tabIndex={0}` element where the region must be
- *   reachable by keyboard on its own.
+ * - Focusable, because arrow keys move the focused element's nearest
+ *   scrollable ancestor: a wrapper around the scroller scrolls the page
+ *   instead. Pass `tabIndex={-1}` where the content already takes focus and a
+ *   second stop is noise.
+ * - `label` makes it a named region. Without a name it stays a focus stop and
+ *   claims no landmark, since an unnamed one announces nothing. -> #929
  */
-export function ScrollArea({ orientation, className, ...props }: ScrollAreaProps) {
+export function ScrollArea({ orientation, className, label, ...props }: ScrollAreaProps) {
   return (
     <div
       data-part="scroll-area"
       data-orientation={orientation ?? 'vertical'}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
+      tabIndex={0}
+      {...(label === undefined ? {} : { role: 'region', 'aria-label': label })}
       className={cn(scrollArea({ orientation }), className)}
       {...props}
     />

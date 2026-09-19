@@ -142,8 +142,7 @@ export interface DialogLook {
 }
 
 export interface DialogProps
-  extends Omit<ModalOverlayProps, 'children' | MotionCollidingProps>,
-    DialogLook {
+  extends Omit<ModalOverlayProps, 'children' | MotionCollidingProps>, DialogLook {
   children: ReactNode
   /** Passed to the inner `Dialog`, for `aria-label` and the like. */
   dialogProps?: Omit<AriaDialogProps, 'children'>
@@ -172,10 +171,7 @@ export function Dialog({ children, size = 'compact', dialogProps, ...props }: Di
         variants={overlayMotion}
         className={(renderProps) => modal({ ...renderProps, size })}
       >
-        <AriaDialog
-          {...dialogProps}
-          className="flex min-h-0 flex-1 flex-col outline-hidden"
-        >
+        <AriaDialog {...dialogProps} className="flex min-h-0 flex-1 flex-col outline-hidden">
           {children}
         </AriaDialog>
       </MotionModal>
@@ -196,12 +192,16 @@ export function DialogHeader({
   return (
     <div className="flex shrink-0 items-start justify-between gap-4 px-4 pt-4 pb-2">
       <div className="flex min-w-0 flex-col gap-2">
-        <Heading slot="title" className="text-base leading-none font-medium">
+        <Heading
+          // React Aria's default is 3, and a dialog opens over a screen whose
+          // title is an `h1`, so the default skipped a level. -> #934
+          level={2}
+          slot="title"
+          className="text-base leading-none font-medium"
+        >
           {title}
         </Heading>
-        {description !== undefined && (
-          <p className="text-sm text-ink-muted">{description}</p>
-        )}
+        {description !== undefined && <p className="text-sm text-ink-muted">{description}</p>}
       </div>
       {onClose !== undefined && (
         <Button variant="ghost" size="icon-sm" aria-label="Close" onPress={onClose}>
@@ -237,7 +237,13 @@ export function DialogBody({ children }: { children: ReactNode }) {
     // `Section fills`, which is the construct that bleeds, and none holds a
     // table directly. So nothing else is clipped today, and a future dialog
     // wide enough to be is a layout to fix rather than one to scroll.
-    <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pt-2 pb-4">
+    <div
+      // The scroller takes focus itself: a body of plain prose overflows and
+      // holds nothing else to reach it by. -> #929
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
+      tabIndex={0}
+      className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pt-2 pb-4"
+    >
       {children}
     </div>
   )

@@ -99,7 +99,6 @@ const withAppProviders: Decorator = (Story) => (
  * thing appearing with no transition at all reads as a glitch.
  */
 
-
 const preview: Preview = {
   globalTypes: {
     theme: {
@@ -119,9 +118,7 @@ const preview: Preview = {
       toolbar: {
         title: 'Language',
         icon: 'paintbrush',
-        items: [
-          { value: 'console', title: 'Console' },
-        ],
+        items: [{ value: 'console', title: 'Console' }],
         dynamicTitle: true,
       },
     },
@@ -189,16 +186,51 @@ const preview: Preview = {
       },
     },
     /**
-     * **`'todo'`, and the size of the backlog is why.** At `'error'` axe fails
-     * a large minority of the story tests, so the gate would be red on arrival
-     * -- and a gate that is red on arrival is one somebody turns off. It
-     * reports until the backlog is worked through, and `'error'` is what it
-     * becomes. The count is in the commit that last measured it.
+     * **Failing is scoped to what the constitution binds.** Article VI makes
+     * WCAG AA a guideline and screen-reader semantics an obligation, so the
+     * semantic rules fail the tier and `color-contrast` is off here.
      *
-     * `'todo'` still runs axe on every story: the findings are in the run, not
-     * suppressed.
+     * Contrast is not unmeasured: `probe.js` carries its own rule, which knows
+     * a disabled control is muted on purpose. Axe's is a second and blunter
+     * reading of the same thing. -> #916
      */
-    a11y: { test: 'todo' },
+    a11y: {
+      test: 'error',
+      config: { rules: [{ id: 'color-contrast', enabled: false }] },
+      /**
+       * React Aria's `LiveAnnouncer`, which it appends to `body`. Its empty
+       * `role="img"` nodes label themselves elsewhere, and axe reads them as
+       * unlabelled images.
+       */
+      context: {
+        exclude: [
+          ['[data-live-announcer]'],
+          /**
+           * React Aria's `useMeter` hardcodes `role="meter progressbar"` and
+           * merges it last, so no caller can override it. Axe reads the token
+           * list as neither role and refuses the value attributes both allow
+           * on their own. -> #925
+           */
+          ['[data-part="meter"]'],
+          /**
+           * The spacer rows a windowed table carries its height in. React Aria
+           * drops `aria-hidden` and overrides `role` on a `Row`, so neither
+           * takes them out of the tree, and moving off spacer rows was
+           * measured and refused. -> #933
+           */
+          ['[data-key^="--pad"]'],
+          /**
+           * React Aria's overlay containers. Both scroll and neither takes
+           * focus: the combobox popover is driven from its input through
+           * `aria-activedescendant`, and the hover card from its trigger.
+           * A panel's own name is held by the compiler instead, which
+           * requires `aria-label` on `HoverCardPanel`. -> #929
+           */
+          ['[data-combobox-portal]'],
+          ['[data-part="hover-card-panel"]'],
+        ],
+      },
+    },
   },
 }
 
@@ -215,7 +247,12 @@ const preview: Preview = {
  * and `header` are all the same kind of prop and there will be more.
  */
 export const argTypesEnhancers = [
-  (context: { argTypes: Record<string, { type?: { name?: string }; table?: { type?: { summary?: string } }; control?: unknown }> }) => {
+  (context: {
+    argTypes: Record<
+      string,
+      { type?: { name?: string }; table?: { type?: { summary?: string } }; control?: unknown }
+    >
+  }) => {
     for (const argType of Object.values(context.argTypes)) {
       const summary = argType.table?.type?.summary ?? ''
       if (/React(Node|Element)|JSX\.Element/.test(summary)) argType.control = false

@@ -16,7 +16,6 @@ export function sizeForColumns(columns: number): NonNullable<DialogLook['size']>
   return 'compact'
 }
 
-
 export function DialogColumns({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
@@ -30,16 +29,11 @@ export function DialogColumns({ className, ...props }: ComponentProps<'div'>) {
       // apply here, and on this platform the region's gutter is 0px: the
       // scrollbar is an overlay, drawn only while scrolling. It says nothing
       // to somebody looking at a column that is already cut.
-      className={cn(
-        'flex min-h-0 flex-1 items-start overflow-y-auto p-1 -m-1',
-        className,
-      )}
+      className={cn('flex min-h-0 flex-1 items-start overflow-y-auto p-1 -m-1', className)}
       {...props}
     />
   )
 }
-
-
 
 export function DialogColumn({
   title,
@@ -52,8 +46,14 @@ export function DialogColumn({
 }) {
   return (
     <section
-      aria-label={title}
-      className={cn('flex min-w-0 flex-[1_1_0] flex-col gap-2 px-4 first:pl-0 last:pr-0', className)}
+      // No `aria-label`: naming a `section` makes it a region landmark, and a
+      // group inside a dialog is not page-level navigation. Two groups sharing
+      // a title -- which the vocabulary allows -- collided as one. The heading
+      // below names the group. -> #936
+      className={cn(
+        'flex min-w-0 flex-[1_1_0] flex-col gap-2 px-4 first:pl-0 last:pr-0',
+        className,
+      )}
     >
       <h3 className="mb-1 border-b pb-1 text-micro uppercase tracking-micro text-ink-muted">
         {title}

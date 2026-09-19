@@ -311,7 +311,8 @@ export interface RailRowProps {
  * One row in the rail: a destination or an act.
  *
  * Folded, the children other than the glyph should not be drawn; the row
- * becomes a square and `tooltip` carries the name.
+ * becomes a square and `tooltip` names it, as the label as well as the
+ * description.
  */
 export function RailRow({
   href,
@@ -325,11 +326,14 @@ export function RailRow({
   'data-testid': testId,
 }: RailRowProps) {
   const { folded } = useRail()
+  // Folded, the label is not drawn and the tooltip only describes, so without
+  // this the row reaches a reader with no name at all. -> #926
+  const name = ariaLabel ?? (folded ? tooltip : undefined)
   const shared = {
     'data-part': 'rail-row',
     'data-active': isActive,
     ...(isActive ? { 'aria-current': 'page' as const } : {}),
-    ...(ariaLabel === undefined ? {} : { 'aria-label': ariaLabel }),
+    ...(name === undefined ? {} : { 'aria-label': name }),
     ...(testId === undefined ? {} : { 'data-testid': testId }),
     className: cn(row({ isActive, folded }), className),
   }
@@ -419,9 +423,14 @@ export function RailSwitcher({
 }: RailSwitcherProps) {
   const { folded } = useRail()
 
+  // Folded, the label is not drawn, so the switcher reaches a reader with
+  // only its mark -- the same hole `RailRow` had. -> #935
+  const name = props['aria-label'] ?? (folded ? tooltip : undefined)
+
   const button = (
     <AriaButton
       data-part="rail-switcher"
+      {...(name === undefined ? {} : { 'aria-label': name })}
       {...props}
       className={composeRenderProps(className, (resolved) =>
         cn(
