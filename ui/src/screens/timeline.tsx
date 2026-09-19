@@ -383,7 +383,9 @@ export function TimelineScreen({
   const gapName =
     filter.missing === ''
       ? ''
-      : fieldLabel((specs === undefined ? undefined : labelFor(specs, filter.missing)) ?? filter.missing)
+      : fieldLabel(
+          (specs === undefined ? undefined : labelFor(specs, filter.missing)) ?? filter.missing,
+        )
 
   const narrowed = isTimelineFiltered(filter)
   const toggle = (list: readonly string[], value: string): string[] =>
@@ -617,9 +619,7 @@ export function TimelineScreen({
         ) : (
           <>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="flex items-center text-ink-muted">
-                {selectAllCheckbox}
-              </span>
+              <span className="flex items-center text-ink-muted">{selectAllCheckbox}</span>
               <BulkActionBar
                 table={table}
                 // No bulk edit: an event and an activity share no field, the
@@ -648,7 +648,7 @@ export function TimelineScreen({
                   <Fragment key={run.lead.id}>
                     {dayChanged ? (
                       <li>
-                        <h3
+                        <h2
                           data-part="timeline-day"
                           className="border-b border-border bg-muted/40 px-4 py-1 text-2xs font-semibold uppercase tracking-micro text-ink-muted"
                         >
@@ -658,7 +658,7 @@ export function TimelineScreen({
                               {`${durationText(gap)} with nothing recorded`}
                             </span>
                           )}
-                        </h3>
+                        </h2>
                       </li>
                     ) : (
                       gap !== undefined && <TimelineGapMark span={gap} />
