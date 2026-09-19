@@ -192,7 +192,13 @@ export function DialogHeader({
   return (
     <div className="flex shrink-0 items-start justify-between gap-4 px-4 pt-4 pb-2">
       <div className="flex min-w-0 flex-col gap-2">
-        <Heading slot="title" className="text-base leading-none font-medium">
+        <Heading
+          // React Aria's default is 3, and a dialog opens over a screen whose
+          // title is an `h1`, so the default skipped a level. -> #934
+          level={2}
+          slot="title"
+          className="text-base leading-none font-medium"
+        >
           {title}
         </Heading>
         {description !== undefined && <p className="text-sm text-ink-muted">{description}</p>}
