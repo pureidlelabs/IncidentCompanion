@@ -132,6 +132,18 @@ export const TONE_INK: Record<FieldTone, string> = {
   done: 'text-action-contain',
 }
 
+/** The tones as a custom property, for a surface painting its own stripe: a
+ * gradient takes a colour value and a `bg-*` class is not one. */
+export const TONE_STRIPE: Record<FieldTone, string> = {
+  critical: '[--tone-stripe:var(--severity-critical-type)]',
+  high: '[--tone-stripe:var(--severity-high)]',
+  medium: '[--tone-stripe:var(--severity-medium)]',
+  low: '[--tone-stripe:var(--severity-low-type)]',
+  info: '[--tone-stripe:var(--severity-info)]',
+  none: '[--tone-stripe:var(--severity-none)]',
+  done: '[--tone-stripe:var(--action-contain)]',
+}
+
 export const TONE_FILL: Record<FieldTone, string> = {
   critical: 'bg-severity-critical-type',
   high: 'bg-severity-high',
