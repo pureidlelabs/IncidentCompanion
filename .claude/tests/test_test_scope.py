@@ -517,3 +517,92 @@ def test_a_landing_ignores_what_the_trunk_did_after_the_branch_left(tmp_path: Pa
         "the trunk's own later file is counted as this branch's change:\n" + done.stdout
     )
     assert "server/src/a.ts" in done.stdout, done.stdout
+
+
+def test_a_landing_reads_origin_head_where_there_is_no_origin_main(tmp_path: Path) -> None:
+    """The first entry of the chain, pinned where nothing else can answer.
+
+    A fixture carrying both refs cannot pin either: the literal `origin/main`
+    the chain falls back to resolves the same commit, so emptying the tuple
+    outright leaves such a test green -- measured. Here the trunk is called
+    something else, so only reading `origin/HEAD` answers.
+    """
+    _pushed_branch(tmp_path)
+    run = lambda *args: subprocess.run(args, cwd=str(tmp_path), check=True, capture_output=True)
+    trunk = subprocess.run(["git", "rev-parse", "refs/remotes/origin/main"], cwd=str(tmp_path),
+                           capture_output=True, text=True, check=True).stdout.strip()
+    run("git", "update-ref", "refs/remotes/origin/trunk", trunk)
+    run("git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk")
+    run("git", "update-ref", "--no-deref", "-d", "refs/remotes/origin/main")
+
+    done = subprocess.run([sys.executable, str(SCRIPT), "--landing"],
+                          cwd=str(tmp_path), capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert "server/src/a.ts" in done.stdout, (
+        "the chain did not read `origin/HEAD`, so a repository whose trunk is not "
+        f"called main found no base:\n{done.stdout}{done.stderr}"
+    )
+
+
+def test_a_landing_falls_back_when_origin_head_is_absent(tmp_path: Path) -> None:
+    """`origin/HEAD` is written by `git remote set-head`, and a clone may not have it."""
+    _pushed_branch(tmp_path)
+    # `symbolic-ref --delete`, not `update-ref -d`: the latter follows the
+    # symref and deletes `refs/remotes/origin/main` with it, which is a
+    # different fixture from the one this test is about.
+    subprocess.run(["git", "symbolic-ref", "--delete", "refs/remotes/origin/HEAD"],
+                   cwd=str(tmp_path), check=True, capture_output=True)
+
+    done = subprocess.run([sys.executable, str(SCRIPT), "--landing"],
+                          cwd=str(tmp_path), capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert "server/src/a.ts" in done.stdout, (
+        "with no `origin/HEAD` the landing found no base and named no tier:\n" + done.stdout
+    )
+
+
+def test_a_ref_given_positionally_ignores_what_the_trunk_did_after(tmp_path: Path) -> None:
+    """`test_scope.py main` is the form `skills/land/SKILL.md` prints.
+
+    It carries the same defect as the landing form did: `git diff <ref>`
+    compares the ref as it stands now, so a trunk that moved while the branch
+    was open reports its files as this branch's.
+    """
+    _pushed_branch(tmp_path)
+    run = lambda *args: subprocess.run(args, cwd=str(tmp_path), check=True, capture_output=True)
+    run("git", "checkout", "-q", "main")
+    (tmp_path / "ui").mkdir()
+    (tmp_path / "ui" / "src").mkdir()
+    (tmp_path / "ui" / "src" / "b.tsx").write_text("export const b = 1\n", encoding="utf-8")
+    run("git", "add", "ui/src/b.tsx")
+    run("git", "commit", "-qm", "a client change on the trunk")
+    run("git", "checkout", "-q", "feature/a-thing")
+
+    done = subprocess.run([sys.executable, str(SCRIPT), "main"],
+                          cwd=str(tmp_path), capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert "ui/src/b.tsx" not in done.stdout, (
+        "the trunk's own later file is counted as this branch's change:\n" + done.stdout
+    )
+    assert "server/src/a.ts" in done.stdout, done.stdout
+
+
+def test_a_landing_with_no_trunk_to_land_on_says_so(tmp_path: Path) -> None:
+    """A repository with no `origin` answers, rather than handing over git's error.
+
+    The range is built from a ref that is not there, so the failure surfaced
+    inside `git diff` as a traceback naming git and not this file.
+    """
+    run = lambda *args: subprocess.run(args, cwd=str(tmp_path), check=True, capture_output=True)
+    run("git", "init", "-q", "-b", "main")
+    run("git", "config", "user.email", "a@b.c")
+    run("git", "config", "user.name", "A")
+    (tmp_path / "README.md").write_text("base\n", encoding="utf-8")
+    run("git", "add", "README.md")
+    run("git", "commit", "-qm", "base")
+
+    done = subprocess.run([sys.executable, str(SCRIPT), "--landing"],
+                          cwd=str(tmp_path), capture_output=True, text=True)
+    assert done.returncode == 2, f"rc={done.returncode}\n{done.stdout}{done.stderr}"
+    assert "no branch to land on" in done.stderr, done.stderr
+    assert "Traceback" not in done.stderr, done.stderr
