@@ -5,6 +5,7 @@ import { expect } from 'storybook/test'
 
 import { Badge } from './badge'
 import { Button } from './button'
+import { IconTile } from './icon-tile'
 import {
   Item,
   ItemActions,
@@ -16,8 +17,7 @@ import {
 } from './item'
 
 // A 1x1 transparent GIF, inline: a story may not reach the network.
-const PIXEL =
-  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
 /**
  * A dense list row: media, a title and a description, and an action slot.
@@ -217,6 +217,134 @@ export const Media: Story = {
         Math.round(title.getBoundingClientRect().left),
       )
       await expect(new Set(edges).size).toBe(3)
+    })
+  },
+}
+
+/**
+ * A stack inside a stack keeps its own spacing.
+ *
+ * `:has()` matches a descendant, so naming the part is not enough on its own:
+ * a nested group of small rows, or a small row nested inside an ordinary one,
+ * both sit under the outer group and answered for it. The direct child is
+ * what ties the selector to the rows the group actually stacks. -> #951
+ */
+export const NestedGroupsKeepTheirOwnGap: Story = {
+  render: () => (
+    <ItemGroup className="max-w-lg" data-testid="outer">
+      <Item role="listitem">
+        <ItemContent>
+          <ItemTitle>WKS-4417</ItemTitle>
+        </ItemContent>
+      </Item>
+      <Item role="listitem">
+        <ItemContent>
+          <ItemGroup data-testid="inner">
+            <Item role="listitem" variant="outline" size="xs">
+              <ItemContent>
+                <ItemTitle>chrome.exe</ItemTitle>
+              </ItemContent>
+            </Item>
+            <Item role="listitem" variant="outline" size="xs">
+              <ItemContent>
+                <ItemTitle>powershell.exe</ItemTitle>
+              </ItemContent>
+            </Item>
+          </ItemGroup>
+        </ItemContent>
+      </Item>
+    </ItemGroup>
+  ),
+  play: async ({ canvas, step }) => {
+    await step('the outer stack answers to its own rows', async () => {
+      const outer = await canvas.findByTestId('outer')
+      await expect(
+        getComputedStyle(outer).rowGap,
+        'a nested stack of small rows pulled the stack around it tight',
+      ).toBe('16px')
+    })
+
+    await step('the inner stack still tightens for its own', async () => {
+      const inner = await canvas.findByTestId('inner')
+      await expect(
+        getComputedStyle(inner).rowGap,
+        'the nested stack lost the tightening its own rows ask for',
+      ).toBe('8px')
+    })
+  },
+}
+
+/**
+ * A stack of small rows draws tight.
+ *
+ * The rows carry the size and the group reads it, so the spacing between them
+ * answers to what they are rather than to a class the caller has to remember.
+ */
+export const GroupOfSmallRows: Story = {
+  render: () => (
+    <ItemGroup className="max-w-lg">
+      <Item role="listitem" variant="outline" size="xs">
+        <ItemContent>
+          <ItemTitle>WKS-4417</ItemTitle>
+        </ItemContent>
+      </Item>
+      <Item role="listitem" variant="outline" size="xs">
+        <ItemContent>
+          <ItemTitle>d.okoro</ItemTitle>
+        </ItemContent>
+      </Item>
+    </ItemGroup>
+  ),
+  play: async ({ canvasElement, step }) => {
+    await step('the stack tightens for the rows it holds', async () => {
+      const group = canvasElement.querySelector('[data-part="item-group"]')
+      await expect(
+        group === null ? '' : getComputedStyle(group).rowGap,
+        'a stack of xs rows drew the roomy gap',
+      ).toBe('8px')
+    })
+  },
+}
+
+/**
+ * A tile nested in a row does not tighten the stack around it.
+ *
+ * `ItemGroup` tightens to `gap-2` for a stack of `xs` rows. The selector used
+ * to key on the attribute alone, and `IconTile` writes the same one -- so a
+ * tile dropped inside a row of ordinary size pulled the whole stack tight,
+ * for a reason nobody writing that markup would look for. -> #951
+ */
+export const GroupIgnoresANestedSize: Story = {
+  render: () => (
+    <ItemGroup className="max-w-lg">
+      <Item role="listitem">
+        <ItemMedia variant="icon">
+          <IconTile size="xs">
+            <Monitor />
+          </IconTile>
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle>WKS-4417</ItemTitle>
+          <ItemDescription>Windows workstation</ItemDescription>
+        </ItemContent>
+      </Item>
+      <Item role="listitem">
+        <ItemContent>
+          <ItemTitle>d.okoro</ItemTitle>
+        </ItemContent>
+      </Item>
+    </ItemGroup>
+  ),
+  play: async ({ canvasElement, step }) => {
+    await step('the stack keeps the gap its own rows ask for', async () => {
+      const group = canvasElement.querySelector('[data-part="item-group"]')
+      await expect(group).not.toBeNull()
+      // 16px is `gap-4`, which is what a stack of default rows is. The tight
+      // 8px belongs to a stack whose own rows are `xs`.
+      await expect(
+        group === null ? '' : getComputedStyle(group).rowGap,
+        'the stack did not draw the gap its own rows ask for',
+      ).toBe('16px')
     })
   },
 }

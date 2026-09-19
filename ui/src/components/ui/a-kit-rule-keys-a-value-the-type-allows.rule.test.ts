@@ -20,8 +20,15 @@ import { describe, expect, it } from 'vitest'
  */
 const KIT_DIR = dirname(fileURLToPath(import.meta.url))
 
-/** `data-[size=sm]`, `group-data-[size=sm]/item`, `has-data-[state=open]`. */
-const KEYED = /data-\[([a-z-]+)=([a-z0-9-]+)\]/g
+/**
+ * `data-[size=sm]`, `group-data-[size=sm]/item`, `has-data-[state=open]`, and
+ * the arbitrary form's `[data-size=xs]`.
+ *
+ * Both spellings, because a selector rewritten from the sugar form to the
+ * arbitrary one is the same key on the same value and would otherwise leave
+ * the union unchecked.
+ */
+const KEYED = /\[?data-\[?([a-z-]+)=([a-z0-9-]+)\]/g
 
 /**
  * Every value the file's own declarations of `attribute` allow.
