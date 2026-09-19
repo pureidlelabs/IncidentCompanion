@@ -12,9 +12,13 @@ import { expect } from 'storybook/test'
  *
  * **Two stories in one file, because the order inside a file is the only order
  * this tier fixes.** The first writes, the second reads: without the reset in
- * `.storybook/vitest.setup.ts` the second sees what the first left.
+ * `.storybook/vitest.setup.ts` the second sees what the first left. The sort
+ * is alphabetical and `LeavesAFold` precedes `StartsClean`, which is what
+ * keeps them in that order -- renaming either breaks the pair silently.
  */
-const meta = { title: 'Blocks/App shell/A clean surface' } satisfies Meta
+// `!autodocs`: three assertions about the harness, which is not a block and
+// owes the gallery no documentation page.
+const meta = { title: 'Blocks/App shell/A clean surface', tags: ['!autodocs'] } satisfies Meta
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -40,19 +44,24 @@ export const StartsClean: Story = {
 }
 
 /**
- * The width a story is drawn at is the tier's, not the provider's.
+ * The width a story is drawn at, which nothing in this repository chooses.
+ *
+ * `@storybook/addon-vitest` resizes the tester before every story to its own
+ * `DEFAULT_VIEWPORT_DIMENSIONS`, 1200x900, unless a story names a viewport
+ * through `globals`. Vitest's `browser.viewport` is applied once per file and
+ * then overwritten per story, so setting it there changes nothing -- measured,
+ * by pinning 999x777 and still rendering 1200x900.
  *
  * With nothing stored the shell folds its rail below 768px, and a folded rail
- * draws no sub-list -- so an unpinned viewport leaves a default deciding what
- * the tier asserts. Asserted rather than trusted: a provider changing its own
- * default is silent, and every story that measures a box would move with it.
+ * draws no sub-list -- so that constant decides what a whole class of stories
+ * can assert. This is what notices it moving. -> #527
  */
 export const IsDrawnAtTheTiersWidth: Story = {
   render: () => <p>reads the viewport</p>,
   play: async () => {
     await expect(
       { width: window.innerWidth, height: window.innerHeight },
-      'the story tier is not rendering at the size it pins, so what it asserts is a default',
+      'the size every story is drawn at has moved, which moves what they measure',
     ).toEqual({ width: 1200, height: 900 })
   },
 }

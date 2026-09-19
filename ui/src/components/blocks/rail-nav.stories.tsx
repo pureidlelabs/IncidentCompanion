@@ -156,11 +156,12 @@ export const Folded: Story = {
 /**
  * A group open, with its own rows under it.
  *
- * The fold is remembered per group, so a rail comes back the way the analyst
- * left it rather than reopening everything on every visit.
+ * **Open because that is the default**, not because anything was remembered:
+ * `RailGroup` falls back to open, so seeding the key would be a loader that
+ * changes nothing. What the remembering looks like is the story below, which
+ * seeds the value the default is not.
  */
 export const GroupUnfolded: Story = {
-  loaders: [seed(OPEN_GROUP, 'true')],
   name: 'A group unfolded',
   render: () => (
     <Shell open>

@@ -79,8 +79,7 @@ const body = (
       <LayoutGrid aria-hidden className="size-5" />
       children
       <span className="max-w-xs font-sans text-sm not-italic">
-        The screen goes here, and it scrolls on its own while the rail and the
-        header bar stay put.
+        The screen goes here, and it scrolls on its own while the rail and the header bar stay put.
       </span>
     </span>
   </div>
@@ -96,8 +95,9 @@ const body = (
  * same shell with no case at all. Judge the assembled thing on `Case frame`; judge the geometry
  * here.
  *
- * Each story uses its own `collapsedKey`, so one story's persisted fold state
- * does not decide what another opens on.
+ * Each story uses its own `collapsedKey`, which reads as what keeps one
+ * story's fold out of another. The tier clearing storage between stories is
+ * what does that now. -> #527
  */
 const meta = {
   title: 'Blocks/App shell/Shell',

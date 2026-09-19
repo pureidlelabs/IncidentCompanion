@@ -466,18 +466,6 @@ export default defineConfig({
             enabled: true,
             provider: playwright(),
             headless: true,
-            /**
-             * **The width is pinned, because it decides what a story is.**
-             * With nothing stored the shell folds its rail below 768px, and a
-             * folded rail is a different document -- so an unpinned viewport
-             * leaves the provider's default deciding what the tier asserts.
-             *
-             * 1200x900 is what it already rendered at, measured. The visual
-             * sweep runs at 1440x900 and making the two agree is worth doing,
-             * but it changes what every story draws and is its own change.
-             * -> #527
-             */
-            viewport: { width: 1200, height: 900 },
             instances: [{ browser: 'chromium' as const }],
           },
         },

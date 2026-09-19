@@ -91,10 +91,10 @@ beforeEach(() => {
    * no sub-list -- so a story about a rail row can fail on state a different
    * file put there, and what the tier asserts depends on the order it ran in.
    * The unit tier clears the same storage for the same reason, per file.
+   * `sessionStorage` is not cleared: nothing in the tree writes one.
    * -> #527
    */
   localStorage.clear()
-  sessionStorage.clear()
 
   seen.length = 0
   realError = console.error
