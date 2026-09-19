@@ -20,7 +20,7 @@ The issue's own example does not reproduce, and what is there instead is worse. 
 - `openspec/specs/collections/design.md` — the ladder and the first-wins rule, which were written down nowhere.
 - `server/src/domain/identity.ts` — `namingsOf`, `matchIn` and `rememberIn`; `indexOf` records every naming.
 - `server/src/exports/import.service.ts`, `server/src/incident-import/import.service.ts` — both ask the shared helpers; the incident door's own index builder and lookup are deleted rather than corrected.
-- `ui/src/components/blocks/csv-import.ts` — the preview an analyst approves decides duplicates by the same rule, so it no longer offers as new a row the server will merge.
+- `server/src/exports/csv-import.ts` — the preview an analyst approves decides duplicates by the same rule, so it no longer offers as new a row the server will merge.
 - An analyst importing one thing through two screens updates one record.
 
 ## What this does not settle

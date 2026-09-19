@@ -25,8 +25,6 @@ main.ts
        -> live/        the per-case socket, presence, claims, prose
 ```
 
-**`app/` is not in this picture.** It is the retired Python corpus, kept for checking Node behaviour against what it replaced. `run.py` still runs it and nothing else does. → `CLAUDE.md`
-
 ## Repository map
 
 ```text
