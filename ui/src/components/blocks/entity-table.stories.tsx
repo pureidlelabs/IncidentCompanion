@@ -465,7 +465,7 @@ export const NarrowedOutOfTheWindow: Story = {
           verdict: VERDICTS[index % VERDICTS.length]!,
         })),
         columns,
-        meta: { pendingIds: new Set() },
+        meta: { pendingIds: new Set(), commit: () => undefined },
       })
       return (
         <>
