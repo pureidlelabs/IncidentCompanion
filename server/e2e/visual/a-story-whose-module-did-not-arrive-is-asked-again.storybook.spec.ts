@@ -65,16 +65,19 @@ test.describe('a story whose module did not arrive is asked again', () => {
     const { broke } = await loadStory(page, SB, STORY, 'light')
 
     expect(broke, 'a module that failed once and arrived next time was reported as broken').toBeNull()
-    expect(asked(), 'the story was fetched once, so nothing was retried').toBeGreaterThan(1)
+    // Exactly two: `toBeGreaterThan(1)` passes a runaway retry, measured -- a
+    // loop of three attempts left all three cases green.
+    expect(asked(), 'the story was asked a number of times that is not twice').toBe(2)
   })
 
   test('a module that never arrives is still reported', async ({ page }) => {
-    await refuseTheModule(page, Number.MAX_SAFE_INTEGER)
+    const asked = await refuseTheModule(page, Number.MAX_SAFE_INTEGER)
 
     const { broke } = await loadStory(page, SB, STORY, 'light')
 
     expect(broke, 'a story that cannot load reported as fine').not.toBeNull()
     expect(broke).toMatch(/dynamically imported module/)
+    expect(asked(), 'a story that never arrives was asked more than twice').toBe(2)
   })
 
   test('a story that renders is not asked twice', async ({ page }) => {
