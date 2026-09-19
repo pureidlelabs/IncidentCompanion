@@ -20,19 +20,27 @@ const CASE_ID = 'DEMO-CAMPAIGN'
 const CURRENT = `/cases/${CASE_ID}/timeline`
 
 /**
- * A fold key per story, seeded before the first render.
+ * A fold key per story, seeded before that story renders.
  *
  * `RailGroup` reads its fold from `localStorage` inside `useState`, so a story
- * that wants a folded group has to write the key before the group mounts.
+ * that wants a folded group has to write the key before the group mounts --
+ * which is what a loader is for, and `play` is too late for.
+ *
+ * **Per story rather than once when this module loads.** A module-level write
+ * survives only while nothing clears the storage between stories, and the tier
+ * clears it now: every story starts on the surface it seeds for itself rather
+ * than on whatever ran first. -> #527
  */
 const OPEN_GROUP = 'story:rail-nav:open'
 const FOLDED_GROUP = 'story:rail-nav:folded'
 
-try {
-  window.localStorage.setItem(OPEN_GROUP, 'true')
-  window.localStorage.setItem(FOLDED_GROUP, 'false')
-} catch {
-  // A refused store leaves both groups on their default, which is unfolded.
+const seed = (key: string, value: 'true' | 'false') => () => {
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // A refused store leaves the group on its default, which is unfolded.
+  }
+  return {}
 }
 
 const SECTIONS = [
@@ -55,9 +63,7 @@ function Rows() {
           label={section.label}
           to={section.to}
           {...(section.count === undefined ? {} : { count: section.count })}
-          {...(section.count === undefined
-            ? {}
-            : { countLabel: `${String(section.count)} rows` })}
+          {...(section.count === undefined ? {} : { countLabel: `${String(section.count)} rows` })}
         />
       ))}
     </RailList>
@@ -154,6 +160,7 @@ export const Folded: Story = {
  * left it rather than reopening everything on every visit.
  */
 export const GroupUnfolded: Story = {
+  loaders: [seed(OPEN_GROUP, 'true')],
   name: 'A group unfolded',
   render: () => (
     <Shell open>
@@ -182,6 +189,7 @@ export const GroupUnfolded: Story = {
  */
 export const GroupFolded: Story = {
   name: 'A group folded \u2014 the heading alone',
+  loaders: [seed(FOLDED_GROUP, 'false')],
   render: () => (
     <Shell open>
       <RailGroup
