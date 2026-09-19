@@ -361,6 +361,8 @@
 | A case opened from an incident keeps what the provider reported | One case from several incidents | demonstrated | server/test/incident-import.test.ts |
 | A case opened from an incident keeps what the provider reported | A level this vocabulary cannot express | demonstrated | server/test/incident-import.test.ts |
 | A case opened from an incident keeps what the provider reported | A caller naming the severity itself | demonstrated | server/test/incident-import.test.ts |
+| An incident is not used up by the case it starts | A second case from the same incident | demonstrated | ui/src/app/case/ImportSentinelContainer.test.tsx |
+| An incident is not used up by the case it starts | A composed field would have to be unique | demonstrated | ui/src/app/case/ImportSentinelContainer.test.tsx |
 
 ## install-audit
 

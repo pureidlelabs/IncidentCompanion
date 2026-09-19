@@ -49,12 +49,15 @@ class IncidentImportedDto extends createZodDto(importedSchema) {}
 /**
  * The start door's body: an import, plus what the case is called.
  *
- * **The fields the incident can seed, plus the one it cannot.** Sentinel names
+ * **The field the incident can seed, and the ones it cannot.** Sentinel names
  * an incident rather than an engagement, so the title and the customer are the
- * analyst's to give -- but the reference and the first activity are the
- * incident's own, and a case created without them loses what the provider
- * already knew. The client seeds them and the analyst may correct them; either
- * way they arrive here.
+ * analyst's to give -- but the first activity is the incident's own, and a
+ * case created without it loses when the incident actually started.
+ *
+ * **A reference is accepted and never seeded.** It is unique within its
+ * customer, so one taken from an incident's number lets that incident start
+ * exactly one case and refuses every later attempt as the case is written.
+ * -> #882
  *
  * **`severity` is not among them.** It is derived from `incidents`, already in
  * this body, by the mapper that owns the provider's words -- so a caller
