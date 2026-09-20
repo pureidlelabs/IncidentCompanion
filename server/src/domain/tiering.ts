@@ -76,4 +76,3 @@ export function isGapped(row: {
 function camel(name: string): string {
   return name.replace(/_([a-z])/g, (_m, letter: string) => letter.toUpperCase())
 }
-
