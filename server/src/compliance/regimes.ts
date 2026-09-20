@@ -16,14 +16,15 @@
  */
 import * as dora from './dora.js'
 import type { ComplianceRow } from './compliance.service.js'
+import { REGIME_LABEL, type RegimeKey } from '../domain/vocabularies/regimes.js'
 
 /**
  * **A closed set, because a regime is law.** Typing the key rather than taking
- * `string` is what makes a table keyed on it exhaustive: a regime added here
- * and nowhere else fails to compile rather than answering a request with a
- * `TypeError`.
+ * `string` is what makes a table keyed on it exhaustive: a regime added to the
+ * vocabulary and nowhere else fails to compile rather than answering a request
+ * with a `TypeError`.
  */
-export type RegimeKey = 'nis2' | 'gdpr' | 'dora'
+export type { RegimeKey }
 
 export interface Regime {
   /** What the switch and the readiness line key on. */
@@ -40,13 +41,13 @@ export interface Regime {
 export const REGIMES: readonly Regime[] = [
   {
     key: 'nis2',
-    label: 'NIS2',
+    label: REGIME_LABEL.nis2,
     reading: 'NIS2 (Article 23)',
     inPlay: (row) => row.nis2EntityClass === 'essential' || row.nis2EntityClass === 'important',
   },
   {
     key: 'gdpr',
-    label: 'GDPR',
+    label: REGIME_LABEL.gdpr,
     reading: 'GDPR (Articles 33 and 34)',
     inPlay: (row) => row.personalDataInvolved === 'yes',
   },
@@ -57,7 +58,7 @@ export const REGIMES: readonly Regime[] = [
      * reads `undetermined` on every case the app opens, which is a verdict
      * about nothing and a readiness line against nothing.
      */
-    label: 'DORA',
+    label: REGIME_LABEL.dora,
     reading: 'DORA (Articles 17 to 20)',
     inPlay: (row) => dora.inScope(row).met !== null,
   },

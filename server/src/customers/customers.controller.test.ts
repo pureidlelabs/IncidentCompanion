@@ -174,11 +174,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     ).rejects.toMatchObject({ status: 422 })
   })
 
-  /**
-   * A regime the install does not have matches nothing for ever, and the
-   * column is read by the compliance switches rather than by anybody who
-   * could spot the typo. -> #643
-   */
+  /** A regime the install does not have matches nothing for ever. -> #643 */
   it.each([['gdrp'], ['GDPR'], ['nis'], ['gdpr ']])(
     'refuses %o, which is not a regime this install has',
     async (regime) => {
@@ -188,12 +184,16 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     },
   )
 
-  it('takes every regime the install does have', async () => {
+  it('takes every regime the install does have, and stores them', async () => {
     const made = await controller.create(
       { name: 'Northwind BV', regimes: [...REGIME_KEYS] },
       caller,
     )
-    expect(made.id).toBeTruthy()
+
+    // Read back, because a create that answered with an id and wrote nothing
+    // passes against any schema at all.
+    const [row] = await db!.select().from(customers).where(eq(customers.id, made.id))
+    expect(row!.regimes).toEqual([...REGIME_KEYS])
   })
 
   it('refuses a field it does not know rather than stripping it', async () => {
