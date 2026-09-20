@@ -126,12 +126,7 @@ const THEME = 'css-variables'
 let highlighterPromise: Promise<HighlighterLike> | null = null
 const loaded = new Set<string>()
 
-/**
- * Which highlighter the module is on, bumped whenever one is discarded.
- *
- * `loaded` describes the instance a call comes back to, so a call that comes
- * back to a number that has moved writes nothing.
- */
+/** Which highlighter the module is on: `loaded` describes the one a call returns to. */
 let generation = 0
 
 /**
