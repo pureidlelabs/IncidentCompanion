@@ -20,7 +20,13 @@ import {
   SEVERITY_COLOUR,
 } from '../domain/colours.lists.js'
 import { NOUNS, SCREEN_KEY } from '../domain/collections.js'
-import { blankOf, fields as fieldRegistry, type FieldKind, type FieldMeta } from '../domain/field-spec.js'
+import {
+  blankOf,
+  fields as fieldRegistry,
+  FIELD_KINDS,
+  type FieldKind,
+  type FieldMeta,
+} from '../domain/field-spec.js'
 import { accountSchema } from '../domain/entities/account.js'
 import { cloudAppSchema } from '../domain/entities/cloud-app.js'
 import { evidenceSchema } from '../domain/entities/evidence.js'
@@ -36,7 +42,6 @@ import {
   DEFAULT_TACTIC_LINKS,
   EVENT_ALWAYS_CLEAR,
   EVENT_CORE,
-  FIELD_KINDS,
   TACTIC_LINKS,
 } from '../domain/tiering.js'
 import { FIELD_TONES } from '../domain/field-tones.js'

@@ -76,29 +76,3 @@ export function isGapped(row: {
 function camel(name: string): string {
   return name.replace(/_([a-z])/g, (_m, letter: string) => letter.toUpperCase())
 }
-
-/**
- * The closed set of kinds a form field can be.
- *
- * **The form renderer's `switch` ends in a `default` that builds a text
- * input**, so a misspelled kind renders as a plain box rather than failing. A
- * client validating against this list is what catches it.
- *
- * **This list and `FieldKind` in `field-spec.ts` are two declarations of one
- * closed set.** A kind added to the union alone typechecks, serves, and draws
- * as a text box. `specs.controller.test.ts` asserts no served field carries a
- * kind absent from here, which is the property rather than the pair.
- */
-export const FIELD_KINDS = [
-  'autocomplete',
-  'checkbox',
-  'color',
-  'device_select',
-  'event_datetime',
-  'multi_device_select',
-  'number',
-  'select',
-  'tag_select',
-  'text',
-  'textarea',
-] as const
