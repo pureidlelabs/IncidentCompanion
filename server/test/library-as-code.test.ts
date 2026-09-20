@@ -113,6 +113,17 @@ describe.skipIf(!runnable)('a library as code', () => {
    * differ after both were "synced".
    */
   it('removes an entry the document no longer names', async () => {
+    // Added here rather than borrowed from the case that adds one: what this
+    // asserts is the removal.
+    const added = await read()
+    await apply({
+      ...added,
+      entries: [
+        ...added.entries.filter((entry) => entry.name !== 'from-git'),
+        { name: 'from-git', label: 'From git', payload: { actions: [{ task: 'Do the thing' }] } },
+      ],
+    })
+
     const doc = await read()
     expect(doc.entries.map((entry) => entry.name)).toContain('from-git')
 
