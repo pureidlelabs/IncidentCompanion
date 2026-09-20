@@ -126,6 +126,9 @@ const THEME = 'css-variables'
 let highlighterPromise: Promise<HighlighterLike> | null = null
 const loaded = new Set<string>()
 
+/** Which highlighter the module is on: `loaded` describes the one a call returns to. */
+let generation = 0
+
 /**
  * One highlighter for the page, built on the JavaScript regex engine.
  *
@@ -186,12 +189,14 @@ export async function highlightCode(code: string, language?: string): Promise<Co
   const grammar = resolveLanguage(language)
   if (grammar === undefined || !isHighlightable(source, grammar)) return toPlainLines(source)
 
+  const mine = generation
   try {
     const highlighter = await loadHighlighter()
     const load = GRAMMARS[grammar]
     if (load === undefined) return toPlainLines(source)
     if (!loaded.has(grammar)) {
       await highlighter.loadLanguage(await load())
+      if (mine !== generation) return toPlainLines(source)
       loaded.add(grammar)
     }
     const { tokens } = highlighter.codeToTokens(source, { lang: grammar, theme: THEME })
@@ -221,6 +226,7 @@ export function loadedGrammars(): readonly string[] {
 
 /** Test seam: drops the singleton and everything it had loaded. */
 export function resetHighlighter(): void {
+  generation += 1
   highlighterPromise = null
   loaded.clear()
 }

@@ -239,6 +239,19 @@ describe('the edges of a paste', () => {
     expect(textOf(lines)).toBe('Get-Process\nGet-Service')
   })
 
+  /** Deterministic: the defect was found under shuffle and must not need it. -> #999 */
+  it('writes nothing once its highlighter has been discarded', async () => {
+    const inFlight = highlightCode('Get-Process', 'powershell')
+    resetHighlighter()
+
+    expect(await inFlight).toEqual([[{ content: 'Get-Process' }]])
+    expect(loadedGrammars(), 'a discarded call recorded its grammar').not.toContain('powershell')
+
+    // The replacement still colours: a guard that merely stopped writing would not.
+    const after = await highlightCode('Get-Process', 'powershell')
+    expect(after.some((line) => line.some((token) => token.color !== undefined))).toBe(true)
+  })
+
   it('colours nothing when it falls back, so the caller cannot tell two failures apart', async () => {
     const plain = await highlightCode('Get-Process', 'plaintext')
     expect(plain).toEqual([[{ content: 'Get-Process' }]])
