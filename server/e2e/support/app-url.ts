@@ -1,6 +1,13 @@
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 
+/**
+ * The ports this worktree was allocated.
+ *
+ * **Derived, because a literal here tests somebody else's app.** The same
+ * script `dev-node.sh` and `vitest.config.mts` read. See
+ * `server/scripts/stack.mjs`.
+ */
 const STACK = (): { apiUrl: string; vitePort: number } =>
   JSON.parse(
     execFileSync('node', [join(__dirname, '../../scripts/stack.mjs'), '--json'], {
@@ -35,5 +42,10 @@ export const APP_URL: string =
     ? STACK().apiUrl
     : `http://127.0.0.1:${String(STACK().vitePort)}`)
 
-/** Where the built client is served: Nest serves `ui/dist` on the API port. */
+/**
+ * Where the built client is served: Nest serves `ui/dist` on the API port.
+ *
+ * A value rather than a function, and read once: `STACK()` is a subprocess, so
+ * a getter here would spawn one per project that asks.
+ */
 export const DIST_URL: string = STACK().apiUrl

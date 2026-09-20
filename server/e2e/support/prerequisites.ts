@@ -53,15 +53,15 @@ async function answers(url: string, deadline: number): Promise<boolean> {
  * The front end is asked for `/`, never a route the SPA owns: every unknown
  * address is answered with the shell, so a 200 on one of those says nothing.
  */
-async function missing(baseURL: string, needs: readonly Prerequisite[]): Promise<string[]> {
+async function missing(needs: readonly Prerequisite[]): Promise<string[]> {
   const absent: string[] = []
   if (needs.includes('app')) {
     // Short, because `webServer` has already waited on this one: reaching here
     // with no app means it never came up, not that it is still coming up.
-    if (!(await answers(`${baseURL}/api/health`, 15_000))) {
-      absent.push(`no app answering at ${baseURL} - start one with ./dev-node.sh`)
-    } else if (!(await answers(baseURL, 15_000))) {
-      absent.push(`${baseURL} serves the API but no front end - run \`npm run build\` in \`ui\``)
+    if (!(await answers(`${APP_URL}/api/health`, 15_000))) {
+      absent.push(`no app answering at ${APP_URL} - start one with ./dev-node.sh`)
+    } else if (!(await answers(APP_URL, 15_000))) {
+      absent.push(`${APP_URL} serves the API but no front end - run \`npm run build\` in \`ui\``)
     }
   }
   if (needs.includes('storybook') && !(await answers(STORYBOOK_URL, 180_000))) {
@@ -86,7 +86,7 @@ export function requiring(...needs: readonly Prerequisite[]) {
   return async function checkPrerequisites(): Promise<void> {
     if (!mustRun()) return
 
-    const absent = await missing(APP_URL, needs)
+    const absent = await missing(needs)
     if (absent.length === 0) return
 
     throw new Error(
