@@ -54,6 +54,29 @@ afterAll(async () => {
 })
 
 /**
+ * **The analyst every block here writes as, seeded for the file rather than by
+ * one block.** Three `describe`s open cases as `prose-analyst`, and a case
+ * carries `created_by` into `user`: a block that runs before whichever one
+ * happened to insert the row gets
+ * `cases_created_by_user_id_fkey` rather than the behaviour it came to assert.
+ */
+beforeAll(async () => {
+  if (!seed) return
+  const now = new Date()
+  await seed
+    .insert(user)
+    .values({
+      id: 'prose-analyst',
+      name: 'Prose Analyst',
+      email: 'prose@example.test',
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing()
+})
+
+/**
  * **The codec half needs no database**, and the predicate below is the whole of
  * what stands between a filed report and an edit, so it is asserted on its own
  * rather than only through the socket that calls it.
@@ -98,18 +121,6 @@ describe.skipIf(!db)('the prose document', () => {
 
   beforeAll(async () => {
     actorId = 'prose-analyst'
-    const now = new Date()
-    await seed!
-      .insert(user)
-      .values({
-        id: actorId,
-        name: 'Prose Analyst',
-        email: 'prose@example.test',
-        emailVerified: true,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoNothing()
 
     cases_ = new CasesService(db!, {
       announce: () => {},
