@@ -25,9 +25,10 @@ import { Button } from '@/components/ui/button'
  * **A `<details>` rather than a state hook**, on purpose: this has to render
  * when the failure is React itself, and a hook is the thing that just broke.
  *
- * These take what they draw and hold no router. `ui/src/app/RouteError.tsx` reads
- * `useRouteError` and hands it over, which is what lets the gallery show a
- * screen that by construction only appears when something has gone wrong.
+ * These take what they draw and hold no router. `ui/src/app/RouteError.tsx` and
+ * `ui/src/app/RootError.tsx` read the error and hand it over, which is what
+ * lets the gallery show screens that by construction only appear when
+ * something has gone wrong.
  */
 export interface ErrorScreenProps {
   /** The error in one line: a status and its text, or the message. */
@@ -121,8 +122,9 @@ export function RouteErrorScreen({
 /**
  * Nothing survived: the tree is gone, and with it the router.
  *
- * So the offer is a reload and only a reload -- there is no case list to leave
- * for when the thing that draws links is what threw.
+ * So the offer is a reload and only a reload: leaving for the case list is a
+ * `useNavigate` call, and this boundary sits above the router that would
+ * provide it.
  */
 export function RootErrorScreen({
   detail = 'Nothing is written while a screen is drawing, so every save that went through is already stored.',

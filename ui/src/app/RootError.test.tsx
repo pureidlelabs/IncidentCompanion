@@ -46,6 +46,32 @@ describe('the last boundary', () => {
     expect(painted, 'the last boundary is drawn by the kit, not painted by hand').toEqual([])
   })
 
+  it('says what was thrown even when it was not an Error', () => {
+    function ThrowAString(): never {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw 'a bare string'
+    }
+    render(
+      <RootError>
+        <ThrowAString />
+      </RootError>,
+    )
+    expect(screen.getByText(/a bare string/)).toBeInTheDocument()
+  })
+
+  it('draws the failure when the thrown value is falsy', () => {
+    function ThrowNull(): never {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw null
+    }
+    render(
+      <RootError>
+        <ThrowNull />
+      </RootError>,
+    )
+    expect(screen.getByRole('heading', { name: 'The app stopped rendering' })).toBeInTheDocument()
+  })
+
   it('folds the detail away rather than opening on a stack trace', () => {
     render(
       <RootError>

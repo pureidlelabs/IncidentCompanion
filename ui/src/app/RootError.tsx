@@ -24,8 +24,20 @@ interface Props {
 }
 
 interface State {
-  readonly error: Error | null
+  /**
+   * Separate from `error`, because a `throw null` is a caught failure whose
+   * value is falsy: testing the value sends React back into the children,
+   * which throw again, and after a few attempts it gives up and unmounts the
+   * tree -- the white page this file exists to prevent.
+   */
+  readonly caught: boolean
+  readonly error: unknown
   readonly stack: string
+}
+
+/** What was thrown, in one line, for anything throwable rather than an `Error`. */
+function lineOf(error: unknown): string {
+  return error instanceof Error ? `${error.name}: ${error.message}` : String(error)
 }
 
 const reload = () => {
@@ -39,17 +51,17 @@ const reload = () => {
  * the designed screen threw as well, and anything it reached for to look
  * better is a second thing that can be the thing that is broken.
  */
-function Bare({ error }: { error: Error }) {
+function Bare({ detail }: { detail: string }) {
   return (
-    <div>
+    // The sweep reads this: a run with the kit broken and the fallback on
+    // screen would otherwise record a clean pass. -> `complaints()`
+    <div data-testid="root-error">
       <h1>The app stopped rendering</h1>
       <p>Nothing was written. Reloading is safe.</p>
       <button type="button" onClick={reload}>
         Reload
       </button>
-      <pre>
-        {error.name}: {error.message}
-      </pre>
+      <pre>{detail}</pre>
     </div>
   )
 }
@@ -77,25 +89,26 @@ class IfTheDrawingThrewToo extends Component<
 }
 
 export class RootError extends Component<Props, State> {
-  override state: State = { error: null, stack: '' }
+  override state: State = { caught: false, error: null, stack: '' }
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    return { error }
+  static getDerivedStateFromError(error: unknown): Partial<State> {
+    return { caught: true, error }
   }
 
-  override componentDidCatch(error: Error, info: ErrorInfo): void {
+  override componentDidCatch(error: unknown, info: ErrorInfo): void {
     // The component stack says *where*, which the message alone never does.
     this.setState({ stack: info.componentStack ?? '' })
     console.error('the app stopped rendering', error, info.componentStack)
   }
 
   override render(): ReactNode {
-    const { error, stack } = this.state
-    if (!error) return this.props.children
+    const { caught, error, stack } = this.state
+    if (!caught) return this.props.children
 
+    const detail = lineOf(error)
     return (
-      <IfTheDrawingThrewToo instead={<Bare error={error} />}>
-        <RootErrorScreen stack={`${error.name}: ${error.message}\n${stack}`} onReload={reload} />
+      <IfTheDrawingThrewToo instead={<Bare detail={detail} />}>
+        <RootErrorScreen stack={`${detail}\n${stack}`} onReload={reload} />
       </IfTheDrawingThrewToo>
     )
   }

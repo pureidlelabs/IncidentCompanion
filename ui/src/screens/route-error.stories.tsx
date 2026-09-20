@@ -136,9 +136,10 @@ export const InsideTheShell: Story = {
 /**
  * Nothing survived: the tree is gone, and the router with it.
  *
- * **The offer is a reload and only a reload.** *Back to your cases* is a link,
- * and the thing that draws links is what threw -- so an offer to navigate is
- * one that cannot be honoured, which is worse than not making it.
+ * **The offer is a reload and only a reload.** *Back to your cases* is a
+ * `useNavigate` call, and this boundary sits above the router that would
+ * provide it -- so an offer to navigate is one that cannot be honoured, which
+ * is worse than not making it.
  *
  * The title is the window's only heading, so it is announced as one. An empty
  * state inside a populated screen sits under that screen's heading and needs

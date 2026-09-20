@@ -533,20 +533,7 @@ function arbitraryRadii(text: string): string[] {
  */
 const LITERAL_COLOUR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch)\(\s*[\d.]/
 
-/**
- * `RootError.tsx` is the one file allowed to paint its own colours.
- *
- * It renders when the app itself has stopped rendering, so it may not reach the
- * component library - and the token layer arrives through a stylesheet the
- * failing tree is what loaded. Its own docstring makes the same argument for
- * importing nothing.
- *
- * **By path, and only this path.** The reason is the boundary's position above
- * everything, not the directory it sits in, so a second file under `app/` is
- * caught.
- */
 const PAINTS_ITS_OWN = [
-  join(SRC, 'app', 'RootError.tsx'),
   // The portraits are `data:image/svg+xml` URIs. An `<img>` loads in its own
   // document and inherits none of this page's custom properties, so a token
   // reaches nothing there - the alternative is a story that fetches, and a
@@ -612,8 +599,8 @@ describe('no component carries a visual value', () => {
   })
 
   it('catches a colour written as a value', () => {
-    // `RootError.tsx`'s own three, as fixtures rather than as a live read: the
-    // file is exempt, so nothing else here proves the pattern still fires.
+    // Fixtures rather than a live read, so the pattern is proved against a
+    // value whatever the tree happens to hold.
     expect(LITERAL_COLOUR.test("color: '#666'")).toBe(true)
     expect(LITERAL_COLOUR.test("background: '#f5f5f5'")).toBe(true)
     expect(LITERAL_COLOUR.test("color: '#900'")).toBe(true)
