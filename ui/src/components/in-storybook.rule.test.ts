@@ -22,14 +22,15 @@
  * a permanent excuse: a name that has since gained a story must be removed
  * from it, so the list can only shrink.
  */
-import { readdirSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
 const COMPONENTS = join(process.cwd(), 'src', 'components')
 
-const TIERS = ['ui', 'blocks'] as const
+/** A component's own story and test files, which are not themselves components. */
+const SATELLITE = /\.(stories|test)\.tsx$/
 
 /**
  * Empty, and that is the resting state: every kit component and every block
@@ -39,24 +40,29 @@ const TIERS = ['ui', 'blocks'] as const
  */
 const WITHOUT_A_STORY = new Set<string>([])
 
-/** Every component file in a tier, by `<tier>/<name>`, excluding its own satellites. */
-function componentsIn(tier: string): string[] {
-  return readdirSync(join(COMPONENTS, tier))
-    .filter((name) => name.endsWith('.tsx'))
-    .filter((name) => !/\.(stories|test|rule\.test)\.tsx$/.test(name))
-    .map((name) => `${tier}/${name.replace(/\.tsx$/, '')}`)
+/**
+ * Every component under `components/`, by its path relative to that directory,
+ * the root included. Derived rather than listed: a hardcoded tier list leaves
+ * whatever it does not name unexamined, and reports that as a pass.
+ */
+function everyComponent(): string[] {
+  return readdirSync(COMPONENTS, { withFileTypes: true }).flatMap((entry) => {
+    const inside = entry.isDirectory() ? readdirSync(join(COMPONENTS, entry.name)) : [entry.name]
+    const prefix = entry.isDirectory() ? `${entry.name}/` : ''
+    return inside
+      .filter((name) => name.endsWith('.tsx') && !SATELLITE.test(name))
+      .map((name) => `${prefix}${name.replace(/\.tsx$/, '')}`)
+  })
 }
 
-/** Whether a component has a story under either spelling. */
+/** Whether a component has a story beside it. */
 function hasStory(id: string): boolean {
-  const [tier, name] = id.split('/') as [string, string]
-  const here = readdirSync(join(COMPONENTS, tier))
-  return here.includes(`${name}.stories.tsx`) || here.includes(`${name}.stories.tsx`)
+  return existsSync(join(COMPONENTS, `${id}.stories.tsx`))
 }
 
 describe('the gallery is the index of what the interface is built from', () => {
   it('gives every kit component and block a story', () => {
-    const every = TIERS.flatMap(componentsIn)
+    const every = everyComponent()
 
     // `COMPONENTS` is built from `process.cwd()`, so a run started anywhere but
     // `ui/` reads an empty directory and every filter below has nothing to
@@ -84,10 +90,20 @@ describe('the gallery is the index of what the interface is built from', () => {
     ).toEqual([])
   })
 
+  it('examines the components root as well as its subdirectories', () => {
+    // The root held a component nothing looked at, because the directories to
+    // read were listed by hand.
+    const atTheRoot = readdirSync(COMPONENTS)
+      .filter((name) => name.endsWith('.tsx') && !SATELLITE.test(name))
+      .map((name) => name.replace(/\.tsx$/, ''))
+    expect(atTheRoot.length, 'nothing sits at the root, so this proves nothing').toBeGreaterThan(0)
+    expect(everyComponent()).toEqual(expect.arrayContaining(atTheRoot))
+  })
+
   it('names only components that exist', () => {
     // A stale entry hides a real absence: delete the file and its exemption
     // silently starts covering nothing.
-    const all = new Set(TIERS.flatMap(componentsIn))
+    const all = new Set(everyComponent())
     expect([...WITHOUT_A_STORY].filter((id) => !all.has(id)).sort()).toEqual([])
   })
 })
