@@ -129,6 +129,9 @@ describe.skipIf(!db)('an analyst whose level is reduced while they work', () => 
   })
 
   it('is still served the reading, so the reduction is not a revocation', async () => {
+    // The control: reading has to survive a reduction, not merely a membership.
+    await groupsService.grant(sector, ANALYST, 'read')
+
     expect(await guard.canActivate(asking(caseId, 'GET'))).toBe(true)
   })
 

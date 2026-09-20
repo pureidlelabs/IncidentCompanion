@@ -207,6 +207,8 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
    * gives a revoked analyst.
    */
   it('ends a connection the analyst had open on it', async () => {
+    await new GroupsService(drizzle({ client: appPool! })).revoke(elsewhere, analyst.id)
+
     const db = drizzle({ client: pool! })
     const [opened] = await db
       .insert(cases)

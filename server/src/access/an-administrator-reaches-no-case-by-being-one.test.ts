@@ -116,7 +116,7 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
   it('is refused the case, being an administrator and nothing else', async () => {
     // The cases below grant this membership; being in no group is this one's
     // subject rather than the state it happens to start in.
-    await groupsService.revoke(sector, ADMIN).catch(() => undefined)
+    await groupsService.revoke(sector, ADMIN)
 
     const refused = await guard.canActivate(asking(caseId)).catch((why: unknown) => why)
 
@@ -136,7 +136,7 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
    * one, and the product's answer is the record rather than a restriction.
    */
   it('reaches the same case once it has granted itself the reach', async () => {
-    await groupsService.revoke(sector, ADMIN).catch(() => undefined)
+    await groupsService.revoke(sector, ADMIN)
     await groupsService.grant(sector, ADMIN, 'read')
 
     expect(
