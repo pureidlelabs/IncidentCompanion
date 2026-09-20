@@ -168,6 +168,23 @@
       groupName: 'nest',
       matchPackageNames: ['@nestjs/**'],
     },
+    // **A dependency can break a library it never names.** jsdom 30.1.0 gives a
+    // `focusin` event a `relatedTarget` of the *document* where 30.0.1 gave
+    // `null`, and React Aria's toast region restores focus to whatever it was
+    // handed -- so `element.focus is not a function` arrives from
+    // `useToastRegion`, in a suite that names neither package in the failure.
+    //
+    // Left visible rather than pinned below the break: the note is what makes
+    // the red branch legible, and the day jsdom answers it the branch goes
+    // green and merges on its own.
+    {
+      description: 'jsdom',
+      matchPackageNames: ['jsdom'],
+      prBodyNotes: [
+        "**Check `notify-render.test.tsx` first.** 30.1.0 fails *draws the refusal card* and *runs the retry it was given* with `TypeError: element.focus is not a function` from `react-aria`'s `useToastRegion`. Measured: under 30.1.0 a `focusin` raised during a `userEvent.click` carries `relatedTarget === #document`; under 30.0.1 it is `null`. React Aria guards that value with `?.isConnected`, which a document satisfies, and then calls `.focus()` on it. -> #1001",
+      ],
+    },
+
     {
       description: 'The images built from this tree do not exist in any registry.',
       matchDatasources: ['docker'],
