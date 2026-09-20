@@ -23,7 +23,7 @@
  * from it, so the list can only shrink.
  */
 import { readdirSync } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
@@ -41,28 +41,31 @@ const SATELLITE = /\.(stories|test)\.tsx$/
  */
 const WITHOUT_A_STORY = new Set<string>([])
 
+/** Every file under `components/`, by its path relative to that directory. */
+const FILES = new Set(
+  readdirSync(COMPONENTS, { recursive: true }).map((name) => String(name).replaceAll('\\', '/')),
+)
+
 /**
- * Every component under `components/`, at any depth, by its path relative to
- * that directory. Derived rather than listed: a hardcoded tier list leaves
- * whatever it does not name unexamined, and reports that as a pass.
+ * Every component under `components/`, at any depth. Derived rather than
+ * listed: a hardcoded tier list leaves whatever it does not name unexamined,
+ * and reports that as a pass.
  */
 function everyComponent(): string[] {
-  return readdirSync(COMPONENTS, { recursive: true })
-    .map(String)
+  return [...FILES]
     .filter((name) => name.endsWith('.tsx') && !SATELLITE.test(name))
-    .map((name) => name.replace(/\.tsx$/, '').replaceAll('\\', '/'))
+    .map((name) => name.replace(/\.tsx$/, ''))
 }
 
 /**
  * Whether a component has a story beside it.
  *
- * Read from the directory rather than asked of `existsSync`, which answers
- * true for a differently cased name on this laptop and false in the merge
- * queue -- and Storybook's own glob is the case-sensitive one.
+ * Answered from the listing rather than by `existsSync`, which says true for a
+ * differently cased name on this laptop and false in the merge queue -- and
+ * Storybook's own glob is the case-sensitive one.
  */
 function hasStory(id: string): boolean {
-  const story = join(COMPONENTS, `${id}.stories.tsx`)
-  return readdirSync(dirname(story)).includes(basename(story))
+  return FILES.has(`${id}.stories.tsx`)
 }
 
 /** Every directory a component may sit in, relative to `components/`. */
@@ -100,8 +103,7 @@ describe('the gallery is the index of what the interface is built from', () => {
   })
 
   it('reads every directory under components/, not only the root', () => {
-    // Dropping `blocks/` alone passed every other assertion here, leaving 101
-    // components unread.
+    // Dropping `blocks/` alone left 101 components unread.
     const every = everyComponent()
 
     const atTheRoot = readdirSync(COMPONENTS)
@@ -124,6 +126,8 @@ describe('the gallery is the index of what the interface is built from', () => {
     // A hasStory that answered true unconditionally would disable the ratchet
     // and leave every other assertion in this file passing.
     expect(hasStory('no-such-component')).toBe(false)
+    // And a directory that has gone answers rather than throwing ENOENT.
+    expect(hasStory('no-such-tier/no-such-component')).toBe(false)
   })
 
   it('names only components that exist', () => {
