@@ -71,10 +71,15 @@ describe.skipIf(!(await bootable()))('an analyst signed in from two places', () 
   })
 
   it('ends the one that is named and leaves the other signed in', async () => {
-    expect(await stillServed(first.cookie), 'the first session was not usable to begin with').toBe(
+    // Its own pair: this test spends one of them, so borrowing the file's
+    // leaves whatever reads them afterwards a session short.
+    const analyst = await sharedAnalyst(harness!)
+    const caller = await signIn(harness!, analyst.email)
+    const ends = await signIn(harness!, analyst.email)
+    expect(await stillServed(caller.cookie), 'the first session was not usable to begin with').toBe(
       true,
     )
-    expect(await stillServed(second.cookie), 'the second session was not usable to begin with').toBe(
+    expect(await stillServed(ends.cookie), 'the second session was not usable to begin with').toBe(
       true,
     )
 
@@ -85,26 +90,26 @@ describe.skipIf(!(await bootable()))('an analyst signed in from two places', () 
      * from the shared fixture's own sign-in, which elimination would have
      * ended instead.
      */
-    const seen = await sessionsOf(first.cookie)
-    const mine = seen.find((one) => first.cookie.includes(one.token))
-    const theirs = seen.find((one) => second.cookie.includes(one.token))
+    const seen = await sessionsOf(caller.cookie)
+    const mine = seen.find((one) => caller.cookie.includes(one.token))
+    const theirs = seen.find((one) => ends.cookie.includes(one.token))
     expect(mine, 'no listed session matches the cookie that asked, so the list is not theirs').toBeDefined()
     expect(theirs, 'the second sign-in is not in the list the first one is shown').toBeDefined()
 
     const ended = await fetch(`${harness!.base}/api/auth/revoke-session`, {
       method: 'POST',
-      headers: { cookie: first.cookie, 'content-type': 'application/json' },
+      headers: { cookie: caller.cookie, 'content-type': 'application/json' },
       body: JSON.stringify({ token: theirs!.token }),
     })
     expect(ended.status, `revoking a session answered ${ended.status}`).toBe(200)
 
     expect(
-      await stillServed(second.cookie),
+      await stillServed(ends.cookie),
       'the session that was named is still being served, so ending it did nothing',
     ).toBe(false)
 
     expect(
-      await stillServed(first.cookie),
+      await stillServed(caller.cookie),
       'ending one session ended the one that asked, which is a sign-out rather than a choice',
     ).toBe(true)
   })

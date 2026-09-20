@@ -571,12 +571,18 @@ describe.skipIf(!db)('writing a case', () => {
      * rows no screen can ever reach and no query will ever clean up.
      */
     it('takes the entity rows with it', async () => {
-      await seed!.delete(cases)
-      await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
-      const [demo] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
-      const id = demo!.id
+      const { id } = await freshCase()
+      await seed!.insert(timeline).values({
+        caseId: id, kind: 'event', description: 'Beacon',
+        time: new Date('2026-07-24T10:00:00Z'), createdBy: session.user.id,
+      })
+      await seed!.insert(systems).values({
+        caseId: id, hostname: 'host-cascade', createdBy: session.user.id,
+      })
       // The fixture has to have rows, or the cascade assertion passes vacuously.
       expect((await seed!.select().from(timeline).where(eq(timeline.caseId, id))).length)
+        .toBeGreaterThan(0)
+      expect((await seed!.select().from(changeFeed).where(eq(changeFeed.caseId, id))).length)
         .toBeGreaterThan(0)
 
       await controller.remove(id, asCaller())

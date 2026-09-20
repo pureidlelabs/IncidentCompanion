@@ -79,7 +79,6 @@ function aStringFieldOf(row: Record<string, unknown>): [string, string] | null {
   return null
 }
 
-const exercised: string[] = []
 
 describe.skipIf(!db)('a refused write says what the row became', () => {
   let caseId: string
@@ -140,7 +139,6 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
         `${collection.name} refused the write without saying what the row became`,
       ).toBe(readAt + 1)
 
-      exercised.push(collection.name)
     },
   )
 
@@ -149,7 +147,16 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
    * case leaves empty, so a seeder that stopped writing rows would leave the
    * whole sweep green having asserted nothing.
    */
-  it('covered most of the collections, or the sweep above proved little', () => {
-    expect(exercised.length).toBeGreaterThan(7)
+  it('covered most of the collections, or the sweep above proved little', async () => {
+    // Counted from the case rather than from what the sweep recorded: the
+    // sweep's cases are what this guards, so reading their tally makes the
+    // guard hold only where it sits.
+    let patchable = 0
+    for (const collection of collections()) {
+      const rows = await collection.make().list(caseId)
+      if (rows.some((row) => aStringFieldOf(row) !== null)) patchable += 1
+    }
+
+    expect(patchable).toBeGreaterThan(7)
   })
 })

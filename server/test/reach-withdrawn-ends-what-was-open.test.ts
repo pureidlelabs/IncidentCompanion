@@ -160,7 +160,34 @@ describe.skipIf(!(await bootable()))('an analyst whose reach is taken away', () 
     await harness?.close()
   })
 
+  /**
+   * Puts the analyst's reach into a known state, whatever the case before it
+   * left. Both halves are set, because the last case here takes the customer
+   * out of the group rather than the analyst.
+   */
+  const reaching = async (should: boolean): Promise<void> => {
+    for (const path of [
+      `/api/groups/${groupId}/members/${analystId}`,
+      `/api/groups/${groupId}/customers/${customerId}`,
+    ]) {
+      await fetch(`${harness!.base}${path}`, { method: 'DELETE', headers: { cookie: admin.cookie } })
+    }
+    if (!should) return
+    for (const [path, body] of [
+      [`/api/groups/${groupId}/customers`, { customerId }],
+      [`/api/groups/${groupId}/members`, { userId: analystId, level: 'read' }],
+    ] as const) {
+      const answer = await fetch(`${harness!.base}${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: admin.cookie },
+        body: JSON.stringify(body),
+      })
+      expect(answer.ok, `${path} was refused: ${await answer.text()}`).toBe(true)
+    }
+  }
+
   it('is served the case while the group reaches it', async () => {
+    await reaching(true)
     const answer = await fetch(`${harness!.base}/api/cases/${caseId}`, {
       headers: { cookie: analyst.cookie },
     })
@@ -172,6 +199,7 @@ describe.skipIf(!(await bootable()))('an analyst whose reach is taken away', () 
   })
 
   it('ends the connection it already had open', async () => {
+    await reaching(true)
     const { socket, up } = await socketOn(analyst.cookie)
     expect(up, 'the socket never opened, so its closing would say nothing').toBe(true)
 
@@ -190,6 +218,7 @@ describe.skipIf(!(await bootable()))('an analyst whose reach is taken away', () 
   }, 40_000)
 
   it('stops serving the case at all', async () => {
+    await reaching(false)
     const answer = await fetch(`${harness!.base}/api/cases/${caseId}`, {
       headers: { cookie: analyst.cookie },
     })
@@ -201,6 +230,7 @@ describe.skipIf(!(await bootable()))('an analyst whose reach is taken away', () 
   })
 
   it('refuses a fresh connection as well', async () => {
+    await reaching(false)
     const { up } = await socketOn(analyst.cookie)
 
     expect(up, 'a new socket opened on a case the analyst no longer reaches').toBe(false)
@@ -214,13 +244,7 @@ describe.skipIf(!(await bootable()))('an analyst whose reach is taken away', () 
    * they are one event, so one of them working says nothing about the other.
    */
   it('ends the connection when the customer leaves the group instead', async () => {
-    const regranted = await fetch(`${harness!.base}/api/groups/${groupId}/members`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', cookie: admin.cookie },
-      body: JSON.stringify({ userId: analystId, level: 'read' }),
-    })
-    const regrantedSaid = await regranted.text()
-    expect(regranted.ok, `the membership was not restored: ${regrantedSaid}`).toBe(true)
+    await reaching(true)
 
     const { socket, up } = await socketOn(analyst.cookie)
     expect(up, 'the restored grant did not reach the case, so nothing is being taken away').toBe(

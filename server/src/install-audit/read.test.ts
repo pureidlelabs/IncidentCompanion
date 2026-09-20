@@ -384,11 +384,9 @@ describe.skipIf(!db)('reading the audit', () => {
    * `High 0` chip over a page of High lines.
    */
   it('counts each severity as the number the filter would return', async () => {
+    const target = `${ownTarget('tally')}@example.test`
     for (let i = 0; i < RUN_IS_AN_ATTACK; i += 1) {
-      await recordInstallActivity(db!, {
-        event: 'sign_in_failed',
-        target: `tally-${String(Date.now())}@example.test`,
-      })
+      await recordInstallActivity(db!, { event: 'sign_in_failed', target })
     }
 
     const all = await reads.page({ limit: 200 }, session, {})

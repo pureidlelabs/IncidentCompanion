@@ -50,6 +50,27 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+// **One actor for the file, not one per `describe`.** Both suites write as
+// `bulk-analyst`, and the change feed has a foreign key to it, so a suite that
+// borrowed the row from another suite's setup failed on the key rather than on
+// what it was asserting.
+const ACTOR = 'bulk-analyst'
+beforeAll(async () => {
+  if (!seed) return
+  const now = new Date()
+  await seed
+    .insert(user)
+    .values({
+      id: ACTOR,
+      name: 'Bulk Analyst',
+      email: 'bulk@example.test',
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing()
+})
+
 // **One teardown for the file, not one per `describe`.** A per-suite
 // `pool.end()` closes the pool the *next* suite is still holding, and every
 // test in it fails with "Cannot use a pool after calling end" -- which reads
@@ -105,21 +126,8 @@ describe.skipIf(!db)('writing many at once', () => {
   let otherCaseId: string
   let session: Session
 
-  beforeAll(async () => {
-    const actorId = 'bulk-analyst'
-    const now = new Date()
-    await seed!
-      .insert(user)
-      .values({
-        id: actorId,
-        name: 'Bulk Analyst',
-        email: 'bulk@example.test',
-        emailVerified: true,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoNothing()
-    session = { user: { id: actorId } }
+  beforeAll(() => {
+    session = { user: { id: ACTOR } }
   })
 
   beforeEach(async () => {
@@ -489,7 +497,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = one!.id
-    session = { user: { id: 'bulk-analyst' } }
+    session = { user: { id: ACTOR } }
   })
 
   it('refuses a host the timeline still names, and says how many', async () => {

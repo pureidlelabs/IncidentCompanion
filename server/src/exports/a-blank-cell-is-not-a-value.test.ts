@@ -123,6 +123,10 @@ describe.skipIf(!db)('a row that left a value blank', () => {
   })
 
   it('leaves the blank fields unset rather than empty', async () => {
+    // Imported here rather than borrowed from the case above: what this reads
+    // is the row an import writes.
+    await service.fromCsv('evidence', intoId, file, ME)
+
     const [written] = await seed!.select().from(evidence).where(eq(evidence.caseId, intoId))
 
     expect(written, 'the import wrote no row').toBeDefined()

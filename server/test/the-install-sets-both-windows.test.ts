@@ -26,6 +26,7 @@ import {
 import {
   SESSION_IDLE_MINUTES,
   SESSION_LIFETIME_FLOOR_MINUTES,
+  SESSION_LIFETIME_MINUTES,
 } from '../src/policy/keys.js'
 
 const RUNNABLE = await bootable()
@@ -117,6 +118,9 @@ describe.skipIf(!RUNNABLE)('the windows an install sets', () => {
       SESSION_IDLE_MINUTES,
     )
     await set('auth.sessionIdleMinutes', asked)
+    // The expiry written is the earlier of the two windows, and the cases
+    // below leave the lifetime on its floor -- which is below what this asks.
+    await set('auth.sessionLifetimeMinutes', SESSION_LIFETIME_MINUTES)
 
     const session = await working()
 

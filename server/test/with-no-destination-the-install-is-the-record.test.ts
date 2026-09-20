@@ -115,6 +115,14 @@ describe.skipIf(!(await bootable()))('an install pointed at no destination', () 
   })
 
   it('serves that line back, so its own copy is reachable as the record', async () => {
+    // Recorded here rather than borrowed from the case above: what this
+    // asserts is that the install hands its own copy back.
+    await fetch(`${harness!.base}/api/install/policy`, {
+      method: 'PUT',
+      headers: { cookie: admin.cookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ key: KEY, value: 7 }),
+    })
+
     const answer = await fetch(`${harness!.base}/api/install/activity?limit=50`, {
       headers: { cookie: admin.cookie },
     })

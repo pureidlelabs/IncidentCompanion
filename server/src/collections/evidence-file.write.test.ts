@@ -298,7 +298,10 @@ describe.skipIf(!db)('an evidence attachment', () => {
     await controller.attach(
       caseId,
       id,
-      upload('the exact bytes', { 'x-original-filename': 'sample.eml' }),
+      // **Bytes of its own.** The store is content-addressed and records the
+      // name the first attach gave a hash, so sharing a body with the case
+      // below means sharing whichever name ran first.
+      upload('the exact bytes, sealed', { 'x-original-filename': 'sample.eml' }),
       { user: { id: actorId } } as never,
     )
 
@@ -318,7 +321,7 @@ describe.skipIf(!db)('an evidence attachment', () => {
     expect(served.length).toBeGreaterThan(0)
 
     expect(served.subarray(0, 2).toString()).toBe('PK')
-    expect(served.toString('latin1')).not.toContain('the exact bytes')
+    expect(served.toString('latin1')).not.toContain('the exact bytes, sealed')
 
     const reader = new ZipReader(new Uint8ArrayReader(new Uint8Array(served)), {
       password: 'infected',
@@ -328,7 +331,7 @@ describe.skipIf(!db)('an evidence attachment', () => {
     expect(entry!.filename).toBe('sample.eml')
     const inside = await (entry as { getData: (w: Uint8ArrayWriter) => Promise<Uint8Array> })
       .getData(new Uint8ArrayWriter())
-    expect(Buffer.from(inside).toString()).toBe('the exact bytes')
+    expect(Buffer.from(inside).toString()).toBe('the exact bytes, sealed')
     await reader.close()
   })
 
