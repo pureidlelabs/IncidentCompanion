@@ -17,26 +17,34 @@ import { rowVersion } from './column-bounds.js'
 /**
  * How a field is drawn. Lifted from the Python spec vocabulary; the renderer
  * decides what each means, and the server never draws anything.
+ *
+ * **Served as `field_kinds`, so the order is a client's to read.** The
+ * renderer's `switch` ends in a `default` that builds a text input, which is
+ * why a kind the client has never heard of renders as a plain box and posts a
+ * string rather than failing.
  */
-export type FieldKind =
-  | 'text'
+export const FIELD_KINDS = [
+  'autocomplete',
+  'checkbox',
+  'color',
+  /** One reference to another collection's row. */
+  'device_select',
+  'event_datetime',
+  'multi_device_select',
   /** A whole number. Rendered as a numeric input, never a free text box. */
-  | 'number'
-  | 'textarea'
-  | 'select'
-  | 'checkbox'
-  | 'color'
-  | 'autocomplete'
-  | 'event_datetime'
+  'number',
+  'select',
   /**
    * Tags. **A csv string underneath, not a list** - `entry_tags` is what every
    * reader goes through, and a chips control that stored an array would give
    * the filter a second shape to understand.
    */
-  | 'tag_select'
-  /** One reference to another collection's row. */
-  | 'device_select'
-  | 'multi_device_select'
+  'tag_select',
+  'text',
+  'textarea',
+] as const
+
+export type FieldKind = (typeof FIELD_KINDS)[number]
 
 /**
  * The three surfaces an entity dialog stacks, in reading order.

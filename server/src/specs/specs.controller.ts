@@ -36,9 +36,9 @@ import {
   DEFAULT_TACTIC_LINKS,
   EVENT_ALWAYS_CLEAR,
   EVENT_CORE,
-  FIELD_KINDS,
   TACTIC_LINKS,
 } from '../domain/tiering.js'
+import { FIELD_KINDS } from '../domain/field-spec.js'
 import { FIELD_TONES } from '../domain/field-tones.js'
 import * as vocab from '../domain/vocabularies.js'
 import { COMPLIANCE } from '../domain/compliance-form.js'

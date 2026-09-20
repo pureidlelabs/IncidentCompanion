@@ -131,11 +131,9 @@ describe('the specs document', () => {
    * kind the client has never heard of renders as a plain box and posts a
    * string -- and `field_kinds` is the only thing a client can check against.
    *
-   * The two declarations of that closed set are `FieldKind` in `field-spec.ts`
-   * and `FIELD_KINDS` in `tiering.ts`, and nothing compared them: a kind added
-   * to the union alone typechecks, serves, and renders as a text box with
-   * every suite green. This asserts the property rather than the pair, so it
-   * holds however the two are arranged.
+   * `FieldKind` is derived from `FIELD_KINDS`, so a kind cannot reach a form
+   * without reaching the served list. What this still catches is the other
+   * direction: a form field whose kind is a string neither of them holds.
    */
   it('serves no field whose kind is missing from the kinds it publishes', () => {
     const served = new Set(document_['field_kinds'] as string[])
