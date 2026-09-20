@@ -67,10 +67,10 @@ export const VOCABULARIES: Record<string, readonly string[]> = {
   tactic: vocab.TACTIC,
   ukcPhase: vocab.UKC_PHASE,
   /**
-   * Served ahead of the field that will name it - `case-facts.ts` declares
-   * `incidentClass` against this list and nothing imports that module yet.
-   * `specs.controller.test.ts` carries the exemption and fails once a field
-   * does name it.
+   * Served ahead of any field naming it: the case's own class is
+   * `INCIDENT_CLASS`, which is this list with `unknown` in front, under the
+   * tag `incidentClass`. `specs.controller.test.ts` carries the exemption and
+   * fails once a field does name this one.
    */
   verisAction: compliance.VERIS_ACTIONS,
   entryColour: ENTRY_COLOUR,

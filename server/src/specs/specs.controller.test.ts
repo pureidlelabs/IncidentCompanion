@@ -472,9 +472,10 @@ describe('the specs document', () => {
      * field's deletion by nobody noticing. Writing it here makes the first
      * case a decision and leaves the second red.
      *
-     * `verisAction`: `domain/entities/case-facts.ts` declares `incidentClass`
-     * against it and nothing imports that module yet - ENISA RSIT is
-     * first-class in the parked compliance design.
+     * `verisAction`: no field names this list. A case's own class is
+     * `INCIDENT_CLASS` under the tag `incidentClass`, which is this list with
+     * `unknown` in front - VERIS' own vocabulary is served for the parked
+     * compliance design, where a report's action cites it unprefixed.
      */
     const SERVED_AHEAD_OF_THEIR_FIELDS: ReadonlySet<string> = new Set(['verisAction'])
 
