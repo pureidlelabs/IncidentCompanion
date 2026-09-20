@@ -129,10 +129,8 @@ const loaded = new Set<string>()
 /**
  * Which highlighter the module is on, bumped whenever one is discarded.
  *
- * **`highlightCode` awaits twice, and `loaded` describes the instance it came
- * back to.** A caller that started against a highlighter since thrown away
- * would otherwise record its grammar against the one that replaced it -- which
- * has not loaded it, and now never will, because `loaded` says it has.
+ * `loaded` describes the instance a call comes back to, so a call that comes
+ * back to a number that has moved writes nothing.
  */
 let generation = 0
 
@@ -201,7 +199,6 @@ export async function highlightCode(code: string, language?: string): Promise<Co
     const highlighter = await loadHighlighter()
     const load = GRAMMARS[grammar]
     if (load === undefined) return toPlainLines(source)
-    if (mine !== generation) return toPlainLines(source)
     if (!loaded.has(grammar)) {
       await highlighter.loadLanguage(await load())
       if (mine !== generation) return toPlainLines(source)

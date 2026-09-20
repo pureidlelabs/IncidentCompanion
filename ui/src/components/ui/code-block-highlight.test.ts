@@ -239,6 +239,27 @@ describe('the edges of a paste', () => {
     expect(textOf(lines)).toBe('Get-Process\nGet-Service')
   })
 
+  /**
+   * **A reset mid-flight, which is what a suite does between tests.** The call
+   * below is still inside `loadLanguage` when its highlighter is discarded; if
+   * it went on to record the grammar, the next highlighter would be told a
+   * language is loaded that it has never loaded, and every later highlight
+   * would throw its way to plain text. Deterministic on purpose -- the defect
+   * was found under `--sequence.shuffle` and must not need it. -> #999
+   */
+  it('writes nothing once its highlighter has been discarded', async () => {
+    const inFlight = highlightCode('Get-Process', 'powershell')
+    resetHighlighter()
+
+    expect(await inFlight).toEqual([[{ content: 'Get-Process' }]])
+    expect(loadedGrammars(), 'a discarded call recorded its grammar').not.toContain('powershell')
+
+    // And the highlighter that replaced it still colours, which is the half a
+    // guard that simply stopped writing would also satisfy.
+    const after = await highlightCode('Get-Process', 'powershell')
+    expect(after.some((line) => line.some((token) => token.color !== undefined))).toBe(true)
+  })
+
   it('colours nothing when it falls back, so the caller cannot tell two failures apart', async () => {
     const plain = await highlightCode('Get-Process', 'plaintext')
     expect(plain).toEqual([[{ content: 'Get-Process' }]])
