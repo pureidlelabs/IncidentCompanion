@@ -114,6 +114,10 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
   })
 
   it('is refused the case, being an administrator and nothing else', async () => {
+    // The cases below grant this membership; being in no group is this one's
+    // subject rather than the state it happens to start in.
+    await groupsService.revoke(sector, ADMIN).catch(() => undefined)
+
     const refused = await guard.canActivate(asking(caseId)).catch((why: unknown) => why)
 
     expect(
@@ -132,6 +136,7 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
    * one, and the product's answer is the record rather than a restriction.
    */
   it('reaches the same case once it has granted itself the reach', async () => {
+    await groupsService.revoke(sector, ADMIN).catch(() => undefined)
     await groupsService.grant(sector, ADMIN, 'read')
 
     expect(
@@ -154,9 +159,10 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
    * `a-revocation-reaches-an-open-session.test.ts` holds that.
    */
   it('stops reaching it the moment the membership is revoked', async () => {
+    await groupsService.grant(sector, ADMIN, 'read')
     expect(
       await guard.canActivate(asking(caseId)),
-      'the grant from the previous case did not survive into this one',
+      'the grant did not take, so the refusal below cannot be attributed to the revocation',
     ).toBe(true)
 
     await groupsService.revoke(sector, ADMIN)
