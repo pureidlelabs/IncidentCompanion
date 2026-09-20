@@ -235,7 +235,56 @@ const MAY_IMPORT: Record<string, string[]> = {
 /** Tests are outside the layering rule: nothing imports one, so none can cycle. */
 const isTest = (path: string) => path.endsWith('.test.ts')
 
+/**
+ * The first loop `MAY_IMPORT` admits, as the path that closes it.
+ *
+ * Depth-first over the map rather than over the imports on disk: an edge is
+ * added here before the import that uses it, so this refuses the entry rather
+ * than the file.
+ */
+function loopIn(graph: Record<string, string[]>): string[] | null {
+  const open = new Set<string>()
+  const done = new Set<string>()
+
+  const walk = (name: string, path: string[]): string[] | null => {
+    open.add(name)
+    for (const next of graph[name] ?? []) {
+      if (open.has(next)) return [...path.slice(path.indexOf(next)), next]
+      if (!done.has(next)) {
+        const found = walk(next, [...path, next])
+        if (found) return found
+      }
+    }
+    open.delete(name)
+    done.add(name)
+    return null
+  }
+
+  for (const name of Object.keys(graph)) {
+    if (done.has(name)) continue
+    const found = walk(name, [name])
+    if (found) return found
+  }
+  return null
+}
+
 describe('the layers only reach downwards', () => {
+  /**
+   * **Six comments in this file argue a particular edge cannot close a loop**,
+   * and the sweep below only checks that an import is allowed. So an entry
+   * admitting one passes, and the property those comments defend is held by
+   * whoever is editing the map. -> #1010
+   *
+   * **The path goes in the message, not in the compared value.** Compared, it
+   * is truncated around the third hop -- which is the half that names the
+   * loop.
+   */
+  it('admits no loop, so an edge can be read as reaching downwards', () => {
+    const loop = loopIn(MAY_IMPORT)
+
+    expect(loop, loop?.join(' -> ')).toBeNull()
+  })
+
   /**
    * Enumerates the folders on disk, not `MAY_IMPORT`'s keys: a folder absent
    * from the map is exempt from the sweep below rather than failing it.
