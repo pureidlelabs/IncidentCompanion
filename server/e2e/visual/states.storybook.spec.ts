@@ -16,6 +16,7 @@
  */
 import { expect, test, type ElementHandle, type Page } from '@playwright/test'
 
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -123,18 +124,10 @@ async function open(page: Page, story: string): Promise<void> {
   await page.mouse.click(2, 2)
 }
 
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 test.describe('a control paints its states', () => {
   test.beforeAll(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB}`)
+    await requireStorybook()
   })
 
   for (const probe of PROBES) {

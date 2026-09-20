@@ -22,6 +22,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -39,14 +40,6 @@ const STORIES = [
 /** How far into the tab order to walk. Past this the stories repeat rows. */
 const CONTROLS = 14
 
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 /** What the tab walk lands on, so it is what has to stop changing for it. */
 const FOCUSABLE = 'a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])'
@@ -182,7 +175,7 @@ test.describe('a scrolling section leaves room for a ring', () => {
   test.use({ viewport: { width: 1400, height: 900 } })
 
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   for (const story of STORIES) {

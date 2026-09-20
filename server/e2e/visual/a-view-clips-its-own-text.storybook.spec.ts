@@ -27,6 +27,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -61,14 +62,6 @@ interface Drawn {
   ellipsis: string
 }
 
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
@@ -126,7 +119,7 @@ test.describe('a view clips its own text', () => {
   test.use({ viewport: { width: 900, height: 900 } })
 
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   for (const { story, column, floor } of COLUMNS) {
@@ -197,7 +190,7 @@ test.describe('a badge is capped by its cell', () => {
   test.use({ viewport: { width: 900, height: 900 } })
 
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   test('the methods kind chip does not cross its column', async ({ page }) => {

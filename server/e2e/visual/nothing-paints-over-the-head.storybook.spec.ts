@@ -26,6 +26,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -39,14 +40,6 @@ const RESTING = [
   'screens-case-timeline--populated',
 ]
 
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
@@ -65,7 +58,7 @@ async function openStory(page: Page, id: string): Promise<void> {
 
 test.describe('a sticky toolbar', () => {
   test.beforeAll(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook answering at ${SB}`)
+    await requireStorybook()
   })
 
   for (const id of RESTING) {

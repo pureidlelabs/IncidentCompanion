@@ -13,6 +13,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -20,15 +21,6 @@ const SB = STORYBOOK_URL
 /** Any story that renders, since what is under test is the reporting rather than the story. */
 const STORY = 'screens-report-section--opened-on-a-report'
 
-/** Whether a Storybook is listening, asked once. */
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 /**
  * Opens a story and waits only for the root to attach.
@@ -46,7 +38,7 @@ async function open(page: Page, id: string): Promise<void> {
 
 test.describe('a preview that did not load says so', () => {
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   test('a preview script that fails to fetch is reported, not read as an empty story', async ({

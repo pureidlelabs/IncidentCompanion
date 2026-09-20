@@ -8,20 +8,13 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
 
 const STORIES = ['screens-collect-all-entities--dense', 'screens-collect-all-entities--in-the-shell']
 
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
@@ -36,7 +29,7 @@ test.describe('a boxed table reaches the bottom of its pane', () => {
   test.use({ viewport: { width: 1400, height: 900 } })
 
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   for (const story of STORIES) {

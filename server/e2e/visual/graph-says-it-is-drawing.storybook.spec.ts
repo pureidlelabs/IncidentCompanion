@@ -15,27 +15,19 @@
  */
 import { expect, test } from '@playwright/test'
 
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
 
 const STORY = 'screens-correlate-investigation-graph--dense'
 
-/** Whether a Storybook is listening, asked once. */
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 test.describe('the graph says it is drawing', () => {
   test.use({ viewport: { width: 1400, height: 900 } })
 
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   test('names the wait while the engine is still arriving', async ({ page }) => {
