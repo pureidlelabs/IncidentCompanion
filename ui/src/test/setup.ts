@@ -34,7 +34,7 @@ afterEach(() => {
  * jsdom 30.1.0 leaves its focus pointer on the document when a focused element
  * is removed, so the next focus event names the document as what lost focus and
  * React Aria calls a method it has not got. Focusing and blurring a scratch
- * element moves the pointer. Remove once jsdom/jsdom#4344 ships.
+ * element moves the pointer. Remove once jsdom/jsdom#4344 ships. -> #1001
  */
 afterEach(() => {
   const scratch = document.createElement('button')
