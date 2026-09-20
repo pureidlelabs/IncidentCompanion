@@ -104,6 +104,9 @@ describe.skipIf(!db)('an analyst whose level is reduced while they work', () => 
   })
 
   it('is writing to the case, which is what the reduction happens to', async () => {
+    // The case below reduces this level, and writing is this one's premise.
+    await groupsService.grant(sector, ANALYST, 'write')
+
     expect(
       await guard.canActivate(asking(caseId, 'PATCH')),
       'the analyst could not write before the reduction, so nothing below is a reduction',
@@ -111,6 +114,7 @@ describe.skipIf(!db)('an analyst whose level is reduced while they work', () => 
   })
 
   it('is refused the next write once the membership is read', async () => {
+    await groupsService.grant(sector, ANALYST, 'write')
     await groupsService.grant(sector, ANALYST, 'read')
 
     const refused = await guard.canActivate(asking(caseId, 'PATCH')).catch((why: unknown) => why)
