@@ -23,7 +23,7 @@ import { Plate } from '@/components/ui/plate'
 import { tokenColour } from '@/lib/tokenColour'
 
 import { heldBackAt, type IncidentGraph, type IncidentNode } from './incident-graph'
-import { KIND_LABEL } from './graph-kinds'
+import { selectionSummary } from './incident-selection'
 import { SEVERITY_TONE, toneOf, type Tone } from './graph-tones'
 
 /**
@@ -899,11 +899,7 @@ export function IncidentCanvas({
               <Dialog aria-label={picked.label} size="compact">
                 <div data-part="graph-selection" className="p-3">
                   <p className="text-2xs uppercase tracking-micro text-ink-muted">
-                    {picked.kind === 'event' ? 'Event' : (KIND_LABEL[picked.kind] ?? picked.kind)}
-                    {picked.severity && ` \u00b7 ${picked.severity}`}
-                    {picked.count > 1 && ` \u00b7 ${String(picked.count)} together`}
-                    {picked.bridge && ` \u00b7 in ${String(picked.spans)} kinds of event`}
-                    {picked.entry && ' \u00b7 entry point'}
+                    {selectionSummary(picked)}
                   </p>
                   <ul className="mt-1 max-h-56 space-y-0.5 overflow-y-auto text-sm">
                     {picked.members.map((member) => (
