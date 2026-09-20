@@ -1,23 +1,18 @@
 /**
- * **Every documented read serves a body its own published schema accepts.**
+ * **A documented read that answers 200 serves a body its own published schema
+ * accepts.**
  *
- * `served-shapes.test.ts` asks a different question and says so: the serializer
- * refuses a payload the *Zod* schema rejects, so a 200 proves the handler and
- * the schema agree. It cannot see the step after that. The document is
- * generated from those schemas, and a generator that renders one of them
- * wrongly produces a reference that is honest about nothing -- with the route
- * still answering 200 and every suite still green.
+ * `served-shapes.test.ts` asks the other question: the serializer refuses a
+ * payload the *Zod* schema rejects, so a 200 proves the handler and the schema
+ * agree. The document is generated from those schemas, so a generator that
+ * renders one wrongly publishes a reference honest about nothing while every
+ * suite stays green -- and the document is what a client writes against.
  *
- * So this validates the response against the **document**, which is what a
- * client writes against, rather than against the schema the document came from.
- *
- * **Reads only, and the same exclusions.** A write would have to invent a body
- * per route and would leave rows behind. -> #862
- *
- * **What this does not cover:** a status that is wrong for the request, a
- * refusal carrying the wrong media type, and a required parameter that is not
- * required. Each is its own axis and each has its own sweep today; #862 is the
- * issue that wants them in one place.
+ * **What this does not reach.** A read whose path parameter names nothing
+ * answers 404 and is skipped, which today is every case-scoped read: the
+ * bodies judged are the install, library and report configuration ones.
+ * Seeding a case would take the sweep most of the rest of the way. Status,
+ * media type and parameter requiredness are each their own axis. -> #862
  */
 import Ajv2020 from 'ajv/dist/2020'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
