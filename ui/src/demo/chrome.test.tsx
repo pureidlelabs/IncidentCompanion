@@ -55,7 +55,10 @@ describe('the strip', () => {
     window.localStorage.setItem(KEY, '1')
     const onReset = vi.fn()
     render(<DemoChrome build="abc1234" onReset={onReset} />)
-    expect(screen.getByText('demo \u00B7 abc1234 \u00B7 stays in this browser')).toBeInTheDocument()
+    expect(screen.getByText('demo \u00B7 abc1234')).toBeInTheDocument()
+    // The dialog is confirmed before anything can be typed, so a strip
+    // repeating it spends the corner on a sentence already agreed to.
+    expect(screen.queryByText(/stays in this browser/)).toBeNull()
     expect(screen.getByRole('link', { name: 'source' })).toHaveAttribute(
       'href',
       'https://github.com/pureidlelabs/IncidentCompanion',

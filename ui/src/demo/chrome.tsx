@@ -7,10 +7,11 @@
  * know whether it is there, and the kit rather than plain DOM, so it reads on
  * the tokens and follows the ground the visitor chose.
  *
- * **The sentence about where the work goes is the load-bearing one.** This is
- * a branded product opening on a case, so an analyst will type a real hostname
- * into it; nothing else on screen says the case never leaves the browser, so
- * the dialog says it in full and the strip keeps saying it in three words.
+ * **The sentence about where the work goes is the load-bearing one**, and the
+ * dialog is where it is said: this is a branded product opening on a case, so
+ * an analyst will type a real hostname into it. The dialog is confirmed before
+ * anything can be typed, which is what leaves the strip the build and a way
+ * back out.
  *
  * **The source offer is the licence's**, not decoration: publishing this over
  * a network conveys it under AGPL section 13, which obliges an offer of the
@@ -91,7 +92,7 @@ export function DemoChrome({ build, onReset }: DemoChromeProps) {
         data-part="demo-strip"
         className="fixed right-0 bottom-0 z-40 flex items-center gap-1 rounded-tl-md border-t border-l border-border bg-surface py-0.5 pr-1 pl-2.5 font-mono text-2xs text-ink-muted"
       >
-        <span>{`demo \u00B7 ${build} \u00B7 stays in this browser`}</span>
+        <span>{`demo \u00B7 ${build}`}</span>
         <ButtonLink variant="link" size="xs" href={SOURCE} target="_blank" rel="noreferrer">
           source
         </ButtonLink>
