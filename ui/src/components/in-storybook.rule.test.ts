@@ -22,12 +22,13 @@
  * a permanent excuse: a name that has since gained a story must be removed
  * from it, so the list can only shrink.
  */
-import { existsSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { readdirSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-const COMPONENTS = join(process.cwd(), 'src', 'components')
+const COMPONENTS = dirname(fileURLToPath(import.meta.url))
 
 /** A component's own story and test files, which are not themselves components. */
 const SATELLITE = /\.(stories|test)\.tsx$/
@@ -41,33 +42,41 @@ const SATELLITE = /\.(stories|test)\.tsx$/
 const WITHOUT_A_STORY = new Set<string>([])
 
 /**
- * Every component under `components/`, by its path relative to that directory,
- * the root included. Derived rather than listed: a hardcoded tier list leaves
+ * Every component under `components/`, at any depth, by its path relative to
+ * that directory. Derived rather than listed: a hardcoded tier list leaves
  * whatever it does not name unexamined, and reports that as a pass.
  */
 function everyComponent(): string[] {
-  return readdirSync(COMPONENTS, { withFileTypes: true }).flatMap((entry) => {
-    const inside = entry.isDirectory() ? readdirSync(join(COMPONENTS, entry.name)) : [entry.name]
-    const prefix = entry.isDirectory() ? `${entry.name}/` : ''
-    return inside
-      .filter((name) => name.endsWith('.tsx') && !SATELLITE.test(name))
-      .map((name) => `${prefix}${name.replace(/\.tsx$/, '')}`)
-  })
+  return readdirSync(COMPONENTS, { recursive: true })
+    .map(String)
+    .filter((name) => name.endsWith('.tsx') && !SATELLITE.test(name))
+    .map((name) => name.replace(/\.tsx$/, '').replaceAll('\\', '/'))
 }
 
-/** Whether a component has a story beside it. */
+/**
+ * Whether a component has a story beside it.
+ *
+ * Read from the directory rather than asked of `existsSync`, which answers
+ * true for a differently cased name on this laptop and false in the merge
+ * queue -- and Storybook's own glob is the case-sensitive one.
+ */
 function hasStory(id: string): boolean {
-  return existsSync(join(COMPONENTS, `${id}.stories.tsx`))
+  const story = join(COMPONENTS, `${id}.stories.tsx`)
+  return readdirSync(dirname(story)).includes(basename(story))
+}
+
+/** Every directory a component may sit in, relative to `components/`. */
+function everyTier(): string[] {
+  return readdirSync(COMPONENTS, { withFileTypes: true, recursive: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join(entry.parentPath, entry.name).slice(COMPONENTS.length + 1))
 }
 
 describe('the gallery is the index of what the interface is built from', () => {
   it('gives every kit component and block a story', () => {
     const every = everyComponent()
 
-    // `COMPONENTS` is built from `process.cwd()`, so a run started anywhere but
-    // `ui/` reads an empty directory and every filter below has nothing to
-    // reject -- which passes, saying only that nothing was looked at.
-    expect(every.length, 'the tiers hold no component at all').toBeGreaterThan(40)
+    expect(every.length, 'nothing was read, so nothing below rejected anything').toBeGreaterThan(150)
 
     const missing = every
       .filter((id) => !hasStory(id))
@@ -90,14 +99,31 @@ describe('the gallery is the index of what the interface is built from', () => {
     ).toEqual([])
   })
 
-  it('examines the components root as well as its subdirectories', () => {
-    // The root held a component nothing looked at, because the directories to
-    // read were listed by hand.
+  it('reads every directory under components/, not only the root', () => {
+    // Dropping `blocks/` alone passed every other assertion here, leaving 101
+    // components unread.
+    const every = everyComponent()
+
     const atTheRoot = readdirSync(COMPONENTS)
       .filter((name) => name.endsWith('.tsx') && !SATELLITE.test(name))
       .map((name) => name.replace(/\.tsx$/, ''))
     expect(atTheRoot.length, 'nothing sits at the root, so this proves nothing').toBeGreaterThan(0)
-    expect(everyComponent()).toEqual(expect.arrayContaining(atTheRoot))
+    expect(every).toEqual(expect.arrayContaining(atTheRoot))
+
+    const tiers = everyTier()
+    expect(tiers.length, 'there is no subdirectory, so this proves nothing').toBeGreaterThan(1)
+    for (const tier of tiers) {
+      expect(
+        every.some((id) => id.startsWith(`${tier}/`)),
+        `${tier} holds components that nothing here reads`,
+      ).toBe(true)
+    }
+  })
+
+  it('answers no for a component with no story beside it', () => {
+    // A hasStory that answered true unconditionally would disable the ratchet
+    // and leave every other assertion in this file passing.
+    expect(hasStory('no-such-component')).toBe(false)
   })
 
   it('names only components that exist', () => {
