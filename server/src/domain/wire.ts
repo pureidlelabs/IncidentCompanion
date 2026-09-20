@@ -262,7 +262,7 @@ void _everyListedIsAScope
  *
  * **`rsitClass` and `rsitType` are typed as strings, not as their enums.**
  * They are served columns the case *form* omits on purpose - the pair validates
- * together - so no schema states their vocabulary and no write path enforces
- * one. Narrowing them here would claim a guarantee nothing keeps.
+ * together - so no write path enforces their vocabulary and `CASE_WRITABLE`
+ * refuses both. Narrowing them here would claim a guarantee nothing keeps.
  */
 export type CaseRow = Payload<typeof caseReadSchema>
