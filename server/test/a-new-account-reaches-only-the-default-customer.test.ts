@@ -28,6 +28,8 @@ const PASSWORD = 'a-password-long-enough-to-pass'
 /** What the holder picks for themselves, which is what lifts the hold. */
 const CHOSEN = 'the-password-they-chose-themselves'
 const NEW_ACCOUNT = `provisioned-${String(Date.now())}@example.test`
+/** Provisioned and released in `beforeAll`, so the held account above stays held. */
+const RELEASED_ACCOUNT = `released-${String(Date.now())}@example.test`
 
 let harness: Harness | null = null
 let admin: Persona
@@ -39,22 +41,39 @@ let defaultCase = ''
 const status = async (cookie: string, caseId: string) =>
   (await fetch(`${harness!.base}/api/cases/${caseId}`, { headers: { cookie } })).status
 
+async function provision(email: string): Promise<void> {
+  const made = await fetch(`${harness!.base}/api/accounts`, {
+    method: 'POST',
+    headers: { cookie: admin.cookie, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      username: email,
+      displayName: 'A Provisioned Analyst',
+      password: PASSWORD,
+      role: 'analyst',
+    }),
+  })
+  expect(made.status, `creating the account answered ${await made.text()}`).toBe(201)
+}
+
+/** Sets the account's own password, which is what lifts the hold. */
+async function release(cookie: string): Promise<void> {
+  const changed = await fetch(`${harness!.base}/api/change-password`, {
+    method: 'POST',
+    headers: { cookie, 'content-type': 'application/json' },
+    body: JSON.stringify({ current: PASSWORD, password: CHOSEN, repeat: CHOSEN }),
+  })
+  expect(changed.status, `changing the password answered ${await changed.text()}`).toBe(200)
+}
+
 describe.skipIf(!(await bootable()))('an account just provisioned', () => {
   beforeAll(async () => {
     harness = await boot()
     admin = await sharedAdmin(harness)
 
-    const made = await fetch(`${harness.base}/api/accounts`, {
-      method: 'POST',
-      headers: { cookie: admin.cookie, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        username: NEW_ACCOUNT,
-        displayName: 'A Provisioned Analyst',
-        password: PASSWORD,
-        role: 'analyst',
-      }),
-    })
-    expect(made.status, `creating the account answered ${await made.text()}`).toBe(201)
+    await provision(NEW_ACCOUNT)
+    await provision(RELEASED_ACCOUNT)
+    await release((await signIn(harness, RELEASED_ACCOUNT, PASSWORD)).cookie)
+    newcomer = await signIn(harness, RELEASED_ACCOUNT, CHOSEN)
 
     pool = openTestPool(process.env['SEED_DATABASE_URL'] ?? process.env['DATABASE_URL']!, 'ic_seed')
     const db = drizzle({ client: pool })
@@ -91,9 +110,9 @@ describe.skipIf(!(await bootable()))('an account just provisioned', () => {
   })
 
   it('can sign in', async () => {
-    newcomer = await signIn(harness!, NEW_ACCOUNT, PASSWORD)
-    expect(newcomer.cookie, 'the new account signed in without a session').toContain('session_token')
-    expect(newcomer.role, 'a provisioned account was made an administrator').toBe('analyst')
+    const held = await signIn(harness!, NEW_ACCOUNT, PASSWORD)
+    expect(held.cookie, 'the new account signed in without a session').toContain('session_token')
+    expect(held.role, 'a provisioned account was made an administrator').toBe('analyst')
   })
 
   /**
@@ -104,8 +123,13 @@ describe.skipIf(!(await bootable()))('an account just provisioned', () => {
    * pass for a reason that has nothing to do with groups.
    */
   it('is refused everything until it sets its own password, and then is not', async () => {
+    // Its own account: releasing the hold is one-way, and the password it
+    // leaves behind is not the one `can sign in` signs in with.
+    const email = `held-${String(Date.now())}@example.test`
+    await provision(email)
+    const held = await signIn(harness!, email, PASSWORD)
     const before = await fetch(`${harness!.base}/api/cases/${defaultCase}`, {
-      headers: { cookie: newcomer.cookie },
+      headers: { cookie: held.cookie },
     })
     expect(before.status).toBe(403)
     expect((await before.json()) as { mustChangePassword?: boolean }).toMatchObject({
@@ -119,14 +143,10 @@ describe.skipIf(!(await bootable()))('an account just provisioned', () => {
      * afterwards. Releasing the hold is this application's own route, which
      * calls `PasswordHoldService.release` after the change.
      */
-    const changed = await fetch(`${harness!.base}/api/change-password`, {
-      method: 'POST',
-      headers: { cookie: newcomer.cookie, 'content-type': 'application/json' },
-      body: JSON.stringify({ current: PASSWORD, password: CHOSEN, repeat: CHOSEN }),
-    })
-    expect(changed.status, `changing the password answered ${await changed.text()}`).toBe(200)
+    await release(held.cookie)
 
-    newcomer = await signIn(harness!, NEW_ACCOUNT, CHOSEN)
+    const after = await signIn(harness!, email, CHOSEN)
+    expect(await status(after.cookie, defaultCase), 'the hold outlived the password').toBe(200)
   })
 
   it('reaches a case on the default customer, which everybody holds', async () => {
