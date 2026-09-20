@@ -246,5 +246,11 @@ describe('the keys a section owns', () => {
       expect(document.activeElement?.getAttribute('aria-label') ?? '').not.toBe(first)
     })
     expect(document.activeElement?.getAttribute('aria-label') ?? '').toMatch(GAPS)
+
+    // **Dropped, though the walk is what this asserts.** React Aria's drag
+    // session is global and outlives the unmount, so a pickup left open is
+    // inherited by whatever runs next: every later drag then starts inside a
+    // session that never ended, and finds no grid at all.
+    await user.keyboard('{Escape}')
   })
 })
