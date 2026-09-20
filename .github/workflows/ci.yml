@@ -551,6 +551,71 @@ jobs:
           SHARD: ${{ matrix.shard }}
         run: cd ui && npx vitest run --project=storybook --shard="$SHARD/2"
 
+  # ------------------------------------------------------- the app in a browser
+  #
+  # **Nightly only, and it gates nothing.** `client-screen` above drives the
+  # story tier in a real browser on every pull request, so components are
+  # covered; what nothing asked for is `server/e2e/` -- real Nest, real Vite,
+  # real Postgres and real navigation, which is where a rail that mounts no
+  # section and a pane that scrolls underneath the document are visible and
+  # nowhere else.
+  #
+  # It is the slowest tier by a distance and end-to-end tiers are the ones that
+  # flake, which a merge queue that ejects on red pays for. So it runs where a
+  # red answer blocks nothing: `inputs.all` is set by `nightly-build.yml` and by
+  # nothing else, so a pull request and a merge group both skip it.
+  #
+  # **It is still in `gate`'s `needs`**, because a job that cannot fail the gate
+  # is a red tier under a green check. That costs nothing here: `gate` reads a
+  # skip as out of scope unless the run asked for every tier, and the only run
+  # that asks is the one this job is for. -> #89
+  browser:
+    if: '!failure() && !cancelled() && inputs.all'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/node
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: >-
+            playwright-${{ runner.os }}-${{ runner.arch }}-${{
+            hashFiles('package-lock.json') }}
+
+      - name: The browser both tiers need
+        run: cd server && npx playwright install --with-deps chromium
+
+      # **Both configs raise their own stack** through Playwright's `webServer`,
+      # which runs `dev-node.sh`: compose brings Postgres and Redis up, the
+      # server is built, the schema pushed and the case seeded before Vite
+      # answers. So there are no service containers here, and nothing to start
+      # first.
+      #
+      # `IC_SUITE_MUST_RUN` is what makes a missing prerequisite a refusal:
+      # without it a run against no Storybook omits most of the tier and still
+      # exits 0, which is the shape of a green job that asked nothing.
+      - name: The app in a browser
+        env:
+          IC_SUITE_MUST_RUN: '1'
+        run: cd server && npx playwright test --config=e2e/playwright.config.ts
+
+      - name: The kit in a browser
+        env:
+          IC_SUITE_MUST_RUN: '1'
+        run: cd server && npx playwright test --config=e2e/playwright.kit.config.ts
+
+      # The run is worth reading when it goes red, and a nightly nobody watched
+      # is the only place this tier reports.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: browser-tier-report
+          path: |
+            server/playwright-report/
+            server/test-results/
+          retention-days: 7
+
   devcontainer:
     needs: scope
     if: >-
@@ -617,7 +682,8 @@ jobs:
   gate:
     if: always()
     needs:
-      [scope, lint, build, repository, server-suite, client-suite, client-screen, devcontainer, containers]
+      [scope, lint, build, repository, server-suite, client-suite, client-screen, browser,
+       devcontainer, containers]
     runs-on: ubuntu-24.04
     steps:
       - name: Every tier
