@@ -28,6 +28,7 @@ import { unofferedTerms } from '../domain/entities/case-compliance.js'
 import { cases } from '../db/schema/case.js'
 import { customers } from '../db/schema/customer.js'
 import { isMissingParent } from '../db/missing-parent.js'
+import { REGIME_KEYS } from '../domain/vocabularies/regimes.js'
 import {
   ORGANISATION_FACTS,
   factsOf,
@@ -58,7 +59,7 @@ export class ComplianceService {
     const held = await this.settings.all()
     const master = held['compliance.enabled'] === true
     const enabled = Object.fromEntries(
-      (['nis2', 'gdpr', 'dora'] as const).map((key) => [
+      REGIME_KEYS.map((key) => [
         key,
         master && held[`compliance.regime.${key}`] === true,
       ]),

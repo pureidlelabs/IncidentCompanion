@@ -18,19 +18,7 @@ import { z } from 'zod'
 
 import { InstallPreferencesService } from './install.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
-
-/**
- * Each regime, and what a screen calls it.
- *
- * **Named here rather than derived from the vocabulary modules.** A label is
- * copy; `compliance.ts` holds the taxonomies those regimes are *made of*, which
- * is a different thing from what the switch is called.
- */
-const REGIMES: readonly { key: string; label: string }[] = [
-  { key: 'gdpr', label: 'GDPR' },
-  { key: 'nis2', label: 'NIS2' },
-  { key: 'dora', label: 'DORA' },
-]
+import { REGIMES } from '../domain/vocabularies/regimes.js'
 
 const switchSchema = z.object({ enabled: z.boolean() }).strict()
 

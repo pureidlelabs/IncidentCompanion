@@ -17,6 +17,7 @@ import { CustomersController } from './customers.controller.js'
 import { CustomersService } from './customers.service.js'
 import { SETTABLE_FACTS } from './customers.controller.js'
 import { MERGE_FACTS } from './organisation-facts.js'
+import { REGIME_KEYS } from '../domain/vocabularies/regimes.js'
 import { cases, customers, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
@@ -171,6 +172,28 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     await expect(
       controller.create({ name: 'Northwind BV', [field]: value }, caller),
     ).rejects.toMatchObject({ status: 422 })
+  })
+
+  /**
+   * A regime the install does not have matches nothing for ever, and the
+   * column is read by the compliance switches rather than by anybody who
+   * could spot the typo. -> #643
+   */
+  it.each([['gdrp'], ['GDPR'], ['nis'], ['gdpr ']])(
+    'refuses %o, which is not a regime this install has',
+    async (regime) => {
+      await expect(
+        controller.create({ name: 'Northwind BV', regimes: [regime] }, caller),
+      ).rejects.toMatchObject({ status: 422 })
+    },
+  )
+
+  it('takes every regime the install does have', async () => {
+    const made = await controller.create(
+      { name: 'Northwind BV', regimes: [...REGIME_KEYS] },
+      caller,
+    )
+    expect(made.id).toBeTruthy()
   })
 
   it('refuses a field it does not know rather than stripping it', async () => {
