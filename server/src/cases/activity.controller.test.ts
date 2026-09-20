@@ -146,8 +146,14 @@ describe.skipIf(!db)('the case activity feed', () => {
   })
 
   it('caps what it returns', async () => {
+    // Its own case: sixty rows on the shared one push every row the other
+    // cases read out of the newest fifty.
+    const [own] = await seed!
+      .insert(cases)
+      .values({ title: 'Activity capped', createdBy: actorId })
+      .returning()
     const many = Array.from({ length: 60 }, (_unused, index) => ({
-      caseId,
+      caseId: own!.id,
       entity: 'timeline' as const,
       entityId: '33333333-3333-4333-8333-333333333333',
       op: 'update' as const,
@@ -157,7 +163,7 @@ describe.skipIf(!db)('the case activity feed', () => {
     }))
     await seed!.insert(changeFeed).values(many)
 
-    const { rows } = await controller.activity(caseId)
+    const { rows } = await controller.activity(own!.id)
 
     expect(rows.length).toBeLessThanOrEqual(50)
   })
