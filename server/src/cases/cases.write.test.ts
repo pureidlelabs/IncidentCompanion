@@ -13,7 +13,7 @@
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CASE_COLLECTIONS, CasesService } from './cases.service.js'
 import { CasesController } from './cases.controller.js'
@@ -122,6 +122,16 @@ describe.skipIf(!db)('writing a case', () => {
         caseDeleted: recorder('case_deleted'),
       } as never,
     )
+  })
+
+  /**
+   * **The roster every test starts from, which is nobody.** `present` is a
+   * `let` the fake channel reads, so a test that puts a name on it hands that
+   * name to whatever runs next: the delete tests then meet a case somebody
+   * else is holding and get a 409 instead of the answer they came for.
+   */
+  beforeEach(() => {
+    present = []
   })
 
   afterAll(async () => {
