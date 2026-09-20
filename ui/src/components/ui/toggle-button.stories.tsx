@@ -262,9 +262,8 @@ export const Sizes: Story = {
 /**
  * The icon sizes, square rather than a rung on the ladder above.
  *
- * `icon-sm` is what the theme switcher and the report toolbar ship.
- * `auth-frame.stories.tsx` renders it, so Axe reaches it; what no story
- * measured is the size itself. -> #1014
+ * `icon-sm` ships on several screens and stories render it, so Axe reaches it.
+ * What none of them measured is the size itself. -> #1014
  */
 export const IconSizes: Story = {
   render: () => (
