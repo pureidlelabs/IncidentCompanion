@@ -24,7 +24,6 @@ const SB = STORYBOOK_URL
 /** The story the false findings were measured on. */
 const STORY = 'components-overlayanchor--anchored'
 
-
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
     waitUntil: 'load',
@@ -48,7 +47,9 @@ test.describe('a marker nobody can click is not a target', () => {
     // so appending straight after `openStory` is a race that passes only when
     // the render happened to be finished, and reports the injected elements
     // missing when it did not.
-    await page.locator('[data-part="overlay-anchor"]').waitFor({ state: 'attached', timeout: 20_000 })
+    await page
+      .locator('[data-part="overlay-anchor"]')
+      .waitFor({ state: 'attached', timeout: 20_000 })
 
     // Injected rather than found, so the case does not depend on which story
     // happens to hold a disabled control today.
@@ -105,7 +106,9 @@ test.describe('a marker nobody can click is not a target', () => {
     // Waited for, not assumed: `#storybook-root` attaches before the story
     // renders into it, so reading the boxes straight after `openStory` is a
     // race that passes on a fast machine and reports `null` on a slow one.
-    await page.locator('[data-part="overlay-anchor"]').waitFor({ state: 'attached', timeout: 20_000 })
+    await page
+      .locator('[data-part="overlay-anchor"]')
+      .waitFor({ state: 'attached', timeout: 20_000 })
     await page.locator('button[aria-label="A shape in the pane"]').waitFor({ timeout: 20_000 })
 
     const scene = await page.evaluate(() => {
@@ -125,8 +128,14 @@ test.describe('a marker nobody can click is not a target', () => {
 
     expect(scene, 'the story draws neither the marker nor the button it points at').not.toBeNull()
     const seen = scene as NonNullable<typeof scene>
-    expect(seen.untargetable, 'the marker is the thing under test only while it takes no pointer').toBe(true)
-    expect(seen.disabled, 'a disabled marker is excluded for a different reason, which would not test this').toBe(false)
+    expect(
+      seen.untargetable,
+      'the marker is the thing under test only while it takes no pointer',
+    ).toBe(true)
+    expect(
+      seen.disabled,
+      'a disabled marker is excluded for a different reason, which would not test this',
+    ).toBe(false)
     expect(
       Math.min(seen.marker.w, seen.marker.h),
       'a marker under 2x2 is dropped by `paintedRect` before the exclusion is reached',

@@ -62,7 +62,6 @@ interface Drawn {
   ellipsis: string
 }
 
-
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
     waitUntil: 'load',
@@ -156,7 +155,7 @@ test.describe('a view clips its own text', () => {
     })
   }
 
-    test('the malware hash offers the digest it truncated', async ({ page }) => {
+  test('the malware hash offers the digest it truncated', async ({ page }) => {
     await openStory(page, 'blocks-table-entity-scope-table--scoped&args=scope:malware')
 
     const whole = await page.evaluate(() => {
@@ -212,18 +211,18 @@ test.describe('a badge is capped by its cell', () => {
 
         const style = getComputedStyle(cell)
         const box = cell.getBoundingClientRect()
-        const room =
-          box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+        const room = box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
         // **Measured on the text leaf, not on the chip.** Once the chip is
         // capped it clips inside itself, so its own `scrollWidth` equals its
         // `clientWidth` and reports that it wanted exactly the room it got.
         const leaf = [...chip.querySelectorAll('span')].find((n) => !n.querySelector('*')) ?? chip
         const chipStyle = getComputedStyle(chip)
-        const padding =
-          parseFloat(chipStyle.paddingLeft) + parseFloat(chipStyle.paddingRight)
+        const padding = parseFloat(chipStyle.paddingLeft) + parseFloat(chipStyle.paddingRight)
         out.push({
           text: chip.textContent.trim().slice(0, 30),
-          past: Math.round(chip.getBoundingClientRect().right - (box.right - parseFloat(style.paddingRight))),
+          past: Math.round(
+            chip.getBoundingClientRect().right - (box.right - parseFloat(style.paddingRight)),
+          ),
           want: Math.round(leaf.scrollWidth + padding),
           room: Math.round(room),
         })
@@ -241,7 +240,10 @@ test.describe('a badge is capped by its cell', () => {
     expect(
       chips
         .filter((c) => c.past > 1)
-        .map((c) => `"${c.text}" ends ${String(c.past)}px past its cell, wanting ${String(c.want)}px of ${String(c.room)}px`),
+        .map(
+          (c) =>
+            `"${c.text}" ends ${String(c.past)}px past its cell, wanting ${String(c.want)}px of ${String(c.room)}px`,
+        ),
       'a badge left the cell holding it and runs into the column beside it',
     ).toEqual([])
   })

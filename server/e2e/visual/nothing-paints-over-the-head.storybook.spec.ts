@@ -40,7 +40,6 @@ const RESTING = [
   'screens-case-timeline--populated',
 ]
 
-
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
     waitUntil: 'load',

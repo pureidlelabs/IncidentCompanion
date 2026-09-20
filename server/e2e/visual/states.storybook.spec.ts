@@ -63,7 +63,11 @@ const PROBES: Probe[] = [
     target: '[role="row"]:not([aria-selected="true"])',
     pressed: true,
   },
-  { story: 'components-tabs--default', target: '[role="tab"]:not([aria-selected="true"])', pressed: false },
+  {
+    story: 'components-tabs--default',
+    target: '[role="tab"]:not([aria-selected="true"])',
+    pressed: false,
+  },
   { story: 'components-link--default', target: 'a', pressed: false },
   { story: 'components-select--default', target: 'button', pressed: false },
   {
@@ -91,10 +95,7 @@ const PAINT = [
  * between two states and equals neither, which reads as a state that never
  * arrived.
  */
-async function paint(
-  page: Page,
-  target: ElementHandle<Element>,
-): Promise<Record<string, string>> {
+async function paint(page: Page, target: ElementHandle<Element>): Promise<Record<string, string>> {
   const read = () =>
     target.evaluate((el, props) => {
       const style = getComputedStyle(el)
@@ -123,7 +124,6 @@ async function open(page: Page, story: string): Promise<void> {
   await page.mouse.move(2, 2)
   await page.mouse.click(2, 2)
 }
-
 
 test.describe('a control paints its states', () => {
   test.beforeAll(async () => {
@@ -174,7 +174,9 @@ test.describe('a control paints its states', () => {
         const rest = await paint(page, target)
         await target.hover({ force: true })
         const hovered = await paint(page, target)
-        expect(differs(rest, hovered), `a disabled ${twin.target} lit under the pointer`).toBe(false)
+        expect(differs(rest, hovered), `a disabled ${twin.target} lit under the pointer`).toBe(
+          false,
+        )
       })
     }
   }

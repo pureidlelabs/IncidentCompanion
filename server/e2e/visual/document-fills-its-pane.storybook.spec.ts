@@ -24,7 +24,6 @@ const SB = STORYBOOK_URL
 /** A report open in the workspace, which is where the paper column is drawn. */
 const STORY = 'screens-report-section--opened-on-a-report'
 
-
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
     waitUntil: 'load',
@@ -53,7 +52,10 @@ test.describe('a document uses the room its pane gives it', () => {
     // Paper is not the default view, so the switch is pressed rather than
     // assumed: a run that measured the composing view would find no document
     // at all and pass by measuring nothing.
-    await page.getByRole('radio', { name: /page|paper|document/i }).first().click()
+    await page
+      .getByRole('radio', { name: /page|paper|document/i })
+      .first()
+      .click()
 
     const measured = await page.evaluate(() => {
       const paper = [...document.querySelectorAll('div')].find((el) =>

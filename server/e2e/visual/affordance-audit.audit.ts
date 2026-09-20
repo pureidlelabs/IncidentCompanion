@@ -44,6 +44,7 @@ import { join } from 'node:path'
 
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 import {
@@ -534,10 +535,7 @@ test.describe('the probe can tell reachable from painted-at-zero', () => {
    * a probe that answered "blocked" for everything fails here too.
    */
   test('a zero-opacity control reads as blocked and its twin does not', async ({ page }) => {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(10_000) }).catch(
-      () => null,
-    )
-    test.skip(!answer?.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
 
     await page.goto(`${SB}/iframe.html?id=blocks-empty-state-empty-state--default&viewMode=story`, {
       waitUntil: 'load',
@@ -580,10 +578,7 @@ test.describe('the probe can tell reachable from painted-at-zero', () => {
   test('a control is reported with the landmark it sits in and its place in it', async ({
     page,
   }) => {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(10_000) }).catch(
-      () => null,
-    )
-    test.skip(!answer?.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
 
     await page.goto(`${SB}/iframe.html?id=blocks-empty-state-empty-state--default&viewMode=story`, {
       waitUntil: 'load',
@@ -621,8 +616,7 @@ test.describe('the probe can tell reachable from painted-at-zero', () => {
 test.describe('what a family of components does not agree about', () => {
   test('every family agrees with itself', async ({ page }) => {
     test.setTimeout(120 * 60_000)
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(10_000) })
-    test.skip(!answer.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
     const index = (await answer.json()) as { entries: Record<string, StoryEntry> }
 
     const only = ONLY.split(',')

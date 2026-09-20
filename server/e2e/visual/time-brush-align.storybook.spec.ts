@@ -28,7 +28,6 @@ const SB = STORYBOOK_URL
 /** A window narrowed inside a case, so both grips are away from the edges. */
 const STORY = 'components-timebrush--narrowed'
 
-
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
     waitUntil: 'load',
@@ -98,9 +97,12 @@ test.describe('the time brush grip against its density', () => {
    * two, since neither can be seen at one value.
    */
   test('follows the floor when the floor moves', async ({ page }) => {
-    await page.locator('[data-part="time-brush"]').first().evaluate((node) => {
-      node.style.setProperty('--brush-floor', '0.75rem')
-    })
+    await page
+      .locator('[data-part="time-brush"]')
+      .first()
+      .evaluate((node) => {
+        node.style.setProperty('--brush-floor', '0.75rem')
+      })
     const { ceiling, floor, grips } = await measure(page)
     expect(grips.length).toBeGreaterThan(0)
     for (const grip of grips) {

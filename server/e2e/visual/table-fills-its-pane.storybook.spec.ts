@@ -13,8 +13,10 @@ import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
 
-const STORIES = ['screens-collect-all-entities--dense', 'screens-collect-all-entities--in-the-shell']
-
+const STORIES = [
+  'screens-collect-all-entities--dense',
+  'screens-collect-all-entities--in-the-shell',
+]
 
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
@@ -37,25 +39,31 @@ test.describe('a boxed table reaches the bottom of its pane', () => {
       await openStory(page, story)
       // The measure lands after the first paint; two frames is enough.
       await page.waitForTimeout(300)
-      const read = await page.locator('[data-part="table-scroll"]').first().evaluate((el) => {
-        const rect = el.getBoundingClientRect()
-        const root = getComputedStyle(document.documentElement)
-        const rem = parseFloat(root.fontSize)
-        // The pane's inset, and the room the section body keeps around a
-        // scrolling box so a focus ring is not clipped: both are owed.
-        const inset = parseFloat(root.getPropertyValue('--pane-inset-y')) * rem
-        const ring = parseFloat(root.getPropertyValue('--section-ring-room')) * rem
-        return {
-          bottom: rect.bottom,
-          scrolls: el.scrollHeight > el.clientHeight + 1,
-          owed: inset + ring,
-          viewport: window.innerHeight,
-        }
-      })
+      const read = await page
+        .locator('[data-part="table-scroll"]')
+        .first()
+        .evaluate((el) => {
+          const rect = el.getBoundingClientRect()
+          const root = getComputedStyle(document.documentElement)
+          const rem = parseFloat(root.fontSize)
+          // The pane's inset, and the room the section body keeps around a
+          // scrolling box so a focus ring is not clipped: both are owed.
+          const inset = parseFloat(root.getPropertyValue('--pane-inset-y')) * rem
+          const ring = parseFloat(root.getPropertyValue('--section-ring-room')) * rem
+          return {
+            bottom: rect.bottom,
+            scrolls: el.scrollHeight > el.clientHeight + 1,
+            owed: inset + ring,
+            viewport: window.innerHeight,
+          }
+        })
       // Only a table with more rows than room can leave dead pane.
       test.skip(!read.scrolls, `${story} fits without scrolling`)
       const slack = read.viewport - read.owed - read.bottom
-      expect(slack, `${String(slack)}px of pane under a table with rows still to show`).toBeLessThanOrEqual(2)
+      expect(
+        slack,
+        `${String(slack)}px of pane under a table with rows still to show`,
+      ).toBeLessThanOrEqual(2)
       expect(read.bottom, 'the box runs past the pane').toBeLessThanOrEqual(read.viewport)
     })
   }

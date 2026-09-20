@@ -27,5 +27,9 @@ export async function requireStorybook(): Promise<void> {
   if (await storybookIsUp()) return
   const why = `no Storybook at ${STORYBOOK_URL} - run \`cd ui && npm run storybook\``
   if (mustRun()) throw new Error(why)
+  // The reason on stdout, because the list reporter prints a skip as one dash
+  // and the annotation is only read by whoever opens the HTML report.
+  console.warn(`SKIPPED ${test.info().titlePath.join(' > ')}: ${why}`)
+  test.info().annotations.push({ type: 'skipped', description: why })
   test.skip(true, why)
 }

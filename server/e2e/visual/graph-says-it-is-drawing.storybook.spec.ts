@@ -22,7 +22,6 @@ const SB = STORYBOOK_URL
 
 const STORY = 'screens-correlate-investigation-graph--dense'
 
-
 test.describe('the graph says it is drawing', () => {
   test.use({ viewport: { width: 1400, height: 900 } })
 

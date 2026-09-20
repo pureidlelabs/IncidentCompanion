@@ -24,7 +24,6 @@ const SB = STORYBOOK_URL
 /** Any story that renders: what is under test is the asking, not the story. */
 const STORY = 'components-badge--default'
 
-
 /**
  * Refuses the story's own module for the first `times` requests.
  *
@@ -56,7 +55,10 @@ test.describe('a story whose module did not arrive is asked again', () => {
 
     const { broke } = await loadStory(page, SB, STORY, 'light')
 
-    expect(broke, 'a module that failed once and arrived next time was reported as broken').toBeNull()
+    expect(
+      broke,
+      'a module that failed once and arrived next time was reported as broken',
+    ).toBeNull()
     // Exactly two: `toBeGreaterThan(1)` passes a runaway retry, measured -- a
     // loop of three attempts left all three cases green.
     expect(asked(), 'the story was asked a number of times that is not twice').toBe(2)

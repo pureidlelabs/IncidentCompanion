@@ -31,7 +31,6 @@ const SB = STORYBOOK_URL
 /** Screens whose tables are drawn at `scroll="page"` inside the shell. */
 const STORIES = ['screens-collect-all-entities--in-the-shell', 'blocks-report-index--dense']
 
-
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
     waitUntil: 'load',

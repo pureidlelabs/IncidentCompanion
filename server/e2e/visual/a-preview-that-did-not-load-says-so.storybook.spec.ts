@@ -21,7 +21,6 @@ const SB = STORYBOOK_URL
 /** Any story that renders, since what is under test is the reporting rather than the story. */
 const STORY = 'screens-report-section--opened-on-a-report'
 
-
 /**
  * Opens a story and waits only for the root to attach.
  *
@@ -52,7 +51,10 @@ test.describe('a preview that did not load says so', () => {
 
     const said = await brokenPreview(page)
 
-    expect(said, 'a preview whose script never loaded reads as a story that rendered').not.toBeNull()
+    expect(
+      said,
+      'a preview whose script never loaded reads as a story that rendered',
+    ).not.toBeNull()
     expect(said ?? '', 'the report names the file that did not load').toContain('vite-app.js')
   })
 
@@ -103,7 +105,9 @@ test.describe('a preview that did not load says so', () => {
     const said = await brokenPreview(page)
     const took = Date.now() - started
 
-    expect(said ?? '', 'the report says the re-fetch was never answered').toMatch(/gave up after 5s/)
+    expect(said ?? '', 'the report says the re-fetch was never answered').toMatch(
+      /gave up after 5s/,
+    )
     expect(took, 'the re-fetch is bounded, not held until the test times out').toBeLessThan(12_000)
   })
 

@@ -42,7 +42,6 @@ const STORY = 'screens-correlate-investigation-graph--empty'
 /** The layers the overlay spans, whichever of them a given case draws. */
 const UNDER = ['canvas-toolbar', 'canvas-legend', 'canvas-status']
 
-
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
     waitUntil: 'load',

@@ -40,7 +40,6 @@ const STORIES = [
 /** How far into the tab order to walk. Past this the stories repeat rows. */
 const CONTROLS = 14
 
-
 /** What the tab walk lands on, so it is what has to stop changing for it. */
 const FOCUSABLE = 'a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])'
 
@@ -192,7 +191,10 @@ test.describe('a scrolling section leaves room for a ring', () => {
       expect(
         clipped,
         clipped
-          .map((c) => `${c.name}: ${String(c.reach)}px ring cut ${String(c.cut)}px on the ${c.edge} by ${c.by}`)
+          .map(
+            (c) =>
+              `${c.name}: ${String(c.reach)}px ring cut ${String(c.cut)}px on the ${c.edge} by ${c.by}`,
+          )
           .join('; '),
       ).toEqual([])
     })
@@ -269,7 +271,10 @@ test.describe('a scrolling section leaves room for a ring', () => {
             port: port.dataset.part ?? port.tagName,
             gap: Number(gap.toFixed(1)),
             behind: document
-              .elementsFromPoint(box.left + port.clientWidth / 2, box.top + port.clientTop + gap / 2)
+              .elementsFromPoint(
+                box.left + port.clientWidth / 2,
+                box.top + port.clientTop + gap / 2,
+              )
               .map((n) => (n instanceof HTMLElement ? (n.dataset.part ?? n.tagName) : n.tagName))
               .slice(0, 3),
           })
@@ -319,6 +324,9 @@ test.describe('a scrolling section leaves room for a ring', () => {
       return worst
     })
 
-    expect(cut, 'the current-step ring is cut by the box that scrolls the wizard').toBeLessThanOrEqual(0)
+    expect(
+      cut,
+      'the current-step ring is cut by the box that scrolls the wizard',
+    ).toBeLessThanOrEqual(0)
   })
 })
