@@ -44,6 +44,10 @@ describe.skipIf(!(await bootable()))('a caller asking faster than the install pe
     Promise.all(Array.from({ length: n }, () => fetch(`${harness!.base}/api/health`)))
 
   it('lets the permitted number through and refuses the rest', async () => {
+    // The exact count is the claim, so the window has to be empty: the other
+    // cases here rush the same endpoint and their allowance is still spent.
+    await new Promise((wake) => setTimeout(wake, BURST.ttl + 250))
+
     const answers = await rush(BURST.limit * 3)
 
     const allowed = answers.filter((one) => one.status === 200)
