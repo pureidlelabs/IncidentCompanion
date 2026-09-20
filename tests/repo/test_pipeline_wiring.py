@@ -409,6 +409,11 @@ EXPENSIVE_TIER = (
     "containers",
 )
 
+#: Gated on `inputs.all` alone, so neither event this workflow triggers on
+#: starts them. The draft rule below cannot apply: there is no draft to be
+#: held back from.
+NIGHTLY_TIER = ("browser",)
+
 
 def ci_jobs() -> dict:
     return yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]
@@ -456,6 +461,32 @@ def test_a_draft_runs_the_cheap_tier_and_nothing_else() -> None:
             f"{name} does not run in the merge group, which is the only tree "
             "whose verdict decides the merge"
         )
+
+    for name in NIGHTLY_TIER:
+        condition = job_condition(jobs[name])
+        assert "inputs.all" in condition, (
+            f"{name} is listed as nightly and is not gated on `inputs.all`, "
+            "so a pull request pays for it"
+        )
+        assert "draft" not in condition, (
+            f"{name} names the draft, which says it expects a pull request -- "
+            "a nightly tier reaches neither event"
+        )
+
+
+def test_every_job_is_classified() -> None:
+    """A job in none of the tiers is one every rule above walks past.
+
+    The lists are written out rather than derived, so a new job joins none of
+    them and inherits no rule: it may run on a draft, escape the gate, or wait
+    behind a linter, and every test here passes while it does.
+    """
+    jobs = set(ci_jobs())
+    known = set(CHEAP_TIER) | set(EXPENSIVE_TIER) | set(NIGHTLY_TIER) | {"scope", "gate"}
+    assert jobs <= known, (
+        f"these jobs are in no tier, so no rule in this file reaches them: "
+        f"{sorted(jobs - known)}"
+    )
 
 
 def test_the_expensive_tier_is_not_held_behind_the_cheap_one() -> None:

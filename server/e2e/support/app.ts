@@ -12,6 +12,8 @@
 import { readdirSync, statSync, type Dirent } from 'node:fs'
 import { join } from 'node:path'
 
+import { mustRun } from '../../test/must-run.js'
+
 import {
   expect,
   request as apiRequest,
@@ -42,6 +44,9 @@ export async function requireServedApp(baseURL: string): Promise<void> {
   if (stale !== null) throw new Error(stale)
   const why = await unservedReason(baseURL)
   if (why === null) return
+  // A certifying run refuses rather than skipping: `prerequisites.ts` makes
+  // that split once before collection and cannot make it again. -> #1035
+  if (mustRun()) throw new Error(why)
   // The reason on stdout, because the list reporter prints a skip as one dash
   // and the annotation is only read by whoever opens the HTML report.
   console.warn(`SKIPPED ${test.info().titlePath.join(' > ')}: ${why}`)

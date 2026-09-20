@@ -91,7 +91,11 @@ export default defineConfig({
    * that would not draw.
    */
   webServer: {
-    command: './dev-node.sh',
+    // **Without the kit's Storybook**, which this config opens nothing in:
+    // `*.storybook.spec.ts` is ignored above and `playwright.kit.config.ts`
+    // starts its own. Compiling it beside Vite spends the launcher's budget
+    // on a server no spec here reaches.
+    command: './dev-node.sh --no-storybook',
     /**
      * **Anchored, because `cwd` defaults to this config's own directory** --
      * `server/e2e`, not wherever Playwright was invoked. A relative launcher
