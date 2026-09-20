@@ -935,6 +935,10 @@ export function complaints(page: Page): Locator {
       // draws. It carries no `role="alert"`, so without this arm the paragraph
       // above describes a sweep that reports it as a clean pass. -> #451
       '[data-testid="section-error"]',
+      // And the boundary above the router, which no `errorElement` reaches:
+      // a throw in the providers or the session hooks unmounts the tree, and
+      // this is the only thing still on screen. -> #1029
+      '[data-testid="root-error"]',
     ].join(', '),
   )
 }

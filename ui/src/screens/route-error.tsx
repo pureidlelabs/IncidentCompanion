@@ -4,7 +4,7 @@ import { EmptyState } from '@/components/blocks/empty-state'
 import { Button } from '@/components/ui/button'
 
 /**
- * What an analyst sees when a screen stops rendering, in its two sizes.
+ * What an analyst sees when a screen stops rendering, in its three sizes.
  *
  * **The distinction is how much survived, and it is the whole design.** A
  * section that throws is one screen being wrong, so the rail stays and the way
@@ -81,6 +81,7 @@ export function RouteErrorScreen({
     <div className="flex min-h-screen items-center justify-center p-6" data-testid="route-error">
       <div className="flex w-full max-w-lg flex-col items-center gap-4 rounded-lg border border-destructive/40 p-6">
         <EmptyState
+          headingLevel={1}
           icon={AlertTriangle}
           title={
             refused
@@ -118,6 +119,40 @@ export function RouteErrorScreen({
 }
 
 /**
+ * Nothing survived: the tree is gone, and with it the router.
+ *
+ * So the offer is a reload and only a reload -- there is no case list to leave
+ * for when the thing that draws links is what threw.
+ */
+export function RootErrorScreen({
+  detail = 'Nothing is written while a screen is drawing, so every save that went through is already stored.',
+  stack,
+  onReload,
+}: ErrorScreenProps) {
+  return (
+    <div className="flex min-h-screen items-center justify-center p-6" data-testid="root-error">
+      <div className="flex w-full max-w-lg flex-col items-center gap-4 rounded-lg border border-destructive/40 p-6">
+        <EmptyState
+          headingLevel={1}
+          icon={AlertTriangle}
+          title="The app stopped rendering"
+          detail={detail}
+          action={
+            onReload !== undefined && (
+              <Button onPress={onReload}>
+                <RotateCw aria-hidden />
+                Reload
+              </Button>
+            )
+          }
+        />
+        <WhatWentWrong text={stack ?? detail} />
+      </div>
+    </div>
+  )
+}
+
+/**
  * The same failure inside the shell, where the rail survived.
  *
  * No *back to your cases*: the analyst is already in the case and every other
@@ -135,6 +170,7 @@ export function SectionErrorScreen({
       data-testid="section-error"
     >
       <EmptyState
+        headingLevel={2}
         icon={AlertTriangle}
         title="This section stopped rendering"
         detail="The case is untouched, and the rest of it still works &#x2014; pick another section from the rail."

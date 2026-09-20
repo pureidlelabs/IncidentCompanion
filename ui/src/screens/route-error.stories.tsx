@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 
-import { RouteErrorScreen, SectionErrorScreen } from './route-error'
+import { RootErrorScreen, RouteErrorScreen, SectionErrorScreen } from './route-error'
 
 /**
  * The screen an analyst sees when a screen stops rendering.
@@ -130,6 +130,61 @@ export const InsideTheShell: Story = {
     await step('and the reload it offers is the case, not the window', async () => {
       await expect(canvas.getByRole('button', { name: 'Reload this case' })).toBeVisible()
     })
+  },
+}
+
+/**
+ * Nothing survived: the tree is gone, and the router with it.
+ *
+ * **The offer is a reload and only a reload.** *Back to your cases* is a link,
+ * and the thing that draws links is what threw -- so an offer to navigate is
+ * one that cannot be honoured, which is worse than not making it.
+ *
+ * The title is the window's only heading, so it is announced as one. An empty
+ * state inside a populated screen sits under that screen's heading and needs
+ * none; this screen is the whole window and a reader arriving by heading would
+ * otherwise find nothing at all.
+ */
+export const NothingSurvived: Story = {
+  name: 'The whole app stopped rendering',
+  args: { stack: STACK, onReload: fn() },
+  render: (args) => <RootErrorScreen {...args} />,
+  play: async ({ canvas, step }) => {
+    await step('it says the app rather than the screen or the section', async () => {
+      await expect(canvas.getByText('The app stopped rendering')).toBeVisible()
+      await expect(canvas.queryByText('This screen stopped rendering')).toBeNull()
+      await expect(canvas.queryByText('This section stopped rendering')).toBeNull()
+    })
+    await step('the title is the heading, because it is the only one left', async () => {
+      await expect(
+        canvas.getByRole('heading', { name: 'The app stopped rendering' }),
+      ).toBeVisible()
+    })
+    await step('a reload is offered and a navigation is not', async () => {
+      await expect(canvas.getByRole('button', { name: /Reload/ })).toBeVisible()
+      await expect(canvas.queryByRole('button', { name: 'Back to your cases' })).toBeNull()
+    })
+    await step('and it says what survived, without apologising for it', async () => {
+      await expect(canvas.getByText(/every save that went through is already stored/)).toBeVisible()
+    })
+  },
+}
+
+/**
+ * The stack is reachable from the root screen too, and just as folded.
+ *
+ * This is the one surface with no crash reporting behind it, so the analyst
+ * pasting the fold into an issue is the whole reporting path.
+ */
+export const RootDetailUnfolds: Story = {
+  name: 'The stack, unfolded, with nothing left around it',
+  args: { stack: STACK, onReload: fn() },
+  render: (args) => <RootErrorScreen {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText(/TimelineRow/)).not.toBeVisible()
+    await userEvent.click(canvas.getByText('What went wrong'))
+    await expect(canvas.getByText(/TimelineRow/)).toBeVisible()
   },
 }
 
