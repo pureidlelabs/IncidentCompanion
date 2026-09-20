@@ -22,6 +22,7 @@ function node(over: Partial<IncidentNode> = {}): IncidentNode {
     count: 1,
     paintedBy: null,
     severity: '',
+    rateable: false,
     seen: 0,
     bridge: false,
     spans: 1,
