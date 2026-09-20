@@ -30,6 +30,7 @@ import { Caller } from '../install-activity/caller.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { CustomersService } from './customers.service.js'
 import { refusedBody } from '../domain/refusal.js'
+import { REGIME_KEYS } from '../domain/vocabularies/regimes.js'
 
 /**
  * What an administrator may set: the name, and the organisation's own facts
@@ -63,13 +64,7 @@ const requiredText = z.string().trim().max(2000).optional()
 const wholeNumber = z.int().nonnegative().nullable().optional()
 
 const FACTS = {
-  /**
-   * Free text for now, and it should not stay that way: the vocabulary exists
-   * in `preferences/regimes.controller.ts` and is private to it, so an analyst
-   * can write `gdrp` here and it matches nothing for ever. Sharing that list
-   * is its own piece of work.
-   */
-  regimes: z.array(z.string().trim().min(1)).nullable().optional(),
+  regimes: z.array(z.enum(REGIME_KEYS)).nullable().optional(),
   homeMemberState: optionalText,
 
   // The four `NOT NULL` columns. No `.nullable()`: omitting one is fine and
