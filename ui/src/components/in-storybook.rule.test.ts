@@ -22,7 +22,7 @@
  * a permanent excuse: a name that has since gained a story must be removed
  * from it, so the list can only shrink.
  */
-import { readdirSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -31,33 +31,36 @@ import { describe, expect, it } from 'vitest'
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /**
- * The directories the gallery indexes, relative to `src/`.
+ * The directories the gallery indexes, relative to `src/`. Listed, because no
+ * property of a directory says whether it holds things an analyst sees: most
+ * of `app/` is Containers, which compose a screen rather than drawing one, and
+ * the root error boundary that draws its own is the known hole. -> #1029
  *
- * Listed, because no property of a directory says whether it holds things an
- * analyst sees: `app/` is route tables and providers, and a gallery entry for
- * a context is not one. The last assertion is what keeps the list honest -- a
- * story written anywhere else goes red rather than quiet.
+ * The last two assertions keep this honest: a story outside a root goes red,
+ * and so does a root that is not there.
  */
 const ROOTS = ['components', 'screens']
 
 /** A component's own story and test files, which are not themselves components. */
 const SATELLITE = /\.(stories|test)\.tsx$/
 
-/**
- * Empty, and that is the resting state: everything the gallery indexes has a
- * story. A name goes in here only when one is added without one, and comes
- * straight back out when it gains it.
- */
+/** Empty, and that is the resting state. A name here may only come back out. */
 const WITHOUT_A_STORY = new Set<string>([])
 
-/** Every file under a gallery root, by its path relative to `src/`. */
-const FILES = new Set(
-  ROOTS.flatMap((root) =>
-    readdirSync(join(SRC, root), { recursive: true }).map(
-      (name) => `${root}/${String(name).replaceAll('\\', '/')}`,
-    ),
-  ),
-)
+/**
+ * Every file under one gallery root, relative to `src/`. A missing root reads
+ * as empty rather than throwing: this runs at module scope, where an `ENOENT`
+ * collects no tests and silences the assertion written to catch exactly that.
+ */
+function filesUnder(root: string): string[] {
+  if (!existsSync(join(SRC, root))) return []
+  return readdirSync(join(SRC, root), { recursive: true }).map(
+    (name) => `${root}/${String(name).replaceAll('\\', '/')}`,
+  )
+}
+
+/** Every file under every gallery root, by its path relative to `src/`. */
+const FILES = new Set(ROOTS.flatMap((root) => filesUnder(root)))
 
 /**
  * Everything a gallery root holds, at any depth. Derived rather than listed:
@@ -83,7 +86,7 @@ function hasStory(id: string): boolean {
 
 /** Every directory below a gallery root, relative to `src/`. */
 function everyTier(): string[] {
-  return ROOTS.flatMap((root) =>
+  return ROOTS.filter((root) => existsSync(join(SRC, root))).flatMap((root) =>
     readdirSync(join(SRC, root), { withFileTypes: true, recursive: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => join(entry.parentPath, entry.name).slice(SRC.length + 1)),
@@ -138,8 +141,6 @@ describe('the gallery is the index of what the interface is built from', () => {
   })
 
   it('indexes screens as well as components', () => {
-    // A screen is where a control is finally laid out beside its neighbours,
-    // which is what the affordance audit and the visual walk read.
     expect(
       everyComponent().some((id) => id.startsWith('screens/')),
       'no screen is in the index, so nothing requires one to have a story',
@@ -166,6 +167,13 @@ describe('the gallery is the index of what the interface is built from', () => {
       strays,
       'these stories sit outside every gallery root, so nothing requires their neighbours to have one -- add the directory to ROOTS',
     ).toEqual([])
+  })
+
+  it('names a root that is there', () => {
+    // A misspelled or deleted root would otherwise read as empty, and the
+    // stray-story guard above would be reporting on a list nobody maintains.
+    const gone = ROOTS.filter((root) => !existsSync(join(SRC, root)))
+    expect(gone, 'ROOTS names a directory that is not in the tree').toEqual([])
   })
 
   it('names only components that exist', () => {
