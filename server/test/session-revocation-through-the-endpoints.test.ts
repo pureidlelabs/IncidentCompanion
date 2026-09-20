@@ -29,8 +29,6 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
   const PASSWORD = 'harness-password-1234'
 
   /** One account, two sign-ins: the analyst's own screen and the other device. */
-  let here: Persona
-  let elsewhere: Persona
 
   const whoAmI = async (persona: Persona): Promise<number> => {
     const response = await fetch(`${harness.base}/api/auth/get-session`, {
@@ -91,8 +89,6 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
       throw new Error(`the analyst could not set its own password: ${changed.status}`)
     }
 
-    here = await signIn(harness, email, PASSWORD)
-    elsewhere = await signIn(harness, email, PASSWORD)
   }, 90_000)
 
   afterAll(async () => {
@@ -101,17 +97,21 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
   })
 
   it('signs the other device out when the index is in Redis', async () => {
+    // Its own pair: a revoke in any other test takes every session this user
+    // holds, so one made once for the file is already signed out.
+    const caller = await signIn(harness, email, PASSWORD)
+    const other = await signIn(harness, email, PASSWORD)
     // The ordinary path, so a failure here is not about the index at all.
-    expect(await whoAmI(elsewhere)).toBe(200)
+    expect(await whoAmI(other)).toBe(200)
 
     const revoked = await fetch(`${harness.base}/api/auth/revoke-other-sessions`, {
       method: 'POST',
-      headers: { cookie: here.cookie },
+      headers: { cookie: caller.cookie },
     })
     expect(revoked.status).toBe(200)
 
-    expect(await whoAmI(elsewhere), 'the other device is still signed in').toBe(401)
-    expect(await whoAmI(here), 'the caller signed itself out too').toBe(200)
+    expect(await whoAmI(other), 'the other device is still signed in').toBe(401)
+    expect(await whoAmI(caller), 'the caller signed itself out too').toBe(200)
   })
 
   it('signs the other device out when Redis has lost the index', async () => {
@@ -125,6 +125,7 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
      * store's own soft `get` returns null for a Redis error and for a missing
      * key alike, so this is the same input the outage produces.
      */
+    const caller = await signIn(harness, email, PASSWORD)
     const other = await signIn(harness, email, PASSWORD)
     expect(await whoAmI(other)).toBe(200)
 
@@ -138,7 +139,7 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
 
     const revoked = await fetch(`${harness.base}/api/auth/revoke-other-sessions`, {
       method: 'POST',
-      headers: { cookie: here.cookie },
+      headers: { cookie: caller.cookie },
     })
     expect(revoked.status).toBe(200)
 
@@ -158,7 +159,13 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
      *
      * **The index only.** Every session token key survives this deletion, which
      * is why it passes -- see the test below for what happens when they do not.
+     *
+     * **Both sessions are signed in here rather than taken from `beforeAll`.**
+     * A keyspace loss drops the token keys of anything signed in before it, so
+     * a caller made once for the file counts nothing after the test below has
+     * run.
      */
+    const caller = await signIn(harness, email, PASSWORD)
     const extra = await signIn(harness, email, PASSWORD)
     expect(await whoAmI(extra)).toBe(200)
 
@@ -166,7 +173,7 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
     if (indexes.length > 0) await redis.del(...indexes)
 
     expect(
-      await listSessions(here),
+      await listSessions(caller),
       'the session list is empty while at least two sessions are usable, so an ' +
         'analyst is told there is nothing to sign out',
     ).toBeGreaterThan(1)
@@ -187,6 +194,7 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
      * **Reachable by API, not through this app's screens** -- nothing in
      * `ui/src` calls `revoke-other-sessions`.
      */
+    const caller = await signIn(harness, email, PASSWORD)
     const other = await signIn(harness, email, PASSWORD)
     expect(await whoAmI(other)).toBe(200)
 
@@ -196,7 +204,7 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
 
     const revoked = await fetch(`${harness.base}/api/auth/revoke-other-sessions`, {
       method: 'POST',
-      headers: { cookie: here.cookie },
+      headers: { cookie: caller.cookie },
     })
     // It reports success. That is the defect, not an aside.
     expect(revoked.status).toBe(200)
