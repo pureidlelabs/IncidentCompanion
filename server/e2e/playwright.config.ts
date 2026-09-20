@@ -1,51 +1,12 @@
-import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 
 import { defineConfig, devices } from '@playwright/test'
 
-/**
- * Where the app is. A run against an already-started dev server reuses it.
- *
- * **Derived, because a literal here tests somebody else's app.** Same script
- * as `dev-node.sh` and `vitest.config.mts`. See `server/scripts/stack.mjs`.
- *
- * **`__dirname`, not `import.meta`.** Playwright loads this config through a
- * CommonJS wrapper whatever the extension says, so `import.meta.url` throws
- * *"Cannot use import.meta outside a module"* before any test is collected.
- */
-const STACK = (): { apiUrl: string; vitePort: number } =>
-  JSON.parse(
-    execFileSync('node', [join(__dirname, '../scripts/stack.mjs'), '--json'], {
-      encoding: 'utf8',
-    }),
-  ) as { apiUrl: string; vitePort: number }
+import { APP_URL, DIST_URL } from './support/app-url.js'
 
-/**
- * Where the browser is pointed. **The dev server by default; `dist` on
- * request.**
- *
- * **Vite is the default because it cannot go stale.** A `dist` that was never
- * rebuilt reads as a fix that did not apply, and nothing in the capture says
- * which of the two it was.
- *
- * **`VISUAL_TARGET=dist` is what a landing runs**, and the reason is Tailwind
- * rather than tidiness: the build emits only the classes it finds, so a class
- * assembled at runtime can draw in dev and be absent from the bundle. That
- * defect is invisible here and `npm run visual:dist` is where it surfaces.
- * -> `server/e2e/support/app.ts`
- */
-const BASE =
-  process.env.INCIDENTCOMPANION_E2E_URL ??
-  (process.env.VISUAL_TARGET === 'dist'
-    ? STACK().apiUrl
-    : `http://127.0.0.1:${String(STACK().vitePort)}`)
-
-/**
- * Where the built client is served: Nest serves `ui/dist` on the API port.
- *
- * Read once here rather than per project, because `STACK()` is a subprocess.
- */
-const DIST = STACK().apiUrl
+/** Where the app is, and where its built bundle is. -> `support/app-url.ts` */
+const BASE = APP_URL
+const DIST = DIST_URL
 
 /**
  * What this tier does not run, wherever the list is needed.
