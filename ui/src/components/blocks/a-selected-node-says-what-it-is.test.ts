@@ -13,6 +13,7 @@ const node = (): IncidentNode =>
     bridge: false,
     spans: 1,
     entry: false,
+    rateable: true,
   }) as IncidentNode
 
 describe('the line over a selected node', () => {
@@ -20,18 +21,30 @@ describe('the line over a selected node', () => {
     expect(selectionSummary(node())).toBe('Event \u00b7 high')
   })
 
-  /**
-   * The timeline draws `unset` for the same entry, and the event that has not
-   * been rated is the one an analyst is looking for. -> #983
-   */
+  /** The timeline draws `unset` for the same entry. -> #983 */
   it('says the severity is unset rather than leaving it out', () => {
     expect(selectionSummary({ ...node(), severity: '' })).toBe('Event \u00b7 unset')
   })
 
+  /** An action carries no severity field, so `unset` would be false about it. */
+  it('claims no severity for an action, which has none to set', () => {
+    expect(selectionSummary({ ...node(), severity: '', rateable: false })).toBe('Event')
+  })
+
   /** An entity has no severity to be unset, so it claims none. */
   it('says nothing about severity for an entity that has none', () => {
-    const system = { ...node(), kind: 'system', severity: '', label: 'FIN-WS-01' }
-    expect(selectionSummary(system)).not.toContain('unset')
+    const system = { ...node(), kind: 'system', severity: '', rateable: false, label: 'FIN-WS-01' }
+    expect(selectionSummary(system)).toBe('Asset')
+  })
+
+  it('names the severity an entity was painted with', () => {
+    const system = { ...node(), kind: 'system', severity: 'critical', rateable: false }
+    expect(selectionSummary(system)).toBe('Asset \u00b7 critical')
+  })
+
+  it('falls back to the kind itself when nothing names it', () => {
+    const odd = { ...node(), kind: 'gizmo', severity: '', rateable: false }
+    expect(selectionSummary(odd)).toBe('gizmo')
   })
 
   it('keeps the rest of the line, in order', () => {

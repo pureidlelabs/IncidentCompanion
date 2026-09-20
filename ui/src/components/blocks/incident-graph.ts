@@ -1,5 +1,5 @@
 import { text } from '@/api/wireText'
-import type { Case, TimelineEntry } from '@/api/model'
+import { isEvent, type Case, type TimelineEntry } from '@/api/model'
 import type { Specs } from '@/api/specs'
 
 import { buildEntityGraph, type GraphNode } from './entity-graph'
@@ -38,6 +38,9 @@ export interface IncidentNode {
   paintedBy: GraphNode | null
   /** An event's severity, empty for an entity. */
   severity: string
+  /** The record this stands for has a severity field at all: false for an
+   *  entity and for an action, which is never rated. */
+  rateable: boolean
   /** Epoch seconds: the earliest moment any member appears in the case. */
   seen: number
   /** An entity taking part in more than one kind of event - what joins two
@@ -244,6 +247,7 @@ export function buildIncidentGraph(
         count: part.length,
         paintedBy: worst(part),
         severity: '',
+        rateable: false,
         seen: Math.min(...part.map((member) => firstSeen.get(member.id) ?? Infinity)),
         bridge: spans > 1,
         spans,
@@ -315,6 +319,7 @@ export function buildIncidentGraph(
         count: part.length,
         paintedBy: worst(part),
         severity: '',
+        rateable: false,
         seen: withAnchor,
         bridge: false,
         spans: 0,
@@ -358,6 +363,7 @@ export function buildIncidentGraph(
         // Absent on a response record and null on an unrated event; the band
         // draws nothing for either, which is what an empty string already meant.
         severity: text(head.entry.severity),
+        rateable: isEvent(head.entry),
         seen: at,
         bridge: false,
         spans: 0,
@@ -489,6 +495,7 @@ export function bundleThroughJunctions(
       count: 1,
       paintedBy: null,
       severity: '',
+      rateable: false,
       seen,
       bridge: false,
       spans: 0,
