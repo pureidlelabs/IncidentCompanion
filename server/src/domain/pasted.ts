@@ -17,7 +17,7 @@ import { z } from 'zod'
 
 import { withoutInvisibles } from './invisible.lists.js'
 
-export { INVISIBLE, withoutInvisibles } from './invisible.lists.js'
+export { INVISIBLE } from './invisible.lists.js'
 
 /**
  * Wrap a string schema so a pasted value is cleaned before it is judged.
