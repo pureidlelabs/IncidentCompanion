@@ -62,6 +62,9 @@ describe.skipIf(!runnable)('the document describes what is served', () => {
       await fetch(`${harness.base}/api/cases`, { headers: { cookie: admin.cookie } })
     ).json()) as { id?: string }[]
     caseId = listed[0]?.id ?? ''
+    // Without this, `{caseId}` fills to nothing, `/api/cases/` reaches the list
+    // handler, and the sweep reports the case read serving an array.
+    if (!caseId) throw new Error('the seeded content produced no case to read')
 
     /**
      * **The whole document is registered, and every schema is reached through
@@ -122,10 +125,10 @@ describe.skipIf(!runnable)('the document describes what is served', () => {
     }
 
     /**
-     * **A floor rather than a guard against zero.** An empty collection
-     * validates its nested item constraints vacuously, so a sweep that stopped
-     * seeding would keep passing while reaching only the configuration reads --
-     * which is where this started, at 27.
+     * **Counts reads, not rows.** A 200 carrying `[]` counts, so this catches a
+     * sweep that stopped reaching the case-scoped routes -- 27 of the 68 -- and
+     * not one that reached them with an empty case. The nested constraints only
+     * bite where a row exists, and nothing here asserts that.
      */
     expect(checked, 'far fewer reads produced a body than the seeded case affords').toBeGreaterThan(40)
     expect(wrong.sort()).toEqual([])

@@ -479,7 +479,8 @@ export function operations(
       if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue
       let path = template
       for (const [name, value] of Object.entries(real)) {
-        path = path.replace(new RegExp(`\\{${name}\\}`, 'g'), value)
+        // A function, so a `$&` or `$'` in a value inserts rather than interpolates.
+        path = path.replace(new RegExp(`\\{${name}\\}`, 'g'), () => value)
       }
       for (const [pattern, value] of STAND_INS) path = path.replace(pattern, value)
       found.push({
