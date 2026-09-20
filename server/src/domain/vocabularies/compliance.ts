@@ -13,10 +13,11 @@
  * against the published text, and say which in the commit message.
  */
 
-/** ENISA RSIT, the incident taxonomy a report is classified under. */
-export const RSIT_SOURCE_COMMIT = '901c69c124ae33c7827b07a396424d57a1a43645'
-export const RSIT_SOURCE_REPO = 'enisaeu/Reference-Security-Incident-Taxonomy-Task-Force'
-
+/**
+ * ENISA RSIT, the incident taxonomy a report is classified under, taken from
+ * `enisaeu/Reference-Security-Incident-Taxonomy-Task-Force` at
+ * `901c69c124ae33c7827b07a396424d57a1a43645`.
+ */
 export const RSIT_CLASSES = [
   { value: 'abusive-content', label: 'Abusive Content' },
   { value: 'malicious-code', label: 'Malicious Code' },
@@ -215,7 +216,6 @@ export const VERIS_ACTIONS = [
  * technique and the root cause back to a supervisor, and a paraphrase is a
  * different claim from the one the Regulation lists.
  */
-export const DORA_CELEX = '32025R0302'
 export const DORA_THREAT_TECHNIQUES = [
   'Social engineering (including phishing)',
   '(D)DoS',
