@@ -8,16 +8,23 @@
  * renders one wrongly publishes a reference honest about nothing while every
  * suite stays green -- and the document is what a client writes against.
  *
- * **What this does not reach.** A read whose path parameter names nothing
- * answers 404 and is skipped, which today is every case-scoped read: the
- * bodies judged are the install, library and report configuration ones.
- * Seeding a case would take the sweep most of the rest of the way. Status,
- * media type and parameter requiredness are each their own axis. -> #862
+ * **A case is seeded so the case-scoped reads answer**, which is most of the
+ * API. A read whose remaining parameter names a row nothing created still
+ * answers 404 and is skipped. Status, media type and parameter requiredness
+ * are each their own axis. -> #862
  */
 import Ajv2020 from 'ajv/dist/2020'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { boot, bootable, operations, sharedAdmin, type Harness, type Persona } from './app-harness.js'
+import {
+  boot,
+  bootable,
+  operations,
+  seedDemoContent,
+  sharedAdmin,
+  type Harness,
+  type Persona,
+} from './app-harness.js'
 
 const runnable = await bootable()
 
@@ -43,10 +50,21 @@ describe.skipIf(!runnable)('the document describes what is served', () => {
   let harness: Harness
   let admin: Persona
   let ajv: Ajv2020
+  /** The seeded case, so `{caseId}` reaches a row instead of a 404. */
+  let caseId = ''
 
   beforeAll(async () => {
     harness = await boot()
     admin = await sharedAdmin(harness)
+    await seedDemoContent(harness)
+
+    const listed = (await (
+      await fetch(`${harness.base}/api/cases`, { headers: { cookie: admin.cookie } })
+    ).json()) as { id?: string }[]
+    caseId = listed[0]?.id ?? ''
+    // Without this, `{caseId}` fills to nothing, `/api/cases/` reaches the list
+    // handler, and the sweep reports the case read serving an array.
+    if (!caseId) throw new Error('the seeded content produced no case to read')
 
     /**
      * **The whole document is registered, and every schema is reached through
@@ -73,7 +91,7 @@ describe.skipIf(!runnable)('the document describes what is served', () => {
 
   it('serves no read whose body its own schema refuses', async () => {
     const excluded = new Set(NOT_JSON.map(([path]) => path))
-    const reads = operations(harness.document).filter(
+    const reads = operations(harness.document, { caseId }).filter(
       (one) => one.method === 'GET' && !excluded.has(one.template),
     )
 
@@ -106,9 +124,13 @@ describe.skipIf(!runnable)('the document describes what is served', () => {
       }
     }
 
-    // The guard against a vacuous pass: a sweep that validated nothing because
-    // every read answered 401 would otherwise report an empty list.
-    expect(checked, 'no read produced a body to judge').toBeGreaterThan(10)
+    /**
+     * **Counts reads, not rows.** A 200 carrying `[]` counts, so this catches a
+     * sweep that stopped reaching the case-scoped routes -- 27 of the 68 -- and
+     * not one that reached them with an empty case. The nested constraints only
+     * bite where a row exists, and nothing here asserts that.
+     */
+    expect(checked, 'far fewer reads produced a body than the seeded case affords').toBeGreaterThan(40)
     expect(wrong.sort()).toEqual([])
   }, 180_000)
 
