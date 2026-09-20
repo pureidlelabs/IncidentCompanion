@@ -46,6 +46,8 @@ let leaves = ''
 let arrives = ''
 let sector = ''
 let elsewhere = ''
+/** The move runs once in `beforeAll`: three cases read the case after it. */
+let moved: { status: number; said: string; body: unknown } = { status: 0, said: '', body: null }
 
 const asAnalyst = (path: string, init: RequestInit = {}) =>
   fetch(`${harness!.base}${path}`, {
@@ -119,6 +121,17 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
 
     appPool = openTestPool(process.env['DATABASE_URL']!, 'ic_app')
     await new GroupsService(drizzle({ client: appPool })).grant(sector, analyst.id, 'write')
+
+    const answer = await asAnalyst(`/api/cases/${caseId}/customer`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ customerId: arrives }),
+    })
+    moved = {
+      status: answer.status,
+      said: await answer.clone().text(),
+      body: await answer.json().catch(() => null),
+    }
   }, 90_000)
 
   afterAll(async () => {
@@ -139,18 +152,23 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
 
   /** The premise. A case they could not reach to begin with proves nothing. */
   it('starts reachable by the analyst who holds the customer it is on', async () => {
-    expect((await asAnalyst(`/api/cases/${caseId}`)).status).toBe(200)
+    // Its own case, because the one the rest of the file reads has already
+    // been moved by the setup.
+    const db = drizzle({ client: pool! })
+    const [before] = await db
+      .insert(cases)
+      .values({ title: `Still where it started ${String(Date.now())}`, customerId: leaves })
+      .returning({ id: cases.id })
+    try {
+      expect((await asAnalyst(`/api/cases/${before!.id}`)).status).toBe(200)
+    } finally {
+      await db.delete(cases).where(eq(cases.id, before!.id))
+    }
   })
 
-  it('is moved by that analyst, who needs no administrator', async () => {
-    const moved = await asAnalyst(`/api/cases/${caseId}/customer`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ customerId: arrives }),
-    })
-
-    expect(moved.status, `moving the case answered ${await moved.clone().text()}`).toBe(200)
-    expect(await moved.json()).toMatchObject({ done: true, from: leaves })
+  it('is moved by that analyst, who needs no administrator', () => {
+    expect(moved.status, `moving the case answered ${moved.said}`).toBe(200)
+    expect(moved.body).toMatchObject({ done: true, from: leaves })
   })
 
   /**
@@ -161,6 +179,10 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
    * that somebody else's case exists.
    */
   it('is out of reach for the analyst who moved it, the moment it lands', async () => {
+    // The case below puts the analyst in the group holding the customer it
+    // went to, and that membership outlives it.
+    await new GroupsService(drizzle({ client: appPool! })).revoke(elsewhere, analyst.id)
+
     expect(
       (await asAnalyst(`/api/cases/${caseId}`)).status,
       'the analyst still reaches a case for a customer they do not hold',
@@ -169,6 +191,8 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
 
   /** And what hangs off it, or reach is not decided in one place. */
   it('takes what hangs off it out of reach too', async () => {
+    await new GroupsService(drizzle({ client: appPool! })).revoke(elsewhere, analyst.id)
+
     expect((await asAnalyst(`/api/cases/${caseId}/timeline`)).status).toBe(404)
   })
 
