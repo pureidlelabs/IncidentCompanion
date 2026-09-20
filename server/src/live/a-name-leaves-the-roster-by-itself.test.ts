@@ -78,7 +78,11 @@ const member = (sessionId: string) => ({
   joinedAt: Date.now(),
 })
 
-const key = (sessionId: string) => `case:${CASE}:member:${sessionId}`
+const key = (kase: string, sessionId: string) => `case:${kase}:member:${sessionId}`
+
+/** A roster of its own per case, so expiring a member costs the others nothing. */
+let seq = 0
+const aCase = (): string => `${CASE}-${String(process.pid)}-${String((seq += 1))}`
 
 describe.skipIf(!reachable)('a connection that ended without notice', () => {
   let store: PresenceStore
@@ -86,12 +90,10 @@ describe.skipIf(!reachable)('a connection that ended without notice', () => {
 
   beforeAll(async () => {
     raw = new Redis(URL_)
-    const stale = await raw.keys(`case:${CASE}:*`)
+    const stale = await raw.keys(`case:${CASE}*`)
     if (stale.length > 0) await raw.del(...stale)
 
     store = new PresenceStore(config)
-    await store.join(CASE, member(LOST))
-    await store.join(CASE, member(STAYS))
   })
 
   afterAll(async () => {
@@ -100,14 +102,21 @@ describe.skipIf(!reachable)('a connection that ended without notice', () => {
   })
 
   it('is on the roster to begin with, so its leaving is a change', async () => {
+    const kase = aCase()
+    await store.join(kase, member(LOST))
+    await store.join(kase, member(STAYS))
+
     expect(
-      (await store.members(CASE)).map((one) => one.sessionId).sort(),
+      (await store.members(kase)).map((one) => one.sessionId).sort(),
       'the roster does not name a member that just joined',
     ).toEqual([LOST, STAYS].sort())
   })
 
   it('is written with a bound rather than left to a goodbye', async () => {
-    const left = await raw.pttl(key(LOST))
+    const kase = aCase()
+    await store.join(kase, member(LOST))
+
+    const left = await raw.pttl(key(kase, LOST))
 
     expect(
       left,
@@ -122,10 +131,14 @@ describe.skipIf(!reachable)('a connection that ended without notice', () => {
   })
 
   it('leaves the roster once its bound passes, with nobody acting', async () => {
-    await raw.pexpire(key(LOST), 1)
+    const kase = aCase()
+    await store.join(kase, member(LOST))
+    await store.join(kase, member(STAYS))
+
+    await raw.pexpire(key(kase, LOST), 1)
     await new Promise((wake) => setTimeout(wake, 50))
 
-    const roster = (await store.members(CASE)).map((one) => one.sessionId)
+    const roster = (await store.members(kase)).map((one) => one.sessionId)
 
     expect(
       roster,
@@ -140,8 +153,17 @@ describe.skipIf(!reachable)('a connection that ended without notice', () => {
   })
 
   it('corrects the set rather than filtering the lapsed name out of each read', async () => {
+    const kase = aCase()
+    await store.join(kase, member(LOST))
+    await store.join(kase, member(STAYS))
+
+    await raw.pexpire(key(kase, LOST), 1)
+    await new Promise((wake) => setTimeout(wake, 50))
+    // The correction happens on a read, so one has to have happened.
+    await store.members(kase)
+
     expect(
-      await raw.smembers(`case:${CASE}:members`),
+      await raw.smembers(`case:${kase}:members`),
       'the expired session is still in the set, so the roster grows without bound on an ' +
         'install nobody says goodbye to',
     ).not.toContain(LOST)
