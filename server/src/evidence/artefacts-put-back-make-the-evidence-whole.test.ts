@@ -33,7 +33,7 @@
  * artefacts it expects and cannot find, which is
  * `health/an-install-says-what-it-cannot-find.test.ts`.
  */
-import { mkdtemp, rename, rm } from 'node:fs/promises'
+import { access, mkdtemp, rename, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
@@ -106,7 +106,21 @@ describe.skipIf(!db)('an install restored without its artefacts', () => {
     await rm(aside, { recursive: true, force: true })
   })
 
+  /** Puts the artefact where a case needs it, wherever the one before left it. */
+  const artefactIn = async (where: string): Promise<void> => {
+    const other = where === root ? aside : root
+    const from = join(other, hash)
+    try {
+      await access(from)
+    } catch {
+      return
+    }
+    await rename(from, join(where, hash))
+  }
+
   it('holds the artefact and the row that names it to begin with', async () => {
+    await artefactIn(root)
+
     expect(await store.read(hash), 'the artefact was never stored').not.toBeNull()
     expect(
       Buffer.from((await store.read(hash))!).toString(),
@@ -116,6 +130,7 @@ describe.skipIf(!db)('an install restored without its artefacts', () => {
   })
 
   it('loses the bytes and keeps the record when the artefacts are not there', async () => {
+    await artefactIn(root)
     const before = await recorded()
     await rename(join(root, hash), join(aside, hash))
 
@@ -134,6 +149,7 @@ describe.skipIf(!db)('an install restored without its artefacts', () => {
   })
 
   it('is whole again when the artefacts are put back, with nothing re-recorded', async () => {
+    await artefactIn(aside)
     const during = await recorded()
     await rename(join(aside, hash), join(root, hash))
 

@@ -166,8 +166,11 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
   })
 
   it('draws a section per block before either report is sent', async () => {
-    const sent = (await documentOf(sentId)) as { sections: unknown[] }
-    expect(sent.sections).toHaveLength(DERIVED_KINDS.length)
+    // Its own report: the case below sends the filed one, and what this
+    // asserts is the shape of one that has not been sent.
+    const unsent = await reportOf('Not filed with anybody')
+    const drawn = (await documentOf(unsent)) as { sections: unknown[] }
+    expect(drawn.sections).toHaveLength(DERIVED_KINDS.length)
   })
 
   /**
@@ -178,10 +181,13 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
    * would fail for a reason that is not the one on trial.
    */
   it('holds the filed document unchanged while the draft moves', async () => {
-    const filedBefore = await documentOf(sentId)
+    // Its own report to file: sending is one-way, and the case below sends
+    // the one the file made.
+    const filed = await reportOf('Filed while the case moves')
+    const filedBefore = await documentOf(filed)
     const draftBefore = await documentOf(draftId)
 
-    await lifecycle.send(caseId, sentId, actorId, 'en')
+    await lifecycle.send(caseId, filed, actorId, 'en')
 
     await seed!.insert(timeline).values({
       caseId,
@@ -204,12 +210,16 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
     // any section, and the assertion below would hold on a re-rendering server.
     expect(await documentOf(draftId)).not.toEqual(draftBefore)
 
-    const filedAfter = await render.render(caseId, sentId, 'en')
+    const filedAfter = await render.render(caseId, filed, 'en')
     expect(filedAfter.frozen).toBe(true)
     expect(filedAfter.document_).toEqual(filedBefore)
   })
 
   it('paints the filed report with its own blocks deleted', async () => {
+    // Frozen is the premise: the case above sends it, and this one is about a
+    // sent report whose blocks are gone.
+    await lifecycle.send(caseId, sentId, actorId, 'en').catch(() => undefined)
+
     await seed!
       .delete(reportBlocks)
       .where(and(eq(reportBlocks.caseId, caseId), eq(reportBlocks.reportId, sentId)))
