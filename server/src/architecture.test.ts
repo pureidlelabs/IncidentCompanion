@@ -270,13 +270,19 @@ function loopIn(graph: Record<string, string[]>): string[] | null {
 
 describe('the layers only reach downwards', () => {
   /**
-   * **Six entries above argue a particular edge cannot close a loop**, and the
-   * sweep below only checks that an import is allowed. So an entry admitting
-   * one passes, and the property those comments defend is held by whoever is
-   * editing the map. -> #1010
+   * **Six comments in this file argue a particular edge cannot close a loop**,
+   * and the sweep below only checks that an import is allowed. So an entry
+   * admitting one passes, and the property those comments defend is held by
+   * whoever is editing the map. -> #1010
+   *
+   * **The path goes in the message, not in the compared value.** Compared, it
+   * is truncated around the third hop -- which is the half that names the
+   * loop.
    */
   it('admits no loop, so an edge can be read as reaching downwards', () => {
-    expect(loopIn(MAY_IMPORT)?.join(' -> ') ?? null).toBeNull()
+    const loop = loopIn(MAY_IMPORT)
+
+    expect(loop, loop?.join(' -> ')).toBeNull()
   })
 
   /**
