@@ -225,6 +225,35 @@ describe('the page ruler', () => {
     expect(marked.split('TLP:AMBER').length - 1).toBeGreaterThanOrEqual(2)
   })
 
+  /**
+   * **The marker reaches the page, and the count is per level.** `marks.ts`
+   * decides the number and this decides the indent; a painter that stopped
+   * asking for the marker would draw an unnumbered column of text, which is a
+   * list only to somebody who already knew it was one.
+   */
+  it('numbers a nested ordered list per level', () => {
+    const drawn = definitionText(
+      definitionFor(
+        paper([
+          {
+            type: 'list',
+            items: [
+              { runs: [{ text: 'one' }], level: 0, ordered: true },
+              { runs: [{ text: 'one-a' }], level: 1, ordered: true },
+              { runs: [{ text: 'two' }], level: 0, ordered: true },
+              { runs: [{ text: 'two-a' }], level: 1, ordered: true },
+            ],
+          },
+        ]),
+      ),
+    )
+
+    expect(drawn).toContain('1. ')
+    expect(drawn).toContain('2. ')
+    // The deeper level restarts rather than carrying on to three.
+    expect(drawn.split('"1. "').length - 1).toBe(3)
+  })
+
   it('draws no marking furniture when the report carries none', () => {
     const bare = definitionText(definitionFor(paper([{ type: 'prose', paras: ['x'] }])))
     expect(bare).not.toContain('#ffc000')

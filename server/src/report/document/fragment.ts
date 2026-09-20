@@ -25,6 +25,7 @@ import {
 } from '../../domain/prose-bounds.js'
 import { proseSchema } from '../../domain/prose-schema.js'
 import { evenly, padded, paddedLabels } from './grid.js'
+import { urlBeside } from './marks.js'
 import type { Cell, ListItem, Node, Run, TableNode } from './model.js'
 
 // Re-exported so this module stays the one door to a block's prose, while
@@ -79,7 +80,7 @@ function runsIn(node: PmNode, depth = 0): Run[] {
 const textOf = (runs: Run[]): string => runs.map((run) => run.text).join('')
 
 const flatten = (runs: Run[]): string =>
-  runs.map((run) => (run.url && run.url !== run.text ? `${run.text} (${run.url})` : run.text)).join('')
+  runs.map((run) => `${run.text}${urlBeside(run) ?? ''}`).join('')
 
 /**
  * Every list item under a list node, flattened with its depth.
