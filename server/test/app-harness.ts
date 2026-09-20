@@ -464,13 +464,23 @@ const STAND_INS: ReadonlyArray<readonly [RegExp, string]> = [
  * **Taken from the document rather than from a hand-kept list**, so a route
  * added tomorrow is swept tomorrow. That is the whole reason these sweeps are
  * worth more than a test per route: the list cannot go stale.
+ *
+ * `real` names parameters a caller has a row for, and is applied before the
+ * stand-ins. A sweep that wants a 404 passes nothing and keeps the default; one
+ * that wants a body passes the ids it seeded.
  */
-export function operations(document: OpenAPIObject): Operation[] {
+export function operations(
+  document: OpenAPIObject,
+  real: Readonly<Record<string, string>> = {},
+): Operation[] {
   const found: Operation[] = []
   for (const [template, item] of Object.entries(document.paths ?? {})) {
     for (const [method, operation] of Object.entries(item as Record<string, unknown>)) {
       if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue
       let path = template
+      for (const [name, value] of Object.entries(real)) {
+        path = path.replace(new RegExp(`\\{${name}\\}`, 'g'), value)
+      }
       for (const [pattern, value] of STAND_INS) path = path.replace(pattern, value)
       found.push({
         method: method.toUpperCase(),
