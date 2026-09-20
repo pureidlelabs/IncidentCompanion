@@ -572,6 +572,11 @@ jobs:
   browser:
     if: '!failure() && !cancelled() && inputs.all'
     runs-on: ubuntu-24.04
+    # **The one tier nobody watches, so the one that needs a ceiling.** Each
+    # test is capped at 60s and the launcher at 300s, but nothing bounds the
+    # run: a wedged browser would spend GitHub's 360-minute default before a
+    # nightly nobody is waiting on reported anything.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
@@ -592,9 +597,10 @@ jobs:
       # answers. So there are no service containers here, and nothing to start
       # first.
       #
-      # `IC_SUITE_MUST_RUN` is what makes a missing prerequisite a refusal:
-      # without it a run against no Storybook omits most of the tier and still
-      # exits 0, which is the shape of a green job that asked nothing.
+      # `IC_SUITE_MUST_RUN` is what arms `mustRunWithAStack()`, so a stack that
+      # never came up refuses the run rather than skipping it. A runner sets
+      # `CI` too, which arms the prerequisite check on its own -- this is the
+      # half that answers for the compose stack.
       - name: The app in a browser
         env:
           IC_SUITE_MUST_RUN: '1'
@@ -605,15 +611,15 @@ jobs:
           IC_SUITE_MUST_RUN: '1'
         run: cd server && npx playwright test --config=e2e/playwright.kit.config.ts
 
-      # The run is worth reading when it goes red, and a nightly nobody watched
+      # **The traces, not a report**: both configs declare `reporter: [['list']]`
+      # and no HTML one, so `playwright-report/` is never written. `test-results/`
+      # is what `trace: 'retain-on-failure'` fills, and a nightly nobody watched
       # is the only place this tier reports.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
-          name: browser-tier-report
-          path: |
-            server/playwright-report/
-            server/test-results/
+          name: browser-tier-traces
+          path: server/test-results/
           retention-days: 7
 
   devcontainer:
