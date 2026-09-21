@@ -389,9 +389,8 @@ describe.skipIf(!db)('reading the audit', () => {
       await recordInstallActivity(db!, { event: 'sign_in_failed', target })
     }
 
-    // **A line above High, so the two cannot agree by accident.** An exact
-    // tally and a floor answer the same number whenever nothing louder is on
-    // the page, which is what made this pass in declaration order.
+    // **A line above High, so the two cannot agree by accident**: an exact
+    // tally and a floor agree whenever nothing louder is on the page.
     await recordInstallActivity(db!, {
       event: 'audit_retention_changed',
       target: `${ownTarget('tally-louder')}@example.test`,

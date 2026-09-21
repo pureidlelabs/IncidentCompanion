@@ -285,13 +285,8 @@ export class InstallActivityReadService {
         outcomes.map((one) => [one.statusId === 2 ? 'failure' : 'success', one.n]),
       ),
       /**
-       * **Cumulative, because `minSeverity` is a floor.** Pressing `High`
-       * returns High and everything louder, so these do not sum to the page:
-       * a Critical run counts under Critical, High and Medium.
-       *
-       * **Zero is reported rather than omitted**, because `filter-bar`
-       * disables a chip counting zero and leaves an absent one enabled.
-       * -> #1006
+       * **Zero is reported rather than omitted**, because `filter-bar` disables
+       * a chip counting zero and leaves an absent one enabled. -> #1006
        */
       severities: Object.fromEntries(
         Object.entries(SEVERITY_ID).map(
