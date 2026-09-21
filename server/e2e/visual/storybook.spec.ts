@@ -41,6 +41,7 @@ import { dirname } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 import {
@@ -261,7 +262,9 @@ for (const ground of GROUNDS) {
       report.at = `${ground} at ${String(width)}px`
 
       const all = await storyIndex()
-      test.skip(all === null, `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`)
+      // A null index is the no-Storybook case, so the same helper answers it:
+      // a skip while exploring, a refusal on a run that claims to certify.
+      if (all === null) await requireStorybook()
       const stories = (all ?? [])
         .filter((one) => ONLY === undefined || ONLY.some((prefix) => one.title.startsWith(prefix)))
         .sort((a, b) => a.id.localeCompare(b.id))

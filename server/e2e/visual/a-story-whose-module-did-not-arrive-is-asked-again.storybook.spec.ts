@@ -16,22 +16,13 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { armStoryFinished, loadStory } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
 
 /** Any story that renders: what is under test is the asking, not the story. */
 const STORY = 'components-badge--default'
-
-/** Whether a Storybook is listening, asked once. */
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 /**
  * Refuses the story's own module for the first `times` requests.
@@ -54,7 +45,7 @@ async function refuseTheModule(page: Page, times: number): Promise<() => number>
 
 test.describe('a story whose module did not arrive is asked again', () => {
   test.beforeEach(async ({ page }) => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
     // `loadStory` reads what this arms, and refuses outright without it.
     await armStoryFinished(page)
   })
@@ -64,7 +55,10 @@ test.describe('a story whose module did not arrive is asked again', () => {
 
     const { broke } = await loadStory(page, SB, STORY, 'light')
 
-    expect(broke, 'a module that failed once and arrived next time was reported as broken').toBeNull()
+    expect(
+      broke,
+      'a module that failed once and arrived next time was reported as broken',
+    ).toBeNull()
     // Exactly two: `toBeGreaterThan(1)` passes a runaway retry, measured -- a
     // loop of three attempts left all three cases green.
     expect(asked(), 'the story was asked a number of times that is not twice').toBe(2)

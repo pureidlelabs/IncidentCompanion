@@ -15,6 +15,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 import { findings, sayFinding } from './view.js'
 
@@ -22,16 +23,6 @@ const SB = STORYBOOK_URL
 
 /** The story the false findings were measured on. */
 const STORY = 'components-overlayanchor--anchored'
-
-/** Whether a Storybook is listening, asked once. */
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
@@ -44,7 +35,7 @@ async function openStory(page: Page, id: string): Promise<void> {
 
 test.describe('a marker nobody can click is not a target', () => {
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   test('a disabled control keeps its geometry checked, though it takes no pointer either', async ({
@@ -56,7 +47,9 @@ test.describe('a marker nobody can click is not a target', () => {
     // so appending straight after `openStory` is a race that passes only when
     // the render happened to be finished, and reports the injected elements
     // missing when it did not.
-    await page.locator('[data-part="overlay-anchor"]').waitFor({ state: 'attached', timeout: 20_000 })
+    await page
+      .locator('[data-part="overlay-anchor"]')
+      .waitFor({ state: 'attached', timeout: 20_000 })
 
     // Injected rather than found, so the case does not depend on which story
     // happens to hold a disabled control today.
@@ -113,7 +106,9 @@ test.describe('a marker nobody can click is not a target', () => {
     // Waited for, not assumed: `#storybook-root` attaches before the story
     // renders into it, so reading the boxes straight after `openStory` is a
     // race that passes on a fast machine and reports `null` on a slow one.
-    await page.locator('[data-part="overlay-anchor"]').waitFor({ state: 'attached', timeout: 20_000 })
+    await page
+      .locator('[data-part="overlay-anchor"]')
+      .waitFor({ state: 'attached', timeout: 20_000 })
     await page.locator('button[aria-label="A shape in the pane"]').waitFor({ timeout: 20_000 })
 
     const scene = await page.evaluate(() => {
@@ -133,8 +128,14 @@ test.describe('a marker nobody can click is not a target', () => {
 
     expect(scene, 'the story draws neither the marker nor the button it points at').not.toBeNull()
     const seen = scene as NonNullable<typeof scene>
-    expect(seen.untargetable, 'the marker is the thing under test only while it takes no pointer').toBe(true)
-    expect(seen.disabled, 'a disabled marker is excluded for a different reason, which would not test this').toBe(false)
+    expect(
+      seen.untargetable,
+      'the marker is the thing under test only while it takes no pointer',
+    ).toBe(true)
+    expect(
+      seen.disabled,
+      'a disabled marker is excluded for a different reason, which would not test this',
+    ).toBe(false)
     expect(
       Math.min(seen.marker.w, seen.marker.h),
       'a marker under 2x2 is dropped by `paintedRect` before the exclusion is reached',
