@@ -49,7 +49,7 @@ services:
     user: redis
     # Pinned to the minor, and must match `server/compose.dev.yaml` or the
     # suite runs against an engine the stack does not ship. Bump both together.
-    image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
+    image: redis:8.10-alpine@sha256:bd999b5cfee25fb24b8320a31fddbd69f462df44c8138c66e369582937beebc0
     # **It holds session tokens, and the key is the bearer token.** Read
     # straight off the store: `auth:<token>` against a value repeating that
     # token beside the whole user row. Publishing no port is real containment
