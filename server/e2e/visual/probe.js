@@ -149,9 +149,25 @@ export function probe([rootSel, excludeSel]) {
         .slice(0, 48);
 
     // 1. The page scrolls sideways. Never intended here.
-    if (!rootSel && doc.scrollWidth > vw + 1)
-        out.push({kind: 'h-scroll', what: 'document',
-                  detail: `page scrolls horizontally by ${doc.scrollWidth - vw}px`});
+    //
+    // **Named with what reaches furthest past the edge**, because the document
+    // is never the thing to change: a finding that says only how many pixels
+    // sends its reader to measure the screen by hand. The deepest element is
+    // taken rather than the widest, since every ancestor of the offender is
+    // over the edge too and only the innermost is the one to fix.
+    if (!rootSel && doc.scrollWidth > vw + 1) {
+        let worst = null, edge = vw + 1;
+        for (const el of root.querySelectorAll('*')) {
+            if (portal(el) || !visible(el)) continue;
+            const r = el.getBoundingClientRect();
+            if (r.width <= 0 || r.right < edge) continue;
+            edge = r.right; worst = el;
+        }
+        out.push({kind: 'h-scroll',
+                  what: worst ? name(worst) : 'document',
+                  detail: `page scrolls horizontally by ${doc.scrollWidth - vw}px`
+                        + (worst ? `, and ${name(worst)} reaches ${Math.round(edge - vw)}px past the edge` : '')});
+    }
 
     // 2. Text cut off with no ellipsis -- a word ends mid-glyph and
     //    nothing on screen says there was more.
