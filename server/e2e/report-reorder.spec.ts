@@ -88,6 +88,13 @@ test('a section moves down one place, and the order is written', async ({ browse
       .locator('[data-testid="rail"] [data-testid^="rail-report-"]:not([data-testid="rail-report-index"]):not([data-testid="rail-report-new"])')
       .filter({ hasNotText: /SENT/i })
     await drafts.first().click()
+    // **The screen, before the geometry.** `settle` reads what is rendered, and
+    // a navigating click leaves the old screen rendered and still -- so it
+    // certifies the screen just left. -> #1053
+    await expect(
+      page.locator('[aria-label="Report sections"]'),
+      'the click did not open the report',
+    ).toBeVisible({ timeout: 15_000 })
     await settle(page)
 
     /**
