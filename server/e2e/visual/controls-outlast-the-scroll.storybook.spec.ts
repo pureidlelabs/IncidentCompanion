@@ -30,24 +30,22 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
 
 /** Screens whose section holds a table long enough to scroll. */
-const STORIES = ['screens-collect-all-entities--in-the-shell', 'screens-case-timeline--in-the-shell']
-
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
+const STORIES = [
+  'screens-collect-all-entities--in-the-shell',
+  'screens-case-timeline--in-the-shell',
+]
 
 async function openStory(page: Page, id: string): Promise<void> {
-  await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, { waitUntil: 'load', timeout: 20_000 })
+  await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
+    waitUntil: 'load',
+    timeout: 20_000,
+  })
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
   expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
   await page.locator('[data-part="section-body"]').first().waitFor({ timeout: 30_000 })
@@ -100,7 +98,7 @@ test.describe('a table keeps its controls while the rows move', () => {
   test.use({ viewport: { width: 1400, height: 900 } })
 
   test.beforeAll(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook answering at ${SB}`)
+    await requireStorybook()
   })
 
   for (const id of STORIES) {

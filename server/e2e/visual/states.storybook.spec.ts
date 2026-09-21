@@ -16,6 +16,7 @@
  */
 import { expect, test, type ElementHandle, type Page } from '@playwright/test'
 
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -62,7 +63,11 @@ const PROBES: Probe[] = [
     target: '[role="row"]:not([aria-selected="true"])',
     pressed: true,
   },
-  { story: 'components-tabs--default', target: '[role="tab"]:not([aria-selected="true"])', pressed: false },
+  {
+    story: 'components-tabs--default',
+    target: '[role="tab"]:not([aria-selected="true"])',
+    pressed: false,
+  },
   { story: 'components-link--default', target: 'a', pressed: false },
   { story: 'components-select--default', target: 'button', pressed: false },
   {
@@ -90,10 +95,7 @@ const PAINT = [
  * between two states and equals neither, which reads as a state that never
  * arrived.
  */
-async function paint(
-  page: Page,
-  target: ElementHandle<Element>,
-): Promise<Record<string, string>> {
+async function paint(page: Page, target: ElementHandle<Element>): Promise<Record<string, string>> {
   const read = () =>
     target.evaluate((el, props) => {
       const style = getComputedStyle(el)
@@ -123,18 +125,9 @@ async function open(page: Page, story: string): Promise<void> {
   await page.mouse.click(2, 2)
 }
 
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
-
 test.describe('a control paints its states', () => {
   test.beforeAll(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB}`)
+    await requireStorybook()
   })
 
   for (const probe of PROBES) {
@@ -181,7 +174,9 @@ test.describe('a control paints its states', () => {
         const rest = await paint(page, target)
         await target.hover({ force: true })
         const hovered = await paint(page, target)
-        expect(differs(rest, hovered), `a disabled ${twin.target} lit under the pointer`).toBe(false)
+        expect(differs(rest, hovered), `a disabled ${twin.target} lit under the pointer`).toBe(
+          false,
+        )
       })
     }
   }

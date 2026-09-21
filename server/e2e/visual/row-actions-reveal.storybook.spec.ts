@@ -28,6 +28,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -42,16 +43,6 @@ const TABLE_STORY = 'blocks-table-data-table--reveal-on-hover'
 const MENU_ONLY_STORY = 'blocks-table-data-table--menu-only-row'
 /** The gallery timeline, whose rows are `<li>` rather than a React Aria row. */
 const TIMELINE_STORY = 'screens-case-timeline--populated'
-
-/** Whether a Storybook is listening, asked once. */
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
@@ -75,7 +66,7 @@ async function opacityOf(page: Page, at: number): Promise<number> {
 
 test.describe('a row hands over its actions', () => {
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   test('the table row reveals its cluster to a pointer and hides it again', async ({ page }) => {
@@ -118,7 +109,10 @@ test.describe('a row hands over its actions', () => {
     // keyboard and `:focus-visible` applies to what is focused next. A
     // pointer-driven focus deliberately does not reveal anything.
     await page.keyboard.press('Tab')
-    await page.getByRole('button', { name: /^Edit / }).first().focus()
+    await page
+      .getByRole('button', { name: /^Edit / })
+      .first()
+      .focus()
 
     await expect.poll(async () => opacityOf(page, 0)).toBe(1)
   })
@@ -160,7 +154,10 @@ test.describe('a row hands over its actions', () => {
     await row.waitFor({ state: 'visible' })
 
     await row.hover()
-    await page.getByRole('button', { name: /^More for / }).first().click()
+    await page
+      .getByRole('button', { name: /^More for / })
+      .first()
+      .click()
     const fromOverflow = await page.getByRole('menuitem').allInnerTexts()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('menuitem').first()).toBeHidden()
@@ -191,7 +188,10 @@ test.describe('a row hands over its actions', () => {
     await row.waitFor({ state: 'visible' })
 
     await row.hover()
-    await page.getByRole('button', { name: /^More for / }).first().click()
+    await page
+      .getByRole('button', { name: /^More for / })
+      .first()
+      .click()
     const fromOverflow = await page.getByRole('menuitem').allInnerTexts()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('menuitem').first()).toBeHidden()
@@ -240,9 +240,7 @@ test.describe('a row hands over its actions', () => {
    * arriving from a bracketed CSS escape hatch would pass the opacity check
    * while asserting a row is hoverable that React Aria believes is not.
    */
-  test('a row whose only offer is its menu reveals its cluster to a pointer', async ({
-    page,
-  }) => {
+  test('a row whose only offer is its menu reveals its cluster to a pointer', async ({ page }) => {
     await openStory(page, MENU_ONLY_STORY)
     const row = page.locator('[data-row-id]').first()
     await row.waitFor({ state: 'visible' })
@@ -303,7 +301,10 @@ test.describe('a row hands over its actions', () => {
     await row.waitFor({ state: 'visible' })
 
     await row.hover()
-    await page.getByRole('button', { name: /^More for / }).first().click()
+    await page
+      .getByRole('button', { name: /^More for / })
+      .first()
+      .click()
 
     await expect(page.getByRole('menu')).toHaveCount(1)
     await expect(page.getByRole('menu')).toBeVisible()
@@ -323,7 +324,10 @@ test.describe('a row hands over its actions', () => {
     await row.waitFor({ state: 'visible' })
 
     await row.hover()
-    await page.getByRole('button', { name: /^More for / }).first().click()
+    await page
+      .getByRole('button', { name: /^More for / })
+      .first()
+      .click()
     const fromOverflow = await page.getByRole('menuitem').allInnerTexts()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('menuitem').first()).toBeHidden()

@@ -22,6 +22,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -38,15 +39,6 @@ const STORIES = [
 
 /** How far into the tab order to walk. Past this the stories repeat rows. */
 const CONTROLS = 14
-
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 /** What the tab walk lands on, so it is what has to stop changing for it. */
 const FOCUSABLE = 'a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])'
@@ -182,7 +174,7 @@ test.describe('a scrolling section leaves room for a ring', () => {
   test.use({ viewport: { width: 1400, height: 900 } })
 
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   for (const story of STORIES) {
@@ -199,7 +191,10 @@ test.describe('a scrolling section leaves room for a ring', () => {
       expect(
         clipped,
         clipped
-          .map((c) => `${c.name}: ${String(c.reach)}px ring cut ${String(c.cut)}px on the ${c.edge} by ${c.by}`)
+          .map(
+            (c) =>
+              `${c.name}: ${String(c.reach)}px ring cut ${String(c.cut)}px on the ${c.edge} by ${c.by}`,
+          )
           .join('; '),
       ).toEqual([])
     })
@@ -276,7 +271,10 @@ test.describe('a scrolling section leaves room for a ring', () => {
             port: port.dataset.part ?? port.tagName,
             gap: Number(gap.toFixed(1)),
             behind: document
-              .elementsFromPoint(box.left + port.clientWidth / 2, box.top + port.clientTop + gap / 2)
+              .elementsFromPoint(
+                box.left + port.clientWidth / 2,
+                box.top + port.clientTop + gap / 2,
+              )
               .map((n) => (n instanceof HTMLElement ? (n.dataset.part ?? n.tagName) : n.tagName))
               .slice(0, 3),
           })
@@ -326,6 +324,9 @@ test.describe('a scrolling section leaves room for a ring', () => {
       return worst
     })
 
-    expect(cut, 'the current-step ring is cut by the box that scrolls the wizard').toBeLessThanOrEqual(0)
+    expect(
+      cut,
+      'the current-step ring is cut by the box that scrolls the wizard',
+    ).toBeLessThanOrEqual(0)
   })
 })

@@ -16,22 +16,13 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
 
 /** A report open in the workspace, which is where the paper column is drawn. */
 const STORY = 'screens-report-section--opened-on-a-report'
-
-/** Whether a Storybook is listening, asked once. */
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
@@ -52,7 +43,7 @@ test.describe('a document uses the room its pane gives it', () => {
   test.use({ viewport: { width: 1400, height: 900 } })
 
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   test('ends where the pane ends, rather than short of it', async ({ page }) => {
@@ -61,7 +52,10 @@ test.describe('a document uses the room its pane gives it', () => {
     // Paper is not the default view, so the switch is pressed rather than
     // assumed: a run that measured the composing view would find no document
     // at all and pass by measuring nothing.
-    await page.getByRole('radio', { name: /page|paper|document/i }).first().click()
+    await page
+      .getByRole('radio', { name: /page|paper|document/i })
+      .first()
+      .click()
 
     const measured = await page.evaluate(() => {
       const paper = [...document.querySelectorAll('div')].find((el) =>

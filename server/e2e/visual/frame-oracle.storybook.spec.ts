@@ -166,7 +166,10 @@ test('names a planted pair of identically-rendering stories', async ({ browser }
   const probe = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) }).catch(
     () => null,
   )
-  test.skip(probe === null || !probe.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`)
+  test.skip(
+    probe === null || !probe.ok,
+    `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`,
+  )
 
   mkdirSync(path.dirname(DUPLICATE_PLANT_PATH), { recursive: true })
   writeFileSync(DUPLICATE_PLANT_PATH, DUPLICATE_PLANT_SOURCE)
@@ -210,7 +213,10 @@ test('names a planted pair of identically-rendering stories', async ({ browser }
     const clusters = duplicateClusters(frames)
     expect(clusters, 'the planted pair renders identical pixels and must be named').toHaveLength(1)
     expect(clusters[0]?.stories.sort()).toEqual(
-      ['Selftest/Frame Oracle Plant / Planted One', 'Selftest/Frame Oracle Plant / Planted Two'].sort(),
+      [
+        'Selftest/Frame Oracle Plant / Planted One',
+        'Selftest/Frame Oracle Plant / Planted Two',
+      ].sort(),
     )
   } finally {
     rmSync(DUPLICATE_PLANT_PATH, { force: true })
@@ -223,7 +229,10 @@ test('does not pair a story with its sibling once play has run', async ({ browse
   const probe = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) }).catch(
     () => null,
   )
-  test.skip(probe === null || !probe.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`)
+  test.skip(
+    probe === null || !probe.ok,
+    `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`,
+  )
 
   mkdirSync(path.dirname(PLAY_PLANT_PATH), { recursive: true })
   writeFileSync(PLAY_PLANT_PATH, PLAY_PLANT_SOURCE)
@@ -279,7 +288,10 @@ test('reports a play function whose assertion did not hold', async ({ browser })
   const probe = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) }).catch(
     () => null,
   )
-  test.skip(probe === null || !probe.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`)
+  test.skip(
+    probe === null || !probe.ok,
+    `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`,
+  )
 
   mkdirSync(path.dirname(THREW_PLANT_PATH), { recursive: true })
   writeFileSync(THREW_PLANT_PATH, THREW_PLANT_SOURCE)

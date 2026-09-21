@@ -27,6 +27,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -59,15 +60,6 @@ interface Drawn {
   textWidth: number
   room: number
   ellipsis: string
-}
-
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
 }
 
 async function openStory(page: Page, id: string): Promise<void> {
@@ -126,7 +118,7 @@ test.describe('a view clips its own text', () => {
   test.use({ viewport: { width: 900, height: 900 } })
 
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   for (const { story, column, floor } of COLUMNS) {
@@ -163,7 +155,7 @@ test.describe('a view clips its own text', () => {
     })
   }
 
-    test('the malware hash offers the digest it truncated', async ({ page }) => {
+  test('the malware hash offers the digest it truncated', async ({ page }) => {
     await openStory(page, 'blocks-table-entity-scope-table--scoped&args=scope:malware')
 
     const whole = await page.evaluate(() => {
@@ -197,7 +189,7 @@ test.describe('a badge is capped by its cell', () => {
   test.use({ viewport: { width: 900, height: 900 } })
 
   test.beforeEach(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
   })
 
   test('the methods kind chip does not cross its column', async ({ page }) => {
@@ -219,18 +211,18 @@ test.describe('a badge is capped by its cell', () => {
 
         const style = getComputedStyle(cell)
         const box = cell.getBoundingClientRect()
-        const room =
-          box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+        const room = box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
         // **Measured on the text leaf, not on the chip.** Once the chip is
         // capped it clips inside itself, so its own `scrollWidth` equals its
         // `clientWidth` and reports that it wanted exactly the room it got.
         const leaf = [...chip.querySelectorAll('span')].find((n) => !n.querySelector('*')) ?? chip
         const chipStyle = getComputedStyle(chip)
-        const padding =
-          parseFloat(chipStyle.paddingLeft) + parseFloat(chipStyle.paddingRight)
+        const padding = parseFloat(chipStyle.paddingLeft) + parseFloat(chipStyle.paddingRight)
         out.push({
           text: chip.textContent.trim().slice(0, 30),
-          past: Math.round(chip.getBoundingClientRect().right - (box.right - parseFloat(style.paddingRight))),
+          past: Math.round(
+            chip.getBoundingClientRect().right - (box.right - parseFloat(style.paddingRight)),
+          ),
           want: Math.round(leaf.scrollWidth + padding),
           room: Math.round(room),
         })
@@ -248,7 +240,10 @@ test.describe('a badge is capped by its cell', () => {
     expect(
       chips
         .filter((c) => c.past > 1)
-        .map((c) => `"${c.text}" ends ${String(c.past)}px past its cell, wanting ${String(c.want)}px of ${String(c.room)}px`),
+        .map(
+          (c) =>
+            `"${c.text}" ends ${String(c.past)}px past its cell, wanting ${String(c.want)}px of ${String(c.room)}px`,
+        ),
       'a badge left the cell holding it and runs into the column beside it',
     ).toEqual([])
   })
