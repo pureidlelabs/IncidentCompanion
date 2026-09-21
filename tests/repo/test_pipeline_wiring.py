@@ -512,8 +512,14 @@ def test_a_shard_matrix_and_its_denominator_agree() -> None:
         run = " ".join(
             str(step.get("run", "")) for step in job.get("steps") or [] if "run" in step
         )
-        for total in set(re.findall(r'--shard="\$SHARD/(\$?\w+)"', run)):
-            for sized, counted in shard_pairs(job, shards, total):
+        totals = set(re.findall(r'--shard="\$SHARD/(\$?\w+)"', run))
+        if not totals:
+            wrong.append(f"{name}: a shard matrix and no --shard flag reading it")
+        for total in totals:
+            pairs = shard_pairs(job, shards, total)
+            if not pairs:
+                wrong.append(f"{name}: --shard/{total} against a matrix neither side could be read from")
+            for sized, counted in pairs:
                 if sized != counted:
                     wrong.append(f"{name}: matrix of {counted} running --shard/{sized}")
     assert not wrong, (

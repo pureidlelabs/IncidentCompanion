@@ -281,9 +281,8 @@ async function whyThePreviewScriptFailed(page: Page): Promise<string> {
  * document, so there is nothing to read before then.
  */
 export async function brokenPreview(page: Page): Promise<string | null> {
-  // **Neither read may fail the story.** Both run before every render, and
-  // each looks for a message that replaces what it is read from -- so a read
-  // too slow to finish is the answer rather than a fault. -> #1058
+  // **Neither read may fail the story.** A root too big to read in the budget
+  // has rendered, and a read that cannot answer is not evidence. -> #1058
   const read = async (selector: string): Promise<string | null> =>
     page
       .locator(selector)

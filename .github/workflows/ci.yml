@@ -615,8 +615,9 @@ jobs:
   # **A shard per chunk**, because `workers: 1` is a statement about one
   # machine and a runner is a machine each.
   #
-  # **A pull request walks light, the nightly walks both grounds.** The probe
-  # reads geometry, which a ground cannot move. -> #1057
+  # **A pull request walks light, the nightly walks both.** Most kinds are
+  # geometry, but `low-contrast` and `paints-past-the-corner` read colour -- so
+  # a dark-only regression in those reaches the nightly and not the branch.
   gallery:
     if: >-
       !failure() && !cancelled() &&
@@ -654,7 +655,6 @@ jobs:
         env:
           SHARD: ${{ matrix.shard }}
           SHARDS: ${{ inputs.all && 40 || 20 }}
-          # One test per shard, so a shard's budget covers one chunk.
           STORYBOOK_CHUNKS: '10'
           VISUAL_GROUNDS: ${{ inputs.all && 'light,dark' || 'light' }}
           IC_SUITE_MUST_RUN: '1'
