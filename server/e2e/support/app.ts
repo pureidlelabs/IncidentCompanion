@@ -857,8 +857,20 @@ export async function closeDialog(page: Page): Promise<'closed' | 'needed-button
   // poll interval, and anything shorter calls an absent overlay present.
   if ((await page.locator(OVERLAY).count()) === 0) return 'closed'
 
-  await page.keyboard.press('Escape')
-  if (await gone(EXIT)) return 'closed'
+  /**
+   * **One press per layer, while the press is still achieving something.** A
+   * calendar opened inside a create dialog is two overlays, and Escape closes
+   * the innermost -- so a single press leaves one behind and reads as stuck.
+   * The loop stops the moment a press stops reducing the count, which is the
+   * state the caller is entitled to hear about. -> #1054
+   */
+  for (let open = await page.locator(OVERLAY).count(); open > 0; ) {
+    await page.keyboard.press('Escape')
+    if (await gone(EXIT)) return 'closed'
+    const left = await page.locator(OVERLAY).count()
+    if (left >= open) break
+    open = left
+  }
 
   const close = page
     .locator(DIALOG)
