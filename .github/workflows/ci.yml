@@ -192,16 +192,10 @@ jobs:
             echo "manifests=$(match '^(package(-lock)?\.json|[^/]+/package\.json|packages/[^/]+/package\.json)$')"
           } >> "$GITHUB_OUTPUT"
 
-      # **One clear failure instead of eight opaque ones.** `npm ci` refuses a
-      # manifest and lock file that disagree, and every job installs -- so the
-      # whole matrix went red fifteen seconds in, each job saying only that its
-      # install failed. Every one of them `needs: scope` and carries
-      # `!failure()`, so refusing here skips them rather than repeating this.
-      #
-      # **npm's own check rather than a second implementation of it.** The same
-      # property is asserted in `tests/contract/test_workspaces.py`, but that
-      # tier installs before it runs pytest, so the clearer message never
-      # arrives. -> #444, #449
+      # **One clear failure instead of eight opaque ones.** Every job installs,
+      # so a manifest and lock file that disagree fail all of them saying only
+      # that. Refusing here skips them: each `needs: scope` and carries
+      # `!failure()`. -> #444
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         if: steps.scope.outputs.manifests == 'true'
         with:
@@ -273,9 +267,8 @@ jobs:
               # expressions and the shell inside `run:` both being opaque to it.
               # `renovate` because a malformed rule matches nothing, and
               # Renovate reports a clean run for having skipped it.
-              # `bytes` over the whole tree rather than the diff: the five stray
-              # bytes it first caught had been on `main` since the import, under
-              # paths no tier reached.
+              # `bytes` over the whole tree rather than the diff: a stray byte
+              # sits under paths no tier reaches.
               if [ "$WANT_ACTIONS" = true ]; then
                 actionlint --version
                 npm run --silent lint:actions
@@ -352,11 +345,9 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install -q -r requirements-dev.txt
           # **Two `tests/docker` modules that read files rather than run
-          # containers.** Both compare a container file against a package
+          # containers.** Both hold a container file against a package
           # manifest, and the `containers` scope fires on the container file
-          # alone -- so a bump to `engines.node` never reached the check that
-          # holds it against the image's `FROM`. 54 tests, six seconds, no
-          # daemon. -> #460
+          # alone. -> #460
           .venv/bin/python -m pytest tests/docs tests/repo tests/contract .claude/tests \
             tests/docker/test_container_config.py tests/docker/test_stack_images.py \
             -q -n auto --dist loadfile
@@ -367,10 +358,8 @@ jobs:
   # shards is that defect at a larger scale.
   #
   # **`needs: scope` alone, and this is the longest tier, so it starts first.**
-  # `build` uploads no artifact and this downloads none; they run on separate
-  # runners, so naming it would be a gate rather than a dependency. What holds
-  # in its place is the draft, which lints and typechecks the branch before it
-  # can be offered -- take that away and the gate has to come back.
+  # Naming `build` would gate rather than depend: separate runners, no artifact
+  # between them. -> `test_the_expensive_tier_is_not_held_behind_the_cheap_one`
   server-suite:
     needs: scope
     if: >-
@@ -395,8 +384,7 @@ jobs:
     # holds these two numbers to the script rather than to a memory of it.
     #
     # The credentials are `compose.dev.yaml`'s, because `adminDatabaseUrl`
-    # assumes them. Writing a second set here is what put five connection
-    # strings in this file that nothing held against the script.
+    # assumes them.
     services:
       postgres:
         image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
@@ -624,17 +612,19 @@ jobs:
 
   # ------------------------------------------------- every story in a browser
   #
-  # **A shard per chunk.** The sweep is two grounds by two widths over 1411
-  # stories, split five ways by `STORYBOOK_CHUNKS`, so twenty tests go to
-  # twenty runners. The config holds `workers: 1` because a second
-  # browser competing for a machine skews the geometry it is there to measure;
-  # that is a statement about one machine, and a shard per runner is a machine
-  # each.
+  # **A shard per chunk**, because `workers: 1` is a statement about one
+  # machine and a runner is a machine each.
   #
-  # Nightly only, and for the same reason as `browser` above: the merge queue
-  # ejects on red and this is the slowest tier there is. -> #1040
+  # **A pull request walks light, the nightly walks both.** Most kinds are
+  # geometry, but `low-contrast` and `paints-past-the-corner` read colour -- so
+  # a dark-only regression in those reaches the nightly and not the branch.
   gallery:
-    if: '!failure() && !cancelled() && inputs.all'
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
+      (inputs.all || needs.scope.outputs.screen == 'true')
+    needs: scope
     runs-on: ubuntu-24.04
     # Above the budgets declared inside it -- 5 minutes for the launcher, 4 for
     # the warm and 10 per test -- plus the checkout and install ahead of them.
@@ -644,7 +634,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+        shard: ${{ fromJSON(inputs.all && '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]' || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
@@ -664,11 +654,14 @@ jobs:
       - name: Every story in a browser
         env:
           SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ inputs.all && 40 || 20 }}
+          STORYBOOK_CHUNKS: '10'
+          VISUAL_GROUNDS: ${{ inputs.all && 'light,dark' || 'light' }}
           IC_SUITE_MUST_RUN: '1'
         run: |
           cd server && npx playwright test \
             --config=e2e/visual/playwright.storybook.config.ts \
-            --shard="$SHARD/20"
+            --shard="$SHARD/$SHARDS"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
@@ -693,19 +686,13 @@ jobs:
           docker run --rm ic-devcontainer bash /usr/local/bin/ic-smoke.sh
 
   # ------------------------------------------------------------- the containers
-  # **`tests/docker` ran locally and in no job here.** `test.sh` runs `pytest
-  # tests` unqualified so it reached the local sweep; `ci.yml` names four
-  # directories and this was not one, which is how four failures sat at head
-  # unseen. `verify.sh --detailed` is the local half of the same tier.
-  #
   # In the merge group with the other expensive tiers: it builds images and
   # resolves the compose stack, which is the tree that ships rather than the
-  # branch's own question.
+  # branch's own question. `verify.sh --detailed` is the local half.
   #
   # **`INCIDENTCOMPANION_CONTAINER_TESTS` is what makes the tier run the thing
   # it is named for.** Without it the runtime tests skip and the job reports
-  # green in five seconds, which is how the built output stayed unexecuted after
-  # the tier itself was added.
+  # green in five seconds.
   #
   # **`docker/secrets.sh` first, or none of them get as far as a build.** Every
   # credential is `${NAME:?...}` rather than defaulted, so compose refuses to

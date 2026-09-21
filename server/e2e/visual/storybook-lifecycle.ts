@@ -281,9 +281,17 @@ async function whyThePreviewScriptFailed(page: Page): Promise<string> {
  * document, so there is nothing to read before then.
  */
 export async function brokenPreview(page: Page): Promise<string | null> {
-  const said = await page.locator('#error-message').textContent({ timeout: 1_000 })
+  // **Neither read may fail the story.** A root too big to read in the budget
+  // has rendered, and a read that cannot answer is not evidence. -> #1058
+  const read = async (selector: string): Promise<string | null> =>
+    page
+      .locator(selector)
+      .textContent({ timeout: 1_000 })
+      .catch(() => null)
+
+  const said = await read('#error-message')
   if (said !== null && said.trim() !== '') return said.trim().split('\n')[0] ?? ''
-  const root = await page.locator('#storybook-root').textContent({ timeout: 1_000 })
+  const root = await read('#storybook-root')
   if (root === null || !root.includes(PREVIEW_SCRIPT_FAILED)) return null
   return `${PREVIEW_SCRIPT_FAILED}: ${await whyThePreviewScriptFailed(page)}`
 }
