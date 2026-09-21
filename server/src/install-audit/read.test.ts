@@ -389,10 +389,20 @@ describe.skipIf(!db)('reading the audit', () => {
       await recordInstallActivity(db!, { event: 'sign_in_failed', target })
     }
 
+    // **A line above High, so the two cannot agree by accident.** An exact
+    // tally and a floor answer the same number whenever nothing louder is on
+    // the page, which is what made this pass in declaration order.
+    await recordInstallActivity(db!, {
+      event: 'audit_retention_changed',
+      target: `${ownTarget('tally-louder')}@example.test`,
+      detail: { from: '365', to: '7' },
+    })
+
     const all = await reads.page({ limit: 200 }, session, {})
     const high = await reads.page({ minSeverity: SEVERITY_ID.High, limit: 200 }, session, {})
 
     expect(all.severities['High'] ?? 0).toBeGreaterThan(0)
+    expect(all.severities['Critical'] ?? 0, 'the louder line landed').toBeGreaterThan(0)
     expect(
       high.events.length,
       'the High chip must count what pressing High returns',
