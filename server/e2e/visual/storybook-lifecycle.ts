@@ -188,15 +188,6 @@ export async function applyStoryViewport(
 const PREVIEW_SCRIPT_FAILED = "Failed to load the Storybook preview file 'vite-app.js'"
 
 /**
- * What the preview script answers when asked again, from the page that failed to load it.
- *
- * **Storybook's error page carries no diagnosis**, so the reason is asked for
- * rather than read off it. -> the `visual-check` skill.
- *
- * An `ok` is the narrowest answer, not a reason to retry: it says the *entry
- * script* is serveable, which a module it imports need not be.
- */
-/**
  * Asks again when a navigation destroys the context the question was asked in.
  *
  * The questions here hold an evaluate open for seconds by design, and
@@ -216,15 +207,24 @@ export async function askDespiteNavigation<T>(
       const lost =
         thrown instanceof Error && thrown.message.includes('Execution context was destroyed')
       if (!lost || attempt >= 2) throw thrown
-      // **Bounded, like the question it recovers.** `navigationTimeout`
-      // resolves to 0 here, which installs no rejection at all -- so an
-      // unbounded wait holds for the enclosing test, which is the 45 minutes
-      // the bound inside the question exists to refuse.
+      // **Bounded, like the question it recovers.** The context's navigation
+      // timeout resolves to 0 here, which installs no rejection at all -- so
+      // an unbounded wait holds for the enclosing test, which is the 45
+      // minutes the bound inside the question exists to refuse.
       await page.waitForLoadState('domcontentloaded', { timeout: 5_000 }).catch(() => undefined)
     }
   }
 }
 
+/**
+ * What the preview script answers when asked again, from the page that failed to load it.
+ *
+ * **Storybook's error page carries no diagnosis**, so the reason is asked for
+ * rather than read off it. -> the `visual-check` skill.
+ *
+ * An `ok` is the narrowest answer, not a reason to retry: it says the *entry
+ * script* is serveable, which a module it imports need not be.
+ */
 async function whyThePreviewScriptFailed(page: Page): Promise<string> {
   return askDespiteNavigation(page, async (attempt) => {
     const said = await page.evaluate(async () => {
