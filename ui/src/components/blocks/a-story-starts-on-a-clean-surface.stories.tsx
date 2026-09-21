@@ -57,6 +57,9 @@ export const StartsClean: Story = {
  * can assert. This is what notices it moving. -> #527
  */
 export const IsDrawnAtTheTiersWidth: Story = {
+  // The claim is about the story tier's own tester, so the visual walk -- which
+  // drives its own widths -- has nothing to learn here. -> #1052
+  tags: ['story-tier-only'],
   render: () => <p>reads the viewport</p>,
   play: async () => {
     await expect(

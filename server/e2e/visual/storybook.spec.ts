@@ -106,8 +106,34 @@ interface Entry {
   title: string
   name: string
   type: string
+  tags?: string[]
   componentPath?: string
 }
+
+/**
+ * The tag a story carries when its `play` asserts something only the story
+ * tier can be true of.
+ *
+ * `@storybook/addon-vitest` resizes its tester to a fixed viewport, and a story
+ * guarding that constant is asserting about the tier rather than about itself.
+ * This walk drives its own widths, so such a story throws on every probe and
+ * the line is noise in a log whose whole point is that nothing in it is. The
+ * story says which tier owns it, because the story is what knows. -> #1052
+ */
+const STORY_TIER_ONLY = 'story-tier-only'
+
+/** The stories this walk is entitled to probe. */
+export function walkable(entries: Entry[]): Entry[] {
+  return entries.filter((one) => !(one.tags ?? []).includes(STORY_TIER_ONLY))
+}
+
+test('a story that belongs to the story tier is not walked here', () => {
+  const entries = [
+    { id: 'a', title: 'T', name: 'kept', type: 'story' },
+    { id: 'b', title: 'T', name: 'skipped', type: 'story', tags: ['dev', STORY_TIER_ONLY] },
+  ]
+  expect(walkable(entries).map((one) => one.name)).toEqual(['kept'])
+})
 
 /** The story index, or null when no Storybook is listening. */
 async function storyIndex(): Promise<Entry[] | null> {
@@ -297,7 +323,7 @@ for (const ground of GROUNDS) {
         // A null index is the no-Storybook case, so the same helper answers it:
         // a skip while exploring, a refusal on a run that claims to certify.
         if (all === null) await requireStorybook()
-        const matched = (all ?? [])
+        const matched = walkable(all ?? [])
           .filter(
             (one) => ONLY === undefined || ONLY.some((prefix) => one.title.startsWith(prefix)),
           )
