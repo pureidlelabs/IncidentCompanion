@@ -424,9 +424,7 @@ export class LiveGateway implements OnApplicationShutdown {
     live.on('close', close)
     live.on('error', close)
 
-    await joined
-
-    live.on('message', (raw: Buffer) => {
+    const onFrame = (raw: Buffer) => {
       let message: { type?: unknown; table?: unknown; id?: unknown; field?: unknown; update?: unknown }
       try {
         message = JSON.parse(raw.toString()) as typeof message
@@ -460,8 +458,24 @@ export class LiveGateway implements OnApplicationShutdown {
 
       if (message.type === 'claim') this.channel.claim(member, table, id).catch(failed)
       if (message.type === 'release') this.channel.release(member, table, id).catch(failed)
+    }
+
+    /**
+     * **Attached before the join is awaited, and every frame handled after
+     * it.** The 101 is written before this method runs, so the browser writes
+     * into an open socket while the join is still in flight -- and a `ws`
+     * socket whose listener is attached after the await drops what arrived
+     * rather than queueing it. Chaining each frame onto `joined` keeps the
+     * ordering that await gave: nothing acts on a member the roster has not
+     * been told about. -> #515
+     */
+    live.on('message', (raw: Buffer) => {
+      // Settled rather than fulfilled: a join that rejected is a connection
+      // `close` is already tearing down, and its frames go nowhere.
+      joined.then(() => { onFrame(raw) }).catch(() => undefined)
     })
 
+    await joined
   }
 
   /**
