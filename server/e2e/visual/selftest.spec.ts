@@ -61,6 +61,17 @@ test.describe('the geometry probes', () => {
       ]),
     )
 
+    /**
+     * **A name is a tag and its classes joined by dots**, so whitespace in one
+     * means the class list was never split and the 48-character cut fell
+     * mid-token. That is invisible in a passing run: the finding still names
+     * an element, just not one a reader can search for. -> #1071
+     */
+    expect(
+      [...new Set(results.flatMap((one) => one.named))].filter((one) => /\s/.test(one)),
+      'a finding named its element with the raw class list rather than the first classes',
+    ).toEqual([])
+
     const dead = results.filter((one) => !one.quiet && !one.fired)
     expect(
       dead.map((one) => `${one.kind}: ${one.why}${one.error ? ` -- ${one.error}` : ''}`),
