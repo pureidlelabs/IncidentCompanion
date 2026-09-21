@@ -34,6 +34,21 @@ function candidateId(incident: string, identity: string): string {
 const stated = (value: unknown): boolean => value !== undefined && value !== null && value !== ''
 
 /**
+ * What an imported timeline entry is recognised by, or `null` when it has none.
+ *
+ * Takes a stored row and a mapped candidate alike: `time` arrives as a `Date`
+ * from the store and as text from the mapping.
+ */
+function entryNaming(row: Record<string, unknown>): string | null {
+  const when = row['time']
+  const at = when instanceof Date ? when.getTime() : Date.parse(typeof when === 'string' ? when : '')
+  const description = typeof row['description'] === 'string' ? row['description'].trim() : ''
+  if (Number.isNaN(at) || description === '') return null
+  const tool = typeof row['sourceTool'] === 'string' ? row['sourceTool'].trim() : ''
+  return [tool, description, String(at)].join(SEPARATOR)
+}
+
+/**
  * Fill a candidate's blanks from another incident's naming of the same thing.
  *
  * **Blanks only, so the row does not depend on which incident came first.** A
@@ -159,9 +174,10 @@ export class ImportService {
     const seen = new Map<string, Candidate>()
     /** An identity to the candidate already proposing it, from any incident. */
     const planned = new Map<string, string>()
-    const existing = caseId
-      ? await this.existingByIdentity(caseId, defs, on)
-      : new Map<string, string>()
+    const [existing, onTimeline] = await Promise.all([
+      caseId ? this.existingByIdentity(caseId, defs, on) : Promise.resolve(new Map<string, string>()),
+      caseId ? this.importedEntries(caseId, defs, on) : Promise.resolve(new Map<string, string>()),
+    ])
 
     for (const incident of incidents) {
       /** ARM's own entity id to the candidate it became, for the alert links. */
@@ -222,13 +238,16 @@ export class ImportService {
           skipped.unmappable += 1
           continue
         }
+        const naming = entryNaming(row.fields)
+        const held = (naming === null ? undefined : onTimeline.get(naming)) ?? null
         timeline.push({
           id: candidateId(incident.key, row.identity),
           incident: incident.key,
           fields: row.fields,
           label: row.label,
           links: entityRefsOf(alert, byRef, seen),
-          checked: true,
+          existing: held,
+          checked: held === null,
         })
       }
     }
@@ -318,8 +337,13 @@ export class ImportService {
     // its rows name the entity ids the call above minted. Both are inside the
     // same case and the same guards, and whether a failure here leaves the
     // entities written is `on`'s to decide.
-    const rows = plan.timeline
-      .filter((one) => wanted.has(one.id))
+    // Decided here rather than by what was ticked: an entry the case holds is
+    // one the analyst may have approved anyway.
+    const approvedEntries = plan.timeline.filter((one) => wanted.has(one.id))
+    skippedExisting += approvedEntries.filter((one) => one.existing !== null).length
+
+    const rows = approvedEntries
+      .filter((one) => one.existing === null)
       .map((one) => ({
         ...this.edited('timeline', one.fields, editsById.get(one.id)),
         ...this.links(one, resolved),
@@ -464,6 +488,29 @@ export class ImportService {
       malwareIds: many(row.links.malware),
       cloudAppIds: many(row.links.cloudApps),
     }
+  }
+
+  /**
+   * The entries a previous import left in this case, by the naming an arriving
+   * alert answers to. Imported rows only: an entry an analyst typed is their
+   * own record, and never an alert already held.
+   */
+  private async importedEntries(
+    caseId: string,
+    defs: ImportDefinitions,
+    on?: Executor,
+  ): Promise<Map<string, string>> {
+    const index = new Map<string, string>()
+    for (const row of await this.collections.list(defs.timeline, caseId, on)) {
+      if (typeof row !== 'object' || row === null) continue
+      const record: Record<string, unknown> = { ...row }
+      const id = record['id']
+      if (typeof id !== 'string' || record['provenance'] !== 'imported') continue
+      const naming = entryNaming(record)
+      // First wins, which is what `rememberIn` does for the entity half.
+      if (naming !== null && !index.has(naming)) index.set(naming, id)
+    }
+    return index
   }
 
   /**

@@ -343,7 +343,8 @@
 | Nothing is written until an analyst has approved it | A correction the import cannot account for | demonstrated | server/src/incident-import/a-stale-review-is-refused.test.ts |
 | An import is matched against what the case already holds | An imported thing is already in the case | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | The case changed while the import was reviewed | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
-| An import is matched against what the case already holds | An event is imported twice | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
+| An import is matched against what the case already holds | An event is imported twice | demonstrated | server/test/a-preview-is-what-happens.test.ts |
+| An import is matched against what the case already holds | An analyst's own entry resembles one arriving | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An imported row says that it was imported, and that nobody has read it | An imported row is read back | demonstrated | server/test/incident-import.test.ts |
 | An imported row says that it was imported, and that nobody has read it | A platform's data claims to be something else | demonstrated | server/src/incident-import/an-imported-row-says-so.test.ts |
 | An imported row says that it was imported, and that nobody has read it | An analyst reviews an imported row | unbuilt | Not built: `unreviewed` is owned by the server and no route clears it. -> #168 |
