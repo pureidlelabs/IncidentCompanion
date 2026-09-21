@@ -3,15 +3,6 @@ import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 
 import { DemoChrome } from './chrome'
 
-/**
- * What the evaluation build draws around the application.
- *
- * **The first thing a visitor meets, and the only gate in front of the demo.**
- * Nothing else on screen says a case never leaves the browser, so the dialog
- * says it and the visitor confirms it before anything can be typed.
- *
- * The acknowledgement is read at mount, so a story seeds it in a loader.
- */
 const ACKNOWLEDGED = 'incidentcompanion.demo.acknowledged'
 
 const seen = (value: '1' | null) => () => {
@@ -24,6 +15,15 @@ const seen = (value: '1' | null) => () => {
   return {}
 }
 
+/**
+ * What the evaluation build draws around the application.
+ *
+ * **The first thing a visitor meets, and the only gate in front of the demo.**
+ * Nothing else on screen says a case never leaves the browser, so the dialog
+ * says it and the visitor confirms it before anything can be typed.
+ *
+ * The acknowledgement is read at mount, so a story seeds it in a loader.
+ */
 const meta = {
   title: 'Demo/Chrome',
   component: DemoChrome,
@@ -47,7 +47,7 @@ export const FirstVisit: Story = {
     // The dialog is portalled, so the canvas element does not contain it.
     const screen = within(canvasElement.ownerDocument.body)
     await step('it says what the demo does with what you type', async () => {
-      await expect(screen.getByText(/stays in this\s+browser/)).toBeVisible()
+      await expect(screen.getByText(/stays in this browser/)).toBeVisible()
       await expect(screen.getByText(/Nothing is sent anywhere/)).toBeVisible()
     })
     await step('and offers leaving as well as agreeing', async () => {
@@ -67,12 +67,16 @@ export const FirstVisit: Story = {
 export const Acknowledged: Story = {
   name: 'The strip, once the dialog is answered',
   loaders: [seen('1')],
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step }) => {
+    // The dialog is portalled out of the canvas, so only a document-scoped
+    // query can see it, and so only one can report it gone.
+    const screen = within(canvasElement.ownerDocument.body)
+    await step('the dialog is answered, so it is not on screen', async () => {
+      await expect(screen.queryByRole('button', { name: 'Understood' })).toBeNull()
+      await expect(screen.queryByText(/Nothing is sent anywhere/)).toBeNull()
+    })
     await step('it names the build', async () => {
       await expect(canvas.getByText('demo \u00B7 abc1234')).toBeVisible()
-    })
-    await step('and does not repeat what the dialog already said', async () => {
-      await expect(canvas.queryByText(/stays in this browser/)).toBeNull()
     })
     await step('the source offer is there, because the licence asks for it', async () => {
       await expect(canvas.getByRole('link', { name: 'source' })).toBeVisible()
@@ -89,8 +93,7 @@ export const ResetAsksFirst: Story = {
   play: async ({ canvas, canvasElement }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'reset' }))
     const screen = within(canvasElement.ownerDocument.body)
-    // The dialog animates in, so it is present before it is painted and a
-    // single read catches it at zero opacity.
+    // The overlay fades in, so the text is opaque while its ancestor is not.
     await waitFor(async () => {
       await expect(screen.getByText(/discarded/)).toBeVisible()
     })
