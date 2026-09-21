@@ -196,36 +196,60 @@ const PREVIEW_SCRIPT_FAILED = "Failed to load the Storybook preview file 'vite-a
  * An `ok` is the narrowest answer, not a reason to retry: it says the *entry
  * script* is serveable, which a module it imports need not be.
  */
-async function whyThePreviewScriptFailed(page: Page): Promise<string> {
-  return page.evaluate(async () => {
-    // The tag's `src` rather than the virtual path it is written with: Vite
-    // rewrites it, and the rewritten URL is the one that was actually fetched.
-    const tag = document.querySelector<HTMLScriptElement>('script[src*="vite-app"]')
-    if (tag === null) return 'no preview script tag in the document to ask about'
+/**
+ * Asks again when a navigation destroys the context the question was asked in.
+ *
+ * The questions here hold an evaluate open for seconds by design, and
+ * Storybook reloads a preview whose script failed -- so under load the reload
+ * lands inside the window. The question survives it: the script that failed is
+ * still the one that failed, so re-asking answers it. Anything else throws.
+ * -> #1037
+ */
+export async function askDespiteNavigation<T>(page: Page, ask: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt += 1) {
     try {
-      // **Bounded**, because `page.evaluate` has no timeout of its own: a
-      // server that accepts and never answers -- what a restarting Vite leaves
-      // -- would hold this for the enclosing test's 45 minutes.
-      const answer = await fetch(tag.src, {
-        cache: 'no-store',
-        signal: AbortSignal.timeout(5_000),
-      })
-      // **`ok` does not mean transient.** The `error` event fires for a
-      // failure anywhere in the module graph, which leaves the entry script
-      // itself perfectly serveable.
-      return answer.ok
-        ? `the entry script re-fetched ${String(answer.status)}, so the failure is either ` +
-            'in a module it imports or was transient -- read the preview console'
-        : `re-fetched ${String(answer.status)} ${answer.statusText}`
+      return await ask()
     } catch (thrown) {
-      // The budget is named: `signal timed out` is Chromium's wording for our
-      // own ceiling and reads as though the server said it.
-      const why = thrown instanceof Error ? thrown.message : String(thrown)
-      return why.includes('timed out')
-        ? `re-fetch gave up after 5s: ${why} -- the server accepted and answered nothing`
-        : `re-fetch threw ${why}`
+      const lost =
+        thrown instanceof Error && thrown.message.includes('Execution context was destroyed')
+      if (!lost || attempt >= 2) throw thrown
+      await page.waitForLoadState('domcontentloaded').catch(() => undefined)
     }
-  })
+  }
+}
+
+async function whyThePreviewScriptFailed(page: Page): Promise<string> {
+  return askDespiteNavigation(page, async () =>
+    page.evaluate(async () => {
+      // The tag's `src` rather than the virtual path it is written with: Vite
+      // rewrites it, and the rewritten URL is the one that was actually fetched.
+      const tag = document.querySelector<HTMLScriptElement>('script[src*="vite-app"]')
+      if (tag === null) return 'no preview script tag in the document to ask about'
+      try {
+        // **Bounded**, because `page.evaluate` has no timeout of its own: a
+        // server that accepts and never answers -- what a restarting Vite leaves
+        // -- would hold this for the enclosing test's 45 minutes.
+        const answer = await fetch(tag.src, {
+          cache: 'no-store',
+          signal: AbortSignal.timeout(5_000),
+        })
+        // **`ok` does not mean transient.** The `error` event fires for a
+        // failure anywhere in the module graph, which leaves the entry script
+        // itself perfectly serveable.
+        return answer.ok
+          ? `the entry script re-fetched ${String(answer.status)}, so the failure is either ` +
+              'in a module it imports or was transient -- read the preview console'
+          : `re-fetched ${String(answer.status)} ${answer.statusText}`
+      } catch (thrown) {
+        // The budget is named: `signal timed out` is Chromium's wording for our
+        // own ceiling and reads as though the server said it.
+        const why = thrown instanceof Error ? thrown.message : String(thrown)
+        return why.includes('timed out')
+          ? `re-fetch gave up after 5s: ${why} -- the server accepted and answered nothing`
+          : `re-fetch threw ${why}`
+      }
+    }),
+  )
 }
 
 /**
