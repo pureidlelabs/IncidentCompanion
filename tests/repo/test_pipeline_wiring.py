@@ -412,7 +412,7 @@ EXPENSIVE_TIER = (
 #: Gated on `inputs.all` alone, so neither event this workflow triggers on
 #: starts them. The draft rule below cannot apply: there is no draft to be
 #: held back from.
-NIGHTLY_TIER = ("browser",)
+NIGHTLY_TIER = ("browser", "gallery")
 
 
 def ci_jobs() -> dict:
@@ -472,6 +472,31 @@ def test_a_draft_runs_the_cheap_tier_and_nothing_else() -> None:
             f"{name} names the draft, which says it expects a pull request -- "
             "a nightly tier reaches neither event"
         )
+
+
+def test_a_shard_matrix_and_its_denominator_agree() -> None:
+    """A matrix of four running `--shard=$SHARD/3` drops a quarter, silently.
+
+    Neither runner can see the matrix that supplies the index, and a sharded
+    run is exempt from the empty-run error -- so the shards nobody indexed
+    collect nothing and the tier passes on a fraction of itself.
+    """
+    jobs = ci_jobs()
+    wrong = []
+    for name, job in jobs.items():
+        shards = ((job.get("strategy") or {}).get("matrix") or {}).get("shard")
+        if not shards:
+            continue
+        run = " ".join(
+            str(step.get("run", "")) for step in job.get("steps") or [] if "run" in step
+        )
+        for total in {int(one) for one in re.findall(r'--shard="\$SHARD/(\d+)"', run)}:
+            if total != len(shards):
+                wrong.append(f"{name}: matrix of {len(shards)} running --shard/{total}")
+    assert not wrong, (
+        "a shard matrix and the total it passes disagree, so the shards nobody "
+        "indexed run nothing and pass:\n  " + "\n  ".join(wrong)
+    )
 
 
 def test_every_job_is_classified() -> None:

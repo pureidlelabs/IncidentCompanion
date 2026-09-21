@@ -41,12 +41,17 @@ export default defineConfig({
   // exemption to that staying true. The ratio still decides what
   // `STORYBOOK_SHOTS` writes, which is read by eye, and four density projects
   // wrote that file four times with the last one winning.
-  use: { deviceScaleFactor: 2 },
+  // `trace` because the job uploads one: without it the artifact step
+  // succeeds and collects nothing.
+  use: { deviceScaleFactor: 2, trace: 'retain-on-failure' },
 
   // One worker: the probe measures rendered geometry, and a second browser
-  // competing for the machine is how a settled reading stops being one.
+  // competing for the machine is how a settled reading stops being one. That
+  // is a statement about one machine, so it survives sharding: a shard per
+  // runner is a machine each, with nothing to contend with.
   workers: 1,
-  fullyParallel: false,
+  // Shard granularity, not concurrency: one worker still runs a shard serially.
+  fullyParallel: true,
   reporter: [['list']],
   // A ceiling over the shard timeout `storybook.spec.ts` sets for itself,
   // which is the one that decides.
