@@ -62,15 +62,23 @@ test.describe('the geometry probes', () => {
     )
 
     /**
-     * **A name is a tag and its classes joined by dots**, so whitespace in one
-     * means the class list was never split and the 48-character cut fell
-     * mid-token. That is invisible in a passing run: the finding still names
-     * an element, just not one a reader can search for. -> #1071
+     * **A name that reached its classes has them joined by dots**, so a space
+     * inside one means the class list was never split and the character cut
+     * fell mid-token. Invisible in a passing run: the finding still names an
+     * element, just not one a reader can search for. -> #1071
+     *
+     * Only the segments that name a single element are read. A rule that
+     * reports a pair joins two of them with a slash, and one that reports a
+     * side adds a word, so whitespace in a whole `what` proves nothing.
      */
+    const named = [...new Set(results.flatMap((one) => one.named))]
+      .flatMap((one) => one.split(' / '))
+      .filter((one) => /^[a-z]+[.[]/.test(one))
     expect(
-      [...new Set(results.flatMap((one) => one.named))].filter((one) => /\s/.test(one)),
-      'a finding named its element with the raw class list rather than the first classes',
+      named.filter((one) => /\s/.test(one)),
+      'a finding named its element with the raw class list rather than its own classes',
     ).toEqual([])
+    expect(named.length, 'no finding named an element, so the check above read nothing').toBeGreaterThan(0)
 
     const dead = results.filter((one) => !one.quiet && !one.fired)
     expect(
