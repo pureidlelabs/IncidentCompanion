@@ -39,7 +39,7 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
  * The last two assertions keep this honest: a story outside a root goes red,
  * and so does a root that is not there.
  */
-const ROOTS = ['components', 'screens']
+const ROOTS = ['components', 'screens', 'demo']
 
 /** A component's own story and test files, which are not themselves components. */
 const SATELLITE = /\.(stories|test)\.tsx$/
@@ -97,7 +97,9 @@ describe('the gallery is the index of what the interface is built from', () => {
   it('gives every kit component and block a story', () => {
     const every = everyComponent()
 
-    expect(every.length, 'nothing was read, so nothing below rejected anything').toBeGreaterThan(200)
+    expect(every.length, 'nothing was read, so nothing below rejected anything').toBeGreaterThan(
+      200,
+    )
 
     const missing = every
       .filter((id) => !hasStory(id))
@@ -130,9 +132,17 @@ describe('the gallery is the index of what the interface is built from', () => {
     expect(atTheRoot.length, 'nothing sits at the root, so this proves nothing').toBeGreaterThan(0)
     expect(every).toEqual(expect.arrayContaining(atTheRoot))
 
-    const tiers = everyTier()
-    expect(tiers.length, 'there is no subdirectory, so this proves nothing').toBeGreaterThan(1)
-    for (const tier of tiers) {
+    // Read from the directory rather than from `everyComponent`, which would
+    // make this agree with itself. A tier holding no component is not a gap:
+    // `demo/catalogue` is the data the demo serves.
+    const holding = everyTier().filter((tier) =>
+      readdirSync(join(SRC, tier)).some((name) => name.endsWith('.tsx') && !SATELLITE.test(name)),
+    )
+    expect(
+      holding.length,
+      'no subdirectory holds a component, so this proves nothing',
+    ).toBeGreaterThan(1)
+    for (const tier of holding) {
       expect(
         every.some((id) => id.startsWith(`${tier}/`)),
         `${tier} holds components that nothing here reads`,
