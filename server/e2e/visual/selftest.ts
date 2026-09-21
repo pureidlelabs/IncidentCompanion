@@ -372,6 +372,8 @@ export interface SelftestResult {
   /** True where the injection is one the rule must stay silent about. */
   quiet: boolean
   fired: boolean
+  /** Every element name this fault's findings carried, for the shape check. */
+  named: string[]
   error?: string
 }
 
@@ -437,6 +439,7 @@ export async function selftest(browser: Browser): Promise<SelftestResult[]> {
           why: fault.why,
           quiet: fault.quiet === true,
           fired: false,
+          named: [],
           error: `the fault would not apply: ${String(cause)}`,
         })
         continue
@@ -449,6 +452,7 @@ export async function selftest(browser: Browser): Promise<SelftestResult[]> {
         why: fault.why,
         quiet: fault.quiet === true,
         fired: found.filter((one) => one.kind === fault.kind).length > alreadyThere(fault.kind),
+        named: found.map((one) => one.what),
       })
     }
   } finally {

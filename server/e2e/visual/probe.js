@@ -144,9 +144,23 @@ export function probe([rootSel, excludeSel]) {
         if (r.width <= 0 || r.height <= 0) return false;
         return !clippedOut(el);
     };
-    const name = el => (el.tagName.toLowerCase()
-        + (el.className && el.className.toString ? '.' + el.className.toString().trim().split(/\\s+/).slice(0, 2).join('.') : ''))
-        .slice(0, 48);
+    // **An attribute the source spells, before classes the source composes.**
+    // A class list is assembled at runtime from several recipes, so no part of
+    // it is searchable; `data-part`, `data-testid` and `id` are each written
+    // in one place. Classes stay as the fallback, whole rather than cut at a
+    // character count, which left a name nothing could be searched for at all.
+    // -> #1071
+    const name = el => {
+        const tag = el.tagName.toLowerCase();
+        for (const attr of ['data-part', 'data-testid', 'id']) {
+            const held = el.getAttribute && el.getAttribute(attr);
+            if (held) return `${tag}[${attr}="${held}"]`;
+        }
+        const classes = el.className && el.className.toString
+            ? el.className.toString().trim().split(/\s+/).filter(Boolean).slice(0, 4)
+            : [];
+        return tag + (classes.length ? '.' + classes.join('.') : '');
+    };
 
     // 1. The page scrolls sideways. Never intended here.
     //
