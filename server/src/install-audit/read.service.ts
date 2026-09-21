@@ -286,21 +286,21 @@ export class InstallActivityReadService {
       ),
       /**
        * **Cumulative, because `minSeverity` is a floor.** Pressing `High`
-       * returns High and everything louder, so a chip counting High alone
-       * names a number its own press does not answer. They do not sum to the
-       * page and cannot: a Critical run counts under Critical, High and
-       * Medium, which is what a control built from `FLOORS` offers. -> #1006
+       * returns High and everything louder, so these do not sum to the page:
+       * a Critical run counts under Critical, High and Medium.
+       *
+       * **Zero is reported rather than omitted**, because `filter-bar`
+       * disables a chip counting zero and leaves an absent one enabled.
+       * -> #1006
        */
       severities: Object.fromEntries(
-        Object.entries(SEVERITY_ID)
-          .map(
-            ([name, id]) =>
-              [
-                name,
-                severities.reduce((sum, one) => (one.severityId >= id ? sum + one.n : sum), 0),
-              ] as const,
-          )
-          .filter(([, n]) => n > 0),
+        Object.entries(SEVERITY_ID).map(
+          ([name, id]) =>
+            [
+              name,
+              severities.reduce((sum, one) => (one.severityId >= id ? sum + one.n : sum), 0),
+            ] as const,
+        ),
       ),
     }
   }

@@ -407,6 +407,12 @@ describe.skipIf(!db)('reading the audit', () => {
       high.events.length,
       'the High chip must count what pressing High returns',
     ).toBe(all.severities['High'] ?? 0)
+
+    // Zero is an answer, not an absence: `filter-bar` disables a chip counting
+    // zero and leaves an absent one enabled.
+    for (const name of Object.keys(SEVERITY_ID)) {
+      expect(all.severities[name], `${name} is reported`).toBeTypeOf('number')
+    }
   })
   /**
    * **The other direction, and it is the one the requirement is worded as:**

@@ -89,7 +89,7 @@ export const activityPageSchema = z.object({
   counts: z.record(z.string(), z.number().int()),
   /** The same, per ECS outcome, so both chip groups count one population. */
   outcomes: z.record(z.string(), z.number().int()),
-  /** And per OCSF severity, on the level the row is drawn at. */
+  /** Per OCSF severity, cumulative: each level counts the runs at it or louder. */
   severities: z.record(z.string(), z.number().int()),
 })
 
@@ -109,7 +109,10 @@ const querySchema = z.object({
   /** Narrow to lines at or above this OCSF `severity_id`. */
   minSeverity: z.coerce.number().int().min(1).max(6).optional(),
   /** Resume after this `seq`. Absent means the newest page. */
-  after: z.string().regex(/^\d{1,19}$/).optional(),
+  after: z
+    .string()
+    .regex(/^\d{1,19}$/)
+    .optional(),
   since: z.iso.datetime().optional(),
   outcome: z.enum(['success', 'failure']).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
