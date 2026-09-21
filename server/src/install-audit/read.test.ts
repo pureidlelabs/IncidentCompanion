@@ -389,14 +389,29 @@ describe.skipIf(!db)('reading the audit', () => {
       await recordInstallActivity(db!, { event: 'sign_in_failed', target })
     }
 
+    // **A line above High, so the two cannot agree by accident**: an exact
+    // tally and a floor agree whenever nothing louder is on the page.
+    await recordInstallActivity(db!, {
+      event: 'audit_retention_changed',
+      target: `${ownTarget('tally-louder')}@example.test`,
+      detail: { from: '365', to: '7' },
+    })
+
     const all = await reads.page({ limit: 200 }, session, {})
     const high = await reads.page({ minSeverity: SEVERITY_ID.High, limit: 200 }, session, {})
 
     expect(all.severities['High'] ?? 0).toBeGreaterThan(0)
+    expect(all.severities['Critical'] ?? 0, 'the louder line landed').toBeGreaterThan(0)
     expect(
       high.events.length,
       'the High chip must count what pressing High returns',
     ).toBe(all.severities['High'] ?? 0)
+
+    // Zero is an answer, not an absence: `filter-bar` disables a chip counting
+    // zero and leaves an absent one enabled.
+    for (const name of Object.keys(SEVERITY_ID)) {
+      expect(all.severities[name], `${name} is reported`).toBeTypeOf('number')
+    }
   })
   /**
    * **The other direction, and it is the one the requirement is worded as:**

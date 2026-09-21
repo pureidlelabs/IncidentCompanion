@@ -15,12 +15,7 @@ import type { Database } from '../db/client.js'
 import { readPolicy } from '../policy/read.js'
 import { installActivity, type InstallChannel } from '../db/schema/install-activity.js'
 import { recordInstallActivity } from '../install-activity/record.js'
-import {
-  FAILURES,
-  RUN_IS_AN_ATTACK,
-  SEVERITY_ID,
-  SEVERITY_NAME,
-} from '../install-activity/severity.js'
+import { FAILURES, RUN_IS_AN_ATTACK, SEVERITY_ID } from '../install-activity/severity.js'
 import type { ActivityPage } from './activity.controller.js'
 import { lineOf } from './line.js'
 
@@ -289,10 +284,19 @@ export class InstallActivityReadService {
       outcomes: Object.fromEntries(
         outcomes.map((one) => [one.statusId === 2 ? 'failure' : 'success', one.n]),
       ),
-      severities: severities.reduce<Record<string, number>>((into, one) => {
-        const name = SEVERITY_NAME[one.severityId] ?? 'Informational'
-        return { ...into, [name]: (into[name] ?? 0) + one.n }
-      }, {}),
+      /**
+       * **Zero is reported rather than omitted**, because `filter-bar` disables
+       * a chip counting zero and leaves an absent one enabled. -> #1006
+       */
+      severities: Object.fromEntries(
+        Object.entries(SEVERITY_ID).map(
+          ([name, id]) =>
+            [
+              name,
+              severities.reduce((sum, one) => (one.severityId >= id ? sum + one.n : sum), 0),
+            ] as const,
+        ),
+      ),
     }
   }
 

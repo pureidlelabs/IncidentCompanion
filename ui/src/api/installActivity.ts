@@ -74,11 +74,8 @@ export interface AuditPage {
   /** The same, per ECS outcome, so both chip groups count one population. */
   outcomes: Record<string, number>
   /**
-   * The same, per OCSF severity name.
-   *
-   * **Counted on the level the row is drawn at**, which the server computes
-   * once for the column, the filter and this - so a chip's number is exactly
-   * what pressing it returns.
+   * Per OCSF severity name, cumulative: each counts the runs at it or louder,
+   * so a chip's number is what pressing it returns and these do not sum.
    */
   severities: Record<string, number>
 }
