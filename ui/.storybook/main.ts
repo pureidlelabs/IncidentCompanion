@@ -1,4 +1,8 @@
+import { realpathSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import type { StorybookConfig } from '@storybook/react-vite'
+import { mergeConfig, searchForWorkspaceRoot } from 'vite'
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(ts|tsx)', '../src/**/*.mdx'],
@@ -8,6 +12,26 @@ const config: StorybookConfig = {
   // story renders from `src/fixtures/`; a story needing the API is a story
   // that cannot be opened in the morning.
   staticDirs: [],
+  /**
+   * Serves the product's own font when `node_modules` is a symlink.
+   *
+   * Vite resolves the asset to its real path, which in a worktree is outside
+   * the tree and refused by `server.fs` -- so the gallery renders in a
+   * fallback face and every text measurement the visual tier takes is of a
+   * font nobody ships. Naming `allow` turns the automatic workspace lookup
+   * off, so `searchForWorkspaceRoot` puts it back.
+   */
+  viteFinal: (config) =>
+    mergeConfig(config, {
+      server: {
+        fs: {
+          allow: [
+            searchForWorkspaceRoot(process.cwd()),
+            realpathSync(resolve(process.cwd(), '..', 'node_modules')),
+          ],
+        },
+      },
+    }),
   /**
    * **The props table is generated from the types, not written twice.**
    *
