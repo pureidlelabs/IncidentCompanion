@@ -407,12 +407,13 @@ EXPENSIVE_TIER = (
     "client-screen",
     "devcontainer",
     "containers",
+    "gallery",
 )
 
 #: Gated on `inputs.all` alone, so neither event this workflow triggers on
 #: starts them. The draft rule below cannot apply: there is no draft to be
 #: held back from.
-NIGHTLY_TIER = ("browser", "gallery")
+NIGHTLY_TIER = ("browser",)
 
 
 def ci_jobs() -> dict:
@@ -474,6 +475,27 @@ def test_a_draft_runs_the_cheap_tier_and_nothing_else() -> None:
         )
 
 
+def shard_pairs(job: dict, shards, total: str) -> list[tuple[int, int]]:
+    """Every (denominator, matrix length) this job can run with.
+
+    A denominator naming an env var and a matrix built by `fromJSON` are one
+    pair per branch of the expression, in the order written; a literal pair is
+    one. Returns no pair when neither side can be read, which is the case a
+    caller has to treat as unchecked rather than as agreement.
+    """
+    if not total.startswith("$"):
+        return [(int(total), len(shards))] if isinstance(shards, list) else []
+    named = [
+        str((step.get("env") or {}).get(total[1:], ""))
+        for step in job.get("steps") or []
+        if (step.get("env") or {}).get(total[1:])
+    ]
+    env = named[0] if named else ""
+    sizes = [int(one) for one in re.findall(r"\b(\d+)\b", env)]
+    lengths = [len(one.split(",")) for one in re.findall(r"\[([^\]]*)\]", str(shards))]
+    return list(zip(sizes, lengths)) if len(sizes) == len(lengths) else []
+
+
 def test_a_shard_matrix_and_its_denominator_agree() -> None:
     """A matrix of four running `--shard=$SHARD/3` drops a quarter, silently.
 
@@ -490,9 +512,10 @@ def test_a_shard_matrix_and_its_denominator_agree() -> None:
         run = " ".join(
             str(step.get("run", "")) for step in job.get("steps") or [] if "run" in step
         )
-        for total in {int(one) for one in re.findall(r'--shard="\$SHARD/(\d+)"', run)}:
-            if total != len(shards):
-                wrong.append(f"{name}: matrix of {len(shards)} running --shard/{total}")
+        for total in set(re.findall(r'--shard="\$SHARD/(\$?\w+)"', run)):
+            for sized, counted in shard_pairs(job, shards, total):
+                if sized != counted:
+                    wrong.append(f"{name}: matrix of {counted} running --shard/{sized}")
     assert not wrong, (
         "a shard matrix and the total it passes disagree, so the shards nobody "
         "indexed run nothing and pass:\n  " + "\n  ".join(wrong)
