@@ -205,22 +205,29 @@ const PREVIEW_SCRIPT_FAILED = "Failed to load the Storybook preview file 'vite-a
  * still the one that failed, so re-asking answers it. Anything else throws.
  * -> #1037
  */
-export async function askDespiteNavigation<T>(page: Page, ask: () => Promise<T>): Promise<T> {
+export async function askDespiteNavigation<T>(
+  page: Page,
+  ask: (attempt: number) => Promise<T>,
+): Promise<T> {
   for (let attempt = 0; ; attempt += 1) {
     try {
-      return await ask()
+      return await ask(attempt)
     } catch (thrown) {
       const lost =
         thrown instanceof Error && thrown.message.includes('Execution context was destroyed')
       if (!lost || attempt >= 2) throw thrown
-      await page.waitForLoadState('domcontentloaded').catch(() => undefined)
+      // **Bounded, like the question it recovers.** `navigationTimeout`
+      // resolves to 0 here, which installs no rejection at all -- so an
+      // unbounded wait holds for the enclosing test, which is the 45 minutes
+      // the bound inside the question exists to refuse.
+      await page.waitForLoadState('domcontentloaded', { timeout: 5_000 }).catch(() => undefined)
     }
   }
 }
 
 async function whyThePreviewScriptFailed(page: Page): Promise<string> {
-  return askDespiteNavigation(page, async () =>
-    page.evaluate(async () => {
+  return askDespiteNavigation(page, async (attempt) => {
+    const said = await page.evaluate(async () => {
       // The tag's `src` rather than the virtual path it is written with: Vite
       // rewrites it, and the rewritten URL is the one that was actually fetched.
       const tag = document.querySelector<HTMLScriptElement>('script[src*="vite-app"]')
@@ -248,8 +255,13 @@ async function whyThePreviewScriptFailed(page: Page): Promise<string> {
           ? `re-fetch gave up after 5s: ${why} -- the server accepted and answered nothing`
           : `re-fetch threw ${why}`
       }
-    }),
-  )
+    })
+    // A reload destroyed the first ask, so this answer is about whatever
+    // replaced the document that failed, not about that document.
+    return attempt === 0
+      ? said
+      : `${said} -- asked again after a reload, so this reads the document that replaced it`
+  })
 }
 
 /**

@@ -6,9 +6,14 @@ import { askDespiteNavigation } from './storybook-lifecycle.js'
  * A navigation landing inside a bounded evaluate does not lose the answer.
  *
  * `whyThePreviewScriptFailed` holds an evaluate open for up to five seconds on
- * purpose, and Storybook reloads the preview whose script failed. Under a full
- * run's parallelism that reload lands inside the window and the evaluate
- * throws instead of answering. -> #1037
+ * purpose, and Storybook reloads the preview whose script failed. On a loaded
+ * machine that reload lands inside the window and the evaluate throws instead
+ * of answering -- load from outside the run, since this tier is `workers: 1`.
+ * -> #1037
+ *
+ * It rides the kit tier rather than needing it: the tier boots Storybook for
+ * every run and this opens none, but the app tier's launcher raises Postgres,
+ * Redis and Nest, which is the more expensive place to sit.
  *
  * Driven here rather than waited for: the real race needs a loaded machine,
  * and a test that only fails under load is one nobody can act on.
