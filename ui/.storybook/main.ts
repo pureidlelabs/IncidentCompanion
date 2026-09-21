@@ -2,7 +2,31 @@ import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import type { StorybookConfig } from '@storybook/react-vite'
-import { mergeConfig, searchForWorkspaceRoot } from 'vite'
+import { mergeConfig, searchForWorkspaceRoot, type Plugin } from 'vite'
+
+/**
+ * Lets the browser keep a font file across story navigations.
+ *
+ * The dev server sends no validator for one, so a walk that navigates per
+ * story refetches it every time -- and the file is content-addressed by its
+ * own name, so it can be held for as long as the browser likes. -> #1069
+ *
+ * Registered before Vite's own middlewares, which is where a header has to be
+ * set to reach the static response.
+ */
+function cacheTheFont(): Plugin {
+  return {
+    name: 'incidentcompanion:cache-the-font',
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        if (/\.(?:woff2?|ttf|otf)(?:\?|$)/.test(request.url ?? '')) {
+          response.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+        }
+        next()
+      })
+    },
+  }
+}
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(ts|tsx)', '../src/**/*.mdx'],
@@ -31,6 +55,7 @@ const config: StorybookConfig = {
           ],
         },
       },
+      plugins: [cacheTheFont()],
     }),
   /**
    * **The props table is generated from the types, not written twice.**
