@@ -412,7 +412,7 @@ EXPENSIVE_TIER = (
 #: Gated on `inputs.all` alone, so neither event this workflow triggers on
 #: starts them. The draft rule below cannot apply: there is no draft to be
 #: held back from.
-NIGHTLY_TIER = ("browser",)
+NIGHTLY_TIER = ("browser", "gallery")
 
 
 def ci_jobs() -> dict:

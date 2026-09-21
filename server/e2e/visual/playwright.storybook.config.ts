@@ -44,9 +44,15 @@ export default defineConfig({
   use: { deviceScaleFactor: 2 },
 
   // One worker: the probe measures rendered geometry, and a second browser
-  // competing for the machine is how a settled reading stops being one.
+  // competing for the machine is how a settled reading stops being one. That
+  // is a statement about one machine, so it survives sharding: a shard per
+  // runner is a machine each, with nothing to contend with.
   workers: 1,
-  fullyParallel: false,
+  // **For shard granularity, not concurrency.** Playwright assigns whole files
+  // to shards unless this is set, and `testMatch` here selects exactly one
+  // file -- so `--shard` would hand one runner every probe and the rest
+  // nothing. With one worker the tests still run serially within a shard.
+  fullyParallel: true,
   reporter: [['list']],
   // A ceiling over the shard timeout `storybook.spec.ts` sets for itself,
   // which is the one that decides.
