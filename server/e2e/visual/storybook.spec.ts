@@ -41,6 +41,7 @@ import { dirname } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
+import { ALREADY_FOUND } from './findings-baseline.js'
 import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
@@ -137,9 +138,25 @@ const report: {
   died: string | null
   failures: string[]
   plays: string[]
-  found: { where: string; line: string }[]
+  found: { where: string; kind: string; line: string }[]
+  walked: string[]
   frames: FrameRecord[]
-} = { at: '', probed: 0, expected: 0, died: null, failures: [], plays: [], found: [], frames: [] }
+} = {
+  at: '',
+  probed: 0,
+  expected: 0,
+  died: null,
+  failures: [],
+  plays: [],
+  found: [],
+  walked: [],
+  frames: [],
+}
+
+/** The baseline's key: what was walked and what the probe called it. */
+function keyOf(where: string, kind: string): string {
+  return `${where} - ${kind}`
+}
 
 // **Reset per test rather than trusted to be fresh.** The config runs this
 // file once per density project, and module state outlives a single test in a
@@ -175,6 +192,7 @@ test.beforeEach(() => {
     failures: [],
     plays: [],
     found: [],
+    walked: [],
     frames: [],
   })
 })
@@ -333,8 +351,9 @@ for (const ground of GROUNDS) {
               report.plays.push(`${where} - play threw: ${playError.split('\n')[0] ?? ''}`)
               continue
             }
+            report.walked.push(where)
             for (const one of await findings(page))
-              report.found.push({ where, line: sayFinding(one) })
+              report.found.push({ where, kind: one.kind, line: sayFinding(one) })
             // One capture serves both the oracle and `STORYBOOK_SHOTS` -- a
             // second `page.screenshot()` here would double the run's cost across
             // every story render for a file nobody asked for.
@@ -404,6 +423,21 @@ for (const ground of GROUNDS) {
         // Asserted after the failures, and both after the hook has already printed
         // everything the walk saw.
         expect(report.died, 'the sweep did not finish').toBeNull()
+
+        // Only over the stories this test walked, so the answer is the same under
+        // `STORYBOOK_CHUNKS` and `--shard` as it is in one run.
+        const walked = new Set(report.walked)
+        const seen = new Set(report.found.map((one) => keyOf(one.where, one.kind)))
+        expect(
+          [...seen].filter((key) => !ALREADY_FOUND.has(key)).sort(),
+          'the probe found something `findings-baseline.ts` does not list: fix it, or add it there with the reason',
+        ).toEqual([])
+        expect(
+          [...ALREADY_FOUND]
+            .filter((key) => walked.has(key.slice(0, key.lastIndexOf(' - '))) && !seen.has(key))
+            .sort(),
+          'these no longer happen, so `findings-baseline.ts` describes a tree nobody has: remove them',
+        ).toEqual([])
       })
     }
   }
