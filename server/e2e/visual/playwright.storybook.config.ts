@@ -51,11 +51,6 @@ export default defineConfig({
   // A ceiling over the shard timeout `storybook.spec.ts` sets for itself,
   // which is the one that decides.
   timeout: 45 * 60_000,
-  /**
-   * **A cold Storybook's compile would otherwise land inside the first
-   * shard's timer**, and a run killed there used to print nothing at all.
-   * Warming happens before any shard starts. -> #286
-   */
   // **The same shape `playwright.kit.config.ts` uses**, and the port is derived
   // rather than written down: `stack.mjs` allocates it from the worktree's own
   // path, so a literal is right in one tree and points at a neighbour's in the
@@ -70,5 +65,10 @@ export default defineConfig({
     stdout: 'pipe',
     stderr: 'pipe',
   },
+  /**
+   * **A cold Storybook's compile would otherwise land inside the first
+   * shard's timer**, and a run killed there used to print nothing at all.
+   * Warming happens before any shard starts. -> #286
+   */
   globalSetup: require.resolve('./storybook-warm.ts'),
 })

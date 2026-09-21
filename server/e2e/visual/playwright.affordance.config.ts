@@ -1,6 +1,9 @@
 import { defineConfig } from '@playwright/test'
 
+import { join } from 'node:path'
+
 import { densityProjects } from './densities.js'
+import { STORYBOOK_URL } from './storybook-url.js'
 
 /**
  * `npm run audit:affordances` -- the capabilities a family of components does
@@ -12,10 +15,10 @@ import { densityProjects } from './densities.js'
  * either. The extension is what keeps it out rather than an ignore list
  * somebody has to remember to extend.
  *
- * It needs a Storybook and skips with a reason when there is none.
+ * It raises the Storybook it drives, so a clean checkout can run it, and a
+ * session already serving one is reused. -> #1040
  *
  * ```bash
- * cd ui && npm run storybook          # in another shell
  * cd server && npm run audit:affordances
  *
  * AFFORDANCE_ONLY=data-table npm run audit:affordances
@@ -35,5 +38,15 @@ export default defineConfig({
   timeout: 120 * 60_000,
   // One test walking every component, against the same story iframe the sweep
   // walks, so it is exposed to the cold-start compile the same way. -> #286
+  webServer: {
+    command: 'npm run --silent storybook',
+    cwd: join(__dirname, '../../../ui'),
+    url: STORYBOOK_URL,
+    env: { STORYBOOK_PORT: new URL(STORYBOOK_URL).port },
+    reuseExistingServer: true,
+    timeout: 300_000,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  },
   globalSetup: require.resolve('./storybook-warm.ts'),
 })
