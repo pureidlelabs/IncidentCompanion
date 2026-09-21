@@ -41,17 +41,16 @@ export default defineConfig({
   // exemption to that staying true. The ratio still decides what
   // `STORYBOOK_SHOTS` writes, which is read by eye, and four density projects
   // wrote that file four times with the last one winning.
-  use: { deviceScaleFactor: 2 },
+  // `trace` because the job uploads one: without it the artifact step
+  // succeeds and collects nothing.
+  use: { deviceScaleFactor: 2, trace: 'retain-on-failure' },
 
   // One worker: the probe measures rendered geometry, and a second browser
   // competing for the machine is how a settled reading stops being one. That
   // is a statement about one machine, so it survives sharding: a shard per
   // runner is a machine each, with nothing to contend with.
   workers: 1,
-  // **For shard granularity, not concurrency.** Playwright assigns whole files
-  // to shards unless this is set, and `testMatch` here selects exactly one
-  // file -- so `--shard` would hand one runner every probe and the rest
-  // nothing. With one worker the tests still run serially within a shard.
+  // Shard granularity, not concurrency: one worker still runs a shard serially.
   fullyParallel: true,
   reporter: [['list']],
   // A ceiling over the shard timeout `storybook.spec.ts` sets for itself,

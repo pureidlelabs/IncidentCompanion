@@ -624,23 +624,27 @@ jobs:
 
   # ------------------------------------------------- every story in a browser
   #
-  # **A shard per probe.** The sweep is four probes -- two grounds by two
-  # widths -- over about sixteen hundred stories each, and one probe measured
-  # 22.8 minutes, so the whole walk is an hour and a half on one machine. The
-  # config holds `workers: 1` because a second browser competing for a machine
-  # skews the geometry it is there to measure; that is a statement about one
-  # machine, and a shard per runner is a machine each.
+  # **A shard per chunk.** The sweep is two grounds by two widths over 1411
+  # stories, split five ways by `STORYBOOK_CHUNKS`, so twenty tests go to
+  # twenty runners. The config holds `workers: 1` because a second
+  # browser competing for a machine skews the geometry it is there to measure;
+  # that is a statement about one machine, and a shard per runner is a machine
+  # each.
   #
   # Nightly only, and for the same reason as `browser` above: the merge queue
   # ejects on red and this is the slowest tier there is. -> #1040
   gallery:
     if: '!failure() && !cancelled() && inputs.all'
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # Above the budgets declared inside it -- 5 minutes for the launcher, 4 for
+    # the warm and 10 per test -- plus the checkout and install ahead of them.
+    # A test that times out prints what it walked; a job killed by this prints
+    # nothing.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
@@ -664,7 +668,7 @@ jobs:
         run: |
           cd server && npx playwright test \
             --config=e2e/visual/playwright.storybook.config.ts \
-            --shard="$SHARD/4"
+            --shard="$SHARD/20"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
