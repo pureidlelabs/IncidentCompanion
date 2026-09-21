@@ -127,6 +127,25 @@ export function walkable(entries: Entry[]): Entry[] {
   return entries.filter((one) => !(one.tags ?? []).includes(STORY_TIER_ONLY))
 }
 
+/**
+ * Stories the walk reached and neither probed nor accounted for.
+ *
+ * A story that refused to render or whose play threw is reported, and its
+ * baseline entries are exempt from the shrink check for that run. One that is
+ * neither walked nor reported exempts them in silence. -> #1059
+ */
+export function unexplained(planned: string[], walked: string[], skipped: string[]): string[] {
+  const reached = new Set(walked)
+  const said = new Set(skipped)
+  return planned.filter((one) => !reached.has(one) && !said.has(one)).sort()
+}
+
+test('a story that went missing without a word is told from one that was reported', () => {
+  const planned = ['light A / one', 'light A / two', 'light A / three']
+  expect(unexplained(planned, ['light A / one'], ['light A / two'])).toEqual(['light A / three'])
+  expect(unexplained(planned, ['light A / one'], ['light A / two', 'light A / three'])).toEqual([])
+})
+
 test('a story that belongs to the story tier is not walked here', () => {
   const entries = [
     { id: 'a', title: 'T', name: 'kept', type: 'story' },
@@ -166,6 +185,8 @@ const report: {
   plays: string[]
   found: { where: string; kind: string; line: string }[]
   walked: string[]
+  planned: string[]
+  skipped: string[]
   frames: FrameRecord[]
 } = {
   at: '',
@@ -176,6 +197,8 @@ const report: {
   plays: [],
   found: [],
   walked: [],
+  planned: [],
+  skipped: [],
   frames: [],
 }
 
@@ -219,6 +242,8 @@ test.beforeEach(() => {
     plays: [],
     found: [],
     walked: [],
+    planned: [],
+    skipped: [],
     frames: [],
   })
 })
@@ -349,6 +374,7 @@ for (const ground of GROUNDS) {
         for (const story of stories) {
           const at = primary ? '' : ` @${String(width)}`
           const where = `${ground}${at} ${story.title} / ${story.name}`
+          report.planned.push(where)
           try {
             // Undoes a previous story's `viewport` global before this one's own
             // load decides whether it needs one -- `loadStory` only resizes when
@@ -358,6 +384,7 @@ for (const ground of GROUNDS) {
             const { broke, playError } = await loadStory(page, SB, story.id, ground)
             if (broke !== null) {
               report.failures.push(`${where} - ${broke}`)
+              report.skipped.push(where)
               continue
             }
             // A story whose `play` threw has not reached the state it is named
@@ -375,6 +402,7 @@ for (const ground of GROUNDS) {
             // in dark or at the narrow width is printed here and asserted nowhere.
             if (playError !== null) {
               report.plays.push(`${where} - play threw: ${playError.split('\n')[0] ?? ''}`)
+              report.skipped.push(where)
               continue
             }
             report.walked.push(where)
@@ -414,6 +442,7 @@ for (const ground of GROUNDS) {
               break
             }
             report.failures.push(`${where} - ${why}`)
+            report.skipped.push(where)
           }
         }
 
@@ -463,6 +492,15 @@ for (const ground of GROUNDS) {
             .filter((key) => walked.has(key.slice(0, key.lastIndexOf(' - '))) && !seen.has(key))
             .sort(),
           'these no longer happen, so `findings-baseline.ts` describes a tree nobody has: remove them',
+        ).toEqual([])
+
+        // **A story reached but not walked exempts its entries from the check
+        // above.** That is right when it refused to render or its play threw,
+        // because both are reported; with neither, the entries went unchecked
+        // and nothing said so. -> #1059
+        expect(
+          unexplained(report.planned, report.walked, report.skipped),
+          'these stories were neither walked nor reported, so their baseline entries went unchecked in silence',
         ).toEqual([])
       })
     }
