@@ -617,6 +617,9 @@ test.describe('what a family of components does not agree about', () => {
   test('every family agrees with itself', async ({ page }) => {
     test.setTimeout(120 * 60_000)
     await requireStorybook()
+    // The probe above answers whether Storybook is up; this reads the index it
+    // serves, which is what the sweep walks.
+    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(10_000) })
     const index = (await answer.json()) as { entries: Record<string, StoryEntry> }
 
     const only = ONLY.split(',')
