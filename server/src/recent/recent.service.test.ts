@@ -308,14 +308,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('the cases an analyst has be
   })
 
   /**
-   * *THEN they stop being served that case.* The list is read from a table of
-   * visits, so a case an analyst was in stays named by it long after the
-   * membership that reached it is gone -- and a pinned row never ages out at
-   * all. `GET /api/recent-cases` names no case, so no guard runs on it.
-   *
-   * **The grant is the control.** A row missing because the fixture never
-   * committed looks exactly like one filtered out, so the same case is asked
-   * for again with the membership restored.
+   * The same case is asked for again with the membership restored, so a row the
+   * fixture never committed cannot pass for one filtered out.
    */
   describe('a case whose reach is revoked', () => {
     let groupsService: GroupsService

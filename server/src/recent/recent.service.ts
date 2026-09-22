@@ -77,8 +77,7 @@ export class RecentService {
       })
       .from(caseVisits)
       .innerJoin(cases, eq(cases.id, caseVisits.caseId))
-      // **The visit is not the reach**, and a pin never ages out: filtered on
-      // the write, a revocation would leave the row naming the case forever.
+      // Filtered on the read: a visit outlives the reach, and a pin never ages out.
       .where(
         and(eq(caseVisits.userId, userId), await reachedCases(this.db, userId, cases.customerId)),
       )

@@ -190,12 +190,6 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
     ).not.toBe(true)
   })
 
-  /**
-   * The same refusal, asked of the list rather than of one case. `GET
-   * /api/cases` mounts no guard -- it names no case -- so the filter is the
-   * only thing standing between an administrator in no group and every
-   * customer's title, reference and summary.
-   */
   it("is offered no such case by the list either, and the default customer's regardless", async () => {
     await groupsService.revoke(sector, ADMIN)
 
