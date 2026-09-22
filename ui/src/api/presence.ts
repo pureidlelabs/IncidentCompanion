@@ -90,9 +90,16 @@ export function readMessage(data: unknown): PresenceSnapshot | null {
 function readSnapshot(message: Message): PresenceSnapshot | null {
   if (message.type !== 'presence') return null
   return {
-    roster: Array.isArray(message.roster) ? (message.roster as Participant[]) : [],
+    roster: Array.isArray(message.roster) ? message.roster.filter(isParticipant) : [],
     claims: Array.isArray(message.claims) ? (message.claims as Claim[]) : [],
   }
+}
+
+/** Checked, never cast: an entry with no string id or name is dropped. */
+function isParticipant(entry: unknown): entry is Participant {
+  if (!entry || typeof entry !== 'object') return false
+  const { user_id: id, username } = entry as Record<string, unknown>
+  return typeof id === 'string' && typeof username === 'string'
 }
 
 /** The real socket, absent in jsdom - which defines no `WebSocket` at all. */
