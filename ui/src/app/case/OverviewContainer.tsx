@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useCase } from '@/api/case'
 import { useComplianceRecord } from '@/api/compliance'
-import { useSpecs } from '@/api/specs'
+import { formSpec, labelsOf, useSpecs } from '@/api/specs'
 import { useCaseMutation } from '@/api/useCaseMutation'
 import { useCaseId } from '@/app/useCaseId'
 import { casePath } from '@/components/blocks/case-paths'
 import { OverviewScreen } from '@/screens/overview'
 
-import { announcing } from './entryWrites'
+import { announced } from './entryWrites'
 
 import type { CaseWrites } from '@/components/blocks/case-record-form'
 
@@ -36,6 +36,14 @@ export function OverviewContainer() {
   const patch = useCaseMutation(caseId)
   // Read once, so the reading holds for the mount.
   const [now] = useState(() => Date.now())
+  /** The last write another analyst got in first with, drawn above the fields. */
+  const [refusal, setRefusal] = useState<{ field: string; by: string } | undefined>(undefined)
+  // By label, because that is what the band names and what the screen finds the
+  // pane by.
+  const labels = useMemo(
+    () => (specs.data ? labelsOf(formSpec(specs.data, 'CASE_FIELDS')) : {}),
+    [specs.data],
+  )
 
   // A door is spent once the pane it named has the cursor, and the form takes
   // it in its own effect, which runs before this one. Left in the address it is
@@ -48,8 +56,24 @@ export function OverviewContainer() {
     // The version travels from the form rather than from `kase.data`: the form
     // was drawn at one, and re-reading here would adopt whatever another
     // analyst wrote in between as the base this write claims to have seen.
-    save: (field, value, version) =>
-      announcing('the case', () => patch.mutateAsync({ version, fields: { [field]: value } })),
+    save: (field, value, version) => {
+      setRefusal(undefined)
+      return announced(
+        'the case',
+        () => patch.mutateAsync({ version, fields: { [field]: value } }),
+        {
+          // The merge review is the screen's answer to a 409, so the toast that
+          // used to be the only one would say the same thing twice and name no
+          // field. -> #1110
+          refused: (error) => {
+            setRefusal({
+              field: labels[field] ?? field,
+              by: (error.body as { heldBy?: string } | null)?.heldBy ?? 'Another analyst',
+            })
+          },
+        },
+      )
+    },
   }
 
   return (
@@ -63,6 +87,7 @@ export function OverviewContainer() {
       onRetry={() => {
         void kase.refetch()
       }}
+      {...(refusal === undefined ? {} : { refusal })}
       focusField={field === '' ? undefined : field}
       onOpen={(row) => {
         const to = casePath(caseId, row.section)
