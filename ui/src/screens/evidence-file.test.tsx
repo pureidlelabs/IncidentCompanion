@@ -193,7 +193,6 @@ describe('attaching the bytes to the record just made', () => {
     vi.unstubAllGlobals()
   })
 
-  /** The record exists once the first request lands, so a failed attach still has a row to show. */
   it('refreshes the list when the bytes fail after the record landed', async () => {
     const { hook, invalidated } = upload(new Response(JSON.stringify({ error: 'store down' }), { status: 500 }))
 
@@ -206,7 +205,6 @@ describe('attaching the bytes to the record just made', () => {
     expect(invalidated()).toContain(JSON.stringify(keys.case(CASE)))
   })
 
-  /** A header is a ByteString, so a name above Latin-1 threw at `fetch` after the record had landed. */
   it('sends a non-Latin-1 filename percent-encoded, which the server decodes', async () => {
     const { hook, named } = upload(new Response(JSON.stringify({ id: 'ev-new' }), { status: 200 }))
 

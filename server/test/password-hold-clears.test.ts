@@ -92,11 +92,6 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
     expect(after.status, 'the mistyped pair was written anyway').toBe(403)
   })
 
-  /**
-   * **The session is alive and the body is refused**, so the answer is 422. A
-   * 401 here is what a client reads as signed out, and it drops the identity
-   * of an analyst who only mistyped.
-   */
   it('refuses a wrong current password as the body, not as the session', async () => {
     const held = await heldAccount()
 

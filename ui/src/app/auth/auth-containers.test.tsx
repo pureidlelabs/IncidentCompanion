@@ -293,12 +293,7 @@ describe('changing a password somebody else chose', () => {
   })
 })
 
-/**
- * **A wrong current password is a refused body, not a dead session.** The
- * client drops its identity on any 401, so the route has to answer 422 for the
- * analyst to stay signed in. The real call runs here, over a stubbed `fetch`
- * answering what the route answers.
- */
+/** The real `changeOwnPassword`, over a `fetch` stubbed with the route's own refusal. */
 describe('a refused change against the real client', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
