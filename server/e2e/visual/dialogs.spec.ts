@@ -72,14 +72,8 @@ for (const ground of GROUNDS) {
 
     const { page } = await asPersona(browser, ADMIN)
     await page.setViewportSize({ width: 1440, height: 900 })
-    /**
-     * **The guided demo, by name and by id.** An empty fixture draws every dialog
-     * blank, which says nothing about the surface an analyst uses -- correcting a
-     * row that already holds values -- and the picker keeps demos out of Your
-     * cases on purpose, so the rail is not a way to reach one. Naming it is what
-     * makes "a row in every entity table" true of the case this actually opens.
-     * -> #453
-     */
+    // The guided demo, by name: an empty fixture draws every dialog blank, and
+    // the rail does not offer a demo. -> #453
     const demoId = await demoCase(request, 'DEMO-2026-001')
     await page.goto(`/cases/${demoId}/timeline`)
     await settle(page)
@@ -149,9 +143,7 @@ for (const ground of GROUNDS) {
           process.stdout.write(`COLS ${door.name} ${JSON.stringify(cols)}\n`)
         }
 
-        // **The column heights, not the dialog's.** A dialog that fits says
-        // nothing about a column that overflows while its neighbours are empty,
-        // which is what grouping by control kind produces.
+        // The column heights: a dialog that fits can still hold a column that overflows.
         if (ground === 'light') {
           const columns = await dialog.evaluate((el) =>
             [...el.querySelectorAll('section[aria-label]')].map((c) => ({
@@ -162,26 +154,16 @@ for (const ground of GROUNDS) {
           )
           console.log(`COLUMNS ${door.name} ${JSON.stringify(columns)}`)
 
-          // **Whether the body overruns its own scroller**, which is what cuts
-          // the last control in half. The section heights above sum to the
-          // content and say nothing about the box holding it.
+          // Whether the body overruns its own scroller, which cuts the last control in half.
           const fit = await dialog.evaluate((el) => {
             const scroller = [...el.querySelectorAll('*')].find(
               (node) => node.scrollHeight > node.clientHeight + 1 && node.clientHeight > 200,
             )
             if (scroller === undefined) return null
-            // **Padding counts in `scrollHeight` and not in the content.** The
-            // bodies carry `p-1` to keep a focus ring off the clip edge, so a
-            // dialog that fits perfectly reported 8px of overflow at each end
-            // and read as a real finding.
+            // Padding counts in `scrollHeight` and not in the content.
             const pad = getComputedStyle(scroller)
             const inset = Number.parseFloat(pad.paddingTop) + Number.parseFloat(pad.paddingBottom)
-            // **A residual 16px is known and is not clipping.** The three entity
-            // dialogs report it identically whatever their content height, which
-            // is the signature of an artefact rather than a defect, and the
-            // captures show nothing cut. Subtracting the bodies' `-m-1` overhang
-            // did not account for it, so the cause is not written down here -
-            // read the number as "more than 16 means look".
+            // The entity dialogs report a residual 16px that is not clipping; more means look.
             const over = scroller.scrollHeight - inset - scroller.clientHeight
             return over > 1
               ? { visible: scroller.clientHeight, content: scroller.scrollHeight, over }
