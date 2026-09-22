@@ -20,6 +20,7 @@ import type { Database } from '../db/client.js'
 import { user } from '../db/schema/auth.js'
 import { customers } from '../db/schema/customer.js'
 import { LEVELS, groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
+import type { Executor } from '../db/scope.js'
 
 export type Level = 'read' | 'write' | 'delete'
 
@@ -131,12 +132,7 @@ export class ReachService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async defaultCustomerId(): Promise<string | null> {
-    const [row] = await this.db
-      .select({ id: customers.id })
-      .from(customers)
-      .where(eq(customers.isDefault, true))
-      .limit(1)
-    return row?.id ?? null
+    return defaultCustomerId(this.db)
   }
 
   /**
@@ -304,15 +300,32 @@ export class ReachService {
    * reaching it was never a membership.
    */
   async customersReachedBy(userId: string): Promise<string[]> {
-    const rows = await this.db
-      .select({ customerId: groupCustomers.customerId })
-      .from(groupMembers)
-      .innerJoin(groupCustomers, eq(groupCustomers.groupId, groupMembers.groupId))
-      .where(eq(groupMembers.userId, userId))
-
-    const reached = new Set(rows.map((row) => row.customerId))
-    const fallback = await this.defaultCustomerId()
-    if (fallback) reached.add(fallback)
-    return [...reached]
+    return customersReachedBy(this.db, userId)
   }
+}
+
+/**
+ * The methods above delegate here, so a caller holding a handle and no
+ * container asks the same code. -> `customers.service.ts`, the same shape.
+ */
+export async function defaultCustomerId(on: Executor): Promise<string | null> {
+  const [row] = await on
+    .select({ id: customers.id })
+    .from(customers)
+    .where(eq(customers.isDefault, true))
+    .limit(1)
+  return row?.id ?? null
+}
+
+export async function customersReachedBy(on: Executor, userId: string): Promise<string[]> {
+  const rows = await on
+    .select({ customerId: groupCustomers.customerId })
+    .from(groupMembers)
+    .innerJoin(groupCustomers, eq(groupCustomers.groupId, groupMembers.groupId))
+    .where(eq(groupMembers.userId, userId))
+
+  const reached = new Set(rows.map((row) => row.customerId))
+  const fallback = await defaultCustomerId(on)
+  if (fallback) reached.add(fallback)
+  return [...reached]
 }

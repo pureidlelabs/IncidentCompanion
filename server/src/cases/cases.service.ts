@@ -19,6 +19,7 @@ import { and, asc, desc, eq, getTableColumns, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import { defaultCustomer } from '../customers/customers.service.js'
+import { reachedCases } from '../access/reached-cases.js'
 import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { CaseChannel } from '../live/case-channel.service.js'
@@ -147,8 +148,18 @@ export class CasesService {
     @Optional() private readonly gateway?: LiveGateway,
   ) {}
 
-  list(): Promise<CaseRow[]> {
-    return this.db.select().from(cases).orderBy(desc(cases.updatedAt))
+  /**
+   * Every case this analyst reaches, newest first.
+   *
+   * The analyst is required rather than optional: this route mounts no guard,
+   * so a caller that could omit them could ask for the whole install.
+   */
+  async list(userId: string): Promise<CaseRow[]> {
+    return this.db
+      .select()
+      .from(cases)
+      .where(await reachedCases(this.db, userId, cases.customerId))
+      .orderBy(desc(cases.updatedAt))
   }
 
   async get(id: string): Promise<CaseRow> {
