@@ -378,7 +378,7 @@ function acquireDocument(
   }
 
   const listeners = new Set<(status: SyncStatus) => void>([onStatus])
-  const link: CaseLink = acquireLink(caseId, (url) => new WebSocket(url))
+  const link: CaseLink = acquireLink(caseId)
   const channel = new ProseChannel(link, docKey, {
     ...(user ? { user } : {}),
     // `settle` has already written `channel.status`; this only fans it out.

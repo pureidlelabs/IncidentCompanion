@@ -40,11 +40,7 @@ export class AuditedThrottlerGuard extends ThrottlerGuard {
     detail: ThrottlerLimitDetail,
   ): Promise<void> {
     const request = context.switchToHttp().getRequest<Request>()
-    /**
-     * **The tier is in the line.** `burst` being hit is usually the importer
-     * and `api` is a script pacing itself. Without the name every refusal
-     * reads the same and the log answers neither question.
-     */
+    // The tier is in the line: `burst` is usually the importer, `api` a script pacing itself.
     await recordInstallActivity(this.db, {
       event: 'rate_limited',
       target: `${request.method} ${routeOf(request)}`,

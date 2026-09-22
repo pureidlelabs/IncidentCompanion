@@ -354,6 +354,8 @@ export interface RowClaims {
   ) => { user_id: string; username: string } | undefined
   claim: (table: string, entryId: string) => void
   release: (table: string, entryId: string) => void
+  /** Whether the server refused this tab's claim on the row, because the case is read-only to it. */
+  refused: (table: string, entryId: string) => boolean
   /**
    * The signed-in analyst's id -- not their name, since `user.name` is not
    * unique and two colleagues sharing one would read each other's claim as
@@ -389,9 +391,12 @@ export function useRowHolder(table: string, entryId: string): Person | undefined
  * The release is the half that gets forgotten - a dialog closed with Escape, a
  * route change, a component that throws - so it is an effect's cleanup rather
  * than a call anyone has to remember. Silent when there is no case.
+ *
+ * Returns whether the server refused the hold, because the case is read-only
+ * to this analyst. False outside a case.
  */
 export function useHoldRow(table: string, entryId: string | undefined,
-                           active: boolean): void {
+                           active: boolean): boolean {
   const claims = useContext(ClaimsContext)
   const take = claims?.claim
   const give = claims?.release
@@ -400,6 +405,7 @@ export function useHoldRow(table: string, entryId: string | undefined,
     take(table, entryId)
     return () => give(table, entryId)
   }, [active, table, entryId, take, give])
+  return entryId !== undefined && (claims?.refused(table, entryId) ?? false)
 }
 
 /** The badge for one row, drawn where the row's controls are. */

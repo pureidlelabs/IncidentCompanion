@@ -68,6 +68,11 @@ function focusedField(pane: CaseGroupKey): string | undefined {
   return active.closest<HTMLElement>('[data-field]')?.dataset.field
 }
 
+/** The served case as the form holds it: every field by name, and nothing before it is served. */
+function draftOf(kase: Case | undefined): Draft {
+  return { ...kase }
+}
+
 export function CaseRecordForm({
   kase,
   specs,
@@ -80,7 +85,7 @@ export function CaseRecordForm({
   const fields = useMemo(() => (specs ? fieldsOf(formSpec(specs, 'CASE_FIELDS')) : []), [specs])
   const groups = useMemo(() => caseGroupsFor(fields, pane), [fields, pane])
 
-  const [draft, setDraft] = useState<Draft>(() => ({ ...(kase as unknown as Draft) }))
+  const [draft, setDraft] = useState<Draft>(() => draftOf(kase))
   const [touched, setTouched] = useState<ReadonlySet<string>>(new Set())
   // The case identity, held so a repaint from another analyst's write rebuilds
   // the draft. The refusal is a prop and survives it -- held as state here it
@@ -91,7 +96,7 @@ export function CaseRecordForm({
    * what was typed until the server agrees with it. -> #1109
    */
   if (given !== kase) {
-    const next = { ...(kase as unknown as Draft) }
+    const next = draftOf(kase)
     // A touched field the served case now agrees with follows the server again.
     const held = new Set([...touched].filter((name) => draft[name] !== next[name]))
     const focused = focusedField(pane)
@@ -102,7 +107,7 @@ export function CaseRecordForm({
     setTouched(held)
   }
 
-  const was = kase as unknown as Record<string, unknown>
+  const was = draftOf(kase)
 
   const root = useRef<HTMLDivElement>(null)
   useEffect(() => {

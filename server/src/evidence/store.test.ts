@@ -86,12 +86,6 @@ describe('keeping an artefact', () => {
     }
   })
 
-  /**
-   * **The entry name is caller-supplied, so the container is built with it.**
-   * A download hands the zip to the analyst's own tooling, which extracts by
-   * the member name - so a name that climbs is a Zip Slip this application
-   * wrote. -> #1101
-   */
   it('keeps a member name that climbs from reaching the container', async () => {
     const stored = await store.put(bytesOf('a traversing name'), '../../etc/passwd')
 

@@ -151,14 +151,7 @@ describe.skipIf(!db)('the socket asks reach too', () => {
     expect(await mayReach(theirCase, MEMBER)).toBe(false)
   })
 
-  /**
-   * A claim is offered only to somebody who could make the edit it announces.
-   *
-   * **Admission is read; a claim is not**, the same split the prose branch
-   * makes -- and a claim is the worse one to get wrong, because
-   * `CollectionService` answers a write to a row somebody else holds with a
-   * 409. A read-only analyst claiming every row refuses every writer.
-   */
+  /** A claim is offered only to somebody who could make the edit it announces. */
   describe('what it lets an analyst claim', () => {
     const ROW = '44444444-4444-4444-8444-444444444444'
 
@@ -181,11 +174,7 @@ describe.skipIf(!db)('the socket asks reach too', () => {
       }
     }
 
-    /**
-     * **Polled on the answer, not a count of turns.** The claim branch awaits
-     * a real query, so a fixed number of macrotasks is a guess that goes green
-     * while asserting nothing.
-     */
+    // Polled, because the claim branch awaits a real query.
     const until = (answered: () => number) => vi.waitFor(() => expect(answered()).toBe(1))
 
     async function socketOn(caseId: string, userId: string) {
@@ -233,11 +222,6 @@ describe.skipIf(!db)('the socket asks reach too', () => {
       expect(live.sent).toEqual([])
     })
 
-    /**
-     * **Release stays open.** `PresenceStore.release` refuses a field held by
-     * another session, so the only claim a release can reach is one this
-     * connection already owns.
-     */
     it('lets a read-only analyst release', async () => {
       await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'read' })
       const { live, released } = await socketOn(theirCase, MEMBER)

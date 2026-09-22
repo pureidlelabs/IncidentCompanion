@@ -164,11 +164,8 @@ export class InstallAccountsController {
   async endEverySession(@Body() body: unknown, @Caller() caller: Caller): Promise<Written> {
     if (!noBodySchema.safeParse(body ?? {}).success) refuse('Ending every session takes no body.')
 
-    /**
-     * **The sessions open when the call was made**, read once. A sign-in
-     * landing after the read is after the request and is left alone; a holder's
-     * later session ends with the rest of theirs.
-     */
+    // The accounts holding a session at this read, each losing every session
+    // it has; an account first signing in after the read is left alone.
     let ended = 0
     for (const userId of callerLast(await this.accounts.withAnOpenSession(), caller.session.user.id)) {
       await this.endOneAccountsSessions(caller, userId)

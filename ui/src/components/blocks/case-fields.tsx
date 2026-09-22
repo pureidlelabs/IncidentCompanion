@@ -1,3 +1,5 @@
+import type { Ref } from 'react'
+
 import { spansRow } from '@/components/blocks/form-section'
 import { VocabSelect } from '@/components/blocks/vocab-select'
 import type { FieldSpec, FormSpec } from '@/api/specs'
@@ -43,6 +45,8 @@ export interface CaseFieldsProps {
   problems?: Readonly<Record<string, string>>
   /** The one field that takes focus when the door opens. */
   autoFocus?: string
+  /** A handle on a text field's input, by name, for a caller to focus. */
+  refs?: Readonly<Record<string, Ref<HTMLInputElement>>>
 }
 
 export function CaseFields({
@@ -54,6 +58,7 @@ export function CaseFields({
   required = [],
   problems = {},
   autoFocus,
+  refs = {},
 }: CaseFieldsProps) {
   return (
     <>
@@ -66,7 +71,6 @@ export function CaseFields({
           <Field
             key={name}
             label={spec.label}
-            // A handle for the submit to focus what it refused.
             data-field={name}
             // The same rule the entity renderer lifts the cap on, rather than
             // a second reading of `fullWidth`: `Field` caps every field at
@@ -80,7 +84,7 @@ export function CaseFields({
             {(ids) =>
               control(spec, ids, value, (next) => {
                 onChange(name, next)
-              }, autoFocus === name)
+              }, autoFocus === name, refs[name])
             }
           </Field>
         )
@@ -102,6 +106,7 @@ function control(
   value: string,
   onChange: (next: string) => void,
   autoFocus: boolean,
+  ref: Ref<HTMLInputElement> | undefined,
 ) {
   if (spec.kind === 'select') {
     return (
@@ -144,6 +149,7 @@ function control(
   return (
     <Input
       {...ids}
+      ref={ref}
       autoFocus={autoFocus}
       required={spec.required === true}
       value={value}

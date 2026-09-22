@@ -8,10 +8,10 @@ import { matchRoutes } from 'react-router-dom'
 import type { ReactElement } from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { router } from '@/app/routes'
+import { routes } from '@/app/routes'
 import { PICKER_PANES } from '@/components/blocks/picker-panes'
 
-const last = (path: string) => matchRoutes(router.routes, path)?.at(-1)
+const last = (path: string) => matchRoutes(routes, path)?.at(-1)
 
 const redirect = (path: string): string | undefined =>
   (last(path)?.route.element as ReactElement<{ to?: string }> | undefined)?.props.to

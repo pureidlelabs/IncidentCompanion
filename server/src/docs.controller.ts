@@ -41,10 +41,7 @@ const POLICY = [
 
 /**
  * The app's built stylesheet, as Vite's manifest names it for the `index.html`
- * entry - the filename is hashed on every build.
- *
- * **Null when there is no build**, which is ordinary - the API serves without
- * a front end. A manifest that is there and unreadable throws.
+ * entry. Null when there is no build; a manifest that is there and unreadable throws.
  */
 export function appStylesheet(bundle: string): string | null {
   let manifest: string

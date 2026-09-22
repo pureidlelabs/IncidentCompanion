@@ -102,10 +102,7 @@ test.describe('a table keeps its controls while the rows move', () => {
     test(`${id} keeps its head and toolbar on screen`, async ({ page }) => {
       await openStory(page, id)
 
-      // The rows arrive after the frame does, and a walk over an empty table
-      // measures a section that has nothing to scroll. Whichever box holds it,
-      // something has to move -- otherwise every assertion below is true of a
-      // screen with four rows in it.
+      // The rows arrive after the frame does, and an empty table has nothing to scroll.
       await expect
         .poll(async () => (await measure(page)).travel, {
           message: 'nothing on this screen can be scrolled at all',

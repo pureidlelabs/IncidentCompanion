@@ -30,6 +30,7 @@ function claimsFor(held: Record<string, string> = {}): RowClaims & {
         : undefined,
     claim: (table, id) => { taken.push(`${table}:${id}`) },
     release: (table, id) => { given.push(`${table}:${id}`) },
+    refused: () => false,
   }
 }
 

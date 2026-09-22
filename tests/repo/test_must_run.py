@@ -156,7 +156,7 @@ A_MISSING_ENVIRONMENT_IS_A_DECLINE = {
     "tests/docker/test_container_runtime.py": "no Docker daemon is reachable",
     "tests/docker/test_backup_restores.py": "no Postgres container could be raised",
     "tests/docker/test_services_can_write_where_they_must.py": "docker is not on PATH",
-    "tests/repo/test_a_linked_dependency_is_servable.py": "ui/node_modules is absent",
+    "tests/repo/test_a_linked_dependency_is_servable.py": "vite is installed in neither",
     "tests/contract/test_workspaces.py": "nothing is installed in this checkout",
 }
 

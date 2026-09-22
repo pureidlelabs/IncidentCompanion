@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react'
+import { useRef, useState, type SyntheticEvent } from 'react'
 import { ClipboardList, FilePlus2, LibraryBig } from 'lucide-react'
 
 import type { LibraryEntry } from '@/api/library'
@@ -98,6 +98,7 @@ export function NewCaseScreen({
   const [refusal, setRefusal] = useState<string | undefined>(undefined)
   const [source, setSource] = useState<'all' | 'shipped' | 'yours'>('all')
   const [typed, setTyped] = useState('')
+  const titleInput = useRef<HTMLInputElement>(null)
 
   const caseForm = specs ? formSpec(specs, 'CASE_FIELDS') : undefined
 
@@ -137,15 +138,16 @@ export function NewCaseScreen({
     event.preventDefault()
     if (!fields.title.trim()) {
       setRefused({ title: 'Required.' })
-      document.querySelector<HTMLElement>('[data-field="title"] input')?.focus()
+      titleInput.current?.focus()
       return
     }
     setRefused({})
     if (!writes) return
 
-    const filled = Object.fromEntries(
-      Object.entries(fields).filter(([, value]) => value.trim() !== ''),
-    ) as unknown as NewCaseFields
+    const filled: NewCaseFields = { title: fields.title }
+    for (const name of ['summary', 'customer', 'reference', 'template'] as const) {
+      if (fields[name].trim() !== '') filled[name] = fields[name]
+    }
 
     setPending(true)
     setRefusal(undefined)
@@ -191,6 +193,7 @@ export function NewCaseScreen({
                 names={['title', 'customer', 'reference']}
                 required={['title']}
                 autoFocus="title"
+                refs={{ title: titleInput }}
                 problems={refused}
                 values={fields}
                 hints={{ reference: 'The ticket this was raised under, if there is one.' }}

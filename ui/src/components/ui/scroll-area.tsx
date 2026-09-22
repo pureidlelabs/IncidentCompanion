@@ -46,7 +46,6 @@ export function ScrollArea({ orientation, className, label, ...props }: ScrollAr
     <div
       data-part="scroll-area"
       data-orientation={orientation ?? 'vertical'}
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
       tabIndex={0}
       {...(label === undefined ? {} : { role: 'region', 'aria-label': label })}
       className={cn(scrollArea({ orientation }), className)}

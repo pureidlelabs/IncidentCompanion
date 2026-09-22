@@ -81,9 +81,7 @@ export const TABLES = [
 
 /**
  * `values` with each timestamp column's ISO string read as a `Date`.
- *
- * Throws `BadArchive` for a string no date can be read from, which the generic
- * write path refuses at its schema.
+ * Throws `BadArchive` for a string no date can be read from.
  */
 export function coercedTimes(
   collection: string,
@@ -480,9 +478,7 @@ export class ArchiveImportService {
 
   /**
    * Remove the artefacts a rolled-back import wrote, keeping any a row names.
-   *
-   * A failure here is logged rather than thrown, so the refusal the operator
-   * reads is the import's own.
+   * A failure is logged, not thrown.
    */
   private async discard(introduced: readonly string[]): Promise<void> {
     if (introduced.length === 0) return

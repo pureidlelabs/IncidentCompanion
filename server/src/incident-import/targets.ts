@@ -10,12 +10,7 @@ import { DEFINITIONS } from '../collections/definitions.js'
 import type { BulkTarget } from '../domain/collections.js'
 import type { ImportDefinitions } from './import.service.js'
 
-/**
- * **A literal tuple of bulk targets**: a name here that is not one is a type
- * error. The reverse does not hold -- this is a subset of the registry rather
- * than a second copy of it, and a collection added to `TABLES` is simply not
- * imported until it is named here too.
- */
+/** The bulk targets an import writes; a collection is not imported until named here. */
 export const IMPORT_TARGETS = [
   'systems',
   'accounts',
@@ -25,7 +20,7 @@ export const IMPORT_TARGETS = [
 ] as const satisfies readonly BulkTarget[]
 
 /**
- * **The shipping definitions, never rebuilt.** A hand-written
+ * The shipping definitions, never rebuilt. A hand-written
  * copy is a second door that a guard added to the first never reaches -- a
  * timeline definition without `schemaFor` loses the whole reference check on an
  * imported entry the analyst edits.
