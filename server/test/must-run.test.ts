@@ -81,12 +81,6 @@ describe('a declined suite says so', () => {
     })
   })
 
-  /**
-   * **Every write-path describe asks this one question**, so an answer of
-   * `false` under a certifying run is the whole of them skipped with nothing
-   * to read it. The embedded URL is what `global-setup.ts` leaves behind, and
-   * the two are compared on host and port. -> #1079
-   */
   describe('the suites that need two concurrent connections', () => {
     function embedded(): void {
       process.env['IC_EMBEDDED_DATABASE_URL'] = 'postgres://x@127.0.0.1:55432/ic'

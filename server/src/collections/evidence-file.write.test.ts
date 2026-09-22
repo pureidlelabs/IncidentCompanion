@@ -243,10 +243,6 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     expect(row!.storedAt).not.toBeNull()
   })
 
-  /**
-   * **A header value is a ByteString**, so a name outside Latin-1 cannot be put
-   * on the wire at all and the client percent-encodes it. -> #1112
-   */
   it('reads a percent-encoded filename back as the name the analyst chose', async () => {
     const { caseId, id } = await caseWithRow()
     await controller.attach(
@@ -260,11 +256,6 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     expect(row!.originalFilename).toBe('\u65E5\u672C.pdf')
   })
 
-  /**
-   * **A client that has not been updated still attaches.** A percent sign in a
-   * filename is ordinary, and `decodeURIComponent` throws on one that begins no
-   * escape sequence.
-   */
   it('keeps a filename that is not percent-encoded, malformed escape and all', async () => {
     const { caseId, id } = await caseWithRow()
     await controller.attach(

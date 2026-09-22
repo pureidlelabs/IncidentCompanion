@@ -106,9 +106,6 @@ export function isEmbedded(url: string): boolean {
  * the second of two concurrent writers needs two real connections, and the
  * embedded engine has one. A test asserting that must skip rather than pass.
  *
- * Declines rather than answering no on a certifying run, so the suites this
- * guards cannot go quiet where the whole run claims to certify.
- *
  * @throws when the run is certifying and the engine is the in-process one
  */
 export function hasConcurrentConnections(): boolean {

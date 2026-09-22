@@ -304,10 +304,7 @@ export class ReachService {
   }
 }
 
-/**
- * The methods above delegate here, so a caller holding a handle and no
- * container asks the same code. -> `customers.service.ts`, the same shape.
- */
+/** The default customer's id, for a caller holding a handle and no container. */
 export async function defaultCustomerId(on: Executor): Promise<string | null> {
   const [row] = await on
     .select({ id: customers.id })

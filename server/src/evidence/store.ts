@@ -226,15 +226,7 @@ export class EvidenceStore {
   }
 }
 
-/**
- * The last segment of a caller's filename, or the digest when nothing is left.
- *
- * **Reduced rather than refused**, unlike `archive/format.ts`'s
- * `safeMemberName`: the entry name is a label on the container and the store
- * needs nothing from it, so a name that climbs costs the analyst their upload
- * for no gain. The backslash is folded first, being a separator on the
- * platform the name may have been typed on. -> #1101
- */
+/** A caller's filename cut to its last segment (either slash), or the digest when none is left. */
 function memberName(name: string | undefined, digest: string): string {
   const last = basename((name ?? '').replaceAll('\\', '/')).replaceAll('\0', '')
   return last === '' || last === '.' || last === '..' ? digest : last

@@ -14,8 +14,7 @@ export async function artefactsNamed(db: Database): Promise<Set<string>> {
     const rows = await withCase(db, one.id, (tx) =>
       tx.select({ hash: evidence.hash }).from(evidence).where(isNotNull(evidence.storedAt)),
     )
-    // A row cannot be stored without the digest it is stored under; the
-    // check is what narrows the column's type, not a second filter.
+    // Narrows the column's type: a stored row always has a digest.
     for (const row of rows) if (row.hash) named.add(row.hash)
   }
   return named

@@ -47,10 +47,7 @@ import { Optional } from '@nestjs/common'
 /**
  * What a browser should call the file it just downloaded.
  *
- * **Percent-decoded first.** A header value is a ByteString, so a name outside
- * Latin-1 cannot be sent as it stands and the client encodes it; a value that
- * decodes to nothing valid is a client that does not encode, and is taken as
- * it arrived. -> #1112
+ * Percent-decoded first; a value that does not decode is taken as it arrived.
  *
  * **Quotes and control characters are stripped, not escaped.** The value goes
  * into a `content-disposition` header, and a filename carrying a quote splits

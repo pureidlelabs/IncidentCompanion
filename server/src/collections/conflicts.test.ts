@@ -537,14 +537,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
   })
 
   describe('answering it against a sent report', () => {
-    /**
-     * **The sixth door.** Answering a review writes without a `PATCH`, and
-     * owes the sent-report guard the `PATCH` meets.
-     *
-     * The route is ordinary rather than contrived: a refused `PATCH` records
-     * the analyst's values, the report is sent, and answering the review that
-     * is already on their screen replays those values into it.
-     */
+    /** Answering a review writes without a `PATCH`, and owes the sent-report guard it meets. */
     it('refuses to write a kept-mine value into a report that has been sent', async () => {
       const reportId = randomUUID()
       await seed!.insert(reports).values({

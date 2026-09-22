@@ -40,11 +40,8 @@
  * component's slug).
  */
 /* eslint-disable playwright/no-wait-for-timeout --
-   An audit waits for whatever a screen it has never seen does next: the
-   overlay, the hover reveal and the paint it settles into are what the sweep
-   is there to discover, so there is no condition to wait on that does not
-   assume the finding. Every other sleep in `server/e2e/` waits on its own
-   next assertion instead. */
+   What a screen does next is what the audit discovers, so no condition to wait
+   on exists that does not assume the finding. */
 
 import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'

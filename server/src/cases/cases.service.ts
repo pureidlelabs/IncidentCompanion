@@ -149,10 +149,8 @@ export class CasesService {
   ) {}
 
   /**
-   * Every case this analyst reaches, newest first.
-   *
-   * The analyst is required rather than optional: this route mounts no guard,
-   * so a caller that could omit them could ask for the whole install.
+   * Every case this analyst reaches, newest first. The analyst is required:
+   * this route mounts no guard.
    */
   async list(userId: string): Promise<CaseRow[]> {
     return this.db
