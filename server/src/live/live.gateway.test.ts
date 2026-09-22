@@ -12,12 +12,13 @@
  * not in the handshake at all - a filed report is frozen at every collection
  * door and was still editable word by word over this socket.
  */
-import type { IncomingMessage } from 'node:http'
+import { createServer, type IncomingMessage } from 'node:http'
+import type { AddressInfo } from 'node:net'
 
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { WebSocket } from 'ws'
+import { WebSocket as Client, type WebSocket } from 'ws'
 import { readSyncMessage, writeSyncStep2 } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
@@ -942,5 +943,176 @@ describe('a socket that goes before the join has finished', () => {
     await settle()
 
     expect(left, 'nothing is listening for a socket that errors rather than closing').toHaveLength(1)
+  })
+})
+
+/**
+ * What a claim frame may name, and how much of it the socket will read.
+ *
+ * A claim key is attacker-chosen and reaches Redis: `PresenceStore.claim`
+ * writes it as a field of `case:<id>:claims`, the heartbeat refreshes every
+ * held field every ten seconds, and `holderOf` reads the whole hash before
+ * every row write in the case. Unbounded in size and in count, that is a hash
+ * one connection can grow until it is on the path of every write.
+ */
+describe('what a claim frame may name', () => {
+  const ROW = '44444444-4444-4444-8444-444444444444'
+
+  async function claiming() {
+    const claimed: string[] = []
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => Promise.resolve(),
+      prose: () => undefined,
+      claim: (_member: unknown, table: string, id: string) => {
+        claimed.push(`${table}:${id}`)
+        return Promise.resolve()
+      },
+      release: (_member: unknown, table: string, id: string) => {
+        claimed.splice(claimed.indexOf(`${table}:${id}`), 1)
+        return Promise.resolve()
+      },
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      {} as never,
+      caseWithNoCustomer,
+      {} as never,
+      audit as never,
+      holding('write'),
+    )
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    return { live, claimed }
+  }
+
+  it('refuses a table name no collection could have', async () => {
+    const { live, claimed } = await claiming()
+
+    live.receive({ type: 'claim', table: 'x'.repeat(65_000), id: ROW })
+    live.receive({ type: 'claim', table: 'Systems; drop', id: ROW })
+    await settle()
+
+    expect(claimed, 'an arbitrary string became a field of the case claims hash').toEqual([])
+  })
+
+  it('refuses an entry id that is not a uuid', async () => {
+    const { live, claimed } = await claiming()
+
+    live.receive({ type: 'claim', table: 'systems', id: 'x'.repeat(65_000) })
+    await settle()
+
+    expect(claimed).toEqual([])
+  })
+
+  it('takes a claim that names a plausible table and a real id', async () => {
+    const { live, claimed } = await claiming()
+
+    live.receive({ type: 'claim', table: 'network_indicators', id: ROW })
+    await settle()
+
+    expect(claimed).toEqual([`network_indicators:${ROW}`])
+  })
+
+  /**
+   * **The cap is per connection and has headroom over any screen.**
+   * `useHoldRow` has one caller -- `entity-dialog.tsx` -- and one dialog is
+   * open at a time, so a browser holds one claim and re-sends that set on a
+   * reconnect. What the cap stops is a loop.
+   */
+  it('stops claiming once the connection holds more than a screen ever could', async () => {
+    const { live, claimed } = await claiming()
+
+    for (let n = 0; n < 200; n += 1) {
+      live.receive({
+        type: 'claim',
+        table: 'systems',
+        id: `44444444-4444-4444-8444-${String(n).padStart(12, '0')}`,
+      })
+    }
+    await settle()
+
+    expect(claimed.length).toBeLessThanOrEqual(64)
+    expect(claimed.length, 'the cap is below what one screen legitimately holds').toBeGreaterThan(1)
+  })
+
+  /** A released row gives its place back, or a long session runs out of cap. */
+  it('counts a released claim as given back', async () => {
+    const { live, claimed } = await claiming()
+
+    for (let n = 0; n < 200; n += 1) {
+      live.receive({
+        type: 'claim',
+        table: 'systems',
+        id: `44444444-4444-4444-8444-${String(n).padStart(12, '0')}`,
+      })
+    }
+    await settle()
+    const full = claimed.length
+    live.receive({ type: 'release', table: 'systems', id: '44444444-4444-4444-8444-000000000000' })
+    await settle()
+    live.receive({ type: 'claim', table: 'systems', id: ROW })
+    await settle()
+
+    expect(claimed).toContain(`systems:${ROW}`)
+    expect(claimed).toHaveLength(full)
+  })
+})
+
+/**
+ * **The frame bound, over a real socket**, because `maxPayload` is enforced by
+ * `ws` on the way in and nothing above it can see whether it was set. The
+ * default is 100 MB per frame, on a path no guard and no throttler reaches.
+ */
+describe('how much of a frame the socket will read', () => {
+  it('closes a socket that sends a frame past the bound', async () => {
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => Promise.resolve(),
+      prose: () => undefined,
+    }
+    const auth = {
+      api: {
+        getSession: () =>
+          Promise.resolve({ user: { id: 'u-1', name: 'Ada', email: 'a@b.test' } }),
+      },
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      auth as never,
+      caseWithNoCustomer,
+      {} as never,
+      audit as never,
+      holding('write'),
+    )
+    const server = createServer()
+    gateway.attach(server)
+    await new Promise<void>((listening) => {
+      server.listen(0, '127.0.0.1', listening)
+    })
+    const { port } = server.address() as AddressInfo
+
+    const client = new Client(`ws://127.0.0.1:${String(port)}/api/cases/${CASE}/live`, {
+      origin: `http://127.0.0.1:${String(port)}`,
+    })
+    await new Promise<void>((open, fail) => {
+      client.on('open', () => { open() })
+      client.on('error', fail)
+    })
+    const closed = new Promise<number>((code) => {
+      client.on('close', (why: number) => { code(why) })
+    })
+    // A close code arrives as an error on the client too, and an unhandled
+    // one is a rejection beside a green run.
+    client.on('error', () => undefined)
+
+    client.send(JSON.stringify({ type: 'claim', table: 'x'.repeat(200_000), id: CASE }))
+
+    expect(await closed, 'the socket read a frame it should have refused').toBe(1009)
+
+    gateway.onApplicationShutdown()
+    await new Promise<void>((done) => {
+      server.close(() => { done() })
+    })
   })
 })

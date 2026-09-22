@@ -88,6 +88,40 @@ export const STATUS: Record<Refusal, string> = {
 const REPORTS_SCOPE = 'reports'
 
 /**
+ * The largest frame this socket will read, in bytes.
+ *
+ * **The `ws` default is 100 MB and no throttler reaches an upgrade**, so the
+ * bound is the only thing between a frame and the memory to hold it. The
+ * largest legitimate frame is a prose sync update; `server/src/prose/` states
+ * no bound of its own, and the widest stated prose-shaped field in the schemas
+ * is a case summary at 4000 characters (`domain/case.ts`), which this clears
+ * by a factor of sixteen.
+ */
+const MAX_FRAME_BYTES = 64 * 1024
+
+/**
+ * What a claim key may be.
+ *
+ * **A shape, not the collection registry.** `architecture.test.ts` refuses
+ * `live` an import of `collections` or `domain`, so the set of real table
+ * names is not reachable from here - and the weakness is an unbounded
+ * attacker-chosen key rather than a wrong one, since a claim on a table that
+ * does not exist matches no row and refuses no write.
+ */
+const CLAIM_TABLE = /^[a-z_]{1,40}$/
+const CLAIM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * How many rows one connection may hold at once.
+ *
+ * `useHoldRow` has one caller - the entity dialog - and one dialog is open at
+ * a time, so a browser holds one claim and re-sends that set on a reconnect.
+ * The headroom is for a screen nobody has written yet; what the cap stops is a
+ * loop.
+ */
+const CLAIMS_PER_CONNECTION = 64
+
+/**
  * Whether this analyst may be admitted to a socket on this case.
  *
  * **Read is enough and no more is asked.** A socket only ever shows what a
@@ -141,7 +175,7 @@ interface OpenDocument {
 @Injectable()
 export class LiveGateway implements OnApplicationShutdown {
   private readonly log = new Logger(LiveGateway.name)
-  private readonly sockets = new WebSocketServer({ noServer: true })
+  private readonly sockets = new WebSocketServer({ noServer: true, maxPayload: MAX_FRAME_BYTES })
   private connections = 0
 
   private readonly admitted = new Map<WebSocket, { caseId: string; userId: string }>()
@@ -383,6 +417,9 @@ export class LiveGateway implements OnApplicationShutdown {
      */
     const opened = new Map<string, OpenDocument>()
 
+    /** The rows this connection holds, so `CLAIMS_PER_CONNECTION` is countable. */
+    const claims = new Set<string>()
+
     const joined = this.channel.join(member)
 
     let gone = false
@@ -458,8 +495,11 @@ export class LiveGateway implements OnApplicationShutdown {
       const id = typeof message.id === 'string' ? message.id : null
       if (!table || !id) return
 
-      if (message.type === 'claim') this.onClaim(member, live, table, id).catch(failed)
-      if (message.type === 'release') this.channel.release(member, table, id).catch(failed)
+      if (message.type === 'claim') this.onClaim(member, live, claims, table, id).catch(failed)
+      if (message.type === 'release') {
+        claims.delete(`${table}:${id}`)
+        this.channel.release(member, table, id).catch(failed)
+      }
     })
 
   }
@@ -481,11 +521,23 @@ export class LiveGateway implements OnApplicationShutdown {
   private async onClaim(
     member: Member,
     live: WebSocket,
+    claims: Set<string>,
     table: string,
     id: string,
   ): Promise<void> {
+    // Silence, as for a frame this build does not understand: a key of this
+    // shape comes from a loop rather than from a client.
+    if (!CLAIM_TABLE.test(table) || !CLAIM_ID.test(id)) return
+    const field = `${table}:${id}`
+    if (!claims.has(field) && claims.size >= CLAIMS_PER_CONNECTION) return
+    // **Counted before the await, not after.** A loop of frames arrives in one
+    // tick and every one of them would otherwise pass a count that nothing has
+    // yet raised.
+    claims.add(field)
+
     const level = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
     if (level !== 'write' && level !== 'delete') {
+      claims.delete(field)
       live.send(JSON.stringify({ type: 'claim.refused', table, id, reason: 'read-only' }))
       return
     }
