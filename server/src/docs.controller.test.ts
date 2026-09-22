@@ -7,7 +7,7 @@
  * safer than the library if something checks it. This is that check.
  */
 import { describe, expect, it } from 'vitest'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -97,26 +97,35 @@ describe('wearing the app\u2019s own colours', () => {
 })
 
 describe('finding the built stylesheet', () => {
-  const shellWith = (html: string): string => {
+  const built = (manifest: string, shell = '<!doctype html><html></html>'): string => {
     const dir = mkdtempSync(join(tmpdir(), 'ic-docs-'))
-    writeFileSync(join(dir, 'index.html'), html)
+    mkdirSync(join(dir, '.vite'))
+    writeFileSync(join(dir, '.vite', 'manifest.json'), manifest)
+    writeFileSync(join(dir, 'index.html'), shell)
     return dir
   }
+  const entry = (css?: string[]) =>
+    JSON.stringify({ 'index.html': { file: 'assets/index-C1.js', isEntry: true, css } })
 
-  it('reads the hashed name Vite emitted', () => {
-    const dir = shellWith(
-      '<!doctype html><html><head><link rel="stylesheet" crossorigin ' +
-        'href="/assets/index-BmK5aacp.css"></head><body></body></html>',
+  it('reads the hashed name from the manifest, whatever the shell says', () => {
+    const dir = built(
+      entry(['assets/index-BmK5aacp.css']),
+      '<!doctype html><html><head><link href="/assets/index-BmK5aacp.css" ' +
+        'rel="stylesheet"></head></html>',
     )
     expect(appStylesheet(dir)).toBe('/assets/index-BmK5aacp.css')
   })
 
-  it('answers nothing when the shell has no stylesheet', () => {
-    expect(appStylesheet(shellWith('<!doctype html><html><body></body></html>'))).toBeNull()
+  it('answers nothing when the entry has no stylesheet', () => {
+    expect(appStylesheet(built(entry()))).toBeNull()
   })
 
   it('answers nothing when there is no build at all', () => {
     expect(appStylesheet('/nowhere/at/all/definitely-not-here')).toBeNull()
+  })
+
+  it('surfaces a manifest it cannot read, rather than drawing unthemed', () => {
+    expect(() => appStylesheet(built('{ not json'))).toThrow()
   })
 })
 
