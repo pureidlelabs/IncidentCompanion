@@ -14,7 +14,7 @@
 import { Logger } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
 
-import type { Database } from '../db/client.js'
+import type { Executor } from '../db/scope.js'
 import { callerAddress } from '../wire/caller-address.js'
 import { retentionClassOf } from './retention-class.js'
 import { CHANNEL_OF, installActivity } from '../db/schema/install-activity.js'
@@ -130,7 +130,7 @@ function originOf(headers: IncomingHttpHeaders | undefined) {
  * which is the one outcome worse than a vague line.
  */
 export async function recordInstallActivity(
-  db: Database,
+  db: Executor,
   input: InstallActivityInput,
 ): Promise<boolean> {
   const { ipAddress, userAgent } = input.origin
