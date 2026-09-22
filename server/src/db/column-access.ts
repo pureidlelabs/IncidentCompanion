@@ -42,11 +42,8 @@ export function columnOf(table: PgTable, name: string): PgColumn {
 }
 
 /**
- * ISO strings become `Date`s for the columns that are timestamps.
- *
- * **Derived from the table, never from the field name.** Every time arrives
- * as a string, because a schema is also the API document and JSON Schema has
- * no date type - and the columns carrying one share no naming rule.
+ * ISO strings become `Date`s for the columns that are timestamps, as the table
+ * declares them rather than as the field is named.
  */
 export function coerceTimes(
   table: PgTable,

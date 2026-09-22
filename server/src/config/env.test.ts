@@ -1,11 +1,4 @@
-/**
- * What the environment schema answers for a value nobody set.
- *
- * A default belongs to the schema and to nothing else: four readers each
- * spelling `?? '.evidence'` is four places for the answer to differ, and one
- * of them reading a different directory is an install whose evidence is
- * somewhere no screen looks. -> #1087
- */
+/** What the environment schema answers for a value nobody set. -> #1087 */
 import { describe, expect, it } from 'vitest'
 
 import { loadEnv } from './env.js'

@@ -81,9 +81,7 @@ export const TABLES = [
 
 /**
  * `values` with each timestamp column's ISO string read as a `Date`.
- *
- * Throws `BadArchive` for a string no date can be read from, which the generic
- * write path refuses at its schema.
+ * Throws `BadArchive` for a string no date can be read from.
  */
 export function coercedTimes(
   collection: string,

@@ -122,8 +122,7 @@ describe('the install settings document', () => {
     expect(settings.limits.passphraseChars).toBeGreaterThan(0)
   })
 
-  // The answer for an environment naming no directory is the schema's, and
-  // `config/env.test.ts` is where it is asserted.
+  // The answer for an unset directory is asserted in `config/env.test.ts`.
   it('names the directory the environment gave it', async () => {
     expect((await settingsOf()).storage.evidence).toBe('/var/lib/incidentcompanion/evidence')
   })
