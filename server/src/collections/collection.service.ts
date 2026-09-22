@@ -100,14 +100,7 @@ export interface CollectionDefinition {
    * whole. Absent means the collection is its own scope.
    */
   readonly orderWithin?: string
-  /**
-   * Which schema a row validates against, for the reference check.
-   *
-   * **Only the timeline needs to supply this.** Every other collection has one
-   * schema and `COLLECTION_SCHEMAS` already holds it; the timeline's depends
-   * on the row's `kind`, and that knowledge belongs in its own definition
-   * rather than as a special case in here.
-   */
+  /** Which schema a row validates against for the reference check; absent, `COLLECTION_SCHEMAS`. */
   readonly schemaFor?: (values: Record<string, unknown>) => z.ZodObject | undefined
   /**
    * Refuse a write that lands in a row this collection considers closed. Only

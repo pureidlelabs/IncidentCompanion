@@ -480,9 +480,7 @@ export class ArchiveImportService {
 
   /**
    * Remove the artefacts a rolled-back import wrote, keeping any a row names.
-   *
-   * A failure here is logged rather than thrown, so the refusal the operator
-   * reads is the import's own.
+   * A failure is logged, not thrown.
    */
   private async discard(introduced: readonly string[]): Promise<void> {
     if (introduced.length === 0) return
