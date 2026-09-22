@@ -34,7 +34,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 
 import { request, type ApiError } from './client'
-import type { CollectionEntry, CollectionName } from './model'
+import { COLLECTION_TO_CASE_KEY, type Case, type CollectionEntry, type CollectionName } from './model'
 import { keys } from './queryKeys'
 
 /** The field the collection definition names as its `position`. */
@@ -52,6 +52,7 @@ export interface ReorderedEntries {
 
 interface OrderRollback<N extends CollectionName> {
   previous: CollectionEntry[N][] | undefined
+  previousCase: Case | undefined
 }
 
 /**
@@ -137,6 +138,8 @@ export function useEntryReorder<N extends CollectionName>(
 ): UseMutationResult<ReorderedEntries, ApiError, EntryOrder, OrderRollback<N>> {
   const client = useQueryClient()
   const listKey = keys.collection(caseId, collection)
+  const caseKey = keys.case(caseId)
+  const onCase = COLLECTION_TO_CASE_KEY[collection]
 
   return useMutation<ReorderedEntries, ApiError, EntryOrder, OrderRollback<N>>({
     mutationKey: [...listKey, 'reorder'],
@@ -148,17 +151,27 @@ export function useEntryReorder<N extends CollectionName>(
       ),
 
     onMutate: async ({ ids }) => {
-      await client.cancelQueries({ queryKey: listKey })
+      // The screens render from the case document, so the write lands there as well as on the list.
+      await Promise.all([
+        client.cancelQueries({ queryKey: listKey }),
+        client.cancelQueries({ queryKey: caseKey, exact: true }),
+      ])
       const previous = client.getQueryData<CollectionEntry[N][]>(listKey)
+      const previousCase = client.getQueryData<Case>(caseKey)
 
-      client.setQueryData<CollectionEntry[N][]>(listKey, (rows) =>
-        rows ? resequence(rows as (CollectionEntry[N] & { id: string })[], ids) : rows,
+      const apply = (rows: CollectionEntry[N][] | undefined) =>
+        rows ? resequence(rows as (CollectionEntry[N] & { id: string })[], ids) : rows
+      client.setQueryData<CollectionEntry[N][]>(listKey, apply)
+      client.setQueryData<Case>(caseKey, (kase) =>
+        kase && { ...kase, [onCase]: apply(kase[onCase] as CollectionEntry[N][]) },
       )
-      return { previous }
+      return { previous, previousCase }
     },
 
     onError: (_error, _order, context) => {
-      if (context) client.setQueryData(listKey, context.previous)
+      if (!context) return
+      client.setQueryData(listKey, context.previous)
+      client.setQueryData(caseKey, context.previousCase)
     },
 
     onSettled: () => {

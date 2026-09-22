@@ -12,7 +12,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 
 import { request, type ApiError } from './client'
-import type { EvidenceEntry } from './model'
+import type { Case, EvidenceEntry } from './model'
 import { optimisticRow } from './optimisticRow'
 import { keys } from './queryKeys'
 
@@ -22,6 +22,7 @@ export interface EvidenceRecordDraft {
 
 interface CreateRollback {
   previous: EvidenceEntry[] | undefined
+  previousCase: Case | undefined
 }
 
 export function useEvidenceRecordCreate(
@@ -29,6 +30,7 @@ export function useEvidenceRecordCreate(
 ): UseMutationResult<EvidenceEntry, ApiError, EvidenceRecordDraft, CreateRollback> {
   const client = useQueryClient()
   const listKey = keys.collection(caseId, 'evidence')
+  const caseKey = keys.case(caseId)
 
   return useMutation<EvidenceEntry, ApiError, EvidenceRecordDraft, CreateRollback>({
     mutationKey: [...listKey, 'create-record'],
@@ -40,8 +42,13 @@ export function useEvidenceRecordCreate(
       }),
 
     onMutate: async ({ fields }) => {
-      await client.cancelQueries({ queryKey: listKey })
+      // The screens render from the case document, so the write lands there as well as on the list.
+      await Promise.all([
+        client.cancelQueries({ queryKey: listKey }),
+        client.cancelQueries({ queryKey: caseKey, exact: true }),
+      ])
       const previous = client.getQueryData<EvidenceEntry[]>(listKey)
+      const previousCase = client.getQueryData<Case>(caseKey)
 
       // A metadata-only draft: no hash, no file path, same as what the
       // server writes for a record that names no file. **Both are stated here
@@ -53,11 +60,14 @@ export function useEvidenceRecordCreate(
         filePath: null,
       })
       client.setQueryData<EvidenceEntry[]>(listKey, (rows) => [...(rows ?? []), draft])
-      return { previous }
+      client.setQueryData<Case>(caseKey, (kase) => kase && { ...kase, evidence: [...kase.evidence, draft] })
+      return { previous, previousCase }
     },
 
     onError: (_error, _draft, context) => {
-      if (context) client.setQueryData(listKey, context.previous)
+      if (!context) return
+      client.setQueryData(listKey, context.previous)
+      client.setQueryData(caseKey, context.previousCase)
     },
 
     onSettled: () => {
