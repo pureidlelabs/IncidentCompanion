@@ -659,8 +659,7 @@ export class LiveGateway implements OnApplicationShutdown {
     }
 
     const reply = this.prose.applySync(held.doc, frame, live)
-    // The server's own step 1 goes after the answer, so the client is ready
-    // before it is asked.
+    // The server's own step 1 goes after the answer, so the client is ready first.
     for (const bytes of [reply, opens ? this.prose.hello(held.doc) : null]) {
       if (!bytes) continue
       live.send(

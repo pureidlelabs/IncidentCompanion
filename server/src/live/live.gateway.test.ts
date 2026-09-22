@@ -721,11 +721,6 @@ describe('opening a field asks the client what it has', () => {
   const kinds = (live: FakeSocket) =>
     live.frames('prose.sync').map((frame) => decoderFor(frame['update'] as string).arr[0])
 
-  /**
-   * A reconnecting client's step 1 is answered with what it lacks, which tells
-   * the server nothing about what the client typed while the socket was down.
-   * The answer comes first, so the client is ready before it is asked.
-   */
   it('answers the step 1, then sends its own, once', async () => {
     const { live } = await connected(null, filed('on the server'))
 
@@ -737,11 +732,6 @@ describe('opening a field asks the client what it has', () => {
     expect(kinds(live)).toEqual([1, 0])
   })
 
-  /**
-   * The answer to that step 1 is a step 2 carrying nothing new, and refusing it
-   * would tell a read-only analyst, or anyone reading a filed report, that
-   * something they wrote was lost.
-   */
   it.each([
     ['a filed report', SENT, 'write'],
     ['a read-only analyst', null, 'read'],
