@@ -113,7 +113,7 @@ const OWNED: Readonly<Record<string, string>> = {
   PointerAt: 'blocks/incident-canvas.tsx',
   PointerContextMenu: 'blocks/data-table.tsx',
   PopoverTrigger: 'blocks/incident-canvas.tsx',
-  Radio: 'blocks/choice-row.tsx',
+  Radio: 'blocks/new-account-dialog.tsx',
   Row: 'blocks/data-table.tsx',
   ScrollArea: 'blocks/activity-door.tsx',
   Sheet: 'blocks/case-key-times-sheet.tsx',
