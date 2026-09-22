@@ -88,37 +88,22 @@ export const STATUS: Record<Refusal, string> = {
 const REPORTS_SCOPE = 'reports'
 
 /**
- * The largest frame this socket will read, in bytes.
+ * The largest frame this socket will read, in bytes. The largest legitimate
+ * one is a prose sync update.
  *
- * **The `ws` default is 100 MB and no throttler reaches an upgrade**, so the
- * bound is the only thing between a frame and the memory to hold it. The
- * largest legitimate frame is a prose sync update; `server/src/prose/` states
- * no bound of its own, and the widest stated prose-shaped field in the schemas
- * is a case summary at 4000 characters (`domain/case.ts`), which this clears
- * by a factor of sixteen.
+ * **The `ws` default is 100 MB and no throttler reaches an upgrade**, so this
+ * is the only thing between a frame and the memory to hold it.
  */
 const MAX_FRAME_BYTES = 64 * 1024
 
 /**
- * What a claim key may be.
- *
- * **A shape, not the collection registry.** `architecture.test.ts` refuses
- * `live` an import of `collections` or `domain`, so the set of real table
- * names is not reachable from here - and the weakness is an unbounded
- * attacker-chosen key rather than a wrong one, since a claim on a table that
- * does not exist matches no row and refuses no write.
+ * What a claim key may be - a shape, not the collection registry, which
+ * `architecture.test.ts` refuses `live` an import of.
  */
 const CLAIM_TABLE = /^[a-z_]{1,40}$/
 const CLAIM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-/**
- * How many rows one connection may hold at once.
- *
- * `useHoldRow` has one caller - the entity dialog - and one dialog is open at
- * a time, so a browser holds one claim and re-sends that set on a reconnect.
- * The headroom is for a screen nobody has written yet; what the cap stops is a
- * loop.
- */
+/** How many rows one connection may hold at once. A browser holds one. */
 const CLAIMS_PER_CONNECTION = 64
 
 /**
