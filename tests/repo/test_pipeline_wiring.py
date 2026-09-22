@@ -1112,3 +1112,20 @@ def test_every_client_vitest_step_arms_the_must_run_reporter() -> None:
         "these steps run the client tier without arming its must-run floor, so a "
         f"run that reached no test file exits 0:\n  " + "\n  ".join(bare)
     )
+
+
+def test_the_server_lint_script_caps_warnings_at_zero() -> None:
+    """A rule set to `warn` decides nothing until the script refuses one.
+
+    `playwright/no-wait-for-timeout` arrives at `warn` from the plugin's
+    recommended set, so a fixed sleep with no argument passed every gate the
+    repository has. -> #1081
+    """
+    script = json.loads(
+        (REPO_ROOT / "server" / "package.json").read_text(encoding="utf-8"),
+    )["scripts"]["lint"]
+
+    assert "--max-warnings 0" in script, (
+        f"`{script}` exits 0 on any number of warnings, so every warn-level rule "
+        "in server/eslint.config.mjs is decorative"
+    )

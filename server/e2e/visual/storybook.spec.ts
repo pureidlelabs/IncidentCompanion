@@ -232,6 +232,9 @@ test('a stale server and a broken story are told apart', () => {
   expect(fromAStaleServer('light X / Y - Objects are not valid as a React child')).toBe(false)
 })
 
+// Beside the `report` object both hooks reset and print, rather than above a
+// test of a pure helper that touches neither.
+// eslint-disable-next-line playwright/prefer-hooks-on-top
 test.beforeEach(() => {
   Object.assign(report, {
     at: '',
@@ -258,6 +261,7 @@ function say(line: string): void {
  * A hook rather than the walk's own last lines: Playwright runs this after a
  * test that timed out, which is the case the walk cannot write from.
  */
+// eslint-disable-next-line playwright/prefer-hooks-on-top
 test.afterEach(() => {
   if (report.expected === 0) return
   const whole = report.probed === report.expected
@@ -336,6 +340,7 @@ for (const ground of GROUNDS) {
 
     for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
       const part = CHUNKS === 1 ? '' : `, ${String(chunk + 1)}/${String(CHUNKS)}`
+
       test(`probes every Storybook story at ${ground}, ${String(width)}px${part}`, async ({
         browser,
       }) => {

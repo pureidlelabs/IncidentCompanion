@@ -18,6 +18,9 @@ import { setGround, shoot, quiesce, type Ground } from './view.js'
 const OUT = join(process.cwd(), '.visual', 'auth')
 const GROUNDS = (process.env['VISUAL_GROUNDS'] ?? 'light,dark').split(',') as Ground[]
 
+// A capture, not a check: the screenshots are the output and the eye
+// reading them is the oracle.
+// eslint-disable-next-line playwright/expect-expect
 test('captures the screens shown before anyone signs in', async ({ browser, baseURL }) => {
   await requireServedApp(baseURL ?? '')
   await mkdir(OUT, { recursive: true })
