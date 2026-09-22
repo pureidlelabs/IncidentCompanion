@@ -249,7 +249,7 @@ export async function unpack(
   // taking the manifest as a lower bound rather than the whole truth is how an
   // unlisted member gets imported.
   for (const name of Object.keys(members)) {
-    if (name !== MANIFEST_NAME && !(name in manifest.files)) {
+    if (name !== MANIFEST_NAME && !Object.hasOwn(manifest.files, name)) {
       throw new BadArchive(`${name} is in this archive and not in its manifest`)
     }
   }

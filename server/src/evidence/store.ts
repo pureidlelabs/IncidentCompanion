@@ -9,7 +9,7 @@ import { ATTACHMENT_MEGABYTES } from '../policy/keys.js'
 import { createHash } from 'node:crypto'
 import { mkdir, rename, stat, writeFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 import {
   Uint8ArrayReader,
@@ -118,7 +118,7 @@ export class EvidenceStore {
     // entry - so this check has to be on the name and never on the file.
     if (!(await this.exists(hash))) {
       const partial = `${held}.${process.pid}.partial`
-      await writeFile(partial, await this.wrap(Buffer.concat(chunks), name ?? hash))
+      await writeFile(partial, await this.wrap(Buffer.concat(chunks), memberName(name, hash)))
       await rename(partial, held)
     }
 
@@ -216,6 +216,20 @@ export class EvidenceStore {
       return false
     }
   }
+}
+
+/**
+ * The last segment of a caller's filename, or the digest when nothing is left.
+ *
+ * **Reduced rather than refused**, unlike `archive/format.ts`'s
+ * `safeMemberName`: the entry name is a label on the container and the store
+ * needs nothing from it, so a name that climbs costs the analyst their upload
+ * for no gain. The backslash is folded first, being a separator on the
+ * platform the name may have been typed on. -> #1101
+ */
+function memberName(name: string | undefined, digest: string): string {
+  const last = basename((name ?? '').replaceAll('\\', '/')).replaceAll('\0', '')
+  return last === '' || last === '.' || last === '..' ? digest : last
 }
 
 /**

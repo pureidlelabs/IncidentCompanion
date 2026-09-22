@@ -243,6 +243,41 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     expect(row!.storedAt).not.toBeNull()
   })
 
+  /**
+   * **A header value is a ByteString**, so a name outside Latin-1 cannot be put
+   * on the wire at all and the client percent-encodes it. -> #1112
+   */
+  it('reads a percent-encoded filename back as the name the analyst chose', async () => {
+    const { caseId, id } = await caseWithRow()
+    await controller.attach(
+      caseId,
+      id,
+      upload('encoded name', { 'x-original-filename': '%E6%97%A5%E6%9C%AC.pdf' }),
+      { user: { id: actorId } } as never,
+    )
+
+    const [row] = await seed!.select().from(evidence).where(eq(evidence.id, id))
+    expect(row!.originalFilename).toBe('\u65E5\u672C.pdf')
+  })
+
+  /**
+   * **A client that has not been updated still attaches.** A percent sign in a
+   * filename is ordinary, and `decodeURIComponent` throws on one that begins no
+   * escape sequence.
+   */
+  it('keeps a filename that is not percent-encoded, malformed escape and all', async () => {
+    const { caseId, id } = await caseWithRow()
+    await controller.attach(
+      caseId,
+      id,
+      upload('raw name', { 'x-original-filename': '100%-coverage.pdf' }),
+      { user: { id: actorId } } as never,
+    )
+
+    const [row] = await seed!.select().from(evidence).where(eq(evidence.id, id))
+    expect(row!.originalFilename).toBe('100%-coverage.pdf')
+  })
+
   it('refuses an empty file rather than recording one', async () => {
     const { caseId, id } = await caseWithRow()
     await expect(

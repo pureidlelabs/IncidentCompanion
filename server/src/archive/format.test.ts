@@ -104,6 +104,20 @@ describe('an archive somebody else built', () => {
     await expect(unpack(forged, LIMITS)).rejects.toThrow(/not in its manifest/)
   })
 
+  it('refuses a member named after a prototype property the manifest never named', async () => {
+    // `manifest.files` comes from `JSON.parse`, so `Object.prototype` is on its
+    // chain and `in` answers true for a name nobody wrote. -> #1105
+    const forged = await forge(
+      { 'case.json': bytes('{}'), toString: bytes('unlisted') },
+      {
+        version: ARCHIVE_VERSION,
+        attachments: 'included',
+        files: { 'case.json': sha256(bytes('{}')) },
+      },
+    )
+    await expect(unpack(forged, LIMITS)).rejects.toThrow(/not in its manifest/)
+  })
+
   it('refuses a manifest naming a member that is not there', async () => {
     const forged = await forge({ 'case.json': bytes('{}') }, {
       version: ARCHIVE_VERSION,
