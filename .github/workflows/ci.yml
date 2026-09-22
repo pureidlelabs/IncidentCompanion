@@ -537,6 +537,7 @@ jobs:
       - name: Story tier
         env:
           SHARD: ${{ matrix.shard }}
+          IC_SUITE_MUST_RUN: '1'
         run: cd ui && npx vitest run --project=storybook --shard="$SHARD/2"
 
   # ------------------------------------------------------- the app in a browser

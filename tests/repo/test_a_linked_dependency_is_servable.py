@@ -19,8 +19,7 @@ import os
 import subprocess
 from pathlib import Path
 
-import pytest
-
+from tests._must_run import declined
 from tests._repo import REPO_ROOT
 
 UI = REPO_ROOT / "ui"
@@ -36,7 +35,8 @@ console.log(JSON.stringify(config.server.fs.allow))
 def allow_list() -> list[str]:
     """What Vite computes for `server.fs.allow`, or a skip when it cannot run."""
     if not (UI / "node_modules").exists():
-        pytest.skip("ui/node_modules is absent, so vite cannot be loaded to answer")
+        declined("The linked-dependency check",
+                 "ui/node_modules is absent, so vite cannot be loaded to answer")
     done = subprocess.run(
         ["node", "--input-type=module", "-e", READ_THE_ALLOW_LIST],
         cwd=UI, capture_output=True, text=True, check=False, timeout=180,

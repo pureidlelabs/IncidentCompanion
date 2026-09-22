@@ -33,6 +33,7 @@ from pathlib import Path
 import pytest
 
 from tests import posix_modes
+from tests._must_run import declined
 from tests._repo import REPO_ROOT
 
 REPO_ROOT = REPO_ROOT
@@ -126,14 +127,20 @@ def _docker_available() -> bool:
     return result.returncode == 0
 
 
-pytestmark = [
-    pytest.mark.skipif(
-        os.environ.get("INCIDENTCOMPANION_CONTAINER_TESTS", "") != "1",
-        reason="opt-in: set INCIDENTCOMPANION_CONTAINER_TESTS=1 (builds an image)"),
-    pytest.mark.skipif(
-        not _docker_available(),
-        reason="no Docker daemon is reachable"),
-]
+pytestmark = pytest.mark.skipif(
+    os.environ.get("INCIDENTCOMPANION_CONTAINER_TESTS", "") != "1",
+    reason="opt-in: set INCIDENTCOMPANION_CONTAINER_TESTS=1 (builds an image)")
+
+
+@pytest.fixture(autouse=True)
+def _a_daemon_answers() -> None:
+    """The daemon probe, routed so a certifying run cannot lose the tier to it.
+
+    The opt-in above stays a plain skip: a run that did not ask for this tier
+    is not declining it. -> #1080
+    """
+    if not _docker_available():
+        declined("The container runtime tier", "no Docker daemon is reachable")
 
 IMAGE = "incidentcompanion-node:local"
 

@@ -149,3 +149,36 @@ def test_the_client_tier_refuses_a_certifying_run_that_ran_nothing():
     assert "IC_SUITE_MUST_RUN" in output, (
         f"the run failed for a reason other than the arm:\n{output}"
     )
+
+
+#: A module that loses its whole tier to a missing tool or an unreachable
+#: service, paired with the phrase that names the gap. Each one is a decline
+#: rather than a skip, so a certifying run goes red instead of green. -> #1080
+A_MISSING_ENVIRONMENT_IS_A_DECLINE = {
+    "tests/docker/test_container_runtime.py": "no Docker daemon is reachable",
+    "tests/docker/test_backup_restores.py": "no Postgres container could be raised",
+    "tests/docker/test_services_can_write_where_they_must.py": "docker is not on PATH",
+    "tests/repo/test_a_linked_dependency_is_servable.py": "ui/node_modules is absent",
+    "tests/contract/test_workspaces.py": "nothing is installed in this checkout",
+}
+
+
+@pytest.mark.parametrize(
+    ("module", "gap"), sorted(A_MISSING_ENVIRONMENT_IS_A_DECLINE.items()))
+def test_a_tier_lost_to_its_environment_declines_rather_than_skips(module, gap) -> None:
+    """A regression to a bare skip, which reads as a pass in every summary.
+
+    Matched on the phrase rather than on the call, because a skip rewritten to
+    say something else is the same defect wearing new words.
+    """
+    text = (REPO_ROOT / module).read_text(encoding="utf-8")
+    holding = [line for line in text.splitlines() if gap in line]
+    assert holding, f"{module} no longer says {gap!r}; the gate it named has moved"
+
+    where = text.index(gap)
+    call = text.rfind("(", 0, where)
+    opener = text[max(0, call - 60):call]
+    assert "declined" in opener and "pytest.skip" not in opener, (
+        f"{module} declines its tier with {opener.strip()!r} rather than through "
+        "`declined`, so a certifying run reports success having run none of it"
+    )

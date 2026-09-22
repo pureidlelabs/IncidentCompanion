@@ -1088,3 +1088,27 @@ def test_the_installed_tree_key_hashes_no_glob_reaching_into_node_modules() -> N
     recursive = sorted(one for one in hashed if "**" in one)
 
     assert recursive == [], f"these reach into node_modules: {recursive}"
+
+
+def test_every_client_vitest_step_arms_the_must_run_reporter() -> None:
+    """`MustRunReporter` reads `IC_SUITE_MUST_RUN` and never `CI`.
+
+    A worker pool that times out leaves the client run with no test modules and
+    no failure, which vitest exits 0 on -- so a job that drives `ui/`'s config
+    without the variable reports success having run none of the tier. The
+    server side reads both variables and needs no step to set either. -> #1080
+    """
+    bare = []
+    for name, job in sorted(ci_jobs().items()):
+        for step in job.get("steps", []):
+            run = str(step.get("run", ""))
+            if "vitest" not in run or "cd ui" not in run:
+                continue
+            armed = {**job.get("env", {}), **step.get("env", {})}
+            if not armed.get("IC_SUITE_MUST_RUN"):
+                bare.append(f"{name}: {step.get('name', run.strip()[:40])}")
+
+    assert not bare, (
+        "these steps run the client tier without arming its must-run floor, so a "
+        f"run that reached no test file exits 0:\n  " + "\n  ".join(bare)
+    )
