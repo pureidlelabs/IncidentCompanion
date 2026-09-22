@@ -19,9 +19,9 @@
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { reachesCase } from './live.gateway.js'
+import { LiveGateway, reachesCase } from './live.gateway.js'
 import { ReachService } from '../access/reach.service.js'
 import { CustomersService } from '../customers/customers.service.js'
 import {
@@ -149,5 +149,103 @@ describe.skipIf(!db)('the socket asks reach too', () => {
     await seed!.delete(groupMembers).where(eq(groupMembers.userId, MEMBER))
 
     expect(await mayReach(theirCase, MEMBER)).toBe(false)
+  })
+
+  /**
+   * A claim is offered only to somebody who could make the edit it announces.
+   *
+   * **Admission is read; a claim is not**, the same split the prose branch
+   * makes -- and a claim is the worse one to get wrong, because
+   * `CollectionService` answers a write to a row somebody else holds with a
+   * 409. A read-only analyst claiming every row refuses every writer.
+   */
+  describe('what it lets an analyst claim', () => {
+    const ROW = '44444444-4444-4444-8444-444444444444'
+
+    class FakeSocket {
+      readonly sent: string[] = []
+      private readonly handlers = new Map<string, ((raw: Buffer) => void)[]>()
+
+      send(payload: string): void {
+        this.sent.push(payload)
+      }
+      terminate(): void {}
+      on(event: string, handler: (raw: Buffer) => void): this {
+        this.handlers.set(event, [...(this.handlers.get(event) ?? []), handler])
+        return this
+      }
+      receive(frame: Record<string, unknown>): void {
+        for (const handler of this.handlers.get('message') ?? []) {
+          handler(Buffer.from(JSON.stringify(frame)))
+        }
+      }
+    }
+
+    /**
+     * **Polled on the answer, not a count of turns.** The claim branch awaits
+     * a real query, so a fixed number of macrotasks is a guess that goes green
+     * while asserting nothing.
+     */
+    const until = (answered: () => number) => vi.waitFor(() => expect(answered()).toBe(1))
+
+    async function socketOn(caseId: string, userId: string) {
+      const claimed: { table: string; id: string }[] = []
+      const released: { table: string; id: string }[] = []
+      const channel = {
+        join: () => Promise.resolve(),
+        leave: () => Promise.resolve(),
+        claim: (_member: unknown, table: string, id: string) => {
+          claimed.push({ table, id })
+          return Promise.resolve()
+        },
+        release: (_member: unknown, table: string, id: string) => {
+          released.push({ table, id })
+          return Promise.resolve()
+        },
+      }
+      const gateway = new LiveGateway(channel as never, {} as never, db!, {} as never, {} as never, reach)
+      const live = new FakeSocket()
+      await gateway.open(live as never, caseId, { id: userId, name: userId })
+      return { live, claimed, released }
+    }
+
+    it('refuses a claim from an analyst who may only read the case', async () => {
+      await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'read' })
+      const { live, claimed } = await socketOn(theirCase, MEMBER)
+
+      live.receive({ type: 'claim', table: 'systems', id: ROW })
+      await until(() => live.sent.length)
+
+      expect(claimed, 'a read-only analyst took a claim, so every writer now meets a 409').toEqual([])
+      expect(live.sent.map((payload) => JSON.parse(payload) as unknown)).toEqual([
+        { type: 'claim.refused', table: 'systems', id: ROW, reason: 'read-only' },
+      ])
+    })
+
+    it('takes a claim from an analyst who may write the case', async () => {
+      await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'write' })
+      const { live, claimed } = await socketOn(theirCase, MEMBER)
+
+      live.receive({ type: 'claim', table: 'systems', id: ROW })
+      await until(() => claimed.length)
+
+      expect(claimed).toEqual([{ table: 'systems', id: ROW }])
+      expect(live.sent).toEqual([])
+    })
+
+    /**
+     * **Release stays open.** `PresenceStore.release` refuses a field held by
+     * another session, so the only claim a release can reach is one this
+     * connection already owns.
+     */
+    it('lets a read-only analyst release', async () => {
+      await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'read' })
+      const { live, released } = await socketOn(theirCase, MEMBER)
+
+      live.receive({ type: 'release', table: 'systems', id: ROW })
+      await until(() => released.length)
+
+      expect(released).toEqual([{ table: 'systems', id: ROW }])
+    })
   })
 })

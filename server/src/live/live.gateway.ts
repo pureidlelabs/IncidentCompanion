@@ -458,10 +458,38 @@ export class LiveGateway implements OnApplicationShutdown {
       const id = typeof message.id === 'string' ? message.id : null
       if (!table || !id) return
 
-      if (message.type === 'claim') this.channel.claim(member, table, id).catch(failed)
+      if (message.type === 'claim') this.onClaim(member, live, table, id).catch(failed)
       if (message.type === 'release') this.channel.release(member, table, id).catch(failed)
     })
 
+  }
+
+  /**
+   * One claim frame.
+   *
+   * **Admission is read; taking a row is not.** A claim is advisory to a
+   * screen and binding to the write path -- `CollectionService` answers a
+   * write to a row another session holds with a 409 -- so a read-level analyst
+   * who could claim could refuse every writer on the case, from a door with no
+   * guard on it. The level is asked for again here, exactly as the prose
+   * branch asks.
+   *
+   * **`release` is not gated.** `PresenceStore.release` refuses a field held
+   * by another session, so a release can only ever give back this
+   * connection's own claim.
+   */
+  private async onClaim(
+    member: Member,
+    live: WebSocket,
+    table: string,
+    id: string,
+  ): Promise<void> {
+    const level = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
+    if (level !== 'write' && level !== 'delete') {
+      live.send(JSON.stringify({ type: 'claim.refused', table, id, reason: 'read-only' }))
+      return
+    }
+    await this.channel.claim(member, table, id)
   }
 
   /**
