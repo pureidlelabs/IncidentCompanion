@@ -87,19 +87,10 @@ export const STATUS: Record<Refusal, string> = {
  */
 const REPORTS_SCOPE = 'reports'
 
-/**
- * The largest frame this socket will read, in bytes. The largest legitimate
- * one is a prose sync update.
- *
- * **The `ws` default is 100 MB and no throttler reaches an upgrade**, so this
- * is the only thing between a frame and the memory to hold it.
- */
+/** The largest frame this socket will read, in bytes, sized for a prose sync update. */
 const MAX_FRAME_BYTES = 64 * 1024
 
-/**
- * What a claim key may be - a shape, not the collection registry, which
- * `architecture.test.ts` refuses `live` an import of.
- */
+/** What a claim key may be: a shape, because `live` may not import the collection registry. */
 const CLAIM_TABLE = /^[a-z_]{1,40}$/
 const CLAIM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -404,11 +395,8 @@ export class LiveGateway implements OnApplicationShutdown {
      * report document, and the refcount in `ProseService` is what keeps it
      * alive for the second when the first closes.
      *
-     * **The promise, not the document.** Opening one takes two awaits, and a
-     * map written after them is a check across a yield: two frames for one
-     * field in one tick both take a reader and only one is ever given back.
-     * `ProseService.open` and `CaseChannel.subscriptions` hold the same shape
-     * for the same reason.
+     * The promise, not the document, so two frames for one field in one tick
+     * take one reader between them.
      */
     const opened = new Map<string, Promise<OpenDocument | null>>()
 
@@ -425,8 +413,7 @@ export class LiveGateway implements OnApplicationShutdown {
       // **Released before the roster changes.** The last reader out flushes
       // the document, and a closing tab must not leave the report newer in
       // memory than on disk.
-      // Settled, not resolved: a document still opening when the socket goes
-      // is released when it arrives rather than left holding a reader.
+      // A document still opening when the socket goes is released when it arrives.
       for (const [, held] of opened) {
         void held.then((one) => {
           one?.stop()
@@ -506,18 +493,9 @@ export class LiveGateway implements OnApplicationShutdown {
   }
 
   /**
-   * One claim frame.
-   *
-   * **Admission is read; taking a row is not.** A claim is advisory to a
-   * screen and binding to the write path -- `CollectionService` answers a
-   * write to a row another session holds with a 409 -- so a read-level analyst
-   * who could claim could refuse every writer on the case, from a door with no
-   * guard on it. The level is asked for again here, exactly as the prose
-   * branch asks.
-   *
-   * **`release` is not gated.** `PresenceStore.release` refuses a field held
-   * by another session, so a release can only ever give back this
-   * connection's own claim.
+   * One claim frame. A claim takes write on the case, because a held row refuses
+   * every other writer; admission asked only for read. `release` is not gated:
+   * `PresenceStore.release` refuses a field another session holds.
    */
   private async onClaim(
     member: Member,
@@ -526,14 +504,11 @@ export class LiveGateway implements OnApplicationShutdown {
     table: string,
     id: string,
   ): Promise<void> {
-    // Silence, as for a frame this build does not understand: a key of this
-    // shape comes from a loop rather than from a client.
+    // Silence, as for a frame this build does not understand: no client sends this shape.
     if (!CLAIM_TABLE.test(table) || !CLAIM_ID.test(id)) return
     const field = `${table}:${id}`
     if (!claims.has(field) && claims.size >= CLAIMS_PER_CONNECTION) return
-    // **Counted before the await, not after.** A loop of frames arrives in one
-    // tick and every one of them would otherwise pass a count that nothing has
-    // yet raised.
+    // Counted before the await: a loop of frames arrives in one tick.
     claims.add(field)
 
     const level = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
@@ -613,18 +588,9 @@ export class LiveGateway implements OnApplicationShutdown {
 
     const frame = Buffer.from(update, 'base64')
 
-    /**
-     * **Admission is read; editing is a write, and the socket has to ask
-     * again.** `reachesCase` lets a read-only analyst watch, which is right - and
-     * without this the same connection could then edit the document, making
-     * the socket the weaker of the two doors the moment the HTTP guard started
-     * asking for a level.
-     *
-     * A state request is not an edit: it is how a client asks for what it
-     * missed, and refusing it would leave a read-only analyst watching a
-     * document that never caught up. Nor is a frame adding nothing the
-     * document lacks, which is how a caught-up client answers the hello.
-     */
+    // Admission asked only for read, so an edit asks for write. A state request
+    // and a frame adding nothing are not edits: a read-only analyst sends both
+    // to catch up.
     if (!this.prose.isStateRequest(frame)) {
       const level = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
       if (level !== 'write' && level !== 'delete' && !this.prose.addsNothing(held.doc, frame)) {
@@ -674,10 +640,8 @@ export class LiveGateway implements OnApplicationShutdown {
 
   /**
    * Take a reader on one field's document and wire its updates to this socket.
-   *
-   * **Null is unresolvable, and it is silence rather than an error frame.**
-   * The field key comes from a browser; answering "no such field" would make
-   * the socket an oracle for which block ids exist in other cases.
+   * Null when the field does not resolve, which the caller answers with silence
+   * so the socket says nothing about which block ids exist in other cases.
    */
   private async openDocument(
     member: Member,
@@ -709,8 +673,7 @@ export class LiveGateway implements OnApplicationShutdown {
       stale: false,
       stop: () => {
         doc.off('update', onUpdate)
-        // Same rule as `attach`: a release racing a closing Redis rejects,
-        // and `void` would let it escape as an unhandled rejection.
+        // As in `attach`: a release racing a closing Redis rejects, which `void` would leak.
         this.prose.release(member.caseId, address).catch((error: unknown) => {
           this.log.warn(`could not release ${field}: ${String(error)}`)
         })

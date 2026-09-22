@@ -988,15 +988,6 @@ describe('a socket that goes before the join has finished', () => {
   })
 })
 
-/**
- * What a claim frame may name, and how much of it the socket will read.
- *
- * A claim key is attacker-chosen and reaches Redis: `PresenceStore.claim`
- * writes it as a field of `case:<id>:claims`, the heartbeat refreshes every
- * held field every ten seconds, and `holderOf` reads the whole hash before
- * every row write in the case. Unbounded in size and in count, that is a hash
- * one connection can grow until it is on the path of every write.
- */
 describe('what a claim frame may name', () => {
   const ROW = '44444444-4444-4444-8444-444444444444'
 
@@ -1056,12 +1047,6 @@ describe('what a claim frame may name', () => {
     expect(claimed).toEqual([`network_indicators:${ROW}`])
   })
 
-  /**
-   * **The cap is per connection and has headroom over any screen.**
-   * `useHoldRow` has one caller -- `entity-dialog.tsx` -- and one dialog is
-   * open at a time, so a browser holds one claim and re-sends that set on a
-   * reconnect. What the cap stops is a loop.
-   */
   it('stops claiming once the connection holds more than a screen ever could', async () => {
     const { live, claimed } = await claiming()
 
@@ -1101,11 +1086,7 @@ describe('what a claim frame may name', () => {
   })
 })
 
-/**
- * **The frame bound, over a real socket**, because `maxPayload` is enforced by
- * `ws` on the way in and nothing above it can see whether it was set. The
- * default is 100 MB per frame, on a path no guard and no throttler reaches.
- */
+/** Over a real socket, because `ws` enforces `maxPayload` below anything a double can see. */
 describe('how much of a frame the socket will read', () => {
   it('closes a socket that sends a frame past the bound', async () => {
     const channel = {
@@ -1144,8 +1125,7 @@ describe('how much of a frame the socket will read', () => {
     const closed = new Promise<number>((code) => {
       client.on('close', (why: number) => { code(why) })
     })
-    // A close code arrives as an error on the client too, and an unhandled
-    // one is a rejection beside a green run.
+    // A close code arrives as an error on the client too; unhandled, it is a stray rejection.
     client.on('error', () => undefined)
 
     client.send(JSON.stringify({ type: 'claim', table: 'x'.repeat(200_000), id: CASE }))
@@ -1159,19 +1139,7 @@ describe('how much of a frame the socket will read', () => {
   })
 })
 
-/**
- * Two prose frames for one field in one tick.
- *
- * `onProse` read `opened.get(field)`, awaited `resolve` and `open`, and only
- * then `opened.set` - a check across two yields. Both frames see nothing
- * open, both take a reader, the second `set` overwrites the first, and the
- * close releases once. The count never reaches zero, the `Y.Doc` is never
- * destroyed, and its update handler goes on sending to a socket that has gone.
- *
- * **The reader count is observed through the double**, because `ProseService`
- * holds it inside its own map and exposes nothing; counting the calls the
- * gateway makes is the same arithmetic the service does.
- */
+/** The reader count is observed through the double, because `ProseService` exposes none. */
 describe('two prose frames for one field arriving together', () => {
   it('takes one reader, so closing the socket gives the last one back', async () => {
     let readers = 0
