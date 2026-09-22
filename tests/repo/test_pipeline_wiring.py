@@ -874,11 +874,7 @@ def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
 
 
 def test_the_renovate_validator_is_the_pinned_one() -> None:
-    """The rule the OpenSpec CLI is held to: a local binary, never a fetch.
-
-    A fetched validator lets a release move the gate with no commit behind it,
-    and a probe that skips when the registry is down skips the gate with it.
-    """
+    """The rule the OpenSpec CLI is held to: a local binary, never a fetch."""
     package = json.loads(PACKAGE.read_text(encoding="utf-8"))
     pinned = package.get("devDependencies", {}).get("renovate", "")
     assert re.fullmatch(r"\d+\.\d+\.\d+", pinned), (
