@@ -316,10 +316,12 @@ def test_the_detected_profile_names_the_runtime_the_daemon_reports():
 
 
 #: This worktree's copy of the stack, and the project name that keeps a run of
-#: this tier off whatever the analyst has up.
+#: this tier off whatever the analyst has up. Per xdist worker, which may share
+#: this module.
 STACK = REPO_ROOT / "compose.yaml"
-PROJECT = "incidentcompanion-runtime-test"
-PORT = 18443
+_WORKER = os.environ.get("PYTEST_XDIST_WORKER", "gw0")
+PROJECT = f"incidentcompanion-runtime-test-{_WORKER}"
+PORT = 18443 + int(_WORKER.removeprefix("gw"))
 
 
 def _compose(*args, env=None, **kwargs):

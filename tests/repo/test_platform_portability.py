@@ -9,13 +9,13 @@ Windows:
   guarantee, and `posix_modes.assert_owner_only` is the single call site so it
   can stay one. A hand-written `st_mode & 0o777` comparison is an
   ordinary-looking line that drifts from what the app promises.
-- **The parallel runners' configuration.** `-n auto` without `--dist loadfile`
-  splits a file's tests across processes and *unmasks* an order dependence,
-  intermittently, in a file nobody was editing.
+- **The parallel runners' configuration.** xdist splits a file's tests across
+  processes, so nothing two of them share may be fixed per module.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import pathlib
 import re
 import sys
@@ -124,43 +124,44 @@ def test_no_test_module_shadows_a_stdlib_module():
 # ---------------------------------------------------------------------------
 
 
-def test_every_runner_groups_parallel_tests_by_file():
-    """`-n auto` must be paired with `--dist loadfile`, everywhere.
+def test_no_runner_groups_parallel_tests_by_file():
+    """No runner passes `--dist loadfile`: a file's tests must survive a split.
 
-    xdist's default (`--dist load`) hands out individual tests, so two tests in one
-    file can land on different workers. That breaks any file whose tests share
-    warm-up state.
-
-    **The grouping masks a real order dependence rather than fixing it**, which is
-    why it needs a test: it is one flag, it looks like tuning, and dropping it
-    produces an *intermittent* failure in a file nobody was editing.
-
-    Checked across both runners because they drift independently.
-
-    **Matched on the flag, not on `-n`.** A substring test for `-n` finds
-    `[ -n "$one" ]`, which is the shell's string test and appears three times in
-    `verify.sh`'s summary -- so the check reported a runner that passes pytest no
-    xdist flag at all as running it unsafely, and the remedy it printed would
-    have added a flag to a serial run.
+    Grouping by file hides any state two tests of one file share, so the suite
+    runs under xdist's default and the state is made per worker instead.
     """
     runners = {
         "test.sh": REPO_ROOT / "test.sh",
         "verify.sh": REPO_ROOT / "verify.sh",
+        "ci.yml": REPO_ROOT / ".github" / "workflows" / "ci.yml",
     }
-    offenders = []
-    for name, path in runners.items():
-        code = _without_comments(path)
-        if not re.search(r"(?:^|\s)-n\s+(?:auto|\d+)|numprocesses", code):
-            continue
-        # Either spelling: the shells write one string, the Python runner
-        # separate argv entries.
-        if "--dist loadfile" not in code and '"--dist", "loadfile"' not in code:
-            offenders.append(name)
+    offenders = [name for name, path in runners.items()
+                 if re.search(r"--dist[\s=\"',]+loadfile", _without_comments(path))]
 
-    assert not offenders, (
-        f"{offenders} run pytest in parallel without --dist loadfile, so a "
-        "file's tests can be split across workers. See this test's docstring."
-    )
+    assert not offenders, f"{offenders} group parallel tests by file"
+
+
+@pytest.mark.parametrize("module, port", [
+    ("test_backup_restores.py", "PG_PORT"),
+    ("test_container_runtime.py", "PORT"),
+])
+def test_a_docker_module_raises_its_stack_per_xdist_worker(module, port, monkeypatch):
+    """Two workers sharing a module get different Compose projects and host ports.
+
+    A module-scoped stack under one fixed project is torn down by `down -v` on
+    whichever worker finishes first, under the other worker's tests.
+    """
+    def load(worker: str):
+        monkeypatch.setenv("PYTEST_XDIST_WORKER", worker)
+        spec = importlib.util.spec_from_file_location(
+            f"_probe_{worker}", TESTS_DIR / "docker" / module)
+        loaded = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(loaded)
+        return loaded.PROJECT, getattr(loaded, port)
+
+    first, second = load("gw0"), load("gw1")
+    assert first[0] != second[0] and first[1] != second[1], (
+        f"{module} gives workers gw0 and gw1 the same stack: {first} and {second}")
 
 
 def test_vitest_allows_for_a_filesystem_slower_than_the_developer_machine():
