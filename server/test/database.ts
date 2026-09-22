@@ -20,6 +20,7 @@ import { PGLiteSocketServer } from '@electric-sql/pglite-socket'
 import type { Pool } from 'pg'
 
 import { createPool } from '../src/db/client.js'
+import { declined } from './must-run.js'
 
 export interface EmbeddedPostgres {
   url: string
@@ -104,7 +105,16 @@ export function isEmbedded(url: string): boolean {
  * **Two connections at once is the one that matters.** A version check refusing
  * the second of two concurrent writers needs two real connections, and the
  * embedded engine has one. A test asserting that must skip rather than pass.
+ *
+ * Declines rather than answering no on a certifying run, so the suites this
+ * guards cannot go quiet where the whole run claims to certify.
+ *
+ * @throws when the run is certifying and the engine is the in-process one
  */
 export function hasConcurrentConnections(): boolean {
-  return !isEmbedded(process.env.DATABASE_URL ?? '')
+  if (!isEmbedded(process.env.DATABASE_URL ?? '')) return true
+  return declined(
+    'The suites that need two concurrent connections',
+    'this run is on the in-process engine, which multiplexes every transaction onto one backend',
+  )
 }

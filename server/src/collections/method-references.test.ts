@@ -26,7 +26,7 @@ import { evidenceSchema } from '../domain/entities/evidence.js'
 import { systemSchema } from '../domain/entities/system.js'
 import { impactSchema } from '../domain/entities/impact.js'
 import { eventWriteSchema, actionWriteSchema } from '../domain/entities/timeline.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 /**
  * **Pure, so it runs with no database.** Which schemas declare a method
@@ -174,7 +174,7 @@ describe.skipIf(!db)('a method reference that leaves the case', () => {
  * **What a delete leaves behind, which is two different answers.** A method
  * deleted while other rows still cite it.
  */
-describe.skipIf(!db)('deleting a method that things reference', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('deleting a method that things reference', () => {
   let kase = ''
 
   beforeAll(async () => {

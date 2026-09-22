@@ -27,7 +27,7 @@ import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { COLLECTIONS } from '../domain/collections.js'
 import { cases, evidence, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -62,7 +62,7 @@ afterAll(async () => {
   await pool?.end()
 })
 
-describe.skipIf(!db)('creating evidence a batch at a time', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('creating evidence a batch at a time', () => {
   let caseId = ''
   const session = { user: { id: ANALYST } }
 

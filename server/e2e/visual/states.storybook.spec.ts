@@ -103,6 +103,9 @@ async function paint(page: Page, target: ElementHandle<Element>): Promise<Record
     }, PAINT)
   let last = await read()
   for (let i = 0; i < 8; i += 1) {
+    // A transition ends at no event this can await, and the settled value is
+    // what this function is reading.
+    // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(120)
     const next = await read()
     if (PAINT.every((prop) => next[prop] === last[prop])) return next
@@ -166,12 +169,16 @@ test.describe('a control paints its states', () => {
 
     if (probe.disabled) {
       const twin = probe.disabled
+
       test(`${twin.story} ignores the pointer`, async ({ page }) => {
         await open(page, twin.story)
         const found = page.locator(`#storybook-root ${twin.target}`).first()
         await found.waitFor()
         const target = (await found.elementHandle()) as ElementHandle<Element>
         const rest = await paint(page, target)
+        // Forced, because a disabled control fails the actionability check
+        // and refusing the pointer is the thing being asserted.
+        // eslint-disable-next-line playwright/no-force-option
         await target.hover({ force: true })
         const hovered = await paint(page, target)
         expect(differs(rest, hovered), `a disabled ${twin.target} lit under the pointer`).toBe(

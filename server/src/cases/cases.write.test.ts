@@ -20,7 +20,7 @@ import { CasesController } from './cases.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { LibraryService } from '../library/library.service.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import {
   accounts,
   actions,
@@ -56,7 +56,7 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-describe.skipIf(!db)('writing a case', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
   let controller: CasesController
   let service: CasesService
   let library: LibraryService

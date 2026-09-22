@@ -30,7 +30,7 @@ import { ExportsController } from './exports.controller.js'
 import { ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { cases, evidence, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -51,7 +51,7 @@ let fromId = ''
 let intoId = ''
 let file = ''
 
-describe.skipIf(!db)('a row that left a value blank', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a row that left a value blank', () => {
   beforeAll(async () => {
     const now = new Date()
     await seed!

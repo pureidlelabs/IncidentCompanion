@@ -16,7 +16,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { updateVersioned } from './mutate.js'
 import { cases, changeFeed, user } from './schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -40,7 +40,7 @@ const ANALYST_B = 'test-analyst-b'
 
 let CASE_ID: string
 
-describe.skipIf(!db)('a version-checked write', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a version-checked write', () => {
   beforeAll(async () => {
     await seed!.insert(user).values(
       [ANALYST_A, ANALYST_B].map((id) => ({

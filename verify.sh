@@ -47,9 +47,6 @@ expensive() { [ "$MODE" = detailed ]; }
 FAILED=()
 SKIPPED=()
 PASSED=()
-# A tier that ran but could not cover everything it names. Distinct from a skip,
-# which ran nothing, and from a failure, which found something.
-PARTIAL=()
 # Containers this run brought up and is deliberately leaving behind.
 STARTED_SERVICES=0
 
@@ -125,14 +122,12 @@ elif [ -n "$REDIS_PORT" ] && [ -n "$PG_PORT" ] \
   # anyway is telling us something -- a partly-raised stack, or a run that never
   # reached the tests it thinks it ran. -> `server/test/must-run.ts`
   step "server: suite" bash -c 'cd server && IC_SUITE_MUST_RUN=1 npx vitest run --pool=threads'
-elif bash -c 'cd server && npx vitest run --pool=threads'; then
-  # Green on the embedded engine is a real pass of everything it can reach.
-  PASSED+=("server: suite (in-process engine -- the write paths were not covered)")
 else
-  PARTIAL+=("server: suite ran on the in-process engine and some of it failed there.
-            The write paths need two concurrent transactions and cannot pass
-            against one backend. Start the dev stack and run this again before
-            reading those failures as yours: ./dev-node.sh")
+  # The tests that need two concurrent transactions decline on the embedded
+  # engine rather than failing there, so what is left is a pass or a defect
+  # this branch put in. -> `server/test/database.ts::hasConcurrentConnections`
+  step "server: suite (in-process engine -- the write paths were not covered)" \
+    bash -c 'cd server && npx vitest run --pool=threads'
 fi
 behaviour && step "server: build" bash -c 'cd server && npm run --silent build'
 
@@ -262,7 +257,6 @@ fi
 printf '\n\033[1m== what ran (%s)\033[0m\n' "$MODE"
 for one in "${PASSED[@]:-}"; do [ -n "$one" ] && printf '  \033[32mpassed\033[0m  %s\n' "$one"; done
 for one in "${SKIPPED[@]:-}"; do [ -n "$one" ] && printf '  \033[33mskipped\033[0m %s\n' "$one"; done
-for one in "${PARTIAL[@]:-}"; do [ -n "$one" ] && printf '  \033[33mPARTIAL\033[0m %s\n' "$one"; done
 for one in "${FAILED[@]:-}"; do [ -n "$one" ] && printf '  \033[31mFAILED\033[0m  %s\n' "$one"; done
 
 if [ "$STARTED_SERVICES" = 1 ]; then
@@ -272,9 +266,5 @@ fi
 if [ "${#FAILED[@]}" -gt 0 ]; then
   printf '\n%s tier(s) failed.\n' "${#FAILED[@]}"
   exit 1
-fi
-if [ "${#PARTIAL[@]}" -gt 0 ]; then
-  printf '\n%s tier(s) ran without covering everything they name. Nothing failed.\n' "${#PARTIAL[@]}"
-  exit 0
 fi
 printf '\nEvery tier that could run, ran.\n'

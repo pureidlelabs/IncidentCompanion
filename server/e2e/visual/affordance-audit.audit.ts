@@ -39,6 +39,13 @@
  * component, default 8), `AFFORDANCE_ONLY` (comma-separated substrings of a
  * component's slug).
  */
+/* eslint-disable playwright/no-wait-for-timeout --
+   An audit waits for whatever a screen it has never seen does next: the
+   overlay, the hover reveal and the paint it settles into are what the sweep
+   is there to discover, so there is no condition to wait on that does not
+   assume the finding. Every other sleep in `server/e2e/` waits on its own
+   next assertion instead. */
+
 import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -614,6 +621,9 @@ test.describe('the probe can tell reachable from painted-at-zero', () => {
 })
 
 test.describe('what a family of components does not agree about', () => {
+  // The sweep's output is the report it writes; a finding is a row in that
+  // file rather than a failed expectation.
+  // eslint-disable-next-line playwright/expect-expect
   test('every family agrees with itself', async ({ page }) => {
     test.setTimeout(120 * 60_000)
     await requireStorybook()

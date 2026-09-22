@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { ActivityController } from './activity.controller.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { cases, changeFeed, user } from '../db/schema/index.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -19,7 +19,7 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-describe.skipIf(!db)('the case activity feed', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the case activity feed', () => {
   let controller: ActivityController
   let caseId: string
   const actorId = 'activity-analyst'

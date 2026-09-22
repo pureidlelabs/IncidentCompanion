@@ -18,7 +18,7 @@ import { LibraryService } from '../library/library.service.js'
 import { ProseService } from '../prose/prose.service.js'
 import { cases } from '../db/schema/case.js'
 import { reports } from '../db/schema/report.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 import { DemoReportSender } from './sender.service.js'
 import { LanguageService } from '../report/language.service.js'
@@ -64,7 +64,7 @@ const DECLARED = Object.entries(DEMO_REPORTS).flatMap(([reference, listed]) =>
   listed.filter((one) => one.sentAtMinute !== undefined).map((one) => ({ reference, label: one.label })),
 )
 
-describe.skipIf(!db)('filing the demo reports', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('filing the demo reports', () => {
   let sender: DemoReportSender
 
   beforeAll(async () => {

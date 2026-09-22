@@ -15,7 +15,7 @@ import { GroupsService } from '../access/groups.service.js'
 import { caseVisits, cases, user } from '../db/schema/index.js'
 import { customers } from '../db/schema/customer.js'
 import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -30,7 +30,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 const SAM = 'recent-sam'
 const ALEX = 'recent-alex'
 
-describe.skipIf(!db)('the cases an analyst has been in', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the cases an analyst has been in', () => {
   let service: RecentService
 
   async function aCase(title: string): Promise<string> {

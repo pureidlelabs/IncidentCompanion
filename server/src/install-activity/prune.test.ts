@@ -23,7 +23,7 @@ import { RETENTION_DEFAULT_DAYS, refuseOperationalRetention } from './prune.serv
 import { InstallActivityPruneService, refuseRetention } from './prune.service.js'
 import { recordInstallActivity } from './record.js'
 import { OPERATIONAL_FLOOR_DAYS, RETENTION_FLOOR_DAYS, installActivity } from '../db/schema/install-activity.js'
-import { asRole, openTestPool } from '../../test/database.js'
+import { asRole, hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { OCSF_VERSION, classify } from './ocsf.js'
 import { SEVERITY_ID, outcomeOf, severityOf } from './severity.js'
 import type { InstallEvent } from './record.js'
@@ -61,7 +61,7 @@ const db = pool ? drizzle({ client: pool }) : null
 const migratePool = URL_ ? openTestPool(asRole(URL_, 'ic_migrate')) : null
 const migrate = migratePool ? drizzle({ client: migratePool }) : null
 
-describe.skipIf(!db)('pruning the audit', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('pruning the audit', () => {
   let pruner: InstallActivityPruneService
   /**
    * **A fresh target per test, because a fixture here cannot tidy up.**

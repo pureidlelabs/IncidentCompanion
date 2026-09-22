@@ -25,7 +25,7 @@ import { ReportRenderService } from './render.service.js'
 import { cases, reportBlocks, reports, timeline, user } from '../db/schema/index.js'
 import { english } from './document/packs.js'
 import { EvidenceStore } from '../evidence/store.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { defaultPolicy } from '../policy/read.js'
 
 /**
@@ -67,7 +67,7 @@ let writtenId = ''
 const rendered = async () =>
   JSON.stringify((await render.render(caseId, reportId, 'en')).document_)
 
-describe.skipIf(!db)('prose an analyst wrote into a report', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('prose an analyst wrote into a report', () => {
   beforeAll(async () => {
     const now = new Date()
     await seed!

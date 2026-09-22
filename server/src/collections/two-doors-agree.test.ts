@@ -31,7 +31,7 @@ import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, user } from '../db/schema/index.js'
 import { BULK_TARGETS, COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { patchSchema } from '../domain/field-spec.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -113,7 +113,7 @@ const SWEPT: { collection: string; field: string }[] = BULK_TARGETS.flatMap((nam
   return field === null ? [] : [{ collection: name, field }]
 })
 
-describe.skipIf(!db)('the two write doors agree', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the two write doors agree', () => {
   let caseId: string
   /** Who makes the patch under measurement. */
   let session: Session

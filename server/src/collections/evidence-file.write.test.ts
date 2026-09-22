@@ -26,7 +26,7 @@ import { cases, evidence, user } from '../db/schema/index.js'
 import { withCase } from '../db/scope.js'
 import { evidenceSchema } from '../domain/entities/evidence.js'
 import { patchSchema } from '../domain/field-spec.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -126,7 +126,7 @@ describe('the digest algorithm', () => {
   })
 })
 
-describe.skipIf(!db)('an evidence attachment', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', () => {
   let controller: EvidenceFileController
   let rows: EvidenceController
   let store: EvidenceStore

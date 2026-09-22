@@ -37,8 +37,9 @@ test.describe('a boxed table reaches the bottom of its pane', () => {
   for (const story of STORIES) {
     test(`${story} leaves no dead pane under a table that still scrolls`, async ({ page }) => {
       await openStory(page, story)
-      // The measure lands after the first paint; two frames is enough.
-      await page.waitForTimeout(300)
+      // The box is laid out around its rows, so a measure taken before they
+      // arrive reads a table with nothing to scroll.
+      await expect(page.locator('[data-part="table-scroll"] [role="row"]').first()).toBeVisible()
       const read = await page
         .locator('[data-part="table-scroll"]')
         .first()

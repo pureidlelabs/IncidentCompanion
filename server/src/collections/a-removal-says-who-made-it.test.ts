@@ -31,7 +31,7 @@ import { cases } from '../db/schema/case.js'
 import { changeFeed } from '../db/schema/change-feed.js'
 import { systems } from '../db/schema/entities.js'
 import { user } from '../db/schema/auth.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -61,7 +61,7 @@ const KINDS = [
   },
 ] as const
 
-describe.skipIf(!db)('an analyst removing something inside a case', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('an analyst removing something inside a case', () => {
   let service: CollectionService
   let caseId: string
 

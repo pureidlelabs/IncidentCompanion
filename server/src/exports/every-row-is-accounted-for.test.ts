@@ -30,7 +30,7 @@ import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, user } from '../db/schema/index.js'
 import { IMPORTABLE } from '../domain/collections.js'
 import { TABLES, type BulkTarget } from '../collections/registry.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -73,7 +73,7 @@ function dataRows(csv: string): number {
 const accountedFor = (result: Counted) =>
   result.added + result.skipped + result.replaced + result.refused
 
-describe.skipIf(!db)('every row in the file is accounted for', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('every row in the file is accounted for', () => {
   let service: ImportService
   let exports_: ExportsController
   let caseId: string

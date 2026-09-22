@@ -776,16 +776,22 @@ def test_no_tier_is_reported_as_both_skipped_and_run() -> None:
     )
 
 
-def test_a_partial_tier_is_stated_rather_than_counted_as_a_pass() -> None:
-    """The rule the script already applies to a skip, applied to a degraded run.
+def test_a_degraded_server_suite_is_a_pass_or_a_failure_and_never_both() -> None:
+    """A third state the exit code cannot carry, so a red suite exited 0.
 
-    A tier that ran and could not cover what it names is neither a pass nor a
-    failure, and silence about it is the outcome this script exists to prevent.
+    The tests that need two concurrent transactions decline on the embedded
+    engine, which leaves the run green or genuinely red -- and a bucket that
+    prints "Nothing failed" over a failing suite is then the only way to lose
+    one. -> #1079
     """
     text = VERIFY.read_text(encoding="utf-8")
-    assert "PARTIAL=()" in text, "there is no partial state"
-    assert 'PARTIAL+=(' in text, "nothing ever records a partial tier"
-    assert '"${PARTIAL[@]:-}"' in text, "the summary never prints the partial tiers"
+    assert "PARTIAL" not in text, (
+        "a tier can still land in a bucket the exit code reports as a pass"
+    )
+    assert 'step "server: suite (in-process engine' in text, (
+        "the embedded run does not go through `step`, so its result reaches "
+        "neither PASSED nor FAILED"
+    )
 
 
 def test_the_fast_mode_runs_nothing_that_executes() -> None:
@@ -1088,3 +1094,44 @@ def test_the_installed_tree_key_hashes_no_glob_reaching_into_node_modules() -> N
     recursive = sorted(one for one in hashed if "**" in one)
 
     assert recursive == [], f"these reach into node_modules: {recursive}"
+
+
+def test_every_client_vitest_step_arms_the_must_run_reporter() -> None:
+    """`MustRunReporter` reads `IC_SUITE_MUST_RUN` and never `CI`.
+
+    A worker pool that times out leaves the client run with no test modules and
+    no failure, which vitest exits 0 on -- so a job that drives `ui/`'s config
+    without the variable reports success having run none of the tier. The
+    server side reads both variables and needs no step to set either. -> #1080
+    """
+    bare = []
+    for name, job in sorted(ci_jobs().items()):
+        for step in job.get("steps", []):
+            run = str(step.get("run", ""))
+            if "vitest" not in run or "cd ui" not in run:
+                continue
+            armed = {**job.get("env", {}), **step.get("env", {})}
+            if not armed.get("IC_SUITE_MUST_RUN"):
+                bare.append(f"{name}: {step.get('name', run.strip()[:40])}")
+
+    assert not bare, (
+        "these steps run the client tier without arming its must-run floor, so a "
+        f"run that reached no test file exits 0:\n  " + "\n  ".join(bare)
+    )
+
+
+def test_the_server_lint_script_caps_warnings_at_zero() -> None:
+    """A rule set to `warn` decides nothing until the script refuses one.
+
+    `playwright/no-wait-for-timeout` arrives at `warn` from the plugin's
+    recommended set, so a fixed sleep with no argument passed every gate the
+    repository has. -> #1081
+    """
+    script = json.loads(
+        (REPO_ROOT / "server" / "package.json").read_text(encoding="utf-8"),
+    )["scripts"]["lint"]
+
+    assert "--max-warnings 0" in script, (
+        f"`{script}` exits 0 on any number of warnings, so every warn-level rule "
+        "in server/eslint.config.mjs is decorative"
+    )

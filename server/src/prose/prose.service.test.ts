@@ -22,7 +22,7 @@ import {
   type ProseRelay,
 } from './prose.service.js'
 import { caseNotes, cases, reports, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -105,7 +105,7 @@ describe('telling a read from a write', () => {
   })
 })
 
-describe.skipIf(!db)('the prose document', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => {
   let prose: ProseService
   let cases_: CasesService
   let actorId: string
@@ -330,7 +330,7 @@ describe.skipIf(!db)('the prose document', () => {
  * hit and its CSV cell - so the two failures worth the most here are the column
  * winning over the document, and a key naming one table reaching the other.
  */
-describe.skipIf(!db)('a case note as a live document', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live document', () => {
   let prose: ProseService
   let cases_: CasesService
   let actorId: string
@@ -589,7 +589,7 @@ class Bus implements ProseRelay {
   }
 }
 
-describe.skipIf(!db)('two server instances on one report', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one report', () => {
   let cases_: CasesService
   let actorId: string
 

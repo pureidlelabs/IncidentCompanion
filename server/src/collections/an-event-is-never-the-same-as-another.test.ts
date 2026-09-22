@@ -33,7 +33,7 @@ import { identitiesOf } from '../domain/identity.js'
 import { CollectionService } from './collection.service.js'
 import { DEFINITION as TIMELINE } from './timeline.controller.js'
 import { cases, timeline, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const EVENTS = [
   'timeline',
@@ -82,7 +82,7 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-describe.skipIf(!db)('a collection whose rows are events', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a collection whose rows are events', () => {
   let service: CollectionService
   let caseId = ''
 

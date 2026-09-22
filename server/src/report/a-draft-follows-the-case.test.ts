@@ -22,7 +22,7 @@ import { DEFINITION as TIMELINE } from '../collections/timeline.controller.js'
 import { cases, reportBlocks, reports, user } from '../db/schema/index.js'
 import { ProseService } from '../prose/prose.service.js'
 import { ReportRenderService } from './render.service.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -41,7 +41,7 @@ const englishOnly = {
 
 
 
-describe.skipIf(!db)('a draft report against a case that moves', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a draft report against a case that moves', () => {
   let render: ReportRenderService
   let collections: CollectionService
   let caseId: string

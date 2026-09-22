@@ -86,8 +86,16 @@ function ignoreReactAriaWindowFocusThrow(error: {
   return isTheThrow ? false : undefined
 }
 
-/** The fewest test files a whole certifying run may finish and still pass. */
-const MUST_RUN_FILES = 200
+/**
+ * The fewest test files each project may finish in a certifying run.
+ *
+ * Per project, because a run filtered to one of them owes that one's count and
+ * a whole-run floor lets the smaller project through on nothing.
+ */
+const MUST_RUN_FILES = new Map([
+  ['unit', 300],
+  ['storybook', 200],
+])
 
 /**
  * Refuses a certifying run that reported green having run little of the tier.
@@ -99,13 +107,30 @@ const MUST_RUN_FILES = 200
  * reads `CI`.
  */
 class MustRunReporter implements Reporter {
-  private floor = MUST_RUN_FILES
+  private floor = 0
 
   onInit(vitest: Vitest): void {
+    // `projects` is what survived `--project`, so a filtered run owes only the
+    // projects it kept. An unnamed project throws rather than lowering the
+    // floor in silence: whoever declares one declares its count here.
+    this.floor = vitest.projects.reduce((total, project) => {
+      // A browser project's resolved name carries its instance -- `storybook`
+      // is reported as `storybook (chromium)` -- so the declared name is the
+      // first word rather than the whole of it.
+      const declared = project.name.split(' ')[0]
+      const owed = MUST_RUN_FILES.get(declared)
+      if (owed === undefined) {
+        throw new Error(
+          `the project '${project.name}' has no entry in MUST_RUN_FILES, ` +
+            'so a certifying run cannot say what it owes',
+        )
+      }
+      return total + owed
+    }, 0)
     // A shard is a fraction of the tier by construction, and nothing is
     // missing from it. The count a shard was never given is not evidence.
     const shard = vitest.config.shard
-    if (shard) this.floor = Math.ceil(MUST_RUN_FILES / shard.count)
+    if (shard) this.floor = Math.ceil(this.floor / shard.count)
   }
 
   onTestRunEnd(testModules: readonly TestModule[]): void {

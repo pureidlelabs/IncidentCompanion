@@ -30,7 +30,7 @@ import { cases } from '../src/db/schema/case.js'
 import { evidence } from '../src/db/schema/entities.js'
 import { reports } from '../src/db/schema/report.js'
 import { user } from '../src/db/schema/auth.js'
-import { openTestPool } from './database.js'
+import { hasConcurrentConnections, openTestPool } from './database.js'
 
 const ANALYST = 'cross-case-analyst'
 
@@ -50,7 +50,7 @@ let theirEvidence = ''
 let ourEvidence = ''
 let ourReport = ''
 
-describe.skipIf(!db)('a report section naming evidence', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a report section naming evidence', () => {
   beforeAll(async () => {
     service = new CollectionService(db!)
 

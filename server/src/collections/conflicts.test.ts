@@ -21,7 +21,7 @@ import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, conflicts, reports, systems, user } from '../db/schema/index.js'
 import { reportBlocks } from '../db/schema/report.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { randomUUID } from 'node:crypto'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -44,7 +44,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 const ME = 'analyst-mine'
 const THEM = 'analyst-theirs'
 
-describe.skipIf(!db)('the merge review', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
   let service: ConflictsService
   let collections: CollectionService
   let caseId: string

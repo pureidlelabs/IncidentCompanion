@@ -32,7 +32,7 @@ import { ProseService } from '../prose/prose.service.js'
 import { ReportLifecycleService } from './lifecycle.service.js'
 import { ReportRenderService } from './render.service.js'
 import { english } from './document/packs.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
 
@@ -72,7 +72,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
  */
 const DERIVED_KINDS = ['case_header', 'metrics', 'timeline', 'impact'] as const
 
-describe.skipIf(!db)('a sent report, when the case moves under it', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a sent report, when the case moves under it', () => {
   let render: ReportRenderService
   let lifecycle: ReportLifecycleService
   let caseId: string

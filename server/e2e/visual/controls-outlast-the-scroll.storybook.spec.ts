@@ -49,9 +49,6 @@ async function openStory(page: Page, id: string): Promise<void> {
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
   expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
   await page.locator('[data-part="section-body"]').first().waitFor({ timeout: 30_000 })
-  // The rows arrive after the frame does, and a walk over an empty table
-  // measures a section that has nothing to scroll.
-  await page.waitForTimeout(1_000)
 }
 
 interface Reading {
@@ -105,17 +102,28 @@ test.describe('a table keeps its controls while the rows move', () => {
     test(`${id} keeps its head and toolbar on screen`, async ({ page }) => {
       await openStory(page, id)
 
+      // The rows arrive after the frame does, and a walk over an empty table
+      // measures a section that has nothing to scroll. Whichever box holds it,
+      // something has to move -- otherwise every assertion below is true of a
+      // screen with four rows in it.
+      await expect
+        .poll(async () => (await measure(page)).travel, {
+          message: 'nothing on this screen can be scrolled at all',
+          timeout: 30_000,
+        })
+        .toBeGreaterThan(200)
+
       const before = await measure(page)
       expect(before.error).toBeUndefined()
-      // Whichever box holds it, something has to move -- otherwise every
-      // assertion below is true of a screen with four rows in it.
-      expect(before.travel, 'nothing on this screen can be scrolled at all').toBeGreaterThan(200)
       expect(before.head, 'the section draws no head to keep').toBe(true)
 
       // Far more than the travel, so the gesture ends against a hard stop
       // wherever the chain leaves it rather than part way down.
       await page.mouse.move(700, 500)
       for (let push = 0; push < 60; push += 1) await page.mouse.wheel(0, 400)
+      // Smooth scrolling ends at no event, and the only condition that would
+      // say it had is `after.head`, which is the assertion below.
+      // eslint-disable-next-line playwright/no-wait-for-timeout
       await page.waitForTimeout(500)
 
       const after = await measure(page)

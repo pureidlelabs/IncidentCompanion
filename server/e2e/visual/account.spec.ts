@@ -18,6 +18,9 @@ import { findings, setGround, shoot, sayFinding } from './view.js'
 
 const OUT = process.env['SHOT_DIR'] ?? '.visual/current'
 
+// A capture, not a check: the screenshots are the output and the eye
+// reading them is the oracle.
+// eslint-disable-next-line playwright/expect-expect
 test('captures the personal account screen', async ({ browser, baseURL }) => {
   await requireServedApp(baseURL ?? '')
 

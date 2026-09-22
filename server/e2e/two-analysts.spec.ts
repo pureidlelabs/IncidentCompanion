@@ -298,6 +298,9 @@ async function whereItStopped(
         return 'it reached the server and not the second browser: the stored note holds it'
       }
     }
+    // A poll of the notes route, which answers on request and never on an
+    // event, so there is no locator or response to wait on.
+    // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(500)
   }
   // The row is written after a quiet moment, so its silence is two states at
