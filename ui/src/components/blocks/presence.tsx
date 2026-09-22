@@ -391,9 +391,12 @@ export function useRowHolder(table: string, entryId: string): Person | undefined
  * The release is the half that gets forgotten - a dialog closed with Escape, a
  * route change, a component that throws - so it is an effect's cleanup rather
  * than a call anyone has to remember. Silent when there is no case.
+ *
+ * Returns whether the server refused the hold, because the case is read-only
+ * to this analyst. False outside a case.
  */
 export function useHoldRow(table: string, entryId: string | undefined,
-                           active: boolean): void {
+                           active: boolean): boolean {
   const claims = useContext(ClaimsContext)
   const take = claims?.claim
   const give = claims?.release
@@ -402,11 +405,6 @@ export function useHoldRow(table: string, entryId: string | undefined,
     take(table, entryId)
     return () => give(table, entryId)
   }, [active, table, entryId, take, give])
-}
-
-/** Whether the server refused this tab's hold on the row. False outside a case. */
-export function useRowRefused(table: string, entryId: string | undefined): boolean {
-  const claims = useContext(ClaimsContext)
   return entryId !== undefined && (claims?.refused(table, entryId) ?? false)
 }
 
