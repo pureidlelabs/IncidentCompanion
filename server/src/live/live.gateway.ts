@@ -88,6 +88,25 @@ export const STATUS: Record<Refusal, string> = {
 const REPORTS_SCOPE = 'reports'
 
 /**
+ * The largest frame this socket will read, in bytes. The largest legitimate
+ * one is a prose sync update.
+ *
+ * **The `ws` default is 100 MB and no throttler reaches an upgrade**, so this
+ * is the only thing between a frame and the memory to hold it.
+ */
+const MAX_FRAME_BYTES = 64 * 1024
+
+/**
+ * What a claim key may be - a shape, not the collection registry, which
+ * `architecture.test.ts` refuses `live` an import of.
+ */
+const CLAIM_TABLE = /^[a-z_]{1,40}$/
+const CLAIM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** How many rows one connection may hold at once. A browser holds one. */
+const CLAIMS_PER_CONNECTION = 64
+
+/**
  * Whether this analyst may be admitted to a socket on this case.
  *
  * **Read is enough and no more is asked.** A socket only ever shows what a
@@ -141,7 +160,7 @@ interface OpenDocument {
 @Injectable()
 export class LiveGateway implements OnApplicationShutdown {
   private readonly log = new Logger(LiveGateway.name)
-  private readonly sockets = new WebSocketServer({ noServer: true })
+  private readonly sockets = new WebSocketServer({ noServer: true, maxPayload: MAX_FRAME_BYTES })
   private connections = 0
 
   private readonly admitted = new Map<WebSocket, { caseId: string; userId: string }>()
@@ -365,7 +384,11 @@ export class LiveGateway implements OnApplicationShutdown {
             Array.isArray(frame.scopes) &&
             frame.scopes.includes(REPORTS_SCOPE)
           ) {
-            for (const [, held] of opened) held.stale = true
+            for (const [, held] of opened) {
+              void held.then((one) => {
+                if (one) one.stale = true
+              })
+            }
           }
         } catch {
           // Not JSON, or not a shape this knows. Forwarded regardless.
@@ -380,8 +403,17 @@ export class LiveGateway implements OnApplicationShutdown {
      * **Per connection, not per case.** Two tabs are two readers of the same
      * report document, and the refcount in `ProseService` is what keeps it
      * alive for the second when the first closes.
+     *
+     * **The promise, not the document.** Opening one takes two awaits, and a
+     * map written after them is a check across a yield: two frames for one
+     * field in one tick both take a reader and only one is ever given back.
+     * `ProseService.open` and `CaseChannel.subscriptions` hold the same shape
+     * for the same reason.
      */
-    const opened = new Map<string, OpenDocument>()
+    const opened = new Map<string, Promise<OpenDocument | null>>()
+
+    /** The rows this connection holds, so `CLAIMS_PER_CONNECTION` is countable. */
+    const claims = new Set<string>()
 
     const joined = this.channel.join(member)
 
@@ -393,7 +425,13 @@ export class LiveGateway implements OnApplicationShutdown {
       // **Released before the roster changes.** The last reader out flushes
       // the document, and a closing tab must not leave the report newer in
       // memory than on disk.
-      for (const [, held] of opened) held.stop()
+      // Settled, not resolved: a document still opening when the socket goes
+      // is released when it arrives rather than left holding a reader.
+      for (const [, held] of opened) {
+        void held.then((one) => {
+          one?.stop()
+        })
+      }
       opened.clear()
       /**
        * **Chained onto the join rather than run now**, or a socket that goes
@@ -458,10 +496,53 @@ export class LiveGateway implements OnApplicationShutdown {
       const id = typeof message.id === 'string' ? message.id : null
       if (!table || !id) return
 
-      if (message.type === 'claim') this.channel.claim(member, table, id).catch(failed)
-      if (message.type === 'release') this.channel.release(member, table, id).catch(failed)
+      if (message.type === 'claim') this.onClaim(member, live, claims, table, id).catch(failed)
+      if (message.type === 'release') {
+        claims.delete(`${table}:${id}`)
+        this.channel.release(member, table, id).catch(failed)
+      }
     })
 
+  }
+
+  /**
+   * One claim frame.
+   *
+   * **Admission is read; taking a row is not.** A claim is advisory to a
+   * screen and binding to the write path -- `CollectionService` answers a
+   * write to a row another session holds with a 409 -- so a read-level analyst
+   * who could claim could refuse every writer on the case, from a door with no
+   * guard on it. The level is asked for again here, exactly as the prose
+   * branch asks.
+   *
+   * **`release` is not gated.** `PresenceStore.release` refuses a field held
+   * by another session, so a release can only ever give back this
+   * connection's own claim.
+   */
+  private async onClaim(
+    member: Member,
+    live: WebSocket,
+    claims: Set<string>,
+    table: string,
+    id: string,
+  ): Promise<void> {
+    // Silence, as for a frame this build does not understand: a key of this
+    // shape comes from a loop rather than from a client.
+    if (!CLAIM_TABLE.test(table) || !CLAIM_ID.test(id)) return
+    const field = `${table}:${id}`
+    if (!claims.has(field) && claims.size >= CLAIMS_PER_CONNECTION) return
+    // **Counted before the await, not after.** A loop of frames arrives in one
+    // tick and every one of them would otherwise pass a count that nothing has
+    // yet raised.
+    claims.add(field)
+
+    const level = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
+    if (level !== 'write' && level !== 'delete') {
+      claims.delete(field)
+      live.send(JSON.stringify({ type: 'claim.refused', table, id, reason: 'read-only' }))
+      return
+    }
+    await this.channel.claim(member, table, id)
   }
 
   /**
@@ -487,7 +568,7 @@ export class LiveGateway implements OnApplicationShutdown {
   private async onProse(
     member: Member,
     live: WebSocket,
-    opened: Map<string, OpenDocument>,
+    opened: Map<string, Promise<OpenDocument | null>>,
     type: 'prose.sync' | 'prose.awareness',
     field: string,
     update: string,
@@ -500,44 +581,22 @@ export class LiveGateway implements OnApplicationShutdown {
       return
     }
 
-    let held = opened.get(field)
+    let opening = opened.get(field)
+    if (!opening) {
+      // **In the map before the first await.** -> `open`
+      opening = this.openDocument(member, live, field)
+      opened.set(field, opening)
+    }
+    let held
+    try {
+      held = await opening
+    } catch (error) {
+      opened.delete(field)
+      throw error
+    }
     if (!held) {
-      const address = await this.prose.resolve(member.caseId, field)
-      // **Unresolvable is silence, not an error frame.** The field key comes
-      // from a browser; answering "no such field" would make the socket an
-      // oracle for which block ids exist in other cases.
-      if (!address) return
-
-      const doc = await this.prose.open(member.caseId, address)
-      const { sentAt } = address
-
-      const onUpdate = (bytes: Uint8Array, origin: unknown) => {
-        if (origin === live) return
-        live.send(
-          JSON.stringify({
-            type: 'prose.sync',
-            field,
-            update: Buffer.from(this.prose.frameUpdate(bytes)).toString('base64'),
-          }),
-        )
-      }
-      doc.on('update', onUpdate)
-
-      held = {
-        address,
-        doc,
-        sentAt,
-        stale: false,
-        stop: () => {
-          doc.off('update', onUpdate)
-          // Same rule as `attach`: a release racing a closing Redis rejects,
-          // and `void` would let it escape as an unhandled rejection.
-          this.prose.release(member.caseId, address).catch((error: unknown) => {
-            this.log.warn(`could not release ${field}: ${String(error)}`)
-          })
-        },
-      }
-      opened.set(field, held)
+      opened.delete(field)
+      return
     }
 
     /**
@@ -606,6 +665,52 @@ export class LiveGateway implements OnApplicationShutdown {
           update: Buffer.from(reply).toString('base64'),
         }),
       )
+    }
+  }
+
+  /**
+   * Take a reader on one field's document and wire its updates to this socket.
+   *
+   * **Null is unresolvable, and it is silence rather than an error frame.**
+   * The field key comes from a browser; answering "no such field" would make
+   * the socket an oracle for which block ids exist in other cases.
+   */
+  private async openDocument(
+    member: Member,
+    live: WebSocket,
+    field: string,
+  ): Promise<OpenDocument | null> {
+    const address = await this.prose.resolve(member.caseId, field)
+    if (!address) return null
+
+    const doc = await this.prose.open(member.caseId, address)
+    const { sentAt } = address
+
+    const onUpdate = (bytes: Uint8Array, origin: unknown) => {
+      if (origin === live) return
+      live.send(
+        JSON.stringify({
+          type: 'prose.sync',
+          field,
+          update: Buffer.from(this.prose.frameUpdate(bytes)).toString('base64'),
+        }),
+      )
+    }
+    doc.on('update', onUpdate)
+
+    return {
+      address,
+      doc,
+      sentAt,
+      stale: false,
+      stop: () => {
+        doc.off('update', onUpdate)
+        // Same rule as `attach`: a release racing a closing Redis rejects,
+        // and `void` would let it escape as an unhandled rejection.
+        this.prose.release(member.caseId, address).catch((error: unknown) => {
+          this.log.warn(`could not release ${field}: ${String(error)}`)
+        })
+      },
     }
   }
 
