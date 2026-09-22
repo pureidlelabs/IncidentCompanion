@@ -302,7 +302,9 @@ describe('a refused change against the real client', () => {
 
   it('keeps the session when the current password is wrong', async () => {
     const real = await vi.importActual<typeof ApiClient>('@/api/client')
-    changeOwnPassword.mockImplementation(real.changeOwnPassword)
+    changeOwnPassword.mockImplementation((fields) =>
+      real.changeOwnPassword(fields as Parameters<typeof real.changeOwnPassword>[0]),
+    )
     vi.stubGlobal(
       'fetch',
       vi.fn<typeof fetch>(() =>
