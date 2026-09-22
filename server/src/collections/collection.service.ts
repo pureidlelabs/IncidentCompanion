@@ -376,7 +376,7 @@ export class CollectionService {
 
       const [row] = (await tx
         .insert(def.table)
-        .values({ ...coerceTimes(def, values), caseId, createdBy: actorId, updatedBy: actorId })
+        .values({ ...coerceTimes(def.table, values), caseId, createdBy: actorId, updatedBy: actorId })
         .returning()) as { id: string; version: number }[]
 
       await tx.insert(changeFeed).values({
@@ -477,7 +477,7 @@ export class CollectionService {
           .insert(def.table)
           .values(
             rows.slice(at, at + INSERT_CHUNK).map((row) => ({
-              ...coerceTimes(def, row),
+              ...coerceTimes(def.table, row),
               caseId,
               createdBy: actorId,
               updatedBy: actorId,
@@ -722,7 +722,7 @@ export class CollectionService {
       const updated = (await tx
         .update(def.table)
         .set({
-          ...coerceTimes(def, fields),
+          ...coerceTimes(def.table, fields),
           updatedBy: actorId,
           updatedAt: new Date(),
           version: sql`${cols.version} + 1`,
@@ -814,7 +814,7 @@ export class CollectionService {
       id,
       expectedVersion,
       actorId,
-      patch: coerceTimes(def, patch),
+      patch: coerceTimes(def.table, patch),
     })
 
     if (result.ok) this.announce(caseId, [def.name], actorId)

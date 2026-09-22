@@ -9,6 +9,7 @@
  */
 import { BadRequestException } from '@nestjs/common'
 import { eq, getTableColumns } from 'drizzle-orm'
+import type { PgTable } from 'drizzle-orm/pg-core'
 
 import { columnOf } from '../db/column-access.js'
 import type { Transaction } from '../db/client.js'
@@ -182,10 +183,10 @@ export async function refuseIfCrossFieldRuleBroken(
  * no date type - and the columns carrying one share no naming rule.
  */
 export function coerceTimes(
-  def: CollectionDefinition,
+  table: PgTable,
   values: Record<string, unknown>,
 ): Record<string, unknown> {
-  const cols = getTableColumns(def.table)
+  const cols = getTableColumns(table)
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(values)) {
     const column = cols[key]
