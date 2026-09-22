@@ -34,9 +34,11 @@ console.log(JSON.stringify(config.server.fs.allow))
 
 def allow_list() -> list[str]:
     """What Vite computes for `server.fs.allow`, or a skip when it cannot run."""
-    if not (UI / "node_modules").exists():
+    # A workspace install hoists vite to the root, so `ui/node_modules` holds
+    # only tool caches and exists once something has run in `ui/`.
+    if not any((root / "node_modules" / "vite").exists() for root in (REPO_ROOT, UI)):
         declined("The linked-dependency check",
-                 "ui/node_modules is absent, so vite cannot be loaded to answer")
+                 "vite is installed in neither node_modules nor ui/node_modules")
     done = subprocess.run(
         ["node", "--input-type=module", "-e", READ_THE_ALLOW_LIST],
         cwd=UI, capture_output=True, text=True, check=False, timeout=180,
