@@ -62,6 +62,8 @@ export interface CasePresence extends PresenceSnapshot {
   claim: (table: string, entryId: string) => void
   release: (table: string, entryId: string) => void
   holderOf: (table: string, entryId: string) => Claim | undefined
+  /** Whether the server answered this tab's claim on the row with `claim.refused`. */
+  refused: (table: string, entryId: string) => boolean
 }
 
 const EMPTY: PresenceSnapshot = { roster: [], claims: [] }
@@ -88,19 +90,22 @@ export function readMessage(data: unknown): PresenceSnapshot | null {
 function readSnapshot(message: Message): PresenceSnapshot | null {
   if (message.type !== 'presence') return null
   return {
-    roster: Array.isArray(message.roster) ? (message.roster as Participant[]) : [],
+    roster: Array.isArray(message.roster) ? message.roster.filter(isParticipant) : [],
     claims: Array.isArray(message.claims) ? (message.claims as Claim[]) : [],
   }
 }
 
-/** The real socket, absent in jsdom - which defines no `WebSocket` at all. */
-function browserSocket(url: string) {
-  return new WebSocket(url)
+/** Checked, never cast: an entry with no string id or name is dropped. */
+function isParticipant(entry: unknown): entry is Participant {
+  if (!entry || typeof entry !== 'object') return false
+  const { user_id: id, username } = entry as Record<string, unknown>
+  return typeof id === 'string' && typeof username === 'string'
 }
 
 export function useCasePresence(caseId: string): CasePresence {
   const [snapshot, setSnapshot] = useState<PresenceSnapshot>(EMPTY)
   const [connected, setConnected] = useState(false)
+  const [refusedRows, setRefusedRows] = useState<ReadonlySet<string>>(() => new Set())
   const link = useRef<CaseLink | null>(null)
 
   /**
@@ -117,12 +122,17 @@ export function useCasePresence(caseId: string): CasePresence {
 
   useEffect(() => {
     if (typeof WebSocket === 'undefined') return undefined
-    const live = acquireLink(caseId, browserSocket)
+    const live = acquireLink(caseId)
     link.current = live
 
     const stopMessages = live.subscribe((message) => {
       const next = readSnapshot(message)
       if (next) setSnapshot(next)
+      if (message.type === 'claim.refused' && typeof message.table === 'string'
+          && typeof message.id === 'string') {
+        const row = key(message.table, message.id)
+        setRefusedRows((rows) => new Set(rows).add(row))
+      }
     })
     const stopConnected = live.onConnected((up) => {
       setConnected(up)
@@ -131,6 +141,8 @@ export function useCasePresence(caseId: string): CasePresence {
         // empty one: it says three analysts are in the case when this tab has
         // not heard from the server since they might all have left.
         setSnapshot(EMPTY)
+        // The claims are re-sent on the next connect, and so is any refusal.
+        setRefusedRows(new Set())
         return
       }
       for (const { table, entryId } of held.current.values()) {
@@ -173,6 +185,11 @@ export function useCasePresence(caseId: string): CasePresence {
     [byRow],
   )
 
+  const refused = useCallback(
+    (table: string, entryId: string) => refusedRows.has(key(table, entryId)),
+    [refusedRows],
+  )
+
   return {
     roster: snapshot.roster,
     claims: snapshot.claims,
@@ -180,6 +197,7 @@ export function useCasePresence(caseId: string): CasePresence {
     claim,
     release,
     holderOf,
+    refused,
   }
 }
 

@@ -240,7 +240,6 @@ export function DialogBody({ children }: { children: ReactNode }) {
     <div
       // The scroller takes focus itself: a body of plain prose overflows and
       // holds nothing else to reach it by. -> #929
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
       tabIndex={0}
       className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pt-2 pb-4"
     >

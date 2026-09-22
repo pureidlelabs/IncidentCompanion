@@ -117,7 +117,6 @@ export function CodeBlock({
         // A scrollable region must be reachable by keyboard, which is what
         // `tabindex` on a `region` is for. The rule reads it as a static
         // element made focusable for no reason.
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
         tabIndex={0}
         aria-label={name}
         data-part="code-block-scroll"

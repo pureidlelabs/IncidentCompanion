@@ -155,7 +155,14 @@ class Link implements CaseLink {
 
 const LINKS = new Map<string, { link: Link; refs: number }>()
 
-export function acquireLink(caseId: string, make: SocketFactory): CaseLink {
+let browserSocket: SocketFactory = (url) => new WebSocket(url)
+
+/** What opens a case's socket from here on, so the demo build can answer it. */
+export function setSocketFactory(make: SocketFactory): void {
+  browserSocket = make
+}
+
+export function acquireLink(caseId: string, make: SocketFactory = browserSocket): CaseLink {
   const held = LINKS.get(caseId)
   if (held) {
     held.refs += 1

@@ -264,7 +264,6 @@ export function InvestigationGraphScreen({
             <ul
               // Stays a `ul` rather than becoming a `ScrollArea`, which would cost
               // the list its semantics. -> #929
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a region that scrolls takes focus or no keyboard reaches it. -> #929
               tabIndex={0}
               className="-outline-offset-2 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2"
             >
