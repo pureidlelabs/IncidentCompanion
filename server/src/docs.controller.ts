@@ -40,20 +40,22 @@ const POLICY = [
 ].join('; ')
 
 /**
- * The app's built stylesheet, read out of `ui/dist/index.html` rather than
- * named - Vite hashes the filename on every build, and a written-down one is
- * wrong quietly: the page still renders, in Redoc's own colours.
+ * The app's built stylesheet, as Vite's manifest names it for the `index.html`
+ * entry - the filename is hashed on every build.
  *
  * **Null when there is no build**, which is ordinary - the API serves without
- * a front end.
+ * a front end. A manifest that is there and unreadable throws.
  */
 export function appStylesheet(bundle: string): string | null {
+  let manifest: string
   try {
-    const shell = readFileSync(join(bundle, 'index.html'), 'utf8')
-    return /<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/.exec(shell)?.[1] ?? null
-  } catch {
-    return null
+    manifest = readFileSync(join(bundle, '.vite', 'manifest.json'), 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw error
   }
+  const sheet = (JSON.parse(manifest) as Record<string, { css?: string[] }>)['index.html']?.css?.[0]
+  return sheet ? `/${sheet}` : null
 }
 
 export function docsPage(stylesheet: string | null): string {

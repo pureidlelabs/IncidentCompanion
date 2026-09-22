@@ -7,7 +7,7 @@
  */
 import { ATTACHMENT_MEGABYTES } from '../policy/keys.js'
 import { createHash } from 'node:crypto'
-import { mkdir, rename, stat, writeFile } from 'node:fs/promises'
+import { mkdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { basename, join } from 'node:path'
 
@@ -49,6 +49,8 @@ export interface StoredArtefact {
   readonly hash: string
   readonly hashAlgorithm: 'sha256'
   readonly sizeBytes: number
+  /** Whether this call wrote the file, rather than finding it already held. */
+  readonly created: boolean
 }
 
 @Injectable()
@@ -116,13 +118,19 @@ export class EvidenceStore {
     // Already here means identical content, since the name is the plaintext
     // digest. The stored *zip* is not byte-stable - AES uses a fresh salt per
     // entry - so this check has to be on the name and never on the file.
-    if (!(await this.exists(hash))) {
+    const created = !(await this.exists(hash))
+    if (created) {
       const partial = `${held}.${process.pid}.partial`
       await writeFile(partial, await this.wrap(Buffer.concat(chunks), memberName(name, hash)))
       await rename(partial, held)
     }
 
-    return { hash, hashAlgorithm: 'sha256', sizeBytes: size }
+    return { hash, hashAlgorithm: 'sha256', sizeBytes: size, created }
+  }
+
+  /** Remove an artefact's file. The caller answers for no row naming it. */
+  async discard(hash: string): Promise<void> {
+    if (isDigest(hash)) await rm(join(this.root, hash), { force: true })
   }
 
   /**

@@ -221,14 +221,7 @@ fi
 # skipped it. `--no-global` is what makes this a repository config rather than a
 # self-hosted global one, which is validated against a different schema and
 # accepts almost anything.
-#
-# Needs the network, unlike the linters above, so it declines the same way they
-# do rather than failing the tier offline.
-if npx --yes --package renovate@latest -- renovate-config-validator --version >/dev/null 2>&1; then
-  step "renovate config" bash -c 'npm run --silent lint:renovate'
-else
-  SKIPPED+=("renovate config (cannot reach the npm registry)")
-fi
+step "renovate config" bash -c 'npm run --silent lint:renovate'
 
 # --------------------------------------------------------------- browser
 # **It raises its own stack now, so there is nothing to be reachable first.**

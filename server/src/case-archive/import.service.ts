@@ -20,6 +20,7 @@ import { defaultCustomer } from '../customers/customers.service.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { EvidenceStore } from '../evidence/store.js'
+import { artefactsNamed } from '../db/artefacts-named.js'
 import { BadArchive, CASE_NAME, EVIDENCE_PREFIX, PROSE_PREFIX, readArchive } from '../archive/format.js'
 import { MalformedEnvelope, WrongPassphrase, isSealed, open } from '../archive/envelope.js'
 import { PolicyService } from '../policy/policy.service.js'
@@ -280,6 +281,7 @@ export class ArchiveImportService {
      */
     const unresolved = new Set<string>()
     const held = new Set<string>()
+    const introduced: string[] = []
     for (const [name, bytes] of Object.entries(members)) {
       if (!name.startsWith(EVIDENCE_PREFIX)) continue
       const stored = await this.store.put(
@@ -295,6 +297,7 @@ export class ArchiveImportService {
         stored_['evidence.attachmentMegabytes'] * 1024 * 1024,
       )
       held.add(stored.hash)
+      if (stored.created) introduced.push(stored.hash)
     }
 
     return this.db.transaction(async (tx) => {
@@ -469,7 +472,26 @@ export class ArchiveImportService {
         lostAtExport: missing.length,
         unresolvedReferences: unresolved.size,
       }
+    }).catch(async (error: unknown) => {
+      await this.discard(introduced)
+      throw error
     })
+  }
+
+  /**
+   * Remove the artefacts a rolled-back import wrote, keeping any a row names.
+   *
+   * A failure here is logged rather than thrown, so the refusal the operator
+   * reads is the import's own.
+   */
+  private async discard(introduced: readonly string[]): Promise<void> {
+    if (introduced.length === 0) return
+    try {
+      const named = await artefactsNamed(this.db)
+      for (const hash of introduced) if (!named.has(hash)) await this.store.discard(hash)
+    } catch (error) {
+      this.log.warn(`artefacts of a refused import left in the store: ${String(error)}`)
+    }
   }
 
   private async unsealed(archive: Buffer, passphrase: string): Promise<Buffer> {

@@ -32,13 +32,13 @@ describe.skipIf(!runnable)('a service that writes', () => {
     const { CasesService } = await import('../src/cases/cases.service.js')
     const { ComplianceService } = await import('../src/compliance/compliance.service.js')
     const { ReportLifecycleService } = await import('../src/report/lifecycle.service.js')
-    const { ConflictsService } = await import('../src/collections/conflicts.service.js')
+    const { CollectionService } = await import('../src/collections/collection.service.js')
 
     const services: [string, never][] = [
       ['CasesService', CasesService as never],
       ['ComplianceService', ComplianceService as never],
       ['ReportLifecycleService', ReportLifecycleService as never],
-      ['ConflictsService', ConflictsService as never],
+      ['CollectionService', CollectionService as never],
     ]
 
     held = {}

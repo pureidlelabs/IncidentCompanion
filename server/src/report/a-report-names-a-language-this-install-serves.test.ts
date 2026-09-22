@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CollectionService } from '../collections/collection.service.js'
-import { REPORTS_COLLECTION } from '../collections/entities.controller.js'
+import { REPORTS_COLLECTION } from '../collections/definitions.js'
 import { cases, reportLanguage, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 

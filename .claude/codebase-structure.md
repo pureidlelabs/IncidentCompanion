@@ -76,7 +76,7 @@ main.ts
 
 **Three structural facts that cause defects if forgotten:**
 
-- **The generic collection path is where the guards are**, and it is not the only write path. Anything writing outside `CollectionService` asks `freezeGuardFor` and the reference check itself.
+- **The generic collection path is where the guards are**, and it is not the only write path. Anything writing outside `CollectionService` asks the reference check itself.
 - **A reference is declared on the schema**, and both registries are read: `fields` for one an analyst picks, `identityReferences` for one that is identity. Miss either and the case boundary is unchecked.
 - **The socket inherits nothing.** No guard, pipe, middleware or interceptor runs on an upgrade, so every check is re-implemented by hand in `live.gateway.ts`.
 

@@ -23,7 +23,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
-import { REPORT_BLOCKS_COLLECTION } from '../collections/entities.controller.js'
+import { REPORT_BLOCKS_COLLECTION } from '../collections/definitions.js'
 import { cases, evidence, reportBlocks, reports, user } from '../db/schema/index.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ProseService } from '../prose/prose.service.js'

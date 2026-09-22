@@ -24,7 +24,7 @@ import { DemoReportSender } from './demo-reports/sender.service'
 import { DemoSeederService } from './demos/seeder.service'
 import { AuthService } from '@thallesp/nestjs-better-auth'
 
-import type { Auth } from './auth/auth.config'
+import { signUpClosed, type Auth } from './auth/auth.config'
 import { CustomersService } from './customers/customers.service'
 import { LibraryService } from './library/library.service'
 import { LanguageService } from './report/language.service'
@@ -106,7 +106,8 @@ async function seed(): Promise<void> {
             .get<AuthService<Auth>>(AuthService, { strict: false })
             .api.signUpEmail({ body: { email, password, name: 'Dev Analyst' } })
           log.log(`Dev account created: ${email}`)
-        } catch {
+        } catch (error) {
+          if (!signUpClosed(error)) throw error
           log.log('This install already has accounts \u2014 sign in, or ask an admin for one')
         }
       }

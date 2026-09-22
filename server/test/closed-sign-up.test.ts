@@ -21,7 +21,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { AuthService } from '@thallesp/nestjs-better-auth'
 
-import type { Auth } from '../src/auth/auth.config.js'
+import { signUpClosed, type Auth } from '../src/auth/auth.config.js'
 
 import { boot, bootable, sharedAdmin, type Harness } from './app-harness.js'
 
@@ -115,5 +115,16 @@ describe.skipIf(!runnable)('signing yourself up', () => {
       body: JSON.stringify({ email, password: 'a-password-long-enough' }),
     })
     expect(signIn.ok, 'the refused sign-up left an account behind').toBe(false)
+  })
+
+  it('tells the install rule apart from every other refusal', async () => {
+    const auth = harness.app.get<AuthService<Auth>>(AuthService)
+    const signUp = (password: string) =>
+      auth.api
+        .signUpEmail({ body: { email: 'third@example.invalid', password, name: 'Third' } })
+        .catch((error: unknown) => error)
+
+    expect(signUpClosed(await signUp('a-password-long-enough'))).toBe(true)
+    expect(signUpClosed(await signUp('short')), 'a weak password read as the install rule').toBe(false)
   })
 })

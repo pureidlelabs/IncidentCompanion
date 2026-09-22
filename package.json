@@ -11,11 +11,15 @@
     "node": ">=26",
     "npm": ">=11"
   },
-  "//allowScripts": "npm 11.19 refuses an install script until it is listed here, and warns rather than failing -- so an undeclared one prints a warning and the build works, which is how the move to workspaces nearly lost all three. A workspace install reads this from the root and nowhere else, so the two packages' own declarations were read by nobody the moment they stopped being installed separately. All three are denied. esbuild's install.js and @swc/core's postinstall.js are fallbacks that only act when the platform-native optional dependency is missing -- both were verified working with the script unrun (`esbuild --version`, `transformSync`), and @swc/core's fallback runs a nested `npm install` of @swc/wasm, a network fetch at install time. @scarf/scarf is not a fallback at all: report.js POSTs the install to scarf.sh. Declaring them is also what keeps `npm install-scripts ls` empty, so a genuinely new script is visible there rather than lost among known ones. Do not run `npm install-scripts approve --all`, which the warning invites and which would undo all three.",
+  "//allowScripts": "npm 11.19 refuses an install script until it is listed here, and warns rather than failing -- so an undeclared one prints a warning and the build works, which is how the move to workspaces nearly lost all three. A workspace install reads this from the root and nowhere else, so the two packages' own declarations were read by nobody the moment they stopped being installed separately. All three are denied. esbuild's install.js and @swc/core's postinstall.js are fallbacks that only act when the platform-native optional dependency is missing -- both were verified working with the script unrun (`esbuild --version`, `transformSync`), and @swc/core's fallback runs a nested `npm install` of @swc/wasm, a network fetch at install time. @scarf/scarf is not a fallback at all: report.js POSTs the install to scarf.sh. Declaring them is also what keeps `npm install-scripts ls` empty, so a genuinely new script is visible there rather than lost among known ones. Renovate's four -- core-js-pure, dtrace-provider, protobufjs and re2 -- are denied too: `renovate-config-validator` validates the config with none of them run. Do not run `npm install-scripts approve --all`, which the warning invites and which would undo all three.",
   "allowScripts": {
     "esbuild": false,
     "@swc/core": false,
-    "@scarf/scarf": false
+    "@scarf/scarf": false,
+    "core-js-pure": false,
+    "dtrace-provider": false,
+    "protobufjs": false,
+    "re2": false
   },
   "//": "The workspace root. It holds the two packages so one install serves both -- anything shared between the tiers has to resolve to one copy, which the image used to fake with a symlink -- and it is where a whole-tree linter lives, since the alphabet rule and the prose rules apply to the whole tree and a copy of either per package is two things to keep true.",
   "type": "module",
@@ -25,12 +29,13 @@
     "lint:prose": "vale --config=.vale.ini --glob='!.claude/worktrees/*' openspec README.md .devcontainer .claude .github server/src server/test server/e2e ui/src tests",
     "lint:shell": "git ls-files '*.sh' | xargs shellcheck -S warning",
     "lint:actions": "actionlint",
-    "lint:renovate": "npx --yes --package renovate@latest -- renovate-config-validator --no-global --strict .github/renovate.json5"
+    "lint:renovate": "npx --no-install renovate-config-validator --no-global --strict .github/renovate.json5"
   },
   "devDependencies": {
     "@fission-ai/openspec": "1.13.1",
     "@typescript-eslint/parser": "8.70.0",
-    "eslint": "10.11.0"
+    "eslint": "10.11.0",
+    "renovate": "44.107.2"
   },
   "overrides": {
     "multer": "2.4.0"

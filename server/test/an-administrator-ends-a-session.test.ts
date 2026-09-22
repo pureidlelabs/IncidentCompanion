@@ -20,8 +20,9 @@
  * the requirement asks them to end one rather than to list them.
  */
 import { and, eq } from 'drizzle-orm'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
+import { AccountLookupService } from '../src/auth/account-lookup.service.js'
 import { DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
 import { installActivity } from '../src/db/schema/index.js'
@@ -185,5 +186,28 @@ describe.skipIf(!(await bootable()))('an administrator ending sessions', () => {
       await stillServed(boss.cookie),
       'every session did not include the administrator\'s own',
     ).toBe(false)
+  }, 60_000)
+
+  it('ends what was open when it was asked, and leaves a sign-in that lands after', async () => {
+    await endSessions('sessions/end', (await signIn(harness!, admin.email)).cookie)
+    const boss = await signIn(harness!, admin.email)
+
+    const lookup = harness!.app.get(AccountLookupService, { strict: false })
+    const read = lookup.withAnOpenSession.bind(lookup)
+    let late: Persona | undefined
+    const spy = vi.spyOn(lookup, 'withAnOpenSession').mockImplementation(async () => {
+      const holders = await read()
+      late ??= await signIn(harness!, analyst.email)
+      return holders
+    })
+    try {
+      const ended = await endSessions('sessions/end', boss.cookie)
+      expect(ended.status, `ending every session answered ${await ended.text()}`).toBe(200)
+    } finally {
+      spy.mockRestore()
+    }
+
+    expect(await stillServed(boss.cookie), 'a session open at the call survived it').toBe(false)
+    expect(await stillServed(late!.cookie), 'a sign-in after the call was ended by it').toBe(true)
   }, 60_000)
 })

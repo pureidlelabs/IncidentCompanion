@@ -24,7 +24,7 @@ import { eq } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
-import { ordered } from './entities.controller.js'
+import { ordered } from './definitions.js'
 import { TABLES } from './registry.js'
 import { cases, user } from '../db/schema/index.js'
 import { asOneAct, ComposedWithoutAnAct, whenCommitted } from '../db/act.js'

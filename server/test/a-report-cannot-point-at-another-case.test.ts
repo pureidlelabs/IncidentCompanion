@@ -25,7 +25,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CollectionService } from '../src/collections/collection.service.js'
-import { REPORT_BLOCKS_COLLECTION } from '../src/collections/entities.controller.js'
+import { REPORT_BLOCKS_COLLECTION } from '../src/collections/definitions.js'
 import { cases } from '../src/db/schema/case.js'
 import { evidence } from '../src/db/schema/entities.js'
 import { reports } from '../src/db/schema/report.js'

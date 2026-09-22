@@ -285,6 +285,8 @@ export default defineConfig({
    */
   base: process.env.DEMO_BASE ?? '/',
   plugins: [react(), tailwindcss(), demoPolicy()],
+  /** The manifest is how the API reference page finds the hashed stylesheet. -> `server/src/docs.controller.ts` */
+  build: { manifest: true },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

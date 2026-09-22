@@ -561,6 +561,7 @@ export function authOptions(
         if (already) {
           throw new APIError('FORBIDDEN', {
             message: 'This install is not open for sign-up. Ask an administrator for an account.',
+            code: SIGN_UP_CLOSED,
           })
         }
 
@@ -802,6 +803,14 @@ export function createAuth(
 }
 
 export type Auth = ReturnType<typeof createAuth>
+
+/** The code the install rule refuses a sign-up with, once any account exists. */
+export const SIGN_UP_CLOSED = 'SIGN_UP_CLOSED'
+
+/** Whether `error` is the install rule's refusal rather than any other. */
+export function signUpClosed(error: unknown): boolean {
+  return error instanceof APIError && error.body?.code === SIGN_UP_CLOSED
+}
 
 /**
  * The same instance, with its in-process session reads made read-only.

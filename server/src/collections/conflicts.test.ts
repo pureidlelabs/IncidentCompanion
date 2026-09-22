@@ -82,8 +82,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
      */
     await seed!.update(systems).set({ analyst: 'Nobody' }).where(eq(systems.id, rowId))
 
-    service = new ConflictsService(db!)
     collections = new CollectionService(db!)
+    service = new ConflictsService(db!, collections)
   })
 
   afterAll(async () => {
@@ -538,9 +538,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
 
   describe('answering it against a sent report', () => {
     /**
-     * **The sixth door.** `refuseIfClosed` is wired at the five
-     * `CollectionService` write methods; `resolve` writes through
-     * `updateVersioned` directly.
+     * **The sixth door.** Answering a review writes without a `PATCH`, and
+     * owes the sent-report guard the `PATCH` meets.
      *
      * The route is ordinary rather than contrived: a refused `PATCH` records
      * the analyst's values, the report is sent, and answering the review that
@@ -697,6 +696,34 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
       const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
       expect(row!.analyst, 'the refused write did not land').toBe('Them')
       expect(await service.pending(caseId, ME), 'and the record survived it').toHaveLength(1)
+    })
+  })
+
+  describe('answering it runs the guards the PATCH door runs', () => {
+    it('refuses to keep a report language the install does not serve', async () => {
+      const reportId = randomUUID()
+      await seed!.insert(reports).values({
+        id: reportId,
+        caseId,
+        label: 'A report',
+        language: 'en',
+        tlp: 'TLP:RED',
+        createdBy: ME,
+        updatedBy: ME,
+      })
+      await service.record({
+        caseId,
+        userId: ME,
+        entity: 'reports',
+        entityId: reportId,
+        base: { language: 'en' },
+        mine: { language: 'qq-not-a-pack' },
+      })
+
+      await expect(service.resolve(caseId, ME, 'mine')).rejects.toThrow()
+
+      const [row] = await seed!.select().from(reports).where(eq(reports.id, reportId))
+      expect(row!.language, 'the report kept a language it can be printed in').toBe('en')
     })
   })
 

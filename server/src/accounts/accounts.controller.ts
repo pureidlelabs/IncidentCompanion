@@ -79,13 +79,6 @@ const roleSchema = z.object({ role: z.enum(ROLES) }).strict()
  */
 const noBodySchema = z.object({}).strict()
 
-/**
- * How many times the sweep re-reads before it gives up.
- *
- * Two would do on any install nobody is signing into; the third is what
- * turns a sweep that cannot finish into a refusal rather than a loop.
- */
-const PASSES = 3
 
 /**
  * What the account routes answer with.
@@ -172,28 +165,14 @@ export class InstallAccountsController {
     if (!noBodySchema.safeParse(body ?? {}).success) refuse('Ending every session takes no body.')
 
     /**
-     * **Swept until nothing holds a session, not once.** A sign-in landing
-     * between the read and the revocation survives a single pass, and the
-     * answer would still say every session ended. `PASSES` bounds it because an
-     * install signing in faster than this loop revokes is a different problem
-     * and an unbounded loop is not its answer.
+     * **The sessions open when the call was made**, read once. A sign-in
+     * landing after the read is after the request and is left alone; a holder's
+     * later session ends with the rest of theirs.
      */
     let ended = 0
-    for (let pass = 0; pass < PASSES; pass += 1) {
-      const holders = await this.accounts.withAnOpenSession()
-      if (holders.length === 0) break
-      // Earlier passes have already signed people out, so this says what
-      // happened rather than that nothing did.
-      if (pass === PASSES - 1) {
-        refuse(
-          `Sessions are being opened faster than they can be ended. ${String(ended)} were signed ` +
-            'out and some remain.',
-        )
-      }
-      for (const userId of callerLast(holders, caller.session.user.id)) {
-        await this.endOneAccountsSessions(caller, userId)
-        ended += 1
-      }
+    for (const userId of callerLast(await this.accounts.withAnOpenSession(), caller.session.user.id)) {
+      await this.endOneAccountsSessions(caller, userId)
+      ended += 1
     }
 
     await this.activity.everySessionEnded(caller, ended)

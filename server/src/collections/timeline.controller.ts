@@ -33,13 +33,11 @@ import { z } from 'zod'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { refusedBody } from '../domain/refusal.js'
-import { CollectionService, type CollectionDefinition } from './collection.service.js'
+import { CollectionService } from './collection.service.js'
 import { importStamp } from '../db/import-stamp.js'
 import { ConflictsService } from './conflicts.service.js'
-import { timeline } from '../db/schema/timeline.js'
+import { TIMELINE_COLLECTION } from './definitions.js'
 import {
-  actionSchema,
-  eventSchema,
   actionWriteSchema,
   eventWriteSchema,
   timelineRowSchema,
@@ -48,30 +46,6 @@ import {
 } from '../domain/entities/timeline.js'
 import { patchSchema } from '../domain/field-spec.js'
 import type { TimelineRow } from '../domain/wire.js'
-
-/**
- * **Exported because the import door writes timeline rows too.** Rebuilding it
- * by hand there dropped `schemaFor`, and with it the reference check on every
- * analyst edit to an imported entry -- `COLLECTION_SCHEMAS` carries no
- * `timeline` entry on purpose, so the check resolves nothing and returns.
- */
-export const DEFINITION: CollectionDefinition = {
-  name: 'timeline',
-  table: timeline,
-  /** Its own clock, not insertion order - the story is what the analyst reads. */
-  orderBy: 'time',
-  /**
-   * **The only collection that has to answer this**, because its schema is a
-   * union and the arm depends on the row's `kind`. An event and an action
-   * offer different references - an action has no source host - so checking
-   * against the wrong arm would either miss a field or invent one.
-   *
-   * A patch carries no `kind`, so the event arm is the fallback: it is the
-   * wider of the two, and checking a reference an action cannot have costs a
-   * lookup that finds nothing to complain about.
-   */
-  schemaFor: (values) => (values['kind'] === 'action' ? actionSchema : eventSchema),
-}
 
 /**
  * A body pipe that refuses at 422.
@@ -182,7 +156,7 @@ export class TimelineController {
   @Get()
   @ZodResponse({ status: 200, type: TimelineRowsDto, description: "The case's timeline, oldest first." })
   async list(@Param('caseId', ParseUUIDPipe) caseId: string): Promise<TimelineRow[]> {
-    const rows = await this.collections.list(DEFINITION, caseId)
+    const rows = await this.collections.list(TIMELINE_COLLECTION, caseId)
     return rows.map((row) => timelineToWire(row as Record<string, unknown>) as TimelineRow)
   }
 
@@ -192,7 +166,7 @@ export class TimelineController {
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<TimelineRow> {
-    const row = await this.collections.get(DEFINITION, caseId, id)
+    const row = await this.collections.get(TIMELINE_COLLECTION, caseId, id)
     if (row === undefined) throw new NotFoundException(`No timeline entry ${id} in this case.`)
     return timelineToWire(row as Record<string, unknown>) as TimelineRow
   }
@@ -216,7 +190,7 @@ export class TimelineController {
     // document, and JSON Schema has no date type; the column wants a Date.
     const { time, ...rest } = body as { time?: string } & Record<string, unknown>
     const row = await this.collections.create(
-      DEFINITION,
+      TIMELINE_COLLECTION,
       caseId,
       { ...rest, ...whenItHappened(time) },
       session.user.id,
@@ -269,11 +243,11 @@ export class TimelineController {
         // stamping them client-side has every row refused. A caller able to
         // claim `imported` is the reason the omission exists, and this is the
         // downstream that has to apply it.
-        ...importStamp(BULK_IMPORT, DEFINITION.table),
+        ...importStamp(BULK_IMPORT, TIMELINE_COLLECTION.table),
       }
     })
 
-    const { ids } = await this.collections.createMany(DEFINITION, caseId, rows, session.user.id)
+    const { ids } = await this.collections.createMany(TIMELINE_COLLECTION, caseId, rows, session.user.id)
     return { ids }
   }
 
@@ -297,7 +271,7 @@ export class TimelineController {
     // The row's kind decides which fields are patchable, so it is read before
     // the patch is validated. The version check still guards the write itself:
     // a kind cannot change, so a race here cannot pick the wrong schema.
-    const existing = (await this.collections.get(DEFINITION, caseId, id)) as { kind: 'event' | 'action' }
+    const existing = (await this.collections.get(TIMELINE_COLLECTION, caseId, id)) as { kind: 'event' | 'action' }
     const patch = parsed(PATCH_SCHEMAS[existing.kind], raw)
     if (Object.keys(patch).length === 0) {
       throw new UnprocessableEntityException({ message: 'A patch has to change something.' })
@@ -307,7 +281,7 @@ export class TimelineController {
     if ('time' in patch) Object.assign(patch, whenItHappened(patch['time'] as string | undefined))
 
     const result = await this.collections.update(
-      DEFINITION,
+      TIMELINE_COLLECTION,
       caseId,
       id,
       expected,
@@ -331,7 +305,7 @@ export class TimelineController {
     await this.conflicts?.record({
       caseId,
       userId: session.user.id,
-      entity: DEFINITION.name,
+      entity: TIMELINE_COLLECTION.name,
       entityId: id,
       base: base ?? {},
       mine: patch,
@@ -352,7 +326,7 @@ export class TimelineController {
     @Session() session: UserSession,
   ) {
     const removed = await this.collections.remove(
-      DEFINITION,
+      TIMELINE_COLLECTION,
       caseId,
       id,
       versionRead(version, 'delete'),
