@@ -7,6 +7,7 @@
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import type { Env } from '../config/env.js'
 import { isNotNull } from 'drizzle-orm'
 import { readdir } from 'node:fs/promises'
 
@@ -46,7 +47,7 @@ export function saysAtStart(held: Census): { level: 'log' | 'warn'; message: str
 export class ArtefactCensus {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
-    private readonly config: ConfigService,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   /**
@@ -72,7 +73,7 @@ export class ArtefactCensus {
     }
     if (wanted.size === 0) return { expected: 0, missing: 0 }
 
-    const root = this.config.get<string>('EVIDENCE_DIR') ?? '.evidence'
+    const root = this.config.get('EVIDENCE_DIR', { infer: true })
     let held: Set<string>
     try {
       held = new Set(await readdir(root))

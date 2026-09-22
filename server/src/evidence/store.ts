@@ -59,7 +59,7 @@ export class EvidenceStore {
     @Inject(ConfigService) config: ConfigService<Env, true>,
     private readonly policy: PolicyService,
   ) {
-    this.root = config.get('EVIDENCE_DIR', { infer: true }) ?? '.evidence'
+    this.root = config.get('EVIDENCE_DIR', { infer: true })
   }
 
   /**

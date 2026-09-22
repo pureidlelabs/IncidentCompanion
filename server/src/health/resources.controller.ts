@@ -156,7 +156,7 @@ export class ResourcesController {
     const cores = cpus().length
     const [one = 0, five = 0, fifteen = 0] = loadavg()
 
-    const disk = await diskSnapshot(this.config.get('EVIDENCE_DIR', { infer: true }) ?? '.evidence')
+    const disk = await diskSnapshot(this.config.get('EVIDENCE_DIR', { infer: true }))
     const processPercent = cpuPercent(this.previous, usage, at, cores)
     this.previous = { usage, at }
 

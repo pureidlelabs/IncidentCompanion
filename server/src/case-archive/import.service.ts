@@ -14,6 +14,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common'
 import { and, eq, getTableColumns, sql } from 'drizzle-orm'
+import type { PgTable } from 'drizzle-orm/pg-core'
 
 import { defaultCustomer } from '../customers/customers.service.js'
 import { DATABASE } from '../db/db.module.js'
@@ -25,6 +26,7 @@ import { PolicyService } from '../policy/policy.service.js'
 import { REFERENCE_FIELD_NAMES } from '../domain/collections.js'
 import { importStamp } from '../db/import-stamp.js'
 import { archiveRowSchema } from './rows.js'
+import { coerceTimes } from '../db/column-access.js'
 import { z } from 'zod'
 import {
   accounts,
@@ -75,6 +77,28 @@ export const TABLES = [
   ['reports', reports],
   ['reportBlocks', reportBlocks],
 ] as const
+
+/**
+ * `values` with each timestamp column's ISO string read as a `Date`.
+ *
+ * Throws `BadArchive` for a string no date can be read from, which the generic
+ * write path refuses at its schema.
+ */
+export function coercedTimes(
+  collection: string,
+  table: PgTable,
+  values: Record<string, unknown>,
+): Record<string, unknown> {
+  const out = coerceTimes(table, values)
+  for (const [key, value] of Object.entries(out)) {
+    if (value instanceof Date && Number.isNaN(value.getTime())) {
+      throw new BadArchive(
+        `this archive states a ${key} in ${collection} that this install cannot read`,
+      )
+    }
+  }
+  return out
+}
 
 /**
  * One archive row, judged by the shape its collection declares.
@@ -376,13 +400,7 @@ export class ArchiveImportService {
             values[key] = mapped.value
             for (const id of mapped.dropped) unresolved.add(id)
           }
-          // A timestamp arrives as an ISO string and the column wants a Date.
-          for (const key of Object.keys(values)) {
-            if (/At$|^time$/.test(key) && typeof values[key] === 'string') {
-              const when = new Date(values[key])
-              values[key] = Number.isNaN(when.getTime()) ? null : when
-            }
-          }
+          Object.assign(values, coercedTimes(name, table, values))
 
           if (name === 'evidence') {
             const hash = typeof one.hash === 'string' ? one.hash : ''

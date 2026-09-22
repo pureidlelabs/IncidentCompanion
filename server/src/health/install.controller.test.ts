@@ -122,8 +122,10 @@ describe('the install settings document', () => {
     expect(settings.limits.passphraseChars).toBeGreaterThan(0)
   })
 
-  it('falls back to the default evidence directory rather than saying nothing', async () => {
-    expect((await settingsOf({ EVIDENCE_DIR: undefined })).storage.evidence).toBe('.evidence')
+  // The answer for an environment naming no directory is the schema's, and
+  // `config/env.test.ts` is where it is asserted.
+  it('names the directory the environment gave it', async () => {
+    expect((await settingsOf()).storage.evidence).toBe('/var/lib/incidentcompanion/evidence')
   })
 
   /**
