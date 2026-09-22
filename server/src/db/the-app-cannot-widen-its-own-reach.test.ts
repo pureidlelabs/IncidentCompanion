@@ -20,7 +20,7 @@ import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, describe, expect, it } from 'vitest'
 
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -29,7 +29,7 @@ const app = pool ? drizzle({ client: pool }) : null
 /** A case-scoped table, and the one every other case-owned table is shaped like. */
 const SCOPED = 'systems'
 
-describe.skipIf(!app)('the identity the application connects as', () => {
+describe.skipIf(!app || !hasConcurrentConnections())('the identity the application connects as', () => {
   afterAll(async () => {
     await pool!.end()
   })

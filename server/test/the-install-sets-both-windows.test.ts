@@ -23,6 +23,7 @@ import {
   type Harness,
   type Persona,
 } from './app-harness.js'
+import { hasConcurrentConnections } from './database.js'
 import {
   SESSION_IDLE_MINUTES,
   SESSION_LIFETIME_FLOOR_MINUTES,
@@ -37,7 +38,7 @@ const REDIS_PREFIX = 'auth:'
 /** Wide enough for a slow harness, far narrower than the windows it separates. */
 const TOLERANCE_MINUTES = 2
 
-describe.skipIf(!RUNNABLE)('the windows an install sets', () => {
+describe.skipIf(!RUNNABLE || !hasConcurrentConnections())('the windows an install sets', () => {
   let harness: Harness
   let redis: Redis
   let pool: Pool

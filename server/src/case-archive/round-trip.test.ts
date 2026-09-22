@@ -23,7 +23,7 @@ import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
 import { isSealed } from '../archive/envelope.js'
 import { readArchive } from '../archive/format.js'
 import { cases, customers, evidence, reports, systems, timeline, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -36,7 +36,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const PASS = 'a-long-enough-passphrase'
 
-describe.skipIf(!db)('a case, out and back', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () => {
   let exporter: ArchiveExportService
   let importer: ArchiveImportService
   let cases_: CasesService

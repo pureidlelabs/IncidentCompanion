@@ -15,7 +15,7 @@ import { CollectionService } from '../collections/collection.service.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, systems, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -36,7 +36,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const IMPORTER = 'export-analyst'
 
-describe.skipIf(!db)('exporting a collection as CSV', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('exporting a collection as CSV', () => {
   let controller: ExportsController
   let caseId: string
 

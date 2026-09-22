@@ -776,16 +776,22 @@ def test_no_tier_is_reported_as_both_skipped_and_run() -> None:
     )
 
 
-def test_a_partial_tier_is_stated_rather_than_counted_as_a_pass() -> None:
-    """The rule the script already applies to a skip, applied to a degraded run.
+def test_a_degraded_server_suite_is_a_pass_or_a_failure_and_never_both() -> None:
+    """A third state the exit code cannot carry, so a red suite exited 0.
 
-    A tier that ran and could not cover what it names is neither a pass nor a
-    failure, and silence about it is the outcome this script exists to prevent.
+    The tests that need two concurrent transactions decline on the embedded
+    engine, which leaves the run green or genuinely red -- and a bucket that
+    prints "Nothing failed" over a failing suite is then the only way to lose
+    one. -> #1079
     """
     text = VERIFY.read_text(encoding="utf-8")
-    assert "PARTIAL=()" in text, "there is no partial state"
-    assert 'PARTIAL+=(' in text, "nothing ever records a partial tier"
-    assert '"${PARTIAL[@]:-}"' in text, "the summary never prints the partial tiers"
+    assert "PARTIAL" not in text, (
+        "a tier can still land in a bucket the exit code reports as a pass"
+    )
+    assert 'step "server: suite (in-process engine' in text, (
+        "the embedded run does not go through `step`, so its result reaches "
+        "neither PASSED nor FAILED"
+    )
 
 
 def test_the_fast_mode_runs_nothing_that_executes() -> None:

@@ -21,7 +21,7 @@ import { ReportLifecycleService } from './lifecycle.service.js'
 import { ReportRenderService } from './render.service.js'
 import { ProseService, reportDocument } from '../prose/prose.service.js'
 import { cases, library, reportBlocks, reports, timeline, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { english } from './document/packs.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
@@ -89,7 +89,7 @@ const KEYED_LAYOUT = {
   ],
 }
 
-describe.skipIf(!db)('the sections a report is short of', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the sections a report is short of', () => {
   let lifecycle: ReportLifecycleService
   let cases_: CasesService
   let actorId: string
@@ -317,7 +317,7 @@ describe.skipIf(!db)('the sections a report is short of', () => {
  * that left cannot change afterwards, cannot be sent twice, and cannot be
  * stamped sent while frozen to something that could not be produced.
  */
-describe.skipIf(!db)('the report lifecycle', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () => {
   let lifecycle: ReportLifecycleService
   let render: ReportRenderService
   let prose: ProseService

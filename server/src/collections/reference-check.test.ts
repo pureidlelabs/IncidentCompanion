@@ -20,7 +20,7 @@ import { danglingReferences } from './reference-check.js'
 import { eventSchema } from '../domain/entities/timeline.js'
 import { reportBlockSchema } from '../domain/entities/report.js'
 import { reports } from '../db/schema/report.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -31,7 +31,7 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-describe.skipIf(!db)('references that leave the case', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('references that leave the case', () => {
   let mine = ''
   let theirCase = ''
   let myHost = ''

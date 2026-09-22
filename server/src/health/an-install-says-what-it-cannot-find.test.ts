@@ -22,7 +22,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ArtefactCensus, saysAtStart, type Census } from './artefact-census.service.js'
 import { HealthModule } from './health.module.js'
 import { cases, evidence, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 /**
  * **The seed handle, because a fixture here writes across cases.** Row-level
@@ -51,7 +51,7 @@ const appDb = appPool ? drizzle({ client: appPool }) : null
 const ANALYST = 'census-analyst'
 const hashFor = (what: string) => what.padEnd(64, '0')
 
-describe.skipIf(!db || !appDb)('what an install can find beside it', () => {
+describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install can find beside it', () => {
   let root = ''
   let caseId = ''
   // Every case and every directory made here, because `beforeEach` makes one

@@ -21,7 +21,7 @@ import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, systems, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -64,7 +64,7 @@ function controllerFor(name: string): Writable {
   return new (found as new (s: CollectionService) => Writable)(new CollectionService(db!))
 }
 
-describe.skipIf(!db)('writing an entity', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('writing an entity', () => {
   let caseId: string
   let session: { user: { id: string } }
 

@@ -31,7 +31,7 @@ import { ArchiveExportService } from './export.service.js'
 import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
 import { CASE_NAME, MANIFEST_NAME, pack, readArchive } from '../archive/format.js'
 import { cases, cloudApps, systems, timeline, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -45,7 +45,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 const LIMITS = { memberBytes: 256 * 1024 * 1024, totalBytes: 512 * 1024 * 1024 }
 const policy = { read: () => Promise.resolve(defaultPolicy()) } as never
 
-describe.skipIf(!db)('an archive carrying a row this build cannot write', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row this build cannot write', () => {
   let exporter: ArchiveExportService
   let importer: ArchiveImportService
   let store: EvidenceStore

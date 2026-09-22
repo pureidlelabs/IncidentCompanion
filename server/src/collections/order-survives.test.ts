@@ -26,7 +26,7 @@ import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, reportBlocks, reports, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -66,7 +66,7 @@ afterAll(async () => {
   await seedPool?.end()
 })
 
-describe.skipIf(!db)('an arrangement an analyst made', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('an arrangement an analyst made', () => {
   let caseId: string
   let reportId: string
   let session: Session

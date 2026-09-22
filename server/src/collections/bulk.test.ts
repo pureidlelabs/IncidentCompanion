@@ -30,7 +30,7 @@ import {
   user,
 } from '../db/schema/index.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { camelKeys } from '../wire/naming.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -121,7 +121,7 @@ function controllerFor(name: string): Bulk {
   return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!))
 }
 
-describe.skipIf(!db)('writing many at once', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () => {
   let caseId: string
   let otherCaseId: string
   let session: Session
@@ -487,7 +487,7 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 })
 
-describe.skipIf(!db)('deleting a selection that spans collections', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('deleting a selection that spans collections', () => {
   let caseId: string
   let session: Session
   const controller = () => new BulkDeleteController(new CollectionService(db!))

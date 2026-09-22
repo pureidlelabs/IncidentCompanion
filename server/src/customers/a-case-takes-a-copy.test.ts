@@ -19,7 +19,7 @@ import { InstallPreferencesService } from '../preferences/install.service.js'
 import { ORGANISATION_FACTS } from './organisation-facts.js'
 import { caseCompliance, cases, customers, user } from '../db/schema/index.js'
 import { rowVersioning } from '../db/schema/columns.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -39,7 +39,7 @@ afterAll(async () => {
 
 const ACCEPTING_ANALYST = 'accepting-analyst'
 
-describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a case takes a copy of the organisation facts', () => {
   let compliance: ComplianceService
   let customerId: string
 

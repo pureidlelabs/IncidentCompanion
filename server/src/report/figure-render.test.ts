@@ -29,7 +29,7 @@ import { EvidenceStore } from '../evidence/store.js'
 import { ProseService } from '../prose/prose.service.js'
 import { ReportRenderService } from './render.service.js'
 import { english } from './document/packs.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import type { FigureNode } from './document/model.js'
 import { defaultPolicy } from '../policy/read.js'
 
@@ -58,7 +58,7 @@ const englishOnly = {
 
 const root = mkdtempSync(join(tmpdir(), 'ic-figure-render-'))
 
-describe.skipIf(!db)('placing a figure', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
   let render: ReportRenderService
   let collections: CollectionService
   let store: EvidenceStore

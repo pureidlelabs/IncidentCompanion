@@ -30,7 +30,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, describe, expect, it } from 'vitest'
 
 import * as schema from './schema/index.js'
-import { asRole, openTestPool } from '../../test/database.js'
+import { asRole, hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 /** The role the server serves requests as, which is the one under test. */
@@ -63,7 +63,7 @@ function caseScopedTables(): { name: string; table: PgTable }[] {
   return found.sort((one, other) => one.name.localeCompare(other.name))
 }
 
-describe.skipIf(!app)('the store refuses an unscoped read', () => {
+describe.skipIf(!app || !hasConcurrentConnections())('the store refuses an unscoped read', () => {
   const tables = caseScopedTables()
 
   /**

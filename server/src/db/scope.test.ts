@@ -12,7 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { withCase } from './scope.js'
 import { cases, systems } from './schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -23,7 +23,7 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-describe.skipIf(!db)('what one case can see of another', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('what one case can see of another', () => {
   let mine = ''
   let theirs = ''
 

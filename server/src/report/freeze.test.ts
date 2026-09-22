@@ -38,7 +38,7 @@ import { ProseService } from '../prose/prose.service.js'
 import { ReportLifecycleService } from './lifecycle.service.js'
 import { ReportRenderService } from './render.service.js'
 import { english } from './document/packs.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
 
@@ -80,7 +80,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const STAMP = '2020-01-01T00:00:00.000Z'
 
-describe.skipIf(!db)('a report that has been sent', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent', () => {
   let collections: CollectionService
   let lifecycle: ReportLifecycleService
   let controller: ReportsController

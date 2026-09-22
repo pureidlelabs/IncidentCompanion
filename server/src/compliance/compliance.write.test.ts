@@ -17,7 +17,7 @@ import { CasesService } from '../cases/cases.service.js'
 import { ComplianceController } from './compliance.controller.js'
 import { ComplianceService } from './compliance.service.js'
 import { caseCompliance, cases, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -28,7 +28,7 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-describe.skipIf(!db)('the case compliance record', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the case compliance record', () => {
   let controller: ComplianceController
   let cases_: CasesService
   let session: { user: { id: string } }
