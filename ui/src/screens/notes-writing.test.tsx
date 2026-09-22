@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
+import { stampOf } from '@/lib/case-time'
 
 import { NotesScreen } from './notes'
 import { isBlank, withoutBlank } from './notes-index'
@@ -170,6 +171,54 @@ describe('writing a note in the pane', () => {
     // Still the open note, read back out of the field.
     expect(noteText()).toContain(written)
   })
+
+  /**
+   * **The refetch after a create carries the note under the id the server
+   * gave it**, and nothing on screen knows that id unless the create's answer
+   * is read. -> #1108
+   */
+  it('lists a committed note once when the case is served with it', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const written = 'Exfil staged to a share nobody owns.'
+    const stored = {
+      ...campaignCase.casenotes[0]!,
+      id: 'note-as-stored',
+      note: written,
+      createdAt: '2026-03-01T09:00:00.000Z',
+    }
+    writes.create.mockResolvedValue(stored)
+    const view = render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), written)
+    fireEvent.blur(noteField())
+    await waitFor(() => {
+      expect(writes.create).toHaveBeenCalledTimes(1)
+    })
+    await act(async () => {
+      await writes.create.mock.results[0]!.value
+    })
+    // Stored and not yet served: written in again, it must not be created again.
+    await user.type(noteField(), ' Owner unknown.')
+    fireEvent.blur(noteField())
+    expect(writes.create).toHaveBeenCalledTimes(1)
+
+    view.rerender(
+      <NotesScreen
+        kase={{ ...campaignCase, casenotes: [...campaignCase.casenotes, stored] }}
+        specs={specsFixture}
+        writes={writes}
+      />,
+    )
+
+    expect(indexLines().filter((line) => line.includes(written))).toHaveLength(1)
+    // The open row is the stored one, told apart by the stamp only it carries.
+    const open = within(screen.getByRole('navigation', { name: 'Case notes' }))
+      .getAllByTestId('note-row')
+      .find((row) => row.getAttribute('aria-current') === 'true')
+    expect(open?.textContent).toContain(stampOf(stored.createdAt))
+  })
 })
 
 /**
@@ -219,9 +268,7 @@ describe('what a note sends', () => {
     const user = userEvent.setup()
     const writes = spyWrites()
     const { create } = writes
-    const view = render(
-      <NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />,
-    )
+    const view = render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
 
     await user.click(screen.getByRole('button', { name: 'New note' }))
     await user.type(noteField(), 'Proxy logs pulled for the staging window.')
@@ -249,9 +296,7 @@ describe('what a note sends', () => {
     const user = userEvent.setup()
     const writes = spyWrites()
     const { create } = writes
-    const view = render(
-      <NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />,
-    )
+    const view = render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
 
     await user.click(screen.getByRole('button', { name: 'New note' }))
     await user.type(noteField(), 'Beaconing to a newly registered domain.')
@@ -330,9 +375,7 @@ describe('what a note sends', () => {
     const user = userEvent.setup()
     const writes = spyWrites()
     const { create } = writes
-    const view = render(
-      <NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />,
-    )
+    const view = render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
 
     await user.click(screen.getByRole('button', { name: 'New note' }))
     await user.type(noteField(), 'Proxy logs pulled for the staging window.')

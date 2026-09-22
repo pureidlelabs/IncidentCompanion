@@ -252,17 +252,30 @@ export function NotesScreen({
     // the guard above cannot answer for a blur and a leave in the same note.
     if (sent.current.has(id)) return
     sent.current.add(id)
-    void writes.create({ note: local.note, author: local.author }, leaving).catch(() => {
-      /**
-       * **Taken back when the write is refused, or the note is unsendable.**
-       * `sent` would otherwise record *tried* rather than *stored*: a create
-       * that 409s leaves the note on screen, saying nothing, and every later
-       * blur and the leaving below both return at the guard above. That turns
-       * a refusal an analyst could have retried into the silent loss this
-       * screen exists to prevent.
-       */
-      sent.current.delete(id)
-    })
+    void writes.create({ note: local.note, author: local.author }, leaving).then(
+      (stored) => {
+        // The refetch carries the note under the stored id, and the merge keeps
+        // any local row it does not hold.
+        sent.current.add(stored.id)
+        setWritten((current) =>
+          current.some((note) => note.id === stored.id)
+            ? current.filter((note) => note.id !== id)
+            : current.map((note) => (note.id === id ? { ...note, id: stored.id } : note)),
+        )
+        setPicked((current) => (current === id ? stored.id : current))
+      },
+      () => {
+        /**
+         * **Taken back when the write is refused, or the note is unsendable.**
+         * `sent` would otherwise record *tried* rather than *stored*: a create
+         * that 409s leaves the note on screen, saying nothing, and every later
+         * blur and the leaving below both return at the guard above. That turns
+         * a refusal an analyst could have retried into the silent loss this
+         * screen exists to prevent.
+         */
+        sent.current.delete(id)
+      },
+    )
   }
 
   const open = notes.find((note) => note.id === picked)
