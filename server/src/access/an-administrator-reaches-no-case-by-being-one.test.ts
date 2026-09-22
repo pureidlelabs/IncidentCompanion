@@ -16,12 +16,13 @@
  * what a level permits -- and a model that answered correctly while the guard
  * consulted `role` would pass every case there.
  */
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CaseAccessGuard } from './case-access.guard.js'
+import { CasesService } from '../cases/cases.service.js'
 import { GroupsService } from './groups.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { ReachService } from './reach.service.js'
@@ -57,13 +58,16 @@ const asking = (caseId: string) =>
 describe.skipIf(!db)('an administrator who is in no group', () => {
   let guard: CaseAccessGuard
   let groupsService: GroupsService
+  let casesService: CasesService
   let caseId: string
+  let unattributed: string
   let customerId: string
   let sector: string
 
   beforeAll(async () => {
     guard = new CaseAccessGuard(db!, new ReachService(db!), new InstallActivityService(db!))
     groupsService = new GroupsService(db!)
+    casesService = new CasesService(db!)
 
     const now = new Date()
     await seed!
@@ -102,10 +106,22 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
       })
       .returning({ id: cases.id })
     caseId = made!.id
+
+    // The control for the list: a case attributed to nobody is the default
+    // customer's, so it is offered whatever this administrator is granted.
+    const [nobodys] = await seed!
+      .insert(cases)
+      .values({
+        title: 'A case attributed to nobody',
+        createdBy: ADMIN,
+        updatedBy: ADMIN,
+      })
+      .returning({ id: cases.id })
+    unattributed = nobodys!.id
   }, 90_000)
 
   afterAll(async () => {
-    await seed!.delete(cases).where(eq(cases.id, caseId))
+    await seed!.delete(cases).where(inArray(cases.id, [caseId, unattributed]))
     await seed!.delete(groupMembers)
     await seed!.delete(groupCustomers)
     await seed!.delete(groups).where(eq(groups.id, sector))
@@ -172,5 +188,36 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
       refused,
       'the case was still served after the membership that reached it was revoked',
     ).not.toBe(true)
+  })
+
+  /**
+   * The same refusal, asked of the list rather than of one case. `GET
+   * /api/cases` mounts no guard -- it names no case -- so the filter is the
+   * only thing standing between an administrator in no group and every
+   * customer's title, reference and summary.
+   */
+  it("is offered no such case by the list either, and the default customer's regardless", async () => {
+    await groupsService.revoke(sector, ADMIN)
+
+    const offered = (await casesService.list(ADMIN)).map((row) => row.id)
+
+    expect(
+      offered,
+      'the list handed an administrator in no group a case they are refused by id',
+    ).not.toContain(caseId)
+    expect(
+      offered,
+      "a case attributed to nobody is the default customer's, which every analyst reaches",
+    ).toContain(unattributed)
+  })
+
+  it('is offered it by the list once it has granted itself the reach', async () => {
+    await groupsService.revoke(sector, ADMIN)
+    await groupsService.grant(sector, ADMIN, 'read')
+
+    expect(
+      (await casesService.list(ADMIN)).map((row) => row.id),
+      'the grant did not take, so the absence above cannot be attributed to reach',
+    ).toContain(caseId)
   })
 })
