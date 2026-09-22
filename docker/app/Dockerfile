@@ -11,7 +11,7 @@
 
 # 26 is the floor `ui/.nvmrc` and both `package.json` files declare, and
 # `tests/docker/test_stack_images.py` holds this line equal to them.
-FROM node:26-slim@sha256:14bf3eac4bf209d906d3c41256597d3ab1f926b2e93a79e9bdfe1efd32454239 AS ui-build
+FROM node:26-slim@sha256:3a771f83944bb763050c23c0225c260638c4b7899e7a72485ef75e5e570499e5 AS ui-build
 WORKDIR /repo
 
 # **The workspace root, and both manifests, before any source.** One lockfile
@@ -50,7 +50,7 @@ RUN npm run --workspace ui build
 
 # Also run as the `migrate` service: `drizzle-kit` is a devDependency reading
 # TypeScript from `src/db/schema/`, so the push needs this tree.
-FROM node:26-slim@sha256:14bf3eac4bf209d906d3c41256597d3ab1f926b2e93a79e9bdfe1efd32454239 AS server-build
+FROM node:26-slim@sha256:3a771f83944bb763050c23c0225c260638c4b7899e7a72485ef75e5e570499e5 AS server-build
 WORKDIR /repo
 
 # `--include=dev` although nothing sets `NODE_ENV=production` in this stage
@@ -72,7 +72,7 @@ RUN npm run --workspace server build
 
 # The production tree, built once and copied, so the final image never carries
 # a toolchain it would have to remove.
-FROM node:26-slim@sha256:14bf3eac4bf209d906d3c41256597d3ab1f926b2e93a79e9bdfe1efd32454239 AS runtime-deps
+FROM node:26-slim@sha256:3a771f83944bb763050c23c0225c260638c4b7899e7a72485ef75e5e570499e5 AS runtime-deps
 WORKDIR /repo
 COPY package.json package-lock.json .npmrc ./
 COPY ui/package.json ui/
@@ -96,7 +96,7 @@ RUN rm -rf node_modules/drizzle-kit node_modules/@electric-sql \
            node_modules/@rolldown node_modules/@esbuild
 
 
-FROM node:26-slim@sha256:14bf3eac4bf209d906d3c41256597d3ab1f926b2e93a79e9bdfe1efd32454239 AS runtime
+FROM node:26-slim@sha256:3a771f83944bb763050c23c0225c260638c4b7899e7a72485ef75e5e570499e5 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
