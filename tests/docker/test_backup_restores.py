@@ -30,9 +30,10 @@ PROBE_DB = f"ic_backup_probe_{os.getpid()}"
 
 #: Its own project and port, so a run never touches the analyst's stack --
 #: these cases create and drop databases. Same convention as
-#: `test_container_runtime.py`.
-PROJECT = "incidentcompanion-backup-test"
-PG_PORT = "55599"
+#: `test_container_runtime.py`. Per xdist worker, which may share this module.
+_WORKER = os.environ.get("PYTEST_XDIST_WORKER", "gw0")
+PROJECT = f"incidentcompanion-backup-test-{_WORKER}"
+PG_PORT = str(55599 - int(_WORKER.removeprefix("gw")))
 
 COMPOSE_FILE = REPO_ROOT / "server" / "compose.dev.yaml"
 

@@ -321,8 +321,7 @@ jobs:
   # Reads the repository rather than running it, so it needs no stack. It does
   # need `node_modules`: `tests/contract` resolves shared dependencies from
   # both workspaces, and `tests/repo` runs the OpenSpec CLI from the pinned dev
-  # dependency. `-n auto` is paired with `--dist loadfile`, which
-  # `tests/repo/test_platform_portability.py` holds true.
+  # dependency.
   repository:
     needs: scope
     runs-on: ubuntu-24.04
@@ -350,7 +349,7 @@ jobs:
           # alone. -> #460
           .venv/bin/python -m pytest tests/docs tests/repo tests/contract .claude/tests \
             tests/docker/test_container_config.py tests/docker/test_stack_images.py \
-            -q -n auto --dist loadfile
+            -q -n auto
 
   # ------------------------------------------------------------- server suite
   # **Sharded across runners, so each shard gets its own cluster.** The suite
@@ -716,7 +715,7 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install -q -r requirements-dev.txt
           sh docker/secrets.sh
-          .venv/bin/python -m pytest tests/docker -q -n auto --dist loadfile
+          .venv/bin/python -m pytest tests/docker -q -n auto
 
   # ---------------------------------------------------------------- the gate
   # **The one check to require on `main`.** `always()` is what makes it report
