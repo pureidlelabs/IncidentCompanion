@@ -86,6 +86,8 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
      * scoped.
      */
     { queryKey: keys.summary(caseId) },
+    // Under the case key like the summary, so the `exact` above misses it too.
+    { queryKey: keys.activity(caseId) },
   ]
 
   for (const scope of scopes) {
@@ -93,7 +95,7 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
     // the socket. A scope the client does not know produced
     // `['case', id, 'collection', <it>]` - a key no query reads, so the
     // invalidation ran and no screen refreshed. Dropping it loses precision
-    // and keeps correctness: the three unconditional entries above still
+    // and keeps correctness: the unconditional entries above still
     // refresh the case document, the summary and attribution.
     if (!isScope(scope)) continue
     // **`cases`, plural, which is what the server announces.** Every
@@ -101,7 +103,7 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
     // delete); the singular falls through to `keys.collection(caseId, 'cases')`,
     // a key no query ever reads.
     // **A case-scalar write is already covered, so it adds nothing here.** The
-    // three unconditional entries above take attribution, the document and the
+    // unconditional entries above take attribution, the document and the
     // summary. Pushing the case key *without* `exact` takes the whole subtree
     // instead, which invalidates every key a client holds -- and the Overview
     // form commits one PATCH per field, so an edit fans that out once per field
