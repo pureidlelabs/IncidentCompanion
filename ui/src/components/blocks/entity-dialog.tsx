@@ -24,7 +24,8 @@ import {
 } from '@/components/blocks/form-section'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogFooter, DialogHeader } from '@/components/ui/dialog'
-import { useHoldRow } from '@/components/blocks/presence'
+import { useHoldRow, useRowRefused } from '@/components/blocks/presence'
+import { ReadOnlyNotice } from '@/components/blocks/prose-refusal'
 import { isThenable } from '@/lib/isThenable'
 
 /** A reference field's options, by the collection it points at. */
@@ -130,6 +131,7 @@ export function EntityDialog<TData extends object>({
   // is exactly when there is no row to hold.
   const rowId = (entry as { id?: string } | undefined)?.id
   useHoldRow(collection ?? '', collection ? rowId : undefined, open)
+  const readOnly = useRowRefused(collection ?? '', collection ? rowId : undefined)
 
   return (
     // One width for every entity form: the three tiers stack, so the frame has
@@ -145,7 +147,7 @@ export function EntityDialog<TData extends object>({
       />
       <CreateBody
         form={form}
-        lead={lead}
+        lead={readOnly ? <><ReadOnlyNotice />{lead}</> : lead}
         references={references}
         suggestions={suggestions}
         entry={entry}

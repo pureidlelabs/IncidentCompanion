@@ -54,6 +54,7 @@ export const NO_CLAIMS: RowClaims = {
   holderOf: () => undefined,
   claim: () => undefined,
   release: () => undefined,
+  refused: () => false,
   you: undefined,
 }
 
@@ -83,9 +84,10 @@ export function CaseProvidersLive({
       holderOf: presence.holderOf,
       claim: presence.claim,
       release: presence.release,
+      refused: presence.refused,
       you: me,
     }),
-    [presence.holderOf, presence.claim, presence.release, me],
+    [presence.holderOf, presence.claim, presence.release, presence.refused, me],
   )
 
   return (

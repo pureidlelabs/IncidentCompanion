@@ -354,6 +354,8 @@ export interface RowClaims {
   ) => { user_id: string; username: string } | undefined
   claim: (table: string, entryId: string) => void
   release: (table: string, entryId: string) => void
+  /** Whether the server refused this tab's claim on the row, because the case is read-only to it. */
+  refused: (table: string, entryId: string) => boolean
   /**
    * The signed-in analyst's id -- not their name, since `user.name` is not
    * unique and two colleagues sharing one would read each other's claim as
@@ -400,6 +402,12 @@ export function useHoldRow(table: string, entryId: string | undefined,
     take(table, entryId)
     return () => give(table, entryId)
   }, [active, table, entryId, take, give])
+}
+
+/** Whether the server refused this tab's hold on the row. False outside a case. */
+export function useRowRefused(table: string, entryId: string | undefined): boolean {
+  const claims = useContext(ClaimsContext)
+  return entryId !== undefined && (claims?.refused(table, entryId) ?? false)
 }
 
 /** The badge for one row, drawn where the row's controls are. */
