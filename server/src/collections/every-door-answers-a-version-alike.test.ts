@@ -13,9 +13,9 @@
 import { NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 
+import { ComplianceController } from '../compliance/compliance.controller.js'
 import { SystemsController } from './entities.controller.js'
 import { TimelineController } from './timeline.controller.js'
-import type { CollectionService } from './collection.service.js'
 
 const CASE = '00000000-0000-4000-8000-000000000001'
 const ROW = '00000000-0000-4000-8000-000000000002'
@@ -23,7 +23,8 @@ const SESSION = { user: { id: 'u-analyst' } } as never
 
 interface Door {
   update(caseId: string, id: string, body: unknown, session: never): Promise<unknown>
-  remove(caseId: string, id: string, version: string, session: never): Promise<unknown>
+  /** Absent where the door owns one record per case and offers no delete. */
+  remove?(caseId: string, id: string, version: string, session: never): Promise<unknown>
 }
 
 /**
@@ -31,8 +32,28 @@ interface Door {
  * parse for a case about what happens after the write is attempted.
  */
 const DOORS = [
-  ['an entity route', SystemsController, { hostname: 'this must not land' }],
-  ['the timeline route', TimelineController, { description: 'this must not land' }],
+  [
+    'an entity route',
+    (service: never) => new SystemsController(service) as unknown as Door,
+    { hostname: 'this must not land' },
+  ],
+  [
+    'the timeline route',
+    (service: never) => new TimelineController(service) as unknown as Door,
+    { description: 'this must not land' },
+  ],
+  [
+    'the compliance route',
+    // One record per case: the patch names no row, so the id is dropped.
+    (service: never): Door => {
+      const controller = new ComplianceController(service)
+      return {
+        update: (caseId: string, _id: string, body: unknown, session: never) =>
+          controller.patch(caseId, body, session),
+      }
+    },
+    { dpoContact: 'this must not land' },
+  ],
 ] as const
 
 /**
@@ -46,13 +67,11 @@ function doors(answers: unknown = { ok: true, row: { kind: 'action' } }) {
     get: vi.fn().mockResolvedValue({ kind: 'action' }),
     update: reached,
     remove: reached,
-  } as unknown as CollectionService
+    patch: reached,
+  } as never
   return {
     reached,
-    each: DOORS.map(([name, Door_, patch]) => {
-      const door = new Door_(service) as unknown as Door
-      return { name, door, patch }
-    }),
+    each: DOORS.map(([name, build, patch]) => ({ name, door: build(service), patch })),
   }
 }
 
@@ -74,27 +93,39 @@ const NOT_A_VERSION = [
   ' 1',
   '1e3',
   '0x10',
+  // Arriving as numbers, which is what a JSON body carries: past the int4
+  // column the version lives in, and below its floor. -> #1104
+  3000000000,
+  -1,
 ] as const
 
 describe('a version no reader could have read', () => {
-  for (const { name, door } of doors().each) {
-    it.each(NOT_A_VERSION)(`is refused at 422 by ${name} on delete, given %s`, async (version) => {
-      await expect(
-        door.remove(CASE, ROW, version as string, SESSION),
-      ).rejects.toBeInstanceOf(UnprocessableEntityException)
-    })
+  for (const { name, door, patch } of doors().each) {
+    if (door.remove) {
+      it.each(NOT_A_VERSION)(
+        `is refused at 422 by ${name} on delete, given %s`,
+        async (version) => {
+          await expect(door.remove!(CASE, ROW, version as string, SESSION)).rejects.toBeInstanceOf(
+            UnprocessableEntityException,
+          )
+        },
+      )
+    }
 
     it.each(NOT_A_VERSION)(`is refused at 422 by ${name} on patch, given %s`, async (version) => {
-      await expect(
-        door.update(CASE, ROW, { version, description: 'this must not land' }, SESSION),
-      ).rejects.toBeInstanceOf(UnprocessableEntityException)
+      await expect(door.update(CASE, ROW, { version, ...patch }, SESSION)).rejects.toBeInstanceOf(
+        UnprocessableEntityException,
+      )
     })
   }
 
   it('reaches no door with a version that parses, so the refusals above are the guard', async () => {
     const { reached, each } = doors()
-    for (const { door } of each) {
-      await door.remove(CASE, ROW, '3', SESSION).catch(() => null)
+    for (const { door, patch } of each) {
+      await (
+        door.remove?.(CASE, ROW, '3', SESSION) ??
+        door.update(CASE, ROW, { version: 3, ...patch }, SESSION)
+      ).catch(() => null)
     }
     expect(reached).toHaveBeenCalledTimes(each.length)
   })
