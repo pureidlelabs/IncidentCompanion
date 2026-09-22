@@ -8,14 +8,11 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import type { Env } from '../config/env.js'
-import { isNotNull } from 'drizzle-orm'
 import { readdir } from 'node:fs/promises'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import { withCase } from '../db/scope.js'
-import { cases } from '../db/schema/case.js'
-import { evidence } from '../db/schema/entities.js'
+import { artefactsNamed } from '../db/artefacts-named.js'
 
 /** What the install expects, and how much of it is not there. */
 export interface Census {
@@ -58,19 +55,7 @@ export class ArtefactCensus {
    * restored without its artefacts has no such directory at all.
    */
   async take(): Promise<Census> {
-    const open = await this.db.select({ id: cases.id }).from(cases)
-
-    // Deduplicated once, here: two rows naming one artefact are one file, and
-    // so are two cases holding the same one.
-    const wanted = new Set<string>()
-    for (const one of open) {
-      const named = await withCase(this.db, one.id, (tx) =>
-        tx.select({ hash: evidence.hash }).from(evidence).where(isNotNull(evidence.storedAt)),
-      )
-      // A row cannot be stored without the digest it is stored under; the
-      // check is what narrows the column's type, not a second filter.
-      for (const row of named) if (row.hash) wanted.add(row.hash)
-    }
+    const wanted = await artefactsNamed(this.db)
     if (wanted.size === 0) return { expected: 0, missing: 0 }
 
     const root = this.config.get('EVIDENCE_DIR', { infer: true })

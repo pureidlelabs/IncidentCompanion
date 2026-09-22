@@ -20,16 +20,17 @@
 import { defaultPolicy } from '../policy/read.js'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createHash } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
 import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
-import { CASE_NAME, MANIFEST_NAME, pack, readArchive } from '../archive/format.js'
+import { CASE_NAME, EVIDENCE_PREFIX, MANIFEST_NAME, pack, readArchive } from '../archive/format.js'
 import { cases, cloudApps, systems, timeline, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
@@ -277,6 +278,31 @@ describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row t
       after.length,
       'a case was left behind by an import that refused, so a retry meets a half-written case',
     ).toBe(before.length)
+  })
+
+  it('leaves in the store only the artefacts it held before a refused import', async () => {
+    const built = await exported()
+    const hostile = await tamperedWith(built, 'systems', [{ id: 'sys-e', hostname: { not: 'a string' } }])
+    const { members } = await readArchive(hostile, LIMITS)
+    const fresh = new TextEncoder().encode(`only this import carries me ${String(Date.now())}`)
+    const shared = new TextEncoder().encode(`already held ${String(Date.now())}`)
+    const digest = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
+    await store.put((async function* () { yield Buffer.from(shared) })())
+    const { [MANIFEST_NAME]: _old, ...rest } = members
+    const carrying = await pack(
+      {
+        ...rest,
+        [`${EVIDENCE_PREFIX}${digest(fresh)}`]: fresh,
+        [`${EVIDENCE_PREFIX}${digest(shared)}`]: shared,
+      },
+      'omitted',
+    )
+
+    await expect(importer.load(carrying, '', actorId)).rejects.toThrow(/this install cannot/)
+
+    const held = await readdir(root)
+    expect(held, 'a refused import left its artefact in the store for ever').not.toContain(digest(fresh))
+    expect(held, 'the rollback removed a file the store held before it').toContain(digest(shared))
   })
 
   /**
