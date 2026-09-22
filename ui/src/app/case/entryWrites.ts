@@ -5,6 +5,7 @@ import {
   type WriteFailureOptions,
 } from '@/components/blocks/notify'
 
+import { ApiError } from '@/api/client'
 import type { CollectionEntry, CollectionName, GenericCreateCollectionName } from '@/api/model'
 import type { BulkDeleteVars, BulkDeleted } from '@/api/useBulkDelete'
 
@@ -23,15 +24,28 @@ import type { BulkDeleteVars, BulkDeleted } from '@/api/useBulkDelete'
  * analyst nothing.
  */
 
+export interface AnnounceOptions extends WriteFailureOptions {
+  /**
+   * Take a refused write rather than toasting it, for a screen that draws the
+   * merge review. A toast names no field and is gone before the analyst has
+   * decided what to do with the words it is about.
+   */
+  refused?: (error: ApiError) => void
+}
+
 /** Says a refusal out loud, then re-throws so the screen does not keep the row. */
 export async function announcing<T>(
   what: string,
   run: () => Promise<T>,
-  options?: WriteFailureOptions,
+  options?: AnnounceOptions,
 ): Promise<T> {
   try {
     return await run()
   } catch (error) {
+    if (options?.refused && error instanceof ApiError && error.writeConflict) {
+      options.refused(error)
+      throw error
+    }
     // The retry is announced the same way, or its own failure has nowhere to go.
     reportWriteFailure(error, what, {
       ...options,
@@ -51,7 +65,7 @@ export async function announcing<T>(
 export async function announced<T>(
   what: string,
   run: () => Promise<T>,
-  options?: WriteFailureOptions,
+  options?: AnnounceOptions,
 ): Promise<T | undefined> {
   try {
     return await announcing(what, run, options)
@@ -92,7 +106,9 @@ export async function removeSelection(
 
 /** What a container hands this helper: the four mutations, already bound. */
 export interface EntryMutations<N extends CollectionName> {
-  create: { mutateAsync: (vars: { fields: Partial<CollectionEntry[N]> }) => Promise<CollectionEntry[N]> }
+  create: {
+    mutateAsync: (vars: { fields: Partial<CollectionEntry[N]> }) => Promise<CollectionEntry[N]>
+  }
   patch: {
     mutateAsync: (vars: {
       entryId: string
@@ -173,12 +189,6 @@ export function entryWrites<N extends GenericCreateCollectionName>(
     },
 
     remove: (ids: readonly string[]) =>
-      removeSelection(
-        mutations.bulkDelete,
-        collection,
-        ids,
-        rowsNow,
-        noun.many,
-      ),
+      removeSelection(mutations.bulkDelete, collection, ids, rowsNow, noun.many),
   }
 }

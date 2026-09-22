@@ -1,10 +1,12 @@
+import { useState } from 'react'
+
 import { useCaseCompliance, useComplianceMutation, useComplianceRecord } from '@/api/compliance'
 import { useRegimes } from '@/api/regimes'
 import { useSpecs } from '@/api/specs'
 import { useCaseId } from '@/app/useCaseId'
 import { ComplianceScreen, type ComplianceWrites } from '@/screens/compliance'
 
-import { announcing } from './entryWrites'
+import { announced } from './entryWrites'
 
 /**
  * `ComplianceScreen` bound to the record it draws and the answers it writes.
@@ -23,11 +25,21 @@ export function ComplianceContainer() {
   const verdicts = useCaseCompliance(caseId)
   const patch = useComplianceMutation(caseId)
 
+  /** The last answer another analyst got in first with, drawn above the cards. */
+  const [refusal, setRefusal] = useState<{ field: string; by: string } | undefined>(undefined)
+
   const writes: ComplianceWrites = {
-    save: (spec, value) =>
-      announcing('the compliance record', () =>
-        patch.mutateAsync({ [spec.name]: value }),
-      ),
+    save: (spec, value) => {
+      setRefusal(undefined)
+      return announced('the compliance record', () => patch.mutateAsync({ [spec.name]: value }), {
+        refused: (error) => {
+          setRefusal({
+            field: spec.label,
+            by: (error.body as { heldBy?: string } | null)?.heldBy ?? 'Another analyst',
+          })
+        },
+      })
+    },
   }
 
   return (
@@ -35,6 +47,7 @@ export function ComplianceContainer() {
       record={record.data}
       specs={specs.data}
       regimes={regimes.data}
+      {...(refusal === undefined ? {} : { refusal })}
       {...(verdicts.data ? { verdicts: verdicts.data.regimes } : {})}
       busy={record.isPending || specs.isPending || regimes.isPending}
       {...(record.error === null ? {} : { problem: record.error })}

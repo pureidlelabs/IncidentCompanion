@@ -56,6 +56,20 @@ const NO_ADVICE: Advice = {}
 const NO_OPTIONS: ReadonlyMap<string, string> = new Map()
 const NO_PROBLEMS: Problems = {}
 
+/**
+ * The field the caret is in on this pane, so a repaint never overwrites it.
+ *
+ * By pane rather than by ref: the flyout and the tab draw this block at once,
+ * and a ref may not be read during render.
+ */
+function focusedField(pane: CaseGroupKey): string | undefined {
+  const active = document.activeElement
+  if (!(active instanceof HTMLElement)) return undefined
+  const form = active.closest<HTMLElement>('[data-part="case-record-form"]')
+  if (form?.dataset.pane !== pane) return undefined
+  return active.closest<HTMLElement>('[data-field]')?.dataset.field
+}
+
 export function CaseRecordForm({
   kase,
   specs,
@@ -74,10 +88,26 @@ export function CaseRecordForm({
   // the draft. The refusal is a prop and survives it -- held as state here it
   // would be wiped by the very event it is reporting.
   const [given, setGiven] = useState(kase)
+  /**
+   * A field writes on blur, so between a keystroke and a blur the draft holds
+   * the only copy of what was typed -- and one save invalidates the case query
+   * three times over: the optimistic apply, the rollback, the refetch. So a
+   * served case is merged into the draft rather than swapped for it: a field
+   * the analyst has moved and the server has not caught up with keeps what
+   * they typed, which is also what leaves a refused value on screen for the
+   * merge review to name. -> #1109
+   */
   if (given !== kase) {
+    const next = { ...(kase as unknown as Draft) }
+    // A touched field the served case now agrees with is settled, so it stops
+    // being held and follows the server again.
+    const held = new Set([...touched].filter((name) => draft[name] !== next[name]))
+    const focused = focusedField(pane)
+    if (focused !== undefined) held.add(focused)
+    for (const name of held) next[name] = draft[name]
     setGiven(kase)
-    setDraft({ ...(kase as unknown as Draft) })
-    setTouched(new Set())
+    setDraft(next)
+    setTouched(held)
   }
 
   const was = kase as unknown as Record<string, unknown>

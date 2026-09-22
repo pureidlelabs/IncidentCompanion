@@ -158,10 +158,25 @@ export function NotesScreen({
   /** The note the delete dialog is asking about. `null` while it is closed. */
   const [deleting, setDeleting] = useState<CaseNote | null>(null)
   const [given, setGiven] = useState(kase)
+  /**
+   * A served case arrives while a note is being written, and it has never seen
+   * that note: the row is created on blur, so anything anyone writes to the
+   * case invalidates the query mid-sentence. So the served notes are merged in
+   * rather than swapped for what is on screen, and a note nobody has looked
+   * away from yet survives it. -> #1108
+   */
   if (given !== kase) {
+    const served = kase?.casenotes ?? []
+    const servedIds = new Set(served.map((note) => note.id))
+    const merged = [
+      ...served,
+      ...written.filter((note) => !servedIds.has(note.id) && !isBlank(note)),
+    ]
     setGiven(kase)
-    setWritten(kase?.casenotes ?? [])
-    setPicked(openId ?? newestFirst(kase?.casenotes ?? [])[0]?.id)
+    setWritten(merged)
+    setPicked(
+      merged.some((note) => note.id === picked) ? picked : (openId ?? newestFirst(merged)[0]?.id),
+    )
     setCaretOn(undefined)
   }
 
@@ -237,17 +252,30 @@ export function NotesScreen({
     // the guard above cannot answer for a blur and a leave in the same note.
     if (sent.current.has(id)) return
     sent.current.add(id)
-    void writes.create({ note: local.note, author: local.author }, leaving).catch(() => {
-      /**
-       * **Taken back when the write is refused, or the note is unsendable.**
-       * `sent` would otherwise record *tried* rather than *stored*: a create
-       * that 409s leaves the note on screen, saying nothing, and every later
-       * blur and the leaving below both return at the guard above. That turns
-       * a refusal an analyst could have retried into the silent loss this
-       * screen exists to prevent.
-       */
-      sent.current.delete(id)
-    })
+    void writes.create({ note: local.note, author: local.author }, leaving).then(
+      (stored) => {
+        // The refetch carries the note under the stored id, and the merge keeps
+        // any local row it does not hold.
+        sent.current.add(stored.id)
+        setWritten((current) =>
+          current.some((note) => note.id === stored.id)
+            ? current.filter((note) => note.id !== id)
+            : current.map((note) => (note.id === id ? { ...note, id: stored.id } : note)),
+        )
+        setPicked((current) => (current === id ? stored.id : current))
+      },
+      () => {
+        /**
+         * **Taken back when the write is refused, or the note is unsendable.**
+         * `sent` would otherwise record *tried* rather than *stored*: a create
+         * that 409s leaves the note on screen, saying nothing, and every later
+         * blur and the leaving below both return at the guard above. That turns
+         * a refusal an analyst could have retried into the silent loss this
+         * screen exists to prevent.
+         */
+        sent.current.delete(id)
+      },
+    )
   }
 
   const open = notes.find((note) => note.id === picked)
