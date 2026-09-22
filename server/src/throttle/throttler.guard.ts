@@ -13,7 +13,7 @@
  * the shape ISO 27002 8.15 wants in an application log, and until this it
  * ended at nginx's access log - a file no screen in this app reads.
  */
-import { Inject, Injectable, Optional, type ExecutionContext } from '@nestjs/common'
+import { Inject, Injectable, type ExecutionContext } from '@nestjs/common'
 import { ThrottlerGuard, type ThrottlerLimitDetail } from '@nestjs/throttler'
 import type { Request } from 'express'
 
@@ -26,14 +26,8 @@ import { routeOf } from '../install-activity/route-of.js'
 
 @Injectable()
 export class AuditedThrottlerGuard extends ThrottlerGuard {
-  /**
-   * **`@Optional`, because a guard is global and the harness boots slices.**
-   * A module without the database provider would otherwise fail to build over
-   * a rate limit it never reaches.
-   */
-  @Optional()
   @Inject(DATABASE)
-  private readonly db?: Database
+  private readonly db!: Database
 
   protected override getTracker(req: Record<string, unknown>): Promise<string> {
     const request = req as unknown as Request
@@ -45,23 +39,21 @@ export class AuditedThrottlerGuard extends ThrottlerGuard {
     context: ExecutionContext,
     detail: ThrottlerLimitDetail,
   ): Promise<void> {
-    if (this.db) {
-      const request = context.switchToHttp().getRequest<Request>()
-      /**
-       * **The tier is in the line.** `burst` being hit is usually the
-       * importer and `api` is a script pacing itself. Without the name every
-       * refusal reads the same and the log answers neither question.
-       */
-      await recordInstallActivity(this.db, {
-        event: 'rate_limited',
-        target: `${request.method} ${routeOf(request)}`,
-        detail: {
-          tier: tierNameFor(detail),
-          limit: String(detail.limit),
-        },
-        headers: request.headers,
-      })
-    }
+    const request = context.switchToHttp().getRequest<Request>()
+    /**
+     * **The tier is in the line.** `burst` being hit is usually the importer
+     * and `api` is a script pacing itself. Without the name every refusal
+     * reads the same and the log answers neither question.
+     */
+    await recordInstallActivity(this.db, {
+      event: 'rate_limited',
+      target: `${request.method} ${routeOf(request)}`,
+      detail: {
+        tier: tierNameFor(detail),
+        limit: String(detail.limit),
+      },
+      headers: request.headers,
+    })
     await super.throwThrottlingException(context, detail)
   }
 }

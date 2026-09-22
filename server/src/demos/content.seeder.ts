@@ -7,7 +7,7 @@
  */
 import { Injectable, Logger } from '@nestjs/common'
 
-import type { Database } from '../db/client.js'
+import type { Executor } from '../db/scope.js'
 import {
   accounts,
   cloudApps,
@@ -173,7 +173,7 @@ export class DemoContentSeeder {
    * reason a store without that key would not silently write entities
    * belonging to a case that does not exist.
    */
-  async fill(tx: Database, caseId: string, content: DemoContent, base: Date): Promise<number> {
+  async fill(tx: Executor, caseId: string, content: DemoContent, base: Date): Promise<number> {
     {
       const ids: Ids = {}
       // Not `async`: every call hands it an already-awaited array, and the
@@ -255,7 +255,7 @@ export class DemoContentSeeder {
    * logs how many it applied to.
    */
   private async fillReports(
-    tx: Database,
+    tx: Executor,
     caseId: string,
     content: DemoContent,
     base: Date,
@@ -319,7 +319,7 @@ export class DemoContentSeeder {
    * -> `catalogue.ts`'s `startedDaysAgo`
    */
   async fillAll(
-    tx: Database,
+    tx: Executor,
     byReference: Map<string | null, string>,
     baseFor: (reference: string) => Date,
   ): Promise<void> {

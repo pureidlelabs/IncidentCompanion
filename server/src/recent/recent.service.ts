@@ -12,6 +12,7 @@ import { and, desc, eq, isNull, notInArray, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import { reachedCases } from '../access/reached-cases.js'
 import { caseVisits } from '../db/schema/case-visits.js'
 import { caseStatus, cases } from '../db/schema/case.js'
 import { z } from 'zod'
@@ -76,7 +77,11 @@ export class RecentService {
       })
       .from(caseVisits)
       .innerJoin(cases, eq(cases.id, caseVisits.caseId))
-      .where(eq(caseVisits.userId, userId))
+      // **The visit is not the reach**, and a pin never ages out: filtered on
+      // the write, a revocation would leave the row naming the case forever.
+      .where(
+        and(eq(caseVisits.userId, userId), await reachedCases(this.db, userId, cases.customerId)),
+      )
       .orderBy(desc(caseVisits.pinnedAt), desc(caseVisits.visitedAt), desc(caseVisits.caseId))
 
     const view = (row: (typeof rows)[number]): RecentCase => ({

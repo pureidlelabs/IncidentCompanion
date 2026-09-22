@@ -16,10 +16,13 @@
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
+import { desc } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 
 import { CasesService } from '../src/cases/cases.service.js'
+// The list route is filtered by who is asking, and a probe is nobody.
+import { cases as caseRows } from '../src/db/schema/case.js'
 import { resolveReport } from '../src/report/document/resolve.js'
 import { toPdf } from '../src/report/document/pdf.js'
 import { toWord } from '../src/report/document/word.js'
@@ -91,7 +94,8 @@ async function main(): Promise<void> {
     othersOn: () => Promise.resolve([]),
   } as never)
 
-  for (const [at, kase] of (await cases.list()).entries()) {
+  const listed = await db.select().from(caseRows).orderBy(desc(caseRows.updatedAt))
+  for (const [at, kase] of listed.entries()) {
     const caseData = (await cases.getWithCollections(kase.id)) as unknown as CaseData
     const document_ = resolveReport({
       title: kase.title,

@@ -9,6 +9,7 @@
  * Not `schema/columns.ts`, which declares the columns every case-owned row
  * carries.
  */
+import { getTableColumns } from 'drizzle-orm'
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core'
 
 /**
@@ -38,4 +39,27 @@ export function columnOf(table: PgTable, name: string): PgColumn {
   const found = columns[name]
   if (!found) throw new Error(`no column ${name} on this table`)
   return found
+}
+
+/**
+ * ISO strings become `Date`s for the columns that are timestamps.
+ *
+ * **Derived from the table, never from the field name.** Every time arrives
+ * as a string, because a schema is also the API document and JSON Schema has
+ * no date type - and the columns carrying one share no naming rule.
+ */
+export function coerceTimes(
+  table: PgTable,
+  values: Record<string, unknown>,
+): Record<string, unknown> {
+  const cols = getTableColumns(table)
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(values)) {
+    const column = cols[key]
+    // `columnType`, not `dataType`: a timestamp's `dataType` is
+    // `'object date'`, so an `=== 'date'` test matches nothing.
+    const isTimestamp = column?.columnType?.startsWith('PgTimestamp') ?? false
+    out[key] = isTimestamp && typeof value === 'string' ? new Date(value) : value
+  }
+  return out
 }

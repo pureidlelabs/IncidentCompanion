@@ -30,7 +30,7 @@ const schema = z.object({
    * measured in megabytes - a bytea column puts every artefact in every backup
    * and in the working set of an otherwise small database.
    */
-  EVIDENCE_DIR: z.string().min(1).optional(),
+  EVIDENCE_DIR: z.string().min(1).default('.evidence'),
 
   /**
    * Where the built React app is, when it is not beside the server.

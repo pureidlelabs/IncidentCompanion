@@ -11,6 +11,7 @@ import { eq } from 'drizzle-orm'
 
 import { DATABASE, SEED_DATABASE, seedRoleMissing } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import type { Executor } from '../db/scope.js'
 import { cases } from '../db/schema/index.js'
 import { DEMO_CASES, type DemoCase } from './catalogue.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
@@ -24,7 +25,7 @@ import { DemoContentSeeder } from './content.seeder.js'
  * so a reseed can meet a row that already exists.
  */
 async function fillCompliance(
-  tx: Database,
+  tx: Executor,
   ids: Map<string | null, string>,
   startedAt: (demo: DemoCase) => Date,
 ): Promise<void> {
@@ -148,12 +149,12 @@ export class DemoSeederService {
       // existed with no content, however briefly, is one an analyst could open
       // and find empty - and on two app servers the window is real.
       const byReference = new Map(DEMO_CASES.map((demo) => [demo.reference, demo]))
-      await this.content.fillAll(tx as unknown as Database, ids, (reference) => {
+      await this.content.fillAll(tx, ids, (reference) => {
         const demo = byReference.get(reference)
         return demo ? startedAt(demo) : new Date()
       })
 
-      await fillCompliance(tx as unknown as Database, ids, startedAt)
+      await fillCompliance(tx, ids, startedAt)
       return rows.length
     })
   }

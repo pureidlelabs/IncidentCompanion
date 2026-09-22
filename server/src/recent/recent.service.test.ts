@@ -8,10 +8,13 @@
  */
 import { and, eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { RECENT_LIMIT, RecentService } from './recent.service.js'
+import { GroupsService } from '../access/groups.service.js'
 import { caseVisits, cases, user } from '../db/schema/index.js'
+import { customers } from '../db/schema/customer.js'
+import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -301,6 +304,76 @@ describe.skipIf(!db || !hasConcurrentConnections())('the cases an analyst has be
         [],
       )
       expect((await service.list(SAM)).recent).toEqual([])
+    })
+  })
+
+  /**
+   * *THEN they stop being served that case.* The list is read from a table of
+   * visits, so a case an analyst was in stays named by it long after the
+   * membership that reached it is gone -- and a pinned row never ages out at
+   * all. `GET /api/recent-cases` names no case, so no guard runs on it.
+   *
+   * **The grant is the control.** A row missing because the fixture never
+   * committed looks exactly like one filtered out, so the same case is asked
+   * for again with the membership restored.
+   */
+  describe('a case whose reach is revoked', () => {
+    let groupsService: GroupsService
+    let customerId: string
+    let sector: string
+    let caseId: string
+
+    beforeEach(async () => {
+      groupsService = new GroupsService(db!)
+      const [customer] = await seed!
+        .insert(customers)
+        .values({ name: 'Recent customer' })
+        .returning()
+      customerId = customer!.id
+      const [group] = await seed!.insert(groups).values({ name: 'Recent group' }).returning()
+      sector = group!.id
+      await seed!.insert(groupCustomers).values({ groupId: sector, customerId })
+
+      const [made] = await seed!
+        .insert(cases)
+        .values({ title: 'Reached for now', customerId, createdBy: SAM, updatedBy: SAM })
+        .returning({ id: cases.id })
+      caseId = made!.id
+
+      await groupsService.grant(sector, SAM, 'read')
+      await service.visit(SAM, caseId, 'timeline')
+      await service.pin(SAM, caseId, true)
+    })
+
+    afterEach(async () => {
+      await seed!.delete(groupMembers)
+      await seed!.delete(groupCustomers)
+      await seed!.delete(cases).where(eq(cases.id, caseId))
+      await seed!.delete(groups).where(eq(groups.id, sector))
+      await seed!.delete(customers).where(eq(customers.id, customerId))
+    })
+
+    it('stops being named once the membership is revoked, pinned or not', async () => {
+      const held = await service.list(SAM)
+      expect(
+        held.pinned.map((r) => r.caseId),
+        'the grant did not take, so the absence below cannot be attributed to the revocation',
+      ).toContain(caseId)
+
+      await groupsService.revoke(sector, SAM)
+
+      const after = await service.list(SAM)
+      expect(
+        [...after.pinned, ...after.recent].map((r) => r.caseId),
+        'the recent list kept naming a case after the reach to it was revoked',
+      ).not.toContain(caseId)
+    })
+
+    it('is named again once the membership is granted back', async () => {
+      await groupsService.revoke(sector, SAM)
+      await groupsService.grant(sector, SAM, 'read')
+
+      expect((await service.list(SAM)).pinned.map((r) => r.caseId)).toContain(caseId)
     })
   })
 })
