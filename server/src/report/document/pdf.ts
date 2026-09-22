@@ -7,7 +7,7 @@
  * expresses it.
  */
 import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 
 import type { CanvasElement, Content, TDocumentDefinitions } from 'pdfmake/interfaces.js'
 
@@ -26,7 +26,7 @@ import {
   chipColours,
   tlpInk,
 } from './palette.js'
-import { spineGeometry } from './spine.js'
+import { ROBOTO_DIR, spineGeometry } from './spine.js'
 
 const require_ = createRequire(__filename)
 
@@ -43,21 +43,25 @@ let ready = false
 
 function prepare(): void {
   if (ready) return
-  const root = join(dirname(require_.resolve('pdfmake/package.json')), 'fonts', 'Roboto')
   pdfMake.setFonts({
     Roboto: {
-      normal: join(root, 'Roboto-Regular.ttf'),
-      bold: join(root, 'Roboto-Medium.ttf'),
-      italics: join(root, 'Roboto-Italic.ttf'),
-      bolditalics: join(root, 'Roboto-MediumItalic.ttf'),
+      normal: join(ROBOTO_DIR, 'Roboto-Regular.ttf'),
+      bold: join(ROBOTO_DIR, 'Roboto-Medium.ttf'),
+      italics: join(ROBOTO_DIR, 'Roboto-Italic.ttf'),
+      bolditalics: join(ROBOTO_DIR, 'Roboto-MediumItalic.ttf'),
     },
   })
 
   // Nothing outbound, ever, and the only local read is the bundled font
   // directory: the definitions this painter builds name no other file.
   pdfMake.setUrlAccessPolicy(() => false)
-  pdfMake.setLocalAccessPolicy((path) => path.includes('pdfmake'))
+  pdfMake.setLocalAccessPolicy(mayRead)
   ready = true
+}
+
+/** The local access policy: true for a file inside the bundled font directory, and nothing else. */
+export function mayRead(path: string): boolean {
+  return resolve(path).startsWith(ROBOTO_DIR + sep)
 }
 
 

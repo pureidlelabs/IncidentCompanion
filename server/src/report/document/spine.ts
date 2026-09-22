@@ -18,6 +18,9 @@ import { MUTED, PAPER, RULE } from './palette.js'
 
 const require_ = createRequire(__filename)
 
+/** The Roboto directory pdfmake bundles: the one place either painter reads a font from. */
+export const ROBOTO_DIR = join(dirname(require_.resolve('pdfmake/package.json')), 'fonts', 'Roboto')
+
 export interface Phase {
   label: string
   fill: string
@@ -87,8 +90,7 @@ let face: Font | null = null
 function roboto(): Font {
   if (face) return face
   const fontkit = require_('fontkit') as { openSync(path: string): Font }
-  const root = join(dirname(require_.resolve('pdfmake/package.json')), 'fonts', 'Roboto')
-  face = fontkit.openSync(join(root, 'Roboto-Regular.ttf'))
+  face = fontkit.openSync(join(ROBOTO_DIR, 'Roboto-Regular.ttf'))
   return face
 }
 

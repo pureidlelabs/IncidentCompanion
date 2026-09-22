@@ -10,9 +10,12 @@
  * over a page more often than not, and a continuation with no column titles is a
  * table the reader has to scroll back to understand.
  */
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
-import { definitionFor, pageRuler, toPdf } from './pdf.js'
+import { definitionFor, mayRead, pageRuler, toPdf } from './pdf.js'
+import { ROBOTO_DIR } from './spine.js'
 import type { Document, Node, Section } from './model.js'
 
 const paper = (nodes: Node[], tlp = ''): Document => ({
@@ -304,5 +307,17 @@ describe('the page ruler', () => {
     })
     expect(ruler.sections).toHaveLength(2)
     expect(ruler.sections[0]!.heading).toBe('')
+  })
+})
+
+describe('the local access policy', () => {
+  it('reads a font inside the bundled directory', () => {
+    expect(mayRead(join(ROBOTO_DIR, 'Roboto-Regular.ttf'))).toBe(true)
+  })
+
+  it('refuses a path that only mentions pdfmake, or climbs out of the directory', () => {
+    expect(mayRead('/tmp/pdfmake/secret.ttf')).toBe(false)
+    expect(mayRead(`${ROBOTO_DIR}/../../package.json`)).toBe(false)
+    expect(mayRead(`${ROBOTO_DIR}-other/Roboto-Regular.ttf`)).toBe(false)
   })
 })
