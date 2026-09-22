@@ -118,6 +118,23 @@ export default tseslint.config(
       'jsx-a11y/label-has-associated-control': 'off',
     },
   },
+  /**
+   * **The scrollers, which take focus because a region that scrolls is reached
+   * by keyboard or not at all.** The rule's options exempt by tag or by
+   * literal `role`, and these are a `div`, a `ul` and a `pre`, most with no
+   * role, so the exemption is by file. A new scroller joins this list. -> #929
+   */
+  {
+    files: [
+      'src/components/ui/scroll-area.tsx',
+      'src/components/ui/dialog.tsx',
+      'src/components/ui/code-block.tsx',
+      'src/components/blocks/report-paper-page.tsx',
+      'src/screens/killchain-coverage.tsx',
+      'src/screens/investigation-graph.tsx',
+    ],
+    rules: { 'jsx-a11y/no-noninteractive-tabindex': 'off' },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     // Typed linting is scoped here rather than applied at the top level: the
