@@ -7,6 +7,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { hasConcurrentConnections } from './database.js'
 import { declined, mustRun, mustRunWithAStack } from './must-run.js'
 
 const before = { ...process.env }
@@ -77,6 +78,38 @@ describe('a declined suite says so', () => {
     it('leaves a case that needs no stack armed by CI', () => {
       env('true', undefined)
       expect(() => declined('the server tier', 'no database')).toThrow(/no database/)
+    })
+  })
+
+  /**
+   * **Forty-five describes ask this one question**, so an answer of `false`
+   * under a certifying run is 522 tests skipped with nothing to read it. The
+   * embedded URL is what `global-setup.ts` leaves behind, and the two are
+   * compared on host and port. -> #1079
+   */
+  describe('the suites that need two concurrent connections', () => {
+    function embedded(): void {
+      process.env['IC_EMBEDDED_DATABASE_URL'] = 'postgres://x@127.0.0.1:55432/ic'
+      process.env['DATABASE_URL'] = 'postgres://ic_app:ic_app@127.0.0.1:55432/ic'
+    }
+
+    it('answers false on the embedded engine where nothing is certifying', () => {
+      env(undefined, undefined)
+      embedded()
+      expect(hasConcurrentConnections()).toBe(false)
+    })
+
+    it('throws on the embedded engine under IC_SUITE_MUST_RUN', () => {
+      env(undefined, '1')
+      embedded()
+      expect(() => hasConcurrentConnections()).toThrow(/in-process engine/)
+    })
+
+    it('answers true against a server, certifying or not', () => {
+      env('true', undefined)
+      delete process.env['IC_EMBEDDED_DATABASE_URL']
+      process.env['DATABASE_URL'] = 'postgres://ic_app:ic_app@127.0.0.1:5432/ic'
+      expect(hasConcurrentConnections()).toBe(true)
     })
   })
 
