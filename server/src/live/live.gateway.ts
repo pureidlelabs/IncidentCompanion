@@ -399,7 +399,11 @@ export class LiveGateway implements OnApplicationShutdown {
             Array.isArray(frame.scopes) &&
             frame.scopes.includes(REPORTS_SCOPE)
           ) {
-            for (const [, held] of opened) held.stale = true
+            for (const [, held] of opened) {
+              void held.then((one) => {
+                if (one) one.stale = true
+              })
+            }
           }
         } catch {
           // Not JSON, or not a shape this knows. Forwarded regardless.
@@ -414,8 +418,14 @@ export class LiveGateway implements OnApplicationShutdown {
      * **Per connection, not per case.** Two tabs are two readers of the same
      * report document, and the refcount in `ProseService` is what keeps it
      * alive for the second when the first closes.
+     *
+     * **The promise, not the document.** Opening one takes two awaits, and a
+     * map written after them is a check across a yield: two frames for one
+     * field in one tick both take a reader and only one is ever given back.
+     * `ProseService.open` and `CaseChannel.subscriptions` hold the same shape
+     * for the same reason.
      */
-    const opened = new Map<string, OpenDocument>()
+    const opened = new Map<string, Promise<OpenDocument | null>>()
 
     /** The rows this connection holds, so `CLAIMS_PER_CONNECTION` is countable. */
     const claims = new Set<string>()
@@ -430,7 +440,13 @@ export class LiveGateway implements OnApplicationShutdown {
       // **Released before the roster changes.** The last reader out flushes
       // the document, and a closing tab must not leave the report newer in
       // memory than on disk.
-      for (const [, held] of opened) held.stop()
+      // Settled, not resolved: a document still opening when the socket goes
+      // is released when it arrives rather than left holding a reader.
+      for (const [, held] of opened) {
+        void held.then((one) => {
+          one?.stop()
+        })
+      }
       opened.clear()
       /**
        * **Chained onto the join rather than run now**, or a socket that goes
@@ -567,7 +583,7 @@ export class LiveGateway implements OnApplicationShutdown {
   private async onProse(
     member: Member,
     live: WebSocket,
-    opened: Map<string, OpenDocument>,
+    opened: Map<string, Promise<OpenDocument | null>>,
     type: 'prose.sync' | 'prose.awareness',
     field: string,
     update: string,
@@ -580,44 +596,22 @@ export class LiveGateway implements OnApplicationShutdown {
       return
     }
 
-    let held = opened.get(field)
+    let opening = opened.get(field)
+    if (!opening) {
+      // **In the map before the first await.** -> `open`
+      opening = this.openDocument(member, live, field)
+      opened.set(field, opening)
+    }
+    let held
+    try {
+      held = await opening
+    } catch (error) {
+      opened.delete(field)
+      throw error
+    }
     if (!held) {
-      const address = await this.prose.resolve(member.caseId, field)
-      // **Unresolvable is silence, not an error frame.** The field key comes
-      // from a browser; answering "no such field" would make the socket an
-      // oracle for which block ids exist in other cases.
-      if (!address) return
-
-      const doc = await this.prose.open(member.caseId, address)
-      const { sentAt } = address
-
-      const onUpdate = (bytes: Uint8Array, origin: unknown) => {
-        if (origin === live) return
-        live.send(
-          JSON.stringify({
-            type: 'prose.sync',
-            field,
-            update: Buffer.from(this.prose.frameUpdate(bytes)).toString('base64'),
-          }),
-        )
-      }
-      doc.on('update', onUpdate)
-
-      held = {
-        address,
-        doc,
-        sentAt,
-        stale: false,
-        stop: () => {
-          doc.off('update', onUpdate)
-          // Same rule as `attach`: a release racing a closing Redis rejects,
-          // and `void` would let it escape as an unhandled rejection.
-          this.prose.release(member.caseId, address).catch((error: unknown) => {
-            this.log.warn(`could not release ${field}: ${String(error)}`)
-          })
-        },
-      }
-      opened.set(field, held)
+      opened.delete(field)
+      return
     }
 
     /**
@@ -686,6 +680,52 @@ export class LiveGateway implements OnApplicationShutdown {
           update: Buffer.from(reply).toString('base64'),
         }),
       )
+    }
+  }
+
+  /**
+   * Take a reader on one field's document and wire its updates to this socket.
+   *
+   * **Null is unresolvable, and it is silence rather than an error frame.**
+   * The field key comes from a browser; answering "no such field" would make
+   * the socket an oracle for which block ids exist in other cases.
+   */
+  private async openDocument(
+    member: Member,
+    live: WebSocket,
+    field: string,
+  ): Promise<OpenDocument | null> {
+    const address = await this.prose.resolve(member.caseId, field)
+    if (!address) return null
+
+    const doc = await this.prose.open(member.caseId, address)
+    const { sentAt } = address
+
+    const onUpdate = (bytes: Uint8Array, origin: unknown) => {
+      if (origin === live) return
+      live.send(
+        JSON.stringify({
+          type: 'prose.sync',
+          field,
+          update: Buffer.from(this.prose.frameUpdate(bytes)).toString('base64'),
+        }),
+      )
+    }
+    doc.on('update', onUpdate)
+
+    return {
+      address,
+      doc,
+      sentAt,
+      stale: false,
+      stop: () => {
+        doc.off('update', onUpdate)
+        // Same rule as `attach`: a release racing a closing Redis rejects,
+        // and `void` would let it escape as an unhandled rejection.
+        this.prose.release(member.caseId, address).catch((error: unknown) => {
+          this.log.warn(`could not release ${field}: ${String(error)}`)
+        })
+      },
     }
   }
 

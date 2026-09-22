@@ -1116,3 +1116,62 @@ describe('how much of a frame the socket will read', () => {
     })
   })
 })
+
+/**
+ * Two prose frames for one field in one tick.
+ *
+ * `onProse` read `opened.get(field)`, awaited `resolve` and `open`, and only
+ * then `opened.set` - a check across two yields. Both frames see nothing
+ * open, both take a reader, the second `set` overwrites the first, and the
+ * close releases once. The count never reaches zero, the `Y.Doc` is never
+ * destroyed, and its update handler goes on sending to a socket that has gone.
+ *
+ * **The reader count is observed through the double**, because `ProseService`
+ * holds it inside its own map and exposes nothing; counting the calls the
+ * gateway makes is the same arithmetic the service does.
+ */
+describe('two prose frames for one field arriving together', () => {
+  it('takes one reader, so closing the socket gives the last one back', async () => {
+    let readers = 0
+    const document = new Y.Doc({ gc: false })
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => Promise.resolve(),
+      prose: () => undefined,
+    }
+    const prose = {
+      resolve: () => Promise.resolve({ reportId: REPORT, sentAt: null }),
+      open: () => {
+        readers += 1
+        return Promise.resolve(document)
+      },
+      release: () => {
+        readers -= 1
+        return Promise.resolve()
+      },
+      applySync: codec.applySync.bind(codec),
+      frameUpdate: codec.frameUpdate.bind(codec),
+      isStateRequest: codec.isStateRequest.bind(codec),
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      {} as never,
+      caseWithNoCustomer,
+      prose as never,
+      audit as never,
+      holding('write'),
+    )
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    live.receive({ type: 'prose.sync', field: FIELD, update: typed('one').update })
+    live.receive({ type: 'prose.sync', field: FIELD, update: typed('two').update })
+    await settle()
+    expect(readers, 'one field was opened twice for one connection').toBe(1)
+
+    live.drop()
+    await settle()
+
+    expect(readers, 'a reader was never given back, so the document is never destroyed').toBe(0)
+  })
+})
