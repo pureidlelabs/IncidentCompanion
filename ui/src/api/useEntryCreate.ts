@@ -29,9 +29,11 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 
 import { request, type ApiError } from './client'
-import type {
-  CollectionEntry,
-  GenericCreateCollectionName,
+import {
+  COLLECTION_TO_CASE_KEY,
+  type Case,
+  type CollectionEntry,
+  type GenericCreateCollectionName,
 } from './model'
 import { optimisticRow } from './optimisticRow'
 import { keys } from './queryKeys'
@@ -74,6 +76,7 @@ export function createEntry<N extends GenericCreateCollectionName>(
 
 interface CreateRollback<N extends GenericCreateCollectionName> {
   previous: CollectionEntry[N][] | undefined
+  previousCase: Case | undefined
 }
 
 /**
@@ -91,6 +94,8 @@ export function useEntryCreate<N extends GenericCreateCollectionName>(
 ): UseMutationResult<CreatedEntry<N>, ApiError, EntryDraft<N>, CreateRollback<N>> {
   const client = useQueryClient()
   const listKey = keys.collection(caseId, collection)
+  const caseKey = keys.case(caseId)
+  const onCase = COLLECTION_TO_CASE_KEY[collection]
 
   return useMutation<CreatedEntry<N>, ApiError, EntryDraft<N>, CreateRollback<N>>({
     mutationKey: [...listKey, 'create'],
@@ -98,22 +103,30 @@ export function useEntryCreate<N extends GenericCreateCollectionName>(
     mutationFn: ({ fields }) => createEntry(caseId, collection, fields),
 
     onMutate: async ({ fields }) => {
-      await client.cancelQueries({ queryKey: listKey })
+      // The screens render from the case document, so the write lands there as well as on the list.
+      await Promise.all([
+        client.cancelQueries({ queryKey: listKey }),
+        client.cancelQueries({ queryKey: caseKey, exact: true }),
+      ])
       const previous = client.getQueryData<CollectionEntry[N][]>(listKey)
+      const previousCase = client.getQueryData<Case>(caseKey)
 
       // Appended, because that is where the server puts a new row. One that
       // lands at the top optimistically and at the bottom on refetch reads as
       // the write having moved it.
       const draft = optimisticRow<CollectionEntry[N]>(client, collection, fields)
-      client.setQueryData<CollectionEntry[N][]>(listKey, (rows) => [
-        ...(rows ?? []),
-        draft,
-      ])
-      return { previous }
+      const apply = (rows: CollectionEntry[N][] | undefined) => [...(rows ?? []), draft]
+      client.setQueryData<CollectionEntry[N][]>(listKey, apply)
+      client.setQueryData<Case>(caseKey, (kase) =>
+        kase && { ...kase, [onCase]: apply(kase[onCase] as CollectionEntry[N][]) },
+      )
+      return { previous, previousCase }
     },
 
     onError: (_error, _draft, context) => {
-      if (context) client.setQueryData(listKey, context.previous)
+      if (!context) return
+      client.setQueryData(listKey, context.previous)
+      client.setQueryData(caseKey, context.previousCase)
     },
 
     onSettled: () => {

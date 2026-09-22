@@ -86,9 +86,15 @@ describe('the whole-case document, which the shell reads', () => {
       .toContainEqual({ key: '["case","C-1","summary"]', exact: false })
   })
 
+  /** The activity feed sits under the case key too, and is what another analyst's write is for. */
+  it('refreshes the activity feed when a collection moves', () => {
+    expect(forScopes(['evidence']))
+      .toContainEqual({ key: '["case","C-1","activity"]', exact: false })
+  })
+
   /**
    * **`cases` is the scope the server sends**, and it adds nothing to the
-   * three unconditional entries.
+   * unconditional entries.
    *
    * Spelled `case` the branch matches nothing and the string falls through to
    * `keys.collection(caseId, 'cases')`, a key no query reads. Pushing the case
@@ -98,7 +104,7 @@ describe('the whole-case document, which the shell reads', () => {
    * row moved, and `attribution` + `case` exact + `summary` already cover
    * that.
    */
-  it('adds nothing for a scalar write, which the three fixed entries cover', () => {
+  it('adds nothing for a scalar write, which the fixed entries cover', () => {
     const said = forScopes(['cases'])
     expect(said).toContainEqual({ key: '["case","C-1"]', exact: true })
     expect(said).toContainEqual({ key: '["case","C-1","summary"]', exact: false })
@@ -125,7 +131,7 @@ describe('the whole-case document, which the shell reads', () => {
    * this socket is a bare string: a server that grew a scope the client has
    * not compiled against used to produce `['case', id, 'collection', <it>]`,
    * a key no query reads -- the invalidation ran, no screen refreshed, and the
-   * symptom surfaced minutes later on somebody else's monitor. The three
+   * symptom surfaced minutes later on somebody else's monitor. The
    * unconditional entries above still refresh the case, so an unknown scope
    * loses precision rather than correctness.
    */

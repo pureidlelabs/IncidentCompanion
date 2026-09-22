@@ -18,7 +18,6 @@ import {
   HttpCode,
   Post,
   Req,
-  UnauthorizedException,
 } from '@nestjs/common'
 import { AuthService, Session, type UserSession } from '@thallesp/nestjs-better-auth'
 import { fromNodeHeaders } from 'better-auth/node'
@@ -133,8 +132,9 @@ export class ChangePasswordController {
       }
       // Better Auth reports a wrong current password as a refusal; anything
       // else here is the same answer to the caller, who may not learn which
-      // half failed.
-      throw new UnauthorizedException({ message: 'That is not the current password.' })
+      // half failed. 422, not 401: the session is alive, and a client drops
+      // its identity on a 401.
+      throw new UnprocessableEntityException({ message: 'That is not the current password.' })
     }
 
     // **After the change, and unconditionally.** An account that was not being

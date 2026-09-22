@@ -294,7 +294,7 @@ export function PresenceStack({
       <AnimatePresence initial={false}>
         {shown.map((person) => (
           <motion.span
-            key={person.name}
+            key={person.userId ?? person.name}
             /* `layout`, so the neighbours slide into the gap a departure
                leaves rather than jumping across it. It animates position
                only - the arrival owns `opacity` and `scale`, and the two do

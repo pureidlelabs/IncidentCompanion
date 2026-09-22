@@ -52,12 +52,15 @@ export function useEvidenceUpload(
         `/cases/${encodeURIComponent(caseId)}/evidence/${encodeURIComponent(made.id)}/file`,
         file,
         // The name the file had on the analyst's disk, which the digest does
-        // not carry and the row would otherwise never learn.
-        { headers: { 'x-original-filename': file.name } },
+        // not carry and the row would otherwise never learn. Percent-encoded
+        // because a header is Latin-1; the server decodes it.
+        { headers: { 'x-original-filename': encodeURIComponent(file.name) } },
       )
       return made
     },
-    onSuccess: () => {
+    // Settled, not success: the record exists once the first request lands,
+    // whatever the attach then answers.
+    onSettled: () => {
       void client.invalidateQueries({ queryKey: listKey })
       void client.invalidateQueries({ queryKey: keys.case(caseId) })
     },

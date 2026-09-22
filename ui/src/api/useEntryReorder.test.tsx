@@ -20,7 +20,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { ReportBlock } from './model'
+import type { Case, ReportBlock } from './model'
 import { keys } from './queryKeys'
 import { setSession } from './session'
 import { moveWithin, resequence, useEntryReorder } from './useEntryReorder'
@@ -41,6 +41,7 @@ function harness() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   client.setQueryData(listKey, [block('a', 0), block('b', 1), block('c', 2)])
+  client.setQueryData<Case>(keys.case(CASE), { reportBlocks: [block('a', 0), block('b', 1), block('c', 2)] } as Case)
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
@@ -90,6 +91,29 @@ describe('reordering a table', () => {
         release(new Response(JSON.stringify({ ids: ['c', 'a', 'b'] }), { status: 200 }))
       })
     })
+  })
+
+  /** The report screen renders its outline from the case document, so that is where the move has to show. */
+  it('moves the section in the case document before the request resolves', async () => {
+    let release: (value: Response) => void = () => undefined
+    fetchMock.mockReturnValue(
+      new Promise<Response>((resolve) => {
+        release = resolve
+      }),
+    )
+    const { client, hook } = harness()
+    const onScreen = () =>
+      (client.getQueryData<Case>(keys.case(CASE))?.reportBlocks ?? []).map((one) => one.id)
+
+    act(() => {
+      hook.result.current.mutate({ ids: ['c', 'a', 'b'] })
+    })
+
+    await waitFor(() => expect(onScreen()).toEqual(['c', 'a', 'b']))
+    act(() => {
+      release(new Response(JSON.stringify({ ids: ['c', 'a', 'b'] }), { status: 200 }))
+    })
+    await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
   })
 
   it('puts the whole order back when the API refuses it', async () => {

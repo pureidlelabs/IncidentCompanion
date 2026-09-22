@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 
 import { request, type ApiError } from './client'
-import type { CollectionEntry, CollectionName } from './model'
+import { COLLECTION_TO_CASE_KEY, type Case, type CollectionEntry, type CollectionName } from './model'
 import { keys } from './queryKeys'
 
 export interface EntryRemoval {
@@ -24,6 +24,7 @@ export type Removed = Record<string, never>
 
 interface DeleteRollback<N extends CollectionName> {
   previous: CollectionEntry[N][] | undefined
+  previousCase: Case | undefined
 }
 
 export function useEntryDelete<N extends CollectionName>(
@@ -32,6 +33,8 @@ export function useEntryDelete<N extends CollectionName>(
 ): UseMutationResult<Removed, ApiError, EntryRemoval, DeleteRollback<N>> {
   const client = useQueryClient()
   const listKey = keys.collection(caseId, collection)
+  const caseKey = keys.case(caseId)
+  const onCase = COLLECTION_TO_CASE_KEY[collection]
 
   return useMutation<Removed, ApiError, EntryRemoval, DeleteRollback<N>>({
     mutationKey: [...listKey, 'delete'],
@@ -47,19 +50,29 @@ export function useEntryDelete<N extends CollectionName>(
       ),
 
     onMutate: async ({ entryId }) => {
-      await client.cancelQueries({ queryKey: listKey })
+      // The screens render from the case document, so the write lands there as well as on the list.
+      await Promise.all([
+        client.cancelQueries({ queryKey: listKey }),
+        client.cancelQueries({ queryKey: caseKey, exact: true }),
+      ])
       const previous = client.getQueryData<CollectionEntry[N][]>(listKey)
+      const previousCase = client.getQueryData<Case>(caseKey)
 
-      client.setQueryData<CollectionEntry[N][]>(listKey, (rows) =>
-        rows?.filter((row) => (row as { id: string }).id !== entryId),
+      const apply = (rows: CollectionEntry[N][] | undefined) =>
+        rows?.filter((row) => (row as { id: string }).id !== entryId)
+      client.setQueryData<CollectionEntry[N][]>(listKey, apply)
+      client.setQueryData<Case>(caseKey, (kase) =>
+        kase && { ...kase, [onCase]: apply(kase[onCase] as CollectionEntry[N][]) },
       )
-      return { previous }
+      return { previous, previousCase }
     },
 
     onError: (_error, _removal, context) => {
       // The whole snapshot: a delete that fails alongside an edit to another
       // row must not restore the deleted row and drop the edit.
-      if (context) client.setQueryData(listKey, context.previous)
+      if (!context) return
+      client.setQueryData(listKey, context.previous)
+      client.setQueryData(caseKey, context.previousCase)
     },
 
     onSettled: () => {

@@ -3,13 +3,14 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { TimelineEntry } from './model'
+import type { Case, TimelineEntry } from './model'
 import { keys } from './queryKeys'
 import { setSession } from './session'
 import { useEntryMutation } from './useEntryMutation'
 
 const CASE = 'DEMO-CAMPAIGN'
 const listKey = keys.collection(CASE, 'timeline')
+const caseKey = keys.case(CASE)
 
 function row(id: string, description: string): TimelineEntry {
   return { id, description } as TimelineEntry
@@ -22,6 +23,7 @@ function harness() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   client.setQueryData(listKey, [row('e1', 'before'), row('e2', 'untouched')])
+  client.setQueryData<Case>(caseKey, { timeline: [row('e1', 'before'), row('e2', 'untouched')] } as Case)
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
@@ -31,6 +33,21 @@ function harness() {
 
 function rows(client: QueryClient): TimelineEntry[] {
   return client.getQueryData<TimelineEntry[]>(listKey) ?? []
+}
+
+/** What every collection screen renders from: the case document, not the list key. */
+function caseRows(client: QueryClient): TimelineEntry[] {
+  return client.getQueryData<Case>(caseKey)?.timeline ?? []
+}
+
+function held(): { release: (value: Response) => void } {
+  const gate: { release: (value: Response) => void } = { release: () => undefined }
+  fetchMock.mockReturnValue(
+    new Promise<Response>((resolve) => {
+      gate.release = resolve
+    }),
+  )
+  return gate
 }
 
 beforeEach(() => {
@@ -64,6 +81,66 @@ describe('the per-row mutation helper', () => {
 
     act(() => {
       release(new Response(JSON.stringify({ id: 'e1' }), { status: 200 }))
+    })
+    await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
+  })
+
+  it('applies the edit to the case document before the request resolves', async () => {
+    const gate = held()
+    const { client, hook } = harness()
+
+    act(() => {
+      hook.result.current.mutate({ entryId: 'e1', version: 1, fields: { description: 'after' } })
+    })
+
+    await waitFor(() => expect(caseRows(client)[0]?.description).toBe('after'))
+    expect(caseRows(client)[1]?.description).toBe('untouched')
+
+    act(() => {
+      gate.release(new Response(JSON.stringify({ id: 'e1' }), { status: 200 }))
+    })
+    await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
+  })
+
+  it('rolls the case document back when the write is refused', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: 'read-only' }), { status: 403 }),
+    )
+    const { client, hook } = harness()
+
+    act(() => {
+      hook.result.current.mutate({ entryId: 'e1', version: 1, fields: { description: 'after' } })
+    })
+
+    await waitFor(() => expect(hook.result.current.isError).toBe(true))
+    expect(caseRows(client)[0]?.description).toBe('before')
+  })
+
+  /** A case refetch that left before the edit must not land after it and put the old row back. */
+  it('cancels a case read in flight, so it cannot overwrite the edit', async () => {
+    const gate = held()
+    const { client, hook } = harness()
+    let stale: (kase: Case) => void = () => undefined
+    client
+      .query({
+        queryKey: caseKey,
+        queryFn: () => new Promise<Case>((resolve) => {
+          stale = resolve
+        }),
+      })
+      .catch(() => undefined)
+
+    act(() => {
+      hook.result.current.mutate({ entryId: 'e1', version: 1, fields: { description: 'after' } })
+    })
+    await waitFor(() => expect(caseRows(client)[0]?.description).toBe('after'))
+
+    stale({ timeline: [row('e1', 'before'), row('e2', 'untouched')] } as Case)
+    await act(() => Promise.resolve())
+    expect(caseRows(client)[0]?.description).toBe('after')
+
+    act(() => {
+      gate.release(new Response(JSON.stringify({ id: 'e1' }), { status: 200 }))
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
   })
