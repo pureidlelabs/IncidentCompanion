@@ -484,6 +484,22 @@ export class ProseService implements OnApplicationShutdown {
     }
   }
 
+  /**
+   * Does this frame carry nothing `doc` does not already hold?
+   *
+   * Costs a pass over the document, so ask only before a refusal.
+   */
+  addsNothing(doc: Y.Doc, frame: Uint8Array): boolean {
+    if (this.isStateRequest(frame)) return true
+    try {
+      const decoder = decoding.createDecoder(frame)
+      decoding.readVarUint(decoder)
+      return Y.snapshotContainsUpdate(Y.snapshot(doc), decoding.readVarUint8Array(decoder))
+    } catch {
+      return false
+    }
+  }
+
   /** The server's own opening move: what it has, so the client can answer. */
   hello(doc: Y.Doc): Uint8Array {
     const encoder = encoding.createEncoder()
