@@ -58,25 +58,32 @@ const DOORS: { slug: string; button?: string | RegExp; name: string }[] = [
 
 const GROUNDS = (process.env['VISUAL_GROUNDS'] ?? 'light,dark').split(',') as Ground[]
 
-test('captures every create dialog this branch touched', async ({ browser, baseURL, request }) => {
-  await requireServedApp(baseURL ?? '')
-  await mkdir(OUT, { recursive: true })
+for (const ground of GROUNDS) {
+  test(`captures every create dialog this branch touched, ${ground}`, async ({
+    browser,
+    baseURL,
+    request,
+  }) => {
+    // Every door on a runner: the light ground alone took 45s of the 60s budget
+    // in run 35669017430, 774 actions with none longer than 4s.
+    test.setTimeout(180_000)
+    await requireServedApp(baseURL ?? '')
+    await mkdir(OUT, { recursive: true })
 
-  const { page } = await asPersona(browser, ADMIN)
-  await page.setViewportSize({ width: 1440, height: 900 })
-  /**
-   * **The guided demo, by name and by id.** An empty fixture draws every dialog
-   * blank, which says nothing about the surface an analyst uses -- correcting a
-   * row that already holds values -- and the picker keeps demos out of Your
-   * cases on purpose, so the rail is not a way to reach one. Naming it is what
-   * makes "a row in every entity table" true of the case this actually opens.
-   * -> #453
-   */
-  const demoId = await demoCase(request, 'DEMO-2026-001')
-  await page.goto(`/cases/${demoId}/timeline`)
-  await settle(page)
+    const { page } = await asPersona(browser, ADMIN)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    /**
+     * **The guided demo, by name and by id.** An empty fixture draws every dialog
+     * blank, which says nothing about the surface an analyst uses -- correcting a
+     * row that already holds values -- and the picker keeps demos out of Your
+     * cases on purpose, so the rail is not a way to reach one. Naming it is what
+     * makes "a row in every entity table" true of the case this actually opens.
+     * -> #453
+     */
+    const demoId = await demoCase(request, 'DEMO-2026-001')
+    await page.goto(`/cases/${demoId}/timeline`)
+    await settle(page)
 
-  for (const ground of GROUNDS) {
     await setGround(page, ground)
 
     // **The timeline itself, before any dialog.** The rail is painted from the
@@ -105,7 +112,9 @@ test('captures every create dialog this branch touched', async ({ browser, baseU
         if (process.env['MEASURE'] === '1') {
           const widths = await dialog.evaluate((root) => {
             const out: Record<string, unknown>[] = []
-            for (const el of root.querySelectorAll('input, textarea, [data-part="select-trigger"], button[role="combobox"]')) {
+            for (const el of root.querySelectorAll(
+              'input, textarea, [data-part="select-trigger"], button[role="combobox"]',
+            )) {
               const box = el.getBoundingClientRect()
               if (box.width === 0) continue
               const cell = el.closest('[data-part="field"], section, div')
@@ -140,46 +149,45 @@ test('captures every create dialog this branch touched', async ({ browser, baseU
           process.stdout.write(`COLS ${door.name} ${JSON.stringify(cols)}\n`)
         }
 
-      // **The column heights, not the dialog's.** A dialog that fits says
-      // nothing about a column that overflows while its neighbours are empty,
-      // which is what grouping by control kind produces.
+        // **The column heights, not the dialog's.** A dialog that fits says
+        // nothing about a column that overflows while its neighbours are empty,
+        // which is what grouping by control kind produces.
         if (ground === 'light') {
-        const columns = await dialog.evaluate((el) =>
-          [...el.querySelectorAll('section[aria-label]')].map((c) => ({
-            title: c.getAttribute('aria-label') ?? '',
-            height: Math.round(c.getBoundingClientRect().height),
-            controls: c.querySelectorAll('input,select,textarea,[role="combobox"]').length,
-          })),
-        )
-        console.log(`COLUMNS ${door.name} ${JSON.stringify(columns)}`)
-
-        // **Whether the body overruns its own scroller**, which is what cuts
-        // the last control in half. The section heights above sum to the
-        // content and say nothing about the box holding it.
-        const fit = await dialog.evaluate((el) => {
-          const scroller = [...el.querySelectorAll('*')].find(
-            (node) => node.scrollHeight > node.clientHeight + 1 && node.clientHeight > 200,
+          const columns = await dialog.evaluate((el) =>
+            [...el.querySelectorAll('section[aria-label]')].map((c) => ({
+              title: c.getAttribute('aria-label') ?? '',
+              height: Math.round(c.getBoundingClientRect().height),
+              controls: c.querySelectorAll('input,select,textarea,[role="combobox"]').length,
+            })),
           )
-          if (scroller === undefined) return null
-          // **Padding counts in `scrollHeight` and not in the content.** The
-          // bodies carry `p-1` to keep a focus ring off the clip edge, so a
-          // dialog that fits perfectly reported 8px of overflow at each end
-          // and read as a real finding.
-          const pad = getComputedStyle(scroller)
-          const inset =
-            Number.parseFloat(pad.paddingTop) + Number.parseFloat(pad.paddingBottom)
-          // **A residual 16px is known and is not clipping.** The three entity
-          // dialogs report it identically whatever their content height, which
-          // is the signature of an artefact rather than a defect, and the
-          // captures show nothing cut. Subtracting the bodies' `-m-1` overhang
-          // did not account for it, so the cause is not written down here -
-          // read the number as "more than 16 means look".
-          const over = scroller.scrollHeight - inset - scroller.clientHeight
-          return over > 1
-            ? { visible: scroller.clientHeight, content: scroller.scrollHeight, over }
-            : null
-        })
-        console.log(`FIT ${door.name} ${JSON.stringify(fit)}`)
+          console.log(`COLUMNS ${door.name} ${JSON.stringify(columns)}`)
+
+          // **Whether the body overruns its own scroller**, which is what cuts
+          // the last control in half. The section heights above sum to the
+          // content and say nothing about the box holding it.
+          const fit = await dialog.evaluate((el) => {
+            const scroller = [...el.querySelectorAll('*')].find(
+              (node) => node.scrollHeight > node.clientHeight + 1 && node.clientHeight > 200,
+            )
+            if (scroller === undefined) return null
+            // **Padding counts in `scrollHeight` and not in the content.** The
+            // bodies carry `p-1` to keep a focus ring off the clip edge, so a
+            // dialog that fits perfectly reported 8px of overflow at each end
+            // and read as a real finding.
+            const pad = getComputedStyle(scroller)
+            const inset = Number.parseFloat(pad.paddingTop) + Number.parseFloat(pad.paddingBottom)
+            // **A residual 16px is known and is not clipping.** The three entity
+            // dialogs report it identically whatever their content height, which
+            // is the signature of an artefact rather than a defect, and the
+            // captures show nothing cut. Subtracting the bodies' `-m-1` overhang
+            // did not account for it, so the cause is not written down here -
+            // read the number as "more than 16 means look".
+            const over = scroller.scrollHeight - inset - scroller.clientHeight
+            return over > 1
+              ? { visible: scroller.clientHeight, content: scroller.scrollHeight, over }
+              : null
+          })
+          console.log(`FIT ${door.name} ${JSON.stringify(fit)}`)
         }
 
         await page.keyboard.press('Escape')
@@ -284,7 +292,7 @@ test('captures every create dialog this branch touched', async ({ browser, baseU
         await expect(editing).toBeHidden({ timeout: 10_000 })
       }
     }
-  }
-  // The capture is the deliverable; a run that shot nothing is the failure.
-  await shoot(page, join(OUT, 'last-section.png'))
-})
+    // The capture is the deliverable; a run that shot nothing is the failure.
+    await shoot(page, join(OUT, `${ground}-last-section.png`))
+  })
+}
