@@ -25,11 +25,7 @@ import type { BulkDeleteVars, BulkDeleted } from '@/api/useBulkDelete'
  */
 
 export interface AnnounceOptions extends WriteFailureOptions {
-  /**
-   * Take a refused write rather than toasting it, for a screen that draws the
-   * merge review. A toast names no field and is gone before the analyst has
-   * decided what to do with the words it is about.
-   */
+  /** Take a refused write rather than toasting it, for a screen that draws the merge review. */
   refused?: (error: ApiError) => void
 }
 

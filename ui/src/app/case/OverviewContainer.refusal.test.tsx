@@ -1,11 +1,6 @@
 /**
  * A refused case write reaches the analyst as the merge review, not as a toast
  * that scrolls away. -> #1110
- *
- * `MergeReview` is drawn by four screens and every one of them takes it as a
- * `refusal` prop, so a container that never supplies one leaves the block
- * unreachable and the write reported only in a toast -- which says nothing
- * about which field was refused and takes the analyst nowhere.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
