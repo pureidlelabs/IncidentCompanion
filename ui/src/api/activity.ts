@@ -5,10 +5,7 @@
  * asks who last wrote each row and keys a `Map` on `table:id`; this asks what
  * has been happening and keeps the order. Same table, two questions.
  *
- * The key sits under `keys.case(caseId)`, so a write hook's whole-case
- * invalidation reaches it by prefix. The change feed takes the case key `exact`
- * and names this key beside the summary, because any write on the case is a
- * new entry in this list.
+ * The key sits under `keys.case(caseId)`, so a whole-case invalidation reaches it by prefix.
  */
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 

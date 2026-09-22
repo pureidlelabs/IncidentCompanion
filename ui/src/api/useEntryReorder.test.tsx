@@ -93,7 +93,6 @@ describe('reordering a table', () => {
     })
   })
 
-  /** The report screen renders its outline from the case document, so that is where the move has to show. */
   it('moves the section in the case document before the request resolves', async () => {
     let release: (value: Response) => void = () => undefined
     fetchMock.mockReturnValue(

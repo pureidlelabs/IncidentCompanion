@@ -116,7 +116,6 @@ describe('the per-row mutation helper', () => {
     expect(caseRows(client)[0]?.description).toBe('before')
   })
 
-  /** A case refetch that left before the edit must not land after it and put the old row back. */
   it('cancels a case read in flight, so it cannot overwrite the edit', async () => {
     const gate = held()
     const { client, hook } = harness()

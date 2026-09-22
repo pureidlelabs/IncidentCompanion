@@ -86,7 +86,6 @@ describe('the whole-case document, which the shell reads', () => {
       .toContainEqual({ key: '["case","C-1","summary"]', exact: false })
   })
 
-  /** The activity feed sits under the case key too, and is what another analyst's write is for. */
   it('refreshes the activity feed when a collection moves', () => {
     expect(forScopes(['evidence']))
       .toContainEqual({ key: '["case","C-1","activity"]', exact: false })
