@@ -159,11 +159,8 @@ export function NotesScreen({
   const [deleting, setDeleting] = useState<CaseNote | null>(null)
   const [given, setGiven] = useState(kase)
   /**
-   * A served case arrives while a note is being written, and it has never seen
-   * that note: the row is created on blur, so anything anyone writes to the
-   * case invalidates the query mid-sentence. So the served notes are merged in
-   * rather than swapped for what is on screen, and a note nobody has looked
-   * away from yet survives it. -> #1108
+   * A served case is merged into the notes, not swapped for them, so a note still being written
+   * survives it: its row is created on blur. -> #1108
    */
   if (given !== kase) {
     const served = kase?.casenotes ?? []
@@ -254,8 +251,7 @@ export function NotesScreen({
     sent.current.add(id)
     void writes.create({ note: local.note, author: local.author }, leaving).then(
       (stored) => {
-        // The refetch carries the note under the stored id, and the merge keeps
-        // any local row it does not hold.
+        // The refetch may already hold the stored id, and the merge keeps a row it lacks.
         sent.current.add(stored.id)
         setWritten((current) =>
           current.some((note) => note.id === stored.id)
@@ -265,14 +261,8 @@ export function NotesScreen({
         setPicked((current) => (current === id ? stored.id : current))
       },
       () => {
-        /**
-         * **Taken back when the write is refused, or the note is unsendable.**
-         * `sent` would otherwise record *tried* rather than *stored*: a create
-         * that 409s leaves the note on screen, saying nothing, and every later
-         * blur and the leaving below both return at the guard above. That turns
-         * a refusal an analyst could have retried into the silent loss this
-         * screen exists to prevent.
-         */
+        // `sent` records stored, not tried, so a refused create is retried on the next blur.
+
         sent.current.delete(id)
       },
     )

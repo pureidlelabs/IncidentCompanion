@@ -38,8 +38,7 @@ export function OverviewContainer() {
   const [now] = useState(() => Date.now())
   /** The last write another analyst got in first with, drawn above the fields. */
   const [refusal, setRefusal] = useState<{ field: string; by: string } | undefined>(undefined)
-  // By label, because that is what the band names and what the screen finds the
-  // pane by.
+  // By label: the band names a field by it, and the screen finds the pane by it.
   const labels = useMemo(
     () => (specs.data ? labelsOf(formSpec(specs.data, 'CASE_FIELDS')) : {}),
     [specs.data],

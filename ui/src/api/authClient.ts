@@ -23,10 +23,7 @@ export const authClient = createAuthClient({
   fetchOptions: {
     /**
      * **The app's transport, resolved per call**, so the demo answers the
-     * session probe and a test's `fetch` stub is seen. The client otherwise
-     * captures `fetch` when this module loads, before `vi.stubGlobal` runs -
-     * and the symptom is a *real* network call from the unit tier, surfacing
-     * as `TypeError: fetch failed`.
+     * session probe and a test's `fetch` stub is seen.
      */
     customFetchImpl: (input, init) => send(input as RequestInfo, init),
   },

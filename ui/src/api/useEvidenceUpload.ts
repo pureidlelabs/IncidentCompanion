@@ -58,8 +58,7 @@ export function useEvidenceUpload(
       )
       return made
     },
-    // Settled, not success: the record exists once the first request lands,
-    // whatever the attach then answers.
+    // Settled, not success: the record exists once the first request lands.
     onSettled: () => {
       void client.invalidateQueries({ queryKey: listKey })
       void client.invalidateQueries({ queryKey: keys.case(caseId) })

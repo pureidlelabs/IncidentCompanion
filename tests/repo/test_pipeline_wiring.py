@@ -777,13 +777,7 @@ def test_no_tier_is_reported_as_both_skipped_and_run() -> None:
 
 
 def test_a_degraded_server_suite_is_a_pass_or_a_failure_and_never_both() -> None:
-    """A third state the exit code cannot carry, so a red suite exited 0.
-
-    The tests that need two concurrent transactions decline on the embedded
-    engine, which leaves the run green or genuinely red -- and a bucket that
-    prints "Nothing failed" over a failing suite is then the only way to lose
-    one. -> #1079
-    """
+    """A third state the exit code cannot carry lets a red suite exit 0. -> #1079"""
     text = VERIFY.read_text(encoding="utf-8")
     assert "PARTIAL" not in text, (
         "a tier can still land in a bucket the exit code reports as a pass"
@@ -874,11 +868,7 @@ def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
 
 
 def test_the_renovate_validator_is_the_pinned_one() -> None:
-    """The rule the OpenSpec CLI is held to: a local binary, never a fetch.
-
-    A fetched validator lets a release move the gate with no commit behind it,
-    and a probe that skips when the registry is down skips the gate with it.
-    """
+    """The rule the OpenSpec CLI is held to: a local binary, never a fetch."""
     package = json.loads(PACKAGE.read_text(encoding="utf-8"))
     pinned = package.get("devDependencies", {}).get("renovate", "")
     assert re.fullmatch(r"\d+\.\d+\.\d+", pinned), (
@@ -1127,10 +1117,7 @@ def test_the_installed_tree_key_hashes_no_glob_reaching_into_node_modules() -> N
 def test_every_client_vitest_step_arms_the_must_run_reporter() -> None:
     """`MustRunReporter` reads `IC_SUITE_MUST_RUN` and never `CI`.
 
-    A worker pool that times out leaves the client run with no test modules and
-    no failure, which vitest exits 0 on -- so a job that drives `ui/`'s config
-    without the variable reports success having run none of the tier. The
-    server side reads both variables and needs no step to set either. -> #1080
+    Server steps are not checked: the server side reads both variables. -> #1080
     """
     bare = []
     for name, job in sorted(ci_jobs().items()):
@@ -1149,12 +1136,7 @@ def test_every_client_vitest_step_arms_the_must_run_reporter() -> None:
 
 
 def test_the_server_lint_script_caps_warnings_at_zero() -> None:
-    """A rule set to `warn` decides nothing until the script refuses one.
-
-    `playwright/no-wait-for-timeout` arrives at `warn` from the plugin's
-    recommended set, so a fixed sleep with no argument passed every gate the
-    repository has. -> #1081
-    """
+    """A rule set to `warn` decides nothing until the script refuses one. -> #1081"""
     script = json.loads(
         (REPO_ROOT / "server" / "package.json").read_text(encoding="utf-8"),
     )["scripts"]["lint"]

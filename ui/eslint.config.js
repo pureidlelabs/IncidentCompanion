@@ -119,10 +119,8 @@ export default tseslint.config(
     },
   },
   /**
-   * **The scrollers, which take focus because a region that scrolls is reached
-   * by keyboard or not at all.** The rule's options exempt by tag or by
-   * literal `role`, and these are a `div`, a `ul` and a `pre`, most with no
-   * role, so the exemption is by file. A new scroller joins this list. -> #929
+   * The scrollers, which take focus: a region that scrolls is reached by keyboard or not at all.
+   * The rule exempts only by tag or literal `role`, so these go by file. -> #929
    */
   {
     files: [

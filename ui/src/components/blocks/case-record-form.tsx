@@ -57,10 +57,8 @@ const NO_OPTIONS: ReadonlyMap<string, string> = new Map()
 const NO_PROBLEMS: Problems = {}
 
 /**
- * The field the caret is in on this pane, so a repaint never overwrites it.
- *
- * By pane rather than by ref: the flyout and the tab draw this block at once,
- * and a ref may not be read during render.
+ * The field the caret is in on this pane, so a repaint never overwrites it. By pane, not by
+ * ref: the flyout and the tab draw this block at once, and render may not read a ref.
  */
 function focusedField(pane: CaseGroupKey): string | undefined {
   const active = document.activeElement
@@ -94,18 +92,12 @@ export function CaseRecordForm({
   // would be wiped by the very event it is reporting.
   const [given, setGiven] = useState(kase)
   /**
-   * A field writes on blur, so between a keystroke and a blur the draft holds
-   * the only copy of what was typed -- and one save invalidates the case query
-   * three times over: the optimistic apply, the rollback, the refetch. So a
-   * served case is merged into the draft rather than swapped for it: a field
-   * the analyst has moved and the server has not caught up with keeps what
-   * they typed, which is also what leaves a refused value on screen for the
-   * merge review to name. -> #1109
+   * A served case is merged into the draft, not swapped for it: a touched or focused field keeps
+   * what was typed until the server agrees with it. -> #1109
    */
   if (given !== kase) {
     const next = draftOf(kase)
-    // A touched field the served case now agrees with is settled, so it stops
-    // being held and follows the server again.
+    // A touched field the served case now agrees with follows the server again.
     const held = new Set([...touched].filter((name) => draft[name] !== next[name]))
     const focused = focusedField(pane)
     if (focused !== undefined) held.add(focused)

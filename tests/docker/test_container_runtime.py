@@ -134,11 +134,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture(autouse=True)
 def _a_daemon_answers() -> None:
-    """The daemon probe, routed so a certifying run cannot lose the tier to it.
-
-    The opt-in above stays a plain skip: a run that did not ask for this tier
-    is not declining it. -> #1080
-    """
+    """The daemon probe, as a decline; the opt-in above stays a skip. -> #1080"""
     if not _docker_available():
         declined("The container runtime tier", "no Docker daemon is reachable")
 

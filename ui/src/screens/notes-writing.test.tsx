@@ -147,15 +147,7 @@ describe('writing a note in the pane', () => {
     expect(screen.queryByRole('textbox', { name: /tag/i })).toBeNull()
   })
 
-  /**
-   * **A refetch arrives mid-sentence, and it has never seen this note.**
-   *
-   * The case query is invalidated by anything anyone writes to the case, so a
-   * new document lands while a note is being typed - and the note has no row
-   * yet, because the row is created on blur. Rebuilding the screen from the
-   * served notes discards it, which reads as the words having never been
-   * typed. -> #1108
-   */
+  /** The served case has never seen the note: its row is created on blur. -> #1108 */
   it('keeps a note being written when the case is served again', async () => {
     const user = userEvent.setup()
     const view = render(<NotesScreen kase={campaignCase} specs={specsFixture} />)
@@ -172,11 +164,7 @@ describe('writing a note in the pane', () => {
     expect(noteText()).toContain(written)
   })
 
-  /**
-   * **The refetch after a create carries the note under the id the server
-   * gave it**, and nothing on screen knows that id unless the create's answer
-   * is read. -> #1108
-   */
+  /** The refetch after a create carries the note under the id the server gave it. -> #1108 */
   it('lists a committed note once when the case is served with it', async () => {
     const user = userEvent.setup()
     const writes = spyWrites()

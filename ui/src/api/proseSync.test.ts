@@ -347,10 +347,7 @@ describe('joining a document', () => {
   })
 
   it('tells the server nothing it did not already have', () => {
-    // A joining client offers what it holds before the answer arrives, which
-    // is nothing. What must not happen is it handing back a copy of what it
-    // was just sent, which is a whole document on the wire every time anyone
-    // opens a section.
+    // A joining client offers what it holds, which is nothing yet.
     const first = connected()
     type(first, 'shared')
     const before = Y.encodeStateVector(relay.doc)
