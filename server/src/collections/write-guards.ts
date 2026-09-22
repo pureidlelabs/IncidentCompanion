@@ -8,8 +8,7 @@
  * owe a closed-row guard.
  */
 import { BadRequestException } from '@nestjs/common'
-import { eq, getTableColumns } from 'drizzle-orm'
-import type { PgTable } from 'drizzle-orm/pg-core'
+import { eq } from 'drizzle-orm'
 
 import { columnOf } from '../db/column-access.js'
 import type { Transaction } from '../db/client.js'
@@ -173,27 +172,4 @@ export async function refuseIfCrossFieldRuleBroken(
   if (!merged.success) {
     throw new BadRequestException({ message: merged.error.issues[0]?.message ?? 'Invalid' })
   }
-}
-
-/**
- * ISO strings become `Date`s for the columns that are timestamps.
- *
- * **Derived from the table, never from the field name.** Every time arrives
- * as a string, because a schema is also the API document and JSON Schema has
- * no date type - and the columns carrying one share no naming rule.
- */
-export function coerceTimes(
-  table: PgTable,
-  values: Record<string, unknown>,
-): Record<string, unknown> {
-  const cols = getTableColumns(table)
-  const out: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(values)) {
-    const column = cols[key]
-    // `columnType`, not `dataType`: a timestamp's `dataType` is
-    // `'object date'`, so an `=== 'date'` test matches nothing.
-    const isTimestamp = column?.columnType?.startsWith('PgTimestamp') ?? false
-    out[key] = isTimestamp && typeof value === 'string' ? new Date(value) : value
-  }
-  return out
 }

@@ -26,7 +26,7 @@ import { PolicyService } from '../policy/policy.service.js'
 import { REFERENCE_FIELD_NAMES } from '../domain/collections.js'
 import { importStamp } from '../db/import-stamp.js'
 import { archiveRowSchema } from './rows.js'
-import { coerceTimes } from '../collections/write-guards.js'
+import { coerceTimes } from '../db/column-access.js'
 import { z } from 'zod'
 import {
   accounts,

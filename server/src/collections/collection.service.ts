@@ -27,7 +27,7 @@ import type { z } from 'zod'
 import { isScope } from '../domain/scopes.lists.js'
 import type { CollectionName, Scope } from '../domain/wire.js'
 
-import { columnOf } from '../db/column-access.js'
+import { coerceTimes, columnOf } from '../db/column-access.js'
 import { whenCommitted } from '../db/act.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -36,7 +36,6 @@ import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { nested, withCase, type Executor } from '../db/scope.js'
 import { TABLES, type BulkTarget } from './registry.js'
 import {
-  coerceTimes,
   columns,
   dropForeignReferences,
   refuseDanglingReferences,
