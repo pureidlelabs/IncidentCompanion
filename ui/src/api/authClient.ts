@@ -16,20 +16,18 @@
  */
 import { createAuthClient } from 'better-auth/react'
 
+import { send } from './transport'
+
 export const authClient = createAuthClient({
   basePath: '/api/auth',
   fetchOptions: {
     /**
-     * **Resolved per call, so a test's `fetch` stub is seen.** The client
-     * otherwise captures `fetch` when this module loads, before
-     * `vi.stubGlobal` runs - and the symptom is not a failed assertion but a
-     * *real* network call from the unit tier, surfacing as
-     * `TypeError: fetch failed` with a connection error underneath. That reads
-     * as the dev server being down rather than as an un-mocked client.
-     *
-     * Identical behaviour in the browser: the indirection only defers the
-     * lookup.
+     * **The app's transport, resolved per call**, so the demo answers the
+     * session probe and a test's `fetch` stub is seen. The client otherwise
+     * captures `fetch` when this module loads, before `vi.stubGlobal` runs -
+     * and the symptom is a *real* network call from the unit tier, surfacing
+     * as `TypeError: fetch failed`.
      */
-    customFetchImpl: (input, init) => globalThis.fetch(input as RequestInfo, init),
+    customFetchImpl: (input, init) => send(input as RequestInfo, init),
   },
 })

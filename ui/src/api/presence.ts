@@ -102,11 +102,6 @@ function isParticipant(entry: unknown): entry is Participant {
   return typeof id === 'string' && typeof username === 'string'
 }
 
-/** The real socket, absent in jsdom - which defines no `WebSocket` at all. */
-function browserSocket(url: string) {
-  return new WebSocket(url)
-}
-
 export function useCasePresence(caseId: string): CasePresence {
   const [snapshot, setSnapshot] = useState<PresenceSnapshot>(EMPTY)
   const [connected, setConnected] = useState(false)
@@ -127,7 +122,7 @@ export function useCasePresence(caseId: string): CasePresence {
 
   useEffect(() => {
     if (typeof WebSocket === 'undefined') return undefined
-    const live = acquireLink(caseId, browserSocket)
+    const live = acquireLink(caseId)
     link.current = live
 
     const stopMessages = live.subscribe((message) => {

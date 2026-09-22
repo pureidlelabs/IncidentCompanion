@@ -12,6 +12,7 @@
  */
 
 import { authClient } from './authClient'
+import { send } from './transport'
 import { fromWire, toWire } from './naming'
 import { setSession, type Session } from './session'
 
@@ -141,24 +142,6 @@ export const API_BASE = BASE
  */
 export const CREDENTIALS: RequestCredentials = 'include'
 
-/**
- * What actually goes to the network, so the demo build can answer instead.
- *
- * A substitute stands in for `fetch` rather than for `request`, which keeps the
- * refusal mapping, the wire conversion and the dead-session drop below on one
- * path: a demo that returned parsed bodies would be a second client, and the
- * two would disagree about a 422 first.
- *
- * Set through a function rather than read from `import.meta.env` here, so the
- * demo's handler and its seeded case reach the bundle only through the dynamic
- * import in `main.tsx` that the demo build alone takes.
- */
-let transport: typeof fetch = (input, init) => fetch(input, init)
-
-export function setTransport(substitute: typeof fetch): void {
-  transport = substitute
-}
-
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { accept: 'application/json' }
   if (options.body) headers['content-type'] = 'application/json'
@@ -173,7 +156,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     ...(options.keepalive ? { keepalive: true } : {}),
   }
 
-  const response = await transport(`${BASE}${path}`, init)
+  const response = await send(`${BASE}${path}`, init)
   return finishResponse<T>(response, options.raw)
 }
 
@@ -275,7 +258,7 @@ export async function requestBody<T>(
   file: Blob,
   { headers = {}, method = 'POST' }: BodyOptions = {},
 ): Promise<T> {
-  const response = await transport(`${BASE}${path}`, {
+  const response = await send(`${BASE}${path}`, {
     method,
     headers: {
       accept: 'application/json',
@@ -302,7 +285,7 @@ export interface BlobResponse {
  * so a 401 still drops the session.
  */
 export async function requestBlob(path: string, body: Record<string, unknown> = {}): Promise<BlobResponse> {
-  const response = await transport(`${BASE}${path}`, {
+  const response = await send(`${BASE}${path}`, {
     method: 'POST',
     headers: { accept: 'application/octet-stream', 'content-type': 'application/json' },
     credentials: CREDENTIALS,
@@ -472,7 +455,7 @@ const ACTIVITY_PATH = '/api/auth/get-session'
  */
 export async function reportActivity(): Promise<void> {
   try {
-    await transport(ACTIVITY_PATH, {
+    await send(ACTIVITY_PATH, {
       // A read: what advances the clock is the session being *used*, and a
       // read is the smallest thing that counts as using it.
       method: 'GET',

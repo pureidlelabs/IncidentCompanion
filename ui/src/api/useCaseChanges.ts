@@ -149,7 +149,7 @@ export function useCaseChanges(caseId: string): void {
 
   useEffect(() => {
     if (!caseId || typeof WebSocket === 'undefined') return undefined
-    const link = acquireLink(caseId, (url) => new WebSocket(url))
+    const link = acquireLink(caseId)
 
     const pending = new Set<string>()
     let timer: ReturnType<typeof setTimeout> | undefined
