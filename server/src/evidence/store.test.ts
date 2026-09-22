@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from '@zip.js/zip.js'
 
-import { EvidenceStore, MAX_ATTACHMENT_BYTES, isDigest } from './store.js'
+import { ARTEFACT_PASSWORD, EvidenceStore, MAX_ATTACHMENT_BYTES, isDigest } from './store.js'
 import { defaultPolicy } from '../policy/read.js'
 
 /**
@@ -84,6 +84,27 @@ describe('keeping an artefact', () => {
       expect(isDigest(attempt), attempt).toBe(false)
       expect(await store.open(attempt), attempt).toBeNull()
     }
+  })
+
+  /**
+   * **The entry name is caller-supplied, so the container is built with it.**
+   * A download hands the zip to the analyst's own tooling, which extracts by
+   * the member name - so a name that climbs is a Zip Slip this application
+   * wrote. -> #1101
+   */
+  it('keeps a member name that climbs from reaching the container', async () => {
+    const stored = await store.put(bytesOf('a traversing name'), '../../etc/passwd')
+
+    const reader = new ZipReader(
+      new Uint8ArrayReader(new Uint8Array(await readFile(join(root, stored.hash)))),
+      {
+        password: ARTEFACT_PASSWORD,
+      },
+    )
+    const names = (await reader.getEntries()).map((entry) => entry.filename)
+    await reader.close().catch(() => {})
+
+    expect(names).toEqual(['passwd'])
   })
 
   it('refuses an attachment past the cap without buffering it whole', async () => {
