@@ -125,11 +125,7 @@ def test_no_test_module_shadows_a_stdlib_module():
 
 
 def test_no_runner_groups_parallel_tests_by_file():
-    """No runner passes `--dist loadfile`: a file's tests must survive a split.
-
-    Grouping by file hides any state two tests of one file share, so the suite
-    runs under xdist's default and the state is made per worker instead.
-    """
+    """No runner passes `--dist loadfile`: a file's tests must survive a split."""
     runners = {
         "test.sh": REPO_ROOT / "test.sh",
         "verify.sh": REPO_ROOT / "verify.sh",
@@ -146,11 +142,7 @@ def test_no_runner_groups_parallel_tests_by_file():
     ("test_container_runtime.py", "PORT"),
 ])
 def test_a_docker_module_raises_its_stack_per_xdist_worker(module, port, monkeypatch):
-    """Two workers sharing a module get different Compose projects and host ports.
-
-    A module-scoped stack under one fixed project is torn down by `down -v` on
-    whichever worker finishes first, under the other worker's tests.
-    """
+    """Two workers sharing a module get different Compose projects and host ports."""
     def load(worker: str):
         monkeypatch.setenv("PYTEST_XDIST_WORKER", worker)
         spec = importlib.util.spec_from_file_location(
