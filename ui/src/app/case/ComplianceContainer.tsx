@@ -32,8 +32,6 @@ export function ComplianceContainer() {
     save: (spec, value) => {
       setRefusal(undefined)
       return announced('the compliance record', () => patch.mutateAsync({ [spec.name]: value }), {
-        // The merge review names the field and stays; the toast it replaces
-        // did neither. -> #1110
         refused: (error) => {
           setRefusal({
             field: spec.label,

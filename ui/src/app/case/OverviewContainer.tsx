@@ -62,9 +62,6 @@ export function OverviewContainer() {
         'the case',
         () => patch.mutateAsync({ version, fields: { [field]: value } }),
         {
-          // The merge review is the screen's answer to a 409, so the toast that
-          // used to be the only one would say the same thing twice and name no
-          // field. -> #1110
           refused: (error) => {
             setRefusal({
               field: labels[field] ?? field,
