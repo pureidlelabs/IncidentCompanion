@@ -582,6 +582,7 @@ export class LiveGateway implements OnApplicationShutdown {
     }
 
     let opening = opened.get(field)
+    const opens = !opening
     if (!opening) {
       // **In the map before the first await.** -> `open`
       opening = this.openDocument(member, live, field)
@@ -621,11 +622,12 @@ export class LiveGateway implements OnApplicationShutdown {
      *
      * A state request is not an edit: it is how a client asks for what it
      * missed, and refusing it would leave a read-only analyst watching a
-     * document that never caught up.
+     * document that never caught up. Nor is a frame adding nothing the
+     * document lacks, which is how a caught-up client answers the hello.
      */
     if (!this.prose.isStateRequest(frame)) {
-      const held = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
-      if (held !== 'write' && held !== 'delete') {
+      const level = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
+      if (level !== 'write' && level !== 'delete' && !this.prose.addsNothing(held.doc, frame)) {
         live.send(
           JSON.stringify({
             type: 'prose.refused',
@@ -644,7 +646,7 @@ export class LiveGateway implements OnApplicationShutdown {
      * raises at the HTTP door, and it names the same two things - the field
      * and when the report was filed.
      */
-    if (held.sentAt && !this.prose.isStateRequest(frame)) {
+    if (held.sentAt && !this.prose.addsNothing(held.doc, frame)) {
       live.send(
         JSON.stringify({
           type: 'prose.refused',
@@ -657,12 +659,15 @@ export class LiveGateway implements OnApplicationShutdown {
     }
 
     const reply = this.prose.applySync(held.doc, frame, live)
-    if (reply) {
+    // The server's own step 1 goes after the answer, so the client is ready
+    // before it is asked.
+    for (const bytes of [reply, opens ? this.prose.hello(held.doc) : null]) {
+      if (!bytes) continue
       live.send(
         JSON.stringify({
           type: 'prose.sync',
           field,
-          update: Buffer.from(reply).toString('base64'),
+          update: Buffer.from(bytes).toString('base64'),
         }),
       )
     }

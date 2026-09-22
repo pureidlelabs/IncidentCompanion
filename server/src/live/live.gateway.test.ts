@@ -480,6 +480,8 @@ async function connected(
     applySync: codec.applySync.bind(codec),
     frameUpdate: codec.frameUpdate.bind(codec),
     isStateRequest: codec.isStateRequest.bind(codec),
+    addsNothing: codec.addsNothing.bind(codec),
+    hello: codec.hello.bind(codec),
   }
   const gateway = new LiveGateway(
     channel as unknown as CaseChannel,
@@ -520,6 +522,8 @@ async function watched(
     applySync: codec.applySync.bind(codec),
     frameUpdate: codec.frameUpdate.bind(codec),
     isStateRequest: codec.isStateRequest.bind(codec),
+    addsNothing: codec.addsNothing.bind(codec),
+    hello: codec.hello.bind(codec),
   }
   const gateway = new LiveGateway(
     channel as unknown as CaseChannel,
@@ -710,6 +714,54 @@ describe('a read-only analyst watching a draft', () => {
 
     expect(live.frames('prose.refused')).toEqual([])
     expect(live.frames('prose.sync').length).toBeGreaterThan(0)
+  })
+})
+
+describe('opening a field asks the client what it has', () => {
+  const kinds = (live: FakeSocket) =>
+    live.frames('prose.sync').map((frame) => decoderFor(frame['update'] as string).arr[0])
+
+  /**
+   * A reconnecting client's step 1 is answered with what it lacks, which tells
+   * the server nothing about what the client typed while the socket was down.
+   * The answer comes first, so the client is ready before it is asked.
+   */
+  it('answers the step 1, then sends its own, once', async () => {
+    const { live } = await connected(null, filed('on the server'))
+
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
+    await settle()
+    live.receive({ type: 'prose.sync', field: FIELD, update: typed('a keystroke').update })
+    await settle()
+
+    expect(kinds(live)).toEqual([1, 0])
+  })
+
+  /**
+   * The answer to that step 1 is a step 2 carrying nothing new, and refusing it
+   * would tell a read-only analyst, or anyone reading a filed report, that
+   * something they wrote was lost.
+   */
+  it.each([
+    ['a filed report', SENT, 'write'],
+    ['a read-only analyst', null, 'read'],
+  ] as const)('does not refuse %s answering it with nothing new', async (_name, sentAt, level) => {
+    const { live } = await connected(sentAt, filed('as filed'), level)
+    const mine = new Y.Doc({ gc: false })
+
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(mine)) })
+    await settle()
+    for (const frame of live.frames('prose.sync')) {
+      const reply = encoding.createEncoder()
+      readSyncMessage(decoderFor(frame['update'] as string), reply, mine, 'the server')
+      if (encoding.length(reply) > 0) {
+        live.receive({ type: 'prose.sync', field: FIELD, update: wire(encoding.toUint8Array(reply)) })
+      }
+    }
+    await settle()
+
+    expect(mine.getXmlFragment('block-1').toJSON()).toContain('as filed')
+    expect(live.frames('prose.refused')).toEqual([])
   })
 })
 
@@ -1152,6 +1204,8 @@ describe('two prose frames for one field arriving together', () => {
       applySync: codec.applySync.bind(codec),
       frameUpdate: codec.frameUpdate.bind(codec),
       isStateRequest: codec.isStateRequest.bind(codec),
+      addsNothing: codec.addsNothing.bind(codec),
+      hello: codec.hello.bind(codec),
     }
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,

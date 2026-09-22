@@ -167,6 +167,9 @@ export class ProseChannel {
       // vector is also the right thing to send after a gap: it says what this
       // client has, so the answer is only what it missed.
       this.hello()
+      // And everything this end holds, since what was typed while the socket
+      // was down was dropped by `send` and nothing guarantees the server asks.
+      this.send(writeUpdate, Y.encodeStateAsUpdate(this.doc))
       // **And say who we are again.** The identity is set in this constructor,
       // which routinely runs before the socket is up -- the awareness update
       // it fires is dropped, and the other analyst gets a caret with no name

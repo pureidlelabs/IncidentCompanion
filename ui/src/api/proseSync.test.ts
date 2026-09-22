@@ -64,12 +64,6 @@ class Relay {
     if (encoding.length(reply) > 0) {
       this.send(from, field, encoding.toUint8Array(reply))
     }
-    // Its own step 1 in answer to a step 1, so it learns what the client has.
-    if (bytes[0] === 0) {
-      const ask = encoding.createEncoder()
-      writeSyncStep1(ask, this.doc)
-      this.send(from, field, encoding.toUint8Array(ask))
-    }
     // What the transaction added goes to everyone else.
     const diff = Y.encodeStateAsUpdate(this.doc, before)
     if (diff.length > 2) {
@@ -213,6 +207,19 @@ describe('opening a field', () => {
     channel.destroy()
   })
 
+  it('hands over what was typed while the socket was down', () => {
+    // The relay never asks for it, so only the client offering it can pass.
+    const link = relay.link()
+    const channel = new ProseChannel(link, FIELD)
+    link.up()
+    link.down()
+    type(channel, 'typed while disconnected')
+    link.up()
+
+    expect(relay.doc.getText('body').toJSON()).toBe('typed while disconnected')
+    channel.destroy()
+  })
+
   it('ignores a message for a different field', () => {
     const channel = connected()
     const before = channel.doc.getXmlFragment('default').toJSON()
@@ -340,10 +347,10 @@ describe('joining a document', () => {
   })
 
   it('tells the server nothing it did not already have', () => {
-    // A caught-up client still answers the server's step 1, with the empty
-    // update - four bytes, and standard. What must not happen is it handing
-    // back a copy of what it was just sent, which is a whole document on the
-    // wire every time anyone opens a section.
+    // A joining client offers what it holds before the answer arrives, which
+    // is nothing. What must not happen is it handing back a copy of what it
+    // was just sent, which is a whole document on the wire every time anyone
+    // opens a section.
     const first = connected()
     type(first, 'shared')
     const before = Y.encodeStateVector(relay.doc)

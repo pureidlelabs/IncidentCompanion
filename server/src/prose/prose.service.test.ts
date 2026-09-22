@@ -103,6 +103,50 @@ describe('telling a read from a write', () => {
     // unreadable as harmless would let a truncated update past the gate.
     expect(codec.isStateRequest(new Uint8Array())).toBe(false)
   })
+
+  describe('a frame that adds nothing', () => {
+    const held = () => {
+      const doc = new Y.Doc({ gc: false })
+      doc.getXmlFragment('block-1').insert(0, [new Y.XmlText('as filed')])
+      return doc
+    }
+    const copyOf = (doc: Y.Doc) => {
+      const copy = new Y.Doc({ gc: false })
+      Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc))
+      return copy
+    }
+    const step2 = (doc: Y.Doc) => {
+      const encoder = encoding.createEncoder()
+      writeSyncStep2(encoder, doc)
+      return encoding.toUint8Array(encoder)
+    }
+
+    it('is a step 2 or an update the document already holds', () => {
+      const doc = held()
+      expect(codec.addsNothing(doc, step2(copyOf(doc)))).toBe(true)
+      expect(codec.addsNothing(doc, framed(Y.encodeStateAsUpdate(copyOf(doc))))).toBe(true)
+      expect(codec.addsNothing(doc, helloFrom(new Y.Doc()))).toBe(true)
+    })
+
+    it('is not one carrying text the document lacks', () => {
+      const doc = held()
+      const theirs = copyOf(doc)
+      theirs.getXmlFragment('block-1').insert(1, [new Y.XmlText('rewritten')])
+      expect(codec.addsNothing(doc, step2(theirs))).toBe(false)
+    })
+
+    it('is not one carrying only a deletion the document lacks', () => {
+      const doc = held()
+      const theirs = copyOf(doc)
+      theirs.getXmlFragment('block-1').delete(0, 1)
+      expect(codec.addsNothing(doc, step2(theirs))).toBe(false)
+    })
+
+    it('is not one nobody can decode', () => {
+      expect(codec.addsNothing(held(), new Uint8Array())).toBe(false)
+      expect(codec.addsNothing(held(), new Uint8Array([1, 200]))).toBe(false)
+    })
+  })
 })
 
 describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => {
