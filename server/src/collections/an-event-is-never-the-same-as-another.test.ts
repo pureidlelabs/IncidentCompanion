@@ -31,7 +31,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { identitiesOf } from '../domain/identity.js'
 import { CollectionService } from './collection.service.js'
-import { DEFINITION as TIMELINE } from './timeline.controller.js'
+import { TIMELINE_COLLECTION as TIMELINE } from './definitions.js'
 import { cases, timeline, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 

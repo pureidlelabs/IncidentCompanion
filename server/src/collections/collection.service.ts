@@ -105,7 +105,7 @@ export interface CollectionDefinition {
    *
    * **Only the timeline needs to supply this.** Every other collection has one
    * schema and `COLLECTION_SCHEMAS` already holds it; the timeline's depends
-   * on the row's `kind`, and that knowledge belongs in its own controller
+   * on the row's `kind`, and that knowledge belongs in its own definition
    * rather than as a special case in here.
    */
   readonly schemaFor?: (values: Record<string, unknown>) => z.ZodObject | undefined
@@ -113,9 +113,6 @@ export interface CollectionDefinition {
    * Refuse a write that lands in a row this collection considers closed. Only
    * the report tier has such a state, and each of the five write methods below
    * calls it once.
-   *
-   * Those five are not every write path in the server. One outside this class
-   * asks `freezeGuardFor` instead. -> `report/freeze.ts`
    */
   readonly refuseIfClosed?: ClosedRowGuard
 

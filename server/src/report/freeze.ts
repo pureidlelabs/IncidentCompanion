@@ -100,19 +100,6 @@ export function refuseWritesToSentReport(via: 'id' | 'reportId'): ClosedRowGuard
 }
 
 /**
- * The guard an entity's writes owe, or nothing where the entity is not part of
- * a report.
- *
- * Ask this from any write path that resolves an entity name, rather than
- * wiring a guard per caller: `CollectionService` is not the only one.
- */
-export function freezeGuardFor(entity: string): ClosedRowGuard | undefined {
-  if (entity === 'reports') return refuseWritesToSentReport('id')
-  if (entity === 'report_blocks') return refuseWritesToSentReport('reportId')
-  return undefined
-}
-
-/**
  * One body for every refusal of a filed report, so a client can read `sentAt`
  * off any of them. The verb still differs: a restore is a repair and a patch is
  * an edit, and telling an analyst the wrong one is worse than a uniform

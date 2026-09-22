@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest'
 import { reportBlockSchema } from '../domain/entities/report.js'
 import { referenceFieldsOf } from '../domain/references.js'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
-import { REPORT_BLOCKS_COLLECTION } from '../collections/entities.controller.js'
+import { REPORT_BLOCKS_COLLECTION } from '../collections/definitions.js'
 import { reportBlocks } from '../db/schema/report.js'
 
 describe('a report block', () => {

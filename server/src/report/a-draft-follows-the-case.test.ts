@@ -18,7 +18,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
-import { DEFINITION as TIMELINE } from '../collections/timeline.controller.js'
+import { TIMELINE_COLLECTION as TIMELINE } from '../collections/definitions.js'
 import { cases, reportBlocks, reports, user } from '../db/schema/index.js'
 import { ProseService } from '../prose/prose.service.js'
 import { ReportRenderService } from './render.service.js'

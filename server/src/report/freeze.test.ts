@@ -23,11 +23,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
-import {
-  REPORT_BLOCKS_COLLECTION,
-  REPORTS_COLLECTION,
-  ReportsController,
-} from '../collections/entities.controller.js'
+import { REPORT_BLOCKS_COLLECTION, REPORTS_COLLECTION } from '../collections/definitions.js'
+import { ReportsController } from '../collections/entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DEMO_REPORTS } from '../demos/reports.js'
 import { DemoSeederService } from '../demos/seeder.service.js'

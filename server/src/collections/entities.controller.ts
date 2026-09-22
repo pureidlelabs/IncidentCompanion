@@ -40,18 +40,7 @@ import type { Database } from '../db/client.js'
 import { withProseFlags } from './prose-flags.js'
 import { CollectionService, type CollectionDefinition } from './collection.service.js'
 import { ConflictsService } from './conflicts.service.js'
-import {
-  accounts,
-  cloudApps,
-  evidence,
-  impact,
-  malware,
-  methods,
-  networkIndicators,
-  systems,
-} from '../db/schema/entities.js'
-import { reportBlocks, reports } from '../db/schema/report.js'
-import { actions, caseNotes } from '../db/schema/tracker.js'
+import { DEFINITIONS } from './definitions.js'
 import { accountSchema } from '../domain/entities/account.js'
 import { cloudAppSchema } from '../domain/entities/cloud-app.js'
 import { evidenceSchema } from '../domain/entities/evidence.js'
@@ -63,23 +52,8 @@ import { systemSchema } from '../domain/entities/system.js'
 import { actionSchema } from '../domain/entities/action.js'
 import { caseNoteSchema } from '../domain/entities/case-note.js'
 import { reportBlockSchema, reportSchema } from '../domain/entities/report.js'
-import { refuseWritesToSentReport } from '../report/freeze.js'
-import { refuseUnservedLanguage } from '../report/language.service.js'
 import { caseOwnedRowSchema, patchSchema } from '../domain/field-spec.js'
 import { rowVersion } from '../domain/column-bounds.js'
-
-/**
- * A collection ordered by `createdAt` - an entity has no clock of its own the
- * way a timeline entry does, and the table's own sorting is client-side.
- */
-export const ordered = (
-  name: CollectionDefinition['name'],
-  table: CollectionDefinition['table'],
-): CollectionDefinition => ({
-  name,
-  table,
-  orderBy: 'createdAt',
-})
 
 /**
  * What an entity route answers with: the envelope guaranteed and verified, the
@@ -382,7 +356,7 @@ export class SystemsController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = ordered('systems', systems)
+  protected readonly definition = DEFINITIONS.systems
   protected readonly schema = systemSchema
 }
 
@@ -393,7 +367,7 @@ export class AccountsController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = ordered('accounts', accounts)
+  protected readonly definition = DEFINITIONS.accounts
   protected readonly schema = accountSchema
 }
 
@@ -404,7 +378,7 @@ export class MalwareController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = ordered('malware', malware)
+  protected readonly definition = DEFINITIONS.malware
   protected readonly schema = malwareSchema
 }
 
@@ -415,7 +389,7 @@ export class NetworkIndicatorsController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = ordered('network_indicators', networkIndicators)
+  protected readonly definition = DEFINITIONS.network_indicators
   protected readonly schema = networkIndicatorSchema
 }
 
@@ -426,7 +400,7 @@ export class ImpactController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = ordered('impact', impact)
+  protected readonly definition = DEFINITIONS.impact
   protected readonly schema = impactSchema
 }
 
@@ -437,7 +411,7 @@ export class CloudAppsController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = ordered('cloud_apps', cloudApps)
+  protected readonly definition = DEFINITIONS.cloud_apps
   protected readonly schema = cloudAppSchema
 }
 
@@ -448,7 +422,7 @@ export class EvidenceController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = ordered('evidence', evidence)
+  protected readonly definition = DEFINITIONS.evidence
   protected readonly schema = evidenceSchema
 }
 
@@ -459,7 +433,7 @@ export class MethodsController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = ordered('methods', methods)
+  protected readonly definition = DEFINITIONS.methods
   protected readonly schema = methodSchema
 }
 
@@ -470,7 +444,7 @@ export class ActionsController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = ordered('actions', actions)
+  protected readonly definition = DEFINITIONS.actions
   protected readonly schema = actionSchema
 }
 
@@ -481,45 +455,13 @@ export class CaseNotesController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = ordered('casenotes', caseNotes)
+  protected readonly definition = DEFINITIONS.casenotes
   protected readonly schema = caseNoteSchema
-}
-
-export const REPORTS_COLLECTION: CollectionDefinition = {
-  ...ordered('reports', reports),
-  refuseIfClosed: refuseWritesToSentReport('id'),
-  refuseUnservedTerm: refuseUnservedLanguage(),
-}
-
-export const REPORT_BLOCKS_COLLECTION: CollectionDefinition = {
-  name: 'report_blocks',
-  // Blocks are ordered inside their own report, which is what the
-  // `(reportId, position)` index says.
-  position: 'position',
-  orderWithin: 'reportId',
-  table: reportBlocks,
-  orderBy: 'position',
-  /**
-   * Supplied, because `COLLECTION_SCHEMAS` does not carry this one - without
-   * it the reference check resolves `undefined` and returns, leaving a
-   * figure's `evidenceId` free to name another case's row.
-   *
-   * **Through `schemaFor` rather than by registering the schema**, which is
-   * the narrower door: `COLLECTION_SCHEMAS` also drives `IMPORTABLE` and the
-   * published API surface, so registering it would make report blocks
-   * importable as a side effect of closing a reference hole.
-   */
-  schemaFor: () => reportBlockSchema,
-  refuseIfClosed: refuseWritesToSentReport('reportId'),
 }
 
 /**
  * A case's reports, and the blocks they are made of - ordinary collections.
  * The lifecycle verbs (send, freeze) and the painters live in `report/`.
- *
- * Both definitions above are exported so `report/freeze.test.ts` asserts
- * against the ones the controllers use: rebuilt by hand, they would certify a
- * guard the shipping controllers do not have.
  */
 @UseGuards(CaseAccessGuard)
 @Controller('api/cases/:caseId/reports')
@@ -528,7 +470,7 @@ export class ReportsController extends EntityReads {
     super(collections, conflicts)
   }
 
-  protected readonly definition = REPORTS_COLLECTION
+  protected readonly definition = DEFINITIONS.reports
   protected readonly schema = reportSchema
 }
 
@@ -566,7 +508,7 @@ export class ReportBlocksController extends EntityReads {
     return asRows(await withProseFlags(this.db, caseId, rows))
   }
 
-  protected readonly definition = REPORT_BLOCKS_COLLECTION
+  protected readonly definition = DEFINITIONS.report_blocks
   protected readonly schema = reportBlockSchema
 }
 
