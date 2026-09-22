@@ -86,12 +86,7 @@ function ignoreReactAriaWindowFocusThrow(error: {
   return isTheThrow ? false : undefined
 }
 
-/**
- * The fewest test files each project may finish in a certifying run.
- *
- * Per project, because a run filtered to one of them owes that one's count and
- * a whole-run floor lets the smaller project through on nothing.
- */
+/** The fewest test files each project may finish in a certifying run. */
 const MUST_RUN_FILES = new Map([
   ['unit', 300],
   ['storybook', 200],
@@ -110,13 +105,9 @@ class MustRunReporter implements Reporter {
   private floor = 0
 
   onInit(vitest: Vitest): void {
-    // `projects` is what survived `--project`, so a filtered run owes only the
-    // projects it kept. An unnamed project throws rather than lowering the
-    // floor in silence: whoever declares one declares its count here.
+    // `projects` is what survived `--project`, so a filtered run owes only the ones it kept.
     this.floor = vitest.projects.reduce((total, project) => {
-      // A browser project's resolved name carries its instance -- `storybook`
-      // is reported as `storybook (chromium)` -- so the declared name is the
-      // first word rather than the whole of it.
+      // A browser project's name carries its instance: `storybook (chromium)`.
       const declared = project.name.split(' ')[0]
       const owed = MUST_RUN_FILES.get(declared)
       if (owed === undefined) {

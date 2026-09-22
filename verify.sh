@@ -123,9 +123,8 @@ elif [ -n "$REDIS_PORT" ] && [ -n "$PG_PORT" ] \
   # reached the tests it thinks it ran. -> `server/test/must-run.ts`
   step "server: suite" bash -c 'cd server && IC_SUITE_MUST_RUN=1 npx vitest run --pool=threads'
 else
-  # The tests that need two concurrent transactions decline on the embedded
-  # engine rather than failing there, so what is left is a pass or a defect
-  # this branch put in. -> `server/test/database.ts::hasConcurrentConnections`
+  # Tests needing two concurrent transactions decline on the embedded engine.
+  # -> `server/test/database.ts::hasConcurrentConnections`
   step "server: suite (in-process engine -- the write paths were not covered)" \
     bash -c 'cd server && npx vitest run --pool=threads'
 fi
