@@ -117,7 +117,7 @@ export class InstallSettingsController {
       storage: {
         database: whereItPoints(this.config.get('DATABASE_URL', { infer: true })),
         redis: whereItPoints(this.config.get('REDIS_URL', { infer: true })),
-        evidence: this.config.get('EVIDENCE_DIR', { infer: true }) ?? '.evidence',
+        evidence: this.config.get('EVIDENCE_DIR', { infer: true }),
         // **Says both halves, because either alone misleads.** "Sealed" without
         // "not scanned" reads as protection; "not scanned" without "sealed"
         // leaves an analyst expecting their AV to cover it.

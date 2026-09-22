@@ -8,6 +8,7 @@
  * after `listen`, from the routes the adapter actually mounted.
  */
 import { ConfigService } from '@nestjs/config'
+import type { Env } from './config/env.js'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 
 import { LiveGateway } from './live/live.gateway.js'
@@ -40,7 +41,8 @@ export function applyPlatform(
    * so the address HSTS is judged against cannot drift from the address the
    * application believes it is at.
    */
-  app.use(securityHeaders(app.get(ConfigService).get<string>('AUTH_BASE_URL') ?? ''))
+  const config = app.get<ConfigService<Env, true>>(ConfigService)
+  app.use(securityHeaders(config.get('AUTH_BASE_URL', { infer: true })))
   app.use(noStoreOnTheApi())
   app.use(retryAfterOnEveryRefusal())
 

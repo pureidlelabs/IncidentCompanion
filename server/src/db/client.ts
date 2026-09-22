@@ -54,6 +54,13 @@ export function createPool(url: string): Pool {
    * hands every client the superuser, and is never a security boundary.
    */
   if (process.env.PG_ADOPT_ROLE_FROM_URL === '1') {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'Refusing to start -- PG_ADOPT_ROLE_FROM_URL issues `set role` on every ' +
+          'connection and exists for a test engine that hands every client the ' +
+          'superuser. A production server authenticates the role in the URL.',
+      )
+    }
     const role = decodeURIComponent(new URL(url).username)
     if (role) {
       pool.on('connect', (client) => {
