@@ -145,6 +145,31 @@ describe('writing a note in the pane', () => {
     expect(screen.queryByRole('textbox', { name: /author/i })).toBeNull()
     expect(screen.queryByRole('textbox', { name: /tag/i })).toBeNull()
   })
+
+  /**
+   * **A refetch arrives mid-sentence, and it has never seen this note.**
+   *
+   * The case query is invalidated by anything anyone writes to the case, so a
+   * new document lands while a note is being typed - and the note has no row
+   * yet, because the row is created on blur. Rebuilding the screen from the
+   * served notes discards it, which reads as the words having never been
+   * typed. -> #1108
+   */
+  it('keeps a note being written when the case is served again', async () => {
+    const user = userEvent.setup()
+    const view = render(<NotesScreen kase={campaignCase} specs={specsFixture} />)
+    const written = 'Exfil staged to a share nobody owns.'
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), written)
+
+    // A new identity carrying the same served notes: none of them is this one.
+    view.rerender(<NotesScreen kase={{ ...campaignCase }} specs={specsFixture} />)
+
+    expect(indexLines()[0]).toContain(written)
+    // Still the open note, read back out of the field.
+    expect(noteText()).toContain(written)
+  })
 })
 
 /**

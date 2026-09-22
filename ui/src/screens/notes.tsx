@@ -158,10 +158,25 @@ export function NotesScreen({
   /** The note the delete dialog is asking about. `null` while it is closed. */
   const [deleting, setDeleting] = useState<CaseNote | null>(null)
   const [given, setGiven] = useState(kase)
+  /**
+   * A served case arrives while a note is being written, and it has never seen
+   * that note: the row is created on blur, so anything anyone writes to the
+   * case invalidates the query mid-sentence. So the served notes are merged in
+   * rather than swapped for what is on screen, and a note nobody has looked
+   * away from yet survives it. -> #1108
+   */
   if (given !== kase) {
+    const served = kase?.casenotes ?? []
+    const servedIds = new Set(served.map((note) => note.id))
+    const merged = [
+      ...served,
+      ...written.filter((note) => !servedIds.has(note.id) && !isBlank(note)),
+    ]
     setGiven(kase)
-    setWritten(kase?.casenotes ?? [])
-    setPicked(openId ?? newestFirst(kase?.casenotes ?? [])[0]?.id)
+    setWritten(merged)
+    setPicked(
+      merged.some((note) => note.id === picked) ? picked : (openId ?? newestFirst(merged)[0]?.id),
+    )
     setCaretOn(undefined)
   }
 
