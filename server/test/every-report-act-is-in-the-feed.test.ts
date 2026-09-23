@@ -35,20 +35,20 @@ describe.skipIf(!runnable)('the feed a report act leaves', () => {
     await harness?.close()
   })
 
-  /** Each row's writing transaction beside the transaction of the feed rows naming it. */
+  /** Each row's writing transaction beside each feed row naming it, as `<transaction> <actor>`. */
   async function recorded(table: 'reports' | 'report_blocks', ids: readonly string[]) {
-    const { rows } = await owner.query<{ id: string; wrote: string; fed: string[]; by: string[] }>(
+    const { rows } = await owner.query<{ id: string; wrote: string; fed: string[] }>(
       `select t.id::text, t.xmin::text as wrote,
-              array(select f.xmin::text from change_feed f where f.entity = $1 and f.entity_id = t.id::text) as fed,
-              array(select f.actor_id from change_feed f where f.entity = $1 and f.entity_id = t.id::text) as by
+              array(select f.xmin::text || ' ' || coalesce(f.actor_id, '')
+                      from change_feed f where f.entity = $1 and f.entity_id = t.id::text) as fed
          from ${table} t where t.id = any($2::uuid[]) order by t.id`,
       [table, ids],
     )
     return rows
   }
 
-  const inTheSameAct = (row: { wrote: string; fed: string[]; by: string[] }) =>
-    row.fed.includes(row.wrote) && row.by.includes(admin.id)
+  /** A feed row written by the transaction that wrote `row` names the caller. */
+  const inTheSameAct = (row: { wrote: string; fed: string[] }) => row.fed.includes(`${row.wrote} ${admin.id}`)
 
   it('records a send', async () => {
     const { id } = await aDraft(call, caseId, ['Summary'])
