@@ -14,7 +14,6 @@ import {
   Optional,
 } from '@nestjs/common'
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
-import * as Y from 'yjs'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -25,6 +24,7 @@ import { ProseService, reportDocument } from '../prose/prose.service.js'
 import { ReportRenderService } from './render.service.js'
 import { documentSchema } from './document/model.js'
 import { successorStage } from '../domain/report-lifecycle.js'
+import { rekeyed } from '../domain/prose-fields.js'
 import { CaseChannel } from '../live/case-channel.service.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { withCase } from '../db/scope.js'
@@ -331,31 +331,14 @@ export class ReportLifecycleService {
 
     const source = await this.prose.open(caseId, reportDocument(fromReportId))
     try {
-      const target = new Y.Doc({ gc: false })
-      let wrote = false
-      for (const [oldId, newId] of rekey) {
-        const fragment = source.getXmlFragment(oldId)
-        if (fragment.length === 0) continue
-        // **Cloned node by node.** `Y.encodeStateAsUpdate` would carry the
-        // fragments under their own names, which is exactly the keying being
-        // changed; there is no rename in the CRDT.
-        const into = target.getXmlFragment(newId)
-        into.insert(
-          0,
-          fragment.toArray().map((node) => node.clone()) as never,
-        )
-        wrote = true
-      }
-      if (!wrote) return
-
-      const encoded = Buffer.from(Y.encodeStateAsUpdate(target))
+      const encoded = rekeyed(source, rekey)
+      if (!encoded) return
       await withCase(this.db, caseId, (tx) =>
         tx
           .update(reports)
-          .set({ document: encoded })
+          .set({ document: Buffer.from(encoded) })
           .where(and(eq(reports.id, toReportId), eq(reports.caseId, caseId))),
       )
-      target.destroy()
     } finally {
       await this.prose.release(caseId, reportDocument(fromReportId))
     }
