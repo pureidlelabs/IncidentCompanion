@@ -15,4 +15,4 @@
 
 ## 3. The record
 
-- [ ] 3.1 Sync, ledger rows, archive
+- [x] 3.1 Sync, ledger rows, archive

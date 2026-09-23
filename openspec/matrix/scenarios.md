@@ -20,9 +20,9 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| An account is provisioned, never self-created | An install with no accounts is claimed | undemonstrated | |
+| An account is provisioned, never self-created | An install with no accounts is claimed | demonstrated | server/test/two-claims-leave-one-account-and-one-session.test.ts |
 | An account is provisioned, never self-created | Somebody reaches the service first | undemonstrated | |
-| An account is provisioned, never self-created | Two claims arrive together | undemonstrated | |
+| An account is provisioned, never self-created | Two claims arrive together | demonstrated | server/test/two-claims-leave-one-account-and-one-session.test.ts |
 | An account is provisioned, never self-created | The claim is attempted twice | demonstrated | server/test/a-second-claim-is-refused-and-recorded.test.ts |
 | An account is provisioned, never self-created | A new account reaches nothing | demonstrated | server/test/a-new-account-reaches-only-the-default-customer.test.ts |
 | An address names one account, whatever case it is spelled in | An account is created in a second spelling of an address already held | demonstrated | server/test/an-account-is-administered-by-any-spelling-of-its-address.test.ts |
@@ -42,6 +42,7 @@
 | Case data is reached through groups, at a level | An administrator disposes of a case nobody has attributed | demonstrated | server/src/access/case-access.guard.test.ts |
 | Case data is reached through groups, at a level | An analyst is refused the same deletion | demonstrated | server/src/access/case-access.guard.test.ts |
 | Case data is reached through groups, at a level | A group raises an account above the floor | demonstrated | server/src/access/case-access.guard.test.ts |
+| Case data is reached through groups, at a level | An identity the install does not hold | demonstrated | server/test/an-identity-the-install-does-not-hold-reaches-nothing.test.ts |
 | An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts |
 | An install can be recovered without another administrator | The install is claimed | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | An install can be recovered without another administrator | An install runs on a single administrator | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
@@ -56,6 +57,8 @@
 | Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/a-held-account-reaches-only-its-way-out.test.ts |
 | Authentication resists guessing, and says so to the auditor | The install raises its password minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts |
 | Authentication resists guessing, and says so to the auditor | An account holds a password shorter than a raised minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts |
+| Authentication resists guessing, and says so to the auditor | A password is guessed at through a door other than sign-in | demonstrated | server/test/a-guess-counts-at-every-door.test.ts |
+| Authentication resists guessing, and says so to the auditor | A locked account's password is offered where it is changed | demonstrated | server/test/a-guess-counts-at-every-door.test.ts |
 | A second factor is available, and enforcing it is the install's policy | The policy is off | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | An analyst enrols anyway | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | The policy is turned on | unbuilt | Not built: no second factor. Kept normative. -> #59 |
@@ -104,6 +107,11 @@
 | Administrative events are logged | An entry is edited | demonstrated | server/src/install-activity/record.test.ts |
 | Administrative events are logged | The record is read | demonstrated | server/src/install-audit/read.test.ts |
 | Administrative events are logged | Where the record goes is changed | unbuilt | Not built: there is no destination to change. -> #13 |
+| Administrative events are logged | An analyst ends their own session | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
+| An install serves only the account operations it offers | A caller asks for an account operation the install does not offer | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
+| An install serves only the account operations it offers | An operation is asked for by another spelling | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
+| An install serves only the account operations it offers | A held account asks for an operation the install offers | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
+| An install serves only the account operations it offers | An analyst takes another account's name | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
 
 ## analysis
 
@@ -602,6 +610,7 @@
 | A read tells a caller what it is looking at | Somebody wrote first | demonstrated | server/src/collections/a-refused-write-says-what-the-row-became.test.ts |
 | The interface describes itself, and the description is generated | A route is added | demonstrated | server/test/openapi-contract.test.ts |
 | The interface describes itself, and the description is generated | A route changes shape | undemonstrated | |
+| The interface describes itself, and the description is generated | A route served by a library the application mounts | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts |
 | A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/src/domain/a-refusal-names-the-field-it-is-about.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |

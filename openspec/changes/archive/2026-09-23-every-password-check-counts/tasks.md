@@ -9,4 +9,4 @@
 
 ## 2. The record
 
-- [ ] 2.1 Sync, ledger rows, archive
+- [x] 2.1 Sync, ledger rows, archive

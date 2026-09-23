@@ -12,6 +12,8 @@
 
 **Delete is the case as a whole and nothing smaller.** Removing an entry, an entity or a section is ordinary work at the write level.
 
+**The authentication library serves only what a requirement here offers.** Its surface is an allowlist named operation by operation: whatever else it defines, in this version or a later one, is refused as a route that never existed, and the application's own in-process calls to it are not requests anybody outside can make.
+
 # Design
 
 ## Two grants that do not imply each other
@@ -26,7 +28,7 @@ A group holds customers. A membership is an account in a group at a level, and t
 
 An account's reach over a customer is the highest level among its memberships in groups holding that customer. Both an account and a customer may sit in several groups, so overlap is normal and resolves to the most permissive.
 
-An account with no membership reaches no customer's cases beyond the default customer, which every account reaches.
+An account with no membership reaches no customer's cases beyond the default customer, which every account reaches. An identity with no account reaches nothing, so a session that outlives its account is refused like any stranger.
 
 Reach is resolved from the caller's own session on the request that needs it. It is never carried from one caller to another and never answered from whoever has the case open.
 
@@ -39,6 +41,8 @@ A recovery credential is issued when the install is claimed. It restores adminis
 ## Local sign-in resists guessing
 
 A local account locks after a number of consecutive failures the install sets, for a duration the install sets, and an administrator can release it.
+
+The lock lives where a password is verified rather than at any door, so every door that checks one counts into the same run and refuses a locked account's right password as a wrong one, including a door added later. The verification costs a locked account what it costs a wrong password, and an address with no account costs what an account does.
 
 The threshold an install may set is bounded above, so no stored setting turns the control off while a screen still shows a number. The bound is NIST SP 800-63B's limit of no more than 100 consecutive failed attempts against one account.
 

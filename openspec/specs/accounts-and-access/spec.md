@@ -14,7 +14,7 @@ The first account is the exception, and MUST be creatable only while the install
 
 Claiming an install MUST require a bootstrap credential that only somebody with access to the machine can obtain. It MUST be issued to the install's own output at start, never over the network, and MUST be verifiable without revealing it to a caller who guesses. Reaching the service first MUST NOT be enough to become its administrator.
 
-Whether an install is still claimable MUST be decided from what it holds when the claim is made, never from what was true when it started. Claiming MUST be atomic: two claims arriving together MUST produce one administrator.
+Whether an install is still claimable MUST be decided from what it holds when the claim is made, never from what was true when it started. Claiming MUST be atomic: two claims arriving together MUST produce one administrator. A claim that loses MUST leave nothing behind — no account and no session, in any store the install keeps one in.
 
 #### Scenario: An install with no accounts is claimed
 
@@ -35,6 +35,7 @@ Whether an install is still claimable MUST be decided from what it holds when th
 - GIVEN an unclaimed install
 - WHEN two valid claims arrive at the same moment
 - THEN exactly one administrator exists afterwards
+- AND the claim that lost holds no account and no session
 
 #### Scenario: The claim is attempted twice
 
@@ -138,7 +139,7 @@ A customer MAY belong to more than one group and an analyst MAY belong to more t
 
 Membership and its level MUST be grantable and revocable one at a time, and a revocation MUST take effect for sessions already open rather than at their next sign-in.
 
-**The default customer is the one exception in this specification, and it is stated here so that every other rule can be read without one.** Every account reaches it regardless of groups, federation or mapping, and that MUST NOT be revocable. The level is the account's role: an analyst reaches it at read and write, and an administrator reaches it at read, write and delete, so that an install can dispose of a case nobody has attributed without first building the access model.
+**The default customer is the one exception in this specification, and it is stated here so that every other rule can be read without one.** Every account reaches it regardless of groups, federation or mapping, and that MUST NOT be revocable. It is reached by holding an account, so an identity the install holds no account for — a session outliving the account it named, or any identifier that names none — MUST reach nothing, the default customer included. The level is the account's role: an analyst reaches it at read and write, and an administrator reaches it at read, write and delete, so that an install can dispose of a case nobody has attributed without first building the access model.
 
 This is a floor rather than a ceiling: a group holding the default customer MAY raise an account above it, and no membership lowers an account below it.
 
@@ -213,6 +214,13 @@ It is not an inherited grant to somebody's data. The default customer holds only
 - GIVEN an analyst who belongs to a group holding the default customer at delete
 - WHEN they delete a case nobody has attributed
 - THEN it is deleted
+
+#### Scenario: An identity the install does not hold
+
+- GIVEN a session whose account no longer exists
+- WHEN it asks for any case, one on the default customer included
+- THEN it is refused, as for a case that does not exist
+- AND no case is listed to it
 
 ### Requirement: An install always has somebody who can administer it
 
@@ -300,6 +308,8 @@ This requirement governs local accounts. An account whose credentials belong to 
 
 Sign-in MUST resist repeated guessing. A local account MUST lock after a number of failures the install sets, for a duration the install sets, and the lock MUST be releasable by an administrator.
 
+**Every door that checks a password is a door a guess arrives through.** A wrong password MUST count toward the lock whichever door checked it — signing in, confirming the current password before changing it, or any other — and the failures from every door MUST count into one run. While an account is locked, its password MUST be answered as wrong at every door, and nothing a door would do with the right one — signing in, replacing the password — MUST happen. Each wrong answer MUST be logged as a failed sign-in, naming the door.
+
 Local passwords MUST meet a policy the install sets. Where a password must be changed, the holder MUST be unable to reach anything else until they change it.
 
 A policy the install sets MUST govern every door that writes a password, including any the authentication library serves itself, and MUST take effect without a restart. A bound read when the process started is one an administrator cannot raise, and a control that records a change it does not apply is worse than one that was never offered.
@@ -339,6 +349,20 @@ These controls exist to answer OWASP ASVS 5.0 Level 2, which the constitution na
 - GIVEN an account whose password was set before the minimum was raised
 - WHEN its holder signs in with it
 - THEN they are signed in
+
+#### Scenario: A password is guessed at through a door other than sign-in
+
+- GIVEN a signed-in analyst's session in somebody else's hands
+- WHEN they guess at the current password where it is changed
+- THEN each wrong answer counts toward the lock, together with any at sign-in
+- AND each is logged as a failed sign-in naming the door
+
+#### Scenario: A locked account's password is offered where it is changed
+
+- GIVEN a locked account and its right password
+- WHEN it is offered as the current password to change it
+- THEN it is answered exactly as a wrong one
+- AND the password is not changed
 
 ### Requirement: A second factor is available, and enforcing it is the install's policy
 
@@ -775,3 +799,47 @@ Changing what the logging itself does is an administrative event.
 - GIVEN an administrator
 - WHEN they change the log's destination or how long it is kept
 - THEN the change is itself logged, at both the old destination and the new
+
+#### Scenario: An analyst ends their own session
+
+- GIVEN an analyst signed in from more than one place
+- WHEN they end one of their own sessions, or every other one
+- THEN each ending is logged with who ended it, whose sessions they were, and the moment
+
+### Requirement: An install serves only the account operations it offers
+
+An account operation MUST be reachable over the network only where a requirement in this specification offers it. The authentication mechanism an install is built on may define more — changing an address, deleting an account, linking another provider, an administrator's own shortcuts — and every one no requirement offers MUST NOT exist to a caller, whoever asks, at any role, signed in or not.
+
+The refusal MUST be the one for a route that never existed. An answer that differs from it says the operation is there and is merely refused, which is the first thing somebody probing an install wants to know.
+
+An operation MUST NOT be reachable through a second spelling of a route the install does not offer: a change of case, a trailing separator, an encoded character or a doubled one.
+
+An account that must change its password MUST reach, of these operations, only reading its own session, signing in and signing out. Everything else it is offered waits until it has changed its password.
+
+An account MUST NOT change its own display name. The name is how every change the account makes is attributed on screen, and a name its holder chose — another account's included — would let them write as somebody else.
+
+#### Scenario: A caller asks for an account operation the install does not offer
+
+- GIVEN an install
+- WHEN anybody, at any role and signed in or not, asks for an account operation no requirement offers
+- THEN the answer is the one for a route that never existed
+- AND nothing about any account changes
+
+#### Scenario: An operation is asked for by another spelling
+
+- GIVEN an account operation the install does not offer
+- WHEN somebody asks for it with its route spelled differently
+- THEN the answer is the one for a route that never existed
+
+#### Scenario: A held account asks for an operation the install offers
+
+- GIVEN an account that must change its password
+- WHEN it asks for any offered account operation other than reading its own session, signing in or signing out
+- THEN it is refused, and told that it must change its password
+
+#### Scenario: An analyst takes another account's name
+
+- GIVEN an analyst and another account with a display name of its own
+- WHEN the analyst asks to take that name
+- THEN it is refused
+- AND the analyst's display name is unchanged
