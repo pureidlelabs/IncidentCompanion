@@ -203,7 +203,7 @@ const MAY_IMPORT: Record<string, string[]> = {
     'customers',
   ],
   brand: [],
-  /** Bytes on disk. It knows where they go and nothing about a case. */
+  /** Bytes on disk, a directory per case id, and nothing else about a case. */
   evidence: ['config', 'policy'],
   preferences: ['db', 'config', 'auth', 'domain', 'install-activity', 'policy'],
   /** No `live`: the socket knows about documents, never the reverse. */
@@ -227,7 +227,10 @@ const MAY_IMPORT: Record<string, string[]> = {
    */
   // `auth` for `AdminOnly` on the two telemetry routes alone: what the install
   // is made of is an operator's, and the liveness probe beside them stays open.
-  health: ['config', 'db', 'domain', 'policy', 'auth'],
+  //
+  // `evidence` for the census, which asks the store what each case holds
+  // rather than reading its directory itself.
+  health: ['config', 'db', 'domain', 'policy', 'auth', 'evidence'],
   spa: ['config'],
   test: ['db', 'config'],
 }

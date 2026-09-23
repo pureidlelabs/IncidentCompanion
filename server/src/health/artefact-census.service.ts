@@ -1,22 +1,19 @@
 /**
- * What this install expects to find beside it, and what it cannot.
+ * What this install expects beside it, and what it cannot find.
  *
- * Counts the artefacts the evidence rows say this install holds against the
- * names in `EVIDENCE_DIR`. Reads names, never bytes, and never throws for an
- * absent directory. -> `openspec/specs/state/design.md`
+ * Asks each case what its rows name and asks the store what that case holds.
+ * -> `openspec/specs/state/design.md`
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-import type { Env } from '../config/env.js'
-import { readdir } from 'node:fs/promises'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { artefactsNamed } from '../db/artefacts-named.js'
+import { EvidenceStore } from '../evidence/store.js'
 
 /** What the install expects, and how much of it is not there. */
 export interface Census {
-  /** Distinct artefacts the rows name. */
+  /** Artefacts the rows name, once per case holding one. */
   expected: number
   /** How many of those the install cannot find. */
   missing: number
@@ -44,30 +41,20 @@ export function saysAtStart(held: Census): { level: 'log' | 'warn'; message: str
 export class ArtefactCensus {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
-    private readonly config: ConfigService<Env, true>,
+    private readonly store: EvidenceStore,
   ) {}
 
-  /**
-   * Count what this install holds against what is on disk.
-   *
-   * A directory that is not there is read as holding nothing, which is the
-   * state this exists to report rather than an error to raise: an install
-   * restored without its artefacts has no such directory at all.
-   */
+  /** Count what the rows say each case holds against what the store holds for it. */
   async take(): Promise<Census> {
-    const wanted = await artefactsNamed(this.db)
-    if (wanted.size === 0) return { expected: 0, missing: 0 }
-
-    const root = this.config.get('EVIDENCE_DIR', { infer: true })
-    let held: Set<string>
-    try {
-      held = new Set(await readdir(root))
-    } catch {
-      held = new Set()
-    }
-
+    let expected = 0
     let missing = 0
-    for (const hash of wanted) if (!held.has(hash)) missing += 1
-    return { expected: wanted.size, missing }
+    for (const [caseId, { stored }] of await artefactsNamed(this.db)) {
+      if (stored.size === 0) continue
+      const held = await this.store.held(caseId)
+      expected += stored.size
+      for (const hash of stored) if (!held.has(hash)) missing += 1
+    }
+    return { expected, missing }
   }
+
 }

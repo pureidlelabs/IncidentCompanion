@@ -18,11 +18,12 @@ import { ResourcesController } from './resources.controller.js'
 import { PostgresHealth, RedisHealth } from './dependencies.health.js'
 import { healthRedisProvider } from './health.redis.js'
 import { ArtefactCensus, saysAtStart } from './artefact-census.service.js'
+import { EvidenceStore } from '../evidence/store.js'
 
 @Module({
   imports: [TerminusModule],
   controllers: [HealthController, ResourcesController, ActivityController],
-  providers: [PostgresHealth, RedisHealth, healthRedisProvider, ArtefactCensus],
+  providers: [PostgresHealth, RedisHealth, healthRedisProvider, ArtefactCensus, EvidenceStore],
   // Exported for `InstallSettingsController`, which `AppModule` registers.
   exports: [ArtefactCensus],
 })

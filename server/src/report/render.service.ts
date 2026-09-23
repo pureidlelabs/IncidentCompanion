@@ -72,7 +72,7 @@ export class ReportRenderService {
    * A null `t` means a frozen report - the bytes are loaded and nothing is
    * measured or annotated, so a filed document keeps the layout it was sent at.
    */
-  private async figures(document_: Document, t: Translate | null): Promise<Images> {
+  private async figures(caseId: string, document_: Document, t: Translate | null): Promise<Images> {
     const nodes = document_.sections.flatMap((one) =>
       one.nodes.filter((node_): node_ is FigureNode => node_.type === 'figure'),
     )
@@ -81,10 +81,10 @@ export class ReportRenderService {
     await Promise.all(
       nodes.map(async (node_) => {
         if (!node_.hash) return
-        // **A read failure is a missing image, not a failed export.** The store
-        // is content-addressed and an artefact can be absent from this install
-        // entirely; the block still draws its caption.
-        const bytes = await this.evidence.read(node_.hash).catch(() => null)
+        // **A read failure is a missing image, not a failed export.** An
+        // artefact can be absent from this case entirely; the block still draws
+        // its caption.
+        const bytes = await this.evidence.read(caseId, node_.hash).catch(() => null)
         if (!bytes) {
           if (t) node_.note = t('figure.unavailable')
           return
@@ -169,7 +169,7 @@ export class ReportRenderService {
         document_,
         title: document_.title || report.label,
         frozen: true,
-        images: await this.figures(document_, null),
+        images: await this.figures(caseId, document_, null),
       }
     }
 
@@ -211,7 +211,7 @@ export class ReportRenderService {
         })),
       })
       const painted = defangDocument(document_)
-      return { document_: painted, title, frozen: false, images: await this.figures(painted, t) }
+      return { document_: painted, title, frozen: false, images: await this.figures(caseId, painted, t) }
     } catch (error) {
       if (error instanceof UnresolvableSections) {
         // **400, not 500.** The report holds a section this build cannot draw;

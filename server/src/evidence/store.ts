@@ -1,13 +1,17 @@
 /**
- * Where an attached artefact's bytes live: on disk, content-addressed, with
- * the digest as the filename and the row keeping the metadata.
+ * Where an attached artefact's bytes live: on disk, one directory per case,
+ * content-addressed within it, with the row keeping the metadata.
  *
- * Nothing is ever overwritten - a write to an existing digest is a no-op. The
- * cap says what this is for: a screenshot, an `.eml`, a log export.
+ * **Every method takes the case**, and nothing else opens the directory:
+ * `only-the-store-opens-the-evidence-directory.test.ts`.
+ * -> `openspec/specs/state/design.md`
+ *
+ * Nothing is ever overwritten - a write to a digest the case holds is a
+ * no-op. The cap says what this is for: a screenshot, an `.eml`, a log export.
  */
 import { ATTACHMENT_MEGABYTES } from '../policy/keys.js'
 import { createHash } from 'node:crypto'
-import { mkdir, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { basename, join } from 'node:path'
 
@@ -49,8 +53,6 @@ export interface StoredArtefact {
   readonly hash: string
   readonly hashAlgorithm: 'sha256'
   readonly sizeBytes: number
-  /** Whether this call wrote the file, rather than finding it already held. */
-  readonly created: boolean
 }
 
 @Injectable()
@@ -72,6 +74,7 @@ export class EvidenceStore {
    * never leaves a partial file at the digest of the whole.
    */
   async put(
+    caseId: string,
     source: AsyncIterable<Buffer>,
     name?: string,
     /**
@@ -84,7 +87,8 @@ export class EvidenceStore {
      */
     ceilingBytes?: number,
   ): Promise<StoredArtefact> {
-    await mkdir(this.root, { recursive: true })
+    const dir = this.caseDir(caseId)
+    await mkdir(dir, { recursive: true })
 
     /**
      * **Read before the stream, because the cap fires while reading it**, and
@@ -113,24 +117,29 @@ export class EvidenceStore {
     }
 
     const hash = digest.digest('hex')
-    const held = join(this.root, hash)
+    const held = join(dir, hash)
 
     // Already here means identical content, since the name is the plaintext
     // digest. The stored *zip* is not byte-stable - AES uses a fresh salt per
     // entry - so this check has to be on the name and never on the file.
-    const created = !(await this.exists(hash))
-    if (created) {
+    if (!(await exists(held))) {
       const partial = `${held}.${process.pid}.partial`
       await writeFile(partial, await this.wrap(Buffer.concat(chunks), memberName(name, hash)))
       await rename(partial, held)
     }
 
-    return { hash, hashAlgorithm: 'sha256', sizeBytes: size, created }
+    return { hash, hashAlgorithm: 'sha256', sizeBytes: size }
   }
 
-  /** Remove an artefact's file. The caller answers for no row naming it. */
-  async discard(hash: string): Promise<void> {
-    if (isDigest(hash)) await rm(join(this.root, hash), { force: true })
+  /** The digests this case holds. */
+  async held(caseId: string): Promise<Set<string>> {
+    const names = await readdir(this.caseDir(caseId)).catch(() => [])
+    return new Set(names.filter(isDigest))
+  }
+
+  /** Remove everything this case holds. */
+  async discardCase(caseId: string): Promise<void> {
+    await rm(this.caseDir(caseId), { recursive: true, force: true })
   }
 
   /**
@@ -153,9 +162,10 @@ export class EvidenceStore {
    * `infected`, which is the form their own tooling expects and the form that
    * survives the trip past their AV. Callers wanting the bytes want `read`.
    */
-  async open(hash: string): Promise<NodeJS.ReadableStream | null> {
-    if (!isDigest(hash) || !(await this.exists(hash))) return null
-    return createReadStream(join(this.root, hash))
+  async open(caseId: string, hash: string): Promise<NodeJS.ReadableStream | null> {
+    const held = join(this.caseDir(caseId), hash)
+    if (!isDigest(hash) || !(await exists(held))) return null
+    return createReadStream(held)
   }
 
   /**
@@ -166,8 +176,8 @@ export class EvidenceStore {
    * to hold the zip to seal it, so a stream here would only be drained
    * immediately by every caller that has one.
    */
-  async read(hash: string): Promise<Uint8Array | null> {
-    const sealed = await this.sealedBytes(hash)
+  async read(caseId: string, hash: string): Promise<Uint8Array | null> {
+    const sealed = await this.sealedBytes(caseId, hash)
     return sealed === null ? null : await this.unwrap(sealed)
   }
 
@@ -186,8 +196,8 @@ export class EvidenceStore {
     }
   }
 
-  private async sealedBytes(hash: string): Promise<Uint8Array | null> {
-    const stream = await this.open(hash)
+  private async sealedBytes(caseId: string, hash: string): Promise<Uint8Array | null> {
+    const stream = await this.open(caseId, hash)
     if (!stream) return null
     const chunks: Buffer[] = []
     for await (const chunk of stream as AsyncIterable<Buffer>) chunks.push(Buffer.from(chunk))
@@ -200,13 +210,13 @@ export class EvidenceStore {
    * **The only honest integrity check.** Comparing a stored digest against a
    * stored digest proves nothing; this reads the bytes.
    */
-  async verify(hash: string): Promise<boolean> {
+  async verify(caseId: string, hash: string): Promise<boolean> {
     // **Hashes the artefact, never the container.** The stored zip carries a
     // fresh AES salt per write, so its own bytes hash differently every time
     // and comparing them would fail on a file that is perfectly intact.
     let plain: Uint8Array | null
     try {
-      plain = await this.read(hash)
+      plain = await this.read(caseId, hash)
     } catch {
       // An unreadable container is a failed integrity check, not an error to
       // propagate: the caller asked whether this artefact is still sound.
@@ -216,13 +226,19 @@ export class EvidenceStore {
     return createHash('sha256').update(plain).digest('hex') === hash
   }
 
-  private async exists(hash: string): Promise<boolean> {
-    try {
-      await stat(join(this.root, hash))
-      return true
-    } catch {
-      return false
-    }
+  /** Where one case's artefacts live. Throws for anything that is not a case id. */
+  private caseDir(caseId: string): string {
+    if (!isCaseId(caseId)) throw new Error(`${JSON.stringify(caseId)} is not a case id`)
+    return join(this.root, caseId.toLowerCase())
+  }
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path)
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -238,4 +254,9 @@ function memberName(name: string | undefined, digest: string): string {
  */
 export function isDigest(value: string): boolean {
   return /^[0-9a-f]{64}$/.test(value)
+}
+
+/** The same guard for the directory a case's artefacts live in. */
+function isCaseId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 }

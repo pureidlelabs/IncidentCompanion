@@ -92,9 +92,8 @@ export class EvidenceFileController {
    * caller's word makes the verification that checks the file against it
    * circular. The column's own docstring says the same.
    *
-   * **Re-attaching replaces.** The row points at one artefact; the store is
-   * content-addressed, so the previous bytes stay on disk under their own
-   * digest and are simply no longer referenced here.
+   * **Re-attaching replaces.** The row points at one artefact; the previous
+   * bytes stay in the case until the next start finds nothing naming them.
    */
   @Post()
   @HttpCode(200)
@@ -107,15 +106,13 @@ export class EvidenceFileController {
     const row = await this.rowOr404(caseId, id)
 
     // **The name goes in with the bytes**, so the entry inside the stored zip
-    // is `invoice.eml` rather than a digest an analyst cannot act on. Content
-    // addressing means the first writer's name wins for identical content -
-    // the alternative is naming the entry by the digest, which is worse for
-    // every download to save one edge case nobody meets.
+    // is `invoice.eml` rather than a digest an analyst cannot act on. Within a
+    // case the first writer's name wins for identical content.
     const sentName =
       typeof request.headers['x-original-filename'] === 'string'
         ? dispositionName(request.headers['x-original-filename'])
         : undefined
-    const stored = await this.store.put(request, sentName)
+    const stored = await this.store.put(caseId, request, sentName)
     if (stored.sizeBytes === 0) {
       // **An empty attachment is a mistake, not an artefact.** It hashes and
       // stores perfectly, and the row would then claim a file nobody can read
@@ -182,7 +179,7 @@ export class EvidenceFileController {
       throw new NotFoundException('This evidence record has no file attached.')
     }
 
-    const stream = await this.store.open(row.hash)
+    const stream = await this.store.open(caseId, row.hash)
     if (!stream) {
       // The row says the bytes are here and they are not: an app root moved,
       // or a file removed underneath. Saying so beats a stream that ends at

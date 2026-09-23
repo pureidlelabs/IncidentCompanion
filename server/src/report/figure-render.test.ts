@@ -114,7 +114,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
       // eslint-disable-next-line no-unexpected-multiline
       [format]()
       .toBuffer()
-    const stored = await store.put(Readable.from([bytes]) as never, `shot.${format}`)
+    const stored = await store.put(caseId, Readable.from([bytes]) as never, `shot.${format}`)
 
     const [row] = await seed!
       .insert(evidence)
@@ -154,7 +154,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
     })
       .png()
       .toBuffer()
-    const stored = await store.put(Readable.from([bytes]) as never, 'picked.png')
+    const stored = await store.put(caseId, Readable.from([bytes]) as never, 'picked.png')
     const [row] = await seed!
       .insert(evidence)
       .values({ caseId, name: 'picked.png', hash: stored.hash, createdBy: actorId })
@@ -322,7 +322,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
     })
       .png()
       .toBuffer()
-    const stored = await store.put(Readable.from([damage(whole)]) as never, 'broken.png')
+    const stored = await store.put(caseId, Readable.from([damage(whole)]) as never, 'broken.png')
 
     const [row] = await seed!
       .insert(evidence)

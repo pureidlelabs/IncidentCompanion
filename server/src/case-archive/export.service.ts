@@ -14,6 +14,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common'
 import { textOf } from '../domain/text-of.js'
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
+import { frozenFigures } from '../db/artefacts-named.js'
 import {
   CASE_NAME,
   EVIDENCE_PREFIX,
@@ -79,7 +80,11 @@ export class ArchiveExportService {
     // **The Yjs documents come out of the case record and ride separately.**
     // Left in the JSON they would be a base64 blob in the file a human is
     // meant to read, and the JSON is the half that has to stay greppable.
-    const reports = (data.reports ?? []) as { id: string; document?: Buffer | null }[]
+    const reports = (data.reports ?? []) as {
+      id: string
+      document?: Buffer | null
+      frozen?: unknown
+    }[]
     const carried = reports.map((report) => {
       const { document, ...rest } = report
       if (document && document.length > 0) {
@@ -94,15 +99,19 @@ export class ArchiveExportService {
     const attachments: Attachments = request.includeFiles ? 'included' : 'omitted'
     if (request.includeFiles) {
       // **By digest, so an artefact attached to two rows travels once.** The
-      // store is content-addressed and the archive follows it; the rows name
-      // the digest, so nothing is lost by not repeating the bytes.
-      const evidence = (data.evidence ?? []) as { hash?: string | null; name?: string | null }[]
+      // rows name the digest, so nothing is lost by not repeating the bytes.
+      // A row that does not say the bytes are held here is not asked about.
+      const evidence = (data.evidence ?? []) as {
+        hash?: string | null
+        name?: string | null
+        storedAt?: unknown
+      }[]
       const seen = new Set<string>()
       for (const row of evidence) {
         const hash = row.hash ?? ''
-        if (!hash || seen.has(hash)) continue
+        if (!row.storedAt || !hash || seen.has(hash)) continue
         seen.add(hash)
-        const bytes = await this.store.read(hash)
+        const bytes = await this.store.read(request.caseId, hash)
         if (!bytes) {
           // **Named rather than failing the export.** The row says this
           // install holds the file and it does not; an export that refuses
@@ -113,6 +122,13 @@ export class ArchiveExportService {
           continue
         }
         members[`${EVIDENCE_PREFIX}${hash}`] = bytes
+      }
+      // A sent report's figures travel after their rows go; one never held here is not lost.
+      for (const hash of reports.flatMap((report) => frozenFigures(report.frozen))) {
+        if (seen.has(hash)) continue
+        seen.add(hash)
+        const bytes = await this.store.read(request.caseId, hash)
+        if (bytes) members[`${EVIDENCE_PREFIX}${hash}`] = bytes
       }
     }
 

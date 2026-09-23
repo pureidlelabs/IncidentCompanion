@@ -13,7 +13,8 @@
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq, inArray } from 'drizzle-orm'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Logger } from '@nestjs/common'
@@ -21,6 +22,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ArtefactCensus, saysAtStart, type Census } from './artefact-census.service.js'
 import { HealthModule } from './health.module.js'
+import { EvidenceStore } from '../evidence/store.js'
 import { cases, evidence, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
@@ -119,7 +121,14 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     })
   }
 
-  const census = () => new ArtefactCensus(db!, { get: () => root } as never)
+  const storeAt = (dir: string) => new EvidenceStore({ get: () => dir } as never, {} as never)
+  const census = () => new ArtefactCensus(db!, storeAt(root))
+
+  /** Bytes under `hash` in the directory the store keeps `forCase`'s artefacts in. */
+  const placed = async (hash: string, forCase = caseId) => {
+    await mkdir(join(root, forCase), { recursive: true })
+    await writeFile(join(root, forCase, hash), 'here')
+  }
 
   /**
    * What this test added, against what the install already held.
@@ -140,7 +149,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     const before = await census().take()
     await record(hashFor('a'))
     await record(hashFor('b'))
-    await writeFile(join(root, hashFor('a')), 'here')
+    await placed(hashFor('a'))
 
     const held = await since(before)
 
@@ -173,7 +182,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     const before = await census().take()
     await record('')
     await record(hashFor('d'))
-    await writeFile(join(root, hashFor('d')), 'here')
+    await placed(hashFor('d'))
 
     const held = await since(before)
 
@@ -206,10 +215,18 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     expect(held.missing, 'an install that never held those bytes is told it has lost them').toBe(0)
   })
 
+  it('does not count bytes held for another case as this case\u2019s', async () => {
+    const before = await census().take()
+    await record(hashFor('i'))
+    await placed(hashFor('i'), randomUUID())
+
+    expect((await since(before)).missing, 'a digest found under another case was counted as held').toBe(1)
+  })
+
   it('says nothing is missing on an install that holds them all', async () => {
     const before = await census().take()
     await record(hashFor('e'))
-    await writeFile(join(root, hashFor('e')), 'here')
+    await placed(hashFor('e'))
 
     expect((await since(before)).missing).toBe(0)
   })
@@ -224,7 +241,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     await record(hashFor('f'))
     expect((await since(before)).missing).toBe(1)
 
-    await writeFile(join(root, hashFor('f')), 'restored')
+    await placed(hashFor('f'))
 
     expect(
       (await since(before)).missing,
@@ -243,7 +260,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
    * answer a healthy install gives, and the exact silence #179 is about.
    */
   it('counts what the install holds when the application asks', async () => {
-    const asApp = () => new ArtefactCensus(appDb!, { get: () => root } as never)
+    const asApp = () => new ArtefactCensus(appDb!, storeAt(root))
     const before = await asApp().take()
     await record(hashFor('g'))
 
@@ -269,7 +286,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
   it('reports nothing expected on an install holding no evidence', async () => {
     const empty = { select: () => ({ from: () => Promise.resolve([]) }) }
 
-    const held = await new ArtefactCensus(empty as never, { get: () => root } as never).take()
+    const held = await new ArtefactCensus(empty as never, storeAt(root)).take()
 
     expect(held).toEqual({ expected: 0, missing: 0 })
   })
