@@ -563,7 +563,7 @@ export class CasesService {
     customerId: string,
     actorId: string,
   ): Promise<{ from: string | null; title: string }> {
-    const answer = await withReach(this.db, (tx) => this.moveWithin(tx, id, customerId, actorId))
+    const answer = await withReach(this.db, (tx) => this.moveWithin(tx, id, customerId))
 
     // Outside the transaction: neither is a database write, and announcing a
     // move that then rolled back would be worse than announcing it late.
@@ -576,34 +576,12 @@ export class CasesService {
     tx: Transaction,
     id: string,
     customerId: string,
-    actorId: string,
   ): Promise<{ from: string | null; title: string }> {
     const [held] = await tx
-      .select({ id: customers.id, isDefault: customers.isDefault })
+      .select({ id: customers.id })
       .from(customers)
       .where(eq(customers.id, customerId))
     if (!held) throw new NotFoundException(`No customer ${customerId}.`)
-
-    /**
-     * **The default is not a destination**, in the direction that matters and
-     * for the reason `merge` refuses it in both: it stands for an incident
-     * whose origin is not yet known, and every analyst reaches it at write.
-     * Moving an attributed case there would widen who reads it to the whole
-     * install, and falsify the premise the floor rests on -- that what sits
-     * under the default is nobody's yet.
-     *
-     * **This leaves no way to undo a wrong attribution**, which is a real gap
-     * and the same one #131 records: nothing distinguishes a case that has
-     * never been attributed from one attributed to the default, so there is
-     * no state to return it to.
-     */
-    if (held.isDefault) {
-      throw new ConflictException({
-        message:
-          'A case cannot be moved to the default customer. It stands for an incident ' +
-          'whose origin is not yet known, and every analyst reaches it.',
-      })
-    }
 
     const [row] = await tx
       .select({ customerId: cases.customerId, title: cases.title, reference: cases.reference })
@@ -616,32 +594,32 @@ export class CasesService {
       })
     }
 
-    /**
-     * **A reference is unique within its customer, and a move is the second
-     * way to break that.** Asked only for a mover who reaches the destination,
-     * so the answer never depends on what an unreached customer holds.
-     */
-    if (row.reference !== null && row.reference !== '') {
-      const { rows } = await tx.execute<{ level: string | null }>(
-        sql`select ic_level(${actorId}, ${customerId}::uuid) as level`,
-      )
-      if (!rows[0]?.level) {
+    // Finds a collision only where the mover reaches the destination: the
+    // policies hide every other customer's cases, and the store refuses that
+    // mover a referenced case before it looks.
+    await this.referenceIsFree(tx, customerId, row.reference ?? undefined, id)
+
+    const { rows } = await tx.execute<{ answer: 'moved' | 'absent' | 'default' | 'unreached' }>(
+      sql`select ic_move_case(${id}::uuid, ${customerId}::uuid) as answer`,
+    )
+    switch (rows[0]?.answer) {
+      case 'moved':
+        return { from: row.customerId, title: row.title }
+      case 'default':
+        throw new ConflictException({
+          message:
+            'A case cannot be moved to the default customer. It stands for an incident ' +
+            'whose origin is not yet known, and every analyst reaches it.',
+        })
+      case 'unreached':
         throw new ForbiddenException({
           message:
             'A case carrying a reference moves only to a customer you reach. ' +
             'Clear its reference to move it there.',
         })
-      }
-      await this.referenceIsFree(tx, customerId, row.reference, id)
+      default:
+        throw new NotFoundException(`No case ${id}.`)
     }
-
-    // Through the store's own act: the moved row may be one the mover no
-    // longer sees, which no update of theirs may leave behind.
-    const { rows } = await tx.execute<{ moved: boolean }>(
-      sql`select ic_move_case(${id}::uuid, ${customerId}::uuid) as moved`,
-    )
-    if (!rows[0]?.moved) throw new NotFoundException(`No case ${id}.`)
-    return { from: row.customerId, title: row.title }
   }
 
 }

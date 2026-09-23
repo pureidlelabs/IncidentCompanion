@@ -16,8 +16,11 @@
  * create is: the answer is about a case they can open. A case with no
  * reference still moves anywhere, which is the ordinary triage.
  */
+import { sql } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { openTestPool } from './database.js'
 import {
   boot,
   bootable,
@@ -32,12 +35,41 @@ const TAG = `${String(process.pid)}-${String(Date.now()).slice(-6)}`
 const HELD = `CHG-${TAG}`
 /** Held by the customer too, and asked about only by somebody who reaches it. */
 const ALSO_HELD = `CHG-${TAG}-B`
+/** Held by the customer too, and probed at the store rather than the route. */
+const STORE_HELD = `CHG-${TAG}-S`
 
 let harness: Harness
 let admin: Persona
 let prober: Persona
 let insider: Persona
 let victim = ''
+let pool: ReturnType<typeof openTestPool> | null = null
+
+/** What the store's own move answers `who` for `caseId`, rolled back whatever it did. */
+async function storeMove(who: Persona, caseId: string, customerId: string) {
+  pool ??= openTestPool(process.env.DATABASE_URL!, 'ic_app')
+  const client = await pool.connect()
+  try {
+    await client.query('begin')
+    await client.query(`select set_config('app.principal', $1, true)`, [who.id])
+    await client.query('savepoint move')
+    const answer = await client
+      .query<{ answer: unknown }>('select ic_move_case($1::uuid, $2::uuid) as answer', [caseId, customerId])
+      .then(({ rows }) => rows[0]?.answer)
+      .catch(async (error: { code?: string }) => {
+        await client.query('rollback to savepoint move')
+        return `raised ${String(error.code)}`
+      })
+    const { rows } = await client.query<{ customer: string | null }>(
+      'select customer from ic_reach($1, $2::uuid)',
+      [who.id, caseId],
+    )
+    return { answer, landed: rows[0]?.customer }
+  } finally {
+    await client.query('rollback')
+    client.release()
+  }
+}
 
 const call = async (who: Persona, method: string, path: string, body?: unknown) => {
   const response = await fetch(`${harness.base}${path}`, {
@@ -104,13 +136,14 @@ describe.skipIf(!(await bootable()))('moving a case to a customer', () => {
     })
     expect(joins.status, joins.text).toBeLessThan(300)
 
-    for (const reference of [HELD, ALSO_HELD]) {
+    for (const reference of [HELD, ALSO_HELD, STORE_HELD]) {
       const theirs = await moveOpened(insider, reference, victim)
       expect(theirs.moved.status, theirs.moved.text).toBe(200)
     }
   }, 120_000)
 
   afterAll(async () => {
+    await pool?.end()
     await harness?.close()
   })
 
@@ -142,5 +175,39 @@ describe.skipIf(!(await bootable()))('moving a case to a customer', () => {
     expect(plain.moved.status, plain.moved.text).toBe(200)
     // Moved out of their reach, which is the ordinary triage and costs them the case.
     expect(plain.stillReads).toBe(404)
+  })
+
+  /**
+   * **The same attack on the store's own act, with no route in front of it.**
+   * A consumer that forgets the route's rules must not reopen the oracle.
+   */
+  it('has the store refuse the same way, whatever the customer holds', async () => {
+    const opened = async (reference: string) => {
+      const made = await call(prober, 'POST', '/api/cases', {
+        title: `Store probe ${reference}`,
+        reference,
+      })
+      expect(made.status, made.text).toBe(201)
+      return made.json['id'] as string
+    }
+    const hit = await storeMove(prober, await opened(STORE_HELD), victim)
+    const miss = await storeMove(prober, await opened(`${STORE_HELD}-X`), victim)
+
+    expect(miss.answer, 'the store answers by what the unreached customer holds').toEqual(
+      hit.answer,
+    )
+    expect(hit.answer).toBe('unreached')
+    expect([hit.landed, miss.landed], 'a probe was planted in the customer').not.toContain(victim)
+  })
+
+  it('has the store refuse the default customer as a destination', async () => {
+    const listed = await call(admin, 'GET', '/api/customers')
+    const fallback = (listed.json['customers'] as { id: string; isDefault: boolean }[]).find(
+      (one) => one.isDefault,
+    )!.id
+    const moved = await moveOpened(insider, undefined, victim)
+    expect(moved.moved.status, moved.moved.text).toBe(200)
+
+    expect((await storeMove(insider, moved.id, fallback)).answer).toBe('default')
   })
 })

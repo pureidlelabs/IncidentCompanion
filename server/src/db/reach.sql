@@ -81,23 +81,33 @@ language sql stable
 set search_path = pg_catalog, pg_temp
 as $$ select nullif(current_setting('app.principal', true), '') $$;
 
--- Moves one case to `destination`, answering whether a case moved. The
--- principal must hold write over the case where it is now; where it lands is
--- the mover's choice, and may be a customer they do not reach.
+-- Moves one case to `destination` as the principal, answering `moved`, or
+-- `absent` where they do not write the case, `default` where the destination
+-- is the default customer, and `unreached` where the case carries a reference
+-- and they do not reach the destination. A case with no reference may land
+-- with a customer they do not reach.
 create or replace function public.ic_move_case(kase uuid, destination uuid)
-returns boolean
+returns text
 language plpgsql volatile security definer
 set search_path = pg_catalog, pg_temp
 as $$
+declare
+  reference text;
 begin
-  if not exists (
-    select 1 from public.ic_reach(public.ic_principal(), kase) r
-     where r.present and r.level in ('write', 'delete')
-  ) then
-    return false;
+  select c.reference into reference
+    from public.cases c, public.ic_reach(public.ic_principal(), kase) r
+   where c.id = kase and r.present and r.level in ('write', 'delete');
+  if not found then
+    return 'absent';
+  end if;
+  if exists (select 1 from public.customers where id = destination and is_default) then
+    return 'default';
+  end if;
+  if coalesce(reference, '') <> '' and public.ic_level(public.ic_principal(), destination) is null then
+    return 'unreached';
   end if;
   update public.cases set customer_id = destination where id = kase;
-  return found;
+  return 'moved';
 end
 $$;
 
