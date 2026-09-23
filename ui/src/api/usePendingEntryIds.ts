@@ -39,9 +39,8 @@ function idsOf(variables: unknown): string[] {
 /**
  * Rows with a PATCH or DELETE in flight, by verb.
  *
- * Two sets rather than one: a row being deleted has already left the list
- * optimistically, while a row being patched is still there and shown dimmed.
- * A caller that merged them would dim rows that are gone.
+ * Two sets rather than one: a row being deleted is about to leave the list,
+ * while a row being patched stays and is shown dimmed until it is answered.
  */
 export function usePendingEntryIds(
   caseId: string,

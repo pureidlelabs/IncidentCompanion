@@ -13,7 +13,6 @@ import {
 } from 'react'
 
 import type { CollectionName } from '@/api/model'
-import { isOptimisticId } from '@/api/useEntryCreate'
 import {
   ESTIMATED_ROW_HEIGHT,
   VIRTUALIZE_FROM,
@@ -854,7 +853,7 @@ export function actionsColumn<TData extends { id: string }>(
                 }
               : {})}
             {...(meta.edit ? { onEdit: () => meta.edit?.(row.id) } : {})}
-            editDisabled={isOptimisticId(row.id)}
+            editDisabled={metaOf(table).pendingIds.has(row.id)}
             {...(meta.remove
               ? {
                   onDelete: () => {

@@ -146,8 +146,8 @@ function emptyUndrawn(field: z.ZodType): unknown {
 }
 
 /**
- * A whole row of this schema with nothing filled in - what a client's
- * optimistic append is completed from, since the create dialog drops blanks.
+ * A whole row of this schema with nothing filled in, every declared default
+ * applied.
  *
  * A declared default wins over the kind's empty value, `null` included -
  * `specs.controller.test.ts` holds every form to that. Distinct from the
@@ -167,8 +167,7 @@ function blankRow(schema: z.ZodObject): Record<string, unknown> {
      * **`null` is a declared default like any other.** A guard reading
      * `!== undefined && !== null` sends every `z.uuid().nullable().default(null)`
      * to the empty value for its control kind, publishing `""` - a value the
-     * same schema refuses, in the row a client's optimistic append is completed
-     * from.
+     * same schema refuses, in a row the document offers as blank.
      */
     if (declared !== undefined) {
       out[name] = declared

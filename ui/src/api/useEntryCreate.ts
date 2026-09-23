@@ -1,17 +1,8 @@
 /**
- * Add one row to a table: optimistic append, POST, rollback on failure.
+ * Add one row to a table: a POST, and the table read again once it is answered.
  *
- * Same skeleton as `useEntryMutation` - cancel, snapshot, apply, restore on
- * error, invalidate on settled - differing only in what it does to the list.
- * Written out rather than shared with the other two behind a generic: the
- * three differ in the one line that matters, and a helper parameterised by
- * "how to change the list" hides exactly the part worth reading.
- *
- * **The optimistic row carries a placeholder id.** The server assigns the real
- * one and returns it; `onSettled` refetches, so the placeholder lives for the
- * duration of one request and never reaches a link or a reference. Nothing may
- * key off it - `isOptimisticId` is exported so a component can refuse to open
- * a row that does not exist yet.
+ * Nothing is drawn before the answer. The screens append the row the server
+ * stored, which carries the id it assigned.
  *
  * **`evidence` never reaches this hook because the URL goes elsewhere, not
  * because anything refuses it.** `GenericCreateCollectionName` is an alias of
@@ -29,23 +20,8 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 
 import { request, type ApiError } from './client'
-import {
-  COLLECTION_TO_CASE_KEY,
-  type Case,
-  type CollectionEntry,
-  type GenericCreateCollectionName,
-} from './model'
-import { optimisticRow } from './optimisticRow'
+import type { CollectionEntry, GenericCreateCollectionName } from './model'
 import { keys } from './queryKeys'
-
-/**
- * Whether this row is a placeholder the server has not acknowledged yet.
- *
- * **Re-exported rather than moved.** It lives beside the row builder now, and
- * several screens import it from here; a rename would be churn in files that
- * have no other reason to change.
- */
-export { isOptimisticId } from './optimisticRow'
 
 export interface EntryDraft<N extends GenericCreateCollectionName> {
   fields: Partial<Omit<CollectionEntry[N], 'id'>>
@@ -54,13 +30,13 @@ export interface EntryDraft<N extends GenericCreateCollectionName> {
 /**
  * The POST alone, for a caller the mutation is too slow for.
  *
- * `mutateAsync` awaits `onMutate` before it reaches this, and a caller inside
- * a `pagehide` handler has no later tick to be resumed on -- the renderer is
- * gone and the request was never issued. Calling this issues the `fetch`
- * synchronously, and `keepalive` is what lets it outlive the document.
+ * `mutateAsync` resolves its own bookkeeping before it reaches this, and a
+ * caller inside a `pagehide` handler has no later tick to be resumed on -- the
+ * renderer is gone and the request was never issued. Calling this issues the
+ * `fetch` synchronously, and `keepalive` is what lets it outlive the document.
  *
- * **No optimistic row and no invalidation**, which is the whole difference:
- * both describe a screen that is about to stop existing.
+ * **No invalidation**, which is the whole difference: it describes a screen
+ * that is about to stop existing.
  */
 export function createEntry<N extends GenericCreateCollectionName>(
   caseId: string,
@@ -72,11 +48,6 @@ export function createEntry<N extends GenericCreateCollectionName>(
     `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}`,
     { method: 'POST', body: fields, ...(keepalive ? { keepalive } : {}) },
   )
-}
-
-interface CreateRollback<N extends GenericCreateCollectionName> {
-  previous: CollectionEntry[N][] | undefined
-  previousCase: Case | undefined
 }
 
 /**
@@ -91,43 +62,14 @@ export type CreatedEntry<N extends GenericCreateCollectionName> = CollectionEntr
 export function useEntryCreate<N extends GenericCreateCollectionName>(
   caseId: string,
   collection: N,
-): UseMutationResult<CreatedEntry<N>, ApiError, EntryDraft<N>, CreateRollback<N>> {
+): UseMutationResult<CreatedEntry<N>, ApiError, EntryDraft<N>> {
   const client = useQueryClient()
   const listKey = keys.collection(caseId, collection)
-  const caseKey = keys.case(caseId)
-  const onCase = COLLECTION_TO_CASE_KEY[collection]
 
-  return useMutation<CreatedEntry<N>, ApiError, EntryDraft<N>, CreateRollback<N>>({
+  return useMutation<CreatedEntry<N>, ApiError, EntryDraft<N>>({
     mutationKey: [...listKey, 'create'],
 
     mutationFn: ({ fields }) => createEntry(caseId, collection, fields),
-
-    onMutate: async ({ fields }) => {
-      // The screens render from the case document, so the write lands there as well as on the list.
-      await Promise.all([
-        client.cancelQueries({ queryKey: listKey }),
-        client.cancelQueries({ queryKey: caseKey, exact: true }),
-      ])
-      const previous = client.getQueryData<CollectionEntry[N][]>(listKey)
-      const previousCase = client.getQueryData<Case>(caseKey)
-
-      // Appended, because that is where the server puts a new row. One that
-      // lands at the top optimistically and at the bottom on refetch reads as
-      // the write having moved it.
-      const draft = optimisticRow<CollectionEntry[N]>(client, collection, fields)
-      const apply = (rows: CollectionEntry[N][] | undefined) => [...(rows ?? []), draft]
-      client.setQueryData<CollectionEntry[N][]>(listKey, apply)
-      client.setQueryData<Case>(caseKey, (kase) =>
-        kase && { ...kase, [onCase]: apply(kase[onCase] as CollectionEntry[N][]) },
-      )
-      return { previous, previousCase }
-    },
-
-    onError: (_error, _draft, context) => {
-      if (!context) return
-      client.setQueryData(listKey, context.previous)
-      client.setQueryData(caseKey, context.previousCase)
-    },
 
     onSettled: () => {
       void client.invalidateQueries({ queryKey: listKey })

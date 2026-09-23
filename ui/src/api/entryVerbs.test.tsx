@@ -7,7 +7,8 @@ import type { Case, TimelineEntry } from './model'
 import { keys } from './queryKeys'
 import { setSession } from './session'
 import { useCaseMutation } from './useCaseMutation'
-import { isOptimisticId, useEntryCreate } from './useEntryCreate'
+import { drawn } from './rowWrite'
+import { useEntryCreate } from './useEntryCreate'
 import { useEntryDelete } from './useEntryDelete'
 
 const CASE = 'DEMO-CAMPAIGN'
@@ -60,19 +61,33 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+const at = (version: number) => drawn({ version }).version
+
+/** A request that stays out until the test answers it. */
+function held(): (value: Response) => void {
+  let answer: (value: Response) => void = () => undefined
+  fetchMock.mockReturnValue(
+    new Promise<Response>((resolve) => {
+      answer = resolve
+    }),
+  )
+  return (value) => {
+    answer(value)
+  }
+}
+
 describe('adding an entry', () => {
-  it('appends optimistically and POSTs only the fields given', async () => {
-    fetchMock.mockResolvedValue(ok({ id: 'server-id' }))
+  it('POSTs only the fields given, and draws nothing before the answer', async () => {
+    const answer = held()
     const { client, hook } = harness(() => useEntryCreate(CASE, 'timeline'))
 
     act(() => {
       hook.result.current.mutate({ fields: { description: 'third' } })
     })
 
-    await waitFor(() => expect(rows(client)).toHaveLength(3))
-    // Appended, not prepended: the server puts a new row at the end, so a
-    // row that lands at the top and then moves reads as the write moving it.
-    expect(rows(client)[2]?.description).toBe('third')
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(rows(client).map((r) => r.id)).toEqual(['e1', 'e2'])
+    answer(ok({ id: 'server-id' }))
 
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
     const [url, init] = fetchMock.mock.calls[0]!
@@ -80,47 +95,20 @@ describe('adding an entry', () => {
     expect(init?.method).toBe('POST')
     expect(sentBody(init)).toEqual({ description: 'third' })
   })
-
-  it('marks the placeholder id so nothing links to a row that does not exist', async () => {
-    fetchMock.mockReturnValue(new Promise<Response>(() => undefined))
-    const { client, hook } = harness(() => useEntryCreate(CASE, 'timeline'))
-
-    act(() => {
-      hook.result.current.mutate({ fields: { description: 'third' } })
-    })
-
-    await waitFor(() => expect(rows(client)).toHaveLength(3))
-    expect(isOptimisticId(rows(client)[2]!.id)).toBe(true)
-    expect(isOptimisticId('e1')).toBe(false)
-  })
-
-  it('takes the row back out when the write is refused', async () => {
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ error: 'read-only' }), { status: 403 }),
-    )
-    const { client, hook } = harness(() => useEntryCreate(CASE, 'timeline'))
-
-    act(() => {
-      hook.result.current.mutate({ fields: { description: 'third' } })
-    })
-
-    await waitFor(() => expect(hook.result.current.isError).toBe(true))
-    expect(rows(client)).toHaveLength(2)
-    expect(hook.result.current.error?.status).toBe(403)
-  })
 })
 
 describe('deleting an entry', () => {
-  it('removes it optimistically and DELETEs that one row', async () => {
-    fetchMock.mockResolvedValue(new Response(null, { status: 200 }))
+  it('DELETEs that one row with the version it read, and leaves it drawn until the answer', async () => {
+    const answer = held()
     const { client, hook } = harness(() => useEntryDelete(CASE, 'timeline'))
 
     act(() => {
-      hook.result.current.mutate({ entryId: 'e1', version: 1 })
+      hook.result.current.mutate({ entryId: 'e1', version: at(1) })
     })
 
-    await waitFor(() => expect(rows(client)).toHaveLength(1))
-    expect(rows(client)[0]?.id).toBe('e2')
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(rows(client).map((r) => r.id)).toEqual(['e1', 'e2'])
+    answer(new Response(null, { status: 200 }))
 
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
     const [url, init] = fetchMock.mock.calls[0]!
@@ -130,38 +118,22 @@ describe('deleting an entry', () => {
     expect(url).toBe('/api/cases/DEMO-CAMPAIGN/timeline/e1?version=1')
     expect(init?.method).toBe('DELETE')
   })
-
-  it('puts it back when the write is refused', async () => {
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ error: 'deleting needs a higher level' }), {
-        status: 403,
-      }),
-    )
-    const { client, hook } = harness(() => useEntryDelete(CASE, 'timeline'))
-
-    act(() => {
-      hook.result.current.mutate({ entryId: 'e1', version: 1 })
-    })
-
-    await waitFor(() => expect(hook.result.current.isError).toBe(true))
-    expect(rows(client).map((r) => r.id)).toEqual(['e1', 'e2'])
-  })
 })
 
 describe('changing the case itself', () => {
-  it('merges optimistically and PATCHes the case route', async () => {
-    fetchMock.mockResolvedValue(ok({ case_id: CASE }))
+  it('PATCHes the case route with the version it read, and draws nothing before the answer', async () => {
+    const answer = held()
     const { client, hook } = harness(() => useCaseMutation(CASE), (c) => {
       c.setQueryData(caseKey, caseFixture('before'))
     })
 
     act(() => {
-      hook.result.current.mutate({ version: 1, fields: { title: 'after' } })
+      hook.result.current.mutate({ version: at(1), fields: { title: 'after' } })
     })
 
-    await waitFor(() =>
-      expect(client.getQueryData<Case>(caseKey)?.title).toBe('after'),
-    )
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(client.getQueryData<Case>(caseKey)?.title).toBe('before')
+    answer(ok({ id: CASE, version: 2, title: 'after' }))
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
 
     const [url, init] = fetchMock.mock.calls[0]!
@@ -173,29 +145,13 @@ describe('changing the case itself', () => {
     expect(sentBody(init)).toEqual({ version: 1, title: 'after' })
   })
 
-  it('rolls the case back when the write is refused', async () => {
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ error: 'read-only' }), { status: 403 }),
-    )
-    const { client, hook } = harness(() => useCaseMutation(CASE), (c) => {
-      c.setQueryData(caseKey, caseFixture('before'))
-    })
-
-    act(() => {
-      hook.result.current.mutate({ version: 1, fields: { title: 'after' } })
-    })
-
-    await waitFor(() => expect(hook.result.current.isError).toBe(true))
-    expect(client.getQueryData<Case>(caseKey)?.title).toBe('before')
-  })
-
   it('refreshes the case list too, because the picker row is derived from these fields', async () => {
-    fetchMock.mockResolvedValue(ok({ case_id: CASE }))
+    fetchMock.mockResolvedValue(ok({ id: CASE, version: 2 }))
     const { client, hook } = harness(() => useCaseMutation(CASE))
     const invalidate = vi.spyOn(client, 'invalidateQueries')
 
     act(() => {
-      hook.result.current.mutate({ version: 1, fields: { status: 'closed' } })
+      hook.result.current.mutate({ version: at(1), fields: { status: 'closed' } })
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
 
