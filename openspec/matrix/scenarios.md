@@ -140,6 +140,7 @@
 | Reading an archive cannot be made to cost more than the install will spend | An archive describing more content than the install accepts | demonstrated | server/src/archive/format.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is read in | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | demonstrated | server/src/case-archive/round-trip.test.ts |
+| Reading an archive creates a case; it never overwrites one | An archive names an artefact it does not carry | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is attributed | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive states where its rows came from | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive says how complete the case it made is | An archive carries rows that name what it left behind | demonstrated | ui/src/components/blocks/notify.test.ts |
@@ -540,7 +541,7 @@
 | Which languages an install can write reports in is the administrator's to change | An incomplete language is managed | demonstrated | ui/src/components/blocks/languages-pane.stories.tsx |
 | A report is for an audience, and the audience decides what it owes | A report is created | unbuilt | Not built: a report records no audience. -> #228 |
 | A report is for an audience, and the audience decides what it owes | A layout omits something the audience requires | unbuilt | Not built: what a report owes is read from its layout, not its audience. -> #228 |
-| A report never carries another customer's data | A report carries a row from another customer | unbuilt | Not built: the boundary is held at the write, and no export refuses. -> #227 |
+| A report never carries another customer's data | A report carries a row from another customer | unbuilt | Not built: the boundary is held at the write and at the evidence store, and no export refuses. -> #227 |
 | A report never carries another customer's data | The offending part is removed | unbuilt | Not built: no export refusal to lift. -> #227 |
 | Material an audience does not expect is named, and the analyst decides | An internal note is in a customer report | unbuilt | Not built: no audience, so nothing to measure material against. -> #229 |
 | Material an audience does not expect is named, and the analyst decides | The analyst sends it anyway | unbuilt | Not built: nothing records what was named and sent anyway. -> #229 |
@@ -586,6 +587,11 @@
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | demonstrated | server/src/health/an-install-says-what-it-cannot-find.test.ts |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | demonstrated | server/src/evidence/artefacts-put-back-make-the-evidence-whole.test.ts |
+| An artefact is reached only through the case that holds it | A digest is named in another case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | Reach is withdrawn from an analyst who read a digest | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | A handover is read in by somebody who does not reach the case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | The same artefact is attached in two cases | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | An artefact nothing names any more | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
 
 ## the-api
 

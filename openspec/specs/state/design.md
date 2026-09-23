@@ -6,6 +6,12 @@
 
 **A copy that has never been restored is not a backup.** Producing one is not the whole obligation; returning to one has to be something an operator has done deliberately before an incident.
 
+**Evidence is deduplicated within a case and never across one.** The same bytes attached in two cases are two stored artefacts.
+
+**The database is the authority on what an install holds.** An evidence directory is kept with the database it was written beside; bytes that database does not name are removed at start, whichever copy is newer.
+
+**A deleted or replaced evidence row's bytes go at the next start**, not at the moment of deletion.
+
 # Design
 
 ## Two kinds of state, decided rather than inherited
@@ -47,6 +53,22 @@ An install never reaches a state where the only way to keep working is to delete
 Evidence is a file taken from a compromised system, stored inside the wrapping the industry already uses for specimens, so an analyst who meets it recognises it and their own tooling opens it.
 
 The wrapping is applied on the way in and is what the store holds. Nothing in the path between the store and the analyst is asked to treat the contents as inert; the wrapping is what makes that unnecessary.
+
+## An artefact belongs to the case that stored it
+
+**A case is the key, and the digest is only a name within it.** Every way into the store takes the case the bytes belong to, and the case decides where they live, so no path names bytes by digest alone. Only the store opens the evidence directory, so a consumer added later has no question to ask it without a case. A case id is checked before a path is built from it, as a digest is.
+
+**Deduplication inside a case is what content addressing is for there**: two rows naming one attachment hold one file. Across cases it would make one case's upload, deletion and filename observable from another.
+
+**An output asks only about what the case says it holds.** An evidence row carrying a digest and no record of the bytes being stored is evidence held elsewhere, and an export neither reads it nor counts it as lost.
+
+**A sent report keeps its figures.** The figures a sent report froze are named by that report for as long as it exists, so they travel in an archive and survive the removal of the rows that first placed them.
+
+**An import creates its case before its artefacts land**, so they are stored under the case they belong to and a refused import removes that case's artefacts whole.
+
+**Deletion removes a case's artefacts after the case is gone.** A failure there does not undo the deletion; the start removes what is left.
+
+**At start, before the install serves, what nothing names is removed.** Each case is asked what its evidence records say it holds and what its sent reports froze, naming the case in every question; every other file in that case goes, and so does every case the database no longer holds, which covers a case removed by a path that never asks the store and a stop between a deletion and its removal. A file written within the last hour is left, because an upload's bytes land before the row naming them commits and an import's before its whole case does.
 
 ## Recovery is exercised, not assumed
 

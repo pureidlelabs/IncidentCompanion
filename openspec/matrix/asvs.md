@@ -32,6 +32,7 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V8.2.2 | Data-specific access restricted to explicit permissions | customers :: A customer cannot be removed out from under its cases |
 | V8.1.2, V8.2.3 | Field-level access restricted to explicit permissions, read and write | the-api :: Reach is enforced where the data is, not where the request arrives |
 | V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | the-api :: A fact can be asked for across cases |
+| V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | state :: An artefact is reached only through the case that holds it |
 | V8.2.2 | Data-specific access restricted to explicit permissions | collections :: A reference points inside its own case, and the store alone cannot enforce it |
 | V2.3.1 | Business logic flows processed only in the expected sequential order | report :: A correction is a new report, not an edit |
 | V2.3.3 | Transactions used so a business logic operation completes or does not | report :: Sending stamps and preserves in one act |

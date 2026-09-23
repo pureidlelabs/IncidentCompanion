@@ -25,6 +25,7 @@ import { CASE_NAME, EVIDENCE_PREFIX, MANIFEST_NAME, pack, readArchive } from '..
 import { cases } from '../src/db/schema/case.js'
 import { customers } from '../src/db/schema/customer.js'
 import { openTestPool } from './database.js'
+import { ARTEFACT_PASSWORD } from '../src/evidence/store.js'
 import { holders } from './evidence-on-disk.js'
 
 const STAMP = String(Date.now())
@@ -181,6 +182,8 @@ describe.skipIf(!(await bootable()))('an artefact is reached only through the ca
   let png = Buffer.alloc(0)
   let pngDigest = ''
   let handover = new Uint8Array()
+  /** The outsider's own case holding the same bytes as customer B's mailbox export. */
+  const same = { caseId: '', row: '' }
 
   beforeAll(async () => {
     h = await boot()
@@ -290,22 +293,31 @@ describe.skipIf(!(await bootable()))('an artefact is reached only through the ca
 
   it('writes an upload of the same bytes into the uploader\u2019s own case, under their own name', async () => {
     const opened = await ok(call(outsider, 'POST', '/api/cases', { title: `same bytes ${STAMP}` }), 201)
-    const mine = ((await opened.json()) as { id: string }).id
-    made.push(mine)
-    const row = await attach(outsider, mine, 'mine.eml', SECRET, 'message/rfc822')
+    same.caseId = ((await opened.json()) as { id: string }).id
+    made.push(same.caseId)
+    same.row = await attach(outsider, same.caseId, 'mine.eml', SECRET, 'message/rfc822')
 
-    const got = await ok(call(outsider, 'GET', `/api/cases/${mine}/evidence/${row}/file`), 200)
-    const reader = new ZipReader(new Uint8ArrayReader(new Uint8Array(await got.arrayBuffer())))
-    const names = (await reader.getEntries()).map((entry) => entry.filename)
-    await reader.close()
-    expect(names, 'the download names the file as the first case to hold these bytes called it').toEqual(['mine.eml'])
+    expect((await downloaded()).map(([name]) => name), 'the download names the file as the first case to hold these bytes called it').toEqual(['mine.eml'])
   }, 60_000)
+
+  /** The outsider's download of their own copy, as each entry's name and bytes. */
+  async function downloaded(): Promise<[string, Buffer][]> {
+    const got = await ok(call(outsider, 'GET', `/api/cases/${same.caseId}/evidence/${same.row}/file`), 200)
+    const reader = new ZipReader(new Uint8ArrayReader(new Uint8Array(await got.arrayBuffer())), { password: ARTEFACT_PASSWORD })
+    const out: [string, Buffer][] = []
+    for (const entry of await reader.getEntries()) {
+      if (!entry.directory) out.push([entry.filename, Buffer.from(await entry.getData(new Uint8ArrayWriter()))])
+    }
+    await reader.close()
+    return out
+  }
 
   it('leaves nothing of a deleted case to name', async () => {
     await ok(call(victim, 'DELETE', `/api/cases/${caseB}`), 200)
     await ok(call(victim, 'GET', `/api/cases/${caseB}`), 404)
 
     expect(await holders(root, png), 'the deleted case\u2019s screenshot is still on disk').toEqual([])
+    expect(await downloaded(), 'deleting one case took another case\u2019s copy of the same bytes').toEqual([['mine.eml', SECRET]])
 
     const named = await throughRowsAndReport(outsider, text, pngDigest)
     const control = await throughRowsAndReport(outsider, absent(), absent())

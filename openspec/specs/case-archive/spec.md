@@ -147,6 +147,8 @@ Where a row came from MUST be recorded as the archive, rather than as whatever t
 
 The analyst reading the archive in MUST be recorded as having brought it in, so a case that arrived from elsewhere is attributable to the person who put it there.
 
+The new case MUST hold the artefacts the archive carries and nothing else. A digest the archive names and does not carry names something held elsewhere, and MUST NOT reach an artefact this install holds for another case.
+
 #### Scenario: An archive is read in
 
 - GIVEN an archive of a case
@@ -160,6 +162,14 @@ The analyst reading the archive in MUST be recorded as having brought it in, so 
 - WHEN it is read in
 - THEN the new case's rows are identified by this install's own names
 - AND nothing already in the install was reached
+
+#### Scenario: An archive names an artefact it does not carry
+
+- GIVEN an archive whose rows name the digest of an artefact another case holds
+- AND the archive does not carry that artefact
+- WHEN it is read in
+- THEN the new case holds nothing under that digest
+- AND nothing the new case produces carries the artefact
 
 #### Scenario: An archive is attributed
 

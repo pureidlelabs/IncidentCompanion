@@ -17,13 +17,17 @@
  * Driven through the endpoints, so what is exercised is the real service, the
  * real table and the real delete rather than a service built by hand.
  */
+import { randomBytes } from 'node:crypto'
+
+import { ConfigService } from '@nestjs/config'
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, grantsItselfDelete, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 import { openTestPool } from './database.js'
-import { cases, installActivity } from '../src/db/schema/index.js'
+import { holders } from './evidence-on-disk.js'
+import { cases, evidence, installActivity } from '../src/db/schema/index.js'
 
 const RUNNABLE = await bootable()
 
@@ -71,6 +75,22 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
     const title = `Deletion outlives ${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
     const id = await openCase(title)
 
+    // The scenario's case holds evidence, and its artefact is part of what goes.
+    const artefact = randomBytes(32)
+    const row = await fetch(`${harness.base}/api/cases/${id}/evidence`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: admin.cookie },
+      body: JSON.stringify({ name: 'mailbox export' }),
+    })
+    const { id: evidenceId } = (await row.json()) as { id: string }
+    const attached = await fetch(`${harness.base}/api/cases/${id}/evidence/${evidenceId}/file`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/octet-stream', cookie: admin.cookie },
+      body: new Uint8Array(artefact),
+    })
+    expect(attached.ok, 'the evidence was not attached, so its absence below proves nothing').toBe(true)
+    const root = harness.app.get(ConfigService).get<string>('EVIDENCE_DIR')!
+
     const removed = await fetch(`${harness.base}/api/cases/${id}`, {
       method: 'DELETE',
       headers: { cookie: admin.cookie },
@@ -79,6 +99,8 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
 
     // The premise: the case really is gone, not merely hidden.
     expect(await db!.select().from(cases).where(eq(cases.id, id))).toHaveLength(0)
+    expect(await seed!.select().from(evidence).where(eq(evidence.caseId, id)), 'its evidence outlived it').toHaveLength(0)
+    expect(await holders(root, artefact), 'its attached artefact outlived it').toEqual([])
 
     const [line] = await db!
       .select()
