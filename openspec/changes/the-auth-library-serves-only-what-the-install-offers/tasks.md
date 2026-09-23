@@ -10,8 +10,8 @@
 
 ## 2. The description
 
-- [ ] 2.1 Publish the operations the library serves in the interface's description
-- [ ] 2.2 Sweep a held account over every published operation
+- [x] 2.1 Publish the operations the library serves in the interface's description
+- [x] 2.2 Sweep a held account over every published operation
 
 ## 3. The record
 

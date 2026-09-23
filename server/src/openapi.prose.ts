@@ -101,7 +101,7 @@ const GROUPS: ReadonlyArray<readonly [RegExp, string]> = [
   [/^\/api\/cases\/\{[^}]+\}\//, 'Case data'],
   [/^\/api\/(cases|demos|recent-cases)/, 'Cases'],
   [/^\/api\/(library|collections|specs)/, 'Library'],
-  [/^\/api\/(accounts|appearance|change-password|preferences)/, 'Accounts and access'],
+  [/^\/api\/(accounts|appearance|auth|change-password|preferences)/, 'Accounts and access'],
   [/^\/api\/(about|settings|health|openapi)/, 'This install'],
 ]
 
@@ -481,6 +481,9 @@ const ANONYMOUS: ReadonlySet<string> = new Set([
   '/api/health',
   '/api/openapi.json',
   '/api/setup',
+  '/api/auth/sign-in/email',
+  '/api/auth/get-session',
+  '/api/auth/sign-out',
 ])
 
 /** Nest's refusal body: a status, a message, and the exception's own name. */

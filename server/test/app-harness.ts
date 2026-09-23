@@ -157,7 +157,7 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
   await app.listen(0, '127.0.0.1')
 
   const base = (await app.getUrl()).replace('[::1]', '127.0.0.1')
-  const document = openApiDocument(app)
+  const document = await openApiDocument(app)
 
   /**
    * **Mirrors what `main.ts` does after listening**, and it has to: without it
@@ -541,7 +541,9 @@ export function operations(
       })
     }
   }
-  return found
+  // Last, because it ends the session a sweep asks with.
+  const ends = (one: Operation) => `${one.method} ${one.template}` === 'POST /api/auth/sign-out'
+  return [...found.filter((one) => !ends(one)), ...found.filter(ends)]
 }
 
 /**

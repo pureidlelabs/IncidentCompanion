@@ -213,6 +213,17 @@ describe.skipIf(!(await bootable()))('the authentication library, over HTTP', ()
     }
   }, 60_000)
 
+  /** So every sweep over the published operations reaches the library's too. */
+  it('publishes every operation it serves in the description', async () => {
+    const published = Object.entries(harness.document.paths ?? {})
+      .filter(([path]) => path.startsWith('/api/auth/'))
+      .flatMap(([path, item]) =>
+        Object.keys(item ?? {}).map((method) => `${method.toUpperCase()} ${path.slice(9)}`),
+      )
+      .sort()
+    expect(published).toEqual(await servedTo(null))
+  }, 60_000)
+
   it("does not let an analyst take another account's name", async () => {
     const cookie = (await signIn(harness, analyst.email, CHOSEN)).cookie
     for (const path of ['/api/auth/update-user', '/api/auth/admin/update-user']) {

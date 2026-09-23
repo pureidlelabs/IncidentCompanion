@@ -17,3 +17,11 @@ The application's own routes are held by an interceptor. The library's routes ne
 ## What is recorded
 
 Ending one's own session is recorded after the library has ended it, as a sign-out is, naming the caller as both the actor and the account.
+
+## The library's operations in the description
+
+Each offered operation is published from the library's own description of it: its summary, the body it reads where it reads one, and its success answer. The refusals are the description's own, attached to the library's operations as to every other, because they describe the install's contract rather than the library's defaults; the one refusal the library's operations answer and that contract does not name, a sign-in that signs nobody in, is stated beside them. The library's schemas are published under names of their own, with every property the library does not require allowed to be null, which is how the library serves an optional value it does not hold.
+
+## The library answers as the rest of the interface does
+
+Over HTTP, a body the library read and will not accept is answered 422, as everywhere else in the interface, and an operation on the caller's own sessions refuses a caller with no session before it reads the body. A sweep over the description reaches the library's operations like any others, and the operation that ends the caller's session is swept last.

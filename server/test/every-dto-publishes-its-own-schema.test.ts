@@ -162,7 +162,19 @@ describe.skipIf(!runnable)('the DTOs the server declares', () => {
       (harness.document as { components?: { schemas?: Record<string, unknown> } }).components
         ?.schemas ?? {},
     )
+    // The authentication library's schemas are declared by the library, and
+    // are the ones its operations refer to.
+    const library = new Set(
+      [
+        ...JSON.stringify(
+          Object.entries(harness.document.paths ?? {}).filter(([path]) =>
+            path.startsWith('/api/auth/'),
+          ),
+        ).matchAll(/#\/components\/schemas\/(\w+)/g),
+      ].map((match) => match[1]!),
+    )
     const orphans = schemas
+      .filter((key) => !library.has(key))
       .filter((key) => ![...names].some((name) => key === name || key.startsWith(`${name}_`)))
       .sort()
 

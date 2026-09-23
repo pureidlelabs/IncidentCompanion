@@ -12,7 +12,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
 import { recordInstallActivity } from '../install-activity/record.js'
 import { trustedAddressHeaders } from '../wire/caller-address.js'
-import { admin } from 'better-auth/plugins'
+import { admin, openAPI } from 'better-auth/plugins'
 import { createAccessControl } from 'better-auth/plugins/access'
 import { defaultStatements } from 'better-auth/plugins/admin/access'
 import type { SecondaryStorage } from 'better-auth'
@@ -279,7 +279,7 @@ export const CREDENTIAL_RULES = {
  * The library's operations the install offers over HTTP, as `METHOD /path`
  * below the mount. -> `offersOnly`
  */
-const OFFERED: ReadonlySet<string> = new Set([
+export const OFFERED: ReadonlySet<string> = new Set([
   'POST /sign-in/email',
   'GET /get-session',
   'POST /sign-out',
@@ -301,6 +301,17 @@ const HELD_MAY: ReadonlySet<string> = new Set([
 ])
 
 /**
+ * The offered operations that act on the caller's own sessions. Refused to a
+ * caller with none before the body is read, so the answer is the missing
+ * session rather than the body.
+ */
+const ACTS_ON_ITS_SESSIONS: ReadonlySet<string> = new Set([
+  '/list-sessions',
+  '/revoke-session',
+  '/revoke-other-sessions',
+])
+
+/**
  * What the install serves of the library, and to whom.
  *
  * `onRequest` answers every HTTP request outside `OFFERED` exactly as the
@@ -308,6 +319,8 @@ const HELD_MAY: ReadonlySet<string> = new Set([
  * app's own `auth.api.X()` calls are unaffected. The `before` hook refuses a
  * held session everything outside `HELD_MAY`, in process included, with the
  * body `MustChangePasswordInterceptor` answers the app's own routes with.
+ * `onResponse`, HTTP only like `onRequest`, answers a body read and refused
+ * with 422, as every route of the app does, where the library answers 400.
  */
 const offersOnly = {
   id: 'offers-only',
@@ -327,12 +340,24 @@ const offersOnly = {
         matcher: (context: { path?: string }) => !HELD_MAY.has(context.path ?? ''),
         handler: createAuthMiddleware(async (ctx) => {
           const session = await getSessionFromCtx(ctx)
+          if (!session && ACTS_ON_ITS_SESSIONS.has(ctx.path)) {
+            throw new APIError('UNAUTHORIZED', { message: 'Unauthorized', code: 'UNAUTHORIZED' })
+          }
           if ((session?.user as { mustChangePassword?: boolean } | undefined)?.mustChangePassword) {
             throw new APIError('FORBIDDEN', { ...HELD })
           }
         }),
       },
     ],
+  },
+  onResponse: async (response: Response) => {
+    if (response.status !== 400) return
+    const said = (await response
+      .clone()
+      .json()
+      .catch(() => null)) as { code?: unknown } | null
+    if (said?.code !== 'VALIDATION_ERROR') return
+    return { response: new Response(response.body, { status: 422, headers: response.headers }) }
   },
 } satisfies BetterAuthPlugin
 
@@ -436,6 +461,9 @@ export function authOptions(
         defaultRole: DEFAULT_ROLE,
         adminRoles: [ADMIN_ROLE],
       }),
+      // The library's description of its own operations, read in process by
+      // `openapi.ts`; its routes are not offered over HTTP.
+      openAPI({ disableDefaultReference: true }),
     ],
     /**
      * **Declared here or the column is invisible to Better Auth.** The adapter

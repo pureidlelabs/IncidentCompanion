@@ -117,15 +117,19 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
     })
     if (!joined.ok) throw new Error(`could not join the group: ${String(joined.status)}`)
 
+    // A session of its own, because the sweep ends the analyst's other
+    // sessions and then its own; the cases below sign in again after it.
+    const sweeping = await signIn(harness, email, password)
     refused = []
     for (const one of operations(harness.document)) {
       const answer = await fetch(`${harness.base}${one.path}`, {
         method: one.method,
-        headers: { cookie: analyst.cookie, 'content-type': 'application/json' },
+        headers: { cookie: sweeping.cookie, 'content-type': 'application/json' },
         body: ['GET', 'DELETE'].includes(one.method) ? undefined : '{}',
       })
       if (answer.status === 403) refused.push(`${one.method} ${one.template}`)
     }
+    analyst = await signIn(harness, email, password)
   }, 180_000)
 
   afterAll(async () => {
