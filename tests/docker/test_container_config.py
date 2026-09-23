@@ -37,6 +37,9 @@ MAIN_TS = REPO_ROOT / "server" / "src" / "main.ts"
 
 NODE_STACK = REPO_ROOT / "compose.yaml"
 
+#: Run once per `up` and exit; every other service is meant to be running.
+ONE_SHOTS = {"roles", "migrate", "seed"}
+
 
 def test_the_node_stack_publishes_one_loopback_port_and_no_more():
     """Exactly one service publishes, and every mapping it makes is loopback.
@@ -116,12 +119,17 @@ def test_the_container_command_is_exec_form():
             "SIGTERM never reaches node")
 
 
+#: A service that mounts a volume may pin only the user its image already owns
+#: the mount point by. `postgres` ships `/var/lib/postgresql` as its own.
+OWNS_ITS_MOUNT = {"postgres": "postgres"}
+
+
 def test_every_volume_is_docker_managed():
-    """Every volume is Docker-managed, and no service pins `user:`.
+    """Every volume is Docker-managed, and no service pins another `user:`.
 
     The two are one property. A managed volume is created owned by the image's
-    user, so a service pinning a uid cannot write its own mount point and the
-    entrypoint dies before node starts.
+    user, so a service pinning any other uid cannot write its own mount point
+    and the entrypoint dies before the server starts.
     """
     spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
     volumes = spec.get("volumes", {})
@@ -142,6 +150,7 @@ def test_every_volume_is_docker_managed():
         name
         for name, service in spec.get("services", {}).items()
         if service.get("user") and service.get("volumes")
+        and OWNS_ITS_MOUNT.get(name) != service.get("user")
     ]
     assert not pinned, (
         f"{pinned} pin `user:` and mount a volume, so a managed volume owned by the image's "
@@ -1561,10 +1570,6 @@ JUSTIFIED_CAPABILITIES: dict[str, set[str]] = {
     # bind. Each of the three was measured by removing it and watching the
     # container refuse to start.
     "nginx": {"CHOWN", "SETGID", "SETUID"},
-    # Postgres prepares its data and socket directories as root, then drops to
-    # the `postgres` user. Without CHOWN and FOWNER its entrypoint refuses with
-    # `chown`/`chmod: Operation not permitted`.
-    "postgres": {"CHOWN", "FOWNER", "SETGID", "SETUID"},
 }
 
 
@@ -1595,6 +1600,22 @@ def test_every_service_drops_the_capabilities_it_does_not_use():
         assert asked <= allowed, (
             f"{name} asks for {sorted(asked - allowed)}, which nothing here justifies"
         )
+
+
+def test_every_long_lived_service_is_started_again_unless_stopped():
+    """A store or the server that stops without being asked is started again.
+
+    Without a policy a crash, an out-of-memory kill or a daemon restart leaves
+    the install down until somebody runs `up`, and the edge answers 502.
+    """
+    services = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))["services"]
+    long_lived = sorted(set(services) - ONE_SHOTS)
+    assert long_lived, "compose.yaml declares no long-lived service"
+    unrestarted = [name for name in long_lived
+                   if str(services[name].get("restart", "no")) != "unless-stopped"]
+    assert not unrestarted, (
+        f"{unrestarted} are not `restart: unless-stopped`, so one that stops "
+        "unexpectedly stays stopped")
 
 
 def test_no_service_can_gain_privileges_through_a_setuid_binary():

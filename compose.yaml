@@ -10,12 +10,13 @@ services:
     # `no-new-privileges` is the other half: a dropped capability comes back
     # through any setuid binary left in the image. -> #185
     cap_drop: [ALL]
-    # Postgres prepares its data directory and its socket directory as root,
-    # then drops to the `postgres` user for the server itself. Each of these
-    # was measured by taking it away: without CHOWN and FOWNER the entrypoint
-    # refuses with `chown`/`chmod: Operation not permitted`.
-    cap_add: [CHOWN, FOWNER, SETGID, SETUID]
+    # **Started as the user the image owns its directories by**, so the
+    # entrypoint's root-only branch -- a `chown` walk over the data directory,
+    # which a root without DAC_READ_SEARCH cannot enter on a second start --
+    # never runs, and the bounding set is empty.
+    user: postgres
     security_opt: [no-new-privileges:true]
+    restart: unless-stopped
     # Pinned to the minor, so two machines run the same engine.
     image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
     environment:
@@ -41,6 +42,7 @@ services:
   redis:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    restart: unless-stopped
     # **Started as the user the image already owns `/data` by**, so there is no
     # privilege to drop and none to keep. The entrypoint would drop root itself
     # given SETGID and SETUID, and then hold them for the life of the process;
@@ -84,6 +86,7 @@ services:
   app:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    restart: unless-stopped
     build:
       context: .
       dockerfile: docker/app/Dockerfile

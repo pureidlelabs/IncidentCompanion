@@ -56,12 +56,7 @@ export const healthRedisProvider: Provider = {
     })
 
     let lastCode: string | undefined
-    /**
-     * **An `error` event with no listener is thrown, not logged.** ioredis
-     * emits one per failed connection attempt, and an unhandled `error` on an
-     * EventEmitter is an uncaught exception - so the probe that exists to
-     * report an unreachable Redis would instead take the process down with it.
-     */
+    // The failed dial's code arrives here and not on the rejected command.
     client.on('error', (error: Error & { code?: string }) => {
       lastCode = error.code
       log.warn(`redis: ${error.message}`)
