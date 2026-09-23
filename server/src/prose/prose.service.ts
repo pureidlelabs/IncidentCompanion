@@ -36,7 +36,7 @@
  */
 import { Inject, Injectable, Logger, Optional, type OnApplicationShutdown } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import {
@@ -327,9 +327,19 @@ export class ProseService implements OnApplicationShutdown {
       // block has no column to seed from, so nothing is seeded there; a note
       // reaches the app from a demo, a CSV import or a `.iccase` archive with
       // its body already written, and opening one to an empty editor would
-      // read as the note having been lost. Guarded on there being no document
-      // yet, so it can never overwrite what anybody typed.
-      else if (row?.note) seedNote(doc, row.note)
+      // read as the note having been lost. Stored at once: a document built
+      // again from the words would hold them a second time for any client
+      // still holding the first.
+      else if (row?.note) {
+        seedNote(doc, row.note)
+        const document = Buffer.from(Y.encodeStateAsUpdate(doc))
+        await withCase(this.db, caseId, (tx) =>
+          tx
+            .update(caseNotes)
+            .set({ document })
+            .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId), isNull(caseNotes.document))),
+        )
+      }
     } else {
       const [row] = await withCase(this.db, caseId, (tx) =>
         tx
@@ -642,10 +652,9 @@ export class ProseService implements OnApplicationShutdown {
               // **`note` is re-derived from the document on every flush.**
               // The document is the record; the column is the projection the
               // index row, the search and the CSV export read, and a note has
-              // no heading to find it by instead. The column is also written
-              // straight by the paths a note arrives on -- case seeding, the
-              // archive import, the generic collection write -- and this
-              // replaces whatever they left once a document exists.
+              // no heading to find it by instead. A note's creation writes the
+              // column once, as the document's first words; this is its only
+              // writer after that.
               .set({ document: bytes, note: noteText(held.doc), ...attributed })
               .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
               .returning({ version: caseNotes.version })

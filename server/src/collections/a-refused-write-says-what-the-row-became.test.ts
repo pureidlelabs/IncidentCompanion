@@ -16,6 +16,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
+import { DEFINITIONS } from './definitions.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
@@ -71,9 +72,10 @@ function collections(): { name: string; make: () => Writable }[] {
   })
 }
 
-function aStringFieldOf(row: Record<string, unknown>): [string, string] | null {
+function aStringFieldOf(row: Record<string, unknown>, collection: string): [string, string] | null {
+  const derived = DEFINITIONS[collection as keyof typeof DEFINITIONS]?.derived ?? []
   for (const [key, value] of Object.entries(row)) {
-    if (NOT_A_PATCH.has(key)) continue
+    if (NOT_A_PATCH.has(key) || derived.includes(key)) continue
     if (typeof value === 'string' && value.length > 0) return [key, value]
   }
   return null
@@ -111,13 +113,13 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
 
   it.each(collections().map((c) => [c.name, c] as const))(
     '%s refuses a stale patch and names the current version',
-    async (_name, collection) => {
+    async (name, collection) => {
       const controller = collection.make()
       const rows = await controller.list(caseId)
-      const row = rows.find((r) => aStringFieldOf(r) !== null)
+      const row = rows.find((r) => aStringFieldOf(r, name) !== null)
       if (!row) return
 
-      const [field, value] = aStringFieldOf(row)!
+      const [field, value] = aStringFieldOf(row, name)!
       const readAt = row['version'] as number
       const id = row['id'] as string
 
@@ -154,7 +156,7 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
     let patchable = 0
     for (const collection of collections()) {
       const rows = await collection.make().list(caseId)
-      if (rows.some((row) => aStringFieldOf(row) !== null)) patchable += 1
+      if (rows.some((row) => aStringFieldOf(row, collection.name) !== null)) patchable += 1
     }
 
     expect(patchable).toBeGreaterThan(7)

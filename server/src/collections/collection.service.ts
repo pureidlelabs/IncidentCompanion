@@ -60,6 +60,17 @@ function groupByCollection(targets: BulkRow[]): [BulkTarget, BulkRow[]][] {
   return [...grouped]
 }
 
+/** Refuses a change naming a field the collection derives, with 422 naming it. */
+function refuseDerived(def: CollectionDefinition, patch: Record<string, unknown>): void {
+  const named = (def.derived ?? []).filter((field) => field in patch)
+  if (named.length > 0) {
+    throw new UnprocessableEntityException({
+      message: `${named.join(', ')} follows the record's live document and is not written here.`,
+      derived: named,
+    })
+  }
+}
+
 /** Rows per INSERT statement, bounded by Postgres's 65,535 bound parameters. */
 const INSERT_CHUNK = 1000
 
@@ -101,6 +112,8 @@ export interface CollectionDefinition {
   readonly orderWithin?: string
   /** Which schema a row validates against for the reference check; absent, `COLLECTION_SCHEMAS`. */
   readonly schemaFor?: (values: Record<string, unknown>) => z.ZodObject | undefined
+  /** Fields taken on create and written by nothing but their own writer afterwards. */
+  readonly derived?: readonly string[]
   /** Refuses the values being written where one names a term the install does not serve. */
   readonly refuseUnservedTerm?: (db: Executor, rows: readonly Record<string, unknown>[]) => Promise<void>
 }
@@ -663,6 +676,7 @@ export class CollectionService {
   ): Promise<{ updated: string[]; missing: string[]; refused: string[] }> {
     if (rows.length === 0) return { updated: [], missing: [], refused: [] }
     const ids = rows.map((row) => row.id)
+    refuseDerived(def, fields)
     await def.refuseUnservedTerm?.(this.db, [fields])
     const cols = columns(def)
 
@@ -754,6 +768,7 @@ export class CollectionService {
     patch: Record<string, unknown>,
     actorId: string,
   ): Promise<WriteResult<{ id: string; version: number }>> {
+    refuseDerived(def, patch)
     await def.refuseUnservedTerm?.(this.db, [patch])
     await this.refuseIfHeldByAnother(caseId, def.name, id, actorId)
 

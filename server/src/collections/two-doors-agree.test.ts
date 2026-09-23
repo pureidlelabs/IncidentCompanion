@@ -25,6 +25,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
+import { DEFINITIONS } from './definitions.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
@@ -72,8 +73,9 @@ function controllerFor(name: string): Doors {
  * A field this collection will accept a string into, found by asking the
  * schema rather than by naming one.
  *
- * The application's own patch validator is the oracle: a key it accepts is
- * patchable by definition, so this cannot drift from what the doors allow.
+ * The application's own patch validator is the oracle, less the fields the
+ * collection derives and refuses on a write, so this cannot drift from what
+ * the doors allow.
  * `null` for a collection with no such field, which is recorded rather than
  * silently skipped.
  */
@@ -81,7 +83,9 @@ function aPatchableTextField(collection: string): string | null {
   const schema = COLLECTION_SCHEMAS[collection]
   if (!schema) return null
   const patch = patchSchema(schema)
+  const derived = DEFINITIONS[collection as keyof typeof DEFINITIONS]?.derived ?? []
   for (const key of Object.keys(schema.shape)) {
+    if (derived.includes(key)) continue
     if (patch.safeParse({ [key]: 'two doors' }).success) return key
   }
   return null

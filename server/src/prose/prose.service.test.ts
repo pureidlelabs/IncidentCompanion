@@ -607,9 +607,9 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live docum
     /**
      * **The seeding is a one-way door, and this is the test that matters.**
      * Once a document exists it is the record; re-seeding from the column would
-     * let anything that wrote `note` behind the document's back - an import, a
-     * bulk PATCH, a hand-run `UPDATE` - reappear on top of what two analysts
-     * had typed, with no write having failed.
+     * let a hand-run `UPDATE` of `note` reappear on top of what two analysts
+     * had typed. The routes refuse `note` once a note exists:
+     * `test/a-note-has-one-writer.test.ts`.
      */
     it('never re-seeds a document that already exists', async () => {
       const { caseId, noteId } = await freshNote('what it arrived with')
