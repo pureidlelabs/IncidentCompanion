@@ -14,6 +14,8 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | --- | --- | --- |
 | V8.2.1, V8.2.2 | Function-level and data-specific access restricted to explicit permissions | accounts-and-access :: Case data is reached through groups, at a level |
 | V8.3.1 | Authorization enforced at a trusted service layer | accounts-and-access :: Managing the install and reaching case data are separate grants |
+| V8.2.1 | Function-level access restricted to consumers with explicit permissions | accounts-and-access :: What the install is made of is management-plane |
+| V13.4.5 | Monitoring endpoints not exposed unless explicitly intended | **The monitoring half; internal documentation is not answered here.** accounts-and-access :: What the install is made of is management-plane |
 | V6.2.2, V6.2.3 | Users can change their password; a change requires the current one | accounts-and-access :: Authentication resists guessing, and says so to the auditor |
 | V6.3.1 | Controls against credential stuffing and brute force | accounts-and-access :: Authentication resists guessing, and says so to the auditor |
 | V6.3.2 | No default accounts present or enabled | accounts-and-access :: An account is provisioned, never self-created |

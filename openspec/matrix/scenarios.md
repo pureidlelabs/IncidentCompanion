@@ -32,6 +32,11 @@
 | Managing the install and reaching case data are separate grants | An administrator has granted themselves no data access | demonstrated | server/src/access/an-administrator-reaches-no-case-by-being-one.test.ts |
 | Managing the install and reaching case data are separate grants | An analyst with wide data access administers nothing | demonstrated | server/test/wide-reach-administers-nothing.test.ts |
 | Managing the install and reaching case data are separate grants | An administrator grants themselves access | demonstrated | server/src/access/groups.controller.test.ts |
+| What the install is made of is management-plane | An analyst asks what the install holds | demonstrated | server/test/analyst-privilege.test.ts |
+| What the install is made of is management-plane | An analyst asks what the host has left | demonstrated | server/test/analyst-privilege.test.ts |
+| What the install is made of is management-plane | An administrator asks the same questions | demonstrated | server/test/analyst-privilege.test.ts |
+| What the install is made of is management-plane | The rail offers a pane nobody behind it would answer | undemonstrated | |
+| What the install is made of is management-plane | Something asks whether the install is serving | undemonstrated | |
 | Case data is reached through groups, at a level | A group is built for a sector | demonstrated | server/src/access/reach.test.ts |
 | Case data is reached through groups, at a level | Two memberships disagree | demonstrated | server/src/access/reach.test.ts |
 | Case data is reached through groups, at a level | A level is reduced while the analyst is working | demonstrated | server/src/access/a-reduced-level-refuses-the-next-write.test.ts |
@@ -42,6 +47,8 @@
 | Case data is reached through groups, at a level | An administrator disposes of a case nobody has attributed | demonstrated | server/src/access/case-access.guard.test.ts |
 | Case data is reached through groups, at a level | An analyst is refused the same deletion | demonstrated | server/src/access/case-access.guard.test.ts |
 | Case data is reached through groups, at a level | A group raises an account above the floor | demonstrated | server/src/access/case-access.guard.test.ts |
+| Case data is reached through groups, at a level | A list is asked for by an analyst in no group | undemonstrated | |
+| Case data is reached through groups, at a level | Reach is withdrawn after the case was opened | undemonstrated | |
 | An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts |
 | An install can be recovered without another administrator | The install is claimed | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | An install can be recovered without another administrator | An install runs on a single administrator | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
@@ -142,6 +149,9 @@
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is attributed | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive states where its rows came from | demonstrated | server/src/case-archive/round-trip.test.ts |
+| An archive is refused where its reference is already held | The install still holds the case the archive was made from | undemonstrated | |
+| An archive is refused where its reference is already held | The reference is free | undemonstrated | |
+| An archive is refused where its reference is already held | The archive carries no reference | undemonstrated | |
 | Reading an archive says how complete the case it made is | An archive carries rows that name what it left behind | demonstrated | ui/src/components/blocks/notify.test.ts |
 | Reading an archive says how complete the case it made is | A case names a row that is not in it | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive says how complete the case it made is | The exporting install had lost material the case records | demonstrated | ui/src/components/blocks/notify.test.ts |
@@ -157,7 +167,7 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| A case is identified by what an analyst recognises it by | A reference is reused within a customer | unbuilt | Not built: nothing refuses a reference already used. -> #220 |
+| A case is identified by what an analyst recognises it by | A reference is reused within a customer | undemonstrated | |
 | A case is identified by what an analyst recognises it by | The same reference is used for two customers | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | demonstrated | server/src/cases/customer.controller.test.ts |
 | A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
@@ -344,6 +354,9 @@
 | An import is matched against what the case already holds | An imported thing is already in the case | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | The case changed while the import was reviewed | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | An event is imported twice | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
+| One import proposes each thing once, however many incidents name it | Two incidents name the same host | undemonstrated | |
+| One import proposes each thing once, however many incidents name it | One incident states a qualifier the other omits | undemonstrated | |
+| One import proposes each thing once, however many incidents name it | An event from the second incident names the shared thing | undemonstrated | |
 | An imported row says that it was imported, and that nobody has read it | An imported row is read back | demonstrated | server/test/incident-import.test.ts |
 | An imported row says that it was imported, and that nobody has read it | A platform's data claims to be something else | demonstrated | server/src/incident-import/an-imported-row-says-so.test.ts |
 | An imported row says that it was imported, and that nobody has read it | An analyst reviews an imported row | unbuilt | Not built: `unreviewed` is owned by the server and no route clears it. -> #168 |
