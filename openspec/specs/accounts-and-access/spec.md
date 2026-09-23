@@ -139,7 +139,7 @@ A customer MAY belong to more than one group and an analyst MAY belong to more t
 
 Membership and its level MUST be grantable and revocable one at a time, and a revocation MUST take effect for sessions already open rather than at their next sign-in.
 
-**The default customer is the one exception in this specification, and it is stated here so that every other rule can be read without one.** Every account reaches it regardless of groups, federation or mapping, and that MUST NOT be revocable. It is reached by holding an account, so an identity the install holds no account for — a session outliving the account it named, or any identifier that names none — MUST reach nothing, the default customer included. The level is the account's role: an analyst reaches it at read and write, and an administrator reaches it at read, write and delete, so that an install can dispose of a case nobody has attributed without first building the access model.
+**The default customer is the one exception in this specification, and it is stated here so that every other rule can be read without one.** Every account reaches it regardless of groups, federation or mapping, and that MUST NOT be revocable. The level is the account's role: an analyst reaches it at read and write, and an administrator reaches it at read, write and delete, so that an install can dispose of a case nobody has attributed without first building the access model.
 
 This is a floor rather than a ceiling: a group holding the default customer MAY raise an account above it, and no membership lowers an account below it.
 
@@ -214,13 +214,6 @@ It is not an inherited grant to somebody's data. The default customer holds only
 - GIVEN an analyst who belongs to a group holding the default customer at delete
 - WHEN they delete a case nobody has attributed
 - THEN it is deleted
-
-#### Scenario: An identity the install does not hold
-
-- GIVEN a session whose account no longer exists
-- WHEN it asks for any case, one on the default customer included
-- THEN it is refused, as for a case that does not exist
-- AND no case is listed to it
 
 ### Requirement: An install always has somebody who can administer it
 

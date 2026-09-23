@@ -28,7 +28,7 @@ A group holds customers. A membership is an account in a group at a level, and t
 
 An account's reach over a customer is the highest level among its memberships in groups holding that customer. Both an account and a customer may sit in several groups, so overlap is normal and resolves to the most permissive.
 
-An account with no membership reaches no customer's cases beyond the default customer, which every account reaches. An identity with no account reaches nothing, so a session that outlives its account is refused like any stranger.
+An account with no membership reaches no customer's cases beyond the default customer, which every account reaches.
 
 Reach is resolved from the caller's own session on the request that needs it. It is never carried from one caller to another and never answered from whoever has the case open.
 
