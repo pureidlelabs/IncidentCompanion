@@ -18,9 +18,9 @@ Tasks already satisfied are marked complete with what demonstrates them. The rem
 
 ## 3. Traceability
 
-- [ ] 3.1 Identify the OWASP ASVS 5.0 controls covering dependency management and vulnerable components, by reading the published standard rather than recalling identifiers. Verify each identifier resolves in the standard before it is written down.
-- [ ] 3.2 Add those controls to `openspec/matrix/asvs.md`, mapped to the requirements in `specs/dependencies/spec.md`. Verify the matrix traces every requirement carrying a security property.
-- [ ] 3.3 Record any identified control that nothing answers as a deviation in the constitution's register, with the reason and what would change it. Verify no identified control is left neither traced nor recorded.
+- [x] 3.1 Identify the OWASP ASVS 5.0 controls covering dependency management and vulnerable components, by reading the published standard rather than recalling identifiers. Verify each identifier resolves in the standard before it is written down.
+- [x] 3.2 Add those controls to `openspec/matrix/asvs.md`, mapped to the requirements in `specs/dependencies/spec.md`. Verify the matrix traces every requirement carrying a security property.
+- [x] 3.3 Record any identified control that nothing answers as a deviation in the constitution's register, with the reason and what would change it. Verify no identified control is left neither traced nor recorded. Neither V15.1.1 nor V15.2.1 is answered, and both are recorded as gaps in the specification rather than as deviations: no requirement states a time within which a vulnerable version must be replaced.
 
 ## 4. Demonstration
 
@@ -29,5 +29,6 @@ Tasks already satisfied are marked complete with what demonstrates them. The rem
 
 ## 5. Reproducibility
 
-- [ ] 5.1 Decide whether the container components are pinned by digest here or in a following change, and record the decision. This is the second open question in `design.md`.
-- [ ] 5.2 If pinned here: identify every component named by a moving tag and pin it by digest. Verify by building one revision twice and comparing the resolved versions of every component.
+- [x] 5.1 Decide whether the container components are pinned by digest here or in a following change, and record the decision. This is the second open question in `design.md`. Pinned: every external image carries a digest beside its tag.
+- [x] 5.2 If pinned here: identify every component named by a moving tag and pin it by digest. Every `FROM` and `image:` line in `compose.yaml`, `docker/` and `.devcontainer/` carries a `@sha256` digest.
+- [ ] 5.3 Verify by building one revision twice and comparing the resolved versions of every component.

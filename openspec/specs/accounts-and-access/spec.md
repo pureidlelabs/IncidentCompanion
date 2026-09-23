@@ -122,6 +122,49 @@ An administrator can grant themselves data access, and that is deliberate. The p
 - THEN they reach that group's customers at that membership's level
 - AND the grant is logged naming them as both the grantor and the subject
 
+### Requirement: What the install is made of is management-plane
+
+The size and shape of the installation and the resources of the host it runs on MUST be reachable by an administrator alone.
+
+That is its storage and how much it holds there, its open connections, how many rows each of its tables holds, and the memory, processor and free space available to it. None of it is what a case holds, and none of it is an account's own.
+
+**A count of rows answers the question the route beside it refuses.** Who may sign in is management-plane, so the account list is an administrator's; a per-table row count reports how many accounts exist without naming them. A boundary one route holds and the table beside it reports around is not held.
+
+**The liveness probe is the exception, and it is the only one.** Whether the application can serve a request at all MUST be answerable without a session, because an answer that needs one cannot be given by an install that has stopped serving. It MUST report only that, and MUST NOT carry the install's size, shape or host resources.
+
+Where a screen is drawn for these facts, it MUST NOT be offered to an account that every route behind it refuses.
+
+#### Scenario: An analyst asks what the install holds
+
+- GIVEN an account signed in as an analyst
+- WHEN they request where the install keeps its data, how many artefacts it holds, or its table sizes and row counts
+- THEN they are refused
+
+#### Scenario: An analyst asks what the host has left
+
+- GIVEN an account signed in as an analyst
+- WHEN they request the host's memory, processor and free space
+- THEN they are refused
+
+#### Scenario: An administrator asks the same questions
+
+- GIVEN an account signed in as an administrator
+- WHEN they request either
+- THEN they are answered
+
+#### Scenario: The rail offers a pane nobody behind it would answer
+
+- GIVEN an account signed in as an analyst
+- WHEN they are offered the panes they may open
+- THEN the pane drawn from install telemetry is not among them
+
+#### Scenario: Something asks whether the install is serving
+
+- GIVEN a caller with no session
+- WHEN it asks whether the application is live
+- THEN it is answered
+- AND the answer carries nothing about the install's size, shape or host resources
+
 ### Requirement: Case data is reached through groups, at a level
 
 A group holds customers. An analyst joins a group at a level, and that level is what they may do to the cases of every customer in it.
@@ -137,6 +180,8 @@ Delete is about the case as a whole and nothing smaller.
 A customer MAY belong to more than one group and an analyst MAY belong to more than one. Where memberships overlap the most permissive applies. An analyst belonging to no group reaches no customer's cases beyond the default customer.
 
 Membership and its level MUST be grantable and revocable one at a time, and a revocation MUST take effect for sessions already open rather than at their next sign-in.
+
+**A list names only what its analyst reaches.** Where the application answers with a list that names cases rather than the contents of one case, it MUST name only the cases the asking analyst reaches, decided by the same rule that decides whether they reach one case by name. A list built from what an analyst has already opened MUST be decided when it is read rather than when it was written, so that reach withdrawn after the visit withdraws the case from the list, and a case kept in such a list deliberately MUST be withdrawn on the same terms as one that was not.
 
 **The default customer is the one exception in this specification, and it is stated here so that every other rule can be read without one.** Every account reaches it regardless of groups, federation or mapping, and that MUST NOT be revocable. The level is the account's role: an analyst reaches it at read and write, and an administrator reaches it at read, write and delete, so that an install can dispose of a case nobody has attributed without first building the access model.
 
@@ -213,6 +258,20 @@ It is not an inherited grant to somebody's data. The default customer holds only
 - GIVEN an analyst who belongs to a group holding the default customer at delete
 - WHEN they delete a case nobody has attributed
 - THEN it is deleted
+
+#### Scenario: A list is asked for by an analyst in no group
+
+- GIVEN an administrator belonging to no group
+- WHEN they ask for a list that names cases
+- THEN no case of a customer somebody has been onboarded as is named by it
+- AND a case the install has attributed to nobody is named by it
+- AND they may grant themselves the access and ask again
+
+#### Scenario: Reach is withdrawn after the case was opened
+
+- GIVEN an analyst who has opened a case, and kept it in their list
+- WHEN the group that reached it is revoked
+- THEN the list stops naming that case
 
 ### Requirement: An install always has somebody who can administer it
 

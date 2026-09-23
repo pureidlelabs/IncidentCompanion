@@ -839,9 +839,9 @@ def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
     assert commands, "the rules prescribe no openspec validate command"
 
     # **Every line naming the CLI is held to the one form, and the absence is
-    # the half a positive check cannot hold.** The rules prescribe two
-    # commands, so a check that only asks whether *some* line is right passes
-    # while its sibling reaches the registry. Matching every runner spelling
+    # the half a positive check cannot hold.** Where the rules prescribe more
+    # than one command, a check that only asks whether *some* line is right
+    # passes while its sibling reaches the registry. Matching every runner spelling
     # rather than one: `-y`, `npm exec`, `dlx`, `bunx` and a bare
     # `openspec@latest` all fetch, and `openspec` unscoped on npm belongs to
     # somebody else.
