@@ -454,16 +454,20 @@
 | A claim warns; it does not lock | An analyst claims an entry | demonstrated | server/src/live/case-channel.service.test.ts |
 | A claim warns; it does not lock | Two analysts claim the same entry | demonstrated | server/src/live/presence.store.test.ts |
 | A claim warns; it does not lock | A holder disappears | demonstrated | server/src/live/presence.store.test.ts |
-| A claim warns; it does not lock | Somebody writes to a claimed entry | demonstrated | server/src/live/a-claim-is-not-a-lock.test.ts |
+| A claim warns; it does not lock | Somebody writes to a claimed entry | demonstrated | server/test/a-claimed-row-is-written-through-every-door.test.ts |
 | A change reaches every open screen, and says only what changed | Another analyst writes | demonstrated | server/test/change-feed-wiring.test.ts |
 | A change reaches every open screen, and says only what changed | What travels over the connection | demonstrated | server/src/live/case-channel.service.test.ts |
 | A change reaches every open screen, and says only what changed | A screen re-reads after an announcement | demonstrated | ui/src/api/every-consumer-re-announces.test.ts |
 | Written prose is edited together, not saved over | Two analysts write in one section | demonstrated | ui/src/api/proseSync.test.ts |
-| Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | ui/src/api/proseSync.test.ts |
-| A reconnection catches up rather than starts over | A connection drops briefly | demonstrated | ui/src/api/a-reconnect-re-reads-the-case.test.tsx |
+| Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts |
+| A reconnection catches up rather than starts over | A connection drops briefly | undemonstrated | |
 | A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
+| An open connection is listening | A screen writes before the connection is ready | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts |
+| An open connection is listening | Preparing the connection does not complete | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
+| An open connection is listening | Frames are acted on in the order sent | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
+| An open connection is listening | A frame the install cannot read | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
 
 ## preferences
 
