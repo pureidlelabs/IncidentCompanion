@@ -124,7 +124,10 @@ describe('a reconnect re-reads the case', () => {
     restore()
     vi.advanceTimersByTime(500)
 
-    expect(invalidate, 'nothing was re-read, so the screen keeps its pre-drop rows').toHaveBeenCalled()
+    expect(
+      invalidate,
+      'nothing was re-read, so the screen keeps its pre-drop rows',
+    ).toHaveBeenCalled()
     const keysAsked = invalidate.mock.calls.map(([one]) => JSON.stringify(one?.queryKey))
     expect(keysAsked).toContain(JSON.stringify(keys.case('C-1')))
   })
@@ -157,7 +160,7 @@ describe('a screen says when it is not live', () => {
   it('is behind from the drop until the case has been read again', async () => {
     vi.useFakeTimers()
     const client = new QueryClient()
-    const reading = { settle: () => undefined as void }
+    const reading: { settle: () => void } = { settle: () => undefined }
     vi.spyOn(client, 'invalidateQueries').mockImplementation(
       () =>
         new Promise<void>((done) => {
@@ -170,7 +173,9 @@ describe('a screen says when it is not live', () => {
     act(() => {
       drop()
     })
-    expect(result.current.behind, 'the drop left the screen presenting itself as current').toBe(true)
+    expect(result.current.behind, 'the drop left the screen presenting itself as current').toBe(
+      true,
+    )
 
     act(() => {
       restore()
