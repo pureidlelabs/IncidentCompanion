@@ -54,6 +54,8 @@ That covers every way reach ends: the session ended, the group revoked, the cust
 
 ## A save names whoever wrote into it
 
-Each connection's change to prose is remembered against the analyst it came from, where it changed the document; a frame that changed nothing names nobody. A save stores the words, names the latest writer on the record, and writes a record of the change per writer, all in one act. A save that fails keeps its writers for the next one.
+Each connection's change to prose is remembered against the analyst it came from, where it changed the document; a frame that changed nothing names nobody. A save stores the words, names the latest writer on the record, and writes a record of the change per writer, all in one act. A save that fails keeps its writers for the next one. Saves of one record run one at a time and in order, so a later save never lands before an earlier one.
+
+A send holds a report's prose still only after saving what was typed and not yet saved, this same way, and after waiting out a save already under way, so the words a send stores are already named. A save that fails there leaves the report unsent.
 
 Once stored, the save is announced to the case and recorded in the install's audit, one line per writer, as the collection routes record a write.

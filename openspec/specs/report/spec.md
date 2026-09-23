@@ -65,6 +65,13 @@ Once a report has been sent it MUST NOT change. Not its parts, not their order, 
 - AND they are told the report was sent, and when
 - AND the report still holds exactly the prose that was sent
 
+#### Scenario: What a sent report points at is removed
+
+- GIVEN a sent report correcting an earlier draft, with a part drawing a piece of evidence
+- WHEN anybody removes that evidence or that draft
+- THEN it is refused, naming the sent report and when it was sent
+- AND the sent report still points at both
+
 ### Requirement: Sending stamps and preserves in one act
 
 Sending MUST record that the report was sent and preserve what was sent, and these MUST be one act.

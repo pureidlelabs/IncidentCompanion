@@ -62,6 +62,8 @@ It is never inferred from when a row was created or last changed, because editin
 
 **An order is written under the version check.** A reorder names every row of the set it arranges with the version it read. The set is locked in one fixed order before anything is compared, so two reorders of it queue rather than interleave or wait on each other; the second then finds the rows the first moved at their new versions and is refused whole, naming them.
 
+**A reorder answers with the versions it left.** Every row it arranged comes back at the version it now holds. A screen writes those into what it holds as soon as they arrive and sends its reorders of one set one at a time, so each carries what the last one left.
+
 ## Import and export are the same description
 
 What the application accepts is what it produces. An import states what it will do before it does it, and reports per row afterwards: taken, recognised as already present, or refused with the reason.

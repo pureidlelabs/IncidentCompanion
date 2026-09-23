@@ -205,6 +205,7 @@
 | Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | undemonstrated |  |
 | Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | undemonstrated |  |
 | Order an analyst chose is theirs, and is not a property of the data | Two analysts reorder at once | demonstrated | server/test/two-reorders-never-mix.test.ts |
+| Order an analyst chose is theirs, and is not a property of the data | An analyst moves a row twice in a row | demonstrated | server/e2e/reorder-keyboard.spec.ts |
 | What comes in and goes out is the same description | An analyst previews an import | demonstrated | server/test/incident-import.test.ts |
 | What comes in and goes out is the same description | A row in an import is malformed | demonstrated | server/src/exports/import.service.test.ts |
 | What comes in and goes out is the same description | An export is imported back | demonstrated | server/src/exports/csv-import.test.ts |
@@ -469,6 +470,7 @@
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
 | Written prose is attributed like any other write | One of two analysts present writes | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
 | Written prose is attributed like any other write | Two analysts write before one save | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
+| Written prose is attributed like any other write | Words typed just before the report is sent | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
 
 ## preferences
 
@@ -522,6 +524,7 @@
 | A sent report is frozen, and the freeze is one rule | A part is moved into a sent report | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
 | A sent report is frozen, and the freeze is one rule | A new way to write a part is added | demonstrated | server/src/report/the-store-refuses-a-sent-report.test.ts |
 | A sent report is frozen, and the freeze is one rule | Prose reaches a sent report | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
+| A sent report is frozen, and the freeze is one rule | What a sent report points at is removed | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
 | Sending stamps and preserves in one act | A report is sent | undemonstrated |  |
 | Sending stamps and preserves in one act | The document cannot be produced | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
 | Sending stamps and preserves in one act | The case changes after sending | undemonstrated |  |

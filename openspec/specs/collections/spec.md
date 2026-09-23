@@ -202,6 +202,8 @@ Reordering MUST be an attributed change like any other.
 
 **Reordering is a bulk write, and carries the version check.** A reorder MUST state what each row it arranges was read at, and MUST be refused whole, naming the rows that moved, where any has moved since. The order stored MUST always be one somebody sent: never a mix of two, and never two rows on one position.
 
+**An analyst's own reorder never refuses their next.** A reorder MUST answer with the version each row it arranged now holds, so a second made at once, before or after the first is answered, is checked against the first rather than refused by it.
+
 #### Scenario: An analyst reorders rows
 
 - GIVEN rows an analyst has arranged
@@ -221,6 +223,13 @@ Reordering MUST be an attributed change like any other.
 - THEN one order is stored whole
 - AND the other analyst is refused, told which rows moved
 - AND no two rows share a position
+
+#### Scenario: An analyst moves a row twice in a row
+
+- GIVEN an analyst who has just moved a row
+- WHEN they move it again at once, before the first move is answered
+- THEN both moves are stored
+- AND neither is refused because of the other
 
 ### Requirement: What comes in and goes out is the same description
 

@@ -208,6 +208,8 @@ Somebody who only had the prose open MUST NOT be named.
 
 Prose is exempt from the version check and from nothing else a write owes. What is recorded is who wrote into a saved change, not which of its words each of them wrote.
 
+**Words stored by any act are named, a send included.** Prose typed a moment before its report is sent MUST NOT reach the record under the sender's name alone.
+
 #### Scenario: One of two analysts present writes
 
 - GIVEN two analysts with the same prose open
@@ -220,3 +222,10 @@ Prose is exempt from the version check and from nothing else a write owes. What 
 - GIVEN two analysts writing into the same prose
 - WHEN both write before it is saved
 - THEN the case's record of changes and the install's audit name both of them
+
+#### Scenario: Words typed just before the report is sent
+
+- GIVEN an analyst writing into a report
+- WHEN the report is sent before their words are saved
+- THEN the sent report holds their words
+- AND the case's record of changes and the install's audit name them
