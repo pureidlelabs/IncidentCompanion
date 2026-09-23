@@ -1083,7 +1083,7 @@ describe('frames that arrive while the socket is still joining', () => {
     const releasedHolding: string[] = []
     let readers = 0
     const prose = {
-      resolve: () => Promise.resolve({ reportId: REPORT, sentAt: null }),
+      resolve: () => Promise.resolve({ table: 'reports', id: REPORT }),
       open: () => {
         readers += 1
         return Promise.resolve(document)
@@ -1094,7 +1094,8 @@ describe('frames that arrive while the socket is still joining', () => {
         order.push('reader released')
         return Promise.resolve()
       },
-      applySync: codec.applySync.bind(codec),
+      apply: (_caseId: string, _address: unknown, frame: Uint8Array, origin: unknown) =>
+        Promise.resolve({ reply: codec.applySync(document, frame, origin) }),
       frameUpdate: codec.frameUpdate.bind(codec),
       isStateRequest: codec.isStateRequest.bind(codec),
       addsNothing: codec.addsNothing.bind(codec),
