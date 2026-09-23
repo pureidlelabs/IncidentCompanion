@@ -227,7 +227,9 @@ const MAY_IMPORT: Record<string, string[]> = {
    */
   // `auth` for `AdminOnly` on the two telemetry routes alone: what the install
   // is made of is an operator's, and the liveness probe beside them stays open.
-  health: ['config', 'db', 'domain', 'policy', 'auth'],
+  // `throttle` for the tier names the probe skips: the count lives in a store
+  // the probe reports on.
+  health: ['config', 'db', 'domain', 'policy', 'auth', 'throttle'],
   spa: ['config'],
   test: ['db', 'config'],
 }
