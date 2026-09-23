@@ -97,6 +97,9 @@ const CLAIM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
 /** How many rows one connection may hold at once. A browser holds one. */
 const CLAIMS_PER_CONNECTION = 64
 
+/** How many frames one connection may have waiting to be acted on before it is ended. */
+const FRAMES_WAITING = 256
+
 /**
  * Whether this analyst may be admitted to a socket on this case.
  *
@@ -404,37 +407,41 @@ export class LiveGateway implements OnApplicationShutdown {
     const claims = new Set<string>()
 
     const joined = this.channel.join(member)
+    /**
+     * **Settled, not fulfilled.** `PresenceStore.join` starts the heartbeat
+     * and `CaseChannel.join` then announces the roster, so a join that rejects
+     * in that last step has already armed the interval, and the leave has to
+     * run after it anyway. Leaving after a partial join is safe: `leave` clears
+     * the interval and deletes keys that may not exist.
+     */
+    const ready = joined.then(
+      () => true,
+      () => false,
+    )
+
+    /**
+     * **Every frame, and then the connection's own end, one at a time in the
+     * order they arrived**, all behind the join. A join that failed acts on
+     * none of them. -> `openspec/specs/live/design.md`
+     */
+    let order: Promise<void> = Promise.resolve()
+    let waiting = 0
 
     let gone = false
     const close = () => {
       if (gone) return
       gone = true
       this.admitted.delete(live)
-      // **Released before the roster changes.** The last reader out flushes
-      // the document, and a closing tab must not leave the report newer in
-      // memory than on disk.
-      // A document still opening when the socket goes is released when it arrives.
-      for (const [, held] of opened) {
-        void held.then((one) => {
-          one?.stop()
+      order = order
+        .then(async () => {
+          await ready
+          // **Released before the roster changes.** The last reader out flushes
+          // the document, and a closing tab must not leave the report newer in
+          // memory than on disk.
+          for (const [, held] of opened) (await held.catch(() => null))?.stop()
+          opened.clear()
+          await this.channel.leave(member)
         })
-      }
-      opened.clear()
-      /**
-       * **Chained onto the join rather than run now**, or a socket that goes
-       * mid-handshake is deleted from a roster it has not been written to yet
-       * and the write lands after it.
-       *
-       * **Settled, not fulfilled.** `PresenceStore.join` starts the heartbeat
-       * and `CaseChannel.join` then announces the roster, so a join that
-       * rejects in that last step has already armed the interval -- and a
-       * `.then` chain skips the leave exactly there, leaving the ghost this
-       * whole change is about. Leaving after a partial join is safe: `leave`
-       * clears the interval and deletes keys that may not exist.
-       */
-      joined
-        .catch(() => undefined)
-        .then(() => this.channel.leave(member))
         .catch((error: unknown) => {
           this.log.warn(`could not release ${member.sessionId}: ${String(error)}`)
         })
@@ -448,23 +455,41 @@ export class LiveGateway implements OnApplicationShutdown {
      */
     live.on('close', close)
     live.on('error', close)
+    live.on('message', (raw: Buffer) => {
+      if (gone) return
+      // ponytail: one fixed cap; a per-type budget if a client legitimately bursts past it.
+      if (++waiting > FRAMES_WAITING) {
+        live.terminate()
+        return
+      }
+      order = order
+        .then(async () => {
+          if (await ready) await this.onFrame(member, live, opened, claims, raw)
+        })
+        .finally(() => {
+          waiting -= 1
+        })
+    })
 
     await joined
+  }
 
-    live.on('message', (raw: Buffer) => {
-      let message: { type?: unknown; table?: unknown; id?: unknown; field?: unknown; update?: unknown }
-      try {
-        message = JSON.parse(raw.toString()) as typeof message
-      } catch {
-        return // A frame this build does not understand is ignored, not fatal.
-      }
+  /** One frame from the client, acted on to completion. Never rejects. */
+  private async onFrame(
+    member: Member,
+    live: WebSocket,
+    opened: Map<string, Promise<OpenDocument | null>>,
+    claims: Set<string>,
+    raw: Buffer,
+  ): Promise<void> {
+    let message: { type?: unknown; table?: unknown; id?: unknown; field?: unknown; update?: unknown }
+    try {
+      message = JSON.parse(raw.toString()) as typeof message
+    } catch {
+      return // A frame this build does not understand is ignored, not fatal.
+    }
 
-      // Caught: a frame from the client is not awaited, so a store failure
-      // here would otherwise be an unhandled rejection and the process.
-      const failed = (error: unknown) => {
-        this.log.warn(`could not apply a ${String(message.type)}: ${String(error)}`)
-      }
-
+    try {
       /**
        * **Prose is routed before the claim gate**, which requires `table` and
        * `id` and returns early without them. A prose frame carries `field` and
@@ -475,7 +500,7 @@ export class LiveGateway implements OnApplicationShutdown {
         const field = typeof message.field === 'string' ? message.field : null
         const update = typeof message.update === 'string' ? message.update : null
         if (!field || !update) return
-        this.onProse(member, live, opened, message.type, field, update).catch(failed)
+        await this.onProse(member, live, opened, message.type, field, update)
         return
       }
 
@@ -483,13 +508,15 @@ export class LiveGateway implements OnApplicationShutdown {
       const id = typeof message.id === 'string' ? message.id : null
       if (!table || !id) return
 
-      if (message.type === 'claim') this.onClaim(member, live, claims, table, id).catch(failed)
+      if (message.type === 'claim') await this.onClaim(member, live, claims, table, id)
       if (message.type === 'release') {
         claims.delete(`${table}:${id}`)
-        this.channel.release(member, table, id).catch(failed)
+        await this.channel.release(member, table, id)
       }
-    })
-
+    } catch (error) {
+      // One failed frame must not stop the ones behind it.
+      this.log.warn(`could not apply a ${String(message.type)}: ${String(error)}`)
+    }
   }
 
   /**
