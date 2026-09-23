@@ -81,9 +81,14 @@ const DEFAULT_FINISH_TIMEOUT_MS = 20_000
  * Call once per `Page`, before the first `page.goto`. Playwright re-runs an
  * init script on every subsequent navigation, so one call covers every story
  * the page visits afterwards.
+ *
+ * Also empties `localStorage` and `sessionStorage` at the start of every
+ * document the page loads.
  */
 export async function armStoryFinished(page: Page): Promise<void> {
   await page.addInitScript(() => {
+    localStorage.clear()
+    sessionStorage.clear()
     window.__frameOraclePlayError = null
     window.__frameOracleStoryFinished = new Promise((resolve) => {
       const attach = (): void => {
