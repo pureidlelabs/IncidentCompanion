@@ -79,6 +79,13 @@ An entry-point check is necessary and MUST NOT be the only one. Where a caller c
 - THEN none of that case is served
 - AND nothing is written into it
 
+#### Scenario: A route forgets to ask before it writes
+
+- GIVEN a route that asks nothing about reach before it writes into a case
+- WHEN a caller writes into a case whose customer they do not reach
+- THEN nothing is written
+- AND they are answered as though the case were not there
+
 ### Requirement: A read tells a caller what it is looking at
 
 Anything a caller may later change MUST arrive carrying what a write will be checked against, so that a caller which read, thought, and then wrote can be told that the ground moved.
