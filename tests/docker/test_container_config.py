@@ -24,6 +24,7 @@ import json
 import os
 import subprocess
 import re
+import uuid
 from pathlib import Path
 
 import pytest
@@ -1470,6 +1471,42 @@ def test_a_name_that_is_not_a_host_is_refused_before_anything_is_written(
         "the edge was configured with it anyway")
     assert "is not a host name" in _fault(result, tmp_path), result.stderr
     assert not (tmp_path / "cert.pem").exists(), "a certificate was minted for it"
+
+
+@needs_edge_image
+def test_a_supplied_pair_is_read_whoever_copied_it_in(tmp_path: Path):
+    """The operator's pair, owned by whoever copied it into the volume, is read with the edge's own capabilities.
+
+    `docker compose cp` keeps the copier's uid, and the edge runs as a root
+    holding only what `compose.yaml` grants it, which cannot read a 0600 file
+    it does not own.
+    """
+    _mint_pair(tmp_path, cn="soc.example.org", sans="DNS:soc.example.org")
+    before = (tmp_path / "cert.pem").read_bytes()
+    image = _require_edge_image()
+    edge = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))["services"]["nginx"]
+    caps = [flag for cap in edge["cap_add"] for flag in ("--cap-add", cap)]
+    volume = f"ic-tls-supplied-{uuid.uuid4().hex[:8]}"
+    try:
+        copied = subprocess.run(
+            ["docker", "run", "--rm", "-v", f"{volume}:/certs", "-v", f"{tmp_path}:/src:ro",
+             "--entrypoint", "sh", image, "-c",
+             "cp /src/cert.pem /src/key.pem /certs/ && chown 501:20 /certs/*.pem"
+             " && chmod 600 /certs/key.pem"],
+            capture_output=True, text=True, timeout=120)
+        assert copied.returncode == 0, copied.stderr
+        started = subprocess.run(
+            ["docker", "run", "--rm", "-v", f"{volume}:/certs", "-e", "IC_TLS_DIR=/certs",
+             "-e", "IC_NAME=soc.example.org", "--cap-drop", "ALL", *caps,
+             "--security-opt", "no-new-privileges:true", "--entrypoint", "sh", image, "-c",
+             "sh /docker-entrypoint.d/10-ic-tls.sh && cat /certs/cert.pem"],
+            capture_output=True, text=True, timeout=120)
+    finally:
+        subprocess.run(["docker", "volume", "rm", "-f", volume], capture_output=True)
+
+    assert started.returncode == 0, (
+        f"the edge refused the operator's own pair: {started.stderr}")
+    assert started.stdout.encode() == before, "the operator's certificate was replaced"
 
 
 @needs_edge_image

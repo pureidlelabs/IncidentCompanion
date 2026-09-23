@@ -75,6 +75,10 @@ if [ "$cert_supplied" = true ] || [ "$key_supplied" = true ]; then
     fail "only one of $CERT and $KEY was supplied -- refusing to mint the other half"
   fi
 
+  # A copied-in pair keeps the copier's uid, and this root holds no
+  # CAP_DAC_OVERRIDE, so it cannot read a 0600 key it does not own.
+  chown 0:0 "$CERT" "$KEY" 2>/dev/null || true
+
   # Parsed before anything is asked of them: `-checkend` returns 1 for a file
   # it cannot read as well as for one that has expired, so checking expiry
   # first would call a malformed file an expired one.
