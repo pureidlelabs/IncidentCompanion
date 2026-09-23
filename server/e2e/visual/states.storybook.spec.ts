@@ -126,9 +126,15 @@ async function open(page: Page, story: string): Promise<void> {
   // story's own `play` may have just pressed the control.
   await page.mouse.move(2, 2)
   await page.mouse.click(2, 2)
-  // The press leaves the hover colour fading, and a reading taken mid-fade
-  // agrees with the hovered one. `paint` settles on two equal readings, which
-  // a slow fade satisfies before it has moved.
+  await faded(page)
+}
+
+/**
+ * Every running transition finished. A reading taken mid-fade agrees with the
+ * hovered one, and `paint` settles on two equal readings, which a slow fade
+ * satisfies before it has moved.
+ */
+async function faded(page: Page): Promise<void> {
   await page.evaluate(() =>
     Promise.all(
       document.getAnimations().map((animation) => animation.finished.catch(() => undefined)),
@@ -150,6 +156,12 @@ test.describe('a control paints its states', () => {
       await found.waitFor()
       const target = (await found.elementHandle()) as ElementHandle<Element>
 
+      // In and out with a real pointer before the rest reading: a story's
+      // `play` hovers with a synthetic one, and only a real leave clears the
+      // hover it left set.
+      await target.hover()
+      await page.mouse.move(2, 2)
+      await faded(page)
       const rest = await paint(page, target)
       await target.hover()
       const hovered = await paint(page, target)
