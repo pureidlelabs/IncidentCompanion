@@ -14,8 +14,9 @@
     "noEmit": true,
     // Overridden so `e2e/` can be included: the build's `rootDir` is `src`, and
     // anything outside it is TS6059 even under `noEmit`, where nothing is
-    // emitted for a root to be relative to.
-    "rootDir": ".",
+    // emitted for a root to be relative to. The repository root, because a
+    // harness test drives the browser's own socket client from `ui/src`.
+    "rootDir": "..",
     "types": ["node"]
   },
   // **`e2e/` is here because it was typechecked by nothing.** The build config

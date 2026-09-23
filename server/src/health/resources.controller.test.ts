@@ -129,8 +129,10 @@ describe('what the payload carries', () => {
   })
 
   it('reports the process uptime and the core count', async () => {
+    const before = Math.floor(process.uptime())
     const out = await new ResourcesController(configOf({})).read()
-    expect(out.uptimeSeconds).toBeGreaterThan(0)
+    expect(out.uptimeSeconds).toBeGreaterThanOrEqual(before)
+    expect(out.uptimeSeconds).toBeLessThanOrEqual(Math.ceil(process.uptime()))
     expect(out.cpu.cores).toBeGreaterThan(0)
   })
 

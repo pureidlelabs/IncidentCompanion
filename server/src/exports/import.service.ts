@@ -6,7 +6,7 @@
  * All or nothing: `createMany` is one transaction, so a file whose 400th row
  * is bad leaves the case exactly as it was.
  */
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common'
+import { BadRequestException, HttpException, Injectable, NotFoundException, Optional } from '@nestjs/common'
 import { getTableColumns } from 'drizzle-orm'
 
 import { CsvInvalid, parseCsv, type CsvShape } from './csv-import.js'
@@ -399,15 +399,14 @@ export class ImportService {
        * concurrent edit is recorded rather than retried against a base the
        * other analyst moved.
        *
-       * `update` throws when another analyst holds the row open, and one row
-       * failing must not abandon the rest.
+       * A row the write door refuses is counted with the version conflicts, and
+       * one refused row must not abandon the rest.
        */
       let result: { ok: boolean } | null
       try {
         result = await this.collections.update(def, caseId, known.id, known.version, row, actorId)
-      } catch {
-        // Held open by somebody else. Not an error for the import: that row is
-        // theirs for the moment and the rest of the file is still good.
+      } catch (error) {
+        if (!(error instanceof HttpException) || error.getStatus() >= 500) throw error
         result = null
       }
 
