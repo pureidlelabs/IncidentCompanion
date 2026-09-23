@@ -329,8 +329,14 @@ def _landing_archives() -> list[Path]:
 
     base = git("merge-base", "origin/main", "HEAD").strip()
     landed = set(git("ls-tree", "--name-only", f"{base}:openspec/changes/archive").split())
-    return sorted(p for p in (OPENSPEC / "changes" / "archive").iterdir()
-                  if p.is_dir() and p.name not in landed)
+
+    def archived_at(change: Path) -> tuple[float, str]:
+        """When the change was archived, so a later restatement of a requirement wins."""
+        added = git("log", "--diff-filter=A", "--format=%ct", "--", str(change)).split()
+        return (float(added[-1]) if added else float("inf"), change.name)
+
+    return sorted((p for p in (OPENSPEC / "changes" / "archive").iterdir()
+                   if p.is_dir() and p.name not in landed), key=archived_at)
 
 
 @pytest.mark.skipif(not LANDING, reason="a branch carries its own change in flight until it lands")
