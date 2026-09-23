@@ -134,7 +134,7 @@ npx --no-install openspec validate --all --strict
 ```
 
 - **Every branch touching `openspec/` owes it, at the same moment as the lint.** → §8
-- **The exit code is the verdict, and the item count says it read something.** `validate --strict` alone prints usage and exits 1, and `--specs` alone leaves every change in flight unread. `test_pipeline_wiring.py` holds every prescription to this one form.
+- **`--all`, the exit code is the verdict, and the item count says it read something.** `validate --strict` alone prints usage and exits 1, `--specs` alone leaves every change in flight unread, `--changes` alone validates nothing on a tree with every change archived, and a count of 0 is the same answer as a clean run. `test_pipeline_wiring.py` holds every prescription to this one form.
 - **Sync, then archive, then land** — the change folds into `specs/`, the change moves to `changes/archive/`, and both land in the branch's own commits. A change archived after the merge is one `main` never carried.
 - **A wording fix is not a change.** Editing `specs/` directly is right when every requirement still says the same thing: a typo, a clearer sentence, a cross-reference. The moment a requirement is added, removed or altered, it is a change.
 

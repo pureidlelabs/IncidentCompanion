@@ -76,6 +76,9 @@ const REFUSED_TO_AN_ANALYST: readonly string[] = [
   // back how many accounts exist to anybody who can reach this.
   'GET /api/health/activity',
   'GET /api/health/resources',
+  // Where the install keeps its data, and how many artefacts it holds across
+  // every customer.
+  'GET /api/settings',
   // Reading the retention window is an administrator's, and changing it is
   // the one setting whose change destroys evidence.
   'GET /api/install/audit/retention',
@@ -153,7 +156,7 @@ describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
    * comparison and this is a direction check -- and these two are the ones
    * whose gate is newest.
    */
-  it.each(['/api/health/activity', '/api/health/resources'])(
+  it.each(['/api/health/activity', '/api/health/resources', '/api/settings'])(
     'answers an administrator at %s',
     async (path) => {
       const response = await fetch(`${harness.base}${path}`, {

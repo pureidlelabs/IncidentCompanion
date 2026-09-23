@@ -22,7 +22,7 @@ Every scenario under the requirement asks for one case by id, which is the shape
 
 ## Impact
 
-- `openspec/specs/accounts-and-access/spec.md` -- one requirement added. Every scenario the capability already carries asks for one case by name, which is the shape the guard covers, so the routes that name no case were demonstrated by nothing.
+- `openspec/specs/accounts-and-access/spec.md` -- *Case data is reached through groups, at a level* gains the paragraph and two scenarios. Every scenario the requirement already carries asks for one case by name, which is the shape the guard covers, so the routes that name no case were demonstrated by nothing.
 - `server/src/cases/cases.service.ts`, `server/src/recent/recent.service.ts` -- both lists filter by reach.
 - `server/src/access/reached-cases.ts` -- the fold both ask, shared so the two lists cannot disagree with the guard.
 - An analyst in no group sees the default customer's cases in the picker and the recent rail, and nothing else.

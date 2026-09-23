@@ -10,11 +10,14 @@ carry, an exception written in one place and contradicted in four others.
 from __future__ import annotations
 
 import csv
+import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
 
+from tests._ledger import rows as ledger_rows
 from tests._repo import REPO_ROOT
 
 ROOT = REPO_ROOT
@@ -23,6 +26,7 @@ SPECS = sorted(OPENSPEC.glob("specs/*/spec.md"))
 CONSTITUTION = OPENSPEC / "constitution.md"
 CONFIG = OPENSPEC / "config.yaml"
 MATRIX = OPENSPEC / "matrix" / "asvs.md"
+LEDGER = OPENSPEC / "matrix" / "scenarios.md"
 
 #: Words the vocabulary moved away from, and what replaced them. A specification
 #: written before a decision keeps its old nouns and reads as though the decision
@@ -231,65 +235,134 @@ def test_the_matrix_scope_line_names_the_chapters_it_actually_cites() -> None:
     )
 
 
-#: Changes already half folded into `specs/` when this check arrived, with what is
-#: missing. A mixture is always a mistake, but which way to resolve one is the
-#: owning branch's call: fold the rest in, or take the landed half back out.
-#: -> #691
-HALF_LANDED = {
-    "a-composed-write-announces-when-its-act-commits": "3 of 5 collections scenarios absent",
-    "a-feed-carries-the-restriction-the-analyst-chose": "1 of 6 data-exchange scenarios absent",
-}
-
-SCENARIO_HEAD = re.compile(r"^#### Scenario:\s*(.+?)\s*$", re.MULTILINE)
+#: Leading bold text naming "unbuilt" in any spelling, so a mark this file does not
+#: recognise is refused rather than read as no mark.
+UNBUILT_MARK = re.compile(r"\s*\*\*([^*]*unbuilt[^*]*)\*\*", re.I)
 
 
-def half_landed() -> dict[str, list[str]]:
-    """Each in-flight change whose delta scenarios are partly in `specs/`, and which.
+def unbuilt_mark(cell: str) -> str | None:
+    """`Unbuilt.`, `Part unbuilt`, None, or the unrecognised mark as written."""
+    mark = UNBUILT_MARK.match(cell)
+    if not mark:
+        return None
+    text = mark.group(1)
+    return "Part unbuilt" if text.startswith("Part unbuilt") else text
 
-    A change with no landed spec for its capability is wholly absent rather than a
-    mixture: that is what a delta introducing a capability looks like.
+
+def test_a_credit_is_marked_unbuilt_exactly_when_its_scenarios_are() -> None:
+    """A mark is owed exactly where the ledger records unbuilt scenarios, in both directions."""
+    statuses: dict[tuple[str, str], list[str]] = {}
+    for capability, requirement, _, status, _ in ledger_rows(LEDGER):
+        statuses.setdefault((capability, requirement), []).append(status)
+    wrong = []
+    for controls, cell in matrix_rows("Answered"):
+        credit = CREDIT.search(cell + "|")
+        assert credit, f"{controls}: {cell.strip()!r} is not `capability :: Requirement title`"
+        seen = statuses.get((credit.group(1), credit.group(2)), [])
+        unbuilt = seen.count("unbuilt")
+        owed = None if not unbuilt else "Unbuilt." if unbuilt == len(seen) else "Part unbuilt"
+        mark = unbuilt_mark(cell)
+        if mark != owed:
+            wrong.append(f"{', '.join(controls)} -> {credit.group(1)} :: {credit.group(2)}: "
+                         f"{unbuilt} of {len(seen)} scenarios unbuilt, so the mark owed is "
+                         f"{owed!r} and the row carries {mark!r}")
+    assert not wrong, "\n  ".join(["the matrix marks disagree with the ledger:", *wrong])
+
+
+def test_every_control_only_an_unbuilt_requirement_answers_is_in_the_deviation_register() -> None:
+    """A control every credit of which is **Unbuilt.** is knowingly unmet today.
+
+    A control with one built credit is answered, and needs no register row.
     """
-    found: dict[str, list[str]] = {}
-    changes = OPENSPEC / "changes"
-    for delta in sorted(changes.glob("*/specs/**/spec.md")):
-        change = delta.relative_to(changes).parts[0]
-        if change == "archive":
-            continue
-        capability = delta.parent.relative_to(changes / change / "specs")
-        names = SCENARIO_HEAD.findall(delta.read_text(encoding="utf-8"))
-        landed = OPENSPEC / "specs" / capability / "spec.md"
-        if not names or not landed.is_file():
-            continue
-        body = landed.read_text(encoding="utf-8")
-        absent = [one for one in names if f"#### Scenario: {one}" not in body]
-        if absent and len(absent) != len(names):
-            found.setdefault(change, []).extend(absent)
-    return found
-
-
-def test_a_change_is_wholly_landed_or_wholly_in_flight() -> None:
-    """A delta half folded into `specs/` is neither the landed truth nor a clean delta.
-
-    `openspec validate` reads each artefact's own shape and the ledger reads
-    `specs/` alone, so a scenario sitting in `changes/` while its requirement's
-    prose has landed is counted by nothing: not present, not missing, not
-    undemonstrated. The requirement then states behaviour whose demonstrating
-    scenario is nowhere. -> `rules/git-workflow.md` 7a, #691
-
-    **What this does not decide** is which way a mixture should be resolved.
-    """
-    unexpected = {k: v for k, v in half_landed().items() if k not in HALF_LANDED}
-    assert not unexpected, (
-        "these changes are half folded into specs/ -- their requirement prose landed "
-        "and these scenarios did not:\n  "
-        + "\n  ".join(f"{change}: {', '.join(names)}" for change, names in unexpected.items())
+    register = CONSTITUTION.read_text()
+    register = register[register.index("### Deviation register") : register.index("## Quality gates")]
+    registered = {c for line in register.splitlines() if line.startswith("| ")
+                  for c in CONTROL.findall(line.split("|")[1])}
+    answered: set[str] = set()
+    unbuilt: set[str] = set()
+    for controls, cell in matrix_rows("Answered"):
+        (unbuilt if unbuilt_mark(cell) == "Unbuilt." else answered).update(controls)
+    missing = sorted(unbuilt - answered - registered)
+    assert not missing, (
+        f"no built requirement answers {missing}, and the deviation register does not name "
+        "them. Add a row with the control identifier, the reason and what would close it."
     )
 
 
-def test_the_half_landed_list_holds_only_changes_that_still_are() -> None:
-    """The other direction, or the list outlives what it describes and reads as coverage."""
-    stale = sorted(set(HALF_LANDED) - set(half_landed()))
-    assert not stale, (
-        f"these are no longer half folded into specs/ -- resolved, or archived. "
-        f"Remove them from HALF_LANDED: {stale}"
+#: The tree is `main`, or is about to become it. Anywhere else a change in flight
+#: is the branch's own work.
+LANDING = (
+    os.environ.get("GITHUB_EVENT_NAME") == "merge_group"
+    or os.environ.get("GITHUB_REF") == "refs/heads/main"
+    or os.environ.get("IC_LANDING") == "1"
+)
+
+
+@pytest.mark.skipif(not LANDING, reason="a branch carries its own change in flight until it lands")
+def test_the_tree_being_landed_carries_nothing_in_flight() -> None:
+    """A change still in `changes/` is one `main` would carry. -> `rules/git-workflow.md` 7a"""
+    in_flight = sorted(p.name for p in (OPENSPEC / "changes").iterdir()
+                       if p.is_dir() and p.name != "archive")
+    assert not in_flight, (
+        "these changes would land unarchived; sync each into specs/ and move it to "
+        f"changes/archive/ in this branch: {in_flight}"
     )
+
+
+def _requirements(text: str) -> dict[str, set[str]]:
+    """Every `### Requirement:` in `text`, with the scenario titles under it."""
+    return {
+        block.splitlines()[0].strip(): set(re.findall(r"^#### Scenario: (.+?)\s*$", block, flags=re.M))
+        for block in re.split(r"^### Requirement: ", text, flags=re.M)[1:]
+    }
+
+
+def _landing_archives() -> list[Path]:
+    """The archived changes this tree adds to `origin/main`."""
+    def git(*args: str) -> str:
+        done = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+        assert done.returncode == 0, (
+            f"git {' '.join(args)} failed, so nothing can say which changes this tree lands: "
+            f"{done.stderr.strip()}"
+        )
+        return done.stdout
+
+    base = git("merge-base", "origin/main", "HEAD").strip()
+    landed = set(git("ls-tree", "--name-only", f"{base}:openspec/changes/archive").split())
+    return sorted(p for p in (OPENSPEC / "changes" / "archive").iterdir()
+                  if p.is_dir() and p.name not in landed)
+
+
+@pytest.mark.skipif(not LANDING, reason="a branch carries its own change in flight until it lands")
+def test_every_change_the_landing_archives_is_folded_into_specs() -> None:
+    """Archived is not folded: each delta this tree archives must already read in `specs/`."""
+    #: (capability, requirement) -> its scenarios, or None where the delta removes it.
+    owed: dict[tuple[str, str], set[str] | None] = {}
+    for change in _landing_archives():
+        for delta in sorted(change.glob("specs/*/spec.md")):
+            capability = delta.parent.name
+            for op, body in re.findall(r"^## (ADDED|MODIFIED|REMOVED|RENAMED) Requirements\s*$"
+                                       r"(.*?)(?=^## |\Z)", delta.read_text(), flags=re.M | re.S):
+                if op == "RENAMED":
+                    for old, new in re.findall(r"FROM:\s*`?### Requirement:\s*(.+?)`?\s*$\s*"
+                                               r"^\s*[-*]?\s*TO:\s*`?### Requirement:\s*(.+?)`?\s*$",
+                                               body, flags=re.M):
+                        owed[(capability, old)] = None
+                        owed.setdefault((capability, new), set())
+                    continue
+                names = _requirements(body) if op != "REMOVED" else dict.fromkeys(
+                    re.findall(r"^\s*[-*]?\s*`?### Requirement:\s*(.+?)`?\s*$", body, flags=re.M))
+                for name, scenarios in names.items():
+                    owed[(capability, name)] = scenarios if op != "REMOVED" else None
+    wrong = []
+    for (capability, name), scenarios in owed.items():
+        spec = OPENSPEC / "specs" / capability / "spec.md"
+        held = _requirements(spec.read_text()) if spec.exists() else {}
+        if scenarios is None and name in held:
+            wrong.append(f"{capability} :: {name} is removed by its delta and still in specs/")
+        elif scenarios is not None and name not in held:
+            wrong.append(f"{capability} :: {name} is in its delta and not in specs/")
+        elif scenarios and held[name] != scenarios:
+            wrong.append(f"{capability} :: {name} has scenarios {sorted(held[name] ^ scenarios)} "
+                         "in its delta or in specs/, and not both")
+    assert not wrong, "\n  ".join(["these archived deltas were never synced into specs/:", *wrong])
