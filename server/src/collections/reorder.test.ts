@@ -19,6 +19,7 @@ import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, changeFeed, reportBlocks, reports, user } from '../db/schema/index.js'
+import { sentReportRefusal } from '../report/freeze.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -226,7 +227,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('reordering a collection tha
         { ids: [before[1]!.id, before[0]!.id, ...before.slice(2).map((b) => b.id)] },
         session,
       ),
-    ).rejects.toMatchObject({ status: 409 })
+    ).rejects.toSatisfy((error) => sentReportRefusal(error)?.getStatus() === 409)
     expect((await blocksOf()).map((b) => b.id)).toEqual(before.map((b) => b.id))
   })
 

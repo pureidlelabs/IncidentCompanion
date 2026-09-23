@@ -21,6 +21,7 @@ import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, conflicts, reports, systems, user } from '../db/schema/index.js'
 import { reportBlocks } from '../db/schema/report.js'
+import { sentReportRefusal } from '../report/freeze.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { randomUUID } from 'node:crypto'
 
@@ -560,7 +561,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
 
       await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
 
-      await expect(service.resolve(caseId, ME, 'mine')).rejects.toThrow(/sent report/i)
+      await expect(service.resolve(caseId, ME, 'mine')).rejects.toSatisfy((error) => sentReportRefusal(error) !== undefined)
 
       const [row] = await seed!.select().from(reports).where(eq(reports.id, reportId))
       expect(row!.label, 'the frozen report kept its own label').toBe('Before it was sent')
@@ -643,7 +644,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
       })
       await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
 
-      await expect(service.resolve(caseId, ME, 'mine')).rejects.toThrow(/sent report/i)
+      await expect(service.resolve(caseId, ME, 'mine')).rejects.toSatisfy((error) => sentReportRefusal(error) !== undefined)
 
       const [after] = await seed!
         .select()

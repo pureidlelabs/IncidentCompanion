@@ -42,7 +42,6 @@ import {
   refuseIfCrossFieldRuleBroken,
 } from './write-guards.js'
 import { CaseChannel } from '../live/case-channel.service.js'
-import type { ClosedRowGuard } from '../report/freeze.js'
 
 /** One row of a selection: which collection it is in, and what it was read at. */
 interface BulkRow {
@@ -102,20 +101,8 @@ export interface CollectionDefinition {
   readonly orderWithin?: string
   /** Which schema a row validates against for the reference check; absent, `COLLECTION_SCHEMAS`. */
   readonly schemaFor?: (values: Record<string, unknown>) => z.ZodObject | undefined
-  /**
-   * Refuse a write that lands in a row this collection considers closed. Only
-   * the report tier has such a state, and each of the five write methods below
-   * calls it once.
-   */
-  readonly refuseIfClosed?: ClosedRowGuard
-
-  /**
-   * A term this row names that the install does not serve.
-   *
-   * Separate from `refuseIfClosed`, which asks whether the row may be written
-   * at all rather than whether what it says is a thing.
-   */
-  readonly refuseUnservedTerm?: ClosedRowGuard
+  /** Refuses the values being written where one names a term the install does not serve. */
+  readonly refuseUnservedTerm?: (db: Executor, rows: readonly Record<string, unknown>[]) => Promise<void>
 }
 
 @Injectable()
@@ -209,11 +196,6 @@ export class CollectionService {
 
   /**
    * A selection spanning collections, removed as one write.
-   *
-   * **No `refuseIfClosed`, because reports are not reachable from here.**
-   * `TABLES` is the bulk half of the registry and has never held `reports` or
-   * `report_blocks`, so a selection cannot name one.
-   * -> `collections/registry.ts`
    *
    * **Every row carries the version it was read at, and one that moved since
    * is refused rather than deleted.** A selection is a read followed by a
@@ -357,8 +339,7 @@ export class CollectionService {
     values: Record<string, unknown>,
     actorId: string,
   ): Promise<unknown> {
-    await def.refuseIfClosed?.(this.db, caseId, { rows: [values] })
-    await def.refuseUnservedTerm?.(this.db, caseId, { rows: [values] })
+    await def.refuseUnservedTerm?.(this.db, [values])
 
     const written = await withCase(this.db, caseId, async (tx) => {
       await refuseDanglingReferences(tx, def, values)
@@ -414,8 +395,7 @@ export class CollectionService {
     on: Executor = this.db,
   ): Promise<{ ids: string[]; unlinked: number }> {
     if (rows.length === 0) return { ids: [], unlinked: 0 }
-    await def.refuseIfClosed?.(on, caseId, { rows })
-    await def.refuseUnservedTerm?.(on, caseId, { rows })
+    await def.refuseUnservedTerm?.(on, rows)
 
     let unlinked = 0
     const ids = await withCase(on, caseId, async (tx) => {
@@ -511,8 +491,7 @@ export class CollectionService {
     const wanted = groups.filter((group) => group.rows.length > 0)
     if (wanted.length === 0) return { ids: {}, unlinked: 0 }
     for (const group of wanted) {
-      await group.def.refuseIfClosed?.(on, caseId, { rows: group.rows })
-      await group.def.refuseUnservedTerm?.(on, caseId, { rows: group.rows })
+      await group.def.refuseUnservedTerm?.(on, group.rows)
     }
 
     let unlinked = 0
@@ -570,8 +549,6 @@ export class CollectionService {
     }
     const cols = columns(def)
     const order = columnOf(def.table, def.position)
-    await def.refuseIfClosed?.(this.db, caseId, { ids, rows: [] })
-    await def.refuseUnservedTerm?.(this.db, caseId, { ids, rows: [] })
 
     const result = await withCase(this.db, caseId, async (tx) => {
       const scope = def.orderWithin ? columnOf(def.table, def.orderWithin) : undefined
@@ -686,8 +663,7 @@ export class CollectionService {
   ): Promise<{ updated: string[]; missing: string[]; refused: string[] }> {
     if (rows.length === 0) return { updated: [], missing: [], refused: [] }
     const ids = rows.map((row) => row.id)
-    await def.refuseIfClosed?.(this.db, caseId, { ids, rows: [fields] })
-    await def.refuseUnservedTerm?.(this.db, caseId, { ids, rows: [fields] })
+    await def.refuseUnservedTerm?.(this.db, [fields])
     const cols = columns(def)
 
     const result = await withCase(this.db, caseId, async (tx) => {
@@ -778,10 +754,7 @@ export class CollectionService {
     patch: Record<string, unknown>,
     actorId: string,
   ): Promise<WriteResult<{ id: string; version: number }>> {
-    // **The patch as well as the row.** A patch may name a *different* parent -
-    // moving a block into a sent report is a write to that report.
-    await def.refuseIfClosed?.(this.db, caseId, { ids: [id], rows: [patch] })
-    await def.refuseUnservedTerm?.(this.db, caseId, { ids: [id], rows: [patch] })
+    await def.refuseUnservedTerm?.(this.db, [patch])
     await this.refuseIfHeldByAnother(caseId, def.name, id, actorId)
 
     /**
@@ -822,8 +795,6 @@ export class CollectionService {
     expectedVersion: number,
     actorId: string,
   ): Promise<boolean> {
-    await def.refuseIfClosed?.(this.db, caseId, { ids: [id] })
-    await def.refuseUnservedTerm?.(this.db, caseId, { ids: [id] })
     const cols = columns(def)
     const removed = await withCase(this.db, caseId, async (tx) => {
       const deleted = (await tx

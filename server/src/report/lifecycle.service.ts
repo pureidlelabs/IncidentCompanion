@@ -93,6 +93,8 @@ export class ReportLifecycleService {
      */
     actorId: string | null,
     lang?: string,
+    /** When it was sent, for a demo declaring a moment in its past. */
+    at = new Date(),
   ): Promise<{ id: string; sentAt: string; sections: number }> {
     const report = await this.reportOr404(caseId, reportId)
     if (report.sentAt) {
@@ -107,7 +109,7 @@ export class ReportLifecycleService {
     // stamped sent and frozen to a document that could not be produced is the
     // one state with no way back out.
     const { document_ } = await this.render.render(caseId, reportId, lang)
-    const stamp = new Date()
+    const stamp = at
 
     const updated = await withCase(this.db, caseId, (tx) =>
       tx

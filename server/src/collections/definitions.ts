@@ -16,7 +16,6 @@ import { actions, caseNotes } from '../db/schema/tracker.js'
 import type { Collection } from '../domain/collections.js'
 import { reportBlockSchema } from '../domain/entities/report.js'
 import { actionSchema, eventSchema } from '../domain/entities/timeline.js'
-import { refuseWritesToSentReport } from '../report/freeze.js'
 import { refuseUnservedLanguage } from '../report/language.service.js'
 
 /** A collection ordered by `createdAt`. */
@@ -39,7 +38,6 @@ export const TIMELINE_COLLECTION: CollectionDefinition = {
 
 export const REPORTS_COLLECTION: CollectionDefinition = {
   ...ordered('reports', reports),
-  refuseIfClosed: refuseWritesToSentReport('id'),
   refuseUnservedTerm: refuseUnservedLanguage(),
 }
 
@@ -51,7 +49,6 @@ export const REPORT_BLOCKS_COLLECTION: CollectionDefinition = {
   orderBy: 'position',
   // `COLLECTION_SCHEMAS` does not carry this schema; without it the reference check is skipped.
   schemaFor: () => reportBlockSchema,
-  refuseIfClosed: refuseWritesToSentReport('reportId'),
 }
 
 export const DEFINITIONS: Readonly<Record<Collection, CollectionDefinition>> = {
