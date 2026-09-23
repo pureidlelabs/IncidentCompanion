@@ -59,6 +59,7 @@ SOURCE_SUFFIXES = (".ts", ".tsx", ".mts", ".cts", ".mjs", ".cjs", ".js", ".jsx",
 STACK_DECLARATIONS = (
     "compose.yaml", "compose.dev.yaml", "package.json", "package-lock.json",
     "Dockerfile", "nginx.conf", "pyproject.toml", "requirements.txt",
+    "mise.toml", "stack-env.sh",
 )
 
 #: Prose Vale reads. `.vale/` is included because one token re-lints every file.
