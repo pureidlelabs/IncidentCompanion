@@ -4,9 +4,9 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 
 **A row cites a requirement exactly**, as `capability :: Requirement title`, so that renaming a requirement breaks the row rather than quietly orphaning it. `tests/docs/test_openspec_consistency.py` holds that true.
 
-**Where a requirement answers a control only in part, the row says which part is missing.** A requirement can be built and still leave a control half open -- sessions end when they should and no administrator can end one, which is most of V7.4 and not all of it.
+**Where a requirement answers a control only in part, the row says which part is missing.** A requirement can be built and still leave a control half open -- every administrative event is logged, and an act the record cannot take still proceeds, which is most of V16.3 and not all of it.
 
-**A row says which requirement answers a control, not that the control is satisfied today.** Where the answering requirement has no implementation the row is marked **Unbuilt**, and the control is not covered on any install now running -- the requirement stands, and the scenarios under it are recorded as `unbuilt` in `scenarios.md` rather than as untested. Reading a marked row as coverage is the mistake this marking exists to stop.
+**A row says which requirement answers a control, not that the control is satisfied today.** Where the answering requirement has no implementation the row is marked **Unbuilt**, and the control is not covered on any install now running -- the requirement stands, and the scenarios under it are recorded as `unbuilt` in `scenarios.md` rather than as untested. Where some of its scenarios are unbuilt the row is marked **Part unbuilt** and says what is missing. Both marks are read from `scenarios.md`, and `tests/docs/test_openspec_consistency.py` refuses a mark the ledger does not bear out in either direction. Reading a marked row as coverage is the mistake this marking exists to stop.
 
 ## Answered
 
@@ -25,7 +25,7 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V6.4.4 | A lost factor requires proofing at enrolment level | **Unbuilt.** accounts-and-access :: A second factor is available, and enforcing it is the install's policy |
 | V7.2.4 | A new session token on authentication; the old one ended | accounts-and-access :: A session belongs to its holder and ends when it should |
 | V7.3.1, V7.3.2 | An inactivity timeout and an absolute maximum lifetime | accounts-and-access :: A session belongs to its holder and ends when it should |
-| V7.4.1, V7.4.5 | Termination disallows further use; administrators can end one session or all | **Half unbuilt: no route ends another analyst's session (#204).** accounts-and-access :: A session belongs to its holder and ends when it should |
+| V7.4.1, V7.4.5 | Termination disallows further use; administrators can end one session or all | accounts-and-access :: A session belongs to its holder and ends when it should |
 | V7.4.2 | All sessions ended when an account is disabled | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
 | V7.5.2 | A user can see and end their own sessions | accounts-and-access :: A session belongs to its holder and ends when it should |
 | V7.6.1 | Session lifetime between relying party and provider behaves as documented | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
@@ -33,7 +33,7 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | cases :: Reaching a case is decided in one place, by customer |
 | V8.2.2 | Data-specific access restricted to explicit permissions | customers :: A customer cannot be removed out from under its cases |
 | V8.1.2, V8.2.3 | Field-level access restricted to explicit permissions, read and write | the-api :: Reach is enforced where the data is, not where the request arrives |
-| V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | the-api :: A fact can be asked for across cases |
+| V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | **Unbuilt.** the-api :: A fact can be asked for across cases |
 | V8.2.2 | Data-specific access restricted to explicit permissions | collections :: A reference points inside its own case, and the store alone cannot enforce it |
 | V2.3.1 | Business logic flows processed only in the expected sequential order | report :: A correction is a new report, not an edit |
 | V2.3.3 | Transactions used so a business logic operation completes or does not | report :: Sending stamps and preserves in one act |
@@ -50,10 +50,10 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V2.4.1 | Anti-automation against excessive calls to application functions | the-api :: What a request costs is bounded before it runs |
 | V4.3.1 | Depth, amount or cost analysis against query and data-layer expression denial of service | the-api :: What a request costs is bounded before it runs |
 | V16.5.1 | A generic message on error, exposing nothing sensitive | the-api :: A refusal says which of the caller's problems it is |
-| V8.2.1 | Function-level access restricted to consumers with explicit permissions | reference :: The door behind a session describes this install |
-| V8.2.2 | Data-specific access restricted to explicit permissions | reference :: Configuration naming a customer is scoped to that customer |
-| V16.3.1 | All authentication operations logged, successful and failed | accounts-and-access :: Administrative events are logged |
-| V16.3.2 | Failed authorization attempts logged | accounts-and-access :: Administrative events are logged |
+| V8.2.1 | Function-level access restricted to consumers with explicit permissions | **Part unbuilt: reading the reference is a session rather than a permission, so nothing withdraws it (#222).** reference :: The door behind a session describes this install |
+| V8.2.2 | Data-specific access restricted to explicit permissions | **Unbuilt.** reference :: Configuration naming a customer is scoped to that customer |
+| V16.3.1 | All authentication operations logged, successful and failed | **Part unbuilt: an act the record cannot take proceeds (#75), and there is no destination to change (#13).** accounts-and-access :: Administrative events are logged |
+| V16.3.2 | Failed authorization attempts logged | **Part unbuilt: an act the record cannot take proceeds (#75), and there is no destination to change (#13).** accounts-and-access :: Administrative events are logged |
 | V16.2.1 | Each entry carries when, where, who, what | install-audit :: A line says who, what, and to what, and never says what was written |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | install-audit :: Reading the audit is an act the audit records |
 | V3.4.3, V3.4.4 | A Content-Security-Policy response header, and a nosniff header on every response | transport :: The browser is told what the application may do, on every response |
@@ -99,7 +99,7 @@ A control at Level 2 that no written requirement answers. Not deviations — unf
 
 ## Deviations
 
-Held in the constitution's deviation register rather than here: cross-case reach, administrator self-grant, the second-factor policy defaulting off (V6.3.3), data classification (V14.1.1, V14.1.2), and the self-signed certificate (V12.2.2).
+The constitution's deviation register is the one list of controls knowingly unmet, each with its identifier, its reason and what would close it. A control that only an **Unbuilt** row here answers has a row there.
 
 ## Grounded elsewhere
 

@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+from tests._ledger import rows as ledger_rows
 from tests._repo import REPO_ROOT
 
 ROOT = REPO_ROOT
@@ -24,6 +25,7 @@ SPECS = sorted(OPENSPEC.glob("specs/*/spec.md"))
 CONSTITUTION = OPENSPEC / "constitution.md"
 CONFIG = OPENSPEC / "config.yaml"
 MATRIX = OPENSPEC / "matrix" / "asvs.md"
+LEDGER = OPENSPEC / "matrix" / "scenarios.md"
 
 #: Words the vocabulary moved away from, and what replaced them. A specification
 #: written before a decision keeps its old nouns and reads as though the decision
@@ -229,6 +231,52 @@ def test_the_matrix_scope_line_names_the_chapters_it_actually_cites() -> None:
     assert claimed == cited, (
         f"the matrix cites {sorted(cited, key=lambda v: int(v[1:]))} and its scope line "
         f"names {sorted(claimed, key=lambda v: int(v[1:]))}"
+    )
+
+
+#: A credit's mark, which leads its third cell: every scenario of the requirement
+#: unbuilt, or some of them.
+UNBUILT_MARK = re.compile(r"\s*\*\*(Unbuilt\.|Part unbuilt\b)")
+
+
+def test_a_credit_is_marked_unbuilt_exactly_when_its_scenarios_are() -> None:
+    """A mark is owed exactly where the ledger records unbuilt scenarios, in both directions."""
+    statuses: dict[tuple[str, str], list[str]] = {}
+    for capability, requirement, _, status, _ in ledger_rows(LEDGER):
+        statuses.setdefault((capability, requirement), []).append(status)
+    wrong = []
+    for controls, cell in matrix_rows("Answered"):
+        credit = CREDIT.search(cell + "|")
+        assert credit, f"{controls}: {cell.strip()!r} is not `capability :: Requirement title`"
+        seen = statuses.get((credit.group(1), credit.group(2)), [])
+        unbuilt = seen.count("unbuilt")
+        owed = None if not unbuilt else "Unbuilt." if unbuilt == len(seen) else "Part unbuilt"
+        mark = UNBUILT_MARK.match(cell)
+        if (mark.group(1) if mark else None) != owed:
+            wrong.append(f"{', '.join(controls)} -> {credit.group(1)} :: {credit.group(2)}: "
+                         f"{unbuilt} of {len(seen)} scenarios unbuilt, so the mark owed is "
+                         f"{owed!r} and the row carries {mark.group(1) if mark else None!r}")
+    assert not wrong, "\n  ".join(["the matrix marks disagree with the ledger:", *wrong])
+
+
+def test_every_control_only_an_unbuilt_requirement_answers_is_in_the_deviation_register() -> None:
+    """A control every credit of which is **Unbuilt.** is knowingly unmet today.
+
+    A control with one built credit is answered, and needs no register row.
+    """
+    register = CONSTITUTION.read_text()
+    register = register[register.index("### Deviation register") : register.index("## Quality gates")]
+    registered = {c for line in register.splitlines() if line.startswith("| ")
+                  for c in CONTROL.findall(line.split("|")[1])}
+    answered: set[str] = set()
+    unbuilt: set[str] = set()
+    for controls, cell in matrix_rows("Answered"):
+        mark = UNBUILT_MARK.match(cell)
+        (unbuilt if mark and mark.group(1) == "Unbuilt." else answered).update(controls)
+    missing = sorted(unbuilt - answered - registered)
+    assert not missing, (
+        f"no built requirement answers {missing}, and the deviation register does not name "
+        "them. Add a row with the control identifier, the reason and what would close it."
     )
 
 
