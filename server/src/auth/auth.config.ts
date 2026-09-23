@@ -777,6 +777,9 @@ export function authOptions(
     verification: { storeInDatabase: true },
     emailAndPassword: {
       enabled: true,
+      // A sign-up makes an account and no session: the claim signs its winner
+      // in once it has won. -> `setup.controller.ts`
+      autoSignIn: false,
       /**
        * **Unset means 8, and the library serves its own change-password
        * and sign-up routes.** Left unset, the effective minimum on the install
