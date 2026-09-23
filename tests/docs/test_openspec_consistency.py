@@ -235,9 +235,18 @@ def test_the_matrix_scope_line_names_the_chapters_it_actually_cites() -> None:
     )
 
 
-#: A credit's mark, which leads its third cell: every scenario of the requirement
-#: unbuilt, or some of them.
-UNBUILT_MARK = re.compile(r"\s*\*\*(Unbuilt\.|Part unbuilt\b)")
+#: Leading bold text naming "unbuilt" in any spelling, so a mark this file does not
+#: recognise is refused rather than read as no mark.
+UNBUILT_MARK = re.compile(r"\s*\*\*([^*]*unbuilt[^*]*)\*\*", re.I)
+
+
+def unbuilt_mark(cell: str) -> str | None:
+    """`Unbuilt.`, `Part unbuilt`, None, or the unrecognised mark as written."""
+    mark = UNBUILT_MARK.match(cell)
+    if not mark:
+        return None
+    text = mark.group(1)
+    return "Part unbuilt" if text.startswith("Part unbuilt") else text
 
 
 def test_a_credit_is_marked_unbuilt_exactly_when_its_scenarios_are() -> None:
@@ -252,11 +261,11 @@ def test_a_credit_is_marked_unbuilt_exactly_when_its_scenarios_are() -> None:
         seen = statuses.get((credit.group(1), credit.group(2)), [])
         unbuilt = seen.count("unbuilt")
         owed = None if not unbuilt else "Unbuilt." if unbuilt == len(seen) else "Part unbuilt"
-        mark = UNBUILT_MARK.match(cell)
-        if (mark.group(1) if mark else None) != owed:
+        mark = unbuilt_mark(cell)
+        if mark != owed:
             wrong.append(f"{', '.join(controls)} -> {credit.group(1)} :: {credit.group(2)}: "
                          f"{unbuilt} of {len(seen)} scenarios unbuilt, so the mark owed is "
-                         f"{owed!r} and the row carries {mark.group(1) if mark else None!r}")
+                         f"{owed!r} and the row carries {mark!r}")
     assert not wrong, "\n  ".join(["the matrix marks disagree with the ledger:", *wrong])
 
 
@@ -272,8 +281,7 @@ def test_every_control_only_an_unbuilt_requirement_answers_is_in_the_deviation_r
     answered: set[str] = set()
     unbuilt: set[str] = set()
     for controls, cell in matrix_rows("Answered"):
-        mark = UNBUILT_MARK.match(cell)
-        (unbuilt if mark and mark.group(1) == "Unbuilt." else answered).update(controls)
+        (unbuilt if unbuilt_mark(cell) == "Unbuilt." else answered).update(controls)
     missing = sorted(unbuilt - answered - registered)
     assert not missing, (
         f"no built requirement answers {missing}, and the deviation register does not name "
@@ -299,6 +307,7 @@ def test_the_tree_being_landed_carries_nothing_in_flight() -> None:
         "these changes would land unarchived; sync each into specs/ and move it to "
         f"changes/archive/ in this branch: {in_flight}"
     )
+
 
 def _requirements(text: str) -> dict[str, set[str]]:
     """Every `### Requirement:` in `text`, with the scenario titles under it."""
