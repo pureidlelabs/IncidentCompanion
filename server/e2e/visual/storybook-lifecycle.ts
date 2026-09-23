@@ -386,10 +386,15 @@ async function attemptStory(
   storyId: string,
   ground: string,
 ): Promise<StoryLoad> {
-  await page.goto(`${storybookUrl}/iframe.html?id=${storyId}&viewMode=story`, {
-    waitUntil: 'load',
-    timeout: 20_000,
-  })
+  // `a11y.manual` keeps the addon from running axe before `storyFinished`,
+  // for a report nothing on this page reads.
+  await page.goto(
+    `${storybookUrl}/iframe.html?id=${storyId}&viewMode=story&globals=a11y.manual:!true`,
+    {
+      waitUntil: 'load',
+      timeout: 20_000,
+    },
+  )
   await page.evaluate((one) => {
     document.documentElement.setAttribute('data-theme', one)
   }, ground)
