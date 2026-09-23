@@ -162,7 +162,8 @@ export class ReachService {
       .select({ role: user.role })
       .from(user)
       .where(eq(user.id, userId))
-    return settle(held, overTheDefault(account?.role ?? null))
+    // The floor is an account's; an id the install holds no account for gets none.
+    return settle(held, account ? overTheDefault(account.role ?? null) : undefined)
   }
 
 
@@ -297,7 +298,7 @@ export class ReachService {
 
   /**
    * The default is included whether or not any group names it, because
-   * reaching it was never a membership.
+   * reaching it was never a membership -- for an id that names an account.
    */
   async customersReachedBy(userId: string): Promise<string[]> {
     return customersReachedBy(this.db, userId)
@@ -322,7 +323,8 @@ export async function customersReachedBy(on: Executor, userId: string): Promise<
     .where(eq(groupMembers.userId, userId))
 
   const reached = new Set(rows.map((row) => row.customerId))
-  const fallback = await defaultCustomerId(on)
+  const [account] = await on.select({ id: user.id }).from(user).where(eq(user.id, userId))
+  const fallback = account ? await defaultCustomerId(on) : null
   if (fallback) reached.add(fallback)
   return [...reached]
 }
