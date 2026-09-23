@@ -204,6 +204,9 @@
 | The description is retrievable, so what a case may hold is answerable from the application | An install has been extended | demonstrated | server/src/library/what-this-install-holds-is-what-is-described.test.ts |
 | Every write is attributed, checked and announced as one act | Two analysts write to one row | demonstrated | server/src/db/mutate.test.ts |
 | Every write is attributed, checked and announced as one act | A write succeeds | demonstrated | server/src/db/mutate.test.ts |
+| Every write is attributed, checked and announced as one act | A write composed into an act that commits | undemonstrated | |
+| Every write is attributed, checked and announced as one act | A write composed into an act that does not commit | undemonstrated | |
+| Every write is attributed, checked and announced as one act | A write composed into nothing that declared an act | undemonstrated | |
 | A reference points inside its own case, and the store alone cannot enforce it | A row references another case's row | demonstrated | server/src/collections/reference-check.test.ts |
 | A reference points inside its own case, and the store alone cannot enforce it | A reference is added to what a row is | demonstrated | server/src/collections/method-references.test.ts |
 | A reference points inside its own case, and the store alone cannot enforce it | A referenced row is removed | demonstrated | server/src/collections/method-references.test.ts |
