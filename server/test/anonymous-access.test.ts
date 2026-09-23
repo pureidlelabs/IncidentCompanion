@@ -56,6 +56,23 @@ const PUBLIC: ReadonlyArray<readonly [string, string, string]> = [
   ],
   [
     'POST',
+    '/api/auth/sign-in/email',
+    'Signing in is how a caller comes to hold a session at all.',
+  ],
+  [
+    'GET',
+    '/api/auth/get-session',
+    'Answers null to a caller with no session, which is how a client learns it ' +
+      'must sign in. It carries nothing else for such a caller.',
+  ],
+  [
+    'POST',
+    '/api/auth/sign-out',
+    'Signing out without a session ends nothing and answers success, so a ' +
+      'client that lost its session can always leave.',
+  ],
+  [
+    'POST',
     '/api/setup',
     'Claims an install that has no accounts, gated by the setup token printed ' +
       'to the console rather than by a session \u2014 there cannot be one yet. It ' +

@@ -49,6 +49,15 @@ const ANSWERS_MALFORMED: ReadonlyArray<readonly [string, string]> = [
 const answersMalformed = (template: string): boolean =>
   ANSWERS_MALFORMED.some(([path]) => path === template)
 
+/**
+ * Operations whose answer no field of the body decides, so a body nobody could
+ * mean is one they have nothing to refuse for.
+ */
+const READS_NO_BODY: ReadonlyArray<readonly [string, string]> = [
+  ['POST /api/auth/sign-out', 'Ends the session it is asked with.'],
+  ['POST /api/auth/revoke-other-sessions', "Ends every other session of the caller's account."],
+]
+
 describe.skipIf(!runnable)('a request the server cannot honour', () => {
   let harness: Harness
   let admin: Persona
@@ -158,7 +167,10 @@ describe.skipIf(!runnable)('a request the server cannot honour', () => {
        * An importer that reads no rows out of a body it cannot parse answers
        * `201 {added: 0}`, which no 5xx check sees -- so it is asserted here.
        */
-      if (response.status < 300) {
+      if (
+        response.status < 300 &&
+        !READS_NO_BODY.some(([operation]) => operation === `${one.method} ${one.template}`)
+      ) {
         succeeded.push(`${one.method} ${one.template} -> ${response.status}`)
       }
       if (response.status >= 500) {

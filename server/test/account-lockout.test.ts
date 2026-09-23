@@ -365,12 +365,9 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
    * different shape is still a way to tell them apart.
    *
    * **The clock is equal by construction rather than by assertion.** A locked
-   * attempt is refused by handing the normal path a password that cannot
-   * match, so it runs the same lookup and the same argon2 verify -- measured
-   * at 17.46ms against 17.19ms, fully overlapping, where throwing early gave
-   * 2.76ms against 19.44ms with none. No timing case is asserted here: a
-   * clock comparison on a shared runner is the flaky kind, and what would
-   * make it drift is the path diverging, which the case below notices.
+   * attempt runs the same argon2 verify and the same count as a wrong one, in
+   * the password check itself. No timing case is asserted here: a clock
+   * comparison on a shared runner is the flaky kind.
    */
   it('answers a locked account exactly as a wrong password', async () => {
     await clear()
@@ -399,13 +396,11 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
   /**
    * **A body with no password at all, which is where the first fix leaked.**
    *
-   * A `before` hook runs on the raw body, before validation. Writing a
-   * password into a body that has none repairs it: the request stops being the
-   * 400 an unlocked account answers and becomes the 401 a locked one does. Ten
-   * guesses to lock an address and then one request carrying no password would
-   * have answered "is this an account", with no credential needed -- the same
-   * oracle #82 describes, by a shorter route, and invisible to the case above
-   * because that one only ever sends a well-formed body.
+   * A lock decided before validation could turn the 400 an unlocked account
+   * answers into the 401 a locked one does. Ten guesses to lock an address and
+   * then one request carrying no password would then answer "is this an
+   * account", with no credential needed -- the oracle #82 describes, invisible
+   * to the case above because that one only ever sends a well-formed body.
    */
   it('answers a malformed attempt the same whether or not the account is locked', async () => {
     await clear()
@@ -440,9 +435,7 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
    * The attempt is counted now, which is what equalises the cost and puts the
    * line in the audit -- and a count that pushed `lockedUntil` further out
    * would hand an attacker a way to keep somebody locked out for as long as
-   * they kept trying. `countTheFailure` returns early once an account is
-   * already locked; this is the case that says so rather than the commit
-   * message.
+   * they kept trying.
    */
   it('does not extend the window when somebody keeps guessing', async () => {
     await clear()
@@ -468,12 +461,8 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
   /**
    * **An attempt on a locked account is still a failed sign-in.**
    *
-   * It was recorded nowhere: the refusal is thrown from a `before` hook, which
-   * skips the `after` hook that writes the line. Measured at the time as 28
-   * attempts against a locked account leaving the audit empty while 28 against
-   * an open one left 28 -- so an attacker who had already locked an account
-   * could go on guessing it unobserved, which is the opposite of what a
-   * lockout is for.
+   * An attacker who had already locked an account must not go on guessing it
+   * unobserved, which is the opposite of what a lockout is for.
    */
   it('records an attempt made while the account is locked', async () => {
     await clear()
