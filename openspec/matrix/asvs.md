@@ -23,8 +23,8 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V6.4.1 | System-generated initial secrets are securely random | **Unbuilt.** accounts-and-access :: An install can be recovered without another administrator |
 | V6.4.4 | A lost factor requires proofing at enrolment level | **Unbuilt.** accounts-and-access :: A second factor is available, and enforcing it is the install's policy |
 | V7.2.4 | A new session token on authentication; the old one ended | accounts-and-access :: A session belongs to its holder and ends when it should |
-| V7.3.1, V7.3.2 | An inactivity timeout and an absolute maximum lifetime | accounts-and-access :: A session belongs to its holder and ends when it should |
-| V7.4.1, V7.4.5 | Termination disallows further use; administrators can end one session or all | accounts-and-access :: A session belongs to its holder and ends when it should |
+| V7.3.1, V7.3.2 | An inactivity timeout and an absolute maximum lifetime | **The connection half is unmet: a session that times out leaves its open case connection writing (#1162).** accounts-and-access :: A session belongs to its holder and ends when it should |
+| V7.4.1, V7.4.5 | Termination disallows further use; administrators can end one session or all | **V7.4.1 in part: a session ended by expiry leaves its open case connection writing (#1162).** accounts-and-access :: A session belongs to its holder and ends when it should |
 | V7.4.2 | All sessions ended when an account is disabled | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
 | V7.5.2 | A user can see and end their own sessions | accounts-and-access :: A session belongs to its holder and ends when it should |
 | V7.6.1 | Session lifetime between relying party and provider behaves as documented | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |

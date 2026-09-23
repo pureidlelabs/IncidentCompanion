@@ -92,7 +92,7 @@
 | A verb the roster offers is refused on the account performing it | An administrator sets the role their account already holds | demonstrated | server/test/an-administrator-does-not-act-on-their-own-row.test.ts |
 | A verb the roster offers is refused on the account performing it | The same verbs on somebody else | demonstrated | server/test/an-administrator-does-not-act-on-their-own-row.test.ts |
 | A session belongs to its holder and ends when it should | An administrator ends a session | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
-| A session belongs to its holder and ends when it should | A session goes idle | demonstrated | server/test/a-session-past-its-window-is-refused.test.ts |
+| A session belongs to its holder and ends when it should | A session goes idle | undemonstrated | |
 | A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | undemonstrated | |
 | A session belongs to its holder and ends when it should | An analyst reviews their own sessions | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
 | A session belongs to its holder and ends when it should | Every session is ended at once | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
