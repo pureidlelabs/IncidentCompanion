@@ -161,130 +161,125 @@ function publishesVersion(document: OpenAPIObject, template: string): boolean {
   return answer !== undefined && versionPaths(document, answer).some((path) => path.length === 1)
 }
 
-describe.skipIf(!(await bootable()))(
-  'every door that takes a version refuses one past its column',
-  () => {
-    let harness: Harness
-    let admin: Persona
-    let caseId = ''
+const runnable = await bootable()
 
-    beforeAll(async () => {
-      harness = await boot()
-      admin = await sharedAdmin(harness)
-      const opened = await fetch(`${harness.base}/api/cases`, {
-        method: 'POST',
-        headers: { cookie: admin.cookie, 'content-type': 'application/json' },
-        body: JSON.stringify({ title: `version doors ${String(Date.now())}` }),
-      })
-      const body = await opened.text()
-      expect(opened.status, body).toBe(201)
-      caseId = (JSON.parse(body) as { id: string }).id
-    }, 120_000)
+describe.skipIf(!runnable)('every door that takes a version refuses one no reader produced', () => {
+  let harness: Harness
+  let admin: Persona
+  let caseId = ''
 
-    afterAll(async () => {
-      await harness?.close()
+  beforeAll(async () => {
+    harness = await boot()
+    admin = await sharedAdmin(harness)
+    const opened = await fetch(`${harness.base}/api/cases`, {
+      method: 'POST',
+      headers: { cookie: admin.cookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ title: `version doors ${String(Date.now())}` }),
     })
+    const body = await opened.text()
+    expect(opened.status, body).toBe(201)
+    caseId = (JSON.parse(body) as { id: string }).id
+  }, 120_000)
 
-    /** Each door, and each place in it a version goes. */
-    function doors() {
-      return operations(harness.document, { caseId })
-        .filter((one) => one.method !== 'GET')
-        .flatMap((one) => {
-          const operation = (harness.document.paths?.[one.template] as Record<string, Operation>)[
-            one.method.toLowerCase()
-          ]!
-          const inQuery = (operation.parameters ?? []).some(
-            (p) => p.in === 'query' && p.name === 'version',
-          )
-          const body = jsonBody(operation)
-          return [
-            ...(inQuery ? [{ ...one, operation, where: ['?version'] }] : []),
-            ...(body ? versionPaths(harness.document, body) : []).map((where) => ({
-              ...one,
-              operation,
-              where,
-            })),
-          ]
+  afterAll(async () => {
+    await harness?.close()
+  })
+
+  /** Each door, and each place in it a version goes. */
+  function doors() {
+    return operations(harness.document, { caseId })
+      .filter((one) => one.method !== 'GET')
+      .flatMap((one) => {
+        const operation = (harness.document.paths?.[one.template] as Record<string, Operation>)[
+          one.method.toLowerCase()
+        ]!
+        const inQuery = (operation.parameters ?? []).some(
+          (p) => p.in === 'query' && p.name === 'version',
+        )
+        const body = jsonBody(operation)
+        return [
+          ...(inQuery ? [{ ...one, operation, where: ['?version'] }] : []),
+          ...(body ? versionPaths(harness.document, body) : []).map((where) => ({
+            ...one,
+            operation,
+            where,
+          })),
+        ]
+      })
+  }
+
+  it('names where the version goes on every PATCH of a record that publishes one', () => {
+    const named = new Set(doors().map((door) => `${door.method} ${door.template}`))
+    const unnamed = operations(harness.document)
+      .filter((one) => one.method === 'PATCH')
+      .filter((one) => publishesVersion(harness.document, one.template.replace(/\/bulk$/, '/{id}')))
+      .map((one) => `${one.method} ${one.template}`)
+      .filter((one) => !named.has(one))
+
+    expect(
+      unnamed,
+      'these write a versioned record and publish nowhere to present the version',
+    ).toEqual([])
+  })
+
+  it('refuses a version no reader could have read at 422, naming it, at each of them', async () => {
+    const found = doors()
+    expect(found.length, 'no door takes a version, so this sweeps nothing').toBeGreaterThan(0)
+
+    const wrong: string[] = []
+    for (const door of found) {
+      const inQuery = door.where[0] === '?version'
+      for (const version of inQuery ? NOT_A_VERSION.query : NOT_A_VERSION.body) {
+        const query =
+          inQuery && version !== undefined ? `?version=${encodeURIComponent(String(version))}` : ''
+        const response = await fetch(`${harness.base}${door.path}${query}`, {
+          method: door.method,
+          headers: { cookie: admin.cookie, 'content-type': 'application/json' },
+          body: inQuery
+            ? undefined
+            : JSON.stringify(
+                bodyWith(harness.document, jsonBody(door.operation), door.where, version),
+              ),
         })
+        const text = await response.text()
+        if (response.status !== 422 || !/version/i.test(text)) {
+          wrong.push(
+            `${door.method} ${door.template} [${door.where.join('.')} = ${JSON.stringify(version)}]: ` +
+              `${String(response.status)} ${text.slice(0, 160)}`,
+          )
+        }
+      }
     }
 
-    it('names where the version goes on every PATCH of a record that publishes one', () => {
-      const named = new Set(doors().map((door) => `${door.method} ${door.template}`))
-      const unnamed = operations(harness.document)
-        .filter((one) => one.method === 'PATCH')
-        .filter((one) =>
-          publishesVersion(harness.document, one.template.replace(/\/bulk$/, '/{id}')),
+    expect(wrong, 'a version no reader produced reached further than the door').toEqual([])
+  }, 180_000)
+
+  /** `currentVersion: null` is a row this case cannot see, and a 409 would send a client to merge against it. */
+  it('answers 404 for a row this case does not hold, at every row PATCH, rather than a conflict', async () => {
+    const rows = doors().filter(
+      (door) => door.method === 'PATCH' && door.template.endsWith('/{id}'),
+    )
+    expect(rows.length, 'no row PATCH takes a version, so this sweeps nothing').toBeGreaterThan(0)
+
+    const wrong: string[] = []
+    for (const door of rows) {
+      const change = oneChange(harness.document, jsonBody(door.operation))
+      if (!change) {
+        wrong.push(`${door.template}: publishes no field this sweep can fill`)
+        continue
+      }
+      const response = await fetch(`${harness.base}${door.path}`, {
+        method: 'PATCH',
+        headers: { cookie: admin.cookie, 'content-type': 'application/json' },
+        body: JSON.stringify({ ...change, version: 1 }),
+      })
+      if (response.status !== 404) {
+        wrong.push(
+          `${door.template}: ${String(response.status)} ${(await response.text()).slice(0, 160)}`,
         )
-        .map((one) => `${one.method} ${one.template}`)
-        .filter((one) => !named.has(one))
-
-      expect(
-        unnamed,
-        'these write a versioned record and publish nowhere to present the version',
-      ).toEqual([])
-    })
-
-    it('refuses a version no reader could have read at 422, naming it, at each of them', async () => {
-      const found = doors()
-      expect(found.length, 'no door takes a version, so this sweeps nothing').toBeGreaterThan(0)
-
-      const wrong: string[] = []
-      for (const door of found) {
-        const inQuery = door.where[0] === '?version'
-        for (const version of inQuery ? NOT_A_VERSION.query : NOT_A_VERSION.body) {
-          const query =
-            inQuery && version !== undefined
-              ? `?version=${encodeURIComponent(String(version))}`
-              : ''
-          const response = await fetch(`${harness.base}${door.path}${query}`, {
-            method: door.method,
-            headers: { cookie: admin.cookie, 'content-type': 'application/json' },
-            body: inQuery
-              ? undefined
-              : JSON.stringify(
-                  bodyWith(harness.document, jsonBody(door.operation), door.where, version),
-                ),
-          })
-          const text = await response.text()
-          if (response.status !== 422 || !/version/i.test(text)) {
-            wrong.push(
-              `${door.method} ${door.template} [${door.where.join('.')} = ${JSON.stringify(version)}]: ` +
-                `${String(response.status)} ${text.slice(0, 160)}`,
-            )
-          }
-        }
       }
+    }
 
-      expect(wrong, 'a version no reader produced reached further than the door').toEqual([])
-    }, 180_000)
-
-    /** `currentVersion: null` is a row this case cannot see, and a 409 would send a client to merge against it. */
-    it('answers 404 for a row this case does not hold, at every row PATCH, rather than a conflict', async () => {
-      const rows = doors().filter(
-        (door) => door.method === 'PATCH' && door.template.endsWith('/{id}'),
-      )
-      expect(rows.length, 'no row PATCH takes a version, so this sweeps nothing').toBeGreaterThan(0)
-
-      const wrong: string[] = []
-      for (const door of rows) {
-        const change = oneChange(harness.document, jsonBody(door.operation))
-        if (!change) {
-          wrong.push(`${door.template}: publishes no field this sweep can fill`)
-          continue
-        }
-        const response = await fetch(`${harness.base}${door.path}`, {
-          method: 'PATCH',
-          headers: { cookie: admin.cookie, 'content-type': 'application/json' },
-          body: JSON.stringify({ ...change, version: 1 }),
-        })
-        if (response.status !== 404) {
-          wrong.push(
-            `${door.template}: ${String(response.status)} ${(await response.text()).slice(0, 160)}`,
-          )
-        }
-      }
-
-      expect(wrong).toEqual([])
-    }, 120_000)
-  },
-)
+    expect(wrong).toEqual([])
+  }, 120_000)
+})
