@@ -54,7 +54,6 @@ function controllerFor(name: string): Arrangeable {
   const channel = {
     announce: () => {},
     othersOn: () => Promise.resolve([]),
-    holderOf: () => Promise.resolve(null),
   }
   return new (found as new (s: CollectionService) => Arrangeable)(
     new CollectionService(db!, channel as never),

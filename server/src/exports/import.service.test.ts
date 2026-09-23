@@ -8,6 +8,7 @@
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
+import { UnprocessableEntityException } from '@nestjs/common'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { ExportsController } from './exports.controller.js'
@@ -313,6 +314,27 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
     await expect(
       failing.fromCsv('systems', emptyCaseId, 'hostname,system_type\nWKS-UNWRITTEN,server\n', ME, 'replace'),
     ).rejects.toThrow('the connection to the store was lost')
+  })
+
+  /** A row the write door refuses is one row: the rest of the file still lands. */
+  it('counts a row the write door refuses and carries on', async () => {
+    class RefusesOneRow extends CollectionService {
+      override update(): never {
+        throw new UnprocessableEntityException({ message: 'this row breaks a rule' })
+      }
+    }
+    const refusing = new ImportService(new RefusesOneRow(db!))
+    await refusing.fromCsv('systems', emptyCaseId, 'hostname\nWKS-REFUSED\n', ME)
+
+    const result = await refusing.fromCsv(
+      'systems',
+      emptyCaseId,
+      'hostname,system_type\nWKS-REFUSED,server\nWKS-FRESH-BESIDE,laptop\n',
+      ME,
+      'replace',
+    )
+
+    expect(result).toMatchObject({ added: 1, replaced: 0, refused: 1 })
   })
 
   /**

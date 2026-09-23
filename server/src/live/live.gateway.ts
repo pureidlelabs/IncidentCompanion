@@ -520,8 +520,8 @@ export class LiveGateway implements OnApplicationShutdown {
   }
 
   /**
-   * One claim frame. A claim takes write on the case, because a held row refuses
-   * every other writer; admission asked only for read. `release` is not gated:
+   * One claim frame. A claim says its holder is editing, so it takes write on
+   * the case; admission asked only for read. `release` is not gated:
    * `PresenceStore.release` refuses a field another session holds.
    */
   private async onClaim(
