@@ -46,6 +46,9 @@ function typed(text: string, fragment = 'block-1'): { update: Uint8Array; doc: Y
   return { update: Y.encodeStateAsUpdate(doc), doc }
 }
 
+/** The analyst every frame here is written as. */
+const WRITER = { id: 'prose-analyst', label: 'Prose Analyst', headers: {} }
+
 // **Ended once, for the file.** The pool is shared across every block here, so
 // a `describe` that closes it in its own teardown takes the next one down with
 // `Cannot use a pool after calling end on the pool` - which reads as a bug in
@@ -287,7 +290,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       const { caseId, address } = await filed()
       const mine = new Y.Doc({ gc: false })
 
-      const applied = await prose.apply(caseId, address, helloFrom(mine), 'a-socket')
+      const applied = await prose.apply(caseId, address, helloFrom(mine), 'a-socket', WRITER)
       Y.applyUpdate(mine, stepTwoPayload('reply' in applied ? applied.reply : null))
 
       expect(mine.getXmlFragment('block-1').toJSON()).toContain('as filed')
@@ -301,7 +304,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       const { caseId, address, doc } = await filed()
       const before = Buffer.from(Y.encodeStateAsUpdate(doc))
 
-      expect(await prose.apply(caseId, address, frame(), 'a-socket')).toEqual({ refused: SENT })
+      expect(await prose.apply(caseId, address, frame(), 'a-socket', WRITER)).toEqual({ refused: SENT })
 
       expect(Buffer.from(Y.encodeStateAsUpdate(doc)).equals(before)).toBe(true)
       await prose.release(caseId, address)
@@ -312,7 +315,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       const copy = new Y.Doc({ gc: false })
       Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc))
 
-      expect(await prose.apply(caseId, address, stepTwo(copy), 'a-socket')).toEqual({ reply: null })
+      expect(await prose.apply(caseId, address, stepTwo(copy), 'a-socket', WRITER)).toEqual({ reply: null })
       await prose.release(caseId, address)
     })
   })
@@ -329,7 +332,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       const { caseId, address, doc, seal } = await held()
       const stamp = new Date('2026-09-01T12:00:00.000Z')
 
-      const waiting = prose.apply(caseId, address, framed(typed('typed while it was sent').update), 'a-socket')
+      const waiting = prose.apply(caseId, address, framed(typed('typed while it was sent').update), 'a-socket', WRITER)
       await new Promise((wake) => setTimeout(wake, 50))
       expect(doc.getXmlFragment('block-1').toJSON()).not.toContain('typed while')
 
@@ -342,7 +345,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
     it('applies what waited when the send does not stamp', async () => {
       const { caseId, address, doc, seal } = await held()
 
-      const waiting = prose.apply(caseId, address, framed(typed('typed while a send failed').update), 'a-socket')
+      const waiting = prose.apply(caseId, address, framed(typed('typed while a send failed').update), 'a-socket', WRITER)
       await seal.settle(null)
 
       expect(await waiting).toEqual({ reply: null })
@@ -353,7 +356,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
     it('answers a state request without waiting', async () => {
       const { caseId, address, seal } = await held()
 
-      const answered = await prose.apply(caseId, address, helloFrom(new Y.Doc()), 'a-socket')
+      const answered = await prose.apply(caseId, address, helloFrom(new Y.Doc()), 'a-socket', WRITER)
 
       expect('reply' in answered && answered.reply).toBeTruthy()
       await seal.settle(null)

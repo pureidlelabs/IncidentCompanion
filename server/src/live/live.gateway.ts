@@ -28,10 +28,10 @@
  *
  * `live.gateway.test.ts` asserts all four, because a missing one is invisible.
  */
-import { Inject, Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common'
+import { Inject, Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common'
 import { AuthService } from '@thallesp/nestjs-better-auth'
 import { eq } from 'drizzle-orm'
-import type { IncomingMessage, Server } from 'node:http'
+import type { IncomingHttpHeaders, IncomingMessage, Server } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type * as Y from 'yjs'
@@ -40,7 +40,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { cases } from '../db/schema/index.js'
 import { CaseChannel, type Member } from './case-channel.service.js'
-import { ProseService, type ProseRecord } from '../prose/prose.service.js'
+import { ProseService, type ProseRecord, type Writer } from '../prose/prose.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
 import { ReachService, type Level } from '../access/reach.service.js'
@@ -133,7 +133,7 @@ interface OpenDocument {
 }
 
 @Injectable()
-export class LiveGateway implements OnApplicationShutdown {
+export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
   private readonly log = new Logger(LiveGateway.name)
   private readonly sockets = new WebSocketServer({ noServer: true, maxPayload: MAX_FRAME_BYTES })
   private connections = 0
@@ -150,8 +150,7 @@ export class LiveGateway implements OnApplicationShutdown {
     /**
      * **The socket audits itself, because nothing else can.** No guard, pipe,
      * middleware or interceptor runs on an upgrade - so the boundary that
-     * records every HTTP write is blind here, and this is the one path that
-     * persists a report.
+     * records every HTTP write is blind here.
      */
     private readonly activity: InstallActivityService,
     /**
@@ -171,6 +170,26 @@ export class LiveGateway implements OnApplicationShutdown {
      * by hand, and the client reconnects to what it is still entitled to.
      */
     this.stopListeningForReachChanges = onReachChanged((userId) => { this.dropUser(userId) })
+  }
+
+  /**
+   * **A saved change to prose is recorded as any write is**: announced to the
+   * case, and a line per writer in the install's audit.
+   */
+  onModuleInit(): void {
+    this.prose.onSaved((caseId, record, writers) => {
+      this.channel.announce(caseId, [record.table], writers.at(-1)!.id)
+      for (const writer of writers) {
+        void this.activity.record({
+          event: 'api_called',
+          outcome: 'success',
+          actor: { id: writer.id, label: writer.label },
+          target: `live prose.sync ${record.table}`,
+          detail: { case: caseId, record: record.id },
+          headers: writer.headers,
+        })
+      }
+    })
   }
 
   dropUser(userId: string): void {
@@ -235,12 +254,7 @@ export class LiveGateway implements OnApplicationShutdown {
       return
     }
 
-    /**
-     * **One line per opening, not per write.** The document is a CRDT flushed
-     * on a timer, so a line per flush would be a line every few seconds per
-     * reader; the question an audit is read for is *who could have edited
-     * this*, and that is answered when the socket opens.
-     */
+    // Who could have edited; who did is the line each saved change writes.
     void this.activity.record({
       event: 'case_opened_live',
       actor: { id: verdict.session.id, label: verdict.session.name },
@@ -249,7 +263,7 @@ export class LiveGateway implements OnApplicationShutdown {
     })
 
     this.sockets.handleUpgrade(request, socket, head, (live) => {
-      this.open(live, verdict.caseId, verdict.session).catch((error: unknown) => {
+      this.open(live, verdict.caseId, verdict.session, request.headers).catch((error: unknown) => {
         this.log.warn(`could not open a socket: ${String(error)}`)
         live.terminate()
       })
@@ -332,7 +346,9 @@ export class LiveGateway implements OnApplicationShutdown {
     live: WebSocket,
     caseId: string,
     session: { id: string; name: string },
+    headers: IncomingHttpHeaders = {},
   ): Promise<void> {
+    const writer: Writer = { id: session.id, label: session.name, headers }
     this.connections += 1
     this.admitted.set(live, { caseId, userId: session.id })
     const member: Member = {
@@ -435,7 +451,7 @@ export class LiveGateway implements OnApplicationShutdown {
         const field = typeof message.field === 'string' ? message.field : null
         const update = typeof message.update === 'string' ? message.update : null
         if (!field || !update) return
-        this.onProse(member, live, opened, message.type, field, update).catch(failed)
+        this.onProse(member, writer, live, opened, message.type, field, update).catch(failed)
         return
       }
 
@@ -494,6 +510,7 @@ export class LiveGateway implements OnApplicationShutdown {
    */
   private async onProse(
     member: Member,
+    writer: Writer,
     live: WebSocket,
     opened: Map<string, Promise<OpenDocument | null>>,
     type: 'prose.sync' | 'prose.awareness',
@@ -546,7 +563,7 @@ export class LiveGateway implements OnApplicationShutdown {
       }
     }
 
-    const applied = await this.prose.apply(member.caseId, held.address, frame, live)
+    const applied = await this.prose.apply(member.caseId, held.address, frame, live, writer)
     /**
      * **Told, not dropped.** A silently discarded update is the worst outcome
      * on this path: the analyst types, sees their own text, and it reaches
