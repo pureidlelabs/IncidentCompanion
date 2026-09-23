@@ -8,7 +8,7 @@
  *
  * Row-level security is the whole of the case boundary in this store, so every
  * other guarantee in that requirement rests on `ic_app` being unable to switch
- * it off. Nothing asserted that. `the-store-refuses-an-unscoped-read.test.ts`
+ * it off. Nothing asserted that. `the-store-refuses-what-its-caller-does-not-reach.test.ts`
  * shows the policies working; this shows they cannot be removed by the role
  * they constrain.
  *
@@ -97,7 +97,7 @@ describe.skipIf(!app || !hasConcurrentConnections())('the identity the applicati
     // **Named exactly, and without `if exists`.** A wrong name plus `if
     // exists` is a DROP that succeeds having done nothing, which reads as an
     // escalation that worked.
-    ['drop the policy outright', sql`drop policy case_scope on systems`],
+    ['drop the policy outright', sql`drop policy case_reads on systems`],
     ['grant itself the bypass', sql`alter role ic_app bypassrls`],
     ['become the migrating role', sql`set role ic_migrate`],
   ])('cannot %s', async (what, statement) => {
@@ -157,6 +157,6 @@ describe.skipIf(!app || !hasConcurrentConnections())('the identity the applicati
     expect(
       (policies.rows as { name: string }[]).map((one) => one.name),
       'the case-scoping policy is gone, so one of the attempts above succeeded',
-    ).toContain('case_scope')
+    ).toContain('case_reads')
   })
 })

@@ -9,6 +9,7 @@
  */
 import {
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -19,7 +20,6 @@ import { and, asc, desc, eq, getTableColumns, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import { defaultCustomer } from '../customers/customers.service.js'
-import { reachedCases } from '../access/reached-cases.js'
 import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { CaseChannel } from '../live/case-channel.service.js'
@@ -27,7 +27,7 @@ import { LiveGateway } from '../live/live.gateway.js'
 import { timelineToWire } from '../domain/entities/timeline.js'
 import { isGapped } from '../domain/tiering.js'
 import { SEVERITY } from '../domain/vocabularies.js'
-import { withCase, type Executor } from '../db/scope.js'
+import { withCase, withReach, type Executor } from '../db/scope.js'
 import { inSeries } from '../db/in-series.js'
 import { columnOf } from '../db/column-access.js'
 import type { PgTable } from 'drizzle-orm/pg-core'
@@ -148,20 +148,13 @@ export class CasesService {
     @Optional() private readonly gateway?: LiveGateway,
   ) {}
 
-  /**
-   * Every case this analyst reaches, newest first. The analyst is required:
-   * this route mounts no guard.
-   */
-  async list(userId: string): Promise<CaseRow[]> {
-    return this.db
-      .select()
-      .from(cases)
-      .where(await reachedCases(this.db, userId, cases.customerId))
-      .orderBy(desc(cases.updatedAt))
+  /** Every case the caller reaches, newest first: the store answers no other. */
+  async list(): Promise<CaseRow[]> {
+    return withReach(this.db, (tx) => tx.select().from(cases).orderBy(desc(cases.updatedAt)))
   }
 
   async get(id: string): Promise<CaseRow> {
-    const [row] = await this.db.select().from(cases).where(eq(cases.id, id))
+    const [row] = await withReach(this.db, (tx) => tx.select().from(cases).where(eq(cases.id, id)))
     if (!row) throw new NotFoundException(`No case ${id}.`)
     return row
   }
@@ -396,7 +389,7 @@ export class CasesService {
     /** A caller's transaction, where the case is one half of a larger act. */
     on: Executor = this.db,
   ): Promise<CaseRow> {
-    return on.transaction(async (tx) => {
+    return withReach(on, async (tx) => {
       const customerId = await this.openedUnder(tx)
       await this.referenceIsFree(tx, customerId, input.reference)
       const [row] = await tx
@@ -491,15 +484,16 @@ export class CasesService {
      * and the driver's error reaches the analyst as a 500 naming nothing,
      * where every other writer names the case that holds the number.
      */
-    if (typeof values['reference'] === 'string') {
-      const [row] = await this.db
-        .select({ customerId: cases.customerId })
-        .from(cases)
-        .where(eq(cases.id, id))
-        .limit(1)
-      if (row?.customerId) {
-        await this.referenceIsFree(this.db, row.customerId, values['reference'], id)
-      }
+    const reference = values['reference']
+    if (typeof reference === 'string') {
+      await withReach(this.db, async (tx) => {
+        const [row] = await tx
+          .select({ customerId: cases.customerId })
+          .from(cases)
+          .where(eq(cases.id, id))
+          .limit(1)
+        if (row?.customerId) await this.referenceIsFree(tx, row.customerId, reference, id)
+      })
     }
 
     const result = await updateVersioned<CaseRow>(this.db, {
@@ -538,7 +532,9 @@ export class CasesService {
       })
     }
 
-    const deleted = await this.db.delete(cases).where(eq(cases.id, id)).returning({ id: cases.id })
+    const deleted = await withReach(this.db, (tx) =>
+      tx.delete(cases).where(eq(cases.id, id)).returning({ id: cases.id }),
+    )
     if (deleted.length === 0) throw new NotFoundException(`No case ${id}.`)
     this.channel?.announce(id, ['cases'], actorId)
     this.gateway?.dropCase(id)
@@ -567,9 +563,7 @@ export class CasesService {
     customerId: string,
     actorId: string,
   ): Promise<{ from: string | null; title: string }> {
-    const answer = await this.db.transaction(async (tx) => {
-      return this.moveWithin(tx, id, customerId)
-    })
+    const answer = await withReach(this.db, (tx) => this.moveWithin(tx, id, customerId, actorId))
 
     // Outside the transaction: neither is a database write, and announcing a
     // move that then rolled back would be worse than announcing it late.
@@ -582,6 +576,7 @@ export class CasesService {
     tx: Transaction,
     id: string,
     customerId: string,
+    actorId: string,
   ): Promise<{ from: string | null; title: string }> {
     const [held] = await tx
       .select({ id: customers.id, isDefault: customers.isDefault })
@@ -623,47 +618,30 @@ export class CasesService {
 
     /**
      * **A reference is unique within its customer, and a move is the second
-     * way to break that.** The merge holds the same boundary from the other
-     * side. An absent reference is not a value and never collides, which is
-     * why the empty string is excluded rather than matched.
-     *
-     * **The colliding case is not named, and the merge's refusal is.** The
-     * caller is not required to reach the destination, so naming a case under
-     * it would disclose a title across the boundary the guard exists to hold
-     * -- and repeated against one customer's id it is an oracle for that
-     * customer's references. The merge can name both cases because it is
-     * admin-gated; this is not. The analyst cannot open the other case anyway,
-     * so being told which one it is would not be actionable.
+     * way to break that.** Asked only for a mover who reaches the destination,
+     * so the answer never depends on what an unreached customer holds.
      */
     if (row.reference !== null && row.reference !== '') {
-      const [clash] = await tx
-        .select({ id: cases.id })
-        .from(cases)
-        .where(and(eq(cases.customerId, customerId), eq(cases.reference, row.reference)))
-      if (clash) {
-        throw new ConflictException({
+      const { rows } = await tx.execute<{ level: string | null }>(
+        sql`select ic_level(${actorId}, ${customerId}::uuid) as level`,
+      )
+      if (!rows[0]?.level) {
+        throw new ForbiddenException({
           message:
-            `${row.reference} is already in use for that customer. ` +
-            `Change this case's reference before moving it.`,
+            'A case carrying a reference moves only to a customer you reach. ' +
+            'Clear its reference to move it there.',
         })
       }
+      await this.referenceIsFree(tx, customerId, row.reference, id)
     }
 
-    // **`returning`, because a case deleted since the read above leaves this
-    // matching nothing** -- and without the check the caller is told the move
-    // happened and the audit carries a line for it. `remove` above does the
-    // same.
-    const moved = await tx
-      .update(cases)
-      .set({ customerId })
-      .where(eq(cases.id, id))
-      .returning({ id: cases.id })
-    if (moved.length === 0) throw new NotFoundException(`No case ${id}.`)
+    // Through the store's own act: the moved row may be one the mover no
+    // longer sees, which no update of theirs may leave behind.
+    const { rows } = await tx.execute<{ moved: boolean }>(
+      sql`select ic_move_case(${id}::uuid, ${customerId}::uuid) as moved`,
+    )
+    if (!rows[0]?.moved) throw new NotFoundException(`No case ${id}.`)
     return { from: row.customerId, title: row.title }
   }
 
-  async exists(id: string): Promise<boolean> {
-    const [row] = await this.db.select({ id: cases.id }).from(cases).where(eq(cases.id, id))
-    return row !== undefined
-  }
 }

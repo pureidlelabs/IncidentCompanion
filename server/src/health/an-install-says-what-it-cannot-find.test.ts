@@ -267,7 +267,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
    * part under test.
    */
   it('reports nothing expected on an install holding no evidence', async () => {
-    const empty = { select: () => ({ from: () => Promise.resolve([]) }) }
+    const empty = { execute: () => Promise.resolve({ rows: [] }) }
 
     const held = await new ArtefactCensus(empty as never, { get: () => root } as never).take()
 

@@ -87,15 +87,9 @@ function gatewayWith(
         ),
     },
   }
-  const db = {
-    select: () => ({
-      from: () => ({ where: () => Promise.resolve(caseExists ? [{ id: CASE }] : []) }),
-    }),
-  }
   return new LiveGateway(
     {} as CaseChannel,
     auth as never,
-    db as never,
     // The gateway's prose half is not what these cases drive; a stand-in keeps
     // the constructor honest rather than the argument list short.
     {} as never,
@@ -104,7 +98,7 @@ function gatewayWith(
     // and an empty object would make `this.activity.record` throw the moment a
     // case drove the upgrade path rather than the verdict.
     audit as never,
-    anyoneReaches,
+    caseExists ? anyoneReaches : reachesNothing,
   )
 }
 
@@ -114,18 +108,20 @@ const request = (
 ) => ({ url, headers }) as unknown as IncomingMessage
 
 /**
- * A reach stand-in that admits whatever the stub database says exists.
+ * A reach stand-in that admits every case, at write.
  *
  * **These cases are not about reach**, and none of them builds a customer or a
- * group -- so the question `reachesCase` asks is answered `yes` here and the
+ * group -- so the question `levelOnCase` asks is answered `write` here and the
  * refusals below stay the ones each case is actually driving. What reach
  * refuses is asserted in `the-socket-asks-reach-too.test.ts`, against real
  * rows.
  */
 const anyoneReaches = {
-  defaultCustomerId: () => Promise.resolve('a-default-customer'),
-  levelFor: () => Promise.resolve('write' as const),
+  levelOnCase: () => Promise.resolve({ customerId: 'a-default-customer', level: 'write' as const }),
 } as never
+
+/** The same stand-in for a case that is not there, which `levelOnCase` answers with nothing. */
+const reachesNothing = { levelOnCase: () => Promise.resolve(null) } as never
 
 describe('what the handshake lets through', () => {
   it('admits a signed-in analyst, same origin, on a case that exists', async () => {
@@ -438,20 +434,8 @@ class FakeSocket {
  */
 const settle = () => new Promise((done) => setTimeout(done, 0))
 
-/**
- * A database that answers the one question `levelOnCase` asks of it: which
- * customer this case belongs to. `null` sends it to the default, which the
- * reach stand-in below then answers for.
- */
-const caseWithNoCustomer = {
-  select: () => ({ from: () => ({ where: () => Promise.resolve([{ customerId: null }]) }) }),
-} as never
-
 const holding = (level: 'read' | 'write' | 'delete') =>
-  ({
-    defaultCustomerId: () => Promise.resolve('a-default-customer'),
-    levelFor: () => Promise.resolve(level),
-  }) as never
+  ({ levelOnCase: () => Promise.resolve({ customerId: 'a-default-customer', level }) }) as never
 
 /**
  * One admitted connection, with the report in whatever state the case needs.
@@ -486,7 +470,6 @@ async function connected(
   const gateway = new LiveGateway(
     channel as unknown as CaseChannel,
     {} as never,
-    caseWithNoCustomer,
     prose as never,
     audit as never,
     holding(level),
@@ -528,7 +511,6 @@ async function watched(
   const gateway = new LiveGateway(
     channel as unknown as CaseChannel,
     {} as never,
-    caseWithNoCustomer,
     prose as never,
     audit as never,
     holding('write'),
@@ -762,7 +744,6 @@ describe('the connection dies with the reach that admitted it', () => {
       channel as unknown as CaseChannel,
       {} as never,
       {} as never,
-      {} as never,
       audit as never,
       anyoneReaches,
     )
@@ -881,7 +862,6 @@ describe('a socket that goes before the join has finished', () => {
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
       {} as never,
-      caseWithNoCustomer,
       {} as never,
       audit as never,
       holding('write'),
@@ -935,7 +915,6 @@ describe('a socket that goes before the join has finished', () => {
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
       {} as never,
-      caseWithNoCustomer,
       {} as never,
       audit as never,
       holding('write'),
@@ -1009,7 +988,6 @@ describe('what a claim frame may name', () => {
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
       {} as never,
-      caseWithNoCustomer,
       {} as never,
       audit as never,
       holding('write'),
@@ -1103,7 +1081,6 @@ describe('how much of a frame the socket will read', () => {
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
       auth as never,
-      caseWithNoCustomer,
       {} as never,
       audit as never,
       holding('write'),
@@ -1168,7 +1145,6 @@ describe('two prose frames for one field arriving together', () => {
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
       {} as never,
-      caseWithNoCustomer,
       prose as never,
       audit as never,
       holding('write'),

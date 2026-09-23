@@ -23,6 +23,7 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
@@ -65,7 +66,9 @@ function controllerFor(name: string): Doors {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Doors)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Doors)(
+    as('parity-analyst', new CollectionService(db!)),
+  )
 }
 
 /**

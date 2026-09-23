@@ -9,6 +9,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from './cases.service.js'
 import { LIVE_STATES, caseStatusSchema } from '../domain/case.js'
@@ -50,9 +51,9 @@ describe.skipIf(!db)('a case moving between states', () => {
       .insert(user)
       .values({ id: actorId, name: 'State Analyst', email: 'state@example.test', emailVerified: true, createdAt: now, updatedAt: now })
       .onConflictDoNothing()
-    service = new CasesService(
-      db!,
-      { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
+    service = as(
+      actorId,
+      new CasesService(db!, { announce: () => {}, othersOn: () => Promise.resolve([]) } as never),
     )
   })
 

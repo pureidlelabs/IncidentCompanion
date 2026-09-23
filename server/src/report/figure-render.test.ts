@@ -20,6 +20,7 @@ import { Readable } from 'node:stream'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
@@ -92,14 +93,14 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
       .returning()
     caseId = row!.id
 
-    collections = new CollectionService(db!)
-    render = new ReportRenderService(
+    collections = as(actorId, new CollectionService(db!))
+    render = as(actorId, new ReportRenderService(
       db!,
       new CasesService(db!),
       new ProseService(db!),
       englishOnly,
       store,
-    )
+    ))
   }, 60_000)
 
   /** A 400x300 artefact in the store, and the evidence row that names it. */

@@ -21,7 +21,7 @@ const APP_URL = process.env.DATABASE_URL ?? ''
 const MIGRATE_URL = APP_URL ? asRole(APP_URL, 'ic_migrate') : ''
 
 const TABLE = 'evidence'
-const POLICY = 'case_scope'
+const POLICY = 'case_reads'
 
 async function qualOf(): Promise<string> {
   const client = new Client({ connectionString: MIGRATE_URL })

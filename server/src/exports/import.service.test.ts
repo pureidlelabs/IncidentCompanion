@@ -9,6 +9,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ExportsController } from './exports.controller.js'
 import { CSV_IMPORT, ImportService } from './import.service.js'
@@ -65,9 +66,9 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
     const [blank] = await seed!.insert(cases).values({ title: 'Blank' }).returning()
     emptyCaseId = blank!.id
 
-    const collections = new CollectionService(db!)
-    service = new ImportService(collections)
-    exports_ = new ExportsController(collections, service)
+    const collections = as(ME, new CollectionService(db!))
+    service = as(ME, new ImportService(collections))
+    exports_ = as(ME, new ExportsController(collections, service))
   })
 
   afterAll(async () => {
@@ -310,7 +311,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
       othersOn: () => Promise.resolve([]),
       holderOf: () => Promise.resolve({ userId: 'robin', username: 'Robin' }),
     } as never)
-    const withClaims = new ImportService(held)
+    const withClaims = as(ME, new ImportService(held))
 
     await withClaims.fromCsv('systems', emptyCaseId, 'hostname\nWKS-HELD\n', ME)
 

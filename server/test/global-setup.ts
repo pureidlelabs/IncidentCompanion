@@ -117,7 +117,7 @@ async function embedded(): Promise<void> {
   // Before the push, so the roles exist for it to grant to.
   await apply()
 
-  await run('npx', ['drizzle-kit', 'push', '--force'], {
+  await run('npm', ['run', '--silent', 'db:push', '--', '--force'], {
     cwd: PACKAGE_ROOT,
     env: { ...process.env, DATABASE_URL: server.url },
   })
@@ -266,7 +266,7 @@ export async function setup(): Promise<void> {
   await onFresh.query(roles)
   await onFresh.end()
 
-  await run('npx', ['drizzle-kit', 'push', '--force'], {
+  await run('npm', ['run', '--silent', 'db:push', '--', '--force'], {
     cwd: PACKAGE_ROOT,
     env: { ...process.env, DATABASE_URL: asRole(url, 'ic_migrate') },
   })

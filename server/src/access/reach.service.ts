@@ -1,10 +1,11 @@
 /**
  * Which customers an analyst reaches, and at what level.
  *
- * **The resolution, never its enforcement.** This answers what somebody may
- * do; asking before writing is the caller's, and keeping the two apart is what
- * lets one implementation serve every write path rather than each growing its
- * own idea of the rules.
+ * **The level is the store's answer, never this module's.** `levelFor` and
+ * `levelOnCase` ask `ic_level` and `ic_reach`, the functions the row-level
+ * policies ask, so the guard, the socket and the store cannot disagree.
+ * `reachOf` and `reachTo` explain a level by the grant behind it, and
+ * `a-grant-explains-the-level-the-store-decides.test.ts` holds them to it.
  *
  * **Answered per call, from the grants as they stand.** A level reduced or a
  * group revoked has to take effect for a session already open, so a cache here
@@ -12,7 +13,7 @@
  * for a stale answer to live.
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 import { ADMIN_ROLE } from '../domain/analyst-account.js'
 import { DATABASE } from '../db/db.module.js'
@@ -135,36 +136,33 @@ export class ReachService {
     return defaultCustomerId(this.db)
   }
 
-  /**
-   * **The default customer's guarantee joins the grants rather than replacing
-   * them**, so the same *most permissive* rule settles both: a group holding
-   * the default may raise an analyst above the floor, and a membership weaker
-   * than the floor does not lower them below it. -> `overTheDefault`
-   *
-   * The groups are read either way. Answering the default before consulting
-   * them would cap it, which is the reading the specification does not
-   * support and which would mean nobody could ever be given delete on an
-   * unattributed case.
-   */
+  /** The level `userId` holds over `customerId`, or null for none. */
   async levelFor(userId: string, customerId: string): Promise<Level | null> {
-    const held = await this.db
-      .select({ level: groupMembers.level })
-      .from(groupMembers)
-      .innerJoin(groupCustomers, eq(groupCustomers.groupId, groupMembers.groupId))
-      .where(and(eq(groupMembers.userId, userId), eq(groupCustomers.customerId, customerId)))
-
-    if (customerId !== (await this.defaultCustomerId())) return settle(held)
-
-    // The role is read here rather than taken from a caller: this is the one
-    // place reach is resolved, and a caller that supplied it could supply a
-    // different one to the socket than to the guard.
-    const [account] = await this.db
-      .select({ role: user.role })
-      .from(user)
-      .where(eq(user.id, userId))
-    return settle(held, overTheDefault(account?.role ?? null))
+    const { rows } = await this.db.execute<{ level: Level | null }>(
+      sql`select ic_level(${userId}, ${customerId}::uuid) as level`,
+    )
+    return rows[0]?.level ?? null
   }
 
+  /**
+   * Whether `caseId` names a case, whose it is, and the level `userId` holds
+   * over it: null where there is no such case.
+   *
+   * **One statement whichever the answer**, so a case out of reach costs what
+   * an absent one does.
+   */
+  async levelOnCase(
+    userId: string,
+    caseId: string,
+  ): Promise<{ customerId: string | null; level: Level | null } | null> {
+    const { rows } = await this.db.execute<{
+      present: boolean
+      customer: string | null
+      level: Level | null
+    }>(sql`select present, customer, level from ic_reach(${userId}, ${caseId}::uuid)`)
+    const [reached] = rows
+    return reached?.present ? { customerId: reached.customer, level: reached.level } : null
+  }
 
   /**
    * Every customer this account reaches, with the level and what granted it.
@@ -294,35 +292,14 @@ export class ReachService {
 
     return [...byUser.values()]
   }
-
-  /**
-   * The default is included whether or not any group names it, because
-   * reaching it was never a membership.
-   */
-  async customersReachedBy(userId: string): Promise<string[]> {
-    return customersReachedBy(this.db, userId)
-  }
 }
 
 /** The default customer's id, for a caller holding a handle and no container. */
-export async function defaultCustomerId(on: Executor): Promise<string | null> {
+async function defaultCustomerId(on: Executor): Promise<string | null> {
   const [row] = await on
     .select({ id: customers.id })
     .from(customers)
     .where(eq(customers.isDefault, true))
     .limit(1)
   return row?.id ?? null
-}
-
-export async function customersReachedBy(on: Executor, userId: string): Promise<string[]> {
-  const rows = await on
-    .select({ customerId: groupCustomers.customerId })
-    .from(groupMembers)
-    .innerJoin(groupCustomers, eq(groupCustomers.groupId, groupMembers.groupId))
-    .where(eq(groupMembers.userId, userId))
-
-  const reached = new Set(rows.map((row) => row.customerId))
-  const fallback = await defaultCustomerId(on)
-  if (fallback) reached.add(fallback)
-  return [...reached]
 }

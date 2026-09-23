@@ -16,6 +16,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from './collection.service.js'
@@ -23,7 +24,7 @@ import { EvidenceController } from './entities.controller.js'
 import { EvidenceFileController } from './evidence-file.controller.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { cases, evidence, user } from '../db/schema/index.js'
-import { withCase } from '../db/scope.js'
+import { actingAs, withCase } from '../db/scope.js'
 import { evidenceSchema } from '../domain/entities/evidence.js'
 import { patchSchema } from '../domain/field-spec.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
@@ -150,6 +151,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
       .insert(user)
       .values({
         id: actorId,
+        // Deleting a case takes delete, which an administrator holds over the default.
+        role: 'admin',
         name: 'Evidence Analyst',
         email: 'evidence-file@example.test',
         emailVerified: true,
@@ -165,12 +168,12 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     // without which the retention tests below cannot see such a change at all.
     process.env.EVIDENCE_DIR = root
     store = new EvidenceStore({ get: () => root } as never, policy)
-    cases_ = new CasesService(
-      db!,
-      { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
+    cases_ = as(
+      actorId,
+      new CasesService(db!, { announce: () => {}, othersOn: () => Promise.resolve([]) } as never),
     )
-    controller = new EvidenceFileController(db!, store)
-    rows = new EvidenceController(new CollectionService(db!))
+    controller = as(actorId, new EvidenceFileController(db!, store))
+    rows = as(actorId, new EvidenceController(new CollectionService(db!)))
   })
 
   afterAll(async () => {
@@ -303,7 +306,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     } as unknown as EvidenceStore
 
     await expect(
-      new EvidenceFileController(db!, racing).attach(caseId, id, upload('mail body'), {
+      as(actorId, new EvidenceFileController(db!, racing)).attach(caseId, id, upload('mail body'), {
         user: { id: actorId },
       } as never),
     ).rejects.toMatchObject({ status: 409, response: { currentVersion: before!.version + 1 } })
@@ -527,8 +530,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
       user: { id: actorId },
     } as never)
 
-    const scoped = await withCase(db!, a.caseId, (tx) =>
-      tx.select({ id: evidence.id }).from(evidence).where(eq(evidence.hash, first.hash)),
+    const scoped = await actingAs(actorId, () =>
+      withCase(db!, a.caseId, (tx) =>
+        tx.select({ id: evidence.id }).from(evidence).where(eq(evidence.hash, first.hash)),
+      ),
     )
     const everywhere = await seed!
       .select({ id: evidence.id })

@@ -1,0 +1,206 @@
+-- The reach decision, and the few acts that have to see past it.
+--
+-- Applied by every schema application before the tables and their policies:
+-- the policies call these, and a policy naming a function that does not exist
+-- cannot be created. `check_function_bodies` is off so the bodies may name
+-- tables the push has yet to create.
+--
+-- Each function is `security definer`, owned by the role that owns the tables,
+-- so it reads the rows it decides about whatever the caller may read. Each
+-- pins its `search_path` and names every table by schema, so nothing the
+-- caller puts on the path can stand in for one.
+--
+-- Dropped and made again, so a changed signature is taken too; the policies
+-- calling them are dropped before this runs.
+set check_function_bodies = off;
+
+drop function if exists
+  public.ic_level(text, uuid),
+  public.ic_reach(text, uuid),
+  public.ic_principal(),
+  public.ic_move_case(uuid, uuid),
+  public.ic_administers(),
+  public.ic_cases_behind(uuid),
+  public.ic_references_shared(uuid, uuid),
+  public.ic_move_cases(uuid, uuid),
+  public.ic_cases_tallied(),
+  public.ic_artefacts_named();
+
+-- The level `principal` holds over `owner`, or null for none. A null owner is
+-- the default customer. An id naming no account reaches nothing: the floor is
+-- an account's role, and a membership goes with its account.
+create or replace function public.ic_level(principal text, owner uuid)
+returns text
+language sql stable security definer
+set search_path = pg_catalog, pg_temp
+as $$
+  with target as (
+    select coalesce(owner, (select id from public.customers where is_default)) as id
+  ),
+  held as (
+    select m.level
+      from public.group_members m
+      join public.group_customers g on g.group_id = m.group_id
+      join target on target.id = g.customer_id
+     where m.user_id = principal
+    union all
+    select case when u.role = 'admin' then 'delete' else 'write' end
+      from public."user" u
+      join target on true
+      join public.customers d on d.id = target.id and d.is_default
+     where u.id = principal
+  )
+  select level
+    from held
+   order by array_position(array['read', 'write', 'delete'], level) desc
+   limit 1
+$$;
+
+-- Whether `kase` exists, whose it is, and the level `principal` holds over it.
+-- One row always: an absent case is answered after the same work as one out of
+-- reach, and `present` is what tells them apart.
+create or replace function public.ic_reach(principal text, kase uuid)
+returns table (present boolean, customer uuid, level text)
+language sql stable security definer
+set search_path = pg_catalog, pg_temp
+as $$
+  select found.id is not null,
+         resolved.id,
+         public.ic_level(principal, resolved.id)
+    from (select kase) asked
+    left join public.cases found on found.id = asked.kase
+    cross join lateral (
+      select coalesce(found.customer_id, (select id from public.customers where is_default)) as id
+    ) resolved
+$$;
+
+-- The principal the transaction carries, which `withCase` and `withReach` set.
+create or replace function public.ic_principal()
+returns text
+language sql stable
+set search_path = pg_catalog, pg_temp
+as $$ select nullif(current_setting('app.principal', true), '') $$;
+
+-- Moves one case to `destination`, answering whether a case moved. The
+-- principal must hold write over the case where it is now; where it lands is
+-- the mover's choice, and may be a customer they do not reach.
+create or replace function public.ic_move_case(kase uuid, destination uuid)
+returns boolean
+language plpgsql volatile security definer
+set search_path = pg_catalog, pg_temp
+as $$
+begin
+  if not exists (
+    select 1 from public.ic_reach(public.ic_principal(), kase) r
+     where r.present and r.level in ('write', 'delete')
+  ) then
+    return false;
+  end if;
+  update public.cases set customer_id = destination where id = kase;
+  return found;
+end
+$$;
+
+-- The acts of a merge, which an administrator makes over customers whose cases
+-- they need not reach. Each refuses a principal who is not an administrator.
+create or replace function public.ic_administers()
+returns boolean
+language sql stable security definer
+set search_path = pg_catalog, pg_temp
+as $$ select exists (select 1 from public."user" where id = public.ic_principal() and role = 'admin') $$;
+
+create or replace function public.ic_cases_behind(owner uuid)
+returns integer
+language plpgsql stable security definer
+set search_path = pg_catalog, pg_temp
+as $$
+begin
+  if not public.ic_administers() then
+    raise exception 'only an administrator counts the cases behind a customer' using errcode = '42501';
+  end if;
+  return (select count(*)::int from public.cases where customer_id = owner);
+end
+$$;
+
+create or replace function public.ic_references_shared(losing uuid, surviving uuid)
+returns table (reference text, losing_case uuid, surviving_case uuid)
+language plpgsql stable security definer
+set search_path = pg_catalog, pg_temp
+as $$
+begin
+  if not public.ic_administers() then
+    raise exception 'only an administrator compares two customers' using errcode = '42501';
+  end if;
+  return query
+    select one.reference, one.id, other.id
+      from public.cases one
+      join public.cases other on other.reference = one.reference
+     where one.customer_id = losing
+       and other.customer_id = surviving
+       and one.reference <> ''
+     order by one.reference;
+end
+$$;
+
+create or replace function public.ic_move_cases(losing uuid, surviving uuid)
+returns integer
+language plpgsql volatile security definer
+set search_path = pg_catalog, pg_temp
+as $$
+declare moved integer;
+begin
+  if not public.ic_administers() then
+    raise exception 'only an administrator merges customers' using errcode = '42501';
+  end if;
+  update public.cases set customer_id = surviving where customer_id = losing;
+  get diagnostics moved = row_count;
+  return moved;
+end
+$$;
+
+-- How many cases stand in each state, demonstrations apart. Counts only, which
+-- the install reports of itself without reaching any case.
+create or replace function public.ic_cases_tallied()
+returns table (status text, is_demo boolean, count integer)
+language sql stable security definer
+set search_path = pg_catalog, pg_temp
+as $$
+  select c.status::text, c.is_demo, count(*)::int from public.cases c group by 1, 2
+$$;
+
+-- Every stored artefact's digest and the case that names it. Digests only,
+-- never rows: the census counts them and a refused import keeps what a case
+-- still names.
+create or replace function public.ic_artefacts_named()
+returns table (case_id uuid, hash text)
+language sql stable security definer
+set search_path = pg_catalog, pg_temp
+as $$
+  select case_id, hash from public.evidence where stored_at is not null and hash <> ''
+$$;
+
+revoke all on function
+  public.ic_level(text, uuid),
+  public.ic_reach(text, uuid),
+  public.ic_principal(),
+  public.ic_move_case(uuid, uuid),
+  public.ic_administers(),
+  public.ic_cases_behind(uuid),
+  public.ic_references_shared(uuid, uuid),
+  public.ic_move_cases(uuid, uuid),
+  public.ic_cases_tallied(),
+  public.ic_artefacts_named()
+from public;
+
+grant execute on function
+  public.ic_level(text, uuid),
+  public.ic_reach(text, uuid),
+  public.ic_principal(),
+  public.ic_move_case(uuid, uuid),
+  public.ic_administers(),
+  public.ic_cases_behind(uuid),
+  public.ic_references_shared(uuid, uuid),
+  public.ic_move_cases(uuid, uuid),
+  public.ic_cases_tallied(),
+  public.ic_artefacts_named()
+to ic_app, ic_seed;

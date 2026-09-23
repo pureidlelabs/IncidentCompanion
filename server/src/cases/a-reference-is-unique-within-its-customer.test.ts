@@ -19,12 +19,13 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from './cases.service.js'
 import { attributeUnattributedCases, defaultCustomer } from '../customers/customers.service.js'
 import { openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
-import { cases, customers, user } from '../db/schema/index.js'
+import { cases, customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -56,14 +57,15 @@ describe.skipIf(!db)('a reference within its customer', () => {
         updatedAt: now,
       })
       .onConflictDoNothing()
-    service = new CasesService(db!, {
-      announce: () => undefined,
-      othersOn: () => Promise.resolve([]),
-    } as never)
+    service = as(
+      ANALYST,
+      new CasesService(db!, { announce: () => undefined, othersOn: () => Promise.resolve([]) } as never),
+    )
   })
 
   beforeEach(async () => {
     await seed!.delete(cases)
+    await seed!.delete(groups).where(eq(groups.name, 'Reference analysts'))
     await clearCustomers(seed!)
     /**
      * **The install always holds a default customer**, ensured on every boot by
@@ -75,10 +77,18 @@ describe.skipIf(!db)('a reference within its customer', () => {
     const [two] = await seed!.insert(customers).values({ name: 'Other NV' }).returning()
     acme = one!.id
     other = two!.id
+    // The analyst works both, so a move into either is theirs to make.
+    const [team] = await seed!.insert(groups).values({ name: 'Reference analysts' }).returning()
+    await seed!.insert(groupCustomers).values([
+      { groupId: team!.id, customerId: acme },
+      { groupId: team!.id, customerId: other },
+    ])
+    await seed!.insert(groupMembers).values({ groupId: team!.id, userId: ANALYST, level: 'write' })
   })
 
   afterAll(async () => {
     await seed!.delete(cases)
+    await seed!.delete(groups).where(eq(groups.name, 'Reference analysts'))
     await clearCustomers(seed!)
     await seed!.delete(user).where(eq(user.id, ANALYST))
     await pool?.end()

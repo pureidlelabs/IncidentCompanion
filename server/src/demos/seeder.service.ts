@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm'
 
 import { DATABASE, SEED_DATABASE, seedRoleMissing } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import type { Executor } from '../db/scope.js'
+import { withReach, type Executor } from '../db/scope.js'
 import { cases } from '../db/schema/index.js'
 import { DEMO_CASES, type DemoCase } from './catalogue.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
@@ -81,10 +81,12 @@ export class DemoSeederService {
    * not stored on the case.
    */
   async cards(): Promise<(DemoCase & { id: string })[]> {
-    const rows = await this.reads
-      .select({ id: cases.id, reference: cases.reference })
-      .from(cases)
-      .where(eq(cases.isDemo, true))
+    const rows = await withReach(this.reads, (tx) =>
+      tx
+        .select({ id: cases.id, reference: cases.reference })
+        .from(cases)
+        .where(eq(cases.isDemo, true)),
+    )
 
     const byReference = new Map(rows.map((row) => [row.reference, row.id]))
     return DEMO_CASES.flatMap((demo) => {

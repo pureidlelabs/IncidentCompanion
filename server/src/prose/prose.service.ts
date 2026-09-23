@@ -50,7 +50,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { reports } from '../db/schema/report.js'
 import { caseNotes } from '../db/schema/tracker.js'
-import { withCase } from '../db/scope.js'
+import { actingAs, principalNow, withCase } from '../db/scope.js'
 
 /**
  * The one fragment a note's document holds.
@@ -178,6 +178,8 @@ interface LiveDocument {
   timer: NodeJS.Timeout | null
   dirty: boolean
   unsubscribe: (() => void) | null
+  /** Whose edit on this instance the document last took; the flush acts as them. */
+  writer: string | null
 }
 
 /**
@@ -340,9 +342,18 @@ export class ProseService implements OnApplicationShutdown {
     // **Registered before the first update can land.** `doc.on('update')` is
     // attached here rather than by the caller, so there is no window in which
     // an update is applied to a document nothing is watching.
-    const entry: LiveDocument = { doc, readers: 1, timer: null, dirty: false, unsubscribe: null }
+    const entry: LiveDocument = {
+      doc,
+      readers: 1,
+      timer: null,
+      dirty: false,
+      unsubscribe: null,
+      writer: null,
+    }
     doc.on('update', (update: Uint8Array, origin: unknown) => {
       entry.dirty = true
+      // Applied inside the frame that carried it, so the context names its author.
+      if (origin !== REMOTE) entry.writer = principalNow() ?? entry.writer
       if (entry.timer) clearTimeout(entry.timer)
       entry.timer = setTimeout(() => {
         void this.flush(caseId, address)
@@ -514,7 +525,11 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   /**
-   * Write the document to its row. Public so a test can force it.
+   * Write the document to its row, as the analyst whose edit it last took, or
+   * else as whoever is asking. Public so a test can force it.
+   *
+   * A document no edit on this instance has touched, flushed with nobody
+   * asking, is left to the instance that took the edit.
    *
    * **The row's version is deliberately not bumped.** `reports.version` guards
    * the analyst-facing fields against a concurrent edit; the document is a
@@ -525,10 +540,12 @@ export class ProseService implements OnApplicationShutdown {
     const holding = this.live.get(keyOf(caseId, address))
     if (!holding) return
     const held = await holding
+    const writer = held.writer ?? principalNow()
+    if (writer === undefined) return
     const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
     held.dirty = false
     try {
-      await withCase(this.db, caseId, (tx) =>
+      await actingAs(() => writer, () => withCase(this.db, caseId, (tx) =>
         address.table === 'casenotes'
           ? tx
               .update(caseNotes)
@@ -545,7 +562,7 @@ export class ProseService implements OnApplicationShutdown {
               .update(reports)
               .set({ document: bytes })
               .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId))),
-      )
+      ))
     } catch (error) {
       // **Marked dirty again**, so the next quiet moment or the last reader
       // leaving tries once more. Swallowing it silently is how a report loses

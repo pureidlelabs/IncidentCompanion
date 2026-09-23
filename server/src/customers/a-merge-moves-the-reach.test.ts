@@ -11,6 +11,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CustomersService } from './customers.service.js'
 import { ReachService } from '../access/reach.service.js'
@@ -28,6 +29,8 @@ const seedPool = process.env.SEED_DATABASE_URL
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const ANALYST = 'reaching-merger'
+/** Makes the merge, which only an administrator may. */
+const MERGER = 'reaching-merger-admin'
 
 afterAll(async () => {
   if (seed) {
@@ -67,8 +70,20 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
         updatedAt: now,
       })
       .onConflictDoNothing()
+    await seed!
+      .insert(user)
+      .values({
+        id: MERGER,
+        role: 'admin',
+        name: MERGER,
+        email: `${MERGER}@example.test`,
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoNothing()
 
-    service = new CustomersService(db!)
+    service = as(MERGER, new CustomersService(db!))
     reach = new ReachService(db!)
     await service.ensureDefault()
 
@@ -102,7 +117,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
       .returning()
     expect(await reach.levelFor(ANALYST, surviving), 'reached the survivor already').toBeNull()
 
-    await service.merge({ losing, surviving, choices: {}, actorId: ANALYST })
+    await service.merge({ losing, surviving, choices: {}, actorId: MERGER })
 
     expect(await reach.levelFor(ANALYST, surviving)).toBe('write')
     const [moved] = await seed!
@@ -121,7 +136,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
     await join(theirs, 'read')
     await join(ours, 'write')
 
-    await service.merge({ losing, surviving, choices: {}, actorId: ANALYST })
+    await service.merge({ losing, surviving, choices: {}, actorId: MERGER })
 
     expect(await reach.levelFor(ANALYST, surviving)).toBe('write')
   })
@@ -130,7 +145,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
     await join(theirs, 'delete')
     await join(ours, 'read')
 
-    await service.merge({ losing, surviving, choices: {}, actorId: ANALYST })
+    await service.merge({ losing, surviving, choices: {}, actorId: MERGER })
 
     expect(await reach.levelFor(ANALYST, surviving)).toBe('delete')
   })
@@ -141,7 +156,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
    * survivor to everybody in any group would satisfy every case above.
    */
   it('grants nothing to somebody who reached neither', async () => {
-    await service.merge({ losing, surviving, choices: {}, actorId: ANALYST })
+    await service.merge({ losing, surviving, choices: {}, actorId: MERGER })
 
     expect(await reach.levelFor(ANALYST, surviving)).toBeNull()
   })
@@ -154,7 +169,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
     await seed!.insert(groupCustomers).values({ groupId: theirs, customerId: surviving })
     await join(theirs, 'read')
 
-    await service.merge({ losing, surviving, choices: {}, actorId: ANALYST })
+    await service.merge({ losing, surviving, choices: {}, actorId: MERGER })
 
     const edges = await seed!
       .select()
@@ -167,7 +182,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
   it('leaves no group holding the customer that went', async () => {
     await join(theirs, 'read')
 
-    await service.merge({ losing, surviving, choices: {}, actorId: ANALYST })
+    await service.merge({ losing, surviving, choices: {}, actorId: MERGER })
 
     const orphaned = await seed!
       .select()

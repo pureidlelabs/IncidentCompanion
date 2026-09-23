@@ -17,6 +17,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 import * as Y from 'yjs'
 
 import { CasesService } from '../cases/cases.service.js'
@@ -82,10 +83,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('prose an analyst wrote into
       })
       .onConflictDoNothing()
 
-    const cases_ = new CasesService(db!, {
+    const cases_ = as(ACTOR, new CasesService(db!, {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
+    } as never))
     const row = await cases_.create({ title: 'A case with an assessment' }, ACTOR)
     caseId = row.id
 
@@ -123,8 +124,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('prose an analyst wrote into
       .returning({ id: reportBlocks.id })
     writtenId = written!.id
 
-    prose = new ProseService(db!)
-    render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
+    prose = as(ACTOR, new ProseService(db!))
+    render = as(ACTOR, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
 
     /**
      * **One paragraph per line, which is the node shape the editor expects** --

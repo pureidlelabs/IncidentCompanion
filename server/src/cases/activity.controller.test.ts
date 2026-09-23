@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ActivityController } from './activity.controller.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
@@ -86,7 +87,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the case activity feed', ()
       },
     ])
 
-    controller = new ActivityController(db!)
+    controller = as(actorId, new ActivityController(db!))
   })
 
   afterAll(async () => {

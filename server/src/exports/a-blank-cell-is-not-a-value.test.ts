@@ -25,6 +25,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ExportsController } from './exports.controller.js'
 import { ImportService } from './import.service.js'
@@ -84,9 +85,9 @@ describe.skipIf(!db || !hasConcurrentConnections())('a row that left a value bla
       type: 'system logs',
     })
 
-    const collections = new CollectionService(db!)
-    service = new ImportService(collections)
-    exports_ = new ExportsController(collections, service)
+    const collections = as(ME, new CollectionService(db!))
+    service = as(ME, new ImportService(collections))
+    exports_ = as(ME, new ExportsController(collections, service))
     // The route types its own response, so a direct call is handed somewhere
     // to say so. -> `a-refusal-is-labelled-as-a-refusal.test.ts`
     file = await exports_.collectionCsv(fromId, 'evidence', { type: () => undefined })

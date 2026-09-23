@@ -15,6 +15,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
@@ -66,10 +67,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('a draft report against a ca
       .returning()
     caseId = row!.id
 
-    collections = new CollectionService(db!)
-    render = new ReportRenderService(db!, new CasesService(db!), new ProseService(db!), englishOnly, {
+    collections = as(actorId, new CollectionService(db!))
+    render = as(actorId, new ReportRenderService(db!, new CasesService(db!), new ProseService(db!), englishOnly, {
       read: () => Promise.resolve(null),
-    } as never)
+    } as never))
 
     const [report] = await seed!
       .insert(reports)

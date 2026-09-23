@@ -8,6 +8,7 @@
 import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ExportsController } from './exports.controller.js'
 import { ImportService } from './import.service.js'
@@ -45,8 +46,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('exporting a collection as C
     await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
-    const collections = new CollectionService(db!)
-    controller = new ExportsController(collections, new ImportService(collections))
+    const collections = as(IMPORTER, new CollectionService(db!))
+    controller = as(IMPORTER, new ExportsController(collections, new ImportService(collections)))
 
     /**
      * **A real actor, because a refusal test needs the write to be *able* to

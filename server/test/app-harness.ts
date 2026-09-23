@@ -504,10 +504,17 @@ export function operations(
  *
  * The order is the seed entry's, for the reason given there: the reports need
  * the cases, and inheriting that from the module graph is what made it fragile.
+ *
+ * **The reports are filed as the shared administrator**, who reaches the
+ * default customer the demos sit under. The seed one-shot connects as the
+ * seeding role instead; the harness serves as the app role, which reaches a
+ * case only for somebody.
  */
 export async function seedDemoContent(harness: Harness): Promise<void> {
   const { DemoSeederService } = await import('../src/demos/seeder.service.js')
   const { DemoReportSender } = await import('../src/demo-reports/sender.service.js')
+  const { actingAs } = await import('../src/db/scope.js')
   await harness.app.get(DemoSeederService, { strict: false }).reseed()
-  await harness.app.get(DemoReportSender, { strict: false }).fileDeclared()
+  const admin = await sharedAdmin(harness)
+  await actingAs(admin.id, () => harness.app.get(DemoReportSender, { strict: false }).fileDeclared())
 }

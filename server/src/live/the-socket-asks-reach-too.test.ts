@@ -21,7 +21,7 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { LiveGateway, reachesCase } from './live.gateway.js'
+import { LiveGateway } from './live.gateway.js'
 import { ReachService } from '../access/reach.service.js'
 import { CustomersService } from '../customers/customers.service.js'
 import {
@@ -101,7 +101,8 @@ describe.skipIf(!db)('the socket asks reach too', () => {
     unattributed = nobodys!.id
   })
 
-  const mayReach = (caseId: string, userId: string) => reachesCase(db!, reach, caseId, userId)
+  const mayReach = async (caseId: string, userId: string) =>
+    Boolean((await reach.levelOnCase(userId, caseId))?.level)
 
   it('admits an analyst whose group holds the case customer', async () => {
     await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'read' })
@@ -192,7 +193,7 @@ describe.skipIf(!db)('the socket asks reach too', () => {
           return Promise.resolve()
         },
       }
-      const gateway = new LiveGateway(channel as never, {} as never, db!, {} as never, {} as never, reach)
+      const gateway = new LiveGateway(channel as never, {} as never, {} as never, {} as never, reach)
       const live = new FakeSocket()
       await gateway.open(live as never, caseId, { id: userId, name: userId })
       return { live, claimed, released }

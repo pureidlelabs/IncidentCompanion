@@ -135,7 +135,7 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
   it('reaches nothing but the default when it belongs to no group', async () => {
     expect(await reach.levelFor(STRANGER, inGroup)).toBeNull()
     expect(await reach.levelFor(STRANGER, outside)).toBeNull()
-    expect(await reach.customersReachedBy(STRANGER)).toEqual([theDefault])
+    expect((await reach.reachOf(STRANGER))!.map((one) => one.customerId)).toEqual([theDefault])
   })
 
   /**
@@ -197,8 +197,8 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
   it('lists every customer reached, the default among them', async () => {
     await join(ANALYST, sector, 'read')
 
-    const reached = await reach.customersReachedBy(ANALYST)
+    const reached = (await reach.reachOf(ANALYST))!.map((one) => one.customerId)
 
-    expect([...reached].sort()).toEqual([inGroup, theDefault].sort())
+    expect(reached.sort()).toEqual([inGroup, theDefault].sort())
   })
 })

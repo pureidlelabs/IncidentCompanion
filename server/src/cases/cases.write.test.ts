@@ -14,6 +14,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CASE_COLLECTIONS, CasesService } from './cases.service.js'
 import { CasesController } from './cases.controller.js'
@@ -81,6 +82,9 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
       .insert(user)
       .values({
         id: actorId,
+        // An administrator holds delete over the default customer, which the
+        // store asks of whoever deletes a case there.
+        role: 'admin',
         name: 'Case Write Analyst',
         email: 'case-write@example.test',
         emailVerified: true,
@@ -92,10 +96,13 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
 
     announced = []
     present = []
-    service = new CasesService(db!, {
-      announce: (caseId: string, scopes: string[]) => announced.push({ caseId, scopes }),
-      othersOn: () => Promise.resolve(present),
-    } as never)
+    service = as(
+      actorId,
+      new CasesService(db!, {
+        announce: (caseId: string, scopes: string[]) => announced.push({ caseId, scopes }),
+        othersOn: () => Promise.resolve(present),
+      } as never),
+    )
     library = new LibraryService(db!, seed)
     await library.seedBuiltIns()
     /**
@@ -113,14 +120,17 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
       audited.push({ event, target: title, detail: { caseId: id } })
       return Promise.resolve()
     }
-    controller = new CasesController(
-      service,
-      new DemoSeederService(seed!, seed, new DemoContentSeeder()),
-      library,
-      {
-        caseCreated: recorder('case_created'),
-        caseDeleted: recorder('case_deleted'),
-      } as never,
+    controller = as(
+      actorId,
+      new CasesController(
+        service,
+        new DemoSeederService(seed!, seed, new DemoContentSeeder()),
+        library,
+        {
+          caseCreated: recorder('case_created'),
+          caseDeleted: recorder('case_deleted'),
+        } as never,
+      ),
     )
   })
 

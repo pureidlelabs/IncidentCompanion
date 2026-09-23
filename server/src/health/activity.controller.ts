@@ -122,9 +122,10 @@ export class ActivityController {
              current_setting('max_connections') as max
     `)
 
-    const cases = await this.db.execute<{ status: string; is_demo: boolean; count: string }>(sql`
-      select status, is_demo, count(*) as count from cases group by 1, 2
-    `)
+    // Counted by the store, which answers counts across cases nobody here reaches.
+    const cases = await this.db.execute<{ status: string; is_demo: boolean; count: string }>(
+      sql`select status, is_demo, count from ic_cases_tallied()`,
+    )
 
     const accounts = await this.db.execute<{ role: string; count: string }>(sql`
       select role, count(*) as count from "user" group by 1
