@@ -832,7 +832,10 @@ OPENSPEC_GATE = "npx --no-install openspec validate --all --strict"
 
 
 def openspec_prescriptions() -> list[tuple[str, str]]:
-    """Every tracked line that runs the CLI's `validate`, as `(where, command)`."""
+    """Every tracked line that runs the CLI's `validate`, as `(where, command)`.
+
+    Bare or behind a runner; a mention carrying no flag prescribes no form.
+    """
     found = subprocess.run(  # noqa: S603
         ["git", "grep", "-n", "-e", "openspec validate", "--", ".",
          ":!openspec/changes/archive", ":!.claude/review"],
@@ -842,8 +845,9 @@ def openspec_prescriptions() -> list[tuple[str, str]]:
     for row in found.splitlines():
         where, _, rest = row.partition(":")
         line = rest.partition(":")[2]
-        match = re.search(r"\b(?:npx|npm exec|dlx|bunx)\b[^`'\"]*openspec validate[^`'\"]*", line)
-        if match:
+        match = re.search(
+            r"(?:\b(?:npx|npm exec|dlx|bunx)\b[^`'\"]*)?\bopenspec validate\b[^`'\"]*", line)
+        if match and "--" in match.group(0):
             prescribed.append((where, match.group(0)))
     return prescribed
 
