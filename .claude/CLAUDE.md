@@ -45,7 +45,7 @@ npx --no-install openspec validate --strict
 
 **mise refuses a config it has not been told to trust**, so `mise trust` is the one-time step on the host, per checkout rather than per shell. The dev container is already told, by `MISE_TRUSTED_CONFIG_PATHS` in its Dockerfile.
 
-**It reaches an interactive shell and nothing else, which is the half an agent does not get.** Activation is a prompt hook, so a `docker exec`, a script and every command a tool runs are still bare — mise's own answer is that `activate --shims` "does not support hooks, [env] variables, or watch_files". So `eval "$(node server/scripts/stack.mjs --export)"` remains the form to use in anything scripted, and on a host without mise. → <https://mise.jdx.dev/faq.html>
+**It reaches an interactive shell and nothing else, which is the half an agent does not get.** Activation is a prompt hook, so a `docker exec`, a script and every command a tool runs are still bare. A program started through a mise shim does get `[env]`, but the shell that started it never does, and `[env]` evaluation reaching a shim is how #1156 forked without end — mise's own answer is that `activate --shims` "does not support hooks, [env] variables, or watch_files". So `eval "$(node server/scripts/stack.mjs --export)"` remains the form to use in anything scripted, and on a host without mise. → <https://mise.jdx.dev/faq.html>
 
 `DATABASE_URL` is the app role, which has no DDL, so `drizzle-kit` needs the migrate role on top of it:
 

@@ -24,6 +24,7 @@ CAP = 20
 def test_the_shell_environment_reaches_the_script_that_prints_it() -> None:
     config = tomllib.loads((REPO_ROOT / "mise.toml").read_text(encoding="utf-8"))
     sourced = config["env"]["_"]["source"]
+    sourced = sourced["path"] if isinstance(sourced, dict) else sourced
 
     wrapper = REPO_ROOT / sourced
     assert wrapper.is_file(), f"mise.toml sources {sourced!r}, which is not a file"
@@ -68,7 +69,19 @@ def _shim(at: Path, shim: Path, body: str) -> Path:
 
 
 def _calls(at: Path) -> int:
-    return int((at / "count").read_text(encoding="utf-8"))
+    count = at / "count"
+    return int(count.read_text(encoding="utf-8")) if count.exists() else 0
+
+
+def _isolated_mise(state: Path, tree: Path, path: str) -> dict[str, str]:
+    """An environment in which mise reads nothing of this machine's own."""
+    return {
+        "HOME": str(state),
+        "PATH": path,
+        "MISE_TRUSTED_CONFIG_PATHS": str(tree),
+        "MISE_AUTO_INSTALL": "0",
+        **{f"MISE_{d}_DIR": str(state / d.lower()) for d in ("CONFIG", "DATA", "STATE", "CACHE")},
+    }
 
 
 def test_a_node_that_re_enters_the_environment_runs_once(tmp_path: Path) -> None:
@@ -118,13 +131,7 @@ def test_mise_evaluates_a_fresh_clone_without_recursing(tmp_path: Path) -> None:
     ran = subprocess.run(
         [mise, "env"],
         cwd=tree,
-        env={
-            "HOME": str(tmp_path),
-            "PATH": f"{shim}:{_real_node().parent}:/usr/bin:/bin",
-            "MISE_TRUSTED_CONFIG_PATHS": str(tree),
-            "MISE_AUTO_INSTALL": "0",
-            **{f"MISE_{d}_DIR": str(state / d.lower()) for d in ("CONFIG", "DATA", "STATE", "CACHE")},
-        },
+        env=_isolated_mise(state, tree, f"{shim}:{_real_node().parent}:/usr/bin:/bin"),
         capture_output=True,
         text=True,
         timeout=60,
@@ -135,11 +142,54 @@ def test_mise_evaluates_a_fresh_clone_without_recursing(tmp_path: Path) -> None:
     assert "DATABASE_URL=" in ran.stdout, ran.stderr
 
 
-def test_a_worktree_without_its_install_is_refused_in_one_line(tmp_path: Path) -> None:
-    """A worktree needs the slot lock, and the lock is a package the clone may not have yet."""
+def test_mise_hands_the_sourced_script_its_own_node(tmp_path: Path) -> None:
+    """Where mise manages node, the script runs it directly and never reaches the shim.
+
+    A nested evaluation is bounded by the guard but still answers with an empty
+    stack, and mise's env cache keeps whatever it is handed.
+    """
+    mise = shutil.which("mise")
+    if mise is None:
+        pytest.skip("mise is not installed, so it manages no node")
+    tree = _fresh_clone(tmp_path)
+    state = tmp_path / "mise"
+    node = _real_node()
+    version = subprocess.check_output([str(node), "--version"], text=True).strip().lstrip("v")
+    installs = state / "data" / "installs" / "node"
+    installs.mkdir(parents=True)
+    (installs / version).symlink_to(node.parent.parent)
+    (state / "config").mkdir()
+    (state / "config" / "config.toml").write_text(f'[tools]\nnode = "{version}"\n', encoding="utf-8")
+    shim = _shim(tmp_path, state / "data" / "shims", f'exec -a node "{mise}" "$@"')
+
+    ran = subprocess.run(
+        [mise, "env"],
+        cwd=tree,
+        env=_isolated_mise(state, tree, f"{shim}:/usr/bin:/bin"),
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+    assert _calls(tmp_path) == 0, ran.stderr
+    assert ran.returncode == 0, ran.stderr
+    assert "DATABASE_URL=" in ran.stdout, ran.stderr
+
+
+@pytest.mark.parametrize("install", ["absent", "partial"])
+def test_a_worktree_without_its_install_is_refused_in_one_line(tmp_path: Path, install: str) -> None:
+    """A worktree needs the slot lock, and the lock is a package the clone may not have yet.
+
+    `partial` is the package present and one of its own dependencies missing.
+    """
     tree = _fresh_clone(tmp_path)
     shutil.rmtree(tree / ".git")
     (tree / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
+    if install == "partial":
+        package = tree / "node_modules" / "proper-lockfile"
+        package.mkdir(parents=True)
+        (package / "package.json").write_text('{"name": "proper-lockfile", "main": "index.js"}', encoding="utf-8")
+        (package / "index.js").write_text("require('graceful-fs')\n", encoding="utf-8")
 
     ran = subprocess.run(
         [str(_real_node()), "server/scripts/stack.mjs", "--export"],

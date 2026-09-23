@@ -102,8 +102,8 @@ async function withRegistryLock(path, work) {
   // Imported here, not at the top, because mise runs this script in a clone
   // nothing has installed into yet, and a main checkout never takes the lock.
   const { lock } = await import('proper-lockfile').catch((error) => {
-    if (error?.code !== 'ERR_MODULE_NOT_FOUND') throw error
-    console.error('stack.mjs: a worktree needs proper-lockfile for its stack slot; run `npm install` first.')
+    if (error?.code !== 'ERR_MODULE_NOT_FOUND' && error?.code !== 'MODULE_NOT_FOUND') throw error
+    console.error('stack.mjs: a worktree needs proper-lockfile for its stack slot, and it does not load; run `npm install` first.')
     process.exit(1)
   })
   mkdirSync(dirname(path), { recursive: true })
