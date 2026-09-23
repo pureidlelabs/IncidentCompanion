@@ -13,6 +13,7 @@ import { readdirSync, statSync, type Dirent } from 'node:fs'
 import { join } from 'node:path'
 
 import { mustRun } from '../../test/must-run.js'
+import { CASE_NAME, MANIFEST_NAME, pack, unpack } from '../../src/archive/format.js'
 
 import {
   expect,
@@ -385,7 +386,12 @@ export async function settle(page: Page, timeout = 10_000): Promise<void> {
 }
 
 /**
- * The demo case with this reference, by name rather than by list order.
+ * This worker's own copy of the demo case with this reference, by name rather
+ * than by list order.
+ *
+ * **A copy, because four workers on the seeded demo let a writer in one empty a
+ * reader in another.** The first ask in a slot exports the demo and imports it
+ * under the reference `<reference>-<slot>`; later asks find it by that. -> #1065
  *
  * **`cases.find((row) => row.isDemo)` is the trap this exists to close.** The
  * listing is not ordered by anything a spec may rely on, so a case that wants
@@ -411,9 +417,29 @@ export async function demoCase(
     id: string
     reference?: string | null
   }[]
+  const copy = `${reference}-${slot().replace('/', '-')}`
+  const mine = rows.find((row) => row.reference === copy)
+  if (mine) return mine.id
+
   const found = rows.find((row) => row.reference === reference)
   expect(found, `no demo case with reference ${reference} is seeded`).toBeDefined()
-  return found!.id
+  const exported = await request.post(`/api/cases/${found!.id}/archive`, { data: {} })
+  expect(exported.ok(), `exporting ${reference} answered ${String(exported.status())}`).toBe(true)
+
+  // The reference is unique within its customer, so the import refuses the demo's own.
+  const { members, manifest } = await unpack(await exported.body(), {
+    memberBytes: Number.MAX_SAFE_INTEGER,
+    totalBytes: Number.MAX_SAFE_INTEGER,
+  })
+  const record = JSON.parse(Buffer.from(members[CASE_NAME]!).toString('utf8')) as object
+  members[CASE_NAME] = Buffer.from(JSON.stringify({ ...record, reference: copy }))
+  delete members[MANIFEST_NAME]
+  const imported = await request.post('/api/cases/import', {
+    data: await pack(members, manifest.attachments, manifest.missing),
+    headers: { 'content-type': 'application/octet-stream' },
+  })
+  expect(imported.ok(), `importing a copy of ${reference} answered ${String(imported.status())}`).toBe(true)
+  return ((await imported.json()) as { id: string }).id
 }
 
 /**
