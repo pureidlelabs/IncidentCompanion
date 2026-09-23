@@ -32,6 +32,34 @@ export type Outcome =
 /** Held for the transaction, so two preparations never interleave. */
 const LOCK = 7_340_111
 
+/** How long a busy store is waited for before the step gives up, changing nothing. */
+const PATIENCE_MS = 120_000
+
+/**
+ * Opens the transaction holding every table, retrying while any is in use.
+ * Throws, having rolled back, once the store has been busy for `PATIENCE_MS`.
+ */
+async function holdEveryTable(client: pg.Client): Promise<void> {
+  const deadline = Date.now() + PATIENCE_MS
+  for (;;) {
+    await client.query('begin')
+    await client.query('select pg_advisory_xact_lock($1)', [LOCK])
+    const { rows } = await client.query<{ tables: string | null }>(
+      `select string_agg(format('%I.%I', schemaname, tablename), ', ') as tables from pg_tables where schemaname = 'public'`,
+    )
+    try {
+      // `nowait`: waiting on one table while holding another deadlocks a write
+      // that holds the second and reaches for the first.
+      if (rows[0]?.tables) await client.query(`lock table ${rows[0].tables} in access exclusive mode nowait`)
+      return
+    } catch (error) {
+      await client.query('rollback')
+      if ((error as { code?: string }).code !== '55P03' || Date.now() > deadline) throw error
+      await new Promise((resolve) => setTimeout(resolve, 200))
+    }
+  }
+}
+
 /**
  * Statements that discard or convert what is stored. Drizzle's own hints do
  * not flag them, so the classification is made here.
@@ -85,8 +113,7 @@ export async function applySchema(url: string): Promise<Outcome> {
   const client = new pg.Client({ connectionString: url })
   await client.connect()
   try {
-    await client.query('begin')
-    await client.query('select pg_advisory_xact_lock($1)', [LOCK])
+    await holdEveryTable(client)
     const before = await shape(client)
 
     // Drizzle creates a policy a table lacks and never alters one it has, so

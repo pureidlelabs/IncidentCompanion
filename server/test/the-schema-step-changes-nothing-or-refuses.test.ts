@@ -135,6 +135,28 @@ describe.skipIf(!ADMIN_URL || !APP_URL || isEmbedded(APP_URL))('the schema step'
     ).toEqual(before)
   }, 120_000)
 
+  it('run beside a write holding a case table and then reaching the change feed, lets both finish', async () => {
+    // The order every versioned write takes its tables in. -> `src/db/mutate.ts`
+    const writer = new Client({ connectionString: scratchUrl('ic_app') })
+    await writer.connect()
+    try {
+      await writer.query('begin')
+      await writer.query('update casenotes set note = note where false')
+      const running = step()
+      const present = `select count(*)::int as n from pg_stat_activity where datname = $1 and usename = 'ic_migrate'`
+      while ((await query<{ n: number }>(admin(), present, [SCRATCH]))[0]!.n === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1_500))
+      await writer.query('insert into change_feed select * from change_feed where false')
+      await writer.query('commit')
+      const ran = await running
+      expect(ran.code, ran.out).toBe(0)
+    } finally {
+      await writer.end()
+    }
+  }, 120_000)
+
   it('puts back a policy the database holds differently from the schema', async () => {
     const qual = `select qual from pg_policies where tablename = 'evidence' and policyname = 'case_scope'`
     const [original] = await query<{ qual: string }>(admin(), qual)
