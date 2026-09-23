@@ -18,7 +18,7 @@
  * by nothing, with the suite still passing. -> `CLAUDE.md`
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render } from '@testing-library/react'
+import { act, cleanup, render, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -28,6 +28,9 @@ import { useCaseChanges } from './useCaseChanges'
 
 /** The watchers the hook registers, so a test can drive the connection. */
 const watchers = new Set<(up: boolean) => void>()
+
+/** What the link reports on registering: up, as a screen mounting into an open socket sees. */
+let upOnRegister = true
 
 const link = {
   send: () => {
@@ -40,7 +43,7 @@ const link = {
     watchers.add(listener)
     // The real link reports the current state on registration, and it is
     // connected by the time a screen mounts.
-    listener(true)
+    listener(upOnRegister)
     return () => {
       watchers.delete(listener)
     }
@@ -84,6 +87,7 @@ function mount(client: QueryClient, caseId = 'C-1') {
 afterEach(() => {
   cleanup()
   watchers.clear()
+  upOnRegister = true
   vi.useRealTimers()
   vi.restoreAllMocks()
 })
@@ -138,5 +142,77 @@ describe('a reconnect re-reads the case', () => {
     vi.advanceTimersByTime(500)
 
     expect(invalidate).not.toHaveBeenCalled()
+  })
+})
+
+describe('a screen says when it is not live', () => {
+  function live(client: QueryClient) {
+    return renderHook(() => useCaseChanges('C-1'), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    }).result
+  }
+
+  it('is behind from the drop until the case has been read again', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    const reading = { settle: () => undefined as void }
+    vi.spyOn(client, 'invalidateQueries').mockImplementation(
+      () =>
+        new Promise<void>((done) => {
+          reading.settle = done
+        }),
+    )
+    const result = live(client)
+    expect(result.current.behind).toBe(false)
+
+    act(() => {
+      drop()
+    })
+    expect(result.current.behind, 'the drop left the screen presenting itself as current').toBe(true)
+
+    act(() => {
+      restore()
+      vi.advanceTimersByTime(500)
+    })
+    expect(result.current.behind, 'the line cleared before the case was read again').toBe(true)
+
+    await act(async () => {
+      reading.settle()
+      await Promise.resolve()
+    })
+    expect(result.current).toMatchObject({ behind: false, failed: false })
+  })
+
+  it('says the read failed, and reads again when asked', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    const invalidate = vi.spyOn(client, 'invalidateQueries').mockRejectedValue(new Error('503'))
+    const result = live(client)
+
+    act(() => {
+      drop()
+      restore()
+      vi.advanceTimersByTime(500)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(result.current).toMatchObject({ behind: true, failed: true })
+
+    invalidate.mockResolvedValue(undefined)
+    await act(async () => {
+      result.current.reread()
+      await Promise.resolve()
+    })
+    expect(result.current).toMatchObject({ behind: false, failed: false })
+  })
+
+  it('is not behind while a socket is still opening for the first time', () => {
+    upOnRegister = false
+    const result = live(new QueryClient())
+
+    expect(result.current.behind).toBe(false)
   })
 })

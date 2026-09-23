@@ -5,9 +5,9 @@ import { useActivity } from '@/api/activity'
 import { useAppearances } from '@/api/appearance'
 import { useCase, useCaseSummary, useCases } from '@/api/case'
 import { useSpecs } from '@/api/specs'
+import { useCaseChanges } from '@/api/useCaseChanges'
 import { useCaseMutation } from '@/api/useCaseMutation'
 import { CaseKeyTimesSheet } from '@/components/blocks/case-key-times-sheet'
-import { announcing } from '@/app/case/entryWrites'
 import { useCasePresence } from '@/api/presence'
 import { SECTIONS } from '@/components/blocks/case-sections'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
@@ -92,6 +92,10 @@ export function CaseFrameContainer() {
   const record = useCase(caseId, keyTimes)
   const specs = useSpecs()
   const patch = useCaseMutation(caseId)
+  // For the whole case rather than per section: a section that is not on
+  // screen still holds a cached query, and that is the one the analyst meets
+  // stale when they navigate back to it.
+  const live = useCaseChanges(caseId)
 
   // **Recorded on arrival, not on the picker's click.** A case reached by a
   // pasted URL, by the switcher or by browser history is just as opened as one
@@ -156,15 +160,11 @@ export function CaseFrameContainer() {
             onOpenChange={setKeyTimes}
             kase={record.data}
             specs={specs.data}
-            writes={{
-              save: (field, value, version) =>
-                announcing('the case', () =>
-                  patch.mutateAsync({ version, fields: { [field]: value } }),
-                ),
-            }}
+            writes={{ save: (fields, version) => patch.mutateAsync({ version, fields }) }}
           />
         }
         people={peopleFrom(presence.roster, session?.userId, appearances.data)}
+        live={live}
         activity={{
           entries: activity.data ?? [],
           busy: activity.isPending,
