@@ -40,13 +40,15 @@ A rename changes the host, so no browser holds HSTS for the new name: a browser 
 
 ## An address is believed only from the edge
 
-The address a request is attributed to, for both limiters, the audit and the session, is resolved once and by one rule. The chain of addresses the edge forwards is believed only when the peer that handed it over is the edge; any other peer is attributed to itself, whatever it presents. The edge is named by host and looked up at start and again on a miss, at most every few seconds, so a recreated edge is found and a flood of direct callers costs little. Until it is found, a request is attributed to its own peer.
+The address a request is attributed to, for both limiters, the audit and the session, is resolved once and by one rule. The chain of addresses the edge forwards is believed only when the peer that handed it over is the edge; any other peer is attributed to itself, whatever it presents. The edge is named by host and looked up at start. A request from a peer that is not the edge and was not checked in the last few seconds waits for the edge to be looked up again before it is attributed, so an edge started or recreated after the application is recognised on its first request, and one direct caller costs one lookup every few seconds.
 
 The socket upgrade, which no middleware reaches, applies the same rule at its own door.
 
-## A cross-site credential request is refused at the edge
+## A request another site sent is refused at the edge
 
-A request to the credential paths presenting another site's origin is refused at the edge before either limiter counts it. A request with no origin is untouched, because a program calling the install sends none and has no browser to be steered by another page.
+A request is another site's when its `Origin` is not the host it reached, or when the browser's fetch metadata says it came from elsewhere for anything but a top-level navigation. Both accounts are read, because an image carries no `Origin` and a browser without fetch metadata sends only the `Origin`. Either refuses the request at the edge, on every route, before any limit counts it. A top-level navigation from another site is a link the analyst followed, and opens the install.
+
+A request carrying neither is a program's, and is untouched: it has no browser for another page to steer.
 
 ## Least privilege, per part
 

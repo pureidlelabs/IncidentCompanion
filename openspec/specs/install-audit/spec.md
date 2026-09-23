@@ -174,6 +174,12 @@ Where a line records the address a request came from, it MUST be taken from some
 - WHEN the request is recorded
 - THEN the recorded address is the caller's own
 
+#### Scenario: An install whose one way in started last
+
+- GIVEN an install whose one way in started after the application
+- WHEN analysts on two machines each fail to sign in through it
+- THEN each failure is recorded at that analyst's own address
+
 ### Requirement: Refusals are recorded, and a run of them is louder than one
 
 A refusal MUST be recorded. An attempt that failed is the thing an investigation is looking for, and a log holding only what succeeded describes an install where nothing was ever tried.

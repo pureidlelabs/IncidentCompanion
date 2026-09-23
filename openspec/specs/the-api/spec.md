@@ -163,6 +163,14 @@ A limit on how often a caller may ask MUST be that caller's own. Another caller 
 - THEN each is refused
 - AND the analyst's own next attempt is not refused for asking too often
 
+#### Scenario: A page on another site calls the install on the analyst's behalf
+
+- GIVEN a page on another site open in the analyst's browser
+- WHEN it fetches from the install, and draws from it, more often than the install permits one caller
+- THEN each is refused
+- AND the analyst's own next request is served
+- AND a link from that page still opens the install
+
 ### Requirement: A fact can be asked for across cases
 
 An analyst MUST be able to ask the application a question that spans cases rather than opening each one: whether an indicator has been seen before, which investigations touched a system, what a customer's history holds.

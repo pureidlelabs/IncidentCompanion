@@ -389,6 +389,7 @@
 | A line says who, what, and to what, and never says what was written | A caller asserts their own address | demonstrated | server/test/a-caller-is-attributed-to-itself.test.ts |
 | A line says who, what, and to what, and never says what was written | A caller invents a route | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
 | A line says who, what, and to what, and never says what was written | A caller reaches the application without passing the one way in | demonstrated | tests/docker/test_ingress.py |
+| A line says who, what, and to what, and never says what was written | An install whose one way in started last | demonstrated | tests/docker/test_ingress.py |
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | demonstrated | server/src/install-activity/record.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One failure and a run of them | demonstrated | server/src/install-audit/read.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One caller, a different account each time | demonstrated | server/src/install-audit/read.test.ts |
@@ -612,6 +613,7 @@
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts |
 | What a request costs is bounded before it runs | Another caller asks too often | demonstrated | tests/docker/test_ingress.py |
 | What a request costs is bounded before it runs | A page on another site asks on the analyst's behalf | demonstrated | tests/docker/test_ingress.py |
+| What a request costs is bounded before it runs | A page on another site calls the install on the analyst's behalf | demonstrated | tests/docker/test_ingress.py |
 | A fact can be asked for across cases | An indicator is asked about across cases | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
 | A fact can be asked for across cases | A question spans a boundary | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
 | The description is valid against the version it declares | A schema uses a keyword the declared version has no spelling for | demonstrated | server/test/openapi-document.test.ts |
