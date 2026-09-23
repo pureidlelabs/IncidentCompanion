@@ -15,15 +15,16 @@ import {
 import { changedFields } from '@/api/entryFields'
 import type { CollectionName } from '@/api/model'
 import { fieldsOf, sealed, type FieldSpec, type FormSpec } from '@/api/specs'
-import { isEmpty, problemsAgainst, problemsIn, type EntitySchema, type Problems } from '@/api/validateDraft'
+import {
+  isEmpty,
+  problemsAgainst,
+  problemsIn,
+  type EntitySchema,
+  type Problems,
+} from '@/api/validateDraft'
 import { FieldControl, type Suggestions } from '@/components/blocks/field-control'
 import { FieldRow, summarise } from '@/components/blocks/field-row'
-import {
-  FoldedGroups,
-  FormCell,
-  FormSection,
-  spansRow,
-} from '@/components/blocks/form-section'
+import { FoldedGroups, FormCell, FormSection, spansRow } from '@/components/blocks/form-section'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogFooter, DialogHeader } from '@/components/ui/dialog'
 import { useWriterOf } from '@/components/blocks/detail-grid'
@@ -166,7 +167,12 @@ export function EntityDialog<TData extends object>({
     // to fit the widest identity value, a 64-character digest. `form.columns`
     // is not consulted - its readers are the timeline dialog and the
     // Start-case pane.
-    <Dialog isOpen={open} size="form" onOpenChange={onOpenChange} dialogProps={{ 'aria-label': title }}>
+    <Dialog
+      isOpen={open}
+      size="form"
+      onOpenChange={onOpenChange}
+      dialogProps={{ 'aria-label': title }}
+    >
       <DialogHeader
         title={title}
         onClose={() => {
@@ -175,7 +181,12 @@ export function EntityDialog<TData extends object>({
       />
       <CreateBody
         form={form}
-        lead={<>{notices}{lead}</>}
+        lead={
+          <>
+            {notices}
+            {lead}
+          </>
+        }
         references={references}
         suggestions={suggestions}
         entry={entry}
@@ -365,10 +376,15 @@ function CreateBody<TData extends object>({
     setWaiting(false)
     if (entry) {
       if (disputed.length > 0) {
-        setSendingFailed('Choose which value stands for each field another analyst changed, then save.')
+        setSendingFailed(
+          'Select Keep mine or Take theirs for each field another analyst changed, then save.',
+        )
         return
       }
-      const fields = changedFields<TData>((row ?? entry) as Partial<TData>, sending as Partial<TData>)
+      const fields = changedFields<TData>(
+        (row ?? entry) as Partial<TData>,
+        sending as Partial<TData>,
+      )
       if (Object.keys(fields).length === 0) {
         onClose()
         return
