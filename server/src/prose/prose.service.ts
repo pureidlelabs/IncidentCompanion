@@ -162,6 +162,8 @@ interface LiveDocument {
   deciding: (() => void)[] | null
   /** Whoever wrote into it since it was last stored, the latest last. */
   writers: Map<string, Writer>
+  /** The last flush queued; each waits for the one before it. */
+  saving: Promise<void>
 }
 
 /** An analyst writing through a connection, and the headers that connection arrived with. */
@@ -363,6 +365,7 @@ export class ProseService implements OnApplicationShutdown {
       sealed,
       deciding: null,
       writers: new Map(),
+      saving: Promise.resolve(),
     }
     doc.on('update', (update: Uint8Array, origin: unknown) => {
       entry.dirty = true
@@ -490,9 +493,9 @@ export class ProseService implements OnApplicationShutdown {
     const holding = this.live.get(keyOf(caseId, address))
     if (!holding) throw new Error(`${recordOf(address)} is not open`)
     const held = await holding
-    if (!this.addsNothing(held.doc, frame)) {
+    const deciding = held.deciding
+    if ((held.sealed || deciding) && !this.addsNothing(held.doc, frame)) {
       if (held.sealed) return { refused: held.sealed }
-      const deciding = held.deciding
       if (deciding) {
         return new Promise((answer) => {
           deciding.push(() => {
@@ -516,10 +519,11 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   /**
-   * Hold a report's document still while a send decides.
+   * Hold a report's document still while a send decides, once what was typed
+   * into it is stored and attributed by `flush`.
    *
    * Takes a reader, which `settle` gives back. A second seal waits for the
-   * first to settle.
+   * first to settle. Throws, holding nothing, where that flush fails.
    */
   async seal(caseId: string, reportId: string): Promise<Seal> {
     const address = reportDocument(reportId)
@@ -530,7 +534,8 @@ export class ProseService implements OnApplicationShutdown {
       await new Promise<void>((next) => waiting.push(next))
     }
     held.deciding = []
-    return {
+    await (held.dirty ? this.flush(caseId, address) : held.saving)
+    const seal: Seal = {
       bytes: Y.encodeStateAsUpdate(held.doc),
       settle: async (stamp) => {
         if (stamp) {
@@ -545,6 +550,11 @@ export class ProseService implements OnApplicationShutdown {
         await this.release(caseId, address)
       },
     }
+    if (held.dirty) {
+      await seal.settle(null)
+      throw new Error(`the prose of report ${reportId} could not be stored, so it is not sent`)
+    }
+    return seal
   }
 
   /**
@@ -626,8 +636,8 @@ export class ProseService implements OnApplicationShutdown {
   /**
    * Write the document to its row, naming whoever wrote into it since the last
    * write: `updated_by` is the latest of them, and each gets a feed row in the
-   * same transaction. Then tells the `onSaved` listener. Public so a test can
-   * force it.
+   * same transaction. Then tells the `onSaved` listener. Resolves once every
+   * flush queued before it has run too. Public so a test can force it.
    *
    * **The row's version is deliberately not bumped.** `reports.version` guards
    * the analyst-facing fields against a concurrent edit; the document is a
@@ -638,6 +648,12 @@ export class ProseService implements OnApplicationShutdown {
     const holding = this.live.get(keyOf(caseId, address))
     if (!holding) return
     const held = await holding
+    // One at a time: two in flight could store the older document last.
+    held.saving = held.saving.then(() => this.store(caseId, address, held))
+    await held.saving
+  }
+
+  private async store(caseId: string, address: ProseRecord, held: LiveDocument): Promise<void> {
     const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
     const writers = [...held.writers.values()]
     held.writers.clear()

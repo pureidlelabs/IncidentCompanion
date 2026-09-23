@@ -6,11 +6,11 @@
  * it, and a document key that resolves across cases hands one customer's report
  * to another. Everything else here degrades visibly.
  */
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { writeSyncStep2 } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
@@ -22,7 +22,7 @@ import {
   reportDocument,
   type ProseRelay,
 } from './prose.service.js'
-import { caseNotes, cases, reports, user } from '../db/schema/index.js'
+import { caseNotes, cases, changeFeed, reports, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -353,6 +353,51 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       await prose.release(caseId, address)
     })
 
+    it('waits out a flush already storing, so what it stores is named before the send decides', async () => {
+      const { caseId, reportId } = await freshReport()
+      const address = reportDocument(reportId)
+      await prose.open(caseId, address)
+      await prose.apply(caseId, address, framed(typed('typed before the send').update), 'a-socket', WRITER)
+      // Another connection holds the row, so the flush started below cannot land yet.
+      const holder = await seedPool!.connect()
+      await holder.query('begin')
+      await holder.query('select 1 from reports where id = $1 for update', [reportId])
+      const flushing = prose.flush(caseId, address)
+      let sealed = false
+      const sealing = prose.seal(caseId, reportId).then((seal) => {
+        sealed = true
+        return seal
+      })
+      await new Promise((wake) => setTimeout(wake, 150))
+      const early = sealed
+      await holder.query('rollback')
+      holder.release()
+      await flushing
+      const seal = await sealing
+
+      const feed = await seed!
+        .select({ actorId: changeFeed.actorId })
+        .from(changeFeed)
+        .where(and(eq(changeFeed.entity, 'reports'), eq(changeFeed.entityId, reportId)))
+      expect({ early, named: feed.map((row) => row.actorId) }).toEqual({ early: false, named: [WRITER.id] })
+      await seal.settle(null)
+      await prose.release(caseId, address)
+    })
+
+    it('throws and holds nothing where what was typed cannot be stored', async () => {
+      const { caseId, reportId } = await freshReport()
+      const address = reportDocument(reportId)
+      await prose.open(caseId, address)
+      const nobody = { ...WRITER, id: 'no-such-account' }
+      await prose.apply(caseId, address, framed(typed('by no account').update), 'a-socket', nobody)
+
+      await expect(prose.seal(caseId, reportId)).rejects.toThrow('could not be stored')
+      expect(await prose.apply(caseId, address, framed(typed('after').update), 'a-socket', WRITER)).toEqual({
+        reply: null,
+      })
+      await prose.release(caseId, address)
+    })
+
     it('answers a state request without waiting', async () => {
       const { caseId, address, seal } = await held()
 
@@ -362,6 +407,19 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       await seal.settle(null)
       await prose.release(caseId, address)
     })
+  })
+
+  it('applies a frame to a draft without first measuring it against the document', async () => {
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    await prose.open(caseId, address)
+    const measured = vi.spyOn(prose, 'addsNothing')
+
+    await prose.apply(caseId, address, framed(typed('an ordinary keystroke').update), 'a-socket', WRITER)
+
+    expect(measured).not.toHaveBeenCalled()
+    measured.mockRestore()
+    await prose.release(caseId, address)
   })
 
   describe('what survives', () => {

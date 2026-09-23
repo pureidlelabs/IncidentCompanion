@@ -12,7 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 
 import { boot, bootable, sharedAdmin, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
-import { aCase, aDraft, caller, Live, typed, type Call } from './report-writers.js'
+import { aCase, aDraft, caller, Live, textOf, typed, type Call } from './report-writers.js'
 import { NOTE_FRAGMENT } from '../src/prose/prose.service.js'
 
 const runnable = await bootable()
@@ -124,5 +124,26 @@ describe.skipIf(!runnable)('prose two analysts hold open', () => {
       inTheWritingTransaction: true,
       audit: [reader.id, writer.id].sort(),
     })
+  }, 60_000)
+
+  it('names the one whose words a send stored before they were saved', async () => {
+    const { id, blocks } = await aDraft(call, caseId, ['Assessment'])
+    const field = `reports:${id}:document`
+    const [, typing] = await both(field)
+    const since = await now()
+
+    typing.send({ type: 'prose.sync', field, update: typed(new Y.Doc(), blocks[0]!.id, 'Typed just before the send') })
+    await pause(200)
+    const sent = await call(`/cases/${caseId}/reports/${id}/send`, 'POST')
+    expect(sent.status, await sent.text()).toBe(201)
+    await pause(1500)
+
+    const [row] = (await owner.query<{ document: Buffer }>('select document from reports where id = $1', [id])).rows
+    const who = await named('reports', id, since)
+    expect({
+      stored: textOf(new Uint8Array(row!.document), blocks[0]!.id).includes('Typed just before the send'),
+      feed: who.feed.includes(writer.id),
+      audit: who.audit,
+    }).toEqual({ stored: true, feed: true, audit: [writer.id] })
   }, 60_000)
 })
