@@ -123,12 +123,13 @@ describe.skipIf(!db || !hasConcurrentConnections())('what one case can see of an
       tx.insert(systems).values({ caseId: theirs, hostname: 'SMUGGLED' }),
     ).catch((error: unknown) => error)
 
-    // **Asserted on the cause, not on the message.** Drizzle wraps the driver
-    // error as "Failed query: ...", so matching what is thrown would pass for
-    // any failed insert - including one refused for the wrong reason.
-    expect(String((refused as { cause?: unknown }).cause ?? refused)).toContain(
-      'row-level security',
-    )
+    // **Asserted on the causes, not on the message.** The refusal is answered
+    // as the case not being there, so what is thrown would read the same for
+    // an insert refused for the wrong reason.
+    const causes: string[] = []
+    for (let at: unknown = refused; at; at = (at as { cause?: unknown }).cause) causes.push(String(at))
+    expect(causes[0]).toContain('NotFoundException')
+    expect(causes.join('\n')).toContain('row-level security')
   })
 
   it('does not leave the scope behind for the next query on that connection', async () => {

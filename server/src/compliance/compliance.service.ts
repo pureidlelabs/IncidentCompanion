@@ -27,7 +27,7 @@ import { caseCompliance } from '../db/schema/case-compliance.js'
 import { unofferedTerms } from '../domain/entities/case-compliance.js'
 import { cases } from '../db/schema/case.js'
 import { customers } from '../db/schema/customer.js'
-import { isMissingParent, isOutOfReach } from '../db/missing-parent.js'
+import { isMissingParent } from '../db/missing-parent.js'
 import { REGIME_KEYS } from '../domain/vocabularies/regimes.js'
 import {
   ORGANISATION_FACTS,
@@ -95,11 +95,11 @@ export class ComplianceService {
           .onConflictDoNothing(),
       )
     } catch (error) {
-      // A case that is not there, or not the caller's, fails at the insert
-      // rather than at the read below: the store refuses a row for a case its
-      // principal does not reach, and `caseId` is a foreign key. Caught rather
-      // than pre-checked, which stays correct when the case goes between the two.
-      if (!isMissingParent(error) && !isOutOfReach(error)) throw error
+      // A case that is not there fails at the insert rather than at the read
+      // below, as a foreign key; one out of reach is answered by `withCase`.
+      // Caught rather than pre-checked, which stays correct when the case goes
+      // between the two.
+      if (!isMissingParent(error)) throw error
       throw new NotFoundException(`No case ${caseId}.`)
     }
 

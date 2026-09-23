@@ -15,9 +15,11 @@
  */
 import { AsyncLocalStorage } from 'node:async_hooks'
 
+import { NotFoundException } from '@nestjs/common'
 import { sql } from 'drizzle-orm'
 
 import type { Database, Transaction } from './client.js'
+import { isOutOfReach } from './missing-parent.js'
 
 /**
  * Either a pool or a transaction already open on it.
@@ -113,7 +115,11 @@ export async function withReach<T>(
   })
 }
 
-/** @throws where nothing in the calling context says who is asking */
+/**
+ * @throws where nothing in the calling context says who is asking
+ * @throws NotFoundException where the store refuses a write for reach, which
+ *   is how a case that is not there is answered too
+ */
 export async function withCase<T>(
   db: Executor,
   caseId: string,
@@ -154,5 +160,8 @@ export async function withCase<T>(
       await tx.execute(sql`select set_config('app.case_id', ${held}, true)`)
     }
     return answer
+  }).catch((error: unknown) => {
+    if (isOutOfReach(error)) throw new NotFoundException(`No case ${caseId}.`, { cause: error })
+    throw error
   })
 }

@@ -162,4 +162,28 @@ describe.skipIf(!(await bootable()))('a case route with its guard forgotten', ()
       vi.restoreAllMocks()
     }
   }, 60_000)
+
+  /**
+   * **The store's refusal is an answer, not a fault.** A write it refuses for
+   * reach reaches the caller as the case not being there, which is also what
+   * a route with its guard answers.
+   */
+  it('answers a write into a case out of reach as it answers one into no case', async () => {
+    vi.spyOn(CaseAccessGuard.prototype, 'canActivate').mockResolvedValue(true)
+    const planting = async (caseId: string) => {
+      const response = await fetch(`${harness.base}/api/cases/${caseId}/timeline`, {
+        method: 'POST',
+        headers: { cookie: analyst.cookie, 'content-type': 'application/json' },
+        body: JSON.stringify({ kind: 'event', time: new Date().toISOString(), description: 'planted' }),
+      })
+      return { status: response.status, said: (await response.text()).replaceAll(caseId, '{caseId}') }
+    }
+    try {
+      const absent = await planting(randomUUID())
+      expect(await planting(theirs)).toEqual(absent)
+      expect(absent.status).toBe(404)
+    } finally {
+      vi.restoreAllMocks()
+    }
+  })
 })
