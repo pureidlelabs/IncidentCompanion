@@ -1464,6 +1464,40 @@ def test_every_tier_certify_reads_writes_the_report_it_reads() -> None:
     assert "python3 -m tests.certify reports --closes" in " ".join(str(step.get("run", "")) for step in steps)
 
 
+def run_certify_step(tmp_path: Path, event: str, queued: str) -> tuple[subprocess.CompletedProcess, str, str]:
+    """The `certify` job's last step, run with stand-ins for `gh` and `python3` that record their arguments."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    for name, answer in (("gh", "203,220"), ("python3", "")):
+        tool = bin_dir / name
+        tool.write_text(f'#!/bin/sh\necho "$@" > "{tmp_path}/{name}.args"\necho "{answer}"\n', encoding="utf-8")
+        tool.chmod(0o755)
+    done = subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", step_script("certify", 2)],
+        cwd=tmp_path, capture_output=True, text=True, timeout=30, check=False,
+        env={"PATH": f"{bin_dir}:{os.environ['PATH']}", "GITHUB_EVENT_NAME": event,
+             "QUEUED": queued, "GITHUB_REPOSITORY": "pureidlelabs/IncidentCompanion"},
+    )
+    read = lambda name: (tmp_path / f"{name}.args").read_text().strip() if (tmp_path / f"{name}.args").exists() else ""  # noqa: E731
+    return done, read("gh"), read("python3")
+
+
+def test_a_landing_is_certified_against_the_issues_its_pull_request_closes(tmp_path: Path) -> None:
+    """The refusal of an `unbuilt` row's issue closing needs the landing's closing issues, read from the queue."""
+    done, gh, python = run_certify_step(
+        tmp_path, "merge_group", "refs/heads/gh-readonly-queue/main/pr-1192-0123456789abcdef")
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert gh.startswith("pr view 1192 --repo pureidlelabs/IncidentCompanion --json closingIssuesReferences"), gh
+    assert python == "-m tests.certify reports --closes 203,220", python
+
+
+def test_a_queued_ref_naming_no_pull_request_is_refused(tmp_path: Path) -> None:
+    done, _, python = run_certify_step(tmp_path, "merge_group", "refs/heads/main")
+
+    assert done.returncode != 0 and not python, "a landing whose closing issues nobody read was certified"
+
+
 def test_a_local_run_certifies_what_its_tiers_reported() -> None:
     """`verify.sh` reads its reports the way the merge group does, or its green is a floor."""
     verify = VERIFY.read_text(encoding="utf-8")
