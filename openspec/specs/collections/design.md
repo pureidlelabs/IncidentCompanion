@@ -8,6 +8,8 @@
 
 **Sameness is not inferred for an event.** The timeline, actions, notes, evidence, impact, reports and their parts have no identity rule at all — not by exact match, not by resemblance, not by an analyst confirming a suggestion.
 
+**A selection's change answers which rows took it, not what they became.** So a row with a change in flight offers no second change until the first is answered and the row read again, rather than the client guessing the version the first one reached.
+
 # Design
 
 ## One implementation, one description per collection
@@ -35,6 +37,10 @@ Acting on many rows carries all of it, per row.
 So the act collects what its writes would have said and says it once, after the commit that made it true. A write that opened its own transaction announces directly, as before.
 
 **A transaction that is not declared an act refuses the write composed into it.** The alternative is a composed write silently choosing one of the two failures above, which is what made this a rule nobody could see being broken. The boundary: composition is an explicit act rather than any open transaction.
+
+## A selection is acted on as it was read
+
+A selection holds the version each row had when the analyst pressed the act, and the dialog confirming it acts on those. A row another analyst changed while the dialog was open is refused and named, never deleted or overwritten at the version the confirmation happened to find. A row with a change in flight offers no second change until the first is answered and the row read again.
 
 ## A reference stays inside its case, checked twice over
 

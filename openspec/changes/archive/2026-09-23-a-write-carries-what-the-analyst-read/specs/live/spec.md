@@ -41,7 +41,7 @@ Nothing MUST be built on a claim as though it were a lock. The record of who wro
 - GIVEN an entry held by one analyst
 - WHEN another opens it
 - THEN they are told who holds it
-- AND they may still edit it and save
+- AND they may still edit it
 
 ### Requirement: A reconnection catches up rather than starts over
 

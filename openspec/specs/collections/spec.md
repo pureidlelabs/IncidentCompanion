@@ -179,6 +179,8 @@ A bulk path MUST NOT be a faster path. Where speed and the guarantees conflict, 
 
 Where part of a bulk act cannot be performed, the caller MUST be told which rows and why, and MUST NOT be left unable to tell what happened.
 
+A selection MUST be acted on as it was read. The version each selected row states MUST be the one it had when the analyst chose it, never one read when the act is confirmed, so a row another analyst changes while the analyst is deciding is refused rather than deleted or overwritten.
+
 #### Scenario: Some rows in a bulk write have moved
 
 - GIVEN a bulk write over several rows
@@ -191,6 +193,13 @@ Where part of a bulk act cannot be performed, the caller MUST be told which rows
 - GIVEN a bulk write including a row from another case
 - WHEN it is attempted
 - THEN it is refused
+
+#### Scenario: A row in a selection changes while the act is being confirmed
+
+- GIVEN rows an analyst selected and asked to delete or change
+- WHEN another analyst changes one of them before the first confirms
+- THEN that row is neither deleted nor overwritten
+- AND the first analyst is told which
 
 ### Requirement: Order an analyst chose is theirs, and is not a property of the data
 

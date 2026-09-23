@@ -109,6 +109,13 @@ Nothing MUST be built on a claim as though it were a lock. The record of who wro
 - WHEN another writes to it anyway
 - THEN the write is judged on the version it was made against, not on the claim
 
+#### Scenario: An analyst opens an entry another holds
+
+- GIVEN an entry held by one analyst
+- WHEN another opens it
+- THEN they are told who holds it
+- AND they may still edit it
+
 ### Requirement: A change reaches every open screen, and says only what changed
 
 A write anywhere MUST reach every screen open on that case, so that an analyst reading a case sees what another has just done without asking for it.
@@ -164,6 +171,8 @@ A connection that drops and returns MUST leave the analyst where they were. They
 
 An install MUST NOT present a screen as current when it cannot know that it is. Where a gap cannot be filled, the analyst MUST be told to re-read rather than shown stale content silently.
 
+A screen MUST say it is not live for as long as its connection is down, and until what changed while it was down has been read again.
+
 #### Scenario: A connection drops briefly
 
 - GIVEN an analyst with a case open
@@ -177,6 +186,13 @@ An install MUST NOT present a screen as current when it cannot know that it is. 
 - WHEN it returns
 - THEN the analyst is told their screen may be stale
 - AND it is not presented as current
+
+#### Scenario: A connection is lost
+
+- GIVEN an analyst with a case open
+- WHEN their connection drops
+- THEN the screen says it is not live
+- AND it goes on saying so until what changed while it was down has been read again
 
 ### Requirement: The connection dies with the reach that admitted it
 
