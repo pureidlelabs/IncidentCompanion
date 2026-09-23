@@ -32,7 +32,7 @@ import { installPreferences } from '../src/db/schema/index.js'
 import { putSettingsBack } from './install-settings.js'
 import type { Server } from 'node:http'
 import { Socket } from 'node:net'
-import { getCurrentTest } from 'vitest/suite'
+import { TestRunner } from 'vitest'
 import { declined } from './must-run.js'
 import type { OpenAPIObject } from '@nestjs/swagger'
 
@@ -46,7 +46,7 @@ declare module 'vitest' {
 
 /** Marks the running case, if any, as having reached the app through its entry point. */
 function tag(what: 'served' | 'socket'): void {
-  const running = getCurrentTest()
+  const running = TestRunner.getCurrentTest()
   if (running) running.meta[what] = true
 }
 
