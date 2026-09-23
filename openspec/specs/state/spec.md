@@ -238,7 +238,7 @@ A copy MUST be checked before it is trusted, and a copy the install cannot retur
 
 #### Scenario: A damaged copy is checked
 
-- GIVEN a copy whose database or evidence was cut short after it was taken
+- GIVEN a copy whose database or evidence was cut short or altered after it was taken
 - WHEN it is checked
 - THEN it is refused, saying which part is not whole
 

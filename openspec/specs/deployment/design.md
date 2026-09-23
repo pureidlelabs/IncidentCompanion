@@ -28,9 +28,11 @@ Seeding demonstration content is its own step, so neither of the other two carri
 
 ## The shape of the store is one transaction
 
-Preparation takes a lock, drops every rule that scopes what the application reads, plans the difference between the declared shape and the store over the same connection, and applies it, all in one transaction. A reader arriving meanwhile waits on the lock and then sees the rules as committed; it never sees a table without them.
+Preparation takes every table at once without waiting, drops every rule that scopes what the application reads, plans the difference between the declared shape and the store over the same connection, and applies it, all in one transaction. If any table is in use it gives everything back and tries again shortly, for a bounded time, and then fails having changed nothing. Once it holds them all it waits on nothing else, so it is never one side of a deadlock: a write or a read arriving meanwhile waits for it and then sees the rules as committed, and never sees a table without them.
 
-A planned statement that drops a table, a column, a type, a sequence or a schema, renames, converts a column's type, truncates or deletes is refused: the transaction rolls back, the refused statements are printed, and the step exits with its own code. The classification is made here rather than taken from the planning tool, whose own warnings are empty for exactly these statements.
+A planned statement that drops a table, a column, a type, a sequence or a schema, converts a column's type, truncates or deletes is refused: the transaction rolls back, the refused statements are printed, and the step exits with its own code. The classification is made here rather than taken from the planning tool, whose own warnings are empty for exactly these statements.
+
+Where the store holds an entity of some kind that the declared shape lacks, beside a declared one of the same kind the store lacks, the planner cannot tell a rename from a removal and an addition. That change is refused the same way, listing the entity on each side.
 
 When the only planned statements are the rules it dropped, and the rules, the store's own functions and triggers, and every table's grants and row security read back as they were, the transaction rolls back rather than committing an identical copy. So preparation run again on an unchanged install writes nothing.
 

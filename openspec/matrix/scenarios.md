@@ -305,7 +305,7 @@
 | Setting up is separate from running, and runs once | Preparation runs before serving | demonstrated | tests/docker/test_container_runtime.py |
 | Setting up is separate from running, and runs once | An install is started again | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | Setting up is separate from running, and runs once | Preparation fails | demonstrated | tests/docker/test_container_config.py |
-| Setting up is separate from running, and runs once | Preparation runs again beside a serving application | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| Setting up is separate from running, and runs once | Preparation runs again beside a serving application | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
 | Setting up is separate from running, and runs once | A new version would discard stored data | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | Setting up is separate from running, and runs once | Preparation is run by hand | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | What must survive is named, and what must not is not | The install is rebuilt | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |

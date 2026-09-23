@@ -54,7 +54,7 @@ An install can produce a copy of its durable state and return to that copy. Retu
 
 A copy is taken from the running install: the database as one consistent dump without session or verification rows, then the shape of the store, then an archive of the evidence directory. Evidence is never rewritten, so an archive taken after the dump holds every artefact the dump names.
 
-Checking a copy restores its database into a scratch database, which a truncated dump cannot survive, refuses a copy carrying session rows or lacking their tables, and requires every artefact the restored rows name to be in the evidence archive.
+Taking a copy records a digest of each of its parts as written. Checking a copy first compares each part with its digest, which refuses damage that leaves a part readable. It then restores the database into a scratch database, which a dump already short when written cannot survive, refuses a copy carrying session rows or lacking their tables, and requires every artefact the restored rows name to be in the evidence archive.
 
 Returning to a copy checks it first, and refuses a copy taken under another shape of the store before changing anything. It then stops the application and the edge, replaces the database in one transaction as the identity that owns the schema, empties the ephemeral store so nobody stays signed in, replaces the evidence directory, and starts the install again, which runs preparation over the restored store. It replaces the install's state; it does not merge.
 
