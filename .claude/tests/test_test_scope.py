@@ -140,7 +140,8 @@ def test_the_retired_corpus_does_not_widen_because_something_else_changed() -> N
 
 
 @pytest.mark.parametrize("path", ["compose.yaml", "docker/app/Dockerfile",
-                                  "docker/nginx/nginx.conf", "server/package.json"])
+                                  "docker/nginx/nginx.conf", "server/package.json",
+                                  "mise.toml", "stack-env.sh"])
 def test_a_stack_declaration_owes_the_tier_that_asserts_on_it(path: str) -> None:
     """A stack declaration is claimed, and by the tier that reads it.
 
@@ -153,6 +154,7 @@ def test_a_stack_declaration_owes_the_tier_that_asserts_on_it(path: str) -> None
     found, why = scope.decide([path])
     assert any("test.sh" in command for command, _ in found), (
         f"{path} is asserted on by root tests/ and routed to: {why}")
+    assert "matches no tier" not in why
 
 
 def test_a_fixture_or_asset_is_still_allowed_to_owe_nothing() -> None:
