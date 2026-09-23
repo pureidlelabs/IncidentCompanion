@@ -300,6 +300,13 @@ const HELD_MAY: ReadonlySet<string> = new Set([
   '/change-password',
 ])
 
+/** The endings of a caller's own sessions, and the event each is recorded as. */
+const OWN_ENDINGS: Readonly<Record<string, 'signed_out' | 'account_sessions_ended'>> = {
+  '/sign-out': 'signed_out',
+  '/revoke-session': 'account_sessions_ended',
+  '/revoke-other-sessions': 'account_sessions_ended',
+}
+
 /**
  * The offered operations that act on the caller's own sessions. Refused to a
  * caller with none before the body is read, so the answer is the missing
@@ -582,10 +589,6 @@ export function authOptions(
        * show for it - which is the first thing both NIST SP 800-92 and
        * ISO 27002 8.15 ask an application log for.
        *
-       * **A sign-out deletes the session**, so the end of an access period is
-       * recoverable only from here. ISO names log-on *and* log-off. An analyst
-       * ending their own sessions deletes them the same way.
-       *
        * The attempted address is recorded and the password never is. It is
        * recorded in `detail` rather than as the target, the target being a
        * partition of the run window and therefore not the caller's to pick.
@@ -593,27 +596,6 @@ export function authOptions(
        */
       after: createAuthMiddleware(async (ctx) => {
         const headers = Object.fromEntries(ctx.headers?.entries() ?? [])
-        if (ctx.path === '/sign-out') {
-          const who = ctx.context.session?.user
-          await recordInstallActivity(db, {
-            event: 'signed_out',
-            actor: { id: who?.id ?? null, label: who?.name ?? who?.email ?? null },
-            headers,
-          })
-          return
-        }
-        if (ctx.path === '/revoke-session' || ctx.path === '/revoke-other-sessions') {
-          if (ctx.context.returned instanceof APIError) return
-          const who = ctx.context.session?.user
-          await recordInstallActivity(db, {
-            event: 'account_sessions_ended',
-            actor: { id: who?.id ?? null, label: who?.name ?? who?.email ?? null },
-            target: who?.email ?? null,
-            detail: { path: ctx.path },
-            headers,
-          })
-          return
-        }
         /**
          * **Every refused sign-in, and a wrong password at any other door.**
          * `returned` is the response *or* an `APIError`, and it is the only
@@ -759,12 +741,32 @@ export function authOptions(
             data: { ...data, expiresAt: await windowFor(db, sessionBegan(context)) },
           }),
         },
-        /** The one point a sign-out, a revoke and an admin's ban all pass through. */
+        /**
+         * The one point a sign-out, a revoke and an admin's ban all pass
+         * through, and it runs only for a session that existed. Writes the
+         * audit line for a caller's own ending, one per session.
+         */
         delete: {
-          after: (deleted: Record<string, unknown>) => {
+          after: async (deleted: Record<string, unknown>, context?: unknown) => {
             const userId = typeof deleted['userId'] === 'string' ? deleted['userId'] : null
-            if (userId) sessionEnded(userId)
-            return Promise.resolve()
+            if (!userId) return
+            sessionEnded(userId)
+            const ending = context as { path?: string; headers?: Headers } | undefined
+            const path = ending?.path ?? ''
+            const event = OWN_ENDINGS[path]
+            if (!event) return
+            const [who] = await db
+              .select({ name: schema.user.name, email: schema.user.email })
+              .from(schema.user)
+              .where(eq(schema.user.id, userId))
+              .limit(1)
+            await recordInstallActivity(db, {
+              event,
+              actor: { id: userId, label: who?.name || who?.email || null },
+              target: who?.email ?? null,
+              detail: { path },
+              headers: Object.fromEntries(ending?.headers?.entries() ?? []),
+            })
           },
         },
       },

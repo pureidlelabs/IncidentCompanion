@@ -107,6 +107,7 @@
 | Administrative events are logged | The record is read | demonstrated | server/src/install-audit/read.test.ts |
 | Administrative events are logged | Where the record goes is changed | unbuilt | Not built: there is no destination to change. -> #13 |
 | Administrative events are logged | An analyst ends their own session | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
+| Administrative events are logged | An ending that ends nothing | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
 | An install serves only the account operations it offers | A caller asks for an account operation the install does not offer | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
 | An install serves only the account operations it offers | An operation is asked for by another spelling | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
 | An install serves only the account operations it offers | A held account asks for an operation the install offers | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |

@@ -67,3 +67,5 @@ For every account the install knows: whether it is local or the provider's, whet
 Every sign-in is recorded with its outcome and how it was attempted. Every refusal of a customer or a case is recorded with who was refused and what they asked for. Every change to who reaches what is recorded with the actor, the subject and the time — including an administrator granting themselves, where the actor and the subject are the same account.
 
 The record cannot be suppressed by whoever it would record, and where an event cannot be recorded the act it describes does not happen.
+
+A caller's own ending of a session, signing out included, is recorded where the session is deleted: once per session, and only for a session that existed. The operation answers the same whether it ended anything or not, so its answer is not evidence of an ending.

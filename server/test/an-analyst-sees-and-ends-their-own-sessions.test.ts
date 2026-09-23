@@ -26,7 +26,15 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { Database } from '../src/db/client.js'
 import { DATABASE } from '../src/db/db.module.js'
 import { installActivity } from '../src/db/schema/index.js'
-import { boot, bootable, sharedAnalyst, signIn, type Harness, type Persona } from './app-harness.js'
+import {
+  boot,
+  bootable,
+  sharedAdmin,
+  sharedAnalyst,
+  signIn,
+  type Harness,
+  type Persona,
+} from './app-harness.js'
 
 let harness: Harness | null = null
 let first: Persona
@@ -118,6 +126,67 @@ describe.skipIf(!(await bootable()))('an analyst signed in from two places', () 
     ).toBe(true)
   })
 
+  /** The library answers 200 whether or not the token named one of the caller's sessions. */
+  it('records no ending for a token that names no session of theirs', async () => {
+    const analyst = await sharedAnalyst(harness!)
+    const caller = await signIn(harness!, analyst.email)
+    const bystander = await sharedAdmin(harness!)
+    const db = harness!.app.get<Database>(DATABASE)
+    const [{ seq: since } = { seq: 0n }] = await db.select({ seq: max(installActivity.seq) }).from(installActivity)
+    const theirs = (await sessionsOf(bystander.cookie)).find((one) => bystander.cookie.includes(one.token))
+    expect(theirs, 'the other account has no session to name').toBeDefined()
+
+    for (const token of ['names-no-session', theirs!.token]) {
+      const answer = await fetch(`${harness!.base}/api/auth/revoke-session`, {
+        method: 'POST',
+        headers: { cookie: caller.cookie, 'content-type': 'application/json', origin: harness!.base },
+        body: JSON.stringify({ token }),
+      })
+      expect(answer.status, `revoke-session answered ${String(answer.status)}`).toBe(200)
+    }
+    expect(await stillServed(bystander.cookie), "an analyst ended another account's session").toBe(true)
+
+    const lines = await db
+      .select({ detail: installActivity.detail })
+      .from(installActivity)
+      .where(
+        and(
+          eq(installActivity.event, 'account_sessions_ended'),
+          gt(installActivity.seq, since ?? 0n),
+        ),
+      )
+    expect(lines, 'an ending that ended nothing was recorded as one').toEqual([])
+  })
+
+  /** A sign-out answers 200 with no session, and again once its session is gone. */
+  it('records a sign-out once, as the analyst who signed out', async () => {
+    const analyst = await sharedAnalyst(harness!)
+    const leaving = await signIn(harness!, analyst.email)
+    const db = harness!.app.get<Database>(DATABASE)
+    const [{ seq: since } = { seq: 0n }] = await db.select({ seq: max(installActivity.seq) }).from(installActivity)
+
+    for (const cookie of [null, leaving.cookie, leaving.cookie]) {
+      const answer = await fetch(`${harness!.base}/api/auth/sign-out`, {
+        method: 'POST',
+        headers: {
+          ...(cookie ? { cookie } : {}),
+          'content-type': 'application/json',
+          origin: harness!.base,
+        },
+        body: '{}',
+      })
+      expect(answer.status, `sign-out answered ${String(answer.status)}`).toBe(200)
+    }
+
+    const lines = await db
+      .select({ actor: installActivity.actorId })
+      .from(installActivity)
+      .where(and(eq(installActivity.event, 'signed_out'), gt(installActivity.seq, since ?? 0n)))
+    expect(lines, 'a sign-out is recorded unless it ended a session, or without who').toEqual([
+      { actor: analyst.id },
+    ])
+  })
+
   /** *Ending a session* is an administrative event, whoever ends it. */
   it('records each session an analyst ends as ended by them', async () => {
     const analyst = await sharedAnalyst(harness!)
@@ -125,7 +194,10 @@ describe.skipIf(!(await bootable()))('an analyst signed in from two places', () 
     const ends = await signIn(harness!, analyst.email)
     const db = harness!.app.get<Database>(DATABASE)
     const [{ seq: since } = { seq: 0n }] = await db.select({ seq: max(installActivity.seq) }).from(installActivity)
-    const ended = (await sessionsOf(caller.cookie)).find((one) => ends.cookie.includes(one.token))
+    const listed = await sessionsOf(caller.cookie)
+    const ended = listed.find((one) => ends.cookie.includes(one.token))
+    const others = listed.filter((one) => one !== ended && !caller.cookie.includes(one.token))
+    expect(others.length, 'nothing is left for revoke-other-sessions to end').toBeGreaterThan(0)
 
     for (const [path, body] of [
       ['/api/auth/revoke-session', { token: ended!.token }],
@@ -150,7 +222,7 @@ describe.skipIf(!(await bootable()))('an analyst signed in from two places', () 
         ),
       )
     expect(lines.map((one) => (one.detail as { path?: string }).path).sort()).toEqual([
-      '/revoke-other-sessions',
+      ...others.map(() => '/revoke-other-sessions'),
       '/revoke-session',
     ])
     expect(lines.every((one) => one.target === analyst.email)).toBe(true)
