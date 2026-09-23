@@ -206,7 +206,7 @@ A connection the browser can write to MUST act on everything written over it, in
 
 A screen's first frame is the one it waits on, so a connection that drops it silently leaves that screen waiting for an answer nothing will send. There is no error to show, nothing to retry, and no way for the analyst to tell that state from a slow one -- so this MUST NOT be left to a screen to notice or to a reload to clear.
 
-This holds for every kind of frame and every connection, not only the first frame of the first one.
+This holds for every kind of frame and every connection, not only the first frame of the first one. A frame the install cannot read, or fails to act on, is set aside, and it MUST NOT stop what was written after it or the connection's end.
 
 Where preparing the connection does not complete, the connection MUST end, and nothing written over it MUST be acted on -- an install that took a frame it can announce to nobody is worse than one that took none.
 
@@ -229,3 +229,10 @@ Where preparing the connection does not complete, the connection MUST end, and n
 - GIVEN an analyst who claims an entry and releases it at once
 - WHEN both reach the install
 - THEN nothing is left held
+
+#### Scenario: A frame the install cannot read
+
+- GIVEN a connection over which a screen has written something the install cannot read
+- WHEN the screen then claims an entry, and the connection ends
+- THEN the claim is acted on
+- AND the analyst leaves the roster

@@ -48,6 +48,8 @@ The connection's own end is the last thing in the sequence. A frame sent just be
 
 The number of frames waiting is bounded, and a connection past the bound is ended rather than allowed to hold an unbounded backlog.
 
+The sequence holds up when a frame fails. A frame that parses but is not an object is set aside without a word, the same as one that does not parse, because it is the client's mistake and not the install's. A frame whose action fails is reported to the operator and set aside. Either way the frames behind it and the connection's end still run in their turn.
+
 ## A reconnection either catches up or says it cannot
 
 A connection that drops and returns leaves the analyst where they were, without a reload.

@@ -467,6 +467,7 @@
 | An open connection is listening | A screen writes before the connection is ready | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts |
 | An open connection is listening | Preparing the connection does not complete | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
 | An open connection is listening | Frames are acted on in the order sent | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
+| An open connection is listening | A frame the install cannot read | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
 
 ## preferences
 
