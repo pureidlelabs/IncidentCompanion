@@ -114,10 +114,10 @@ services:
       # process's.** It stays `https` although this server speaks plaintext:
       # Better Auth picks the `__Secure-` cookie prefix from the scheme, and
       # the browser's connection is the one the prefix describes. Interpolated
-      # from the published port rather than written twice -- a base URL naming
-      # a port the stack does not publish breaks sign-in an hour after a
-      # healthy first run.
-      AUTH_BASE_URL: https://localhost:${IC_STACK_PORT:-443}
+      # from the name and the published port rather than written twice -- a
+      # base URL naming a port the stack does not publish breaks sign-in an
+      # hour after a healthy first run.
+      AUTH_BASE_URL: https://${IC_NAME:-localhost}:${IC_STACK_PORT:-443}
       PORT: "8080"
       # **Where the audit goes, when the operator has somewhere.** An OTLP/HTTP
       # logs endpoint; empty means this install is the record. The headers
@@ -167,18 +167,22 @@ services:
     depends_on:
       app:
         condition: service_started
+    environment:
+      # The name analysts reach the install at: certified, served, and the only
+      # name answered. Unset serves loopback.
+      IC_NAME: ${IC_NAME:-}
     ports:
-      # **The `127.0.0.1:` prefix is the confinement, not the container's
-      # bind.** Docker's forwarding rules sit ahead of the host's chains, so a
-      # bare port number is reachable from the LAN with a host firewall
-      # apparently blocking it. Note also that per-IP limits at the edge are a
-      # *global* ceiling here: every caller arrives as the bridge gateway.
+      # **The host address is the confinement, not the container's bind.**
+      # Docker's forwarding rules sit ahead of the host's chains, so a bare port
+      # number is reachable from the LAN with a host firewall apparently
+      # blocking it. Unset is loopback; `IC_LISTEN` is the operator's act of
+      # putting the install on a network.
       # **8443 inside, so nothing has to be allowed to bind a low port.** The
       # host still answers on 443 by default; what changed is that the
       # container needs no CAP_NET_BIND_SERVICE to listen, which would
       # otherwise be a capability granted for one bind and present for every
       # other. -> #185
-      - "127.0.0.1:${IC_STACK_PORT:-443}:8443"
+      - "${IC_LISTEN:-127.0.0.1}:${IC_STACK_PORT:-443}:8443"
     volumes:
       # `:z` relabels for SELinux (RHEL, Rocky, Alma), where its absence fails
       # every read and reads as a broken certificate. A no-op elsewhere.
