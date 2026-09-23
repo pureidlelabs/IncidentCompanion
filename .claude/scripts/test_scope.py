@@ -58,9 +58,15 @@ SOURCE_SUFFIXES = (".ts", ".tsx", ".mts", ".cts", ".mjs", ".cjs", ".js", ".jsx",
 #: edit is as wrong as answering "none".
 STACK_DECLARATIONS = (
     "compose.yaml", "compose.dev.yaml", "package.json", "package-lock.json",
-    "Dockerfile", "nginx.conf", "pyproject.toml", "requirements.txt",
+    "Dockerfile", "pyproject.toml", "requirements.txt",
     "mise.toml", "stack-env.sh",
 )
+
+#: What the TypeScript suites read, and they read it together: the client
+#: compiles `server/src/domain` as `@contract`, the server's tests read `ui/src`
+#: and `ui/eslint.config.js`, the server suite provisions `docker/db`, and both
+#: load `tests/data`. So a change to any of it owes both.
+TYPESCRIPT_INPUTS = (SERVER, UI, "packages/", "docker/db/", "tests/data/")
 
 #: Prose Vale reads. `.vale/` is included because one token re-lints every file.
 PROSE_TREES = ("openspec/", ".vale/")
@@ -170,7 +176,7 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
     if touches(paths, AGENT):
         out.append((f"{PYTEST} .claude/tests -q -n auto",
                     "the agent tooling's own guards"))
-    whole_python_tier = touches(paths, PYTHON) or any(
+    whole_python_tier = touches(paths, PYTHON, "docker/") or any(
         p.rsplit("/", 1)[-1] in STACK_DECLARATIONS for p in paths
     )
     if whole_python_tier:
@@ -200,10 +206,9 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
         out.append((f"{PYTEST} tests/repo tests/docs tests/contract .claude/tests -q -n auto",
                     "the repository and contract checks, which read `server/src`, "
                     "`ui/src` and `openspec/`"))
-    if touches(paths, SERVER):
+    if touches(paths, *TYPESCRIPT_INPUTS):
         out.append(("(cd server && npm run check && npm run lint)",
                     "typecheck, the Nest suite, and the eslint config nothing used to load"))
-    if touches(paths, UI):
         out.append(("(cd ui && npm run typecheck && npm test && npm run lint)",
                     "the React tier; `typecheck` is `tsc -b` -- `tsc --noEmit` checks nothing here"))
     if touches_prose(paths):

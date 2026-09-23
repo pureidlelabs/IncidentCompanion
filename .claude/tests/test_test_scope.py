@@ -1,8 +1,8 @@
 """The router, against the tiers as they are.
 
-One property per tier: **a change under a tree names that tree's command, and
-names no other tree's.** That is the whole contract, and a selection naming
-the wrong runner is the defect it exists to catch — pytest handed a `.spec.ts`
+One property per tier: **a change under a tree names the command of every tier
+that reads it.** That is the whole contract, and a selection naming the wrong
+runner is the defect it exists to catch — pytest handed a `.spec.ts`
 collects nothing and reports green.
 """
 
@@ -140,7 +140,8 @@ def test_the_retired_corpus_does_not_widen_because_something_else_changed() -> N
 
 
 @pytest.mark.parametrize("path", ["compose.yaml", "docker/app/Dockerfile",
-                                  "docker/nginx/nginx.conf", "server/package.json",
+                                  "docker/nginx/default.conf", "docker/nginx/ic-proxy.inc",
+                                  "docker/db/roles.sql", "server/package.json",
                                   "mise.toml", "stack-env.sh"])
 def test_a_stack_declaration_owes_the_tier_that_asserts_on_it(path: str) -> None:
     """A stack declaration is claimed, and by the tier that reads it.
@@ -155,6 +156,27 @@ def test_a_stack_declaration_owes_the_tier_that_asserts_on_it(path: str) -> None
     assert any("test.sh" in command for command, _ in found), (
         f"{path} is asserted on by root tests/ and routed to: {why}")
     assert "matches no tier" not in why
+
+
+#: A file one TypeScript tier reads from outside its own tree, and the command of the tier reading it.
+CROSS_TREE_READS = [
+    ("server/src/domain/field-spec.ts", "npm test"),  # the client compiles `@contract`
+    ("ui/src/api/accounts.ts", "npm run check"),  # the server holds every path a screen calls
+    ("ui/eslint.config.js", "npm run check"),  # the server reads which rules the client runs
+    ("docker/db/roles.sql", "npm run check"),  # the server suite provisions the roles
+    ("tests/data/prose_fixtures.json", "npm test"),  # the client loads it
+    ("tests/data/prose_fixtures.json", "npm run check"),  # and so does the server
+]
+
+
+@pytest.mark.parametrize(("path", "reader"), CROSS_TREE_READS)
+def test_a_file_one_tier_reads_from_another_owes_the_tier_that_reads_it(
+    path: str, reader: str
+) -> None:
+    """The workspaces read each other, so a change on either side owes both suites."""
+    assert (ROOT / path).exists(), f"{path} is gone; this case proves nothing"
+    got = only([path])
+    assert any(reader in c for c in got), f"{path} is read by `{reader}` and routed to {got}"
 
 
 def test_a_fixture_or_asset_is_still_allowed_to_owe_nothing() -> None:

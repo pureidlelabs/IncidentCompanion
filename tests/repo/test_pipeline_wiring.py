@@ -1176,7 +1176,7 @@ def scope_over(tree: Path, path: str, event: str, tmp_path: Path) -> dict[str, s
 #: Files one tier's checks read from another tier's tree, with the tier that reads it.
 CROSS_TREE_INPUTS = [
     "server/src/domain/field-spec.ts",  # the client compiles and bundles it as `@contract`
-    "ui/src/api/collections.ts",  # the server suite holds every path a screen calls
+    "ui/src/api/accounts.ts",  # the server suite holds every path a screen calls
     "ui/src/fixtures/specs.json",  # the server suite compares the served specs to it
     "ui/eslint.config.js",  # the server suite reads which rules the client runs
     "docker/db/roles.sql",  # the server suite provisions and asserts the roles
