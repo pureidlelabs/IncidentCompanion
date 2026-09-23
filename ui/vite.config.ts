@@ -1,8 +1,8 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url'
 
-import { existsSync, realpathSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, globSync, realpathSync } from 'node:fs'
+import { relative, resolve } from 'node:path'
 
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import tailwindcss from '@tailwindcss/vite'
@@ -10,7 +10,7 @@ import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
 import { chromium } from 'playwright'
 import { defineConfig, searchForWorkspaceRoot, type Plugin, type ProxyOptions } from 'vite'
-import type { Reporter, TestModule, Vitest } from 'vitest/node'
+import type { Reporter, TestModule, TestSpecification, Vitest } from 'vitest/node'
 
 /**
  * Whether the story tier can run here, decided once and announced when it
@@ -86,59 +86,83 @@ function ignoreReactAriaWindowFocusThrow(error: {
   return isTheThrow ? false : undefined
 }
 
-/** The fewest test files each project may finish in a certifying run. */
-const MUST_RUN_FILES = new Map([
-  ['unit', 300],
-  ['storybook', 200],
+/**
+ * The test files each project owns, by name. Read beside `include` rather than
+ * from it, because `include` is what a config change narrows.
+ */
+const OWNED = new Map([
+  ['unit', ['src/**/*.test.{ts,tsx}']],
+  ['storybook', ['src/**/*.stories.tsx']],
 ])
 
 /**
- * Refuses a certifying run that reported green having run little of the tier.
+ * Refuses a certifying run that did not run a test in every file the tier owns.
  *
- * A worker pool that times out leaves the run with no test modules and no
- * failure to report, which vitest exits 0 on. -> #797
+ * A file owed and absent from the run, and a file whose every test skipped,
+ * are named; a shard owes the files vitest's own sequencer hands it.
  *
  * Armed by `IC_SUITE_MUST_RUN` alone, where `server/test/must-run.ts` also
  * reads `CI`.
  */
 class MustRunReporter implements Reporter {
-  private floor = 0
+  private vitest: Vitest | undefined
+  private unplanned: string[] = []
+  private owed: TestSpecification[] = []
 
   onInit(vitest: Vitest): void {
+    this.vitest = vitest
+  }
+
+  /** Given every file the run planned, before any shard takes its part. */
+  async onTestRunStart(specifications: readonly TestSpecification[]): Promise<void> {
+    const vitest = this.vitest
+    if (!process.env.IC_SUITE_MUST_RUN || !vitest) return
+    const planned = new Set(specifications.map((spec) => spec.moduleId))
     // `projects` is what survived `--project`, so a filtered run owes only the ones it kept.
-    this.floor = vitest.projects.reduce((total, project) => {
+    for (const project of vitest.projects) {
       // A browser project's name carries its instance: `storybook (chromium)`.
-      const declared = project.name.split(' ')[0]
-      const owed = MUST_RUN_FILES.get(declared)
-      if (owed === undefined) {
+      const patterns = OWNED.get(project.name.split(' ')[0])
+      if (!patterns) {
         throw new Error(
-          `the project '${project.name}' has no entry in MUST_RUN_FILES, ` +
+          `the project '${project.name}' has no entry in OWNED, ` +
             'so a certifying run cannot say what it owes',
         )
       }
-      return total + owed
-    }, 0)
-    // A shard is a fraction of the tier by construction, and nothing is
-    // missing from it. The count a shard was never given is not evidence.
+      const root = project.config.root
+      for (const file of globSync(patterns, { cwd: root })) {
+        if (!planned.has(resolve(root, file))) this.unplanned.push(file)
+      }
+    }
     const shard = vitest.config.shard
-    if (shard) this.floor = Math.ceil(this.floor / shard.count)
+    this.owed = shard
+      ? await new vitest.config.sequence.sequencer(vitest).shard([...specifications])
+      : [...specifications]
   }
 
   onTestRunEnd(testModules: readonly TestModule[]): void {
     if (!process.env.IC_SUITE_MUST_RUN) return
-    // A module the pool enqueued and never reached is `queued` or `pending`,
-    // and counting one of those is how a timed-out run passes this.
-    const ran = testModules.filter((module) => {
-      const state = module.state()
-      return state !== 'queued' && state !== 'pending'
-    }).length
-    if (ran >= this.floor) return
+    // `queued` and `pending` are a pool that never reached the file, and
+    // `skipped` is a file that reached no test.
+    const ran = new Set(
+      testModules
+        .filter((module) => ['passed', 'failed'].includes(module.state()))
+        .map((module) => module.moduleId),
+    )
+    const root = this.vitest?.config.root ?? process.cwd()
+    const unrun = this.owed
+      .filter((spec) => !ran.has(spec.moduleId))
+      .map((spec) => relative(root, spec.moduleId))
+    if (this.unplanned.length === 0 && unrun.length === 0) return
 
+    const listed = (files: string[]): string =>
+      files.slice(0, 10).join('\n    ') +
+      (files.length > 10 ? `\n    ... and ${String(files.length - 10)} more` : '')
     console.error(
-      `The client tier finished ${String(ran)} test files, where it owes ` +
-        `${String(this.floor)}. This run is certifying (IC_SUITE_MUST_RUN), ` +
-        'where a tier that ran less than itself is a failure rather than a pass. ' +
-        'Run without IC_SUITE_MUST_RUN to run part of the tier deliberately.',
+      'The client tier did not run every test file it owes. This run is ' +
+        'certifying (IC_SUITE_MUST_RUN), where a file that ran no test is a failure ' +
+        'rather than a pass. Run without IC_SUITE_MUST_RUN to run part of the tier deliberately.' +
+        (this.unplanned.length ? `\n  never planned:\n    ${listed(this.unplanned)}` : '') +
+        (unrun.length ? `\n  ran no test:\n    ${listed(unrun)}` : ''),
     )
     process.exitCode = 1
   }

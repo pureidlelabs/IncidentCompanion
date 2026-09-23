@@ -1415,7 +1415,7 @@ def test_every_client_vitest_step_arms_the_must_run_reporter() -> None:
                 bare.append(f"{name}: {step.get('name', run.strip()[:40])}")
 
     assert not bare, (
-        "these steps run the client tier without arming its must-run floor, so a "
+        "these steps run the client tier without arming its must-run check, so a "
         f"run that reached no test file exits 0:\n  " + "\n  ".join(bare)
     )
 
