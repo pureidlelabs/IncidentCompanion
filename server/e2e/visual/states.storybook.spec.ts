@@ -126,6 +126,14 @@ async function open(page: Page, story: string): Promise<void> {
   // story's own `play` may have just pressed the control.
   await page.mouse.move(2, 2)
   await page.mouse.click(2, 2)
+  // The press leaves the hover colour fading, and a reading taken mid-fade
+  // agrees with the hovered one. `paint` settles on two equal readings, which
+  // a slow fade satisfies before it has moved.
+  await page.evaluate(() =>
+    Promise.all(
+      document.getAnimations().map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  )
 }
 
 test.describe('a control paints its states', () => {
