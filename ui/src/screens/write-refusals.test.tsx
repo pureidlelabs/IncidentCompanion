@@ -1,20 +1,20 @@
 /**
- * What a case screen does when a versioned write comes back refused.
+ * What a case screen does when another analyst changes a field this analyst
+ * is changing.
  *
- * Three screens patch the case field by field against the version they were
- * drawn at, so a save can lose a race with another analyst. The answer is a
- * merge review naming the field, and these are attacks on it disappearing.
+ * Two screens hold the case's own fields and the compliance record field by
+ * field, so an analyst can be part-way through a change when another analyst's
+ * write repaints the screen. The answer is a band naming the field and the
+ * other value, and these are attacks on it disappearing.
  *
- * The report index is the fourth surface here and is not a merge review:
+ * The report index is the third surface here and is not a merge review:
  * copying a report writes a new row rather than racing an existing one, so
  * there is no field to name and no value of somebody else's to go and read.
  * What it owes is the server's own reason, which it was throwing away.
  *
- * **The repaint is the attack, not the render.** A refused write means somebody
- * else's write went through, and that write repaints every open screen -- which
- * is the same moment each of these screens rebuilds its draft from the case it
- * was handed. A refusal held as screen state would be wiped by the very event
- * it is reporting, and would look correct in every static render.
+ * **The repaint is the attack, not the render.** The other analyst's write
+ * repaints every open screen, which is the same moment each screen reconciles
+ * what it holds against the record it was handed.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -24,7 +24,6 @@ import { ApiError } from '@/api/client'
 import { ComplianceScreen } from './compliance'
 import { OverviewScreen } from './overview'
 import { ReportIndexPane } from '@/components/blocks/report-index'
-import { TimelineScreen } from './timeline'
 import { CAMPAIGN_NOW, campaignCase } from '@/fixtures/campaign'
 import { campaignCompliance } from '@/fixtures/compliance'
 import { regimesFixture } from '@/fixtures/regimes'
@@ -37,93 +36,65 @@ import { DEMO_HEADINGS } from '@/components/blocks/report-layouts'
  * a tab, the kit's `TabPanel` animates its box in with Motion, and jsdom runs
  * no animation - so the live panel's inline style stays `opacity: 0` and
  * `toBeVisible` answers `false` however well the band renders in a browser.
- * The other three surfaces below are not on tabs and keep the stronger check.
  * -> `overview-tabs.test.tsx`
  */
 describe('the overview form', () => {
-  it('says nothing when nothing was refused', () => {
+  it('says nothing when nobody else changed a field', () => {
     render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
-    expect(screen.queryByText(/was not saved/)).toBeNull()
+    expect(screen.queryByRole('group', { name: /changed/ })).toBeNull()
   })
 
-  it('names the field another analyst set first', () => {
-    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />)
-    expect(screen.getByText('Severity was not saved')).toBeInTheDocument()
-    expect(screen.getByText(/A\. Okonkwo set it first/)).toBeInTheDocument()
-  })
-
-  it('keeps the refusal through the repaint that caused it', () => {
+  it('names the field and the other value, and keeps what was typed through the repaint', async () => {
+    const user = userEvent.setup()
     const { rerender } = render(
-      <OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />,
+      <OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />,
     )
-    // A fresh object with the other analyst's value in it: the identity change
-    // is what drives the form's draft reset.
+    await user.click(screen.getByRole('tab', { name: 'Properties' }))
+    const customer = screen.getByRole('textbox', { name: 'Customer' })
+    await user.clear(customer)
+    await user.type(customer, 'Mine')
+
     rerender(
       <OverviewScreen
         now={CAMPAIGN_NOW}
-        kase={{ ...campaignCase, severity: 'critical' }}
+        kase={{ ...campaignCase, version: campaignCase.version + 1, customer: 'Theirs' }}
         specs={specsFixture}
         record={campaignCompliance}
-        refusal={{ field: 'Severity', by: 'A. Okonkwo' }}
       />,
     )
-    expect(screen.getByText('Severity was not saved')).toBeInTheDocument()
+
+    expect(screen.getByRole('group', { name: 'Another analyst changed Customer' })).toHaveTextContent('Theirs')
+    expect(screen.getByRole('textbox', { name: 'Customer' })).toHaveValue('Mine')
   })
 })
 
 describe('the compliance form', () => {
-  it('says nothing when nothing was refused', () => {
+  it('says nothing when nobody else changed an answer', () => {
     render(<ComplianceScreen record={campaignCompliance} specs={specsFixture} regimes={regimesFixture} />)
-    expect(screen.queryByText(/was not saved/)).toBeNull()
+    expect(screen.queryByRole('group', { name: /changed/ })).toBeNull()
   })
 
-  it('names the field another analyst set first', () => {
-    render(<ComplianceScreen record={campaignCompliance} specs={specsFixture} regimes={regimesFixture} refusal={{ field: 'Notified at', by: 'R. Okonkwo' }} />)
-    expect(screen.getByText('Notified at was not saved')).toBeVisible()
-  })
+  /** A card folds shut once every question in it is answered, so a band drawn inside one is a band nobody sees. */
+  it('names the answer and the other value above the cards', async () => {
+    const user = userEvent.setup()
+    const record = { ...campaignCompliance, financialImpact: '' }
+    const { rerender } = render(<ComplianceScreen record={record} specs={specsFixture} regimes={regimesFixture} />)
+    const fold = document.querySelector<HTMLElement>('[data-fold="Incident facts"]')
+    if (fold?.getAttribute('aria-expanded') === 'false') await user.click(fold)
+    await user.type(screen.getByRole('textbox', { name: 'Financial impact' }), 'Mine')
 
-  /** The regimes decide which cards exist; a refusal is not one of them. */
-  it('draws the refusal above the cards rather than inside one', () => {
-    render(<ComplianceScreen record={campaignCompliance} specs={specsFixture} regimes={regimesFixture} refusal={{ field: 'Notified at', by: 'R. Okonkwo' }} />)
-    const band = screen.getByRole('alert')
-    const verdicts = document.querySelector('[data-part="compliance-verdicts"]')
-    if (verdicts) expect(band.compareDocumentPosition(verdicts)).toBeGreaterThan(0)
-    expect(screen.getByText('Notified at was not saved')).toBeVisible()
-  })
-})
-
-describe('the timeline table', () => {
-  it('says nothing when nothing was refused', () => {
-    render(<TimelineScreen kase={campaignCase} specs={specsFixture} />)
-    expect(screen.queryByText(/was not saved/)).toBeNull()
-  })
-
-  it('names the row as well as the field, there being one field per row', () => {
-    render(
-      <TimelineScreen kase={campaignCase} specs={specsFixture} refusal={{ field: 'Phase', row: 'Initial access', by: 'A. Okonkwo' }} />,
-    )
-    expect(screen.getByText('Phase was not saved')).toBeVisible()
-    expect(screen.getByText(/set it on Initial access first/)).toBeVisible()
-  })
-
-  /**
-   * The refusal is not part of the table body.
-   *
-   * A filter narrow enough to hide every row swaps the whole body for an empty
-   * state. A refusal drawn inside that body would vanish exactly when the
-   * analyst is least able to find the row it names.
-   */
-  it('survives a filter that hides every row', () => {
-    render(
-      <TimelineScreen
-        kase={campaignCase}
+    rerender(
+      <ComplianceScreen
+        record={{ ...record, version: record.version + 1, financialImpact: 'Theirs' }}
         specs={specsFixture}
-        search="no-entry-matches-this-string-anywhere"
-        refusal={{ field: 'Phase', row: 'Initial access', by: 'A. Okonkwo' }}
+        regimes={regimesFixture}
       />,
     )
-    expect(screen.getByText(/No entry matches all of these filters at once/)).toBeVisible()
-    expect(screen.getByText('Phase was not saved')).toBeVisible()
+
+    const band = screen.getByRole('group', { name: 'Another analyst changed Financial impact' })
+    expect(band).toHaveTextContent('Theirs')
+    const firstCard = document.querySelector('[data-fold]')
+    if (firstCard) expect(band.compareDocumentPosition(firstCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
 

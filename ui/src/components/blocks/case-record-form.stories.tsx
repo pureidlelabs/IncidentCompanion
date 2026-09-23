@@ -1,11 +1,23 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 
+import { ApiError } from '@/api/client'
 import type { Case } from '@/api/model'
+import { useRowDraft } from '@/api/rowDraft'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
-import { CaseRecordForm, type CaseWrites } from './case-record-form'
+import { CaseRecordForm, type CaseRecordFormProps, type CaseWrites } from './case-record-form'
+
+/** The form with the draft a screen holds above it, which is how every screen draws it. */
+function CaseRecord({
+  kase,
+  writes,
+  ...rest
+}: Omit<CaseRecordFormProps, 'draft' | 'caseId'> & { kase: Case; writes?: CaseWrites }) {
+  const draft = useRowDraft(kase, writes?.save, true)
+  return <CaseRecordForm draft={draft} caseId={kase.id} {...rest} />
+}
 
 /**
  * One pane of the case's own record.
@@ -15,10 +27,10 @@ import { CaseRecordForm, type CaseWrites } from './case-record-form'
  */
 const meta = {
   title: 'Blocks/Form/Case record',
-  component: CaseRecordForm,
+  component: CaseRecord,
   parameters: { layout: 'padded' },
   args: { pane: 'details', kase: campaignCase, specs: specsFixture },
-} satisfies Meta<typeof CaseRecordForm>
+} satisfies Meta<typeof CaseRecord>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -61,29 +73,30 @@ export const Empty: Story = {
 }
 
 /**
- * A field another analyst wrote first.
+ * A field the server refused on its own value.
  *
- * A refused write is an answer rather than an error: it names who set the
- * field and sends you back to read what it holds now.
+ * The refusal hangs on the control rather than floating above the form, so a
+ * screen reader announces it on the field it belongs to, and the value typed
+ * stays in the field to be corrected.
  */
-export const Refused: Story = {
-  name: 'A write another analyst refused',
-  args: { refusal: { field: 'Severity', by: 'j.mensah' } },
-}
-
-/**
- * Two fields the server refused on their own values.
- *
- * The refusals hang on the controls rather than floating above the form, so a
- * screen reader announces each one on the field it belongs to.
- */
-export const FieldsRefused: Story = {
-  name: 'Fields the server refused',
+export const FieldRefused: Story = {
+  name: 'A field the server refused',
   args: {
-    refused: {
-      reference: 'A reference is at most 64 characters.',
-      recoveredAt: 'Recovery cannot be before containment.',
+    writes: {
+      save: fn(() =>
+        Promise.reject(new ApiError(422, 'A reference is at most 64 characters.', null)),
+      ),
     },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const reference = canvas.getByLabelText('Incident reference')
+    await userEvent.clear(reference)
+    await userEvent.type(reference, 'INC-TOO-LONG')
+    await userEvent.tab()
+
+    await expect(await canvas.findByText('A reference is at most 64 characters.')).toBeVisible()
+    await expect(reference).toHaveValue('INC-TOO-LONG')
   },
 }
 
@@ -155,11 +168,7 @@ export const SendsAFieldEdit: Story = {
     // The write is on blur, so the field has to be left rather than submitted.
     await userEvent.tab()
 
-    await expect(args.writes!.save).toHaveBeenCalledWith(
-      'reference',
-      'INC-2026-0042',
-      AT_VERSION,
-    )
+    await expect(args.writes!.save).toHaveBeenCalledWith({ reference: 'INC-2026-0042' }, AT_VERSION)
   },
 }
 

@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react'
 
 import type { ComplianceRecord } from '@/api/compliance'
 import type { Case } from '@/api/model'
+import { useRowDraft } from '@/api/rowDraft'
 import { fieldsOf, formSpec, type Specs } from '@/api/specs'
-import type { Problems } from '@/api/validateDraft'
 import type { QueueRow } from '@/components/blocks/case-queue'
 import { CasePicturePane } from '@/components/blocks/case-picture-pane'
 import { CaseRecordForm, type CaseWrites } from '@/components/blocks/case-record-form'
-import { paneHoldingLabel, paneHoldingName } from '@/components/blocks/case-record-groups'
+import { paneHoldingName } from '@/components/blocks/case-record-groups'
 import { Section } from '@/components/blocks/section'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/tabs'
 import { dayNumber } from '@/lib/statutory-clock'
@@ -20,18 +20,17 @@ import { dayNumber } from '@/lib/statutory-clock'
  * `properties` and `times` are the two halves of the case's own form, and each
  * is `CaseRecordForm` rather than markup of this screen's.
  *
- * **A refusal selects the tab that holds the field it names.** A merge review
- * drawn on a pane nobody is looking at is a lost write reported as a clean
- * save, so the screen goes to the field rather than waiting to be found.
+ * **The fields being changed are held here, above both panes**, so a change
+ * still being written survives a move between tabs.
+ *
+ * **A field in dispute selects the tab that holds it.** A merge review drawn
+ * on a pane nobody is looking at is a choice the analyst never sees, so the
+ * screen goes to the field rather than waiting to be found.
  */
 export interface OverviewScreenProps {
   kase: Case | undefined
   specs: Specs | undefined
   record: ComplianceRecord | undefined
-  /** A field write another analyst got in first with. */
-  refusal?: { field: string; by: string }
-  /** Fields the last submit was refused on, by name. */
-  refused?: Problems
   /** A field an open item sends the analyst to, by name. Opens its tab. */
   focusField?: string | undefined
   /** Opens the section a queue row is answered on. */
@@ -62,8 +61,6 @@ export function OverviewScreen({
   kase,
   specs,
   record,
-  refusal,
-  refused,
   focusField,
   onOpen,
   now,
@@ -73,24 +70,22 @@ export function OverviewScreen({
   onRetry,
 }: OverviewScreenProps) {
   const fields = useMemo(() => (specs ? fieldsOf(formSpec(specs, 'CASE_FIELDS')) : []), [specs])
-  // A refusal outranks a door: the door is where the analyst was going, the
-  // refusal is the write they have already lost.
+  const draft = useRowDraft(kase, writes?.save, true)
+  // A dispute outranks a door: the door is where the analyst was going, the
+  // dispute is a change of theirs that has not stood.
+  const disputed = Object.entries(draft.holds).find(([, hold]) => hold.theirs)?.[0]
   const wanted = useMemo(() => {
-    const pane =
-      refusal !== undefined
-        ? paneHoldingLabel(fields, refusal.field)
-        : focusField === undefined || focusField === ''
-          ? undefined
-          : paneHoldingName(fields, focusField)
+    const named = disputed ?? (focusField === '' ? undefined : focusField)
+    const pane = named === undefined ? undefined : paneHoldingName(fields, named)
     if (pane === undefined) return READ
     return pane === 'times' ? TIMES : PROPERTIES
-  }, [fields, refusal, focusField])
+  }, [fields, disputed, focusField])
 
   const [tab, setTab] = useState<string>(wanted)
-  // A refusal arriving after the screen was drawn is the repaint that another
-  // analyst's write caused, and it has to move the tab as an opening refusal
-  // would. Held against the wanted tab rather than the refusal object, so a
-  // re-render with an equal refusal does not drag the analyst back.
+  // A dispute arriving after the screen was drawn is the repaint that another
+  // analyst's write caused, and it has to move the tab as an opening door
+  // would. Held against the wanted tab, so a re-render with the same dispute
+  // does not drag the analyst back.
   const [was, setWas] = useState(wanted)
   if (was !== wanted) {
     setWas(wanted)
@@ -144,25 +139,21 @@ export function OverviewScreen({
 
         <TabPanel id={PROPERTIES}>
           <CaseRecordForm
-            kase={kase}
+            draft={draft}
+            caseId={kase?.id}
             specs={specs}
             pane="details"
-            refusal={onTimes ? undefined : refusal}
             focusField={onTimes ? undefined : focusField}
-            {...(refused ? { refused } : {})}
-            {...(writes ? { writes } : {})}
           />
         </TabPanel>
 
         <TabPanel id={TIMES}>
           <CaseRecordForm
-            kase={kase}
+            draft={draft}
+            caseId={kase?.id}
             specs={specs}
             pane="times"
-            refusal={onTimes ? refusal : undefined}
             focusField={onTimes ? focusField : undefined}
-            {...(refused ? { refused } : {})}
-            {...(writes ? { writes } : {})}
           />
         </TabPanel>
       </Tabs>

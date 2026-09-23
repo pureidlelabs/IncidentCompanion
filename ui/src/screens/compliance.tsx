@@ -1,12 +1,15 @@
 import { Building2, FileWarning, Gavel, Scale, ScrollText } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { type ComplianceRecord, type ComplianceVerdict } from '@/api/compliance'
-import { complianceCards, type ComplianceFieldSpec, type Specs } from '@/api/specs'
+import { useRowDraft } from '@/api/rowDraft'
+import type { Read } from '@/api/rowWrite'
+import { complianceCards, type Specs } from '@/api/specs'
 import { enabledRegimes, type Regimes } from '@/api/regimes'
-import { ComplianceControl } from '@/components/blocks/compliance-field'
+import { ComplianceControl, typedAnswer } from '@/components/blocks/compliance-field'
+import { useWriterOf } from '@/components/blocks/detail-grid'
 import { FormCell, FormSection } from '@/components/blocks/form-section'
-import { MergeReview } from '@/components/blocks/merge-review'
+import { FieldConflict } from '@/components/blocks/merge-review'
 import { VerdictCard } from '@/components/blocks/verdict-card'
 import { Section } from '@/components/blocks/section'
 import { SectionMeta } from '@/components/blocks/section-head'
@@ -32,8 +35,6 @@ export interface ComplianceScreenProps {
   regimes: Regimes | undefined
   /** The served verdicts. Absent draws no verdict band at all. */
   verdicts?: readonly ComplianceVerdict[]
-  /** An answer another analyst got in first with. */
-  refusal?: { field: string; by: string }
   /** Omitted in the gallery, where an answer is given and never sent. */
   writes?: ComplianceWrites
   /**
@@ -50,11 +51,8 @@ export interface ComplianceScreenProps {
 }
 
 /**
- * Where a compliance answer leaves the screen.
- *
- * **The spec travels with the value, not just the field name.** Several kinds
- * share one control, and a caller reading the answer needs to know which kind
- * produced it.
+ * Where a compliance answer leaves the screen: the answers by field name, and
+ * the version of the record they were read at.
  *
  * **Nothing converts on the way out.** The control emits what the record
  * stores -- `string[]` for the sets, `null` for a question taken back or an
@@ -62,7 +60,7 @@ export interface ComplianceScreenProps {
  * -> `components/blocks/compliance-field.test.tsx`
  */
 export interface ComplianceWrites {
-  save: (spec: ComplianceFieldSpec, value: unknown) => Promise<unknown>
+  save: (values: Record<string, unknown>, read: Read) => Promise<unknown>
 }
 
 /** A tinted tile per card, by the card's own served title. */
@@ -79,7 +77,6 @@ export function ComplianceScreen({
   specs,
   regimes,
   verdicts = [],
-  refusal,
   writes,
   busy = false,
   problem,
@@ -90,12 +87,11 @@ export function ComplianceScreen({
     [specs, regimes],
   )
 
-  const [draft, setDraft] = useState<ComplianceRecord | undefined>(record)
-  const [given, setGiven] = useState(record)
-  if (given !== record) {
-    setGiven(record)
-    setDraft(record)
-  }
+  // Held here, above the cards, so an answer still being written survives its
+  // card folding shut.
+  const answers = useRowDraft(record, writes?.save, true)
+  const writerOf = useWriterOf('case_compliance', record?.caseId)
+  const draft = record && (answers.view as ComplianceRecord)
 
   const total = cards.reduce((sum, card) => sum + card.fields.length, 0)
   const filled = cards.reduce(
@@ -109,15 +105,6 @@ export function ComplianceScreen({
       card.fields.filter((spec) => draft && isAnswered(draft, spec)).length < card.fields.length,
   )?.title
 
-  const set = (name: string, value: unknown) => {
-    setDraft((was) => (was ? { ...was, [name]: value } : was))
-  }
-
-  /** The draft answer, and the same answer on its way to the server. */
-  const answer = (spec: ComplianceFieldSpec, value: unknown) => {
-    set(spec.name, value)
-    if (writes) void writes.save(spec, value)
-  }
 
   return (
     <Section
@@ -135,8 +122,21 @@ export function ComplianceScreen({
       }}
     >
       <div className="flex flex-col gap-6">
-        {refusal && <MergeReview field={refusal.field} by={refusal.by} />}
-
+        {/* Above the cards rather than beside the field: a card folds shut once
+            every question in it is answered, and a band drawn inside a shut
+            card is one nobody sees. */}
+        {cards.flatMap((card) =>
+          card.fields.flatMap((spec) => [
+            ...(answers.problems[spec.name] === undefined
+              ? []
+              : [
+                  <p key={`${spec.name}-problem`} role="alert" className="text-sm text-destructive">
+                    {`${spec.label}: ${answers.problems[spec.name] ?? ''}`}
+                  </p>,
+                ]),
+            <FieldConflict key={spec.name} draft={answers} field={spec.name} label={spec.label} by={writerOf} />,
+          ]),
+        )}
         {verdicts.length > 0 && (
           <div data-part="compliance-verdicts" className="flex flex-col gap-3">
             {verdicts.map((verdict) => (
@@ -179,9 +179,9 @@ export function ComplianceScreen({
                     <ComplianceControl
                       spec={spec}
                       record={draft}
-                      onSet={(_name, value) => {
-                        answer(spec, value)
-                      }}
+                      {...(typedAnswer(spec)
+                        ? { onSet: answers.set, onLeave: answers.leave }
+                        : { onSet: answers.commit })}
                     />
                   </FormCell>
                 ))}
