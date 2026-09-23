@@ -96,6 +96,20 @@ ALLOWED_SKIPS: dict[str, str] = {
     "tests/docs/test_openspec_consistency.py :: "
     "test_the_tree_being_landed_carries_nothing_in_flight": "armed in the merge group alone",
     **{
+        f"tests/docker/test_container_config.py :: {name}": "opt-in: the containers tier runs it"
+        for name in (
+            "test_the_first_start_with_nothing_supplied_still_mints",
+            "test_a_sound_supplied_pair_is_left_byte_identical",
+            "test_a_malformed_supplied_certificate_is_named_and_not_minted_over",
+            "test_an_expired_supplied_certificate_is_named_and_not_minted_over",
+            "test_a_certificate_and_key_that_do_not_match_is_named_and_not_minted_over",
+            "test_a_certificate_not_covering_the_reached_name_is_named_and_not_minted_over",
+            "test_the_operator_supplied_name_is_honoured",
+            "test_half_a_pair_is_refused_rather_than_completed",
+            "test_the_tls_cases_run_inside_the_image_rather_than_on_the_host",
+        )
+    },
+    **{
         f".claude/tests/test_hooks_import_on_the_oldest_python.py :: {name}[NOTSET]": "no hook guard exists"
         for name in (
             "test_every_guard_names_a_python_floor",
@@ -158,11 +172,11 @@ def _repo_path(name: str, known: set[str]) -> str | None:
 
 
 def _counts_for(named: str, path: str, run: Run) -> str:
-    """Records `path` as run by every tier that owns it; returns the tier its cases answer to."""
-    tiers = owners(path) or [named]
-    for tier in tiers:
-        run.ran.setdefault(tier, set()).add(path)
-    return named if named in tiers else tiers[0]
+    """Records `path` as run by the tier the report is named for, or else by the one owning it."""
+    owned = owners(path)
+    tier = named if named in owned or not owned else owned[0]
+    run.ran.setdefault(tier, set()).add(path)
+    return tier
 
 
 #: Which of two reports of one case stands: a failure anywhere, else a run anywhere.
@@ -183,8 +197,8 @@ def _status(raw: str) -> str:
 def read_vitest(named: str, report: Path, known: set[str], run: Run) -> None:
     """Folds one vitest JSON report into `run`.
 
-    One run of several projects writes one report, so a file counts for the
-    tiers that own it rather than for the one the report is named after.
+    One run of several projects writes one report, so a file the report's tier
+    does not own counts for the tier that does.
     """
     for module in json.loads(report.read_text(encoding="utf-8"))["testResults"]:
         path = _repo_path(module["name"], known)

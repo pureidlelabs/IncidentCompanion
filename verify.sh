@@ -166,7 +166,8 @@ if expensive; then
     env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 ./test.sh -q \
     --junitxml=reports/repository.xml
 elif behaviour; then
-  step "repository: suite" ./test.sh -q --ignore=tests/docker --junitxml=reports/repository.xml
+  step "repository: suite" ./test.sh -q --ignore=tests/docker tests/docker/test_container_config.py \
+    tests/docker/test_stack_images.py --junitxml=reports/repository.xml
   SKIPPED+=("tests/docker -- builds containers; ./verify.sh --detailed runs it")
 fi
 

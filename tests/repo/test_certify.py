@@ -138,6 +138,9 @@ def test_a_case_one_tier_skipped_and_another_ran_counts_as_run(tmp_path: Path) -
     files = {"tests/docker/test_container_config.py": "import os, pytest\n"
              "def test_opt_in():\n    if not os.environ.get('OPT_IN'):\n        pytest.skip('opt-in')\n"}
     reports = junit_report(tmp_path, files, tier="repository")
+    assert certify.read(reports, set(files)).ran == {"repository": set(files)}, (
+        "a file two tiers own counted as run by one whose report never held it"
+    )
     os.environ["OPT_IN"] = "1"
     try:
         junit_report(tmp_path, files, tier="containers")
@@ -147,6 +150,7 @@ def test_a_case_one_tier_skipped_and_another_ran_counts_as_run(tmp_path: Path) -
     run = certify.read(reports, set(files))
 
     assert run.cases["tests/docker/test_container_config.py :: test_opt_in"].status == "passed"
+    assert run.ran == {"repository": set(files), "containers": set(files)}
     assert certify.skips(run, partial=True) == []
 
 
