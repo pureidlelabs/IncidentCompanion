@@ -16,11 +16,14 @@
  * ways and a grant can arrive from a role this one inherits, so each escalation
  * is actually run and its refusal is the assertion.
  */
+import { randomUUID } from 'node:crypto'
+
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { afterAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { user } from './schema/index.js'
+import { asRole, hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -30,10 +33,6 @@ const app = pool ? drizzle({ client: pool }) : null
 const SCOPED = 'systems'
 
 describe.skipIf(!app || !hasConcurrentConnections())('the identity the application connects as', () => {
-  afterAll(async () => {
-    await pool!.end()
-  })
-
   /**
    * The vacuity guard, and it is the premise of every case below: a role that
    * could not reach the table at all would refuse these for the wrong reason.
@@ -158,5 +157,89 @@ describe.skipIf(!app || !hasConcurrentConnections())('the identity the applicati
       (policies.rows as { name: string }[]).map((one) => one.name),
       'the case-scoping policy is gone, so one of the attempts above succeeded',
     ).toContain('case_reads')
+  })
+})
+
+afterAll(async () => {
+  await pool?.end()
+})
+
+/**
+ * **The store's own acts are the other way past a policy**, since each runs as
+ * the role that owns the tables. An act that answers across cases is asked by
+ * an account the install does not hold as an administrator, and one asked for
+ * nobody answers nothing that names a case.
+ */
+describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () => {
+  /** Acts that answer only about the principal, or about one case they name. */
+  const PER_PRINCIPAL = ['ic_administers', 'ic_floor', 'ic_level', 'ic_move_case', 'ic_principal', 'ic_reach']
+  const ADMINISTRATOR_ONLY: Record<string, string> = {
+    ic_cases_behind: 'select ic_cases_behind(gen_random_uuid())',
+    ic_cases_tallied: 'select * from ic_cases_tallied()',
+    ic_move_cases: 'select ic_move_cases(gen_random_uuid(), gen_random_uuid())',
+    ic_references_shared: 'select * from ic_references_shared(gen_random_uuid(), gen_random_uuid())',
+  }
+  /** Asked for nobody, so they answer digests and never which case holds one. */
+  const FOR_NOBODY = ['ic_artefacts_named']
+
+  const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
+  const admin = `acts-admin-${String(process.pid)}-${String(Date.now())}`
+
+  beforeAll(async () => {
+    await drizzle({ client: seedPool! }).insert(user).values({
+      id: admin,
+      name: admin,
+      email: `${admin}@example.invalid`,
+      emailVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      role: 'admin',
+    })
+  })
+
+  afterAll(async () => {
+    await drizzle({ client: seedPool! }).delete(user).where(sql`id = ${admin}`)
+    await seedPool!.end()
+  })
+
+  /** Run `statement` as `principal` on the app role, rolled back; the SQLSTATE where it raised. */
+  async function asking(principal: string, statement: string): Promise<string> {
+    const client = await pool!.connect()
+    try {
+      await client.query('begin')
+      await client.query(`select set_config('app.principal', $1, true)`, [principal])
+      return await client.query(statement).then(
+        () => 'answered',
+        (error: { code?: string }) => String(error.code),
+      )
+    } finally {
+      await client.query('rollback')
+      client.release()
+    }
+  }
+
+  it('classes every act the app role may call', async () => {
+    const { rows } = await pool!.query<{ name: string }>(`
+      select distinct p.proname::text as name from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname like 'ic\\_%'
+         and has_function_privilege('ic_app', p.oid, 'execute')
+       order by 1`)
+    expect(
+      rows.map((one) => one.name),
+      'an act the app role may call is in no class here, so nobody decided who it answers',
+    ).toEqual([...PER_PRINCIPAL, ...Object.keys(ADMINISTRATOR_ONLY), ...FOR_NOBODY].sort())
+  })
+
+  it.each(Object.keys(ADMINISTRATOR_ONLY))('%s refuses an account that is not an administrator', async (name) => {
+    expect(await asking(randomUUID(), ADMINISTRATOR_ONLY[name]!)).toBe('42501')
+    expect(await asking(admin, ADMINISTRATOR_ONLY[name]!), 'the administrator was refused too').toBe(
+      'answered',
+    )
+  })
+
+  it.each(FOR_NOBODY)('%s names no case', async (name) => {
+    const { fields } = await pool!.query(`select * from ${name}() limit 0`)
+    expect(fields.map((one) => one.name)).toEqual(['hash'])
   })
 })

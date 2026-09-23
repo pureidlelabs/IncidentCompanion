@@ -178,25 +178,29 @@ begin
 end
 $$;
 
--- How many cases stand in each state, demonstrations apart. Counts only, which
--- the install reports of itself without reaching any case.
+-- How many cases stand in each state, demonstrations apart, for an
+-- administrator: counts only, which the install reports of itself.
 create or replace function public.ic_cases_tallied()
 returns table (status text, is_demo boolean, count integer)
-language sql stable security definer
+language plpgsql stable security definer
 set search_path = pg_catalog, pg_temp
 as $$
-  select c.status::text, c.is_demo, count(*)::int from public.cases c group by 1, 2
+begin
+  if not public.ic_administers() then
+    raise exception 'only an administrator counts every case' using errcode = '42501';
+  end if;
+  return query select c.status::text, c.is_demo, count(*)::int from public.cases c group by 1, 2;
+end
 $$;
 
--- Every stored artefact's digest and the case that names it. Digests only,
--- never rows: the census counts them and a refused import keeps what a case
--- still names.
+-- Every digest a stored evidence row names, once each, and never which case
+-- names it: the census and a refused import ask it for nobody.
 create or replace function public.ic_artefacts_named()
-returns table (case_id uuid, hash text)
+returns table (hash text)
 language sql stable security definer
 set search_path = pg_catalog, pg_temp
 as $$
-  select case_id, hash from public.evidence where stored_at is not null and hash <> ''
+  select distinct e.hash from public.evidence e where e.stored_at is not null and e.hash <> ''
 $$;
 
 revoke all on function
