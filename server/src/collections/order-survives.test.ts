@@ -42,7 +42,11 @@ interface Session {
 
 interface Arrangeable {
   list(caseId: string): Promise<Record<string, unknown>[]>
-  reorder(caseId: string, body: unknown, session: Session): Promise<{ ids: string[] }>
+  reorder(
+    caseId: string,
+    body: unknown,
+    session: Session,
+  ): Promise<{ rows: { id: string; version: number }[] }>
   update(caseId: string, id: string, body: unknown, session: Session): Promise<unknown>
   createMany(caseId: string, body: unknown, session: Session): Promise<{ ids: string[] }>
 }

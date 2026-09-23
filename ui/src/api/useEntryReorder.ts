@@ -3,7 +3,9 @@
  *
  * Each row goes with the version this screen holds for it, so a row somebody
  * else changed since it was read refuses the whole reorder with 409 rather
- * than being rearranged under them.
+ * than being rearranged under them. The versions the route answers with are
+ * written back at once, and one table's reorders run one at a time, so the
+ * analyst's next move carries what their last one left.
  *
  * Same skeleton as the other three writes - cancel, snapshot, apply, restore on
  * error, invalidate on settled - and the fourth of the four rather than a
@@ -67,9 +69,9 @@ export function versioned(
   })
 }
 
-/** The route echoes the ids it wrote. */
+/** Every row the route wrote, in order, at the version it now holds. */
 export interface ReorderedEntries {
-  ids: string[]
+  rows: { id: string; version: number }[]
 }
 
 interface OrderRollback<N extends CollectionName> {
@@ -165,6 +167,7 @@ export function useEntryReorder<N extends CollectionName>(
 
   return useMutation<ReorderedEntries, ApiError, EntryOrder, OrderRollback<N>>({
     mutationKey: [...listKey, 'reorder'],
+    scope: { id: JSON.stringify([...listKey, 'reorder']) },
 
     mutationFn: ({ ids }) => {
       const held = [
@@ -193,6 +196,20 @@ export function useEntryReorder<N extends CollectionName>(
         kase && { ...kase, [onCase]: apply(kase[onCase] as CollectionEntry[N][]) },
       )
       return { previous, previousCase }
+    },
+
+    onSuccess: ({ rows }) => {
+      const now = new Map(rows.map((row) => [row.id, row.version]))
+      const bump = (held: CollectionEntry[N][] | undefined) =>
+        held?.map((row) => {
+          const version = now.get((row as { id: string }).id)
+          return version === undefined ? row : { ...row, version }
+        })
+      client.setQueryData<CollectionEntry[N][]>(listKey, bump)
+      client.setQueryData<Case>(
+        caseKey,
+        (kase) => kase && { ...kase, [onCase]: bump(kase[onCase] as CollectionEntry[N][]) },
+      )
     },
 
     onError: (_error, _order, context) => {

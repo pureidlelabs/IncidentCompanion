@@ -34,7 +34,11 @@ interface Session {
 }
 
 interface Reorderable {
-  reorder(caseId: string, body: unknown, session: Session): Promise<{ ids: string[] }>
+  reorder(
+    caseId: string,
+    body: unknown,
+    session: Session,
+  ): Promise<{ rows: { id: string; version: number }[] }>
 }
 
 const announced: { caseId: string; scopes: string[]; by: string }[] = []
@@ -106,15 +110,17 @@ describe.skipIf(!db || !hasConcurrentConnections())('reordering a collection tha
       .where(eq(reportBlocks.reportId, reportId))
       .orderBy(reportBlocks.position)
 
-  it('renumbers to the order it was sent, and answers with it', async () => {
+  it('renumbers to the order it was sent, and answers with each row at its stored version', async () => {
     const before = await blocksOf()
     expect(before.length, 'the demo report has blocks to move').toBeGreaterThan(2)
 
     const moved = [before[1]!, before[0]!, ...before.slice(2)]
-    const { ids } = await controllerFor('report_blocks').reorder(caseId, sending(moved), session)
+    const { rows } = await controllerFor('report_blocks').reorder(caseId, sending(moved), session)
 
-    expect(ids).toEqual(moved.map((b) => b.id))
-    expect((await blocksOf()).map((b) => b.id)).toEqual(moved.map((b) => b.id))
+    const after = await blocksOf()
+    expect(after.map((b) => b.id)).toEqual(moved.map((b) => b.id))
+    expect(rows).toEqual(after.map((b) => ({ id: b.id, version: b.version })))
+    expect(rows[0]!.version).toBeGreaterThan(before[1]!.version)
   })
 
   it('refuses a list carrying a version a row has moved past, naming it, and writes nothing', async () => {

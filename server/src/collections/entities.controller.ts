@@ -85,6 +85,7 @@ const reorderBodySchema = z
   .object({ rows: z.array(z.object({ id: z.uuid(), version: rowVersion() }).strict()).max(BULK_LIMIT) })
   .strict()
 class ReorderBodyDto extends createZodDto(reorderBodySchema) {}
+class ReorderedDto extends createZodDto(reorderBodySchema) {}
 class UpdatedManyDto extends createZodDto(
   z.object({
     updated: z.array(z.uuid()),
@@ -154,7 +155,11 @@ abstract class EntityReads {
    * names the wrong thing entirely.
    */
   @Post('order')
-  @ZodResponse({ status: 200, type: CreatedIdsDto, description: 'The ids, in the order written.' })
+  @ZodResponse({
+    status: 200,
+    type: ReorderedDto,
+    description: 'Every row, in the order written, at the version it now holds.',
+  })
   async reorder(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Body() body: ReorderBodyDto,

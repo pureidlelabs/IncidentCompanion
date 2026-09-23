@@ -543,13 +543,15 @@ export class CollectionService {
    * **Only rows that actually moved reach the feed.** Renumbering every row on
    * every reorder would repaint every other analyst's screen for rows that did
    * not change.
+   *
+   * Answers every row in the order written, with the version it now holds.
    */
   async reorder(
     def: CollectionDefinition,
     caseId: string,
     sent: { id: string; version: number }[],
     actorId: string,
-  ): Promise<{ ids: string[] }> {
+  ): Promise<{ rows: { id: string; version: number }[] }> {
     const ids = sent.map((row) => row.id)
     // **Declared, not derived.** Every collection has an `orderBy`, so asking
     // the table settles nothing; only a collection that names a `position`
@@ -655,11 +657,13 @@ export class CollectionService {
           })),
         )
       }
-      return { ids, moved: moved.length }
+      const bumped = new Map(moved.map((row) => [row.id, row.version]))
+      const written = sent.map((row) => ({ id: row.id, version: bumped.get(row.id) ?? row.version }))
+      return { rows: written, moved: moved.length }
     })
 
     if (result.moved > 0) this.announce(caseId, [def.name], actorId)
-    return { ids: result.ids }
+    return { rows: result.rows }
   }
 
   /**

@@ -15,7 +15,7 @@
  *   two-report case exists only here.
  */
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -40,6 +40,15 @@ function held(name: string, position: number): ReportBlock {
 }
 
 const fetchMock = vi.fn<typeof fetch>()
+
+/** What the route answers moving `c` to the top of a, b, c held at versions 3, 4, 5. */
+const ANSWERED = JSON.stringify({
+  rows: [
+    { id: 'c', version: 6 },
+    { id: 'a', version: 4 },
+    { id: 'b', version: 5 },
+  ],
+})
 
 function harness() {
   const client = new QueryClient({
@@ -93,7 +102,7 @@ describe('reordering a table', () => {
       ])
     }).then(() => {
       act(() => {
-        release(new Response(JSON.stringify({ ids: ['c', 'a', 'b'] }), { status: 200 }))
+        release(new Response(ANSWERED, { status: 200 }))
       })
     })
   })
@@ -115,13 +124,13 @@ describe('reordering a table', () => {
 
     await waitFor(() => expect(onScreen()).toEqual(['c', 'a', 'b']))
     act(() => {
-      release(new Response(JSON.stringify({ ids: ['c', 'a', 'b'] }), { status: 200 }))
+      release(new Response(ANSWERED, { status: 200 }))
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
   })
 
   it('sends each row with the version the screen read it at', async () => {
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ids: ['c', 'a', 'b'] }), { status: 200 }))
+    fetchMock.mockResolvedValue(new Response(ANSWERED, { status: 200 }))
     const { hook } = harness()
 
     act(() => {
@@ -203,6 +212,81 @@ describe('reordering a table', () => {
 
     expect(after.map((row) => row.id)).toEqual(['b', 'a'])
     for (const row of after) expect(row).not.toHaveProperty('position')
+  })
+})
+
+/**
+ * One analyst moving a section twice, against a server that keeps the route's
+ * rule: a moved row's version goes up, and a stale version is refused whole.
+ * The case document is observed by the screen and refetches slowly, as the
+ * real one does.
+ */
+describe('moving a section twice', () => {
+  function twice() {
+    const stored = new Map([held('a', 0), held('b', 1), held('c', 2)].map((row) => [row.id, row]))
+    const answers: number[] = []
+    fetchMock.mockImplementation(async (_url, init) => {
+      if (init?.method !== 'POST') {
+        await new Promise((wake) => setTimeout(wake, 150))
+        return new Response(JSON.stringify({ reportBlocks: [...stored.values()] }), { status: 200 })
+      }
+      const body = JSON.parse(init.body as string) as { rows: { id: string; version: number }[] }
+      await new Promise((wake) => setTimeout(wake, 20))
+      const refused = body.rows.filter((row) => stored.get(row.id)?.version !== row.version).map((row) => row.id)
+      answers.push(refused.length ? 409 : 200)
+      if (refused.length) return new Response(JSON.stringify({ refused }), { status: 409 })
+      body.rows.forEach((row, at) => {
+        const one = stored.get(row.id)!
+        if (one.position !== at) stored.set(row.id, { ...one, position: at, version: one.version + 1 })
+      })
+      const written = body.rows.map((row) => ({ id: row.id, version: stored.get(row.id)!.version }))
+      return new Response(JSON.stringify({ rows: written }), { status: 200 })
+    })
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    client.setQueryData<Case>(keys.case(CASE), { reportBlocks: [...stored.values()] } as Case)
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const hook = renderHook(
+      () => {
+        useQuery({
+          queryKey: keys.case(CASE),
+          queryFn: async () => (await fetch(`/api/cases/${CASE}`)).json() as Promise<Case>,
+          staleTime: Infinity,
+        })
+        return useEntryReorder(CASE, 'report_blocks')
+      },
+      { wrapper },
+    )
+    const order = () => [...stored.values()].sort((x, y) => x.position - y.position).map((row) => row.id)
+    return { hook, answers, order }
+  }
+
+  it('takes the second move once the first has landed', async () => {
+    const { hook, answers, order } = twice()
+
+    await act(async () => {
+      await hook.result.current.mutateAsync({ ids: ['b', 'a', 'c'] })
+    })
+    await act(async () => {
+      await new Promise((wake) => setTimeout(wake, 30))
+      await hook.result.current.mutateAsync({ ids: ['b', 'c', 'a'] }).catch(() => undefined)
+    })
+
+    expect({ answers, order: order() }).toEqual({ answers: [200, 200], order: ['b', 'c', 'a'] })
+  })
+
+  it('takes the second move pressed while the first is still on its way', async () => {
+    const { hook, answers, order } = twice()
+
+    await act(async () => {
+      const first = hook.result.current.mutateAsync({ ids: ['b', 'a', 'c'] })
+      const second = hook.result.current.mutateAsync({ ids: ['b', 'c', 'a'] }).catch(() => undefined)
+      await Promise.all([first, second])
+    })
+
+    expect({ answers, order: order() }).toEqual({ answers: [200, 200], order: ['b', 'c', 'a'] })
   })
 })
 

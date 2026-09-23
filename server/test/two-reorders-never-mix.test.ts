@@ -103,4 +103,20 @@ describe.skipIf(!runnable)('two reorders of one report at once', () => {
     }
     expect(bad).toEqual([])
   }, 300_000)
+
+  it('answers each row with the version it now holds, so the next move from the same screen is taken', async () => {
+    const [a, b, c, d] = await sections()
+    const first = await one(`/cases/${caseId}/report_blocks/order`, 'POST', { rows: [b!, a!, c!, d!] })
+    const { rows } = (await first.json()) as { rows: { id: string; version: number }[] }
+    const now = new Map(rows.map((row) => [row.id, row.version]))
+    const next = [b!, c!, a!, d!].map((row) => ({ id: row.id, version: now.get(row.id)! }))
+
+    const second = await one(`/cases/${caseId}/report_blocks/order`, 'POST', { rows: next })
+
+    expect({ first: first.status, second: second.status, order: (await stored(rows.map((row) => row.id))).map((row) => row.id) }).toEqual({
+      first: 200,
+      second: 200,
+      order: [b!.id, c!.id, a!.id, d!.id],
+    })
+  }, 60_000)
 })
