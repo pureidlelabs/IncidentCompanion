@@ -25,6 +25,12 @@ VITEST = REPO_ROOT / "node_modules" / ".bin" / "vitest"
 pytestmark = pytest.mark.skipif(not VITEST.exists(), reason="the installed vitest writes the reports")
 
 
+@pytest.fixture(autouse=True)
+def _nothing_excused(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A fixture run holds none of the tree's allowed skips, so none is in force."""
+    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {})
+
+
 def lay_out(tree: Path, files: dict[str, str]) -> None:
     for path, body in files.items():
         (tree / path).parent.mkdir(parents=True, exist_ok=True)
@@ -94,7 +100,7 @@ def test_a_file_whose_every_case_skipped_is_not_counted_as_run(tmp_path: Path) -
     files = {"server/test/idle.test.ts": "it.skip('waits', () => {})\n"}
     run = certify.read(vitest_report(tmp_path, files), set(files))
 
-    assert certify.skips(run) == [
+    assert certify.skips(run, partial=False) == [
         "server/test/idle.test.ts :: waits: skipped, and ALLOWED_SKIPS gives no reason it may be"
     ]
 
@@ -116,13 +122,32 @@ def test_a_skip_in_a_certifying_report_is_refused_unless_allowed(
     later = "server/test/s.test.ts :: a door > is written later"
     runs = "server/test/s.test.ts :: a door > runs"
 
-    assert {line.rsplit(": skipped", 1)[0] for line in certify.skips(run)} == {waits, later}
+    assert {line.rsplit(": skipped", 1)[0] for line in certify.skips(run, partial=False)} == {waits, later}
 
-    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {waits: "needs a compose project"})
-    assert [line.rsplit(": skipped", 1)[0] for line in certify.skips(run)] == [later]
+    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {waits: "needs a compose project", runs: "runs elsewhere"})
+    assert [line.rsplit(": skipped", 1)[0] for line in certify.skips(run, partial=False)] == [later]
 
-    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {waits: "needs a compose project", runs: "was flaky"})
-    assert any(line.startswith(f"{runs}: ran") for line in certify.skips(run)), certify.skips(run)
+    gone = "server/test/s.test.ts :: a door > was renamed"
+    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {waits: "needs a compose project", gone: "was flaky"})
+    assert f"{gone}: no report holds it, so ALLOWED_SKIPS excuses nothing (was flaky)" in certify.skips(
+        run, partial=False)
+    assert certify.skips(run, partial=True) == [f"{later}: skipped, and ALLOWED_SKIPS gives no reason it may be"]
+
+
+def test_a_case_one_tier_skipped_and_another_ran_counts_as_run(tmp_path: Path) -> None:
+    files = {"tests/docker/test_container_config.py": "import os, pytest\n"
+             "def test_opt_in():\n    if not os.environ.get('OPT_IN'):\n        pytest.skip('opt-in')\n"}
+    reports = junit_report(tmp_path, files, tier="repository")
+    os.environ["OPT_IN"] = "1"
+    try:
+        junit_report(tmp_path, files, tier="containers")
+    finally:
+        del os.environ["OPT_IN"]
+
+    run = certify.read(reports, set(files))
+
+    assert run.cases["tests/docker/test_container_config.py :: test_opt_in"].status == "passed"
+    assert certify.skips(run, partial=True) == []
 
 
 def test_a_skip_in_a_junit_report_is_read_as_one(tmp_path: Path) -> None:

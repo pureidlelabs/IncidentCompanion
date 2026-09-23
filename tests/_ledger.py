@@ -22,6 +22,14 @@ CELLS = 4
 #: The statuses a row may carry. An empty cell means the first of them.
 STATUSES = ("undemonstrated", "demonstrated", "undemonstrable", "unbuilt")
 
+#: A test's file and its title path, as a citation and a report both name it:
+#: `server/test/x.test.ts :: a describe > a case`.
+FILE_AND_TITLE = " :: "
+TITLE_PATH = " > "
+
+#: Between the tests one row cites.
+CITATIONS = " ; "
+
 
 def rows(ledger: Path) -> list[tuple[str, str, str, str, str]]:
     """Every row as capability, requirement, scenario, status, evidence.
@@ -43,4 +51,17 @@ def rows(ledger: Path) -> list[tuple[str, str, str, str, str]]:
         if len(cells) != CELLS or cells[0] in {"Requirement", "---"}:
             continue
         found.append((capability, cells[0], cells[1], cells[2], cells[3]))
+    return found
+
+
+def citations(evidence: str) -> list[tuple[str, str]]:
+    """The tests a `demonstrated` row's evidence names, as (path, title path).
+
+    A citation carrying no title comes back with an empty one, which is a path
+    rather than a test and certifies nothing.
+    """
+    found = []
+    for one in evidence.split(CITATIONS):
+        path, _, title = one.strip().partition(FILE_AND_TITLE)
+        found.append((path.strip(), title.strip()))
     return found
