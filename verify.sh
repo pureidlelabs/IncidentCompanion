@@ -60,6 +60,9 @@ step() {
   fi
 }
 
+# What each tier reports, for `tests/certify.py` to read at the end.
+rm -rf reports && mkdir reports
+
 reachable() {
   "$(command -v python3 || command -v python)" - "$1" "$2" <<'PY' 2>/dev/null
 import socket, sys
@@ -121,7 +124,8 @@ elif [ -n "$REDIS_PORT" ] && [ -n "$PG_PORT" ] \
   # Here the stack was found, which is the one case where a suite that declines
   # anyway is telling us something -- a partly-raised stack, or a run that never
   # reached the tests it thinks it ran. -> `server/test/must-run.ts`
-  step "server: suite" bash -c 'cd server && IC_SUITE_MUST_RUN=1 npx vitest run --pool=threads'
+  step "server: suite" bash -c 'cd server && IC_SUITE_MUST_RUN=1 npx vitest run --pool=threads \
+    --reporter=default --reporter=json --outputFile.json=../reports/server.json'
 else
   # Tests needing two concurrent transactions decline on the embedded engine.
   # -> `server/test/database.ts::hasConcurrentConnections`
@@ -139,9 +143,8 @@ step "client: typecheck" bash -c 'cd ui && npx tsc -b --noEmit --force'
 # client never did, so `ui` was linted by nothing here - an error sat on the
 # release branch unseen.
 step "client: lint" bash -c 'cd ui && npm run --silent lint'
-# Armed, because a worker pool that times out leaves this tier reporting green
-# having run none of itself. -> `ui/vite.config.ts`
-behaviour && step "client: suite" bash -c 'cd ui && IC_SUITE_MUST_RUN=1 npx vitest run'
+behaviour && step "client: suite" bash -c 'cd ui && npx vitest run \
+  --reporter=default --reporter=json --outputFile.json=../reports/client.json'
 
 # ------------------------------------------------------- repository checks
 # **`tests/docker` builds containers**, which is the whole reason a full sweep
@@ -160,9 +163,10 @@ if expensive; then
   # records for the browser tier -- a run against nothing exits 0 -- arriving
   # through an environment variable instead of a missing server.
   step "repository: suite (with the container files)" \
-    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 ./test.sh -q
+    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 ./test.sh -q \
+    --junitxml=reports/repository.xml
 elif behaviour; then
-  step "repository: suite" ./test.sh -q --ignore=tests/docker
+  step "repository: suite" ./test.sh -q --ignore=tests/docker --junitxml=reports/repository.xml
   SKIPPED+=("tests/docker -- builds containers; ./verify.sh --detailed runs it")
 fi
 
@@ -178,7 +182,8 @@ fi
 # or repairs one -- so there is no state left where this tier has nothing to
 # run and says so in a SKIPPED line. -> #653
 if behaviour; then
-  step "hooks and guidance" "$(scripts/venv_python.sh --ensure)" -m pytest .claude/tests -q
+  step "hooks and guidance" "$(scripts/venv_python.sh --ensure)" -m pytest .claude/tests -q \
+    --junitxml=reports/repository-hooks.xml
 fi
 
 # ----------------------------------------------------------------- prose
@@ -244,6 +249,14 @@ if expensive; then
 else
   SKIPPED+=("browser tier, app and kit (./verify.sh --detailed runs both)")
 fi
+
+# ---------------------------------------------------------------- ledger
+# **What the tiers above reported, read the way the merge group reads it.** A
+# file a tier owns that it never ran, a skip nobody excused, a row whose cited
+# test did not pass at the entry point. `--partial`, because a tier this mode
+# does not run is named as not run rather than refused.
+behaviour && step "ledger: what this run certified" \
+  "$(scripts/venv_python.sh --ensure)" -m tests.certify reports --partial
 
 # ----------------------------------------------------------------- said
 printf '\n\033[1m== what ran (%s)\033[0m\n' "$MODE"

@@ -416,6 +416,9 @@ EXPENSIVE_TIER = (
 #: held back from.
 NIGHTLY_TIER = ("browser",)
 
+#: Reads what the tiers reported, so it runs only where every tier ran.
+CERTIFYING = ("certify",)
+
 
 def ci_jobs() -> dict:
     return yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]
@@ -537,7 +540,7 @@ def test_every_job_is_classified() -> None:
     behind a linter, and every test here passes while it does.
     """
     jobs = set(ci_jobs())
-    known = set(CHEAP_TIER) | set(EXPENSIVE_TIER) | set(NIGHTLY_TIER) | {"scope", "gate"}
+    known = set(CHEAP_TIER) | set(EXPENSIVE_TIER) | set(NIGHTLY_TIER) | set(CERTIFYING) | {"scope", "gate"}
     assert jobs <= known, (
         f"these jobs are in no tier, so no rule in this file reaches them: "
         f"{sorted(jobs - known)}"
@@ -1421,25 +1424,52 @@ def test_the_installed_tree_key_hashes_no_glob_reaching_into_node_modules() -> N
     assert recursive == [], f"these reach into node_modules: {recursive}"
 
 
-def test_every_client_vitest_step_arms_the_must_run_reporter() -> None:
-    """`MustRunReporter` reads `IC_SUITE_MUST_RUN` and never `CI`.
+def test_the_ledger_is_certified_only_by_a_run_of_every_tier() -> None:
+    """A pull request's run is scoped, so a report missing from it is a tier it left out."""
+    job = ci_jobs()["certify"]
+    every = dict.fromkeys(("server", "client", "screen", "devcontainer", "containers"), "true")
 
-    Server steps are not checked: the server side reads both variables. -> #1080
+    assert not scheduled(job, "pull_request", every), "certify reads a pull request's scoped run"
+    assert scheduled(job, "merge_group", {}), "the run that decides the merge certifies nothing"
+    assert scheduled(job, "workflow_call", {}, want_all=True), "a run of every tier certifies nothing"
+
+
+def test_every_tier_certify_reads_writes_the_report_it_reads() -> None:
+    """A tier whose report never reaches `certify` is one whose every file it refuses as unrun.
+
+    Or, worse, one it never reads: each tier `tests/certify.py` owns files for
+    has a job `certify` waits on, writing `reports/<tier>` and uploading it
+    under the name `certify` downloads.
     """
-    bare = []
-    for name, job in sorted(ci_jobs().items()):
-        for step in job.get("steps", []):
-            run = str(step.get("run", ""))
-            if "vitest" not in run or "cd ui" not in run:
-                continue
-            armed = {**job.get("env", {}), **step.get("env", {})}
-            if not armed.get("IC_SUITE_MUST_RUN"):
-                bare.append(f"{name}: {step.get('name', run.strip()[:40])}")
+    from tests import certify
 
-    assert not bare, (
-        "these steps run the client tier without arming its must-run check, so a "
-        f"run that reached no test file exits 0:\n  " + "\n  ".join(bare)
+    jobs = ci_jobs()
+    needs = jobs["certify"]["needs"]
+    written = {}
+    for name in needs:
+        steps = jobs[name]["steps"]
+        runs = " ".join(str(step.get("run", "")) for step in steps)
+        uploads = [step for step in steps if "upload-artifact" in str(step.get("uses", ""))]
+        assert any(str(step["with"]["name"]).startswith("report-") and step["with"]["path"] == "reports/"
+                   for step in uploads), f"{name} writes a report certify never downloads"
+        for tier in re.findall(r"reports/(\w+)[-.]", runs):
+            written[tier] = name
+    assert set(written) == set(certify.OWNED), (
+        f"reports are written for {sorted(written)}; certify owns files for {sorted(certify.OWNED)}"
     )
+
+    steps = jobs["certify"]["steps"]
+    download = next(step for step in steps if "download-artifact" in str(step.get("uses", "")))
+    assert download["with"] == {"pattern": "report-*", "path": "reports", "merge-multiple": True}
+    assert "python3 -m tests.certify reports --closes" in " ".join(str(step.get("run", "")) for step in steps)
+
+
+def test_a_local_run_certifies_what_its_tiers_reported() -> None:
+    """`verify.sh` reads its reports the way the merge group does, or its green is a floor."""
+    verify = VERIFY.read_text(encoding="utf-8")
+    assert "-m tests.certify reports --partial" in verify, "verify.sh never reads what its tiers reported"
+    written = set(re.findall(r"reports/(\w+)[-.]", verify))
+    assert {"server", "client", "repository"} <= written, f"verify.sh writes reports for {sorted(written)}"
 
 
 def test_the_server_lint_script_caps_warnings_at_zero() -> None:

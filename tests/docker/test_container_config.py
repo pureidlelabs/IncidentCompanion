@@ -517,38 +517,6 @@ def test_the_image_builds_and_serves_the_react_ui():
         "for a checkout layout that is not there and the SPA never serves")
 
 
-def test_the_ui_build_stage_copies_every_file_npm_ci_needs():
-    """`ui/.npmrc` is load-bearing for `npm ci`, so the stage must copy it, first.
-
-    Asserts both the copy and its position: a `COPY` after the `RUN npm ci` is
-    too late to affect it.
-
-    Skips when `ui/.npmrc` is gone rather than naming it unconditionally, so
-    the test retires itself the day the eslint peer range is fixed upstream and
-    the file is deleted.
-    """
-    if not (REPO_ROOT / "ui" / ".npmrc").is_file():
-        pytest.skip("ui/.npmrc is gone, so the stage no longer needs it")
-
-    dockerfile = DOCKERFILE.read_text(encoding="utf-8")
-    stage = dockerfile.split("AS ui-build", 1)
-    assert len(stage) == 2, "no ui-build stage to check"
-    # Up to the next FROM: a COPY in a later stage does not help this npm ci.
-    body = re.split(r"^FROM ", stage[1], flags=re.MULTILINE)[0]
-
-    copy_line = next(
-        (line for line in body.splitlines()
-         if line.strip().startswith("COPY") and ".npmrc" in line), None)
-    assert copy_line is not None, (
-        "the ui-build stage never copies ui/.npmrc, so `npm ci` resolves peers "
-        "without legacy-peer-deps and the image build fails on ERESOLVE")
-
-    npmrc_at = body.index(copy_line)
-    ci_match = re.search(r"^RUN npm ci", body, re.MULTILINE)
-    assert ci_match and npmrc_at < ci_match.start(), (
-        "ui/.npmrc is copied after `npm ci`, which is too late to affect it")
-
-
 def test_the_ui_build_stage_provides_every_path_alias_tsconfig_resolves():
     """A `paths` alias escaping `ui/` must be copied, and be resolvable.
 

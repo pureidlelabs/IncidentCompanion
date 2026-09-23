@@ -9,9 +9,7 @@ Nothing shares code across the language boundary, so the agreement is the
 thing that can drift.
 """
 
-import os
 import re
-import subprocess
 
 import pytest
 
@@ -91,10 +89,11 @@ def test_the_hooks_tier_cannot_be_skipped_for_want_of_an_interpreter():
 def test_verify_sh_turns_the_mode_on_where_it_certifies():
     """`verify.sh` is the run that certifies, so it is where the mode belongs.
 
-    Four tiers arm it separately, and the argument is in the script: the
-    server suite sets it only on the branch that found a stack, because the
-    branch below it runs deliberately degraded; the two browser tiers set it
-    because their per-spec skips are otherwise invisible in an exit code.
+    The tiers that read it arm it separately, and the argument is in the
+    script: the server suite sets it only on the branch that found a stack,
+    because the branch below it runs deliberately degraded; the two browser
+    tiers set it because their per-spec skips are otherwise invisible in an
+    exit code.
     """
     verify = (REPO_ROOT / "verify.sh").read_text(encoding="utf-8")
     joined = verify.replace("\\\n", " ")
@@ -102,7 +101,6 @@ def test_verify_sh_turns_the_mode_on_where_it_certifies():
     tiers = [
         "browser tier (the app)",
         "browser tier (the kit)",
-        "client: suite",
         "repository: suite (with the container files)",
         "server: suite",
     ]
@@ -112,79 +110,6 @@ def test_verify_sh_turns_the_mode_on_where_it_certifies():
     assert "export IC_SUITE_MUST_RUN" not in verify, (
         "set globally, this turns verify.sh's deliberate in-process fallback into a failure"
     )
-
-
-def test_the_client_tier_refuses_a_certifying_run_that_ran_nothing():
-    """The client tier's own silence, attacked where a pool timeout leaves it.
-
-    `--passWithNoTests` is what makes this an attack rather than a formality: a
-    plain empty client run already exits 1, so without the flag this is green
-    before the arm as well as after. What it cannot reach is the timeout
-    itself, whose pool deadlines are not configurable. -> #797
-    """
-    if not (REPO_ROOT / "node_modules" / "vitest").exists():
-        declined("The client must-run arm", "no node_modules -- run npm ci at the root")
-
-    done = subprocess.run(  # noqa: S603
-        [
-            "npx",
-            "vitest",
-            "run",
-            "--project=unit",
-            "--passWithNoTests",
-            "src/__matches_no_test_file__",
-        ],
-        cwd=REPO_ROOT / "ui",
-        env={**os.environ, "IC_SUITE_MUST_RUN": "1"},
-        capture_output=True,
-        text=True,
-        timeout=600,
-        check=False,
-    )
-    output = done.stdout + done.stderr
-
-    assert done.returncode != 0, (
-        f"the client tier reported green having run no test files:\n{output}"
-    )
-    assert "IC_SUITE_MUST_RUN" in output, (
-        f"the run failed for a reason other than the arm:\n{output}"
-    )
-
-
-def armed_client_run(*args: str) -> str:
-    """The client tier's unit project on its real config, armed, refused or it fails."""
-    if not (REPO_ROOT / "node_modules" / "vitest").exists():
-        declined("The client must-run arm", "no node_modules -- run npm ci at the root")
-    done = subprocess.run(  # noqa: S603
-        ["npx", "vitest", "run", "--project=unit", *args],
-        cwd=REPO_ROOT / "ui",
-        env={**os.environ, "IC_SUITE_MUST_RUN": "1"},
-        capture_output=True, text=True, timeout=600, check=False,
-    )
-    output = done.stdout + done.stderr
-    assert done.returncode != 0, f"a certifying client run passed:\n{output}"
-    return output
-
-
-def test_a_certifying_run_refuses_a_file_that_ran_no_test():
-    """A module whose every test skipped is not a module that ran.
-
-    `-t` matching nothing skips every test in the shard's files, the state a
-    wholesale `skipIf` leaves. A shard of 1/300 owes about one file, which is
-    what a count of finished modules could not tell from one that ran.
-    """
-    output = armed_client_run("--shard=1/300", "-t", "^a name no test carries$")
-    assert re.search(r"ran no test:\s+src/\S+\.test\.tsx?", output), output
-
-
-def test_a_certifying_run_refuses_a_file_every_shard_left_out():
-    """A file no shard was handed is missing from the tier, and no shard's count can see it.
-
-    Excluding `src/lib` stands for an `include` narrowed by the config. The
-    shard still finishes what it was given, which is all a floor could read.
-    """
-    output = armed_client_run("--shard=1/300", "--exclude", "src/lib/**")
-    assert re.search(r"never planned:\s+src/lib/\S+\.test\.tsx?", output), output
 
 
 #: A module that loses its whole tier to its environment, and the phrase naming the gap. -> #1080

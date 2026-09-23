@@ -477,8 +477,11 @@ def bind_mount_root(built_image, tmp_path):
 
 
 @pytest.fixture
-def running_container(built_image):
+def running_container(built_image, record_property):
     """The whole stack, brought up the way an analyst brings it up.
+
+    Records `entry=compose` on the case, which is what `tests/certify.py` reads
+    as one that reached the install through its entry point.
 
     **One `up`, and the fixture may not sequence anything itself.** A fixture
     that starts the services in order, polls for a connection and applies the
@@ -498,6 +501,7 @@ def running_container(built_image):
         assert up.returncode == 0, (
             f"the stack did not come up from a single `up`, which is the whole "
             f"procedure an analyst follows:\n{up.stderr[-3000:]}")
+        record_property("entry", "compose")
         yield env
     finally:
         _compose("down", "-v", env=env)
