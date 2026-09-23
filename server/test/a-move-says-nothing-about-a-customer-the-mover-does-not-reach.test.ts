@@ -16,8 +16,6 @@
  * create is: the answer is about a case they can open. A case with no
  * reference still moves anywhere, which is the ordinary triage.
  */
-import { sql } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { openTestPool } from './database.js'

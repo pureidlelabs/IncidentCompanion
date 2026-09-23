@@ -144,6 +144,21 @@ const ROLLBACK = new Error('rolled back on purpose')
 const rowsOf = (tx: Tx | NonNullable<typeof seed>, subject: Subject, caseId: string) =>
   tx.select().from(subject.table).where(eq(subject.caseColumn, caseId))
 
+/** The rows of `caseId` an update touches: the case column set to what it holds. */
+const updated = (tx: Tx, subject: Subject, caseId: string) => {
+  const [key] = Object.entries(getTableColumns(subject.table)).find(
+    ([, column]) => column === subject.caseColumn,
+  )!
+  return tx
+    .update(subject.table)
+    .set({ [key]: caseId })
+    .where(eq(subject.caseColumn, caseId))
+    .returning()
+}
+
+const deleted = (tx: Tx, subject: Subject, caseId: string) =>
+  tx.delete(subject.table).where(eq(subject.caseColumn, caseId)).returning()
+
 describe.skipIf(!app || !hasConcurrentConnections())(
   'the store refuses a case its caller does not reach',
   () => {
@@ -151,13 +166,17 @@ describe.skipIf(!app || !hasConcurrentConnections())(
     const stamp = `${String(process.pid)}-${String(Date.now())}`
     const insider = `store-insider-${stamp}`
     const outsider = `store-outsider-${stamp}`
+    /** Holds read over the customer, which sees its rows and changes none. */
+    const reader = `store-reader-${stamp}`
+    /** Holds delete over the customer, which is what removing a case asks. */
+    const remover = `store-remover-${stamp}`
     const theirs = randomUUID()
     const everyones = randomUUID()
     let customer = ''
     let group = ''
 
     beforeAll(async () => {
-      const users = [insider, outsider].map((id) => ({
+      const users = [insider, outsider, reader, remover].map((id) => ({
         id,
         name: id,
         email: `${id}@example.invalid`,
@@ -178,9 +197,11 @@ describe.skipIf(!app || !hasConcurrentConnections())(
         .returning({ id: schema.groups.id })
       group = held!.id
       await seed!.insert(schema.groupCustomers).values({ groupId: group, customerId: customer })
-      await seed!
-        .insert(schema.groupMembers)
-        .values({ groupId: group, userId: insider, level: 'write' })
+      await seed!.insert(schema.groupMembers).values([
+        { groupId: group, userId: insider, level: 'write' },
+        { groupId: group, userId: reader, level: 'read' },
+        { groupId: group, userId: remover, level: 'delete' },
+      ])
 
       const [fallback] = await seed!
         .select({ id: schema.customers.id })
@@ -208,7 +229,9 @@ describe.skipIf(!app || !hasConcurrentConnections())(
       await seed!.delete(schema.cases).where(inArray(schema.cases.id, [theirs, everyones]))
       await seed!.delete(schema.groups).where(eq(schema.groups.id, group))
       await seed!.delete(schema.customers).where(eq(schema.customers.id, customer))
-      await seed!.delete(schema.user).where(inArray(schema.user.id, [insider, outsider]))
+      await seed!
+        .delete(schema.user)
+        .where(inArray(schema.user.id, [insider, outsider, reader, remover]))
       await appPool!.end()
       await seedPool!.end()
     })
@@ -321,5 +344,48 @@ describe.skipIf(!app || !hasConcurrentConnections())(
         }
       },
     )
+
+    it.each(tables.map((one) => one.name))(
+      '%s changes and removes nothing for a caller who only reads the case',
+      async (name) => {
+        const subject = tables.find((one) => one.name === name)!
+        const changed = await asking(reader, theirs, async (tx) => [
+          ...(await updated(tx, subject, theirs)),
+          ...(await deleted(tx, subject, theirs)),
+        ])
+        expect(changed, `${name} let a reader change or remove a row`).toHaveLength(0)
+      },
+    )
+
+    /** The control: the same update, by a caller who writes the case, touches its rows. */
+    it.each(tables.map((one) => one.name).filter((name) => name !== 'case_visits'))(
+      '%s is changed by a caller who writes the case',
+      async (name) => {
+        const subject = tables.find((one) => one.name === name)!
+        expect(await asking(insider, theirs, (tx) => updated(tx, subject, theirs))).not.toHaveLength(
+          0,
+        )
+      },
+    )
+
+    it('removes a case only for a caller who holds delete over it', async () => {
+      const subject = tables.find((one) => one.name === 'cases')!
+      expect(
+        await asking(insider, theirs, (tx) => deleted(tx, subject, theirs)),
+        'a caller who only writes the case removed it',
+      ).toHaveLength(0)
+      expect(await asking(remover, theirs, (tx) => deleted(tx, subject, theirs))).toHaveLength(1)
+    })
+
+    it("keeps one analyst's visits from another who reaches the case", async () => {
+      const subject = tables.find((one) => one.name === 'case_visits')!
+      const seen = await asking(insider, theirs, async (tx) => [
+        ...(await rowsOf(tx, subject, theirs)),
+        ...(await updated(tx, subject, theirs)),
+        ...(await deleted(tx, subject, theirs)),
+      ])
+      expect(seen, "a reaching analyst read or changed another analyst's visit").toHaveLength(0)
+      expect(await rowsOf(seed!, subject, theirs), 'no visit to hide').not.toHaveLength(0)
+    })
   },
 )
