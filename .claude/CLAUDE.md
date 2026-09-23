@@ -36,7 +36,7 @@ python3 .claude/scripts/test_scope.py    # what this change actually needs run
 **The OpenSpec CLI is a pinned dev dependency, and its own skills name it wrong.** They declare `Bash(openspec:*)`, and `openspec` is not on `PATH`. The package is `@fission-ai/openspec` and the binary it installs is `openspec`, so `npx` finds the local one from anywhere in the tree. **`--no-install` on every call**, because `openspec` unscoped is somebody else's package on npm: without the flag a miss fetches theirs, and with it a miss is a refusal.
 
 ```bash
-npx --no-install openspec validate --strict
+npx --no-install openspec validate --all --strict
 ```
 
 **Renovate owns the version, and the gate runs offline.** A prescribed command that fetches the CLI puts the check at the mercy of the registry and lets a release move the gate with no commit behind it; `tests/repo/test_pipeline_wiring.py` holds every command in `rules/git-workflow.md` to the local binary.
