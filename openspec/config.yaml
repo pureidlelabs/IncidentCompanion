@@ -39,6 +39,9 @@ context: |
   Quality gate: a requirement is met when its scenarios are demonstrated. Scenarios
   are the coverage measure, never lines. A scenario nothing can demonstrate is recorded
   as undemonstrable rather than counted. The existing test suite is not this gate.
+  A scenario is demonstrated only by evidence that fails when it is false, reaches the
+  product the way its actor does, and passes unskipped in the run that decides a landing.
+  A green verdict means every check able to see the change ran; a skip is no verdict.
 
   Prose: British spelling, no emoji, third-person declarative, RFC 2119 keywords in
   upper case. No user-story or sprint vocabulary.
