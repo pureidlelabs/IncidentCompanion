@@ -127,7 +127,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('what one case can see of an
     // as the case not being there, so what is thrown would read the same for
     // an insert refused for the wrong reason.
     const causes: string[] = []
-    for (let at: unknown = refused; at; at = (at as { cause?: unknown }).cause) causes.push(String(at))
+    for (let at = refused as Error | undefined; at; at = at.cause as Error | undefined) causes.push(String(at))
     expect(causes[0]).toContain('NotFoundException')
     expect(causes.join('\n')).toContain('row-level security')
   })
