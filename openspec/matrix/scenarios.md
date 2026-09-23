@@ -301,6 +301,24 @@
 | A row says which door it came through, and the install decides that | A file claims an origin of its own | demonstrated | server/src/exports/import.service.test.ts |
 | A row says which door it came through, and the install decides that | A collection that records no origin | demonstrated | server/src/exports/import.service.test.ts |
 
+## dependencies
+
+| Requirement | Scenario | Status | Evidence or reason |
+| --- | --- | --- | --- |
+| What is available is answerable without reading the tree | A newer version exists and nothing has adopted it | undemonstrated | |
+| What is available is answerable without reading the tree | Nothing is outstanding | undemonstrated | |
+| A published vulnerability is answered without waiting | A vulnerability is published against an adopted version | undemonstrated | |
+| A published vulnerability is answered without waiting | The vulnerable dependency is not a direct one | undemonstrated | |
+| A version is observed before it is adopted unattended | A version is newer than the minimum period | undemonstrated | |
+| A version is observed before it is adopted unattended | A person adopts it deliberately | undemonstrated | |
+| A dependency held below the latest version carries its reason | A dependency is held back | undemonstrated | |
+| A dependency held below the latest version carries its reason | The constraint that justified a hold is lifted | unbuilt | Not built: no hold is recorded in a form a check reads, so a hold outlives its reason silently. Kept normative. |
+| A dependency held below the latest version carries its reason | Two dependencies are held by the same constraint | unbuilt | Not built: no record relates two holds to the constraint they share. Kept normative. |
+| A change to dependencies is demonstrated before it lands | Every tier runs and passes | undemonstrated | |
+| A change to dependencies is demonstrated before it lands | A tier could not run | unbuilt | Not built: `gate` counts a skipped tier as a pass. -> #1163 |
+| Two builds of one revision resolve the same versions | The same revision is built twice | undemonstrated | |
+| Two builds of one revision resolve the same versions | A component is identified by a moving name | undemonstrated | |
+
 ## deployment
 
 | Requirement | Scenario | Status | Evidence or reason |
@@ -438,6 +456,14 @@
 | The interface has one vocabulary, and it is not invented per screen | An analyst has asked for less motion | undemonstrated | |
 | What two screens both need is derived once | Two screens show the same derived answer | demonstrated | ui/src/lib/shared-derivations.rule.test.ts |
 | What two screens both need is derived once | A derivation needs to know its caller | demonstrated | ui/src/lib/lib-is-shared-and-therefore-pure.rule.test.ts |
+| A part's own documentation states what its caller owns | A part needs something the caller must supply | undemonstrated | |
+| A part's own documentation states what its caller owns | A part is documented beside itself rather than within itself | undemonstrated | |
+| A part's own documentation states what its caller owns | A part's documented behaviour is not its actual behaviour | undemonstrated | |
+| A composition is exercised as a composition | A composition refuses an action | undemonstrated | |
+| A composition is exercised as a composition | A composition is mid-write | undemonstrated | |
+| A screen is exercised at the extremes of what it may hold | A screen is given almost nothing | undemonstrated | |
+| A screen is exercised at the extremes of what it may hold | A screen is given far more than expected | undemonstrated | |
+| A screen is exercised at the extremes of what it may hold | A screen supplies its own content | undemonstrated | |
 
 ## library
 

@@ -1,6 +1,6 @@
 # OWASP ASVS 5.0 Level 2
 
-Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather than recalled. Chapters covered are the ones the written specifications bear on: V1 Encoding and Sanitization, V2 Validation and Business Logic, V3 Web Frontend Security, V4 API and Web Service, V5 File Handling, V6 Authentication, V7 Session Management, V8 Authorization, V10 OAuth and OIDC, V12 Secure Communication, V13 Configuration, V14 Data Protection, V16 Security Logging. The rest are untouched because no specification yet reaches them.
+Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather than recalled. Chapters covered are the ones the written specifications bear on: V1 Encoding and Sanitization, V2 Validation and Business Logic, V3 Web Frontend Security, V4 API and Web Service, V5 File Handling, V6 Authentication, V7 Session Management, V8 Authorization, V10 OAuth and OIDC, V12 Secure Communication, V13 Configuration, V14 Data Protection, V15 Secure Coding and Architecture, V16 Security Logging. The rest are untouched because no specification yet reaches them.
 
 **A row cites a requirement exactly**, as `capability :: Requirement title`, so that renaming a requirement breaks the row rather than quietly orphaning it. `tests/docs/test_openspec_consistency.py` holds that true.
 
@@ -76,6 +76,7 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | preferences :: What an install decides is a closed set, and changing one is an administrative act |
 | V1.2.3 | The application only allows what it is meant to, with everything else refused by default | evaluation :: What it cannot honestly do, it refuses |
 | V14.2.1 | Data classified and handled by its sensitivity, with nothing confidential where it need not be | evaluation :: The visitor's work is their own, and they can discard it |
+| V15.1.2 | An inventory of the third-party components in use | **The inventory only; that each component comes from a trusted, maintained repository is stated nowhere.** dependencies :: What is available is answerable without reading the tree |
 
 ## Gaps this mapping found
 
@@ -94,6 +95,7 @@ A control at Level 2 that no written requirement answers. Not deviations — unf
 | V12.3.3, V12.3.4 | Protected transport between internal components, on trusted certificates | deployment. Traffic between the parts of an install crosses a boundary the operator owns and nothing else shares, and the specification does not say whether that is enough |
 | V6.1.1, V6.1.3, V7.1.1, V7.1.2, V8.1.1 | The documentation these controls require | these specifications are that documentation, and this matrix is how it is found |
 | V10.4.1, V10.4.3, V10.4.6, V10.4.8, V10.4.10 | Redirect allowlist, short-lived codes, proof key for code exchange, refresh expiry, client authentication | accounts-and-access, where federation is written as behaviour and not yet as protocol |
+| V15.1.1, V15.2.1 | Documented remediation time frames for vulnerable components and for updating in general, and no component kept past them | dependencies, which offers a corrected version at once and does not say by when it must be adopted |
 
 ## Deviations
 
