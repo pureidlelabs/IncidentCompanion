@@ -25,7 +25,7 @@ import {
  * is the maintainer's: the deletion record names the case's identity
  * (`openspec/specs/cases/spec.md`), the audit carries no case content
  * (`openspec/specs/install-audit/spec.md`), and a list that names cases names
- * only the ones its caller reaches.
+ * only the ones its caller reaches. -> #1190
  */
 const UNDECIDED = new Set(['/api/install/activity'])
 
