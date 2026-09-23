@@ -1,5 +1,6 @@
 /**
- * A list names only the cases its caller reaches, whichever list it is.
+ * A list names only the cases its caller reaches, whichever list it is but
+ * the one `UNDECIDED` holds out.
  *
  * The lists are the document's: every GET it publishes that takes no path
  * parameter, asked over HTTP by an account that does not reach one case. That
@@ -19,9 +20,12 @@ import {
 } from './app-harness.js'
 
 /**
- * The install audit names a case by the title it was created under, and it is
- * read by administrators who reach no case data. Whether that title is case
- * content a line must not carry is undecided; it is reported, not asserted.
+ * The install audit, which names a case by its title to an administrator who
+ * reaches no case. Three requirements disagree about that line and the choice
+ * is the maintainer's: the deletion record names the case's identity
+ * (`openspec/specs/cases/spec.md`), the audit carries no case content
+ * (`openspec/specs/install-audit/spec.md`), and a list that names cases names
+ * only the ones its caller reaches.
  */
 const UNDECIDED = new Set(['/api/install/activity'])
 
