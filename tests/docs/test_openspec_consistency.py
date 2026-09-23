@@ -10,6 +10,7 @@ carry, an exception written in one place and contradicted in four others.
 from __future__ import annotations
 
 import csv
+import os
 import re
 from pathlib import Path
 
@@ -228,6 +229,26 @@ def test_the_matrix_scope_line_names_the_chapters_it_actually_cites() -> None:
     assert claimed == cited, (
         f"the matrix cites {sorted(cited, key=lambda v: int(v[1:]))} and its scope line "
         f"names {sorted(claimed, key=lambda v: int(v[1:]))}"
+    )
+
+
+#: The tree is `main`, or is about to become it. Anywhere else a change in flight
+#: is the branch's own work.
+LANDING = (
+    os.environ.get("GITHUB_EVENT_NAME") == "merge_group"
+    or os.environ.get("GITHUB_REF") == "refs/heads/main"
+    or os.environ.get("IC_LANDING") == "1"
+)
+
+
+@pytest.mark.skipif(not LANDING, reason="a branch carries its own change in flight until it lands")
+def test_the_tree_being_landed_carries_nothing_in_flight() -> None:
+    """A change still in `changes/` is one `main` would carry. -> `rules/git-workflow.md` 7a"""
+    in_flight = sorted(p.name for p in (OPENSPEC / "changes").iterdir()
+                       if p.is_dir() and p.name != "archive")
+    assert not in_flight, (
+        "these changes would land unarchived; sync each into specs/ and move it to "
+        f"changes/archive/ in this branch: {in_flight}"
     )
 
 
