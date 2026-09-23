@@ -61,9 +61,8 @@ process.env['SEED_DATABASE_URL'] ??= stack.seedDatabaseUrl
 process.env['REDIS_URL'] ??= stack.redisUrl
 /**
  * **An evidence directory beside the suite's own database**, not the dev
- * app's. An install removes at start whatever its database does not name, so
- * a booted harness sharing the dev directory would remove the dev app's
- * artefacts, and the dev app the suite's.
+ * app's. Global setup empties it whenever it makes that database fresh, so a
+ * suite sharing the dev directory would remove the dev app's artefacts.
  */
 process.env['EVIDENCE_DIR'] ??= fileURLToPath(new URL('.evidence-suite', import.meta.url))
 

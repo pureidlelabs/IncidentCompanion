@@ -18,6 +18,7 @@
  * real table and the real delete rather than a service built by hand.
  */
 import { randomBytes } from 'node:crypto'
+import { Readable } from 'node:stream'
 
 import { ConfigService } from '@nestjs/config'
 import { and, eq } from 'drizzle-orm'
@@ -27,6 +28,8 @@ import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { boot, bootable, grantsItselfDelete, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 import { openTestPool } from './database.js'
 import { holders } from './evidence-on-disk.js'
+import { DemoSeederService } from '../src/demos/seeder.service.js'
+import { EvidenceStore } from '../src/evidence/store.js'
 import { cases, evidence, installActivity } from '../src/db/schema/index.js'
 
 const RUNNABLE = await bootable()
@@ -61,6 +64,8 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
     if (seedPool !== pool) await seedPool?.end()
   })
 
+  const evidenceRoot = () => harness.app.get(ConfigService).get<string>('EVIDENCE_DIR')!
+
   async function openCase(title: string): Promise<string> {
     const made = await fetch(`${harness.base}/api/cases`, {
       method: 'POST',
@@ -89,7 +94,7 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
       body: new Uint8Array(artefact),
     })
     expect(attached.ok, 'the evidence was not attached, so its absence below proves nothing').toBe(true)
-    const root = harness.app.get(ConfigService).get<string>('EVIDENCE_DIR')!
+    const root = evidenceRoot()
 
     const removed = await fetch(`${harness.base}/api/cases/${id}`, {
       method: 'DELETE',
@@ -218,6 +223,37 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
     ).toEqual([])
   }, 90_000)
 
+  /** A demonstration case holding an artefact, which neither removal may leave. */
+  async function demonstration(): Promise<{ id: string; artefact: Buffer }> {
+    const title = `Demonstration ${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
+    const [going] = await seed!
+      .insert(cases)
+      .values({ title, isDemo: true })
+      .returning({ id: cases.id, isDemo: cases.isDemo })
+    expect(going!.isDemo, 'the fixture is not marked as demonstration content').toBe(true)
+
+    const artefact = randomBytes(32)
+    await harness.app.get(EvidenceStore).put(going!.id, Readable.from([artefact]))
+    expect(await holders(evidenceRoot(), artefact), 'nothing was stored, so its absence below proves nothing').toHaveLength(1)
+    return { id: going!.id, artefact }
+  }
+
+  async function leftNothing(id: string, artefact: Buffer): Promise<void> {
+    expect(await holders(evidenceRoot(), artefact), 'a removed demonstration left its artefact').toEqual([])
+
+    const found = await db!
+      .select()
+      .from(installActivity)
+      .where(eq(installActivity.event, 'case_deleted'))
+
+    const ours = found.filter((one) => (one.detail as { caseId?: string })?.caseId === id)
+    expect(
+      ours,
+      'a demonstration case left a deletion record, so an install that has only ever run ' +
+        'the demo accumulates an audit of investigations that never happened',
+    ).toHaveLength(0)
+  }
+
   /**
    * **The exception, and it is the same property read the other way.**
    * Demonstration content records no investigation, so its removal leaves
@@ -230,30 +266,23 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
    *
    */
   it('leaves nothing behind a demonstration case', async () => {
-    const title = `Demonstration ${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
-    const [going] = await seed!
-      .insert(cases)
-      .values({ title, isDemo: true })
-      .returning({ id: cases.id, isDemo: cases.isDemo })
+    const { id, artefact } = await demonstration()
 
-    expect(going!.isDemo, 'the fixture is not marked as demonstration content').toBe(true)
-
-    const removed = await fetch(`${harness.base}/api/cases/${going!.id}`, {
+    const removed = await fetch(`${harness.base}/api/cases/${id}`, {
       method: 'DELETE',
       headers: { cookie: admin.cookie },
     })
     expect(removed.ok, 'the demonstration case was not deleted, so this proves nothing').toBe(true)
 
-    const found = await db!
-      .select()
-      .from(installActivity)
-      .where(eq(installActivity.event, 'case_deleted'))
+    await leftNothing(id, artefact)
+  }, 90_000)
 
-    const ours = found.filter((one) => (one.detail as { caseId?: string })?.caseId === going!.id)
-    expect(
-      ours,
-      'a demonstration case left a deletion record, so an install that has only ever run ' +
-        'the demo accumulates an audit of investigations that never happened',
-    ).toHaveLength(0)
+  it('leaves nothing behind a demonstration case the demos are rebuilt over', async () => {
+    const { id, artefact } = await demonstration()
+
+    await harness.app.get(DemoSeederService, { strict: false }).reseed()
+    expect(await db!.select().from(cases).where(eq(cases.id, id)), 'the rebuild kept the case, so this proves nothing').toHaveLength(0)
+
+    await leftNothing(id, artefact)
   }, 90_000)
 })

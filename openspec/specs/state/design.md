@@ -8,7 +8,9 @@
 
 **Evidence is deduplicated within a case and never across one.** The same bytes attached in two cases are two stored artefacts.
 
-**The database is the authority on what an install holds.** An evidence directory is kept with the database it was written beside; bytes that database does not name are removed at start, whichever copy is newer.
+**Inside a case the database holds, the database is the authority on what the case holds.** An evidence directory is kept with the database it was written beside; bytes that database's evidence records and sent reports do not name are removed at start, whichever copy is newer.
+
+**A case the database does not hold is not a deleted case.** Its artefacts leave the install on the install's record of its deletion, or with the rebuild that removes a demonstration. Bytes of a case no database holds and no record says was deleted stay until an operator removes them.
 
 **A deleted or replaced evidence row's bytes go at the next start**, not at the moment of deletion.
 
@@ -56,7 +58,7 @@ The wrapping is applied on the way in and is what the store holds. Nothing in th
 
 ## An artefact belongs to the case that stored it
 
-**A case is the key, and the digest is only a name within it.** Every way into the store takes the case the bytes belong to, and the case decides where they live, so no path names bytes by digest alone. Only the store opens the evidence directory, so a consumer added later has no question to ask it without a case. A case id is checked before a path is built from it, as a digest is.
+**A case is the key, and the digest is only a name within it.** Every way into the store takes the case the bytes belong to, and the case decides where they live, so no path names bytes by digest alone. Only the store opens the evidence directory, and it answers no question without a case; which case a caller may name is decided by the caller's reach before the store is asked. A case id is checked before a path is built from it, as a digest is.
 
 **Deduplication inside a case is what content addressing is for there**: two rows naming one attachment hold one file. Across cases it would make one case's upload, deletion and filename observable from another.
 
@@ -66,9 +68,9 @@ The wrapping is applied on the way in and is what the store holds. Nothing in th
 
 **An import creates its case before its artefacts land**, so they are stored under the case they belong to and a refused import removes that case's artefacts whole.
 
-**Deletion removes a case's artefacts after the case is gone.** A failure there does not undo the deletion; the start removes what is left.
+**Deletion removes a case's artefacts after the case is gone.** A failure there does not undo the deletion; the start removes what is left, because the record of the deletion outlives the case. A demonstration's removal leaves no record, so the rebuild that removes demonstrations removes their artefacts once it commits, from the directory the server writes.
 
-**At start, before the install serves, what nothing names is removed.** Each case is asked what its evidence records say it holds and what its sent reports froze, naming the case in every question; every other file in that case goes, and so does every case the database no longer holds, which covers a case removed by a path that never asks the store and a stop between a deletion and its removal. A file written within the last hour is left, because an upload's bytes land before the row naming them commits and an import's before its whole case does.
+**At start, before the install serves, what nothing names is removed.** The cases are asked once, for the removal and the count together: what each case's evidence records say it holds and which figures its sent reports place, read by the definition render draws from, naming the case in every question. Every other file in that case goes. A case the database does not list goes only when the install's record of deletions names it, and a database that does not list a case is read as knowing nothing about it. What an earlier layout left outside any case directory goes too, since nothing reads it. A file written within the last hour is left, because an upload's bytes land before the row naming them commits and an import's before its whole case does; storing bytes a case already holds counts as writing them.
 
 ## Recovery is exercised, not assumed
 

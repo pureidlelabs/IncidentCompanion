@@ -27,7 +27,6 @@ import { CASE_NAME, EVIDENCE_PREFIX, pack, sha256 } from '../src/archive/format.
 import { cases } from '../src/db/schema/case.js'
 import { DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
-import { DemoSeederService } from '../src/demos/seeder.service.js'
 import { recordInstallActivity } from '../src/install-activity/record.js'
 import { openTestPool } from './database.js'
 import { age, holders } from './evidence-on-disk.js'
@@ -124,18 +123,6 @@ describe.skipIf(!(await bootable()))('what a case stored goes when nothing names
     await ok(call('POST', '/api/cases/import', archive, 'application/octet-stream'), 409)
 
     expect(await holders(root, carried), 'a refused import left its artefact behind').toEqual([])
-  })
-
-  it('takes a demonstration case\u2019s artefacts with it when the demos are rebuilt', async () => {
-    const bytes = unique('held by a demonstration case')
-    const caseId = await opened('A demonstration, rebuilt')
-    await attach(caseId, await row(caseId, 'sample'), bytes)
-    await seed.update(cases).set({ isDemo: true }).where(eq(cases.id, caseId))
-    expect(await holders(root, bytes), 'the attach stored nothing, so the rebuild below proves nothing').toHaveLength(1)
-
-    await h.app.get(DemoSeederService, { strict: false }).reseed()
-
-    expect(await holders(root, bytes), 'the demos were rebuilt and a removed demonstration\u2019s artefact is still on disk').toEqual([])
   })
 
   describe('at the next start', () => {

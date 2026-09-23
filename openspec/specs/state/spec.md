@@ -244,6 +244,8 @@ The same bytes attached in two cases MUST be held by each on its own, so that ne
 
 What a case stored MUST leave the install with the case. Bytes a case holds that none of its evidence records says it holds, and that no report it sent was sent with, MUST NOT outlive the next start.
 
+A database that does not hold a case MUST NOT be read as that case's deletion. A database rebuilt, or restored from an older copy, beside the artefacts would otherwise remove what it was restored to find: what a case stored leaves the install when the install records the case's deletion, or when demonstration content is removed.
+
 #### Scenario: A digest is named in another case
 
 - GIVEN an artefact stored in one case
@@ -278,3 +280,10 @@ What a case stored MUST leave the install with the case. Bytes a case holds that
 - WHEN the install next starts
 - THEN they are gone
 - AND every report the case sent still draws each figure it was sent with
+
+#### Scenario: The install starts beside a database that does not hold a case
+
+- GIVEN artefacts a case stored
+- AND a database, rebuilt or restored from an older copy, that does not hold the case and records no deletion of it
+- WHEN the install starts
+- THEN the case's artefacts are still there
