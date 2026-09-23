@@ -240,20 +240,27 @@ export function useCaseChanges(caseId: string): CaseLive {
      *
      * **A drop is a close, not the state reported on registering.** A socket
      * still opening reports down too, and a screen that said it was not live
-     * every time a case opened would be saying it about nothing.
+     * every time a case opened would be saying it about nothing. The read once
+     * it opens still happens, since nothing was listening before it did, but
+     * only the read after a drop decides whether the screen is current.
      */
     let wasDown = false
+    let dropped = false
     let registering = true
     const stopWatching = link.onConnected((up) => {
       if (!up) {
         wasDown = true
-        if (!registering) setState((was) => (was.behind ? was : { behind: true, failed: false }))
+        if (!registering) {
+          dropped = true
+          setState((was) => (was.behind ? was : { behind: true, failed: false }))
+        }
         return
       }
       if (!wasDown) return
       wasDown = false
       pending.add(EVERYTHING)
-      catchingUp = true
+      catchingUp = dropped
+      dropped = false
       timer ??= setTimeout(settle, COALESCE_MS)
     })
     registering = false
