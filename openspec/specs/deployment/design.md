@@ -64,7 +64,7 @@ An install reports whether it is serving, and distinguishes *started* from *serv
 
 Where a part is unwell, what is wrong is nameable without reading a log — which store, which dependency, which piece of preparation.
 
-The health answer is not subject to any limit counted in the ephemeral store, because with that store gone such a limit fails before the answer can name it. The edge still limits the route.
+The health answer is not subject to any limit counted in the ephemeral store, because with that store gone such a limit fails before the answer can name it. The edge still limits the route. It reads the ephemeral store over the connection the server serves sessions and limits from, so it does not say well while that connection is still coming back.
 
 ## An install recovers without anybody acting
 
