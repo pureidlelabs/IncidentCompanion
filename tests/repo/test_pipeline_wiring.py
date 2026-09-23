@@ -1288,6 +1288,60 @@ def test_the_cheap_tiers_run_whole_whatever_the_diff(
     )
 
 
+NIGHTLY = REPO_ROOT / ".github" / "workflows" / "nightly-build.yml"
+
+
+def run_nightly_report(tmp_path: Path, open_issue: str) -> str:
+    """The nightly's failure reporter, run against a `gh` that records every call.
+
+    The stub answers the jobs query with one failed shard and the open-issue
+    query with `open_issue`, and appends each body it is handed to the record.
+    """
+    jobs = yaml.safe_load(NIGHTLY.read_text(encoding="utf-8"))["jobs"]
+    reporters = [job for job in jobs.values() if "failure()" in str(job.get("if", ""))]
+    assert len(reporters) == 1, "no job in nightly-build.yml runs when the nightly fails"
+    caller = next(name for name, job in jobs.items() if str(job.get("uses", "")).endswith("ci.yml"))
+    assert caller in reporters[0].get("needs", []), "the reporter does not wait for the tiers"
+    assert (reporters[0].get("permissions") or {}).get("issues") == "write", (
+        "the reporter cannot write an issue")
+
+    record = tmp_path / "gh.log"
+    stub = tmp_path / "bin" / "gh"
+    stub.parent.mkdir()
+    stub.write_text(f"""#!/bin/bash
+echo "gh $*" >> "{record}"
+case "$1 $2" in
+  "api "*) echo '- `nightly / server-suite (2)`' ;;
+  "issue list") printf '%s' "{open_issue}" ;;
+  "issue create"|"issue comment")
+    while [ $# -gt 0 ]; do [ "$1" = --body-file ] && cat "$2" >> "{record}"; shift; done ;;
+esac
+""")
+    stub.chmod(0o755)
+    done = subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", str(reporters[0]["steps"][-1]["run"])],
+        cwd=tmp_path, capture_output=True, text=True, timeout=30, check=False,
+        env={"PATH": f"{stub.parent}:{os.environ['PATH']}", "GH_TOKEN": "t", "REPO": "o/r",
+             "RUN_ID": "7", "RUN_URL": "https://example.invalid/runs/7", "HEAD_SHA": "abc123"},
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    return record.read_text(encoding="utf-8")
+
+
+def test_a_failed_nightly_files_its_failure(tmp_path: Path) -> None:
+    """A scheduled run nobody watches, red in 13 of 15 nights, reached nobody. -> #89"""
+    said = run_nightly_report(tmp_path, open_issue="")
+    assert "gh issue create" in said and "--label nightly-red" in said, said
+    assert "nightly / server-suite (2)" in said and "https://example.invalid/runs/7" in said, said
+
+
+def test_a_second_red_night_adds_to_the_open_issue(tmp_path: Path) -> None:
+    """One issue per red streak, or the tracker fills with copies nobody closes."""
+    said = run_nightly_report(tmp_path, open_issue="42")
+    assert "gh issue comment 42" in said and "gh issue create" not in said, said
+    assert "nightly / server-suite (2)" in said, said
+
+
 def node_modules_cache_key() -> str:
     """The key on the composite action's step that restores the installed tree.
 
