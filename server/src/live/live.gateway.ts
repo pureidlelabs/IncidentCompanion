@@ -223,7 +223,7 @@ export class LiveGateway implements OnApplicationShutdown {
   }
 
   private async upgrade(request: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
-    attribute(request.headers, request.socket.remoteAddress)
+    await attribute(request.headers, request.socket.remoteAddress)
     const verdict = await this.check(request)
     if (verdict.refused) {
       // **Refused, not ignored.** An unanswered upgrade stays open in the

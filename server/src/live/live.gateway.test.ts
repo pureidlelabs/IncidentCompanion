@@ -198,11 +198,9 @@ async function driveUpgrade(gateway: LiveGateway, url: string, headers?: Record<
     socket,
     Buffer.alloc(0),
   )
-  // The handler is sync and the work inside it is not; a few microtask turns
-  // settle `check`, because every lookup under it is already resolved.
-  await Promise.resolve()
-  await Promise.resolve()
-  await Promise.resolve()
+  // The handler is sync and the work inside it is not; one macrotask turn
+  // settles it, because every lookup under it is already resolved.
+  await new Promise((resolve) => setImmediate(resolve))
   return { written, destroyed }
 }
 

@@ -36,8 +36,7 @@ export async function applyPlatform(
   /** Who each request is from, settled before anything reads an address. */
   await findTheEdge(config.get('IC_EDGE', { infer: true }))
   app.use((request: Request, _response: Response, next: NextFunction) => {
-    attribute(request.headers, request.socket.remoteAddress)
-    next()
+    attribute(request.headers, request.socket.remoteAddress).then(() => next(), next)
   })
 
   /**

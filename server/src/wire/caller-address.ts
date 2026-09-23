@@ -26,21 +26,22 @@ const edge: string[] = []
 export const ADDRESS_RULE = { ipAddressHeaders: [CHAIN], trustedProxies: edge }
 
 let edgeName: string | undefined
-let lookedUpAt = 0
 
-/** How long a miss waits before the edge is looked up again. */
+/** How long a peer found not to be the edge is believed not to be. */
 const LOOKUP_INTERVAL_MS = 5_000
+
+/** Each peer found not to be the edge, with when and by which lookup. */
+const checked = new Map<string, { at: number; lookup: Promise<void> }>()
 
 /**
  * Look the edge up by name and replace the addresses believed as it.
  *
  * `name` unset names no edge: every request is then attributed to its own
  * peer. A name that does not resolve leaves the set empty rather than
- * throwing, since the edge starts after the application.
+ * throwing, since the edge may start after the application.
  */
 export async function findTheEdge(name: string | undefined): Promise<void> {
   edgeName = name
-  lookedUpAt = Date.now()
   const found = name
     ? await lookup(name, { all: true }).then(
         (answers) => answers.map(({ address }) => address),
@@ -50,25 +51,37 @@ export async function findTheEdge(name: string | undefined): Promise<void> {
   edge.splice(0, edge.length, ...found)
 }
 
+/** Whether `peer` is the edge, looking the edge up first when this peer was not checked lately. */
+async function isTheEdge(peer: string): Promise<boolean> {
+  if (edge.includes(peer)) return true
+  if (!edgeName) return false
+  let check = checked.get(peer)
+  if (!check || Date.now() - check.at >= LOOKUP_INTERVAL_MS) {
+    check = { at: Date.now(), lookup: findTheEdge(edgeName) }
+    checked.set(peer, check)
+  }
+  await check.lookup
+  return edge.includes(peer)
+}
+
 /**
  * Rewrite `x-forwarded-for` so the chain ends at the TCP peer, before anything
- * reads an address. Call once per request, first.
+ * reads an address. Await it once per request, first.
  *
  * A peer that is not the edge is attributed to itself, whatever it sent. A
- * miss looks the edge up again at most once per interval, in the background,
- * so a recreated edge is found and a flood of direct callers costs nothing.
+ * peer not checked in the last few seconds waits for the edge to be looked up
+ * again first.
  */
-export function attribute(headers: IncomingHttpHeaders, socketPeer: string | undefined): void {
+export async function attribute(
+  headers: IncomingHttpHeaders,
+  socketPeer: string | undefined,
+): Promise<void> {
   const peer = socketPeer?.replace(/^::ffff:/, '')
   const handed = headers[CHAIN]
   delete headers[CHAIN]
   if (!peer) return
-  if (edge.includes(peer)) {
-    headers[CHAIN] = typeof handed === 'string' && handed !== '' ? `${handed}, ${peer}` : peer
-    return
-  }
-  headers[CHAIN] = peer
-  if (edgeName && Date.now() - lookedUpAt >= LOOKUP_INTERVAL_MS) void findTheEdge(edgeName)
+  const chain = (await isTheEdge(peer)) && typeof handed === 'string' && handed !== ''
+  headers[CHAIN] = chain ? `${handed}, ${peer}` : peer
 }
 
 /**

@@ -13,8 +13,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { attribute, callerAddress, findTheEdge } from './caller-address.js'
 
-const attributed = (headers: IncomingHttpHeaders, peer: string): string | null => {
-  attribute(headers, peer)
+const attributed = async (headers: IncomingHttpHeaders, peer: string): Promise<string | null> => {
+  await attribute(headers, peer)
   return callerAddress(headers)
 }
 
@@ -27,26 +27,33 @@ describe('behind an edge', () => {
     await findTheEdge(undefined)
   })
 
-  it('believes the address the edge forwarded', () => {
-    expect(attributed({ 'x-forwarded-for': '203.0.113.9' }, '127.0.0.1')).toBe('203.0.113.9')
+  it('believes the address the edge forwarded', async () => {
+    expect(await attributed({ 'x-forwarded-for': '203.0.113.9' }, '127.0.0.1')).toBe('203.0.113.9')
   })
 
-  it('compares an IPv4-mapped peer as the address it maps', () => {
-    expect(attributed({ 'x-forwarded-for': '203.0.113.9' }, '::ffff:127.0.0.1')).toBe('203.0.113.9')
+  it('compares an IPv4-mapped peer as the address it maps', async () => {
+    expect(await attributed({ 'x-forwarded-for': '203.0.113.9' }, '::ffff:127.0.0.1')).toBe(
+      '203.0.113.9',
+    )
   })
 
   it.each([
     ['x-forwarded-for', '203.0.113.9'],
     ['x-forwarded-for', '203.0.113.9, 127.0.0.1'],
     ['x-real-ip', '203.0.113.9'],
-  ])('attributes a caller that is not the edge to itself, whatever %s says', (name, value) => {
-    expect(attributed({ [name]: value }, '198.51.100.4')).toBe('198.51.100.4')
-  })
+  ])(
+    'attributes a caller that is not the edge to itself, whatever %s says',
+    async (name, value) => {
+      expect(await attributed({ [name]: value }, '198.51.100.4')).toBe('198.51.100.4')
+    },
+  )
 })
 
 describe('with no edge named', () => {
-  it('attributes every caller to itself', () => {
-    expect(attributed({ 'x-forwarded-for': '203.0.113.9' }, '198.51.100.4')).toBe('198.51.100.4')
+  it('attributes every caller to itself', async () => {
+    expect(await attributed({ 'x-forwarded-for': '203.0.113.9' }, '198.51.100.4')).toBe(
+      '198.51.100.4',
+    )
   })
 
   it.each(['x-real-ip', 'cf-connecting-ip', 'forwarded', 'true-client-ip'])(

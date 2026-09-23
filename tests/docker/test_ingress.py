@@ -280,3 +280,33 @@ def test_a_page_elsewhere_spends_nothing_the_analyst_asks_for(install):
     assert analyst.status("/", "-H", "sec-fetch-site: cross-site", "-H", "sec-fetch-mode: navigate",
                           "-H", "sec-fetch-dest: document") == 200, "a link from another site was refused"
 
+
+def test_an_edge_started_after_the_application_is_believed_from_its_first_request(install):
+    """An application that booted before its edge records each caller as itself at once.
+
+    The edge is waited for by a name it closes, so nothing reaches the
+    application before the analysts do. A door that finds the edge only on a
+    timer passes whenever its timer fires during the edge's own start-up;
+    `server/src/wire/an-edge-started-late-is-believed.test.ts` decides when.
+    """
+    _compose("stop", "nginx")
+    _compose("restart", "app")
+    _compose("up", "-d", "--no-deps", "--wait", "app")
+    first, second = Analyst("early"), Analyst("early")
+    _compose("start", "nginx")
+    for _ in range(100):
+        closed = first.curl("-k", "--connect-to", f"other.lan.test:{PORT}:nginx:8443",
+                            f"https://other.lan.test:{PORT}/")
+        if closed.returncode not in (6, 7):  # resolved and connected, then closed
+            break
+        time.sleep(0.1)
+    else:
+        pytest.fail(f"the edge never came up: {closed.stderr}")
+
+    guessed = [_guess(), _guess()]
+    assert [first.sign_in(guessed[0], "not-the-password-at-all"),
+            second.sign_in(guessed[1], "not-the-password-at-all")] == [401, 401]
+    recorded = [_audit(f"event = 'sign_in_failed' and detail->>'account' = '{account}'")
+                for account in guessed]
+    assert recorded == [[first.address], [second.address]], (
+        f"{first.address} and {second.address} were recorded as {recorded}")
