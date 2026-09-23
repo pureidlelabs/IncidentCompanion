@@ -14,11 +14,6 @@ proxy_set_header X-Real-IP $remote_addr;
 proxy_set_header X-Forwarded-For $remote_addr;
 proxy_set_header X-Forwarded-Proto https;
 
-# **`$http_host`, not `$host` -- the difference is the port.** `$host` drops
-# it, and `LiveGateway.sameOrigin` compares `Host` against an `Origin` that
-# carries it, so on any published port but 443 every WebSocket upgrade is
-# refused `403 cross-origin` while HTTP answers perfectly.
-#
 # Passing the client's own `Host` through is safe only because the
 # `default_server` block answers an unrecognised one with 444. Re-check this
 # line if that block is ever softened.

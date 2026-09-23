@@ -7,6 +7,7 @@
  * `security-headers.test.ts` holds the loopback install with nothing turned on.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { WebSocket } from 'ws'
 
 import { boot, bootable, type Harness } from './app-harness.js'
 import { sourcesOf } from './content-policy.js'
@@ -48,4 +49,32 @@ describe.skipIf(!runnable)('an install named ir.example.org that imports from Se
     const answer = await fetch(`${harness.base}/`)
     expect(answer.headers.get('strict-transport-security')).toBeNull()
   }, 60_000)
+
+  /**
+   * **The socket admits exactly the origins sign-in admits.** Each case sends
+   * a `Host` matching its `Origin`, as the edge forwards it, so only the set
+   * decides. No cookie: `401` is past the origin check, `403` is refused by it.
+   */
+  it.each([
+    ['https://ir.example.org:8443', 'ir.example.org:8443', 401],
+    ['http://ir.example.org:8443', 'ir.example.org:8443', 403],
+    ['https://ir.example.org', 'ir.example.org', 403],
+    ['https://localhost:8443', 'localhost:8443', 403],
+  ])('answers a socket from %s at %s with %i', async (origin, host, status) => {
+    const socket = new WebSocket(
+      `${harness.base.replace('http://', 'ws://')}/api/cases/00000000-0000-4000-8000-000000000000/live`,
+      { headers: { origin, host } },
+    )
+    const answered = await new Promise<number>((resolve) => {
+      socket.on('unexpected-response', (_request, response) => {
+        resolve(response.statusCode ?? 0)
+      })
+      socket.on('open', () => {
+        resolve(101)
+      })
+      socket.on('error', () => undefined)
+    })
+    socket.terminate()
+    expect(answered).toBe(status)
+  }, 30_000)
 })

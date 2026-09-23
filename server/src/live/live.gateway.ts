@@ -10,8 +10,9 @@
  * **No guard, pipe or middleware runs on an upgrade**, so all four checks
  * below are done by hand, and a missing one looks like nothing at all.
  *
- * - **Origin, against Host.** WebSocket handshakes are *not* subject to CORS,
- *   so without this any website an analyst visits can open a socket carrying
+ * - **Origin, against the install's own.** WebSocket handshakes are *not*
+ *   subject to CORS, so without this any website an analyst visits can open a
+ *   socket carrying
  *   their cookie and read the case - cross-site WebSocket hijacking. There is
  *   no preflight to stop it and the browser sends the cookie regardless.
  * - **A session**, from the same cookie every request carries. Otherwise the
@@ -302,22 +303,16 @@ export class LiveGateway implements OnApplicationShutdown {
   }
 
   /**
-   * **Same-origin, compared against `Host` rather than a configured list.**
-   * The app is served from whatever address it was started on - a port picked
-   * at runtime, a container publish, an analyst's own hostname - so a fixed
-   * allowlist is one more thing to keep true. A missing `Origin` is refused:
+   * **The origins sign-in admits, and no others**: the set Better Auth
+   * enforces on every credential route, so an ordinary request and a socket
+   * cannot disagree about who the install is. A missing `Origin` is refused:
    * every browser sends one on a WebSocket handshake, and this route has no
    * non-browser caller.
    */
   private sameOrigin(request: IncomingMessage): boolean {
     const origin = request.headers.origin
-    const host = request.headers.host
-    if (typeof origin !== 'string' || typeof host !== 'string') return false
-    try {
-      return new URL(origin).host === host
-    } catch {
-      return false
-    }
+    const trusted = this.auth.instance.options.trustedOrigins
+    return typeof origin === 'string' && Array.isArray(trusted) && trusted.includes(origin)
   }
 
   private async sessionFor(

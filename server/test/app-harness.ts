@@ -93,6 +93,8 @@ export async function bootable(): Promise<boolean> {
 export interface Harness {
   app: INestApplication
   base: string
+  /** Where a browser reaches the install, which its own origins derive from. */
+  origin: string
   document: OpenAPIObject
   close(): Promise<void>
 }
@@ -187,6 +189,7 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
   return {
     app,
     base,
+    origin: new URL(process.env.AUTH_BASE_URL).origin,
     document,
     close: async () => {
       // **The app closes whatever the restore does.** A harness left listening

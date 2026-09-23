@@ -100,7 +100,7 @@ describe.skipIf(!runnable)('the case socket', () => {
     ).json()) as { id: string }[]
     caseId = cases[0]!.id
 
-    origin = harness.base
+    origin = harness.origin
     wsBase = harness.base.replace('http://', 'ws://')
   }, 90_000)
 

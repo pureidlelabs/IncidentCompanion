@@ -284,21 +284,15 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
     stopping a caller forging it is nginx overwriting it. No running suite can
     see that, so it is asserted against the config text.
 
-    Four vertices, because any one alone is satisfied by the wrong file: the
-    `X-Real-IP` overwrite, `Host` forwarded with its port, a `default_server`
-    that closes on an unknown hostname, and every `location` including the
-    proxy fragment.
+    Three vertices, because any one alone is satisfied by the wrong file: the
+    `X-Real-IP` overwrite, a `default_server` that closes on an unknown
+    hostname, and every `location` including the proxy fragment.
     """
     proxy = NGINX_PROXY.read_text(encoding="utf-8")
     assert re.search(r"^\s*proxy_set_header\s+X-Real-IP\s+\$remote_addr\s*;",
                      proxy, re.MULTILINE), (
         "the edge does not overwrite X-Real-IP from the peer address, so the "
         "header auth.config.ts trusts is whatever the caller sent")
-
-    assert re.search(r"^\s*proxy_set_header\s+Host\s+\$http_host\s*;",
-                     proxy, re.MULTILINE), (
-        "the edge does not forward the original Host with its port, so a "
-        "stack published on any port but 443 refuses every WebSocket")
 
     conf = NGINX_CONF.read_text(encoding="utf-8")
 
