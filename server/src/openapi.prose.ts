@@ -12,6 +12,7 @@ import { COLLECTION_SCHEMAS } from './domain/collections.js'
 import { fields, patchSchema } from './domain/field-spec.js'
 import { reportBlockSchema, reportSchema } from './domain/entities/report.js'
 import { caseSchema } from './cases/cases.dto.js'
+import { rowVersion } from './domain/column-bounds.js'
 import { timelineWriteSchema } from './domain/entities/timeline.js'
 
 /**
@@ -663,6 +664,28 @@ export function refusals(
   return out
 }
 
+/** A row as a write names it: by id, at the version it was read at. */
+const READ_ROW = z
+  .object({
+    id: z.uuid(),
+    version: rowVersion().describe('The version the row was read at. A stale one is refused with 409.'),
+  })
+  .strict()
+
+/**
+ * `schema` with the version a write presents beside its fields, on every
+ * branch of a union. The route takes it off before the fields are validated.
+ */
+function presenting(schema: Record<string, unknown>, version: unknown): Record<string, unknown> {
+  const oneOf = schema['oneOf'] as Record<string, unknown>[] | undefined
+  if (oneOf) return { ...schema, oneOf: oneOf.map((branch) => presenting(branch, version)) }
+  return {
+    ...schema,
+    properties: { ...(schema['properties'] as Record<string, unknown>), version },
+    required: [...((schema['required'] as string[] | undefined) ?? []), 'version'],
+  }
+}
+
 /**
  * Give a collection route the shapes it accepts and returns, from
  * `PUBLISHABLE` keyed by the path's own segment. Does nothing for a path that
@@ -711,7 +734,8 @@ export function describeOperation(
 
   const patchForm = patchFormOf(PUBLISHABLE[resource]!)
   const partial = patchForm ? published(patchForm) : rows
-  const ids = { type: 'array', items: { type: 'string', format: 'uuid' } }
+  const { $schema: _, ...read } = published(READ_ROW) as { $schema?: unknown; properties: { version: unknown } }
+  const ids = { type: 'array', items: read }
 
   // The bulk bodies are envelopes, not arrays: `POST /bulk` takes
   // `{ entries: [...] }` and `PATCH /bulk` takes `{ ids, fields }` - one patch
@@ -734,11 +758,11 @@ export function describeOperation(
             type: 'object',
             required: ['ids', 'fields'],
             properties: {
-              ids: { ...ids, maxItems: 1000, description: 'The rows to change.' },
+              ids: { ...ids, maxItems: 1000, description: 'The rows to change, each at the version it was read at.' },
               fields: { ...partial, description: 'Applied to every row in `ids`.' },
             },
           }
-        : partial,
+        : presenting(partial, read.properties.version),
     )
   }
 

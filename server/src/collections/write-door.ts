@@ -40,7 +40,7 @@ export function parsed(schema: z.ZodType, body: unknown): Record<string, unknown
  *
  * **Digits before `Number`**, which on its own accepts empty, signed, spaced,
  * exponent and hexadecimal spellings and hands back an integer `rowVersion()`
- * is then satisfied by. -> `every-door-answers-a-version-alike.test.ts`
+ * is then satisfied by. -> `server/test/every-write-door-refuses-a-version-past-its-column.test.ts`
  */
 function fromQuery(value: unknown): number {
   return /^\d+$/.test(String(value)) ? Number(value) : Number.NaN
