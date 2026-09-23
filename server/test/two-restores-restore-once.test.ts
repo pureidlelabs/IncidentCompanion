@@ -2,12 +2,14 @@
  * Two analysts press "restore the missing sections" on one report at the same
  * moment, as two overlapping requests, over several rounds.
  *
- * Each required section comes back once, at a position of its own, and both
- * answers are a success: the second restores nothing.
+ * Each required section comes back once, at a position of its own, with a
+ * record naming whoever restored it, and both answers are a success: the
+ * second restores nothing.
  */
+import { Client } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { boot, bootable, sharedAdmin, sharedAnalyst, type Harness } from './app-harness.js'
+import { boot, bootable, sharedAdmin, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
 import { aCase, blocksOf, caller, type Call } from './report-writers.js'
 
 const runnable = await bootable()
@@ -17,16 +19,22 @@ describe.skipIf(!runnable)('two restores of one report at once', () => {
   let harness: Harness
   let one: Call
   let other: Call
+  let people: Persona[]
   let caseId: string
+  let owner: Client
 
   beforeAll(async () => {
     harness = await boot()
-    one = caller(harness, await sharedAdmin(harness))
-    other = caller(harness, await sharedAnalyst(harness))
+    people = [await sharedAdmin(harness), await sharedAnalyst(harness)]
+    one = caller(harness, people[0]!)
+    other = caller(harness, people[1]!)
     caseId = await aCase(one, 'Two restores at once')
+    owner = new Client({ connectionString: process.env.TEST_DATABASE_URL })
+    await owner.connect()
   }, 120_000)
 
   afterAll(async () => {
+    await owner?.end()
     await harness?.close()
   })
 
@@ -51,6 +59,12 @@ describe.skipIf(!runnable)('two restores of one report at once', () => {
       if (new Set(identities).size !== identities.length || new Set(positions).size !== positions.length) {
         doubled.push(identities.join(', '))
       }
+      const { rows: recorded } = await owner.query<{ actor_id: string }>(
+        `select actor_id from change_feed where entity = 'report_blocks' and entity_id = any($1)`,
+        [blocks.map((block) => block.id)],
+      )
+      expect(recorded).toHaveLength(blocks.length)
+      expect(recorded.every((row) => people.some((who) => who.id === row.actor_id))).toBe(true)
     }
     expect(doubled).toEqual([])
   }, 120_000)

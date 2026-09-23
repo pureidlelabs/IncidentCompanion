@@ -6,6 +6,8 @@
 
 **A bulk path is not a faster path.** Where speed and the guarantees conflict, the guarantees win.
 
+**A reorder is refused whole or written whole.** There is no partial reorder, and none that keeps the rows that did not move while refusing the rest.
+
 **Sameness is not inferred for an event.** The timeline, actions, notes, evidence, impact, reports and their parts have no identity rule at all — not by exact match, not by resemblance, not by an analyst confirming a suggestion.
 
 # Design
@@ -58,6 +60,8 @@ Where an analyst arranges rows, that arrangement is recorded and survives readin
 
 It is never inferred from when a row was created or last changed, because editing an entry would then move it.
 
+**An order is written under the version check.** A reorder names every row of the set it arranges with the version it read. The set is locked in one fixed order before anything is compared, so two reorders of it queue rather than interleave or wait on each other; the second then finds the rows the first moved at their new versions and is refused whole, naming them.
+
 ## Import and export are the same description
 
 What the application accepts is what it produces. An import states what it will do before it does it, and reports per row afterwards: taken, recognised as already present, or refused with the reason.
@@ -69,3 +73,9 @@ A record of evidence and the bytes of an artefact are two things. The record say
 That is why evidence takes a batch write like every other collection. The fields that say bytes are held — the digest, the function that produced it, and the moment they were stored — are written by the upload and are not offered at any door an analyst types into, single or batch. A caller naming one is refused rather than having it dropped, because an answer of *accepted* to that request hands back a record the caller believes says something it does not.
 
 **The boundary this sets:** no door that accepts typed fields may write the fields that say an artefact is held. Adding one is how a record comes to claim a file nobody uploaded, and an install that reconciles what it holds against what is beside it then reports that artefact missing for ever.
+
+## A derived field has one writer
+
+A collection states which of its fields are derived from the row's prose. A single or bulk write naming one is refused, naming it; creating the row may give it, as the prose's first words.
+
+Those first words become the prose the first time it is opened, and are stored then. Built again from the field on a later open they would be new words, and a screen still holding the first ones would merge the two.

@@ -115,10 +115,11 @@ describe.skipIf(!runnable)('prose typed around a send', () => {
 
       expect((await sender(`/cases/${caseId}/reports/${id}/send`, 'POST')).ok).toBe(true)
       live.send({ type: 'prose.sync', field, update: typed(new Y.Doc(), blocks[0]!.id, 'TYPED-AFTER') })
-      await live.until((frame) => frame.type === 'prose.refused' && frame.reason === 'report-sent')
+      const refusal = await live.until((frame) => frame.type === 'prose.refused' && frame.reason === 'report-sent')
 
-      const { stored } = await afterwards(id, blocks[0]!.id, live)
+      const { stored, sentAt } = await afterwards(id, blocks[0]!.id, live)
       expect(stored).not.toContain('TYPED-AFTER')
+      expect(refusal.sentAt).toBe(sentAt?.toISOString())
     } finally {
       store.publish = publish
     }

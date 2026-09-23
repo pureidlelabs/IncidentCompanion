@@ -92,6 +92,7 @@ export interface Frame {
   type?: string
   field?: string
   reason?: string
+  sentAt?: string
   update?: string
   scopes?: string[]
 }

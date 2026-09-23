@@ -8,6 +8,10 @@
 
 **Presence and claims are disposable.** Losing all of it costs a repaint. Nothing durable is inferred from either.
 
+**Prose is attributed per saved change and per writer, never per word.** Two analysts writing into one passage before a save are both named for it, and nothing says which words each wrote. That is the attribution every other write carries: who changed a record, never which characters.
+
+**Only a writer on this process is named for a save it made.** Prose arriving from another process is named by the process it was written on.
+
 # Design
 
 ## Admission is re-derived, not assumed
@@ -47,3 +51,9 @@ Where the gap cannot be filled, the analyst is told to re-read. A screen is neve
 Reach withdrawn while an analyst is connected ends the connection. A connection admitted once does not outlive its admission.
 
 That covers every way reach ends: the session ended, the group revoked, the customer moved, the account disabled at the provider, the case deleted. Reach is therefore re-checked on the connection's own terms rather than trusted from the moment it opened.
+
+## A save names whoever wrote into it
+
+Each connection's change to prose is remembered against the analyst it came from, where it changed the document; a frame that changed nothing names nobody. A save stores the words, names the latest writer on the record, and writes a record of the change per writer, all in one act. A save that fails keeps its writers for the next one.
+
+Once stored, the save is announced to the case and recorded in the install's audit, one line per writer, as the collection routes record a write.
