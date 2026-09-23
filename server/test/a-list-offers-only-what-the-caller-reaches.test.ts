@@ -8,7 +8,15 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { boot, bootable, operations, sharedAdmin, signIn, type Harness, type Persona } from './app-harness.js'
+import {
+  boot,
+  bootable,
+  operations,
+  sharedAdmin,
+  signIn,
+  type Harness,
+  type Persona,
+} from './app-harness.js'
 
 /**
  * The install audit names a case by the title it was created under, and it is
@@ -35,7 +43,11 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
       body: body === undefined ? undefined : JSON.stringify(body),
     })
     const text = await response.text()
-    return { status: response.status, text, json: () => JSON.parse(text) as Record<string, unknown> }
+    return {
+      status: response.status,
+      text,
+      json: () => JSON.parse(text) as Record<string, unknown>,
+    }
   }
 
   /** An account made the way an install makes one, holding the password it chose. */
@@ -63,11 +75,14 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
     const lists = operations(harness.document).filter(
       (one) => one.method === 'GET' && !one.template.includes('{') && !UNDECIDED.has(one.template),
     )
-    expect(lists.length, 'the document publishes no list, so this sweeps nothing').toBeGreaterThan(5)
+    expect(lists.length, 'the document publishes no list, so this sweeps nothing').toBeGreaterThan(
+      5,
+    )
     const naming: string[] = []
     for (const list of lists) {
       const { status, text } = await call(who, 'GET', list.path)
-      if (text.includes(record.id) || text.includes(record.title)) naming.push(`${list.path} (${String(status)})`)
+      if (text.includes(record.id) || text.includes(record.title))
+        naming.push(`${list.path} (${String(status)})`)
     }
     return naming
   }
@@ -97,9 +112,10 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
     const outsider = await account('admin')
 
     expect(await namedBy(outsider, unreached)).toEqual([])
-    expect(await namedBy(outsider, nobodys), 'a case attributed to nobody is everybody’s').toContain(
-      '/api/cases (200)',
-    )
+    expect(
+      await namedBy(outsider, nobodys),
+      'every account reaches a case attributed to nobody',
+    ).toContain('/api/cases (200)')
   }, 120_000)
 
   it('stops naming a case kept in a list once the group that reached it is revoked', async () => {
@@ -117,13 +133,17 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
     }
 
     expect((await call(analyst, 'GET', `/api/cases/${unreached.id}`)).status).toBe(200)
-    expect((await call(analyst, 'PUT', `/api/recent-cases/${unreached.id}`, { section: null })).status).toBeLessThan(300)
     expect(
-      (await call(analyst, 'PUT', `/api/recent-cases/${unreached.id}/pinned`, { pinned: true })).status,
+      (await call(analyst, 'PUT', `/api/recent-cases/${unreached.id}`, { section: null })).status,
     ).toBeLessThan(300)
-    expect(await namedBy(analyst, unreached), 'the case was never in a list to be withdrawn from').toContain(
-      '/api/recent-cases (200)',
-    )
+    expect(
+      (await call(analyst, 'PUT', `/api/recent-cases/${unreached.id}/pinned`, { pinned: true }))
+        .status,
+    ).toBeLessThan(300)
+    expect(
+      await namedBy(analyst, unreached),
+      'the case was never in a list to be withdrawn from',
+    ).toContain('/api/recent-cases (200)')
 
     const revoked = await call(admin, 'DELETE', `/api/groups/${groupId}/members/${analyst.id}`)
     expect(revoked.status, revoked.text).toBeLessThan(300)

@@ -668,7 +668,9 @@ export function refusals(
 const READ_ROW = z
   .object({
     id: z.uuid(),
-    version: rowVersion().describe('The version the row was read at. A stale one is refused with 409.'),
+    version: rowVersion().describe(
+      'The version the row was read at. A stale one is refused with 409.',
+    ),
   })
   .strict()
 
@@ -734,7 +736,10 @@ export function describeOperation(
 
   const patchForm = patchFormOf(PUBLISHABLE[resource]!)
   const partial = patchForm ? published(patchForm) : rows
-  const { $schema: _, ...read } = published(READ_ROW) as { $schema?: unknown; properties: { version: unknown } }
+  const { $schema: _, ...read } = published(READ_ROW) as {
+    $schema?: unknown
+    properties: { version: unknown }
+  }
   const ids = { type: 'array', items: read }
 
   // The bulk bodies are envelopes, not arrays: `POST /bulk` takes
@@ -758,7 +763,11 @@ export function describeOperation(
             type: 'object',
             required: ['ids', 'fields'],
             properties: {
-              ids: { ...ids, maxItems: 1000, description: 'The rows to change, each at the version it was read at.' },
+              ids: {
+                ...ids,
+                maxItems: 1000,
+                description: 'The rows to change, each at the version it was read at.',
+              },
               fields: { ...partial, description: 'Applied to every row in `ids`.' },
             },
           }
