@@ -26,16 +26,13 @@
  * one key lapsed would pass every case above and lose the analysts who are
  * still connected.
  *
- * **What this does not cover, and it is why the scenario stays undemonstrated:**
- * *a bounded time the install states*. What is asserted here is that a bound
- * exists and is enforced, which is not the same claim -- `MEMBER_TTL_SECONDS`
- * is module-private, served nowhere and shown nowhere, so an analyst watching a
- * colleague's avatar linger cannot tell whether thirty seconds of it is
- * expected. -> #134
+ * **The bound is the one the install states.** The member key's expiry is held
+ * to what the install's own description serves, so an analyst reading it can
+ * tell whether thirty seconds of a colleague's lingering avatar is expected.
  *
- * Nor the heartbeat that keeps a live connection's key from lapsing. Asserting
- * it means waiting out a real interval, and `presence.store.test.ts` already
- * covers what a dead session leaves behind.
+ * **What this does not cover:** the heartbeat that keeps a live connection's
+ * key from lapsing. Asserting it means waiting out a real interval, and
+ * `presence.store.test.ts` already covers what a dead session leaves behind.
  */
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -43,6 +40,7 @@ import { fileURLToPath } from 'node:url'
 import { Redis } from 'ioredis'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { AboutController } from '../health/about.controller.js'
 import { PresenceStore } from './presence.store.js'
 
 const URL_ =
@@ -123,11 +121,17 @@ describe.skipIf(!reachable)('a connection that ended without notice', () => {
       'the member key carries no expiry, so a browser that crashes leaves its name on the ' +
         'roster until somebody says goodbye for it -- which is the one thing a crash cannot do',
     ).toBeGreaterThan(0)
+    const stated = new AboutController().read().presenceBoundSeconds * 1000
     expect(
       left,
-      'the bound is longer than a minute, so a crashed analyst is shown as present for longer ' +
-        'than anybody reading the roster would expect',
-    ).toBeLessThanOrEqual(60_000)
+      'the key outlives the bound the install states, so a crashed analyst is shown as present ' +
+        'for longer than the install says anybody will be',
+    ).toBeLessThanOrEqual(stated)
+    expect(
+      left,
+      'the key lapses well inside the stated bound, so a live connection between heartbeats ' +
+        'leaves the roster while the install says it should not have',
+    ).toBeGreaterThan(stated - 5_000)
   })
 
   it('leaves the roster once its bound passes, with nobody acting', async () => {
