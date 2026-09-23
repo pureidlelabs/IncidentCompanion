@@ -1,9 +1,10 @@
 /**
  * **The importer is offered only on an install whose operator turned it on.**
  *
- * The rail's half is `CaseFrameContainer.test.tsx`. Here: the picker's door,
- * which is drawn refused rather than removed, and the section reached by its
- * address, which says the importer is off rather than drawing the wizard.
+ * The rail's half is `CaseFrameContainer.test.tsx`, and the pane leaving an
+ * unhanded door out is `start-case-pane.test.tsx`. Here: whether the picker
+ * hands the door over, and the section reached by its address, which says the
+ * importer is off rather than drawing the wizard.
  */
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'

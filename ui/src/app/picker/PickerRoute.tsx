@@ -112,7 +112,7 @@ export function PickerRoute() {
         onFromImporter={() => {
           setDoor('importer')
         }}
-        // Drawn refused where the install does not import from Sentinel.
+        // Not drawn where the install does not import from Sentinel.
         onLiveSource={
           sentinel === true
             ? () => {
