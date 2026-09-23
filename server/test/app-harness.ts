@@ -233,8 +233,8 @@ export async function signUp(
    * **In process, because `/sign-up/email` is not served.** The setup token is
    * the only way to claim an install over HTTP, and it exists only in the
    * server's console output -- so a fixture would have to scrape a log. This
-   * is the call `setup.controller.ts` makes once the token matches, and
-   * `disabledPaths` does not intercept an in-process call.
+   * is the call `setup.controller.ts` makes once the token matches, and an
+   * in-process call does not pass the router that refuses it over HTTP.
    *
    * The install rule still applies: the first account becomes the
    * administrator, and `sharedAdmin` promotes by hand when a previous run left

@@ -20,8 +20,12 @@
  * cookie, so reading it as the test of a revocation would pass on a session
  * that was never ended.
  */
+import { and, eq, gt, max } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import type { Database } from '../src/db/client.js'
+import { DATABASE } from '../src/db/db.module.js'
+import { installActivity } from '../src/db/schema/index.js'
 import { boot, bootable, sharedAnalyst, signIn, type Harness, type Persona } from './app-harness.js'
 
 let harness: Harness | null = null
@@ -112,5 +116,43 @@ describe.skipIf(!(await bootable()))('an analyst signed in from two places', () 
       await stillServed(caller.cookie),
       'ending one session ended the one that asked, which is a sign-out rather than a choice',
     ).toBe(true)
+  })
+
+  /** *Ending a session* is an administrative event, whoever ends it. */
+  it('records each session an analyst ends as ended by them', async () => {
+    const analyst = await sharedAnalyst(harness!)
+    const caller = await signIn(harness!, analyst.email)
+    const ends = await signIn(harness!, analyst.email)
+    const db = harness!.app.get<Database>(DATABASE)
+    const [{ seq: since } = { seq: 0n }] = await db.select({ seq: max(installActivity.seq) }).from(installActivity)
+    const ended = (await sessionsOf(caller.cookie)).find((one) => ends.cookie.includes(one.token))
+
+    for (const [path, body] of [
+      ['/api/auth/revoke-session', { token: ended!.token }],
+      ['/api/auth/revoke-other-sessions', {}],
+    ] as const) {
+      const answer = await fetch(`${harness!.base}${path}`, {
+        method: 'POST',
+        headers: { cookie: caller.cookie, 'content-type': 'application/json', origin: harness!.base },
+        body: JSON.stringify(body),
+      })
+      expect(answer.status, `${path} answered ${String(answer.status)}`).toBe(200)
+    }
+
+    const lines = await db
+      .select({ target: installActivity.targetLabel, detail: installActivity.detail })
+      .from(installActivity)
+      .where(
+        and(
+          eq(installActivity.event, 'account_sessions_ended'),
+          eq(installActivity.actorId, analyst.id),
+          gt(installActivity.seq, since ?? 0n),
+        ),
+      )
+    expect(lines.map((one) => (one.detail as { path?: string }).path).sort()).toEqual([
+      '/revoke-other-sessions',
+      '/revoke-session',
+    ])
+    expect(lines.every((one) => one.target === analyst.email)).toBe(true)
   })
 })

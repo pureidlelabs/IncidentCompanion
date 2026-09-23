@@ -85,8 +85,8 @@ const REFUSED_TO_AN_ANALYST: readonly string[] = [
   'POST /api/accounts',
   'POST /api/accounts/{username}/reset',
   // The only door a role changes through: Better Auth's own admin routes
-  // are in `disabledPaths`, because a guard outside the endpoint has to
-  // guess the body shape and every path that acts.
+  // are not served, because a guard outside the endpoint has to guess the
+  // body shape and every path that acts.
   'POST /api/accounts/{username}/role',
   'POST /api/accounts/{username}/sessions/end',
   'POST /api/accounts/sessions/end',

@@ -5,8 +5,8 @@
  * lowering any of the three is a security decision, not a performance tune.
  * The auth tables come from the Drizzle schema in `db/schema/`.
  */
-import { betterAuth, type BetterAuthOptions } from 'better-auth'
-import { APIError, createAuthMiddleware } from 'better-auth/api'
+import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
+import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { eq, sql } from 'drizzle-orm'
 
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
@@ -29,6 +29,7 @@ import { sameAddress } from './same-address.js'
 import { readPolicy } from '../policy/read.js'
 import { SESSION_LIFETIME_CEILING_MINUTES } from '../policy/keys.js'
 import { sessionEnded } from './session-ended.js'
+import { HELD } from './must-change-password.interceptor.js'
 
 /**
  * What a failed sign-in is recorded against.
@@ -41,9 +42,10 @@ export const SIGN_IN = 'sign-in'
 /**
  * The endpoints that write a password, and the body field each carries it in.
  *
- * Two are the library's own and reach no controller of ours; three are reached
- * in process by `setup.controller.ts` and `accounts.controller.ts`, which
- * `disabledPaths` does not intercept. -> #374
+ * None is served over HTTP; each is reached in process, by
+ * `setup.controller.ts`, `change-password.controller.ts` and
+ * `accounts.controller.ts`, where `minPasswordLength` is the boot-time number.
+ * -> #374
  *
  * **A path is what this can match, so a server-only endpoint is not here.**
  * `setPassword` is `createAuthEndpoint.serverOnly` and has no URL at all, so
@@ -55,7 +57,6 @@ const PASSWORD_WRITES: Readonly<Record<string, string>> = {
   '/sign-up/email': 'password',
   '/admin/create-user': 'password',
   '/change-password': 'newPassword',
-  '/reset-password': 'newPassword',
   '/admin/set-user-password': 'newPassword',
 }
 
@@ -245,11 +246,68 @@ const CREDENTIAL_ATTEMPTS = 5
 
 export const CREDENTIAL_RULES = {
   '/sign-in/email': { window: CREDENTIAL_WINDOW_SECONDS, max: CREDENTIAL_ATTEMPTS },
-  '/sign-up/email': { window: CREDENTIAL_WINDOW_SECONDS, max: CREDENTIAL_ATTEMPTS },
-  '/forget-password': { window: CREDENTIAL_WINDOW_SECONDS, max: CREDENTIAL_ATTEMPTS },
-  '/reset-password': { window: CREDENTIAL_WINDOW_SECONDS, max: CREDENTIAL_ATTEMPTS },
-  '/change-password': { window: CREDENTIAL_WINDOW_SECONDS, max: CREDENTIAL_ATTEMPTS },
 }
+
+/**
+ * The library's operations the install offers over HTTP, as `METHOD /path`
+ * below the mount. -> `offersOnly`
+ */
+const OFFERED: ReadonlySet<string> = new Set([
+  'POST /sign-in/email',
+  'GET /get-session',
+  'POST /sign-out',
+  'GET /list-sessions',
+  'POST /revoke-session',
+  'POST /revoke-other-sessions',
+])
+
+/**
+ * The operations a held session may still reach. `/change-password` is not
+ * offered over HTTP; it is here for `change-password.controller.ts`, which
+ * calls it in process with the held session.
+ */
+const HELD_MAY: ReadonlySet<string> = new Set([
+  '/get-session',
+  '/sign-in/email',
+  '/sign-out',
+  '/change-password',
+])
+
+/**
+ * What the install serves of the library, and to whom.
+ *
+ * `onRequest` answers every HTTP request outside `OFFERED` exactly as the
+ * router answers a path that was never defined. It runs for HTTP only, so the
+ * app's own `auth.api.X()` calls are unaffected. The `before` hook refuses a
+ * held session everything outside `HELD_MAY`, in process included, with the
+ * body `MustChangePasswordInterceptor` answers the app's own routes with.
+ */
+const offersOnly = {
+  id: 'offers-only',
+  onRequest: (request: Request, context: { baseURL: string }) => {
+    const mount = new URL(context.baseURL).pathname
+    const { pathname } = new URL(request.url)
+    const offered =
+      pathname.startsWith(`${mount}/`) &&
+      OFFERED.has(`${request.method} ${pathname.slice(mount.length)}`)
+    return Promise.resolve(
+      offered ? undefined : { response: new Response(null, { status: 404, statusText: 'Not Found' }) },
+    )
+  },
+  hooks: {
+    before: [
+      {
+        matcher: (context: { path?: string }) => !HELD_MAY.has(context.path ?? ''),
+        handler: createAuthMiddleware(async (ctx) => {
+          const session = await getSessionFromCtx(ctx)
+          if ((session?.user as { mustChangePassword?: boolean } | undefined)?.mustChangePassword) {
+            throw new APIError('FORBIDDEN', { ...HELD })
+          }
+        }),
+      },
+    ],
+  },
+} satisfies BetterAuthPlugin
 
 /**
  * The options `betterAuth` is built from.
@@ -344,51 +402,13 @@ export function authOptions(
      * it with `npm run db:push`; `auth.schema.test.ts` fails on a mismatch.
      */
     plugins: [
+      offersOnly,
       admin({
         ac,
         roles: { analyst: analystRole, admin: adminRole },
         defaultRole: DEFAULT_ROLE,
         adminRoles: [ADMIN_ROLE],
       }),
-    ],
-    /**
-     * **Routes the browser is served and nothing calls.** The admin plugin
-     * mounts fifteen; `grep -rn "auth/admin" ui/src` finds none, because every
-     * account operation goes through `/api/accounts/*`, which calls the same
-     * endpoints in process. `disabledPaths` is enforced in `onRequest`, and
-     * `auth.api.X()` invokes the endpoint directly, so closing a path leaves
-     * the app's own calls working.
-     *
-     * **A rule cannot be enforced from outside the endpoint that acts.** The
-     * last-administrator check was a `before` hook reading `userId` off the raw
-     * body: `z.coerce.string()` turns `["<id>"]` into an id *after* the hook
-     * has decided the body names nobody, and `/admin/update-user` changes a
-     * role through `data.role`, which the hook did not match. Both demoted the
-     * only administrator and answered 200.
-     * -> `accounts.controller.ts`, `POST /api/accounts/:username/role`
-     */
-    disabledPaths: [
-      // Nothing signs itself up: the setup token claims the install and an
-      // administrator provisions every account after it. Left open while
-      // unclaimed it is a second, tokenless door to the *first* administrator,
-      // which is what the token exists to prevent.
-      // `setup.controller.ts` calls `signUpEmail` in process, which
-      // `disabledPaths` does not intercept.
-      '/sign-up/email',
-      '/admin/set-role',
-      '/admin/update-user',
-      '/admin/create-user',
-      '/admin/remove-user',
-      '/admin/list-users',
-      '/admin/set-user-password',
-      '/admin/ban-user',
-      '/admin/unban-user',
-      '/admin/list-user-sessions',
-      '/admin/revoke-user-session',
-      '/admin/revoke-user-sessions',
-      '/admin/impersonate-user',
-      '/admin/stop-impersonating',
-      '/admin/has-permission',
     ],
     /**
      * **Declared here or the column is invisible to Better Auth.** The adapter
@@ -441,23 +461,21 @@ export function authOptions(
      * somebody too, and it fires once the row is already being written, which
      * would answer an error and leave the account behind.
      *
-     * **The one refusal on the in-process path.** `disabledPaths` refuses
-     * `/sign-up/email` over HTTP before any hook runs, so this fires only for
-     * `setup.controller.ts`'s in-process `signUpEmail`, which that list cannot
-     * intercept. Held by *refuses an in-process sign-up once the install has an
-     * account* in `test/closed-sign-up.test.ts`, which goes red when this
-     * refusal is removed. The file's other cases are held by the path list and
-     * survive that deletion, so naming the file alone says too little.
+     * **The one refusal on the in-process path.** `/sign-up/email` is not
+     * offered over HTTP, so this fires only for `setup.controller.ts`'s
+     * in-process `signUpEmail`. Held by *refuses an in-process sign-up once
+     * the install has an account* in `test/closed-sign-up.test.ts`, which goes
+     * red when this refusal is removed. The file's other cases are held by
+     * `offersOnly` and survive that deletion, so naming the file alone says
+     * too little.
      */
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         /**
          * **Every door that writes a password, in one place.** The install's
          * minimum is a stored number and `minPasswordLength` is fixed when
-         * these options are built, so the library's own `/change-password` and
-         * `/reset-password` -- neither of which is in `disabledPaths` -- would
-         * go on taking whatever was set at boot. A check in a controller
-         * reaches neither of them.
+         * these options are built, so an endpoint reached in process would go
+         * on taking whatever was set at boot.
          *
          * **Read now, like every other bound here.** A minimum cached at boot
          * is one an administrator cannot raise without a restart, which for a
@@ -475,10 +493,9 @@ export function authOptions(
             const stored = await readPolicy(db)
             /**
              * **The refusal says no and not how short.** This runs ahead of
-             * the endpoint's own session and token checks -- that is what
-             * makes it cover the library's routes -- so its message reaches an
-             * anonymous caller, and the minimum is otherwise readable only
-             * through an `@AdminOnly` route. `change-password.controller.ts`
+             * the endpoint's own session checks, so it does not know whom it
+             * answers, and the minimum is otherwise readable only through an
+             * `@AdminOnly` route. `change-password.controller.ts`
              * is behind a session and composes the number for the analyst it
              * belongs to.
              *
@@ -567,7 +584,7 @@ export function authOptions(
 
       }),
       /**
-       * The two audit events the session table cannot see.
+       * The audit events the session table cannot see.
        *
        * **A failed sign-in writes no row anywhere**, so without this an
        * attempt run against every account leaves the install with nothing to
@@ -575,7 +592,8 @@ export function authOptions(
        * ISO 27002 8.15 ask an application log for.
        *
        * **A sign-out deletes the session**, so the end of an access period is
-       * recoverable only from here. ISO names log-on *and* log-off.
+       * recoverable only from here. ISO names log-on *and* log-off. An analyst
+       * ending their own sessions deletes them the same way.
        *
        * The attempted address is recorded and the password never is. It is
        * recorded in `detail` rather than as the target, the target being a
@@ -589,6 +607,18 @@ export function authOptions(
           await recordInstallActivity(db, {
             event: 'signed_out',
             actor: { id: who?.id ?? null, label: who?.name ?? who?.email ?? null },
+            headers,
+          })
+          return
+        }
+        if (ctx.path === '/revoke-session' || ctx.path === '/revoke-other-sessions') {
+          if (ctx.context.returned instanceof APIError) return
+          const who = ctx.context.session?.user
+          await recordInstallActivity(db, {
+            event: 'account_sessions_ended',
+            actor: { id: who?.id ?? null, label: who?.name ?? who?.email ?? null },
+            target: who?.email ?? null,
+            detail: { path: ctx.path },
             headers,
           })
           return

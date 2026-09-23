@@ -6,11 +6,10 @@
  * function that has always been correct and had no caller: what was wrong is
  * which code paths consult it, and only a request can say that.
  *
- * **Better Auth serves two of these itself.** `/change-password` and
- * `/reset-password` are not in `disabledPaths`, so a caller reaches them
- * without passing any controller of ours -- and `minPasswordLength` in the
- * options is fixed when the options are built. A check written in a controller
- * would leave the open route taking the old number.
+ * **Better Auth defines two more and serves neither.** `/change-password` and
+ * `/reset-password` would reach no controller of ours, and `minPasswordLength`
+ * in the options is fixed when the options are built -- so the case for them
+ * is that they answer as paths that never existed.
  *
  * **A case that writes a password gets its own account.** A refusal that is
  * wrongly accepted changes the password, so a shared account leaves the next
@@ -124,33 +123,20 @@ describe.skipIf(!RUNNABLE || !db)('a raised password minimum', () => {
     }
   })
 
-  it("refuses one at Better Auth's own change-password route, which no controller guards", async () => {
+  it("serves no door of the library's own that writes a password", async () => {
     const who = await anAccount('library-door')
-    await minimumIs(RAISED)
-    try {
-      const answered = await fetch(`${harness.base}/api/auth/change-password`, {
+    for (const [path, body] of [
+      ['/api/auth/change-password', { currentPassword: ISSUED, newPassword: SHORT }],
+      ['/api/auth/reset-password', { newPassword: SHORT, token: 'not-a-real-token' }],
+    ] as const) {
+      const answered = await fetch(`${harness.base}${path}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', cookie: who.cookie },
-        body: JSON.stringify({ currentPassword: ISSUED, newPassword: SHORT }),
+        headers: { 'content-type': 'application/json', cookie: who.cookie, origin: harness.base },
+        body: JSON.stringify(body),
       })
-
-      expect(
-        answered.ok,
-        'the library route took a password the install refuses, so the setting is bypassable',
-      ).toBe(false)
-
-      // **What it refused for.** A wrong `currentPassword` is also not-ok, and
-      // it is the answer this case gets if the account's password moved under
-      // it -- so the refusal is only evidence once the old one still works.
-      const still = await fetch(`${harness.base}/api/auth/change-password`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', cookie: who.cookie },
-        body: JSON.stringify({ currentPassword: ISSUED, newPassword: LONG }),
-      })
-      expect(still.ok, 'the account no longer held the password it was issued').toBe(true)
-    } finally {
-      await minimumIs(MIN_PASSWORD_LENGTH)
+      expect(answered.status, `${path} is served`).toBe(404)
     }
+    expect((await signIn(harness, who.email, ISSUED)).cookie, 'the password moved').toBeTruthy()
   })
 
   it('refuses one an administrator chooses for a new account', async () => {
@@ -189,39 +175,6 @@ describe.skipIf(!RUNNABLE || !db)('a raised password minimum', () => {
       )
 
       expect(answered.ok, 'an account was reset to a password the install refuses').toBe(false)
-    } finally {
-      await minimumIs(MIN_PASSWORD_LENGTH)
-    }
-  })
-
-  /**
-   * **`/reset-password`, which is the route the design is argued from.**
-   *
-   * It is served by the library, is not in `disabledPaths`, and reaches no
-   * controller of ours -- so a check written in a controller would leave it
-   * taking the boot-time number. Asserted on the status rather than on a
-   * successful reset: the guard runs ahead of the token check, so a bogus
-   * token answers 422 where the minimum refuses and 400 where it does not,
-   * and that difference is the whole claim.
-   */
-  it("refuses one at the library's reset route, which reaches no controller", async () => {
-    await minimumIs(RAISED)
-    try {
-      const short = await fetch(`${harness.base}/api/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ newPassword: SHORT, token: 'not-a-real-token' }),
-      })
-      expect(short.status, 'the reset route took a password the install refuses').toBe(422)
-
-      // **What it refused for.** An invalid token answers 400, so a 422 is the
-      // minimum and nothing else -- without this the case passes on any refusal.
-      const long = await fetch(`${harness.base}/api/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ newPassword: LONG, token: 'not-a-real-token' }),
-      })
-      expect(long.status, 'a long enough password was refused for its length').toBe(400)
     } finally {
       await minimumIs(MIN_PASSWORD_LENGTH)
     }
