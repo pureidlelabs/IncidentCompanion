@@ -30,4 +30,5 @@ Tasks already satisfied are marked complete with what demonstrates them. The rem
 ## 5. Reproducibility
 
 - [x] 5.1 Decide whether the container components are pinned by digest here or in a following change, and record the decision. This is the second open question in `design.md`. Pinned: every external image carries a digest beside its tag.
-- [x] 5.2 If pinned here: identify every component named by a moving tag and pin it by digest. Verify by building one revision twice and comparing the resolved versions of every component.
+- [x] 5.2 If pinned here: identify every component named by a moving tag and pin it by digest. Every `FROM` and `image:` line in `compose.yaml`, `docker/` and `.devcontainer/` carries a `@sha256` digest.
+- [ ] 5.3 Verify by building one revision twice and comparing the resolved versions of every component.
