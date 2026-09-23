@@ -78,9 +78,6 @@ export async function openApiDocument(app: INestApplication): Promise<OpenAPIObj
   return publishedDocument(document, uuidParsedRoutes(app))
 }
 
-/** Where the authentication library is mounted, which its own description omits. */
-const LIBRARY_MOUNT = '/api/auth'
-
 /**
  * Refusals of the library's operations that the document's own set does not
  * describe, because the lockout that decides them is this install's.
@@ -109,6 +106,8 @@ export async function withTheLibrarysOperations(
   document: OpenAPIObject,
   auth: Auth,
 ): Promise<void> {
+  // The library's description omits its mount; its router strips this one.
+  const mount = new URL((await auth.$context).baseURL).pathname
   const described = (await auth.api.generateOpenAPISchema()) as unknown as {
     paths: Record<string, Record<string, Record<string, unknown>>>
     components: { schemas: Record<string, unknown> }
@@ -146,7 +145,7 @@ export async function withTheLibrarysOperations(
     for (const [, name] of JSON.stringify(kept).matchAll(/#\/components\/schemas\/Auth(\w+)/g)) {
       referenced.add(name!)
     }
-    const at = (document.paths[`${LIBRARY_MOUNT}${path}`] ??= {}) as Record<string, unknown>
+    const at = (document.paths[`${mount}${path}`] ??= {}) as Record<string, unknown>
     at[method.toLowerCase()] = kept
   }
 

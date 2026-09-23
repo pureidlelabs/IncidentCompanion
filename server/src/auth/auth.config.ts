@@ -811,10 +811,9 @@ export function authOptions(
       // in once it has won. -> `setup.controller.ts`
       autoSignIn: false,
       /**
-       * **Unset means 8, and the library serves its own change-password
-       * and sign-up routes.** Left unset, the effective minimum on the install
-       * is the library's default while every controller and screen says 12.
-       * -> `auth/password-policy.ts`
+       * **Unset means 8.** The library applies this floor at every door that
+       * writes a password, beneath the stored minimum the `before` hook holds
+       * them to. -> `PASSWORD_WRITES`
        */
       minPasswordLength: MINIMUM_PASSWORD_LENGTH,
       password: {
