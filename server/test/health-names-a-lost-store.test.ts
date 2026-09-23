@@ -32,4 +32,10 @@ describe('health with the ephemeral store unreachable', () => {
     expect(answer.status, JSON.stringify(body)).toBe(503)
     expect(Object.keys(body.error ?? {})).toEqual(['redis'])
   }, 30_000)
+
+  it('serves nothing else as though nothing were wrong', async (context) => {
+    if (!harness) return context.skip()
+    const answer = await fetch(`${harness.base}/api/setup`)
+    expect(answer.status).toBeGreaterThanOrEqual(500)
+  }, 30_000)
 })
