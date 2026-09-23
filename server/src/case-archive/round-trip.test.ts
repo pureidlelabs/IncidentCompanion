@@ -15,6 +15,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import * as Y from 'yjs'
 
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
@@ -22,7 +23,16 @@ import { ArchiveExportService } from './export.service.js'
 import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
 import { isSealed } from '../archive/envelope.js'
 import { readArchive } from '../archive/format.js'
-import { cases, customers, evidence, reports, systems, timeline, user } from '../db/schema/index.js'
+import {
+  cases,
+  customers,
+  evidence,
+  reportBlocks,
+  reports,
+  systems,
+  timeline,
+  user,
+} from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -35,6 +45,26 @@ const seedPool = process.env.SEED_DATABASE_URL
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const PASS = 'a-long-enough-passphrase'
+
+/** A report document holding `text` under each block id, one paragraph apiece. */
+function written(text: Record<string, string>): Buffer {
+  const doc = new Y.Doc()
+  for (const [blockId, words] of Object.entries(text)) {
+    const paragraph = new Y.XmlElement('paragraph')
+    paragraph.insert(0, [new Y.XmlText(words)])
+    doc.getXmlFragment(blockId).insert(0, [paragraph])
+  }
+  return Buffer.from(Y.encodeStateAsUpdate(doc))
+}
+
+/** Each fragment of a stored report document, as its name and its text. */
+function sections(document: Uint8Array): Record<string, string> {
+  const doc = new Y.Doc()
+  Y.applyUpdate(doc, document)
+  return Object.fromEntries(
+    [...doc.share.keys()].map((name) => [name, doc.getXmlFragment(name).toJSON()]),
+  )
+}
 
 describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () => {
   let exporter: ArchiveExportService
@@ -112,10 +142,29 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
       .values({
         caseId: row.id,
         label: 'The report',
-        document: Buffer.from('pretend-yjs-bytes'),
         createdBy: actorId,
       })
       .returning()
+    const blocks = await seed!
+      .insert(reportBlocks)
+      .values(
+        [0, 1].map((position) => ({
+          caseId: row.id,
+          reportId: report!.id,
+          position,
+          createdBy: actorId,
+        })),
+      )
+      .returning()
+    await seed!
+      .update(reports)
+      .set({
+        document: written({
+          [blocks[0]!.id]: 'What happened first.',
+          [blocks[1]!.id]: 'What was done about it.',
+        }),
+      })
+      .where(eq(reports.id, report!.id))
     return {
       caseId: row.id,
       systemId: box!.id,
@@ -393,17 +442,27 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
     expect(result.missingFiles).toBe(0)
   })
 
-  it('carries the prose document onto the report it now belongs to', async () => {
-    // Filed under the old report id it would be in the archive and reachable
-    // from nothing - the same class as the supersede re-keying.
+  /** A fragment left under an old block id is text no block reads. -> #1142 */
+  it('carries each section of prose onto the block it now belongs to', async () => {
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
     await freeTheReference(made.caseId)
     const result = await importer.load(built.bytes, '', other)
 
     const [report] = await seed!.select().from(reports).where(eq(reports.caseId, result.id))
+    const blocks = await seed!
+      .select()
+      .from(reportBlocks)
+      .where(eq(reportBlocks.reportId, report!.id))
+      .orderBy(reportBlocks.position)
     expect(report!.document).not.toBeNull()
-    expect(Buffer.from(report!.document!).toString()).toBe('pretend-yjs-bytes')
+    const text = sections(report!.document!)
+    expect(
+      Object.keys(text).filter((name) => blocks.some((block) => block.id === name)),
+      'sections of prose naming a block of the imported report',
+    ).toHaveLength(2)
+    expect(text[blocks[0]!.id]).toContain('What happened first.')
+    expect(text[blocks[1]!.id]).toContain('What was done about it.')
   })
 
   it('keeps the prose document out of the JSON a human reads', async () => {

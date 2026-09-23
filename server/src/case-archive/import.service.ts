@@ -26,9 +26,11 @@ import { MalformedEnvelope, WrongPassphrase, isSealed, open } from '../archive/e
 import { PolicyService } from '../policy/policy.service.js'
 import { REFERENCE_FIELD_NAMES } from '../domain/collections.js'
 import { importStamp } from '../db/import-stamp.js'
+import { rekeyed } from '../domain/prose-fields.js'
 import { archiveRowSchema } from './rows.js'
 import { coerceTimes } from '../db/column-access.js'
 import { z } from 'zod'
+import * as Y from 'yjs'
 import {
   accounts,
   actions,
@@ -442,10 +444,10 @@ export class ArchiveImportService {
         }
       }
 
-      // **The prose is written after the reports exist**, keyed to the new
-      // report ids - the document's fragments are keyed by *block* id and
-      // those were remapped too, so a document copied under the old report's
-      // name would be filed where nothing reads it.
+      // After the reports exist: each document under its report's new id, each fragment under its block's.
+      const archivedBlocks = Array.isArray(record.reportBlocks)
+        ? (record.reportBlocks as { id?: unknown; reportId?: unknown }[])
+        : []
       for (const [name, bytes] of Object.entries(members)) {
         if (!name.startsWith(PROSE_PREFIX)) continue
         const oldId = name.slice(PROSE_PREFIX.length).replace(/\.ydoc$/, '')
@@ -454,9 +456,23 @@ export class ArchiveImportService {
           this.log.warn(`archive carries prose for report ${oldId}, which it does not describe`)
           continue
         }
+        const rekey = new Map<string, string>()
+        for (const block of archivedBlocks) {
+          const now = typeof block.id === 'string' ? remap.get(block.id) : undefined
+          if (block.reportId === oldId && now) rekey.set(block.id as string, now)
+        }
+        const source = new Y.Doc()
+        try {
+          Y.applyUpdate(source, bytes)
+        } catch {
+          throw new BadArchive(`this archive's prose for report ${oldId} is unreadable`)
+        }
+        const document = rekeyed(source, rekey)
+        source.destroy()
+        if (!document) continue
         await tx
           .update(reports)
-          .set({ document: Buffer.from(bytes) })
+          .set({ document: Buffer.from(document) })
           .where(sql`${reports.id} = ${fresh}`)
       }
 
