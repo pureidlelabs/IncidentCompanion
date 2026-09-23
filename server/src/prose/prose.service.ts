@@ -178,8 +178,8 @@ interface LiveDocument {
   timer: NodeJS.Timeout | null
   dirty: boolean
   unsubscribe: (() => void) | null
-  /** Whose edit on this instance the document last took; the flush acts as them. */
-  writer: string | null
+  /** Who has written into it on this instance since it was last stored, the latest last. */
+  writers: Set<string>
 }
 
 /**
@@ -348,12 +348,16 @@ export class ProseService implements OnApplicationShutdown {
       timer: null,
       dirty: false,
       unsubscribe: null,
-      writer: null,
+      writers: new Set(),
     }
     doc.on('update', (update: Uint8Array, origin: unknown) => {
       entry.dirty = true
       // Applied inside the frame that carried it, so the context names its author.
-      if (origin !== REMOTE) entry.writer = principalNow() ?? entry.writer
+      const who = origin === REMOTE ? null : principalNow()
+      if (who) {
+        entry.writers.delete(who)
+        entry.writers.add(who)
+      }
       if (entry.timer) clearTimeout(entry.timer)
       entry.timer = setTimeout(() => {
         void this.flush(caseId, address)
@@ -525,11 +529,13 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   /**
-   * Write the document to its row, as the analyst whose edit it last took, or
-   * else as whoever is asking. Public so a test can force it.
+   * Write the document to its row, as the latest analyst who wrote into it
+   * since it was last stored and whom the store still lets write it, or else as
+   * whoever is asking. Public so a test can force it.
    *
    * A document no edit on this instance has touched, flushed with nobody
-   * asking, is left to the instance that took the edit.
+   * asking, is left to the instance that took the edit. One nobody may write
+   * stays unsaved and is logged, and the next flush tries again.
    *
    * **The row's version is deliberately not bumped.** `reports.version` guards
    * the analyst-facing fields against a concurrent edit; the document is a
@@ -540,34 +546,46 @@ export class ProseService implements OnApplicationShutdown {
     const holding = this.live.get(keyOf(caseId, address))
     if (!holding) return
     const held = await holding
-    const writer = held.writer ?? principalNow()
-    if (writer === undefined) return
+    const writers = [...held.writers]
+    const asking = principalNow()
+    const candidates = [...writers].reverse()
+    if (asking && !writers.includes(asking)) candidates.push(asking)
+    if (candidates.length === 0) return
     const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
     held.dirty = false
+    held.writers = new Set()
     try {
-      await actingAs(() => writer, () => withCase(this.db, caseId, (tx) =>
-        address.table === 'casenotes'
-          ? tx
-              .update(caseNotes)
-              // **`note` is re-derived from the document on every flush.**
-              // The document is the record; the column is the projection the
-              // index row, the search and the CSV export read, and a note has
-              // no heading to find it by instead. The column is also written
-              // straight by the paths a note arrives on -- case seeding, the
-              // archive import, the generic collection write -- and this
-              // replaces whatever they left once a document exists.
-              .set({ document: bytes, note: noteText(held.doc) })
-              .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
-          : tx
-              .update(reports)
-              .set({ document: bytes })
-              .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId))),
-      ))
+      for (const who of candidates) {
+        const [row] = await actingAs(who, () => withCase(this.db, caseId, (tx) =>
+          address.table === 'casenotes'
+            ? tx
+                .update(caseNotes)
+                // **`note` is re-derived from the document on every flush.**
+                // The document is the record; the column is the projection the
+                // index row, the search and the CSV export read, and a note has
+                // no heading to find it by instead. The column is also written
+                // straight by the paths a note arrives on -- case seeding, the
+                // archive import, the generic collection write -- and this
+                // replaces whatever they left once a document exists.
+                .set({ document: bytes, note: noteText(held.doc) })
+                .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
+                .returning({ id: caseNotes.id })
+            : tx
+                .update(reports)
+                .set({ document: bytes })
+                .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
+                .returning({ id: reports.id }),
+        ))
+        // No row is the store refusing this writer, which raises nothing.
+        if (row) return
+      }
+      throw new Error('the store took it from nobody who wrote it, or its row is gone')
     } catch (error) {
       // **Marked dirty again**, so the next quiet moment or the last reader
       // leaving tries once more. Swallowing it silently is how a report loses
       // an afternoon to a transient database error nobody saw.
       held.dirty = true
+      held.writers = new Set([...writers.filter((one) => !held.writers.has(one)), ...held.writers])
       this.log.error(`could not save the prose for ${recordOf(address)}: ${String(error)}`)
     }
   }
