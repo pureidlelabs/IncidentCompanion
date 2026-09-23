@@ -119,19 +119,21 @@ export const Unpinned: Story = {
   decorators: inARow,
   play: async ({ canvas, args }) => {
     await expect(canvas.getByRole('button', { name: `Pin ${args.label}` })).toBeVisible()
-    await expect(canvas.queryByRole('button', { name: `Unpin ${args.label}` })).not.toBeInTheDocument()
+    await expect(
+      canvas.queryByRole('button', { name: `Unpin ${args.label}` }),
+    ).not.toBeInTheDocument()
   },
 }
 
 /**
- * A row the server has not acknowledged yet: edit is refused because there is
- * no id to send it to.
+ * A row with a write out: neither verb starts another against the version the
+ * row was drawn at.
  *
  * Refused rather than removed, so the control stays where the hand expects it
  * and the row does not change shape as the write lands.
  */
-export const Optimistic: Story = {
-  name: 'Optimistic row \u2014 edit refused, no id to PATCH',
+export const Pending: Story = {
+  name: 'A write out \u2014 edit and delete refused until it is answered',
   args: { editDisabled: true },
   decorators: inARow,
   play: async ({ canvas, args }) => {
@@ -139,10 +141,6 @@ export const Optimistic: Story = {
     await expect(edit).toBeVisible()
     await expect(edit).toHaveAttribute('aria-disabled', 'true')
 
-    // **Delete is refused for the same reason and was not.** There is no id to
-    // send either verb to, so a bin left live sends a delete for a row the
-    // server has never seen -- and the pencil beside it, greyed out, says the
-    // row is not there to act on.
     const remove = canvas.getByRole('button', { name: `Delete ${args.label}` })
     await expect(remove).toBeVisible()
     await expect(remove).toHaveAttribute('aria-disabled', 'true')
@@ -150,19 +148,16 @@ export const Optimistic: Story = {
 }
 
 /**
- * Somebody else is editing the row, so both verbs are refused and the tooltip
- * names them.
- *
- * The controls keep their tab stop and their pointer events: a refusal nobody
- * can reach is a refusal nobody is told about.
+ * Somebody else is editing the row: both verbs stay live and the tooltip names
+ * them. A hold warns; the version check decides the write.
  */
 export const HeldByAnother: Story = {
-  name: 'Held \u2014 edit and delete refused, naming the analyst',
+  name: 'Held \u2014 named, and still editable',
   args: { heldBy: 'Jo Meyer' },
   decorators: inARow,
   play: async ({ canvas, args }) => {
     for (const name of [`Edit ${args.label} in full`, `Delete ${args.label}`]) {
-      await expect(canvas.getByRole('button', { name })).toHaveAttribute('aria-disabled', 'true')
+      await expect(canvas.getByRole('button', { name })).not.toHaveAttribute('aria-disabled')
     }
   },
 }
@@ -211,8 +206,7 @@ export const EveryControlAtOnce: Story = {
 export const ALongValue: Story = {
   name: 'A row value too long for its pane',
   args: {
-    label:
-      'WKS-FINANCE-RECONCILIATION-0417.corp.meridian-holdings.example.internal',
+    label: 'WKS-FINANCE-RECONCILIATION-0417.corp.meridian-holdings.example.internal',
     pinned: true,
     onTogglePin: () => undefined,
     menu: overflow,

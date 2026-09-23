@@ -33,8 +33,8 @@ const SYSTEMS_BULK_FIELDS: readonly BulkField<SystemEntry>[] = bulkFieldsFor(
  * the served spec produces.
  *
  * The harness stands in for the section: it ticks rows through the table's own
- * selection and applies the patch to its own rows, which is what N optimistic
- * writes do to the query cache.
+ * selection and applies the patch to its own rows, which is what the section's
+ * re-read does once the write is answered.
  *
  * **What this composition owes is the relation between the table and the bar.**
  * The bar holds no selection of its own -- it reads the table's -- so ticking a

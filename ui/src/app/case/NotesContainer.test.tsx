@@ -20,7 +20,9 @@ const direct: { collection: string; keepalive: boolean }[] = []
 const mutated: unknown[] = []
 const announced: string[] = []
 
-vi.mock('@/api/case', () => ({ useCase: () => ({ data: undefined, isPending: false, error: null, refetch: vi.fn() }) }))
+vi.mock('@/api/case', () => ({
+  useCase: () => ({ data: undefined, isPending: false, error: null, refetch: vi.fn() }),
+}))
 vi.mock('@/api/specs', () => ({ useSpecs: () => ({ data: undefined }) }))
 vi.mock('@/api/useSession', () => ({ useSession: () => ({ username: 'Ada' }) }))
 vi.mock('@/app/useCaseId', () => ({ useCaseId: () => CASE }))
@@ -100,7 +102,7 @@ describe('how a note leaves the screen', () => {
     expect(direct).toHaveLength(1)
   })
 
-  it('keeps the mutation for an ordinary blur, which wants its optimistic row', async () => {
+  it('sends an ordinary blur through the mutation', async () => {
     const held = await mounted()
 
     await held.create({ note: 'an ordinary blur' })
