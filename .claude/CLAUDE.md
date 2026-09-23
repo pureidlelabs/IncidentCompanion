@@ -36,7 +36,7 @@ python3 .claude/scripts/test_scope.py    # what this change actually needs run
 **The OpenSpec CLI is a pinned dev dependency, and its own skills name it wrong.** They declare `Bash(openspec:*)`, and `openspec` is not on `PATH`. The package is `@fission-ai/openspec` and the binary it installs is `openspec`, so `npx` finds the local one from anywhere in the tree. **`--no-install` on every call**, because `openspec` unscoped is somebody else's package on npm: without the flag a miss fetches theirs, and with it a miss is a refusal.
 
 ```bash
-npx --no-install openspec validate --strict
+npx --no-install openspec validate --all --strict
 ```
 
 **Renovate owns the version, and the gate runs offline.** A prescribed command that fetches the CLI puts the check at the mercy of the registry and lets a release move the gate with no commit behind it; `tests/repo/test_pipeline_wiring.py` holds every command in `rules/git-workflow.md` to the local binary.
@@ -55,7 +55,7 @@ DATABASE_URL="$IC_MIGRATE_DATABASE_URL" npm run db:push
 
 `./test.sh` is the client and the repository checks only.
 
-**CI runs on a pull request into `main` and again in the merge queue, and the two runs are not the same run.** The pull request gets the cheap tiers — both typechecks, both lints, Vale, the shell and workflow lints, the repository checks and both builds. **The suites and the image run only in the merge group**, against the tree merged onto the `main` it is about to enter, because that is the only tree whose verdict decides anything. So a green pull request means the branch is sound, not that it lands clean. **A push to a feature branch still fires none of it.** → `rules/git-workflow.md` §8.
+**CI runs on a pull request into `main` and again in the merge queue, and only the second is a verdict.** Every run gets the cheap tiers whole — both typechecks, both lints, Vale, the shell and workflow lints, the repository checks and both builds. A pull request marked ready adds the suites its paths touch, and that run is advisory: the tiers read across trees, so its `gate` names what it left out. **The merge group runs every tier** but what `gate` leaves to the nightly by name — the tier in `NIGHTLY_ONLY` and the gallery grounds in `NIGHTLY_GROUNDS` — against the tree merged onto the `main` it is about to enter, and a tier that skipped there fails `gate`. So a green pull request means the branch is sound, not that it lands clean. **A push to a feature branch still fires none of it.** → `rules/git-workflow.md` §8.
 
 ## Testing
 

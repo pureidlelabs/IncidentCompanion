@@ -151,6 +151,42 @@ def test_the_client_tier_refuses_a_certifying_run_that_ran_nothing():
     )
 
 
+def armed_client_run(*args: str) -> str:
+    """The client tier's unit project on its real config, armed, refused or it fails."""
+    if not (REPO_ROOT / "node_modules" / "vitest").exists():
+        declined("The client must-run arm", "no node_modules -- run npm ci at the root")
+    done = subprocess.run(  # noqa: S603
+        ["npx", "vitest", "run", "--project=unit", *args],
+        cwd=REPO_ROOT / "ui",
+        env={**os.environ, "IC_SUITE_MUST_RUN": "1"},
+        capture_output=True, text=True, timeout=600, check=False,
+    )
+    output = done.stdout + done.stderr
+    assert done.returncode != 0, f"a certifying client run passed:\n{output}"
+    return output
+
+
+def test_a_certifying_run_refuses_a_file_that_ran_no_test():
+    """A module whose every test skipped is not a module that ran.
+
+    `-t` matching nothing skips every test in the shard's files, the state a
+    wholesale `skipIf` leaves. A shard of 1/300 owes about one file, which is
+    what a count of finished modules could not tell from one that ran.
+    """
+    output = armed_client_run("--shard=1/300", "-t", "^a name no test carries$")
+    assert re.search(r"ran no test:\s+src/\S+\.test\.tsx?", output), output
+
+
+def test_a_certifying_run_refuses_a_file_every_shard_left_out():
+    """A file no shard was handed is missing from the tier, and no shard's count can see it.
+
+    Excluding `src/lib` stands for an `include` narrowed by the config. The
+    shard still finishes what it was given, which is all a floor could read.
+    """
+    output = armed_client_run("--shard=1/300", "--exclude", "src/lib/**")
+    assert re.search(r"never planned:\s+src/lib/\S+\.test\.tsx?", output), output
+
+
 #: A module that loses its whole tier to its environment, and the phrase naming the gap. -> #1080
 A_MISSING_ENVIRONMENT_IS_A_DECLINE = {
     "tests/docker/test_container_runtime.py": "no Docker daemon is reachable",
