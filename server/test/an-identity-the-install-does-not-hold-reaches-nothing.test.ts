@@ -12,14 +12,14 @@
  */
 import { randomUUID } from 'node:crypto'
 
-import { eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAdmin, signIn, type Harness, type Persona } from './app-harness.js'
 import { defaultCustomerIn, openTestPool } from './database.js'
 import { ReachService } from '../src/access/reach.service.js'
-import { cases, user } from '../src/db/schema/index.js'
+import { cases, installActivity, user } from '../src/db/schema/index.js'
 
 const ISSUED = 'a-password-long-enough-to-pass'
 const CHOSEN = 'the-password-they-chose-themselves'
@@ -102,5 +102,35 @@ describe.skipIf(!(await bootable()))('an identity the install does not hold', ()
       listing.map((one) => one.id),
       'a session whose account is gone was listed a case',
     ).not.toContain(everyones)
+  })
+
+  /**
+   * **A refused reach is logged with who was refused**, and a session whose
+   * account is gone still says who it was.
+   */
+  it('records the refusal, naming who the session said it was', async () => {
+    const refused = await fetch(`${harness.base}/api/cases/${everyones}`, {
+      headers: { cookie: ghost.cookie },
+    })
+    expect(refused.status).toBe(404)
+
+    const logged = async () =>
+      drizzle({ client: seedPool })
+        .select({ actorId: installActivity.actorId, actorLabel: installActivity.actorLabel })
+        .from(installActivity)
+        .where(
+          and(
+            eq(installActivity.event, 'access_denied'),
+            sql`${installActivity.detail}->>'case' = ${everyones}`,
+          ),
+        )
+    const until = Date.now() + 5_000
+    let lines = await logged()
+    while (lines.length === 0 && Date.now() < until) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      lines = await logged()
+    }
+    expect(lines, 'the refusal left no line').not.toHaveLength(0)
+    expect(lines[0]).toEqual({ actorId: null, actorLabel: 'Gone' })
   })
 })
