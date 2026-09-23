@@ -130,12 +130,11 @@ Another Claude Code session (or a human) may be working in this checkout.
 **`openspec/changes/` is the in-flight form and `openspec/specs/` is the landed truth.** While a branch is live its spec work is a delta under `openspec/changes/<id>/` — the proposal, the delta spec, the design where the choice was live, the tasks. `specs/` is not edited by hand on a branch; it is written by the sync at the end. That is what makes `specs/` answerable as *what the application does today* rather than what somebody intends.
 
 ```bash
-npx --no-install openspec validate --specs --strict
-npx --no-install openspec validate --changes --strict
+npx --no-install openspec validate --all --strict
 ```
 
-- **Every branch touching `openspec/` owes both, at the same moment as the lint.** → §8
-- **Both flags, and read the item count.** `validate --strict` alone prints usage and exits 1, and a count of 0 is the same answer as a clean run.
+- **Every branch touching `openspec/` owes it, at the same moment as the lint.** → §8
+- **`--all`, and read the item count.** `validate --strict` alone prints usage and exits 1, `--changes` alone validates nothing on a tree with every change archived, and a count of 0 is the same answer as a clean run.
 - **Sync, then archive, then land** — the change folds into `specs/`, the change moves to `changes/archive/`, and both land in the branch's own commits. A change archived after the merge is one `main` never carried.
 - **A wording fix is not a change.** Editing `specs/` directly is right when every requirement still says the same thing: a typo, a clearer sentence, a cross-reference. The moment a requirement is added, removed or altered, it is a change.
 
