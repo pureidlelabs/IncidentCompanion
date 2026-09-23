@@ -201,17 +201,23 @@ def test_the_install_believes_an_address_only_from_its_edge(install):
     assert _session_addresses(ACCOUNT)[-1] == forger.address
 
 
-@pytest.mark.parametrize("origin,own", [
-    (ORIGIN, True),
-    (f"http://{NAME}:{PORT}", False),
-    (f"https://{NAME}:{PORT + 1}", False),
-    (f"https://localhost:{PORT}", False),
-])
-def test_the_install_answers_only_to_its_own_origin(install, origin, own):
+#: Named rather than spelled, because the port differs per xdist worker and a
+#: parameter id that differs between workers is refused at collection.
+_ORIGINS = {
+    "its own": (ORIGIN, True),
+    "unprotected": (f"http://{NAME}:{PORT}", False),
+    "another port": (f"https://{NAME}:{PORT + 1}", False),
+    "loopback": (f"https://localhost:{PORT}", False),
+}
+
+
+@pytest.mark.parametrize("spelling", sorted(_ORIGINS))
+def test_the_install_answers_only_to_its_own_origin(install, spelling):
     """A sign-in and a socket are admitted by the same origins: the install's own, and no other spelling.
 
     No cookie and no account: 401 is past the origin check, 403 is refused by it.
     """
+    origin, own = _ORIGINS[spelling]
     analyst = Analyst("origin")
     expected = 401 if own else 403
     assert analyst.status(
