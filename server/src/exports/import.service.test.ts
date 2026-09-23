@@ -296,35 +296,23 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
   })
 
   /**
-   * **A replace against a row somebody else has open must not abandon the
-   * import.** `update` throws when another analyst holds a row, and an uncaught
-   * throw commits the fresh rows and leaves every later collision unattempted -
-   * a partial import, which is the worst outcome.
-   *
-   * The service every other case here builds has no live channel, so the claim
-   * check is inert in all of them; this one wires a holder to switch it on.
+   * **A row the store could not write is a failure, not a refusal.** Counting
+   * it refused tells the analyst their file met a newer edit when the write
+   * never happened, and records a review nobody can resolve.
    */
-  it('carries on when another analyst is holding one of the rows', async () => {
-    const held = new CollectionService(db!, {
-      announce: () => {},
-      othersOn: () => Promise.resolve([]),
-      holderOf: () => Promise.resolve({ userId: 'robin', username: 'Robin' }),
-    } as never)
-    const withClaims = new ImportService(held)
+  it('fails the import when a replacement cannot be written, rather than counting it refused', async () => {
+    class StoreGoesAway extends CollectionService {
+      override update(): never {
+        throw new Error('the connection to the store was lost')
+      }
+    }
+    const failing = new ImportService(new StoreGoesAway(db!))
 
-    await withClaims.fromCsv('systems', emptyCaseId, 'hostname\nWKS-HELD\n', ME)
+    await failing.fromCsv('systems', emptyCaseId, 'hostname\nWKS-UNWRITTEN\n', ME)
 
-    const result = await withClaims.fromCsv(
-      'systems',
-      emptyCaseId,
-      'hostname,system_type\nWKS-HELD,server\n',
-      ME,
-      'replace',
-    )
-    expect(result).toEqual({ added: 0, skipped: 0, replaced: 0, refused: 1, unlinked: 0, unlinkedBy: {} })
-
-    const rows = await seed!.select().from(systems).where(eq(systems.caseId, emptyCaseId))
-    expect(rows.map((row) => row.systemType)).not.toContain('server')
+    await expect(
+      failing.fromCsv('systems', emptyCaseId, 'hostname,system_type\nWKS-UNWRITTEN,server\n', ME, 'replace'),
+    ).rejects.toThrow('the connection to the store was lost')
   })
 
   /**
