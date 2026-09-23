@@ -296,12 +296,15 @@
 | It comes up with one command and no preparation | A second start | demonstrated | tests/docker/test_container_config.py |
 | It comes up with one command and no preparation | A dependency is slow | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | What an install exposes | demonstrated | tests/docker/test_container_config.py |
-| There is one way in, and it is the only thing exposed | The application is addressed directly | demonstrated | tests/docker/test_container_config.py |
-| There is one way in, and it is the only thing exposed | An operator wants it reachable from the network | demonstrated | tests/docker/test_container_config.py |
+| There is one way in, and it is the only thing exposed | The application is addressed directly | undemonstrated |  |
+| There is one way in, and it is the only thing exposed | An operator wants it reachable from the network | demonstrated | tests/docker/test_ingress.py |
+| There is one way in, and it is the only thing exposed | The install is reached at a name it was not given | demonstrated | tests/docker/test_ingress.py |
 | The connection is protected, and there is no way to turn that off | An install has no certificate | demonstrated | tests/docker/test_container_runtime.py |
 | The connection is protected, and there is no way to turn that off | The operator supplies a certificate | demonstrated | tests/docker/test_container_config.py |
 | The connection is protected, and there is no way to turn that off | A supplied certificate cannot be used | demonstrated | tests/docker/test_container_config.py |
 | The connection is protected, and there is no way to turn that off | Somebody wants it unprotected | demonstrated | tests/docker/test_container_config.py |
+| The connection is protected, and there is no way to turn that off | The install is given a new name | demonstrated | tests/docker/test_container_config.py |
+| The connection is protected, and there is no way to turn that off | A supplied certificate does not cover a new name | demonstrated | tests/docker/test_container_config.py |
 | Setting up is separate from running, and runs once | Preparation runs before serving | demonstrated | tests/docker/test_container_runtime.py |
 | Setting up is separate from running, and runs once | An install is started again | demonstrated | tests/docker/test_container_config.py |
 | Setting up is separate from running, and runs once | Preparation fails | demonstrated | tests/docker/test_container_config.py |
@@ -383,8 +386,9 @@
 | What is kept for a long time and what is kept briefly are separated | The two windows differ | demonstrated | server/src/install-activity/prune.test.ts |
 | A line says who, what, and to what, and never says what was written | An account is removed after acting | demonstrated | server/src/install-activity/record.test.ts |
 | A line says who, what, and to what, and never says what was written | A request carrying a password | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
-| A line says who, what, and to what, and never says what was written | A caller asserts their own address | demonstrated | server/src/install-activity/record.test.ts |
+| A line says who, what, and to what, and never says what was written | A caller asserts their own address | demonstrated | server/test/a-caller-is-attributed-to-itself.test.ts |
 | A line says who, what, and to what, and never says what was written | A caller invents a route | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
+| A line says who, what, and to what, and never says what was written | A caller reaches the application without passing the one way in | demonstrated | tests/docker/test_ingress.py |
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | demonstrated | server/src/install-activity/record.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One failure and a run of them | demonstrated | server/src/install-audit/read.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One caller, a different account each time | demonstrated | server/src/install-audit/read.test.ts |
@@ -606,6 +610,8 @@
 | A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/src/domain/a-refusal-names-the-field-it-is-about.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts |
+| What a request costs is bounded before it runs | Another caller asks too often | demonstrated | tests/docker/test_ingress.py |
+| What a request costs is bounded before it runs | A page on another site asks on the analyst's behalf | demonstrated | tests/docker/test_ingress.py |
 | A fact can be asked for across cases | An indicator is asked about across cases | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
 | A fact can be asked for across cases | A question spans a boundary | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
 | The description is valid against the version it declares | A schema uses a keyword the declared version has no spelling for | demonstrated | server/test/openapi-document.test.ts |
@@ -618,17 +624,20 @@
 | --- | --- | --- | --- |
 | The browser is told what the application may do, on every response | A response is read by a browser | demonstrated | server/test/security-headers.test.ts |
 | The browser is told what the application may do, on every response | The policy is read for what it permits | demonstrated | server/test/security-headers.test.ts |
-| The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | demonstrated | server/test/security-headers.test.ts |
+| The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| The browser is told what the application may do, on every response | An install pointed at nothing outside itself | demonstrated | server/test/security-headers.test.ts |
+| The browser is told what the application may do, on every response | The analyst's browser must reach an import platform | demonstrated | server/test/a-named-install-names-only-itself.test.ts |
 | The application refuses to be framed | A page tries to embed the application | demonstrated | server/test/security-headers.test.ts |
 | Case data is not left on the analyst's disk | An analyst reads a case and signs out | demonstrated | server/test/security-headers.test.ts |
 | Case data is not left on the analyst's disk | An unchanging asset is served | demonstrated | server/test/security-headers.test.ts |
-| An install reached at its own name tells the browser to keep it protected | An install reached at its own name | unbuilt | Not built: no install is reached at a name of its own. -> #138 |
-| An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | unbuilt | Not built: nothing sends HSTS. -> #138 |
-| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | server/test/security-headers.test.ts |
+| An install reached at its own name tells the browser to keep it protected | An install reached at its own name | demonstrated | tests/docker/test_ingress.py |
+| An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | undemonstrable | What a browser does after being told is the browser's; no suite here drives one through a certificate an analyst has chosen to trust |
+| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | tests/docker/test_container_runtime.py |
 | The application answers only to itself | The install is reached at a loopback address | demonstrated | server/src/auth/trusted-origins.test.ts |
-| The application answers only to itself | The unprotected spelling of the install | demonstrated | server/src/auth/trusted-origins.test.ts |
-| The application answers only to itself | Another port on the same host | demonstrated | server/src/auth/trusted-origins.test.ts |
+| The application answers only to itself | The unprotected spelling of the install | demonstrated | tests/docker/test_ingress.py |
+| The application answers only to itself | Another port on the same host | demonstrated | tests/docker/test_ingress.py |
 | The application answers only to itself | The install cannot tell where it is | demonstrated | server/src/auth/trusted-origins.test.ts |
+| The application answers only to itself | A socket is opened from the unprotected spelling of the install | demonstrated | tests/docker/test_ingress.py |
 | A development convenience cannot exist in a running install | A running install | demonstrated | server/src/auth/trusted-origins.test.ts |
 | A development convenience cannot exist in a running install | A development install with no port named | demonstrated | server/src/auth/trusted-origins.test.ts |
 | A request for data is never answered with a page | A caller asks for a route the interface does not have | demonstrated | server/test/a-data-request-is-never-a-page.test.ts |
