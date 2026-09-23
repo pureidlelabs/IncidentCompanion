@@ -7,7 +7,7 @@
  */
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
 import { recordInstallActivity } from '../install-activity/record.js'
@@ -18,18 +18,18 @@ import { defaultStatements } from 'better-auth/plugins/admin/access'
 import type { SecondaryStorage } from 'better-auth'
 import { trustedOrigins } from './trusted-origins.js'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { randomUUID } from 'node:crypto'
+import { tryGetCurrentAuthEndpointContext } from '@better-auth/core/context'
 
 import { Algorithm, hash as argonHash, verify as argonVerify } from '@node-rs/argon2'
 import type { Database } from '../db/client.js'
 import * as schema from '../db/schema/index.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_REFUSED, refusePassword } from './password-policy.js'
 import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
-import { sameAddress } from './same-address.js'
 import { readPolicy } from '../policy/read.js'
 import { SESSION_LIFETIME_CEILING_MINUTES } from '../policy/keys.js'
 import { sessionEnded } from './session-ended.js'
 import { HELD } from './must-change-password.interceptor.js'
+import { sameAddress } from './same-address.js'
 
 /**
  * What a failed sign-in is recorded against.
@@ -118,45 +118,76 @@ const adminRole = ac.newRole({
   session: ['list', 'revoke'],
 })
 
+/** Not an argon2 hash, so no credential row holds it. */
+const NOBODY_HOLDS = '-'
+
 /**
- * One failed sign-in against a named address: count it, and shut the account
- * if that was the last one it had.
+ * The check behind every door that verifies a password, and the lockout's
+ * whole implementation.
  *
- * **A missing address is not an error and writes nothing.** Guessing at
- * addresses that have no account must leave no row to find, or the table
- * becomes a list of every address an attacker tried - which is a write path
- * anyone unauthenticated can drive.
- *
- * **Read-modify-write under a single statement's `where`.** Two failures
- * arriving together would otherwise both read the same count and both write
- * `n + 1`, so the tenth failure could be recorded as the ninth twice; the
- * increment happens in SQL and the threshold is compared against what the
- * statement returns.
+ * Runs the argon2 verify whatever the account's state, so a locked account
+ * costs what a wrong password does. Answers `false` for a locked account's
+ * right password and counts it, as it counts a wrong one; a right one on an
+ * open account clears the count.
  */
-async function countTheFailure(
-  db: Database,
-  attempted: string,
-  headers: Record<string, string>,
-): Promise<void> {
-  /**
-   * **Read now, not at boot.** A threshold cached when the process started is
-   * one that ignores the change an administrator just made - the screen says
-   * five and the control still allows ten until something restarts.
-   */
+async function checkPassword(db: Database, hash: string, password: string): Promise<boolean> {
+  if (await argonVerify(hash, password, ARGON2ID)) {
+    const [holder] = await db
+      .select({
+        id: schema.user.id,
+        failedSignIns: schema.user.failedSignIns,
+        lockedUntil: schema.user.lockedUntil,
+      })
+      .from(schema.account)
+      .innerJoin(schema.user, eq(schema.user.id, schema.account.userId))
+      .where(heldBy(hash))
+      .limit(1)
+    if (holder && !isLocked(holder, new Date())) {
+      if (holder.failedSignIns !== 0 || holder.lockedUntil !== null) {
+        await db.update(schema.user).set(CLEARED).where(eq(schema.user.id, holder.id))
+      }
+      return true
+    }
+  }
+  await countAgainst(db, hash)
+  return false
+}
+
+/** The credential row holding `hash`. */
+const heldBy = (hash: string) =>
+  and(eq(schema.account.providerId, 'credential'), eq(schema.account.password, hash))
+
+/**
+ * One more failure against the account holding `hash`, and the lock when it
+ * is the last one the account had. Writes `account_locked` then, with the
+ * address of the call being answered.
+ *
+ * **One statement increments and returns the count**, so two failures
+ * arriving together cannot both read `n` and both write `n + 1`.
+ *
+ * A hash nobody holds writes nothing, at the cost of the same two statements.
+ */
+async function countAgainst(db: Database, hash: string): Promise<void> {
+  const now = new Date()
+  // Read now: a threshold cached at boot ignores the change an administrator
+  // just made.
   const stored = await readPolicy(db)
   const policy = policyFrom({
     afterFailures: stored['auth.lockoutAfterFailures'],
     minutes: stored['auth.lockoutMinutes'],
   })
-  const before = new Date()
-
   const [row] = await db
     .update(schema.user)
     .set({ failedSignIns: sql`${schema.user.failedSignIns} + 1` })
-    .where(sameAddress(attempted))
+    .where(
+      inArray(
+        schema.user.id,
+        db.select({ id: schema.account.userId }).from(schema.account).where(heldBy(hash)),
+      ),
+    )
     .returning({
       id: schema.user.id,
-      name: schema.user.name,
+      email: schema.user.email,
       failedSignIns: schema.user.failedSignIns,
       lockedUntil: schema.user.lockedUntil,
     })
@@ -167,23 +198,19 @@ async function countTheFailure(
   const next = afterFailure(
     { failedSignIns: row.failedSignIns - 1, lockedUntil: row.lockedUntil },
     policy,
-    before,
+    now,
   )
   if (next.lockedUntil === null || !next.justLocked) return
 
-  await db
-    .update(schema.user)
-    .set({ lockedUntil: next.lockedUntil })
-    .where(eq(schema.user.id, row.id))
-
+  await db.update(schema.user).set({ lockedUntil: next.lockedUntil }).where(eq(schema.user.id, row.id))
   await recordInstallActivity(db, {
     event: 'account_locked',
-    target: attempted,
-    detail: {
-      failures: String(next.failedSignIns),
-      minutes: String(policy.minutes),
-    },
-    headers,
+    target: row.email,
+    detail: { failures: String(next.failedSignIns), minutes: String(policy.minutes) },
+    headers: Object.fromEntries(
+      (tryGetCurrentAuthEndpointContext() as { headers?: Headers } | undefined)?.headers?.entries() ??
+        [],
+    ),
   })
 }
 
@@ -509,70 +536,6 @@ export function authOptions(
           }
         }
 
-        /**
-         * **A shut account is refused before the password is checked**, so a
-         * lockout costs an attacker the guess rather than merely the answer -
-         * and so a correct password found during the window still does not
-         * open it.
-         *
-         * **The refusal is a wrong password, in every channel it has.** Naming
-         * the lock told an unauthenticated caller that the address is an
-         * account, that their guessing was landing, and when the window
-         * reopened -- ten guesses at any address answered the first question.
-         * The specification asks for the opposite and this now meets it:
-         * *the response does not distinguish a locked account from a wrong
-         * password*. -> #82, #212
-         *
-         * **The hash runs even though nothing needs it**, which is the other
-         * half and the one a status code does not show. Throwing here used to
-         * skip the argon2 verify an ordinary attempt pays, so a locked account
-         * answered in 2.8ms against 19.4ms with no overlap at all -- a cleaner
-         * oracle than the status was. Hashing the supplied password and
-         * discarding it costs a locked attempt exactly what a wrong one costs.
-         *
-         * What this loses is real: an analyst locked out mid-incident is told
-         * only that the password was wrong. The lock is temporary, and
-         * `account_locked` is in the audit for an administrator to see.
-         */
-        if (ctx.path.startsWith('/sign-in')) {
-          const attempted = (ctx.body as { email?: unknown } | undefined)?.email
-          if (typeof attempted === 'string' && attempted !== '') {
-            const [account] = await db
-              .select({
-                failedSignIns: schema.user.failedSignIns,
-                lockedUntil: schema.user.lockedUntil,
-              })
-              .from(schema.user)
-              .where(sameAddress(attempted))
-              .limit(1)
-            /**
-             * **Only a body that already carries a password.** A `before` hook
-             * runs on the raw body, before validation, so writing one into a
-             * body that has none *repairs* it: the request stops being the 400
-             * an unlocked account answers and becomes the 401 a locked one
-             * does. That is the same enumeration oracle by a shorter route --
-             * ten guesses to lock an address, then one request with no
-             * password at all, and no credential needed.
-             */
-            const supplied = (ctx.body as { password?: unknown } | undefined)?.password
-            if (typeof supplied === 'string' && account && isLocked(account, new Date())) {
-              /**
-               * **The password is replaced, and Better Auth refuses it.**
-               *
-               * Handing the normal path a password that cannot match gives
-               * the same response by construction rather than by copying, the
-               * same verify, and the same `after` hook -- which is what records
-               * the failed sign-in and counts it, and which a locked attempt
-               * used to reach none of.
-               *
-               * `countTheFailure` returns early once an account is already
-               * locked, so this does not extend the window: an attacker
-               * cannot hold somebody out by keeping at it.
-               */
-              ;(ctx.body as { password?: unknown }).password = randomUUID()
-            }
-          }
-        }
         if (ctx.path !== '/sign-up/email') return
         const [already] = await db.select({ id: schema.user.id }).from(schema.user).limit(1)
         if (already) {
@@ -623,23 +586,33 @@ export function authOptions(
           })
           return
         }
-        if (!ctx.path.startsWith('/sign-in')) return
         /**
-         * **A success clears the count, not only the lock.** Leaving the
-         * counter where it stood would shut the account again on the analyst's
-         * very next typo, which reads as the lockout being broken.
+         * **Every refused sign-in, and a wrong password at any other door.**
+         * `returned` is the response *or* an `APIError`, and it is the only
+         * place the outcome is visible: a refusal writes no row. The count is
+         * `checkPassword`'s; this is the record.
          */
-        if (!(ctx.context.returned instanceof APIError)) {
-          const who = ctx.context.newSession?.user ?? ctx.context.session?.user
-          if (who?.id) {
-            await db.update(schema.user).set(CLEARED).where(eq(schema.user.id, who.id))
-          }
-          return
+        const refused = ctx.context.returned
+        if (!(refused instanceof APIError)) return
+        const signingIn = ctx.path === '/sign-in/email'
+        if (!signingIn && refused.body?.code !== 'INVALID_PASSWORD') return
+        const attempted = signingIn
+          ? (ctx.body as { email?: unknown } | undefined)?.email
+          : ctx.context.session?.user.email
+        /**
+         * **An address with no account costs what an account does.** The
+         * library hashes instead of verifying for one, so `checkPassword`
+         * never runs and would leave the account-holding answer slower by its
+         * two statements. Counting against a hash nobody holds spends them.
+         */
+        if (signingIn && typeof attempted === 'string' && attempted !== '') {
+          const [holds] = await db
+            .select({ id: schema.user.id })
+            .from(schema.user)
+            .where(sameAddress(attempted))
+            .limit(1)
+          if (!holds) await countAgainst(db, NOBODY_HOLDS)
         }
-        // **`returned` is the response *or* an `APIError`**, and it is the only
-        // place a sign-in's outcome is visible: a refusal writes no row, so
-        // there is nothing else to read afterwards.
-        const attempted = (ctx.body as { email?: unknown } | undefined)?.email
         /**
          * **The target is ours, and the identifier they typed is not.**
          * `target_label` partitions the run window, so a caller who chooses it
@@ -664,9 +637,6 @@ export function authOptions(
           },
           headers,
         })
-        if (typeof attempted === 'string' && attempted !== '') {
-          await countTheFailure(db, attempted, headers)
-        }
       }),
     },
     /**
@@ -816,7 +786,7 @@ export function authOptions(
       minPasswordLength: MINIMUM_PASSWORD_LENGTH,
       password: {
         hash: (password) => argonHash(password, ARGON2ID),
-        verify: ({ hash, password }) => argonVerify(hash, password, ARGON2ID),
+        verify: ({ hash, password }) => checkPassword(db, hash, password),
       },
     },
   } satisfies BetterAuthOptions
