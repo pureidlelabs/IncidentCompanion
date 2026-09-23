@@ -59,7 +59,7 @@ test.describe('a boxed table reaches the bottom of its pane', () => {
           }
         })
       // Only a table with more rows than room can leave dead pane.
-      test.skip(!read.scrolls, `${story} fits without scrolling`)
+      expect(read.scrolls, `${story} fits without scrolling, so it shows nothing here`).toBe(true)
       const slack = read.viewport - read.owed - read.bottom
       expect(
         slack,
