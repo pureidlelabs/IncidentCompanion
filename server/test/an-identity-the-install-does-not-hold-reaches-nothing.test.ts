@@ -17,7 +17,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAdmin, signIn, type Harness, type Persona } from './app-harness.js'
-import { openTestPool } from './database.js'
+import { defaultCustomerIn, openTestPool } from './database.js'
 import { ReachService } from '../src/access/reach.service.js'
 import { cases, user } from '../src/db/schema/index.js'
 
@@ -81,9 +81,9 @@ describe.skipIf(!(await bootable()))('an identity the install does not hold', ()
   it('is given no level over the default customer, and no case in it', async () => {
     const reach = harness.app.get(ReachService)
     const nobody = randomUUID()
-    const fallback = await reach.defaultCustomerId()
+    const fallback = await defaultCustomerIn(drizzle({ client: seedPool }))
 
-    expect(await reach.levelFor(nobody, fallback!)).toBeNull()
+    expect(await reach.reachOf(nobody)).toBeNull()
     expect(await reach.levelOnCase(nobody, everyones)).toEqual({
       customerId: fallback,
       level: null,

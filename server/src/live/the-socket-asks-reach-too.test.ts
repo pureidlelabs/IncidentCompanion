@@ -32,7 +32,7 @@ import {
   groups,
   user,
 } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { levelIn, openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -134,7 +134,7 @@ describe.skipIf(!db)('the socket asks reach too', () => {
   it('admits at read, the weakest level there is', async () => {
     await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'read' })
 
-    expect(await reach.levelFor(MEMBER, theirCustomer)).toBe('read')
+    expect(await levelIn(db!, MEMBER, theirCustomer)).toBe('read')
     expect(await mayReach(theirCase, MEMBER)).toBe(true)
   })
 

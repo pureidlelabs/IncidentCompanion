@@ -25,7 +25,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { ReachService, type Level } from './reach.service.js'
 import { CustomersService } from '../customers/customers.service.js'
 import { customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { levelIn, openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -94,8 +94,8 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
   it('reaches every customer in a group it was joined at, and none outside it', async () => {
     await join(ANALYST, sector, 'write')
 
-    expect(await reach.levelFor(ANALYST, inGroup)).toBe('write')
-    expect(await reach.levelFor(ANALYST, outside)).toBeNull()
+    expect(await levelIn(db!, ANALYST, inGroup)).toBe('write')
+    expect(await levelIn(db!, ANALYST, outside)).toBeNull()
   })
 
   /**
@@ -104,11 +104,11 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
    */
   it('reaches a customer added to the group later, without touching the analyst', async () => {
     await join(ANALYST, sector, 'read')
-    expect(await reach.levelFor(ANALYST, outside)).toBeNull()
+    expect(await levelIn(db!, ANALYST, outside)).toBeNull()
 
     await seed!.insert(groupCustomers).values({ groupId: sector, customerId: outside })
 
-    expect(await reach.levelFor(ANALYST, outside)).toBe('read')
+    expect(await levelIn(db!, ANALYST, outside)).toBe('read')
   })
 
   /** *Two memberships disagree*: the most permissive applies. */
@@ -119,7 +119,7 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
     await join(ANALYST, sector, 'read')
     await join(ANALYST, second!.id, 'write')
 
-    expect(await reach.levelFor(ANALYST, inGroup)).toBe('write')
+    expect(await levelIn(db!, ANALYST, inGroup)).toBe('write')
   })
 
   it('is not fooled by the order the two memberships were made in', async () => {
@@ -129,12 +129,12 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
     await join(ANALYST, sector, 'delete')
     await join(ANALYST, second!.id, 'read')
 
-    expect(await reach.levelFor(ANALYST, inGroup)).toBe('delete')
+    expect(await levelIn(db!, ANALYST, inGroup)).toBe('delete')
   })
 
   it('reaches nothing but the default when it belongs to no group', async () => {
-    expect(await reach.levelFor(STRANGER, inGroup)).toBeNull()
-    expect(await reach.levelFor(STRANGER, outside)).toBeNull()
+    expect(await levelIn(db!, STRANGER, inGroup)).toBeNull()
+    expect(await levelIn(db!, STRANGER, outside)).toBeNull()
     expect((await reach.reachOf(STRANGER))!.map((one) => one.customerId)).toEqual([theDefault])
   })
 
@@ -144,10 +144,10 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
    * because reaching it was never a membership.
    */
   it('reaches the default customer at read and write, group or no group', async () => {
-    expect(await reach.levelFor(STRANGER, theDefault)).toBe('write')
+    expect(await levelIn(db!, STRANGER, theDefault)).toBe('write')
 
     await join(ANALYST, sector, 'read')
-    expect(await reach.levelFor(ANALYST, theDefault)).toBe('write')
+    expect(await levelIn(db!, ANALYST, theDefault)).toBe('write')
   })
 
   /**
@@ -161,14 +161,14 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
     await seed!.insert(groupCustomers).values({ groupId: sector, customerId: theDefault })
     await join(ANALYST, sector, 'delete')
 
-    expect(await reach.levelFor(ANALYST, theDefault)).toBe('delete')
+    expect(await levelIn(db!, ANALYST, theDefault)).toBe('delete')
   })
 
   it('does not let a group lower the default customer below the floor', async () => {
     await seed!.insert(groupCustomers).values({ groupId: sector, customerId: theDefault })
     await join(ANALYST, sector, 'read')
 
-    expect(await reach.levelFor(ANALYST, theDefault)).toBe('write')
+    expect(await levelIn(db!, ANALYST, theDefault)).toBe('write')
   })
 
   /**
@@ -182,16 +182,16 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
    */
   it('answers from the grant as it is now, not as it was', async () => {
     await join(ANALYST, sector, 'delete')
-    expect(await reach.levelFor(ANALYST, inGroup)).toBe('delete')
+    expect(await levelIn(db!, ANALYST, inGroup)).toBe('delete')
 
     await seed!
       .update(groupMembers)
       .set({ level: 'read' })
       .where(eq(groupMembers.userId, ANALYST))
-    expect(await reach.levelFor(ANALYST, inGroup)).toBe('read')
+    expect(await levelIn(db!, ANALYST, inGroup)).toBe('read')
 
     await seed!.delete(groupMembers).where(eq(groupMembers.userId, ANALYST))
-    expect(await reach.levelFor(ANALYST, inGroup)).toBeNull()
+    expect(await levelIn(db!, ANALYST, inGroup)).toBeNull()
   })
 
   it('lists every customer reached, the default among them', async () => {

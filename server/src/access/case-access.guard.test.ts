@@ -15,7 +15,7 @@ import { ReachService } from './reach.service.js'
 import { ADMIN_ROLE } from '../domain/analyst-account.js'
 import { CustomersService } from '../customers/customers.service.js'
 import { cases, customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
-import { asRole, openTestPool } from '../../test/database.js'
+import { asRole, defaultCustomerIn, levelIn, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -237,12 +237,11 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
    * what a clause inside the guard would have produced.
    */
   it('answers the same level to anyone who asks the resolution', async () => {
-    const reach = new ReachService(db!)
-    const fallback = (await reach.defaultCustomerId())!
+    const fallback = await defaultCustomerIn(db!)
 
-    expect(await reach.levelFor(ADMIN, fallback)).toBe('delete')
-    expect(await reach.levelFor(ANALYST, fallback)).toBe('write')
-    expect(await reach.levelFor(ADMIN, reachedByNobody)).toBeNull()
+    expect(await levelIn(db!, ADMIN, fallback)).toBe('delete')
+    expect(await levelIn(db!, ANALYST, fallback)).toBe('write')
+    expect(await levelIn(db!, ADMIN, reachedByNobody)).toBeNull()
   })
 
   /**
@@ -251,8 +250,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
    * the specification does not support.
    */
   it('lets a group raise an analyst above the floor', async () => {
-    const reach = new ReachService(db!)
-    const fallback = (await reach.defaultCustomerId())!
+    const fallback = await defaultCustomerIn(db!)
 
     const [sector] = await db!
       .insert(groups)
@@ -264,7 +262,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
         .insert(groupMembers)
         .values({ groupId: sector!.id, userId: ANALYST, level: 'delete' })
 
-      expect(await reach.levelFor(ANALYST, fallback)).toBe('delete')
+      expect(await levelIn(db!, ANALYST, fallback)).toBe('delete')
       await expect(guard.canActivate(deleting(unattributed, ANALYST))).resolves.toBe(true)
     } finally {
       await db!.delete(groupMembers).where(eq(groupMembers.groupId, sector!.id))

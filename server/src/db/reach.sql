@@ -15,6 +15,7 @@
 set check_function_bodies = off;
 
 drop function if exists
+  public.ic_floor(text, uuid),
   public.ic_level(text, uuid),
   public.ic_reach(text, uuid),
   public.ic_principal(),
@@ -26,32 +27,41 @@ drop function if exists
   public.ic_cases_tallied(),
   public.ic_artefacts_named();
 
--- The level `principal` holds over `owner`, or null for none. A null owner is
--- the default customer. An id naming no account reaches nothing: the floor is
--- an account's role, and a membership goes with its account.
+-- The level `principal` holds over `owner` by role alone, or null: an account
+-- reaches the default customer, an administrator at delete and anybody else at
+-- write. A null owner is the default customer. An id naming no account holds no
+-- role, so it reaches nothing.
+create or replace function public.ic_floor(principal text, owner uuid)
+returns text
+language sql stable security definer
+set search_path = pg_catalog, pg_temp
+as $$
+  select case when u.role = 'admin' then 'delete' else 'write' end
+    from public."user" u
+    join public.customers d
+      on d.is_default and d.id = coalesce(owner, (select id from public.customers where is_default))
+   where u.id = principal
+$$;
+
+-- The level `principal` holds over `owner`, or null for none: the strongest of
+-- the floor and every group granting it. A membership goes with its account.
 create or replace function public.ic_level(principal text, owner uuid)
 returns text
 language sql stable security definer
 set search_path = pg_catalog, pg_temp
 as $$
-  with target as (
-    select coalesce(owner, (select id from public.customers where is_default)) as id
-  ),
-  held as (
+  with held as (
     select m.level
       from public.group_members m
       join public.group_customers g on g.group_id = m.group_id
-      join target on target.id = g.customer_id
      where m.user_id = principal
+       and g.customer_id = coalesce(owner, (select id from public.customers where is_default))
     union all
-    select case when u.role = 'admin' then 'delete' else 'write' end
-      from public."user" u
-      join target on true
-      join public.customers d on d.id = target.id and d.is_default
-     where u.id = principal
+    select public.ic_floor(principal, owner)
   )
   select level
     from held
+   where level is not null
    order by array_position(array['read', 'write', 'delete'], level) desc
    limit 1
 $$;
@@ -190,6 +200,7 @@ as $$
 $$;
 
 revoke all on function
+  public.ic_floor(text, uuid),
   public.ic_level(text, uuid),
   public.ic_reach(text, uuid),
   public.ic_principal(),
@@ -203,6 +214,7 @@ revoke all on function
 from public;
 
 grant execute on function
+  public.ic_floor(text, uuid),
   public.ic_level(text, uuid),
   public.ic_reach(text, uuid),
   public.ic_principal(),

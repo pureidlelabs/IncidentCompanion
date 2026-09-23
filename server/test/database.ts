@@ -17,6 +17,8 @@
  */
 import { PGlite } from '@electric-sql/pglite'
 import { PGLiteSocketServer } from '@electric-sql/pglite-socket'
+import { sql } from 'drizzle-orm'
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { Pool } from 'pg'
 
 import { createPool } from '../src/db/client.js'
@@ -114,4 +116,24 @@ export function hasConcurrentConnections(): boolean {
     'The suites that need two concurrent connections',
     'this run is on the in-process engine, which multiplexes every transaction onto one backend',
   )
+}
+
+/** The level the store decides `who` holds over `customerId`, or null for none. */
+export async function levelIn(
+  db: NodePgDatabase,
+  who: string,
+  customerId: string,
+): Promise<string | null> {
+  const { rows } = await db.execute<{ level: string | null }>(
+    sql`select ic_level(${who}, ${customerId}::uuid) as level`,
+  )
+  return rows[0]?.level ?? null
+}
+
+/** The default customer's id. */
+export async function defaultCustomerIn(db: NodePgDatabase): Promise<string> {
+  const { rows } = await db.execute<{ id: string }>(
+    sql`select id from customers where is_default`,
+  )
+  return rows[0]!.id
 }

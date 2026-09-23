@@ -15,7 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { ReachService } from './reach.service.js'
 import { customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
-import { asRole, openTestPool } from '../../test/database.js'
+import { asRole, levelIn, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -92,7 +92,7 @@ describe.skipIf(!db)('a level explained by its grant', () => {
     const shown = new Map((await reach.reachOf(who))!.map((one) => [one.customerId, one.level]))
     for (const customerId of made.customers) {
       expect(shown.get(customerId) ?? null, `${key} over ${customerId}`).toBe(
-        await reach.levelFor(who, customerId),
+        await levelIn(db!, who, customerId),
       )
     }
   })
@@ -104,7 +104,7 @@ describe.skipIf(!db)('a level explained by its grant', () => {
       )
       for (const who of Object.values(PEOPLE)) {
         expect(shown.get(who) ?? null, `${who} over ${customerId}`).toBe(
-          await reach.levelFor(who, customerId),
+          await levelIn(db!, who, customerId),
         )
       }
     }

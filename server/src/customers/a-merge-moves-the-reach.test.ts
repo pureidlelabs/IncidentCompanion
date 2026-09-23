@@ -14,9 +14,8 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { as } from '../../test/acting.js'
 
 import { CustomersService } from './customers.service.js'
-import { ReachService } from '../access/reach.service.js'
 import { cases, customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { levelIn, openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -45,7 +44,6 @@ afterAll(async () => {
 
 describe.skipIf(!db)('what an analyst reaches after a merge', () => {
   let service: CustomersService
-  let reach: ReachService
   let losing: string
   let surviving: string
   let theirs: string
@@ -84,7 +82,6 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
       .onConflictDoNothing()
 
     service = as(MERGER, new CustomersService(db!))
-    reach = new ReachService(db!)
     await service.ensureDefault()
 
     // The two answer every organisation fact the same way, so no merge here
@@ -115,11 +112,11 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
       .insert(cases)
       .values({ title: 'Came across', customerId: losing })
       .returning()
-    expect(await reach.levelFor(ANALYST, surviving), 'reached the survivor already').toBeNull()
+    expect(await levelIn(db!, ANALYST, surviving), 'reached the survivor already').toBeNull()
 
     await service.merge({ losing, surviving, choices: {}, actorId: MERGER })
 
-    expect(await reach.levelFor(ANALYST, surviving)).toBe('write')
+    expect(await levelIn(db!, ANALYST, surviving)).toBe('write')
     const [moved] = await seed!
       .select({ customerId: cases.customerId })
       .from(cases)
@@ -138,7 +135,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
 
     await service.merge({ losing, surviving, choices: {}, actorId: MERGER })
 
-    expect(await reach.levelFor(ANALYST, surviving)).toBe('write')
+    expect(await levelIn(db!, ANALYST, surviving)).toBe('write')
   })
 
   it('is not fooled by which side held the stronger level', async () => {
@@ -147,7 +144,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
 
     await service.merge({ losing, surviving, choices: {}, actorId: MERGER })
 
-    expect(await reach.levelFor(ANALYST, surviving)).toBe('delete')
+    expect(await levelIn(db!, ANALYST, surviving)).toBe('delete')
   })
 
   /**
@@ -158,7 +155,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
   it('grants nothing to somebody who reached neither', async () => {
     await service.merge({ losing, surviving, choices: {}, actorId: MERGER })
 
-    expect(await reach.levelFor(ANALYST, surviving)).toBeNull()
+    expect(await levelIn(db!, ANALYST, surviving)).toBeNull()
   })
 
   /**
@@ -176,7 +173,7 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
       .from(groupCustomers)
       .where(eq(groupCustomers.customerId, surviving))
     expect(edges.filter((one) => one.groupId === theirs)).toHaveLength(1)
-    expect(await reach.levelFor(ANALYST, surviving)).toBe('read')
+    expect(await levelIn(db!, ANALYST, surviving)).toBe('read')
   })
 
   it('leaves no group holding the customer that went', async () => {
