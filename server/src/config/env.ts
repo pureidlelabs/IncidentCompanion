@@ -102,13 +102,16 @@ const schema = z.object({
   ),
 
   /**
-   * Whether analysts may import incidents from Microsoft Sentinel, which puts
-   * Azure's two origins in every page's content policy. Off unless the
-   * operator turns it on.
+   * The detection platforms analysts may import incidents from, comma
+   * separated. `sentinel` puts Azure's two origins in every page's content
+   * policy. None unless the operator names one; an unknown name refuses start.
    */
-  IC_SENTINEL_IMPORTER: z.preprocess(
-    (value) => (value === '' ? undefined : value),
-    z.stringbool().default(false),
+  IC_IMPORTERS: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim() !== ''
+        ? value.split(',').map((one) => one.trim())
+        : [],
+    z.array(z.enum(['sentinel'])),
   ),
 })
 

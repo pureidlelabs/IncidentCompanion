@@ -55,7 +55,7 @@ export async function applyPlatform(
   app.use(
     securityHeaders(
       config.get('AUTH_BASE_URL', { infer: true }),
-      config.get('IC_SENTINEL_IMPORTER', { infer: true }),
+      config.get('IC_IMPORTERS', { infer: true }).includes('sentinel'),
     ),
   )
   app.use(noStoreOnTheApi())

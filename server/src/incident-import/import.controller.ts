@@ -149,7 +149,7 @@ export class StartImportController {
     description: 'The detection platforms this install imports from.',
   })
   platforms(): ImportPlatforms {
-    return { sentinel: this.config.get('IC_SENTINEL_IMPORTER', { infer: true }) }
+    return { sentinel: this.config.get('IC_IMPORTERS', { infer: true }).includes('sentinel') }
   }
 
   /**

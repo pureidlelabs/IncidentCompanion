@@ -124,7 +124,7 @@ services:
       # carry the destination's credential and reach the exporter unread.
       OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
-      IC_SENTINEL_IMPORTER: ${IC_SENTINEL_IMPORTER:-}
+      IC_IMPORTERS: ${IC_IMPORTERS:-}
       # The one peer whose account of who is calling is believed.
       IC_EDGE: nginx
     volumes:

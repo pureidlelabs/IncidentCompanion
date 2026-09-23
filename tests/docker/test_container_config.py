@@ -1478,8 +1478,8 @@ def test_a_supplied_pair_is_read_whoever_copied_it_in(tmp_path: Path):
     """The operator's pair, owned by whoever copied it into the volume, is read with the edge's own capabilities.
 
     `docker compose cp` keeps the copier's uid, and the edge runs as a root
-    holding only what `compose.yaml` grants it, which cannot read a 0600 file
-    it does not own.
+    holding only what `compose.yaml` grants it, which cannot read a private
+    key it does not own.
     """
     _mint_pair(tmp_path, cn="soc.example.org", sans="DNS:soc.example.org")
     before = (tmp_path / "cert.pem").read_bytes()
@@ -1871,6 +1871,6 @@ def test_the_edge_says_hsts_at_a_name_and_never_at_loopback():
 
 def test_the_sentinel_importer_is_off_until_the_operator_turns_it_on():
     """The application is handed the operator's switch, and nothing when it is unset."""
-    assert _resolved()["services"]["app"]["environment"]["IC_SENTINEL_IMPORTER"] == ""
-    on = _resolved(IC_SENTINEL_IMPORTER="on")
-    assert on["services"]["app"]["environment"]["IC_SENTINEL_IMPORTER"] == "on"
+    assert _resolved()["services"]["app"]["environment"]["IC_IMPORTERS"] == ""
+    on = _resolved(IC_IMPORTERS="sentinel")
+    assert on["services"]["app"]["environment"]["IC_IMPORTERS"] == "sentinel"

@@ -68,7 +68,7 @@ export PORT="$API_PORT"
 export NODE_ENV="${NODE_ENV:-development}"
 # The dev loop, and the browser tier driving it, walk the importer against its
 # bundled fixture, which an install offers only where the operator turned it on.
-export IC_SENTINEL_IMPORTER="${IC_SENTINEL_IMPORTER:-on}"
+export IC_IMPORTERS="${IC_IMPORTERS:-sentinel}"
 
 SEED=1
 KEEP_DATA=0

@@ -19,7 +19,7 @@ describe.skipIf(!runnable)('an install named ir.example.org that imports from Se
 
   beforeAll(async () => {
     vi.stubEnv('AUTH_BASE_URL', 'https://ir.example.org:8443')
-    vi.stubEnv('IC_SENTINEL_IMPORTER', 'on')
+    vi.stubEnv('IC_IMPORTERS', 'sentinel')
     harness = await boot()
   }, 90_000)
 
