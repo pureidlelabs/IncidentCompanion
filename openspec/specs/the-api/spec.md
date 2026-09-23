@@ -72,6 +72,13 @@ An entry-point check is necessary and MUST NOT be the only one. Where a caller c
 - THEN it is protected without anybody adding a check
 - AND omitting the check is not something a reviewer must catch
 
+#### Scenario: A route forgets to ask
+
+- GIVEN a route that asks nothing about reach before it serves a case
+- WHEN a caller asks it for a case whose customer they do not reach
+- THEN none of that case is served
+- AND nothing is written into it
+
 ### Requirement: A read tells a caller what it is looking at
 
 Anything a caller may later change MUST arrive carrying what a write will be checked against, so that a caller which read, thought, and then wrote can be told that the ground moved.
@@ -127,6 +134,18 @@ A refusal is a reference entry for somebody writing a client. It names the condi
 - GIVEN a malformed request
 - WHEN it is refused
 - THEN the refusal names what was wrong with it
+
+#### Scenario: A caller times the refusal
+
+- GIVEN a caller without reach to a customer
+- WHEN it measures how long the refusal of one of that customer's cases takes
+- THEN it takes the work the refusal of an identifier that does not exist takes
+
+#### Scenario: A write depends on another customer's data
+
+- GIVEN a caller who does not reach a customer
+- WHEN a write it makes would depend on what that customer holds
+- THEN the answer is the same whatever that customer holds
 
 ### Requirement: What a request costs is bounded before it runs
 

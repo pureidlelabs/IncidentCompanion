@@ -34,13 +34,19 @@ Whether a caller may reach a case is decided in a single place, ahead of anythin
 
 An analyst reaches a case where they reach that case's customer, and does to it only what their level over that customer permits. The decision is made against the customer rather than against the case, so a case moving between customers moves its reach with it.
 
+The store makes the decision, and the route guard, the live connection, every list of cases and the row-level policies all ask it. A case that does not exist and one out of reach are answered after the same work.
+
 ## Attributing a case is its own act, at the level of the customer it has now
 
 Which customer a case answers for is not a field on the edit form. It decides who may reach the case, so it is performed and refused on its own terms.
 
-**The level asked for is write over the customer the case has now, and nothing more.** An analyst working a case is who learns whose incident it was, so requiring an administrator would leave that discovery with nowhere to go. Reaching the *destination* is deliberately not asked either: the organisation a case turns out to belong to is usually one the analyst does not yet work for, and requiring reach there refuses the ordinary use.
+**The level asked for is write over the customer the case has now.** An analyst working a case is who learns whose incident it was, so requiring an administrator would leave that discovery with nowhere to go. Reaching the *destination* is not asked of a case carrying no reference: the organisation a case turns out to belong to is usually one the analyst does not yet work for, and requiring reach there refuses the ordinary use.
 
-**A case can therefore be moved out of the mover's own reach.** That is a boundary rather than an oversight: they already reached the case, so the move gains them nothing, and the act is recorded against both customers. Undoing it is not free — being an administrator carries no reach over a case, so whoever moves it back reaches the destination through a group like anybody else.
+**A case carrying a reference moves only to a customer the mover reaches.** Whether the destination already uses the reference is a fact about that customer's cases, and answering it to somebody who does not reach them makes the move an oracle for its tickets -- refused where the customer holds a guessed reference and planted in its list where it does not. So such a move is refused with one answer whatever the destination holds, and a mover who does reach it is told which case holds the reference, as a create is. The way out is to clear the reference, or to ask somebody who works the destination.
+
+**A case can therefore be moved out of the mover's own reach.** That is a boundary rather than an oversight: they already reached the case, so the move gains them nothing, and the act is recorded against both customers. The store performs the move once it has asked that the mover writes the case where it is now, because the row the move leaves behind is one the mover may no longer see. Undoing it is not free — being an administrator carries no reach over a case, so whoever moves it back reaches the destination through a group like anybody else.
+
+**Whether the named customer exists is answered either way.** A customer's identifier is unguessable, and moving to a customer the mover does not reach is the ordinary use.
 
 **The default customer is not a destination.** Every analyst reaches it, so moving an attributed case there would widen who reads that organisation's incident to the whole install — and it would falsify what the floor rests on, which is that whatever stands against the default is nobody's yet.
 
