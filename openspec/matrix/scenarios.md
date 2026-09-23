@@ -598,12 +598,12 @@
 | A caller asks for what it needs and receives no more | A caller wants everything | demonstrated | server/test/openapi-contract.test.ts |
 | Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
 | Reach is enforced where the data is, not where the request arrives | A new way to read a record is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
-| A read tells a caller what it is looking at | A caller reads and later writes | demonstrated | server/test/openapi-contract.test.ts |
+| A read tells a caller what it is looking at | A caller reads and later writes | undemonstrated | |
 | A read tells a caller what it is looking at | Somebody wrote first | demonstrated | server/src/collections/a-refused-write-says-what-the-row-became.test.ts |
 | The interface describes itself, and the description is generated | A route is added | demonstrated | server/test/openapi-contract.test.ts |
 | The interface describes itself, and the description is generated | A route changes shape | undemonstrated | |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts |
-| A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/src/domain/a-refusal-names-the-field-it-is-about.test.ts |
+| A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/every-write-door-refuses-a-version-past-its-column.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts |
 | A fact can be asked for across cases | An indicator is asked about across cases | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
