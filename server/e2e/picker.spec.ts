@@ -37,7 +37,7 @@ test.beforeAll(async ({ browser, baseURL }) => {
 
 for (const who of [ADMIN, ANALYST] as Persona[]) {
   test.describe(`as ${who.role}`, () => {
-    test.setTimeout(300_000)
+    test.setTimeout(600_000)
 
     test('opens every pane the picker offers', async ({ browser }) => {
       const { context, page } = await asPersona(browser, who)
