@@ -583,8 +583,8 @@ def test_no_tier_runs_on_neither_event() -> None:
 
     The queue splits the work: a pull request proves the branch, a merge group
     proves the tree that ships. A tier gated on neither does not error, it
-    skips -- and `gate` passes on `skipped`, so the suites would report success
-    having run nothing.
+    skips -- and a pull request's `gate` passes on `skipped`, so the suites
+    would report success having run nothing.
 
     It fails in both directions: a trigger for an event that cannot arrive,
     and a condition naming an event this workflow is not triggered on. Neither
@@ -722,8 +722,7 @@ def test_a_called_run_reaches_every_tier_the_gate_waits_for() -> None:
     """`nightly-build.yml` calls `ci.yml`, where `github.event_name` is `schedule`.
 
     So every condition reading `merge_group` is false in a called run: the
-    expensive tiers skip, `gate` passes on `skipped`, and the nightly reports
-    green having run none of the suites.
+    expensive tiers skip, and the nightly answers about none of the suites.
     """
     nightly = yaml.safe_load(
         (REPO_ROOT / ".github" / "workflows" / "nightly-build.yml").read_text(encoding="utf-8")
@@ -1002,58 +1001,244 @@ def test_a_run_that_asks_for_every_tier_writes_every_scope_output(tmp_path: Path
     )
 
 
-def test_the_lint_matrix_a_full_run_asks_for_is_one_fromjson_can_read(tmp_path: Path) -> None:
-    """`fromJSON('')` fails the job with no legs and no annotation.
-
-    The `if` above it tests for `'[]'`, which an unset output does not match,
-    so the job is dispatched with nothing to build a matrix from.
-    """
-    linters = run_scope(tmp_path, ALL="true").get("linters", "")
-    shards = json.loads(linters or '""')
-    assert isinstance(shards, list) and shards, (
-        f"a full run asks for lint shards {linters!r}, which builds no matrix"
-    )
-
-
-def run_gate(results: str, want_all: str) -> subprocess.CompletedProcess[str]:
-    """The `gate` step, executed against one set of tier results."""
+def run_gate(
+    results: dict[str, str], event: str, want_all: str = ""
+) -> subprocess.CompletedProcess[str]:
+    """The `gate` step, executed against each tier's result as `toJSON(needs)` gives it."""
     return subprocess.run(  # noqa: S603
         ["bash", "-e", "-c", step_script("gate")],
         capture_output=True,
         text=True,
         timeout=30,
-        env={"PATH": os.environ["PATH"], "RESULTS": results, "ALL": want_all},
+        env={
+            "PATH": os.environ["PATH"],
+            "NEEDS": json.dumps({name: {"result": r} for name, r in results.items()}),
+            "ALL": want_all,
+            "GITHUB_EVENT_NAME": event,
+            "NIGHTLY_ONLY": gate_env()["NIGHTLY_ONLY"],
+        },
         check=False,
     )
 
 
+def gate_env() -> dict[str, str]:
+    return {k: str(v) for k, v in (ci_jobs()["gate"]["steps"][0].get("env") or {}).items()}
+
+
 @pytest.mark.parametrize(
-    ("results", "want_all", "passes"),
+    ("results", "event", "want_all", "passes"),
     [
-        ("success success", "", True),
-        ("success skipped", "", True),
-        ("success failure", "", False),
-        ("success cancelled", "", False),
-        ("success success", "true", True),
-        ("success skipped", "true", False),
-        ("success failure", "true", False),
+        ({"lint": "success", "client-suite": "success"}, "pull_request", "", True),
+        ({"lint": "success", "client-suite": "skipped"}, "pull_request", "", True),
+        ({"lint": "success", "client-suite": "failure"}, "pull_request", "", False),
+        ({"lint": "success", "client-suite": "cancelled"}, "pull_request", "", False),
+        ({"lint": "success", "client-suite": "success"}, "merge_group", "", True),
+        ({"lint": "success", "client-suite": "skipped"}, "merge_group", "", False),
+        ({"lint": "success", "client-suite": "failure"}, "merge_group", "", False),
+        ({"lint": "success", "browser": "skipped"}, "merge_group", "", True),
+        ({"lint": "success", "client-suite": "success"}, "schedule", "true", True),
+        ({"lint": "success", "client-suite": "skipped"}, "schedule", "true", False),
+        ({"lint": "success", "browser": "skipped"}, "schedule", "true", False),
+        ({"lint": "success", "client-suite": "failure"}, "schedule", "true", False),
     ],
 )
-def test_the_gate_reads_a_skip_by_what_the_run_asked_for(
-    results: str, want_all: str, passes: bool
+def test_the_gate_reads_a_skip_by_the_run_it_is_in(
+    results: dict[str, str], event: str, want_all: str, passes: bool
 ) -> None:
     """A tier that did not run is the defect this pipeline keeps shipping.
 
-    `skipped` has to pass on a pull request: it is how a tier says its paths
-    did not move. On a run that asked for every tier it says the opposite --
-    nothing scoped this out, so the tier was dispatched and never arrived --
-    and passing it there lets a tier skip in every nightly with nothing saying
-    so.
+    A skip passes only where the run is advisory, which is a pull request. The
+    merge group decides the merge, and a run that asked for every tier asked:
+    a skip in either is a tier dispatched that never arrived.
     """
-    done = run_gate(results, want_all)
+    done = run_gate(results, event, want_all)
     assert (done.returncode == 0) is passes, (
-        f"results {results!r} with all={want_all!r} exited {done.returncode}:\n"
-        f"{done.stdout}{done.stderr}"
+        f"{results!r} in a {event} run with all={want_all!r} exited "
+        f"{done.returncode}:\n{done.stdout}{done.stderr}"
+    )
+
+
+def test_a_pull_requests_gate_says_its_verdict_is_advisory() -> None:
+    """A green scoped run reads as certified unless it says what it left out."""
+    done = run_gate({"lint": "success", "client-suite": "skipped"}, "pull_request")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "advisory" in done.stdout and "client-suite" in done.stdout, done.stdout
+    assert "merge group" in done.stdout, done.stdout
+
+
+def test_the_gate_refuses_a_run_it_could_not_read() -> None:
+    """An empty `needs` is a gate that checked nothing, and `for` over nothing passes."""
+    done = subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", step_script("gate")],
+        capture_output=True, text=True, timeout=30, check=False,
+        env={"PATH": os.environ["PATH"], "NEEDS": "{}", "ALL": "",
+             "GITHUB_EVENT_NAME": "merge_group", "NIGHTLY_ONLY": ""},
+    )
+    assert done.returncode != 0, done.stdout + done.stderr
+
+
+def test_the_gate_exempts_exactly_the_nightly_tier() -> None:
+    """The one skip a merge group forgives is a tier no merge group schedules.
+
+    Widen it and a skipped suite passes the queue; leave a nightly tier out and
+    every merge group goes red on a job it never meant to run.
+    """
+    exempt = set(gate_env().get("NIGHTLY_ONLY", "").split())
+    assert exempt == set(NIGHTLY_TIER), (
+        f"the gate forgives {sorted(exempt)} in a merge group; the nightly-only "
+        f"tiers are {sorted(NIGHTLY_TIER)}"
+    )
+    said = run_gate({"lint": "success", **dict.fromkeys(exempt, "skipped")}, "merge_group")
+    assert all(name in said.stdout for name in exempt), (
+        f"a green merge group does not say which tier it did not run:\n{said.stdout}"
+    )
+
+
+def _truthy(node: ast.AST, names: dict[str, object]) -> object:
+    """One node of a job's `if`, translated to Python, evaluated. Unknown syntax raises."""
+    if isinstance(node, ast.BoolOp):
+        values = [_truthy(v, names) for v in node.values]
+        return all(values) if isinstance(node.op, ast.And) else any(values)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        return not _truthy(node.operand, names)
+    if isinstance(node, ast.Compare) and len(node.ops) == 1:
+        left, right = _truthy(node.left, names), _truthy(node.comparators[0], names)
+        if isinstance(node.ops[0], ast.Eq):
+            return left == right
+        if isinstance(node.ops[0], ast.NotEq):
+            return left != right
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.Name) and node.id in names:
+        return names[node.id]
+    raise AssertionError(f"a job condition this reader cannot evaluate: {ast.dump(node)}")
+
+
+def scheduled(job: dict, event: str, outputs: dict[str, str], want_all: bool = False) -> bool:
+    """Whether a runner starts `job` for one event, given what `scope` wrote."""
+    expr = " ".join(str(job.get("if", "true")).split())
+    expr = re.sub(r"needs\.scope\.outputs\.(\w+)",
+                  lambda m: repr(outputs.get(m[1], "")), expr)
+    for spelled, value in (("failure()", "False"), ("cancelled()", "False"),
+                           ("always()", "True"), ("github.event_name", repr(event)),
+                           ("github.event.pull_request.draft", "False"),
+                           ("inputs.all", repr(want_all)),
+                           ("&&", " and "), ("||", " or "), ("!=", " <> ")):
+        expr = expr.replace(spelled, value)
+    expr = expr.replace("!", " not ").replace(" <> ", " != ")
+    return bool(_truthy(ast.parse(expr.strip(), mode="eval").body, {"true": True, "false": False}))
+
+
+@pytest.fixture(scope="module")
+def tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A repository indexing every path this one tracks, as a merge group's checkout holds them.
+
+    The files are empty and never written out: the scope step reads names, from
+    `git ls-files` and `git diff`, and nothing else.
+    """
+    root = tmp_path_factory.mktemp("tree")
+    tracked = subprocess.run(["git", "ls-files", "-z"], cwd=REPO_ROOT, capture_output=True,  # noqa: S603
+                             text=True, check=True).stdout.split("\0")
+    _git(root, "init", "-q")
+    empty = _git(root, "hash-object", "-w", "--stdin", stdin="")
+    _git(root, "update-index", "--add", "--index-info",
+         stdin="".join(f"100644 {empty}\t{p}\n" for p in tracked if p))
+    _git(root, "commit", "-q", "-m", "the tree")
+    return root
+
+
+def _git(root: Path, *args: str, stdin: str | None = None) -> str:
+    return subprocess.run(  # noqa: S603
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", str(root), *args],
+        input=stdin, capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+
+def scope_over(tree: Path, path: str, event: str, tmp_path: Path) -> dict[str, str]:
+    """The `scope` step for a change touching `path` alone, in `event`."""
+    base = _git(tree, "rev-parse", "HEAD")
+    blob = _git(tree, "hash-object", "-w", "--stdin", stdin=f"{tmp_path}\n")
+    _git(tree, "update-index", "--add", "--cacheinfo", f"100644,{blob},{path}")
+    _git(tree, "commit", "-q", "-m", f"touch {path}")
+    out = tmp_path / "github-output"
+    out.touch()
+    done = subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", step_script("scope", 1)],
+        cwd=tree, capture_output=True, text=True, timeout=60, check=False,
+        env={"PATH": os.environ["PATH"], "GITHUB_OUTPUT": str(out), "HEAD_REF": "",
+             "BASE_SHA": base, "HEAD_SHA": _git(tree, "rev-parse", "HEAD"), "ALL": "",
+             "GITHUB_EVENT_NAME": event},
+    )
+    assert done.returncode == 0, f"the scope step failed:\n{done.stdout}{done.stderr}"
+    return dict(line.partition("=")[::2] for line in out.read_text().splitlines())
+
+
+#: Files one tier's checks read from another tier's tree, with the tier that reads it.
+CROSS_TREE_INPUTS = [
+    "server/src/domain/field-spec.ts",  # the client compiles and bundles it as `@contract`
+    "ui/src/api/collections.ts",  # the server suite holds every path a screen calls
+    "ui/src/fixtures/specs.json",  # the server suite compares the served specs to it
+    "ui/eslint.config.js",  # the server suite reads which rules the client runs
+    "docker/db/roles.sql",  # the server suite provisions and asserts the roles
+    "docker/nginx/default.conf",  # the container files read the proxy
+    "dev-node.sh",  # the server suite and the browser tier run it
+    "tests/data/prose_fixtures.json",  # both suites load it
+    "tools/eslint-rules/ascii-only.mjs",  # both eslint configs load it
+    "ui/src/components/ui/button.tsx",  # the image is built from it
+]
+
+
+@pytest.mark.parametrize("path", CROSS_TREE_INPUTS)
+def test_a_merge_group_runs_every_tier_whatever_the_diff(
+    tree: Path, tmp_path: Path, path: str
+) -> None:
+    """The run that decides the merge cannot be scoped by paths, because the tiers read across trees.
+
+    Replayed end to end: the real scope step over a change to `path` alone, each
+    job's `if` over what it wrote, and the real gate over the results. Every tier
+    either runs or, skipped, fails the gate.
+    """
+    jobs = ci_jobs()
+    outputs = scope_over(tree, path, "merge_group", tmp_path)
+    results = {
+        name: "success" if scheduled(jobs[name], "merge_group", outputs) else "skipped"
+        for name in jobs["gate"]["needs"]
+    }
+    unscheduled = sorted(n for n, r in results.items() if r == "skipped")
+    assert unscheduled == sorted(NIGHTLY_TIER), (
+        f"a merge group touching {path} does not start {unscheduled}"
+    )
+    assert run_gate(results, "merge_group").returncode == 0
+
+    for name in results:
+        if name in NIGHTLY_TIER:
+            continue
+        done = run_gate({**results, name: "skipped"}, "merge_group")
+        assert done.returncode != 0, (
+            f"a merge group touching {path} passes with {name} skipped:\n{done.stdout}"
+        )
+
+
+@pytest.mark.parametrize("event", ["pull_request", "merge_group"])
+def test_the_cheap_tiers_run_whole_whatever_the_diff(
+    tree: Path, tmp_path: Path, event: str
+) -> None:
+    """A lint, a typecheck and a build cost seconds, and each reads more than its own tree.
+
+    Scoped, an eslint rule module linted nothing and a client change built no
+    server. So every shard and every step runs on every event.
+    """
+    jobs = ci_jobs()
+    outputs = scope_over(tree, "tools/eslint-rules/ascii-only.mjs", event, tmp_path)
+    for name in CHEAP_TIER:
+        assert scheduled(jobs[name], event, outputs), f"{name} does not run in a {event}"
+        gated = [s.get("name", s.get("uses")) for s in jobs[name]["steps"]
+                 if "scope" in str(s.get("if", ""))]
+        assert not gated, f"{name} skips {gated} by path"
+    assert jobs["lint"]["strategy"]["matrix"]["linter"] == ["server", "client", "tools"]
+    tools = str(jobs["lint"]["steps"][-1]["run"])
+    assert "WANT_" not in tools and "WANT_" not in str(jobs["lint"]["steps"][-1].get("env")), (
+        "the tool shard still runs a linter only when its paths moved"
     )
 
 
