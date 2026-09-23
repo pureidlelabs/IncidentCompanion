@@ -1,12 +1,12 @@
 # OWASP ASVS 5.0 Level 2
 
-Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather than recalled. Chapters covered are the ones the written specifications bear on: V1 Encoding and Sanitization, V2 Validation and Business Logic, V3 Web Frontend Security, V4 API and Web Service, V5 File Handling, V6 Authentication, V7 Session Management, V8 Authorization, V10 OAuth and OIDC, V12 Secure Communication, V13 Configuration, V14 Data Protection, V16 Security Logging. The rest are untouched because no specification yet reaches them.
+Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather than recalled. Chapters covered are the ones the written specifications bear on: V1 Encoding and Sanitization, V2 Validation and Business Logic, V3 Web Frontend Security, V4 API and Web Service, V5 File Handling, V6 Authentication, V7 Session Management, V8 Authorization, V10 OAuth and OIDC, V12 Secure Communication, V13 Configuration, V14 Data Protection, V15 Secure Coding and Architecture, V16 Security Logging. The rest are untouched because no specification yet reaches them.
 
 **A row cites a requirement exactly**, as `capability :: Requirement title`, so that renaming a requirement breaks the row rather than quietly orphaning it. `tests/docs/test_openspec_consistency.py` holds that true.
 
-**Where a requirement answers a control only in part, the row says which part is missing.** A requirement can be built and still leave a control half open -- sessions end when they should and no administrator can end one, which is most of V7.4 and not all of it.
+**Where a requirement answers a control only in part, the row says which part is missing.** A requirement can be built and still leave a control half open -- every administrative event is logged, and an act the record cannot take still proceeds, which is most of V16.3 and not all of it.
 
-**A row says which requirement answers a control, not that the control is satisfied today.** Where the answering requirement has no implementation the row is marked **Unbuilt**, and the control is not covered on any install now running -- the requirement stands, and the scenarios under it are recorded as `unbuilt` in `scenarios.md` rather than as untested. Reading a marked row as coverage is the mistake this marking exists to stop.
+**A row says which requirement answers a control, not that the control is satisfied today.** Where the answering requirement has no implementation the row is marked **Unbuilt**, and the control is not covered on any install now running -- the requirement stands, and the scenarios under it are recorded as `unbuilt` in `scenarios.md` rather than as untested. Where some of its scenarios are unbuilt the row is marked **Part unbuilt** and says what is missing. Both marks are read from `scenarios.md`, and `tests/docs/test_openspec_consistency.py` refuses a mark the ledger does not bear out in either direction. Reading a marked row as coverage is the mistake this marking exists to stop.
 
 ## Answered
 
@@ -14,24 +14,24 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | --- | --- | --- |
 | V8.2.1, V8.2.2 | Function-level and data-specific access restricted to explicit permissions | accounts-and-access :: Case data is reached through groups, at a level |
 | V8.3.1 | Authorization enforced at a trusted service layer | accounts-and-access :: Managing the install and reaching case data are separate grants |
+| V8.2.1 | Function-level access restricted to consumers with explicit permissions | accounts-and-access :: What the install is made of is management-plane |
+| V13.4.5 | Monitoring endpoints not exposed unless explicitly intended | **The monitoring half; internal documentation is not answered here.** accounts-and-access :: What the install is made of is management-plane |
 | V6.2.2, V6.2.3 | Users can change their password; a change requires the current one | accounts-and-access :: Authentication resists guessing, and says so to the auditor |
 | V6.3.1 | Controls against credential stuffing and brute force | accounts-and-access :: Authentication resists guessing, and says so to the auditor |
 | V6.3.2 | No default accounts present or enabled | accounts-and-access :: An account is provisioned, never self-created |
 | V6.3.3 | Multi-factor, or a combination of single factors | **Unbuilt.** accounts-and-access :: A second factor is available, and enforcing it is the install's policy |
 | V6.4.1 | System-generated initial secrets are securely random | **Unbuilt.** accounts-and-access :: An install can be recovered without another administrator |
-| V6.4.2 | No password hints or knowledge-based authentication | **Unbuilt.** accounts-and-access :: An install can be recovered without another administrator |
 | V6.4.4 | A lost factor requires proofing at enrolment level | **Unbuilt.** accounts-and-access :: A second factor is available, and enforcing it is the install's policy |
 | V7.2.4 | A new session token on authentication; the old one ended | accounts-and-access :: A session belongs to its holder and ends when it should |
-| V7.3.1, V7.3.2 | An inactivity timeout and an absolute maximum lifetime | accounts-and-access :: A session belongs to its holder and ends when it should |
-| V7.4.1, V7.4.5 | Termination disallows further use; administrators can end one session or all | **Half unbuilt: no route ends another analyst's session (#204).** accounts-and-access :: A session belongs to its holder and ends when it should |
+| V7.3.1, V7.3.2 | An inactivity timeout and an absolute maximum lifetime | **The connection half is unmet: a session that times out leaves its open case connection writing (#1162).** accounts-and-access :: A session belongs to its holder and ends when it should |
+| V7.4.1, V7.4.5 | Termination disallows further use; administrators can end one session or all | **V7.4.1 in part: a session ended by expiry leaves its open case connection writing (#1162).** accounts-and-access :: A session belongs to its holder and ends when it should |
 | V7.4.2 | All sessions ended when an account is disabled | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
 | V7.5.2 | A user can see and end their own sessions | accounts-and-access :: A session belongs to its holder and ends when it should |
 | V7.6.1 | Session lifetime between relying party and provider behaves as documented | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
-| V10.4.2, V10.4.4 | An authorization code used once; a client allowed only the grants it needs | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
 | V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | cases :: Reaching a case is decided in one place, by customer |
 | V8.2.2 | Data-specific access restricted to explicit permissions | customers :: A customer cannot be removed out from under its cases |
 | V8.1.2, V8.2.3 | Field-level access restricted to explicit permissions, read and write | the-api :: Reach is enforced where the data is, not where the request arrives |
-| V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | the-api :: A fact can be asked for across cases |
+| V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | **Unbuilt.** the-api :: A fact can be asked for across cases |
 | V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | state :: An artefact is reached only through the case that holds it |
 | V8.2.2 | Data-specific access restricted to explicit permissions | collections :: A reference points inside its own case, and the store alone cannot enforce it |
 | V2.3.1 | Business logic flows processed only in the expected sequential order | report :: A correction is a new report, not an edit |
@@ -49,10 +49,10 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V2.4.1 | Anti-automation against excessive calls to application functions | the-api :: What a request costs is bounded before it runs |
 | V4.3.1 | Depth, amount or cost analysis against query and data-layer expression denial of service | the-api :: What a request costs is bounded before it runs |
 | V16.5.1 | A generic message on error, exposing nothing sensitive | the-api :: A refusal says which of the caller's problems it is |
-| V8.2.1 | Function-level access restricted to consumers with explicit permissions | reference :: The door behind a session describes this install |
-| V8.2.2 | Data-specific access restricted to explicit permissions | reference :: Configuration naming a customer is scoped to that customer |
-| V16.3.1 | All authentication operations logged, successful and failed | accounts-and-access :: Administrative events are logged |
-| V16.3.2 | Failed authorization attempts logged | accounts-and-access :: Administrative events are logged |
+| V8.2.1 | Function-level access restricted to consumers with explicit permissions | **Part unbuilt: reading the reference is a session rather than a permission, so nothing withdraws it (#222).** reference :: The door behind a session describes this install |
+| V8.2.2 | Data-specific access restricted to explicit permissions | **Unbuilt.** reference :: Configuration naming a customer is scoped to that customer |
+| V16.3.1 | All authentication operations logged, successful and failed | **Part unbuilt: an act the record cannot take proceeds (#75), and there is no destination to change (#13).** accounts-and-access :: Administrative events are logged |
+| V16.3.2 | Failed authorization attempts logged | **Part unbuilt: an act the record cannot take proceeds (#75), and there is no destination to change (#13).** accounts-and-access :: Administrative events are logged |
 | V16.2.1 | Each entry carries when, where, who, what | install-audit :: A line says who, what, and to what, and never says what was written |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | install-audit :: Reading the audit is an act the audit records |
 | V3.4.3, V3.4.4 | A Content-Security-Policy response header, and a nosniff header on every response | transport :: The browser is told what the application may do, on every response |
@@ -75,6 +75,7 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | preferences :: What an install decides is a closed set, and changing one is an administrative act |
 | V1.2.3 | The application only allows what it is meant to, with everything else refused by default | evaluation :: What it cannot honestly do, it refuses |
 | V14.2.1 | Data classified and handled by its sensitivity, with nothing confidential where it need not be | evaluation :: The visitor's work is their own, and they can discard it |
+| V15.1.2 | An inventory of the third-party components in use | **The inventory only; that each component comes from a trusted, maintained repository is stated nowhere.** dependencies :: What is available is answerable without reading the tree |
 
 ## Gaps this mapping found
 
@@ -92,11 +93,13 @@ A control at Level 2 that no written requirement answers. Not deviations — unf
 | V16.5.2, V16.5.3 | Operating securely when an external resource fails, and failing without falling open | deployment. Previously credited to the audit-logging requirement, which does not answer it: how the install behaves when a part underneath it fails is not a property of the record it keeps |
 | V12.3.3, V12.3.4 | Protected transport between internal components, on trusted certificates | deployment. Traffic between the parts of an install crosses a boundary the operator owns and nothing else shares, and the specification does not say whether that is enough |
 | V6.1.1, V6.1.3, V7.1.1, V7.1.2, V8.1.1 | The documentation these controls require | these specifications are that documentation, and this matrix is how it is found |
-| V10.4.1, V10.4.3, V10.4.6, V10.4.8, V10.4.10 | Redirect allowlist, short-lived codes, proof key for code exchange, refresh expiry, client authentication | accounts-and-access, where federation is written as behaviour and not yet as protocol |
+| V10.1.1, V10.1.2, V10.2.1, V10.2.2, V10.5.1, V10.5.2, V10.5.3, V10.5.4, V10.5.5 | A relying party's defences: tokens kept from what does not need them, values accepted only from a flow it began, request forgery and mix-up in the code flow, and an ID token's replay, subject, audience, issuer and forced logout | accounts-and-access, where federation is written as behaviour and not yet as protocol |
+| V6.4.2 | No password hints or knowledge-based authentication | accounts-and-access. Nothing offers either; what no requirement says is that nothing may |
+| V15.1.1, V15.2.1 | Documented remediation time frames for vulnerable components and for updating in general, and no component kept past them | dependencies, which offers a corrected version at once and does not say by when it must be adopted |
 
 ## Deviations
 
-Held in the constitution's deviation register rather than here: cross-case reach, administrator self-grant, the second-factor policy defaulting off (V6.3.3), data classification (V14.1.1, V14.1.2), and the self-signed certificate (V12.2.2).
+The constitution's deviation register is the one list of controls knowingly unmet, each with its identifier, its reason and what would close it. A control that only an **Unbuilt** row here answers has a row there.
 
 ## Grounded elsewhere
 
@@ -107,3 +110,5 @@ Held in the constitution's deviation register rather than here: cross-case reach
 V4.4.3 and V4.4.4, dedicated connection tokens. Both are conditional on the application's standard session management not being usable over a connection. It is usable here — the same session admits a connection as admits a request — so a second credential would be a second thing to revoke, and its absence is the correct answer rather than a gap.
 
 V17 WebRTC.
+
+V10.3, V10.4, V10.6 and V10.7: a resource server's, an authorization server's and an OpenID provider's controls, and consent. An install federates its sign-in as a relying party, accepts no access token from anybody and issues no code, token or consent of its own.

@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config'
 import { z } from 'zod'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 
+import { AdminOnly } from '../auth/admin-only.js'
 import { PolicyService } from '../policy/policy.service.js'
 import { ArtefactCensus } from './artefact-census.service.js'
 import type { Env } from '../config/env.js'
@@ -97,6 +98,7 @@ export class InstallSettingsController {
     private readonly census: ArtefactCensus,
   ) {}
 
+  @AdminOnly()
   @Get('settings')
   @ZodResponse({
     status: 200,

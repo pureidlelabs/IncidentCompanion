@@ -15,7 +15,6 @@ import {
   ConflictException,
   Inject,
   Injectable,
-  Logger,
   NotFoundException,
   Optional,
   UnprocessableEntityException,
@@ -127,8 +126,6 @@ export interface CollectionDefinition {
 
 @Injectable()
 export class CollectionService {
-  private readonly log = new Logger(CollectionService.name)
-
   /**
    * The channel is optional for the tests, which build this service by hand
    * against a pool. Nest always injects it.
@@ -157,49 +154,6 @@ export class CollectionService {
     // would call it composed and queue its announcement onto somebody's act.
     if (on === undefined || !nested(on)) tell()
     else whenCommitted(tell)
-  }
-
-  /**
-   * Refuse a write to a row another analyst has open, with 409 and the
-   * holder's name.
-   *
-   * **Not a lock, and no substitute for the version check.** A lost connection
-   * frees the row and the next analyst writes legitimately; what catches the
-   * first analyst's later save is the version. A caller with no socket - the
-   * API door - holds no claim at all.
-   *
-   * Compared by `userId`: a display name is not unique, and the holder writing
-   * to their own row is the normal case. -> `live/case-channel.service.ts`
-   */
-  private async refuseIfHeldByAnother(
-    caseId: string,
-    entity: string,
-    id: string,
-    actorId: string,
-  ): Promise<void> {
-    /**
-     * **A store that cannot answer means nobody is known to hold this.** The
-     * claim is advisory, and the live layer is the one dependency this write
-     * does not need: refusing here turns a Redis outage into a 500 on every
-     * row edit, before the write, so the analyst loses the edit and is told
-     * nothing. The announce one layer along already takes this view -- *a
-     * missed repaint is the right failure* -- and the guard that matters is
-     * the version check, which is in Postgres and unaffected. -> #173
-     */
-    const holder = await this.channel?.holderOf(caseId, entity, id).catch((error: unknown) => {
-      // **Logged rather than swallowed.** A guard that stops working with no
-      // signal is the failure this codebase keeps finding elsewhere; the
-      // catch is deliberately broad, so a parse fault in `claims()` would
-      // otherwise read as "nobody holds this" for ever, silently.
-      this.log.warn(`could not read who holds ${entity} ${id}: ${String(error)}`)
-      return null
-    })
-    if (holder && holder.userId !== actorId) {
-      throw new ConflictException({
-        message: `${holder.username} has this open.`,
-        heldBy: holder.username,
-      })
-    }
   }
 
   /**
@@ -803,7 +757,6 @@ export class CollectionService {
     // moving a block into a sent report is a write to that report.
     await def.refuseIfClosed?.(this.db, caseId, { ids: [id], rows: [patch] })
     await def.refuseUnservedTerm?.(this.db, caseId, { ids: [id], rows: [patch] })
-    await this.refuseIfHeldByAnother(caseId, def.name, id, actorId)
 
     /**
      * **Checked in its own scoped transaction, ahead of the write.**

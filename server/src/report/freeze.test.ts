@@ -371,7 +371,6 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
       'announce',
       'get',
       'list',
-      'refuseIfHeldByAnother',
       'removeMany',
       // The shared body of `createMany` and `createAcross`, on a transaction
       // its caller opened. Both callers ask `refuseIfClosed` first, which is

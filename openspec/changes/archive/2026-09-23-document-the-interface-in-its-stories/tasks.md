@@ -41,4 +41,4 @@
 
 ## 5. Fold in
 
-- [ ] 5.1 Sync the delta into the specifications and archive the change. **Waits on 1.5**, which is the whole of what is left. The branch lands without it: `changes/` is the in-flight form, and a change is archived when it is finished rather than when a branch is ready to go
+- [x] 5.1 Sync the delta into the specifications and archive the change. The requirements are normative whether or not 1.5 is done, so they fold now and 1.5 stays open
