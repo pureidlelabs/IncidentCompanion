@@ -25,6 +25,7 @@ import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { english } from './document/packs.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -153,7 +154,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the sections a report is sh
       ])
       .onConflictDoNothing()
 
-    cases_ = new CasesService(db!, { announce: () => {}, othersOn: () => Promise.resolve([]) } as never)
+    cases_ = new CasesService(db!, suiteStore(), { announce: () => {}, othersOn: () => Promise.resolve([]) } as never)
     // **The real service against the real row.** A stub keyed on the slug the
     // caller passes agrees with whatever the caller spells, so a lookup for a
     // kind no row has ever carried passes against it.
@@ -385,6 +386,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () =
 
     cases_ = new CasesService(
       db!,
+      suiteStore(),
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
     const libraryService = { entry: () => Promise.resolve(undefined) } as never

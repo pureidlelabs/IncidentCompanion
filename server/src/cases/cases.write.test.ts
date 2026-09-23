@@ -18,6 +18,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { CASE_COLLECTIONS, CasesService } from './cases.service.js'
 import { CasesController } from './cases.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { LibraryService } from '../library/library.service.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
@@ -92,7 +93,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
 
     announced = []
     present = []
-    service = new CasesService(db!, {
+    service = new CasesService(db!, suiteStore(), {
       announce: (caseId: string, scopes: string[]) => announced.push({ caseId, scopes }),
       othersOn: () => Promise.resolve(present),
     } as never)
@@ -115,7 +116,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
     }
     controller = new CasesController(
       service,
-      new DemoSeederService(seed!, seed, new DemoContentSeeder()),
+      new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()),
       library,
       {
         caseCreated: recorder('case_created'),
@@ -647,7 +648,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
      */
     it('deletes a demo case rather than protecting it', async () => {
       await seed!.delete(cases)
-      await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+      await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
       const [demo] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
       expect(demo!.isDemo).toBe(true)
 

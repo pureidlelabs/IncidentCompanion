@@ -24,6 +24,7 @@ import {
 } from './prose.service.js'
 import { caseNotes, cases, changeFeed, reports, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -170,7 +171,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
   beforeAll(async () => {
     actorId = 'prose-analyst'
 
-    cases_ = new CasesService(db!, {
+    cases_ = new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)
@@ -544,7 +545,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live docum
 
   beforeAll(() => {
     actorId = 'prose-analyst'
-    cases_ = new CasesService(db!, {
+    cases_ = new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)
@@ -797,7 +798,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
 
   beforeAll(() => {
     actorId = 'prose-analyst'
-    cases_ = new CasesService(db!, {
+    cases_ = new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)

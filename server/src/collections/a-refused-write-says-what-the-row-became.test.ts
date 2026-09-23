@@ -19,6 +19,7 @@ import { CollectionService } from './collection.service.js'
 import { DEFINITIONS } from './definitions.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
@@ -67,7 +68,7 @@ function collections(): { name: string; make: () => Writable }[] {
     return {
       name: path.replace('api/cases/:caseId/', ''),
       make: () =>
-        new (controller as new (s: CollectionService) => Writable)(new CollectionService(db!)),
+        new (controller as new (s: CollectionService) => Writable)(new CollectionService(db!, suiteStore())),
     }
   })
 }
@@ -88,7 +89,7 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
 
   beforeAll(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
     const now = new Date()

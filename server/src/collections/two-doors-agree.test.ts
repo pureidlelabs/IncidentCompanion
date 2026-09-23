@@ -28,6 +28,7 @@ import { CollectionService } from './collection.service.js'
 import { DEFINITIONS } from './definitions.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, user } from '../db/schema/index.js'
 import { BULK_TARGETS, COLLECTION_SCHEMAS } from '../domain/collections.js'
@@ -66,7 +67,9 @@ function controllerFor(name: string): Doors {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Doors)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Doors)(
+    new CollectionService(db!, suiteStore()),
+  )
 }
 
 /**
@@ -149,7 +152,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the two write doors agree',
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = one!.id
   })

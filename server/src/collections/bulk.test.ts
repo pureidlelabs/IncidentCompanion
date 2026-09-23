@@ -16,6 +16,7 @@ import { BulkDeleteController, bulkDeleteBodySchema } from './bulk-delete.contro
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import {
   actions,
@@ -118,7 +119,7 @@ function controllerFor(name: string): Bulk {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!, suiteStore()))
 }
 
 describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () => {
@@ -132,7 +133,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () =
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     const [two] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
     caseId = one!.id
@@ -490,11 +491,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () =
 describe.skipIf(!db || !hasConcurrentConnections())('deleting a selection that spans collections', () => {
   let caseId: string
   let session: Session
-  const controller = () => new BulkDeleteController(new CollectionService(db!))
+  const controller = () => new BulkDeleteController(new CollectionService(db!, suiteStore()))
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = one!.id
     session = { user: { id: ACTOR } }

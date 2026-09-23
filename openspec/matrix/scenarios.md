@@ -147,6 +147,7 @@
 | Reading an archive cannot be made to cost more than the install will spend | An archive describing more content than the install accepts | demonstrated | server/src/archive/format.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is read in | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | demonstrated | server/src/case-archive/round-trip.test.ts |
+| Reading an archive creates a case; it never overwrites one | An archive names an artefact it does not carry | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is attributed | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive states where its rows came from | demonstrated | server/src/case-archive/round-trip.test.ts |
 | An archive is refused where its reference is already held | The install still holds the case the archive was made from | undemonstrated | |
@@ -601,7 +602,7 @@
 | Which languages an install can write reports in is the administrator's to change | An incomplete language is managed | demonstrated | ui/src/components/blocks/languages-pane.stories.tsx |
 | A report is for an audience, and the audience decides what it owes | A report is created | unbuilt | Not built: a report records no audience. -> #228 |
 | A report is for an audience, and the audience decides what it owes | A layout omits something the audience requires | unbuilt | Not built: what a report owes is read from its layout, not its audience. -> #228 |
-| A report never carries another customer's data | A report carries a row from another customer | unbuilt | Not built: the boundary is held at the write, and no export refuses. -> #227 |
+| A report never carries another customer's data | A report carries a row from another customer | unbuilt | Not built: the boundary is held at the write and at the evidence store, and no export refuses. -> #227 |
 | A report never carries another customer's data | The offending part is removed | unbuilt | Not built: no export refusal to lift. -> #227 |
 | Material an audience does not expect is named, and the analyst decides | An internal note is in a customer report | unbuilt | Not built: no audience, so nothing to measure material against. -> #229 |
 | Material an audience does not expect is named, and the analyst decides | The analyst sends it anyway | unbuilt | Not built: nothing records what was named and sent anyway. -> #229 |
@@ -647,6 +648,15 @@
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | demonstrated | server/src/health/an-install-says-what-it-cannot-find.test.ts |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | demonstrated | server/src/evidence/artefacts-put-back-make-the-evidence-whole.test.ts |
+| An artefact is reached only through the case that holds it | A digest is named in another case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | Reach is withdrawn from an analyst who read a digest | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | A handover is read in by somebody who does not reach the case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | The same artefact is attached in two cases | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | An artefact nothing names any more | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | Bytes are attached while a record naming them goes | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | Bytes arrive that no record comes to name | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | The install starts beside a database that does not hold a case | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | The install starts beside a database older than a record | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
 
 ## the-api
 
@@ -659,12 +669,12 @@
 | A caller asks for what it needs and receives no more | A caller wants everything | demonstrated | server/test/openapi-contract.test.ts |
 | Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
 | Reach is enforced where the data is, not where the request arrives | A new way to read a record is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
-| A read tells a caller what it is looking at | A caller reads and later writes | demonstrated | server/test/openapi-contract.test.ts |
+| A read tells a caller what it is looking at | A caller reads and later writes | undemonstrated | |
 | A read tells a caller what it is looking at | Somebody wrote first | demonstrated | server/src/collections/a-refused-write-says-what-the-row-became.test.ts |
 | The interface describes itself, and the description is generated | A route is added | demonstrated | server/test/openapi-contract.test.ts |
 | The interface describes itself, and the description is generated | A route changes shape | undemonstrated | |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts |
-| A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/src/domain/a-refusal-names-the-field-it-is-about.test.ts |
+| A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/every-write-door-refuses-a-version-past-its-column.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts |
 | A fact can be asked for across cases | An indicator is asked about across cases | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |

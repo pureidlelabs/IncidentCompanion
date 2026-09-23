@@ -18,6 +18,7 @@ import { ConflictsService } from './conflicts.service.js'
 import { CollectionService } from './collection.service.js'
 import { SystemsController } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, conflicts, reports, systems, user } from '../db/schema/index.js'
 import { reportBlocks } from '../db/schema/report.js'
@@ -68,7 +69,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
     const [kase] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = kase!.id
     await seedAnalyst(ME)
@@ -83,7 +84,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
      */
     await seed!.update(systems).set({ analyst: 'Nobody' }).where(eq(systems.id, rowId))
 
-    collections = new CollectionService(db!)
+    collections = new CollectionService(db!, suiteStore())
     service = new ConflictsService(db!, collections)
   })
 

@@ -11,6 +11,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { DemoContentSeeder } from './content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from './seeder.service.js'
 import { DEMO_CASES } from './catalogue.js'
 import { cases } from '../db/schema/index.js'
@@ -35,7 +36,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 // **The seeding role, matching how Nest wires it.** Generating demos writes
 // rows into every case and deletes all of them, which the request-serving role
 // is refused. Built on `db` this suite would fail on the first insert.
-const seeder = seed ? new DemoSeederService(seed, seed, new DemoContentSeeder()) : null
+const seeder = seed ? new DemoSeederService(seed, seed, new DemoContentSeeder(), suiteStore()) : null
 
 describe.skipIf(!db)('rebuilding the demo cases', () => {
   beforeEach(async () => {

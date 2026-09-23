@@ -34,7 +34,7 @@ import { CollectionService } from './collection.service.js'
 import { referenceCounts } from './bulk-delete.service.js'
 import { BULK_TARGETS } from './registry.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
-import { rowVersion } from '../domain/column-bounds.js'
+import { selectionSchema } from './write-door.js'
 
 /**
  * **Pairs, because a collection name is data and a key is not.**
@@ -59,9 +59,7 @@ export const bulkDeleteBodySchema = z
           collection: z.enum(BULK_TARGETS),
           // **Each row with the version it was read at**, so a row another
           // analyst has edited since is refused rather than deleted. -> #682
-          rows: z
-            .array(z.object({ id: z.uuid(), version: rowVersion() }))
-            .max(1000),
+          rows: selectionSchema,
         }),
       )
       .max(BULK_TARGETS.length),

@@ -72,8 +72,9 @@ const MAY_IMPORT: Record<string, string[]> = {
   db: ['config'],
   config: [],
   // `customers` for the same reason `cases` has it: a demo raises cases, and a
-  // case is opened under a customer.
-  demos: ['db', 'domain', 'config', 'customers'],
+  // case is opened under a customer. `evidence` because a rebuild removes the
+  // artefacts of the demonstrations it deletes, which leave no other trace.
+  demos: ['db', 'domain', 'config', 'customers', 'evidence'],
   /**
    * `wire` for the one decision three folders share: whether the caller's
    * claimed address may be believed. It is a leaf, so the edge cannot become
@@ -84,6 +85,7 @@ const MAY_IMPORT: Record<string, string[]> = {
   // `customers` because a case is opened *under* one: the door that raises a
   // case has to know which, and a reference is unique within it. The reverse
   // edge stays absent -- a customer knows nothing about cases.
+  // `evidence` because a deleted case takes its artefacts with it.
   cases: [
     'db',
     'domain',
@@ -94,6 +96,7 @@ const MAY_IMPORT: Record<string, string[]> = {
     'live',
     'install-activity',
     'customers',
+    'evidence',
   ],
   collections: ['db', 'domain', 'config', 'live', 'access', 'evidence', 'report'],
   /** No `cases`: one row per case, scoped by the `caseId` in the URL alone. */
@@ -191,7 +194,8 @@ const MAY_IMPORT: Record<string, string[]> = {
    * offered and read by nothing.
    */
   // `customers` for the same reason `cases` has it: reading an archive opens a
-  // case, and a case is opened under a customer.
+  // case, and a case is opened under a customer. `report` for which figures a
+  // sent report places, which travel with it.
   'case-archive': [
     'db',
     'archive',
@@ -201,9 +205,10 @@ const MAY_IMPORT: Record<string, string[]> = {
     'domain',
     'policy',
     'customers',
+    'report',
   ],
   brand: [],
-  /** Bytes on disk. It knows where they go and nothing about a case. */
+  /** Bytes on disk, a directory per case id, and nothing else about a case. */
   evidence: ['config', 'policy'],
   preferences: ['db', 'config', 'auth', 'domain', 'install-activity', 'policy'],
   /** No `live`: the socket knows about documents, never the reverse. */
@@ -227,7 +232,11 @@ const MAY_IMPORT: Record<string, string[]> = {
    */
   // `auth` for `AdminOnly` on the two telemetry routes alone: what the install
   // is made of is an operator's, and the liveness probe beside them stays open.
-  health: ['config', 'db', 'domain', 'policy', 'auth'],
+  //
+  // `evidence` for the census, which asks the store what each case holds
+  // rather than reading its directory itself; `report` for what each case
+  // names, sent reports' figures included.
+  health: ['config', 'db', 'domain', 'policy', 'auth', 'evidence', 'report'],
   spa: ['config'],
   test: ['db', 'config'],
 }
