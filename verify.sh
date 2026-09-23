@@ -100,7 +100,7 @@ if expensive; then
      && (cd server && node scripts/stack.mjs --roles) \
      && eval "$(node server/scripts/stack.mjs --export)" \
      && DATABASE_URL="$IC_MIGRATE_DATABASE_URL" \
-        bash -c 'cd server && npm run --silent db:push -- --force' >/dev/null; then
+        bash -c 'cd server && npm run --silent db:push' >/dev/null; then
     STARTED_SERVICES=1
   else
     SKIPPED+=("the services could not be started; the suites fall back to the in-process engine")

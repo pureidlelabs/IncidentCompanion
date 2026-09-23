@@ -1618,6 +1618,36 @@ def test_every_long_lived_service_is_started_again_unless_stopped():
         "unexpectedly stays stopped")
 
 
+PACKAGE_MANAGERS = {"npm", "npx", "yarn", "pnpm", "corepack"}
+
+
+def test_no_service_runs_a_package_manager():
+    """No service starts a package manager, one-shots included. -> Article V
+
+    npm checks the registry for its own update on a schedule, so a one-shot
+    run through it makes an outbound request from an install nobody pointed
+    anywhere.
+    """
+    services = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))["services"]
+
+    def words(value) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return value.replace(";", " ").replace("&&", " ").split()
+        return [word for item in value for word in words(str(item))]
+
+    running = {
+        name: {Path(word).name for word in
+               words(service.get("command")) + words(service.get("entrypoint"))
+               + words((service.get("healthcheck") or {}).get("test"))}
+        for name, service in services.items()
+    }
+    offending = {name: sorted(found & PACKAGE_MANAGERS)
+                 for name, found in running.items() if found & PACKAGE_MANAGERS}
+    assert not offending, f"these services run a package manager: {offending}"
+
+
 def test_no_service_can_gain_privileges_through_a_setuid_binary():
     """A part cannot become more than it was started as.
 

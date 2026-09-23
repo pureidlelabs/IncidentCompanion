@@ -259,14 +259,13 @@ services:
     # one deletes the demo cases before writing them.
     restart: "no"
 
-  # The schema push, one-shot: `docker compose run --rm migrate`.
+  # The store's shape, one-shot: `scripts/apply-schema.mts`, in one transaction
+  # that changes nothing when nothing changed and refuses any loss (exit 2).
   #
   # **The build stage, not the runtime image**: `drizzle-kit` is a devDependency
   # reading TypeScript from `src/db/schema/`, and a tool that rewrites schemas
   # does not belong in the image facing the network. Its own role, because
   # `ic_migrate` owns the schema and `ic_app` has no DDL at all.
-  #
-  # **Pushed, not migrated**, while the Node move settles.
   migrate:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -280,14 +279,10 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgres://ic_migrate:${IC_PG_MIGRATE_PASSWORD:?run docker/secrets.sh once before the first start}@postgres:5432/incidentcompanion
-    # **`npm run`, never `npx`** -- `--no-install` is not the offline form and
-    # resolves the `latest` dist-tag past this project's pin.
-    #
-    # **`--workspace server`, because the working directory is the repository
-    # root and `db:push` is the server's script.** Without it npm answers
-    # *Missing script: "db:push"* and `--silent` suppresses that, so the one-shot
-    # exits 1 with empty logs.
-    command: ["npm", "run", "--silent", "--workspace", "server", "db:push", "--", "--force"]
+    working_dir: /repo/server
+    # **`node`, never `npm run`**: npm checks the registry for its own update,
+    # which is an outbound request from an install nobody pointed anywhere.
+    command: ["node", "--import", "tsx", "scripts/apply-schema.mts"]
     restart: "no"
 
 # **All Docker-managed, and not interchangeable with a bind.** Whether a

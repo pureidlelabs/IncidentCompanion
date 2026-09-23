@@ -203,13 +203,11 @@ echo "==> roles"
 (cd "$SERVER_DIR" && node scripts/stack.mjs --roles)
 
 echo "==> schema"
-# **Pushed, not migrated**, while the Node move settles.
-#
 # As `ic_migrate`, which owns the schema; `ic_app` has no DDL. **`npm run`,
 # never `npx`** -- masked here because the dev container already has
 # `node_modules` installed, and it broke a host run.
 (cd "$SERVER_DIR" && DATABASE_URL="$IC_MIGRATE_DATABASE_URL" \
-  npm run --silent db:push -- --force > /dev/null)
+  npm run --silent db:push > /dev/null)
 
 echo "==> seeding the library and the demo cases"
 # **Needed here because the server stopped seeding on boot**, and this database
