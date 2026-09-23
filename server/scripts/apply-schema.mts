@@ -5,13 +5,14 @@
  *
  * Reads `DATABASE_URL`, which must name the role owning the tables. Exits 0
  * having applied the difference or found none (and then committing nothing),
- * 2 having refused a change that would discard or convert stored data, and 1
- * when a statement failed. Every exit but 0 leaves the store as it was.
+ * 2 having refused a change that would discard or convert stored data or that
+ * names a stored entity differently, and 1 when a statement failed. Every exit
+ * but 0 leaves the store as it was.
  */
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { pushSchema } from 'drizzle-kit/api-postgres'
+import { generateDrizzleJson, pushSchema } from 'drizzle-kit/api-postgres'
 import { is } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { PgTable } from 'drizzle-orm/pg-core'
@@ -72,7 +73,6 @@ const LOSSY = [
   /^TRUNCATE\b/i,
   /^DELETE\b/i,
   /\bDROP COLUMN\b/i,
-  /\bRENAME (TO|COLUMN)\b/i,
   /\bSET DATA TYPE\b/i,
 ]
 
@@ -98,6 +98,53 @@ const SHAPE = `
                  from pg_class c join pg_namespace n on n.oid = c.relnamespace
                 where n.nspname = 'public' and c.relkind in ('r', 'p'))
   )::text as shape`
+
+/** Every table, column, index, constraint and enum the store holds, by the planner's kind. */
+const STORED = `
+  select 'table' as kind, c.relname as name from pg_class c
+   where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p')
+  union all
+  select 'column', c.relname || '.' || a.attname from pg_attribute a join pg_class c on c.oid = a.attrelid
+   where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p') and a.attnum > 0 and not a.attisdropped
+  union all
+  select 'index', c.relname || '.' || i.relname from pg_index x
+    join pg_class i on i.oid = x.indexrelid join pg_class c on c.oid = x.indrelid
+   where c.relnamespace = 'public'::regnamespace
+     and not exists (select from pg_constraint k where k.conindid = x.indexrelid and k.contype in ('p', 'u', 'x'))
+  union all
+  select case k.contype when 'p' then 'primary_key' when 'u' then 'unique' when 'c' then 'check' else 'foreign key' end,
+         c.relname || '.' || k.conname
+    from pg_constraint k join pg_class c on c.oid = k.conrelid
+   where c.relnamespace = 'public'::regnamespace and k.contype in ('p', 'u', 'c', 'f')
+  union all
+  select 'enum', t.typname from pg_type t where t.typnamespace = 'public'::regnamespace and t.typtype = 'e'`
+
+/** The planner's kinds, as its snapshot of the declaration names them. */
+const DECLARED: Record<string, string> = {
+  table: 'tables',
+  column: 'columns',
+  index: 'indexes',
+  primary_key: 'pks',
+  unique: 'uniques',
+  check: 'checks',
+  'foreign key': 'fks',
+  enum: 'enums',
+}
+
+/** What of `kind` the store holds and the declaration lacks, and the reverse, one line each. */
+async function unmatched(client: pg.Client, kind: string): Promise<string[]> {
+  const { rows } = await client.query<{ kind: string; name: string }>(STORED)
+  const stored = rows.filter((row) => row.kind === kind).map((row) => row.name)
+  const { ddl } = await generateDrizzleJson(schema)
+  const declared = (ddl as { entityType: string; table?: string; name: string }[])
+    .filter((entity) => entity.entityType === DECLARED[kind])
+    .map((entity) => (entity.table ? `${entity.table}.${entity.name}` : entity.name))
+  const lines = [
+    ...stored.filter((name) => !declared.includes(name)).map((name) => `${kind} ${name}: stored, and not in this version`),
+    ...declared.filter((name) => !stored.includes(name)).map((name) => `${kind} ${name}: in this version, and not stored`),
+  ]
+  return lines.length > 0 ? lines : [`a ${kind} is stored that this version does not have, beside one it adds`]
+}
 
 async function shape(client: pg.Client): Promise<string> {
   const { rows } = await client.query<{ shape: string }>(SHAPE)
@@ -128,7 +175,19 @@ export async function applySchema(url: string): Promise<Outcome> {
       )
     }
 
-    const { sqlStatements, hints } = await pushSchema(schema, drizzle({ client }))
+    let planned: Awaited<ReturnType<typeof pushSchema>>
+    try {
+      planned = await pushSchema(schema, drizzle({ client }))
+    } catch (error) {
+      // Thrown, planning nothing, when one kind has entities on both sides:
+      // the planner cannot tell a rename from a removal and an addition.
+      const kind = /resolver\((.+)\) was called without a HintsHandler/.exec(String(error))?.[1]
+      if (!kind) throw error
+      const statements = await unmatched(client, kind)
+      await client.query('rollback')
+      return { kind: 'refused', statements }
+    }
+    const { sqlStatements, hints } = planned
     const refused = [
       ...sqlStatements.filter((statement) => LOSSY.some((lossy) => lossy.test(statement.trim()))),
       ...hints.map(({ hint, statement }) => statement ?? hint),
@@ -164,7 +223,7 @@ async function main(): Promise<number> {
   try {
     const outcome = await applySchema(url)
     if (outcome.kind === 'refused') {
-      console.error('Refused: the store holds data this version would discard or convert.')
+      console.error('Refused: this version would discard or convert what the store holds, or names it differently.')
       for (const statement of outcome.statements) console.error(`  ${statement}`)
       console.error('Nothing was changed.')
       return 2

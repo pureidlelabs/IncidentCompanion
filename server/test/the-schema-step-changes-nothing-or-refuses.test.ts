@@ -220,6 +220,37 @@ describe.skipIf(!ADMIN_URL || !APP_URL || isEmbedded(APP_URL))('the schema step'
     }
   }, 60_000)
 
+  it('refuses a column stored under another name, naming both, and keeps what it holds', async () => {
+    await query(admin(), `insert into library (kind, name, label) values ('templates', 'lc-renamed', 'kept')`)
+    await query(scratchUrl('ic_migrate'), 'alter table library rename column label to lc_label')
+    try {
+      const { result, lowest } = await watchingPolicies(() => step())
+      expect(result.code, result.out).toBe(2)
+      expect(result.out).toMatch(/library\.lc_label/)
+      expect(result.out).toMatch(/library\.label\b/)
+      expect(lowest, 'the refused run left tables without policies meanwhile').toBe(policies)
+      expect(await query(admin(), `select lc_label from library where name = 'lc-renamed'`)).toEqual([
+        { lc_label: 'kept' },
+      ])
+    } finally {
+      await query(scratchUrl('ic_migrate'), 'alter table library rename column lc_label to label')
+      await query(admin(), `delete from library where name = 'lc-renamed'`)
+    }
+  }, 60_000)
+
+  it('refuses an index stored under another name, naming both', async () => {
+    await query(scratchUrl('ic_migrate'), 'alter index cases_customer_reference_idx rename to lc_renamed_index')
+    try {
+      const ran = await step()
+      expect(ran.code, ran.out).toBe(2)
+      expect(ran.out).toContain('lc_renamed_index')
+      expect(ran.out).toContain('cases_customer_reference_idx')
+      expect(await query(admin(), `select 1 from pg_indexes where indexname = 'lc_renamed_index'`)).toHaveLength(1)
+    } finally {
+      await query(scratchUrl('ic_migrate'), 'alter index if exists lc_renamed_index rename to cases_customer_reference_idx')
+    }
+  }, 60_000)
+
   it('refuses to convert a column stored as another type', async () => {
     await query(scratchUrl('ic_migrate'), 'alter table library alter column position type bigint')
     try {
