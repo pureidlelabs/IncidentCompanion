@@ -9,7 +9,7 @@
  * names a stored entity differently, and 1 when a statement failed. Every exit
  * but 0 leaves the store as it was.
  */
-import { resolve } from 'node:path'
+import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 import { generateDrizzleJson, pushSchema } from 'drizzle-kit/api-postgres'
@@ -236,6 +236,7 @@ async function main(): Promise<number> {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Node runs a linked script from its real path, so the path it was named by is resolved too.
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.exitCode = await main()
 }

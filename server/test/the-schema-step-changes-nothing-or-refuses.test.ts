@@ -6,8 +6,10 @@
  * step an install runs rather than a function beside it. `/repo` is the image's
  * checkout, which is this repository.
  */
-import { spawn } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { spawn, spawnSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Client } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -103,6 +105,24 @@ async function watchingPolicies<T>(work: () => Promise<T>): Promise<{ result: T;
 }
 
 const admin = (): string => new URL(`/${SCRATCH}`, ADMIN_URL).toString()
+
+it('run through a linked path, runs rather than exiting quietly', () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'ic-schema-step-'))
+  try {
+    const linked = join(scratch, 'server')
+    symlinkSync(fileURLToPath(new URL('..', import.meta.url)), linked)
+    const ran = spawnSync('node', ['--import', 'tsx', join(linked, 'scripts', 'apply-schema.mts')], {
+      cwd: linked,
+      env: { ...process.env, DATABASE_URL: 'postgres://nobody:nothing@127.0.0.1:1/none' },
+      encoding: 'utf8',
+      timeout: 45_000,
+    })
+    expect(ran.status, ran.stdout + ran.stderr).toBe(1)
+    expect(ran.stderr).toContain('could not be applied')
+  } finally {
+    rmSync(scratch, { recursive: true, force: true })
+  }
+}, 60_000)
 
 describe.skipIf(!ADMIN_URL || !APP_URL || isEmbedded(APP_URL))('the schema step', () => {
   let policies = 0
