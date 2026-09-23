@@ -1187,3 +1187,161 @@ describe('two prose frames for one field arriving together', () => {
     expect(readers, 'a reader was never given back, so the document is never destroyed').toBe(0)
   })
 })
+
+/**
+ * **The browser speaks first, and the gateway has not finished joining.**
+ * `handleUpgrade` writes the 101 before `open` runs, so the socket is live in
+ * the browser while the roster join is still in flight over Redis. The harness
+ * tier drives this over a real socket in
+ * `test/a-connection-acts-on-every-frame-in-order.test.ts`; these are the fast
+ * guards on the same door.
+ */
+describe('frames that arrive while the socket is still joining', () => {
+  /** The channel with the join held open until the test finishes it. */
+  function midJoin(document: Y.Doc) {
+    const order: string[] = []
+    const left: string[] = []
+    let finish: () => void = () => undefined
+    const channel = {
+      join: () =>
+        new Promise<void>((resolve) => {
+          finish = () => {
+            order.push('join')
+            resolve()
+          }
+        }),
+      leave: () => {
+        order.push('leave')
+        left.push('leave')
+        return Promise.resolve()
+      },
+      prose: () => undefined,
+      claim: (_member: unknown, table: string, id: string) => {
+        order.push(`claim ${table}/${id}`)
+        return Promise.resolve()
+      },
+      release: (_member: unknown, table: string, id: string) => {
+        order.push(`release ${table}/${id}`)
+        return Promise.resolve()
+      },
+    }
+    /** What the document held each time a reader was given back, and how many are still out. */
+    const releasedHolding: string[] = []
+    let readers = 0
+    const prose = {
+      resolve: () => Promise.resolve({ reportId: REPORT, sentAt: null }),
+      open: () => {
+        readers += 1
+        return Promise.resolve(document)
+      },
+      release: () => {
+        readers -= 1
+        releasedHolding.push(document.getXmlFragment('block-1').toJSON())
+        order.push('reader released')
+        return Promise.resolve()
+      },
+      applySync: codec.applySync.bind(codec),
+      frameUpdate: codec.frameUpdate.bind(codec),
+      isStateRequest: codec.isStateRequest.bind(codec),
+      addsNothing: codec.addsNothing.bind(codec),
+      hello: codec.hello.bind(codec),
+    }
+    /** A level lookup that takes its time, so a frame behind it could overtake it. */
+    const slowWrite = {
+      defaultCustomerId: () => Promise.resolve('a-default-customer'),
+      levelFor: () => new Promise((resolve) => setTimeout(() => { resolve('write') }, 20)),
+    } as never
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      {} as never,
+      caseWithNoCustomer,
+      prose as never,
+      audit as never,
+      slowWrite,
+    )
+    return { gateway, order, left, releasedHolding, readers: () => readers, finish: () => { finish() } }
+  }
+
+  const ROW = '44444444-4444-4444-8444-444444444444'
+  const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
+
+  it('answers a state request that beat the roster, so the editor is built', async () => {
+    const document = new Y.Doc({ gc: false })
+    document.getXmlFragment('block-1').insert(0, [new Y.XmlText('what was already written')])
+    const { gateway, finish } = midJoin(document)
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
+    await settle()
+    finish()
+    await opening
+    await wait(50)
+
+    expect(
+      live.frames('prose.sync'),
+      'the state request was dropped, so the editor never leaves its loading state',
+    ).not.toEqual([])
+  })
+
+  /**
+   * **After the join, not merely eventually.** `CaseChannel.claim` announces the
+   * roster, and until the join returns this member is in neither the local room
+   * nor the subscription.
+   */
+  it('takes a claim that beat the roster, and not before the roster has it', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }))
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.receive({ type: 'claim', table: 'casenotes', id: ROW })
+    await settle()
+    finish()
+    await opening
+    await wait(50)
+
+    expect(order, 'the claim was dropped, or taken before the roster held its author').toEqual([
+      'join',
+      `claim casenotes/${ROW}`,
+    ])
+  })
+
+  it('acts on a release after the claim sent before it, however long the claim takes', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }))
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    finish()
+    await opening
+
+    live.receive({ type: 'claim', table: 'systems', id: ROW })
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    await wait(50)
+
+    expect(order, 'the release overtook its own claim').toEqual([
+      'join',
+      `claim systems/${ROW}`,
+      `release systems/${ROW}`,
+    ])
+  })
+
+  /** A tab that sends and closes at once: its words land before its reader goes. */
+  it('acts on what arrived before the socket went, then gives its reader back and leaves', async () => {
+    const document = new Y.Doc({ gc: false })
+    const { gateway, order, releasedHolding, readers, finish } = midJoin(document)
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
+    live.receive({ type: 'prose.sync', field: FIELD, update: typed('sent as the tab closed').update })
+    live.drop()
+    finish()
+    await opening
+    await wait(100)
+
+    expect(releasedHolding, 'the reader went before the words that needed it').toEqual([
+      expect.stringContaining('sent as the tab closed'),
+    ])
+    expect(readers(), 'a frame behind the end opened a reader nothing gives back').toBe(0)
+    expect(order.at(-1), 'the connection left before it had finished').toBe('leave')
+  })
+})
