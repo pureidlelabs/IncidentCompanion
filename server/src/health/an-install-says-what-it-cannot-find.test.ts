@@ -338,6 +338,7 @@ describe('what an install says at start', () => {
 describe('the install saying it at start', () => {
   const censusOf = (held: Census | Error) =>
     ({
+      named: () => Promise.resolve(new Map()),
       take: () => (held instanceof Error ? Promise.reject(held) : Promise.resolve(held)),
       sweep: () => Promise.resolve(0),
     }) as never

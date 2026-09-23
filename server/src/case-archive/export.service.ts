@@ -14,7 +14,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common'
 import { textOf } from '../domain/text-of.js'
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
-import { frozenFigures } from '../db/artefacts-named.js'
+import { figureHashes } from '../report/document/model.js'
 import {
   CASE_NAME,
   EVIDENCE_PREFIX,
@@ -124,7 +124,7 @@ export class ArchiveExportService {
         members[`${EVIDENCE_PREFIX}${hash}`] = bytes
       }
       // A sent report's figures travel after their rows go; one never held here is not lost.
-      for (const hash of reports.flatMap((report) => frozenFigures(report.frozen))) {
+      for (const hash of reports.flatMap((report) => figureHashes(report.frozen))) {
         if (seen.has(hash)) continue
         seen.add(hash)
         const bytes = await this.store.read(request.caseId, hash)

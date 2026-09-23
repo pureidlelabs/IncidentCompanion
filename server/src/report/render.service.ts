@@ -22,7 +22,7 @@ import { defangDocument } from './document/defang.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { withCase } from '../db/scope.js'
 import type { CaseData } from './document/sections.js'
-import { documentSchema, type Document, type FigureNode, type Images } from './document/model.js'
+import { documentSchema, figuresOf, type Document, type Images } from './document/model.js'
 import type { Translate } from './document/packs.js'
 import { CONTENT_PT } from './document/pdf.js'
 import { EvidenceStore } from '../evidence/store.js'
@@ -73,9 +73,7 @@ export class ReportRenderService {
    * measured or annotated, so a filed document keeps the layout it was sent at.
    */
   private async figures(caseId: string, document_: Document, t: Translate | null): Promise<Images> {
-    const nodes = document_.sections.flatMap((one) =>
-      one.nodes.filter((node_): node_ is FigureNode => node_.type === 'figure'),
-    )
+    const nodes = figuresOf(document_)
     const images = new Map<string, Uint8Array>()
 
     await Promise.all(

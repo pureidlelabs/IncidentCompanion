@@ -41,15 +41,22 @@ export class HealthModule implements OnApplicationBootstrap {
    */
   async onApplicationBootstrap(): Promise<void> {
     const log = new Logger('Evidence')
+    let named
     try {
-      const removed = await this.census.sweep()
+      named = await this.census.named()
+    } catch (why) {
+      log.warn(`Could not ask the cases which artefacts they name: ${String(why)}`)
+      return
+    }
+    try {
+      const removed = await this.census.sweep(named)
       if (removed > 0) log.log(`Removed ${String(removed)} stored artefacts nothing names.`)
     } catch (why) {
       log.warn(`Could not remove the artefacts nothing names: ${String(why)}`)
     }
     let said
     try {
-      said = saysAtStart(await this.census.take())
+      said = saysAtStart(await this.census.take(named))
     } catch (why) {
       log.warn(`Could not count the artefacts this install expects: ${String(why)}`)
       return

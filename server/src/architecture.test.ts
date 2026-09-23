@@ -193,7 +193,8 @@ const MAY_IMPORT: Record<string, string[]> = {
    * offered and read by nothing.
    */
   // `customers` for the same reason `cases` has it: reading an archive opens a
-  // case, and a case is opened under a customer.
+  // case, and a case is opened under a customer. `report` for which figures a
+  // sent report places, which travel with it.
   'case-archive': [
     'db',
     'archive',
@@ -203,6 +204,7 @@ const MAY_IMPORT: Record<string, string[]> = {
     'domain',
     'policy',
     'customers',
+    'report',
   ],
   brand: [],
   /** Bytes on disk, a directory per case id, and nothing else about a case. */
@@ -231,8 +233,9 @@ const MAY_IMPORT: Record<string, string[]> = {
   // is made of is an operator's, and the liveness probe beside them stays open.
   //
   // `evidence` for the census and the sweep at start, which ask the store what
-  // each case holds rather than reading its directory themselves.
-  health: ['config', 'db', 'domain', 'policy', 'auth', 'evidence'],
+  // each case holds rather than reading its directory themselves; `report` for
+  // which figures a sent report places, read as render reads them.
+  health: ['config', 'db', 'domain', 'policy', 'auth', 'evidence', 'report'],
   spa: ['config'],
   test: ['db', 'config'],
 }

@@ -9,7 +9,7 @@ import { Inject, Injectable } from '@nestjs/common'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import { artefactsNamed } from '../db/artefacts-named.js'
+import { artefactsNamed, type Named } from './artefacts-named.js'
 import { EvidenceStore } from '../evidence/store.js'
 
 /** What the install expects, and how much of it is not there. */
@@ -54,11 +54,16 @@ export class ArtefactCensus {
     private readonly store: EvidenceStore,
   ) {}
 
+  /** What each case's rows name, for `take` and `sweep` to share one walk. */
+  named(): Promise<Map<string, Named>> {
+    return artefactsNamed(this.db)
+  }
+
   /** Count what the rows say each case holds against what the store holds for it. */
-  async take(): Promise<Census> {
+  async take(named?: Map<string, Named>): Promise<Census> {
     let expected = 0
     let missing = 0
-    for (const [caseId, { stored }] of await artefactsNamed(this.db)) {
+    for (const [caseId, { stored }] of named ?? (await this.named())) {
       if (stored.size === 0) continue
       const held = await this.store.held(caseId)
       expected += stored.size
@@ -71,8 +76,7 @@ export class ArtefactCensus {
    * Remove the bytes no row and no sent report names, and every case's the
    * database no longer holds. Answers how many files went.
    */
-  async sweep(): Promise<number> {
-    const named = await artefactsNamed(this.db)
+  async sweep(named: Map<string, Named>): Promise<number> {
     const kept = new Map([...named].map(([caseId, { kept }]) => [caseId, kept]))
     return this.store.prune(kept, SWEEP_GRACE_MS)
   }
