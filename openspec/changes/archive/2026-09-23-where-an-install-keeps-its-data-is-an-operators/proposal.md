@@ -4,7 +4,7 @@
 
 *What the install is made of is management-plane* names the install's storage among the facts an administrator alone may reach. One route served it to every analyst: signed in as an analyst, `GET /api/settings` answered 200 with where the database and the cache point, the evidence directory, and how many artefacts the install holds across every customer, including customers the analyst reaches no case of.
 
-The route beside it that reports host resources is an administrator's, and so is the one that reports table sizes. The analyst scenarios named only table sizes and host resources, so the route that carried the storage passed every scenario while breaking the requirement above them.
+The route beside it that reports host resources is an administrator's, and so is the one that reports table sizes. The analyst scenarios named only table sizes and host resources, so the route that carried the storage passed every scenario while breaking the requirement itself.
 
 ## What Changes
 

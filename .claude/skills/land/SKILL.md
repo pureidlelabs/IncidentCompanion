@@ -131,7 +131,7 @@ Then sync the delta into `openspec/specs/`, archive the change into `openspec/ch
 IC_LANDING=1 $(bash scripts/venv_python.sh) -m pytest tests/docs/test_openspec_consistency.py -q
 ```
 
-`IC_LANDING=1` arms the check that `openspec/changes/` holds nothing but `archive/`, which the merge queue's run arms by itself. A change left behind is refused there, so finding it here is cheaper.
+`IC_LANDING=1` arms the two checks the merge queue's run arms by itself: `openspec/changes/` holds nothing but `archive/`, and every change the branch archives reads in `openspec/specs/`. A change left behind or archived unsynced is refused there, so finding it here is cheaper.
 
 - **Before the merge, not after.** A change archived afterwards is one the release branch never carried, and `specs/` then describes a release that has already moved.
 - **`validate --strict` is owed whenever the branch touched `openspec/`**, at the same moment as the lint. It is a fact rather than a judgement, so depth does not apply. → `rules/git-workflow.md` §7a
