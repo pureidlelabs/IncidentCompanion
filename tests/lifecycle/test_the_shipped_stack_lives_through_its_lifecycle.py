@@ -72,7 +72,10 @@ def test_the_shipped_stack_lives_through_its_lifecycle(stack, subtests):
 
     def images() -> dict[str, str]:
         config = json.loads(install.must("config", "--format", "json"))
-        names = sorted({service["image"] for service in config["services"].values()})
+        # A reference pinned by digest cannot move, and the engine may report
+        # a multi-platform image's id differently once its layers are unpacked.
+        names = sorted({service["image"] for service in config["services"].values()
+                        if "@sha256:" not in service["image"]})
         return {name: subprocess.run(["docker", "image", "inspect", "-f", "{{.Id}}", name],
                                      capture_output=True, text=True).stdout.strip() for name in names}
 
