@@ -594,9 +594,9 @@ export class CasesService {
       })
     }
 
-    // Finds a collision only where the mover reaches the destination: the
-    // policies hide every other customer's cases, and the store refuses that
-    // mover a referenced case before it looks.
+    // Finds a collision only where the mover can see the destination's cases;
+    // the store's move refuses anybody else a referenced case, whatever the
+    // destination holds.
     await this.referenceIsFree(tx, customerId, row.reference ?? undefined, id)
 
     const { rows } = await tx.execute<{ answer: 'moved' | 'absent' | 'default' | 'unreached' }>(

@@ -156,8 +156,8 @@ const updated = (tx: Tx, subject: Subject, caseId: string) => {
     .returning()
 }
 
-const deleted = (tx: Tx, subject: Subject, caseId: string) =>
-  tx.delete(subject.table).where(eq(subject.caseColumn, caseId)).returning()
+const deleted = async (tx: Tx, subject: Subject, caseId: string): Promise<unknown[]> =>
+  (await tx.delete(subject.table).where(eq(subject.caseColumn, caseId)).returning()) as unknown[]
 
 describe.skipIf(!app || !hasConcurrentConnections())(
   'the store refuses a case its caller does not reach',
