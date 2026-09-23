@@ -32,6 +32,11 @@
 | Managing the install and reaching case data are separate grants | An administrator has granted themselves no data access | demonstrated | server/src/access/an-administrator-reaches-no-case-by-being-one.test.ts |
 | Managing the install and reaching case data are separate grants | An analyst with wide data access administers nothing | demonstrated | server/test/wide-reach-administers-nothing.test.ts |
 | Managing the install and reaching case data are separate grants | An administrator grants themselves access | demonstrated | server/src/access/groups.controller.test.ts |
+| What the install is made of is management-plane | An analyst asks what the install holds | demonstrated | server/test/analyst-privilege.test.ts |
+| What the install is made of is management-plane | An analyst asks what the host has left | demonstrated | server/test/analyst-privilege.test.ts |
+| What the install is made of is management-plane | An administrator asks the same questions | demonstrated | server/test/analyst-privilege.test.ts |
+| What the install is made of is management-plane | The rail offers a pane nobody behind it would answer | undemonstrated | |
+| What the install is made of is management-plane | Something asks whether the install is serving | undemonstrated | |
 | Case data is reached through groups, at a level | A group is built for a sector | demonstrated | server/src/access/reach.test.ts |
 | Case data is reached through groups, at a level | Two memberships disagree | demonstrated | server/src/access/reach.test.ts |
 | Case data is reached through groups, at a level | A level is reduced while the analyst is working | demonstrated | server/src/access/a-reduced-level-refuses-the-next-write.test.ts |
@@ -42,6 +47,8 @@
 | Case data is reached through groups, at a level | An administrator disposes of a case nobody has attributed | demonstrated | server/src/access/case-access.guard.test.ts |
 | Case data is reached through groups, at a level | An analyst is refused the same deletion | demonstrated | server/src/access/case-access.guard.test.ts |
 | Case data is reached through groups, at a level | A group raises an account above the floor | demonstrated | server/src/access/case-access.guard.test.ts |
+| Case data is reached through groups, at a level | A list is asked for by an analyst in no group | undemonstrated | |
+| Case data is reached through groups, at a level | Reach is withdrawn after the case was opened | undemonstrated | |
 | An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts |
 | An install can be recovered without another administrator | The install is claimed | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | An install can be recovered without another administrator | An install runs on a single administrator | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
@@ -85,8 +92,8 @@
 | A verb the roster offers is refused on the account performing it | An administrator sets the role their account already holds | demonstrated | server/test/an-administrator-does-not-act-on-their-own-row.test.ts |
 | A verb the roster offers is refused on the account performing it | The same verbs on somebody else | demonstrated | server/test/an-administrator-does-not-act-on-their-own-row.test.ts |
 | A session belongs to its holder and ends when it should | An administrator ends a session | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
-| A session belongs to its holder and ends when it should | A session goes idle | demonstrated | server/test/a-session-past-its-window-is-refused.test.ts |
-| A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | unbuilt | Not built: a session has an idle window and no absolute cap. -> #203 |
+| A session belongs to its holder and ends when it should | A session goes idle | undemonstrated | |
+| A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | undemonstrated | |
 | A session belongs to its holder and ends when it should | An analyst reviews their own sessions | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
 | A session belongs to its holder and ends when it should | Every session is ended at once | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
 | An administrator can see who reaches what, and why | An administrator reviews access | unbuilt | Not built: whether an account is local or the provider's, and its second factor. -> #59 |
@@ -142,6 +149,9 @@
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is attributed | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive states where its rows came from | demonstrated | server/src/case-archive/round-trip.test.ts |
+| An archive is refused where its reference is already held | The install still holds the case the archive was made from | undemonstrated | |
+| An archive is refused where its reference is already held | The reference is free | undemonstrated | |
+| An archive is refused where its reference is already held | The archive carries no reference | undemonstrated | |
 | Reading an archive says how complete the case it made is | An archive carries rows that name what it left behind | demonstrated | ui/src/components/blocks/notify.test.ts |
 | Reading an archive says how complete the case it made is | A case names a row that is not in it | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive says how complete the case it made is | The exporting install had lost material the case records | demonstrated | ui/src/components/blocks/notify.test.ts |
@@ -157,7 +167,7 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| A case is identified by what an analyst recognises it by | A reference is reused within a customer | unbuilt | Not built: nothing refuses a reference already used. -> #220 |
+| A case is identified by what an analyst recognises it by | A reference is reused within a customer | undemonstrated | |
 | A case is identified by what an analyst recognises it by | The same reference is used for two customers | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | demonstrated | server/src/cases/customer.controller.test.ts |
 | A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
@@ -194,6 +204,9 @@
 | The description is retrievable, so what a case may hold is answerable from the application | An install has been extended | demonstrated | server/src/library/what-this-install-holds-is-what-is-described.test.ts |
 | Every write is attributed, checked and announced as one act | Two analysts write to one row | demonstrated | server/src/db/mutate.test.ts |
 | Every write is attributed, checked and announced as one act | A write succeeds | demonstrated | server/src/db/mutate.test.ts |
+| Every write is attributed, checked and announced as one act | A write composed into an act that commits | undemonstrated | |
+| Every write is attributed, checked and announced as one act | A write composed into an act that does not commit | undemonstrated | |
+| Every write is attributed, checked and announced as one act | A write composed into nothing that declared an act | undemonstrated | |
 | A reference points inside its own case, and the store alone cannot enforce it | A row references another case's row | demonstrated | server/src/collections/reference-check.test.ts |
 | A reference points inside its own case, and the store alone cannot enforce it | A reference is added to what a row is | demonstrated | server/src/collections/method-references.test.ts |
 | A reference points inside its own case, and the store alone cannot enforce it | A referenced row is removed | demonstrated | server/src/collections/method-references.test.ts |
@@ -288,6 +301,24 @@
 | A row says which door it came through, and the install decides that | A file claims an origin of its own | demonstrated | server/src/exports/import.service.test.ts |
 | A row says which door it came through, and the install decides that | A collection that records no origin | demonstrated | server/src/exports/import.service.test.ts |
 
+## dependencies
+
+| Requirement | Scenario | Status | Evidence or reason |
+| --- | --- | --- | --- |
+| What is available is answerable without reading the tree | A newer version exists and nothing has adopted it | undemonstrated | |
+| What is available is answerable without reading the tree | Nothing is outstanding | undemonstrated | |
+| A published vulnerability is answered without waiting | A vulnerability is published against an adopted version | undemonstrated | |
+| A published vulnerability is answered without waiting | The vulnerable dependency is not a direct one | undemonstrated | |
+| A version is observed before it is adopted unattended | A version is newer than the minimum period | undemonstrated | |
+| A version is observed before it is adopted unattended | A person adopts it deliberately | undemonstrated | |
+| A dependency held below the latest version carries its reason | A dependency is held back | undemonstrated | |
+| A dependency held below the latest version carries its reason | The constraint that justified a hold is lifted | unbuilt | Not built: no hold is recorded in a form a check reads, so a hold outlives its reason silently. Kept normative. |
+| A dependency held below the latest version carries its reason | Two dependencies are held by the same constraint | unbuilt | Not built: no record relates two holds to the constraint they share. Kept normative. |
+| A change to dependencies is demonstrated before it lands | Every tier runs and passes | undemonstrated | |
+| A change to dependencies is demonstrated before it lands | A tier could not run | unbuilt | Not built: `gate` counts a skipped tier as a pass. -> #1163 |
+| Two builds of one revision resolve the same versions | The same revision is built twice | undemonstrated | |
+| Two builds of one revision resolve the same versions | A component is identified by a moving name | undemonstrated | |
+
 ## deployment
 
 | Requirement | Scenario | Status | Evidence or reason |
@@ -344,6 +375,9 @@
 | An import is matched against what the case already holds | An imported thing is already in the case | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | The case changed while the import was reviewed | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | An event is imported twice | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
+| One import proposes each thing once, however many incidents name it | Two incidents name the same host | undemonstrated | |
+| One import proposes each thing once, however many incidents name it | One incident states a qualifier the other omits | undemonstrated | |
+| One import proposes each thing once, however many incidents name it | An event from the second incident names the shared thing | undemonstrated | |
 | An imported row says that it was imported, and that nobody has read it | An imported row is read back | demonstrated | server/test/incident-import.test.ts |
 | An imported row says that it was imported, and that nobody has read it | A platform's data claims to be something else | demonstrated | server/src/incident-import/an-imported-row-says-so.test.ts |
 | An imported row says that it was imported, and that nobody has read it | An analyst reviews an imported row | unbuilt | Not built: `unreviewed` is owned by the server and no route clears it. -> #168 |
@@ -422,6 +456,14 @@
 | The interface has one vocabulary, and it is not invented per screen | An analyst has asked for less motion | undemonstrated | |
 | What two screens both need is derived once | Two screens show the same derived answer | demonstrated | ui/src/lib/shared-derivations.rule.test.ts |
 | What two screens both need is derived once | A derivation needs to know its caller | demonstrated | ui/src/lib/lib-is-shared-and-therefore-pure.rule.test.ts |
+| A part's own documentation states what its caller owns | A part needs something the caller must supply | undemonstrated | |
+| A part's own documentation states what its caller owns | A part is documented beside itself rather than within itself | undemonstrated | |
+| A part's own documentation states what its caller owns | A part's documented behaviour is not its actual behaviour | undemonstrated | |
+| A composition is exercised as a composition | A composition refuses an action | undemonstrated | |
+| A composition is exercised as a composition | A composition is mid-write | undemonstrated | |
+| A screen is exercised at the extremes of what it may hold | A screen is given almost nothing | undemonstrated | |
+| A screen is exercised at the extremes of what it may hold | A screen is given far more than expected | undemonstrated | |
+| A screen is exercised at the extremes of what it may hold | A screen supplies its own content | undemonstrated | |
 
 ## library
 

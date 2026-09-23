@@ -1,13 +1,14 @@
 extends: existence
-message: "'%s' states a plan. A rule or a skill says what is true now; what is coming belongs in `openspec/changes/`."
+message: "'%s' states a plan. A rule or a skill says what is true now; what is coming belongs in an issue, and in `openspec/changes/` on the branch doing the work."
 level: error
 ignorecase: true
 nonword: true
 # **A rule and a skill are read as facts about the tree in front of you**, so a
 # sentence saying something *will* be built reads with the authority of a
 # measurement and goes stale the day the plan changes. What is coming belongs in
-# a change under `openspec/changes/`, where it is a proposal somebody accepts or
-# drops, and in `openspec/specs/` once it is built.
+# an issue, where somebody picks it up or drops it; in a change under
+# `openspec/changes/` on the branch that builds it; and in `openspec/specs/` once
+# it lands.
 #
 # **Measured 2026-08-17 over the 505 notes this then governed: zero matches.**
 # So it is a fence rather than a cleanup -- it refuses the return of a shape

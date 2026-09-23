@@ -31,3 +31,10 @@ Where preparing the connection does not complete, the connection MUST end, and n
 - GIVEN an analyst who claims an entry and releases it at once
 - WHEN both reach the install
 - THEN nothing is left held
+
+#### Scenario: A frame the install cannot read
+
+- GIVEN a connection over which a screen has written something the install cannot read
+- WHEN the screen then claims an entry, and the connection ends
+- THEN the claim is acted on
+- AND the analyst leaves the roster

@@ -2,9 +2,9 @@
 
 ## Purpose
 
-What the application owes about the third-party versions it is built from: that the set is answerable without reading the tree, that a published vulnerability is answered rather than queued behind routine work, that a version is observed before it is adopted without a person looking, that anything deliberately held back carries its reason, and that a change to any of it is demonstrated before it reaches the release branch.
+What the application owes about the third-party versions it is built from: that the set is answerable without reading the tree, that a published vulnerability is answered rather than queued behind routine work, that a version is observed before it is adopted without a person looking, that anything deliberately held back carries its reason, that a change to any of it is demonstrated before it reaches the release branch, and that two builds of one revision are built from the same things.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: What is available is answerable without reading the tree
 
@@ -14,14 +14,16 @@ An operator or maintainer asking what the application is behind on MUST NOT have
 
 #### Scenario: A newer version exists and nothing has adopted it
 
-- **WHEN** a newer version of a dependency is published and the application has not adopted it
-- **THEN** the record names the dependency, the adopted version and the available one
-- **AND** it distinguishes that dependency from one that is held deliberately
+- GIVEN a newer version of a dependency, published and not adopted by the application
+- WHEN the record is read
+- THEN it names the dependency, the adopted version and the available one
+- AND it distinguishes that dependency from one that is held deliberately
 
 #### Scenario: Nothing is outstanding
 
-- **WHEN** every dependency is at the newest version its constraints permit
-- **THEN** the record states that, rather than being absent or stale
+- GIVEN every dependency at the newest version its constraints permit
+- WHEN the record is read
+- THEN it states that, rather than being absent or stale
 
 ### Requirement: A published vulnerability is answered without waiting
 
@@ -31,14 +33,16 @@ A vulnerability affecting a dependency reached only through another dependency S
 
 #### Scenario: A vulnerability is published against an adopted version
 
-- **WHEN** a vulnerability is published against a version the application depends on
-- **THEN** a corrected version is offered immediately
-- **AND** the observation period governing routine adoption is not applied to it
+- GIVEN a version the application depends on
+- WHEN a vulnerability is published against it
+- THEN a corrected version is offered immediately
+- AND the observation period governing routine adoption is not applied to it
 
 #### Scenario: The vulnerable dependency is not a direct one
 
-- **WHEN** the affected dependency is reached only through another dependency
-- **THEN** it is treated as affecting the application, and is not excluded for being indirect
+- GIVEN a dependency reached only through another dependency
+- WHEN a vulnerability is published against it
+- THEN it is treated as affecting the application, and is not excluded for being indirect
 
 ### Requirement: A version is observed before it is adopted unattended
 
@@ -48,14 +52,16 @@ A version SHALL NOT be adopted without a person's decision until it has been pub
 
 #### Scenario: A version is newer than the minimum period
 
-- **WHEN** a version has been published for less than the defined period
-- **THEN** it is not adopted without a person's decision
-- **AND** the reason it was passed over is stated rather than the version being silently absent
+- GIVEN a version published for less than the defined period
+- WHEN adoption runs without a person
+- THEN the version is not adopted
+- AND the reason it was passed over is stated rather than the version being silently absent
 
 #### Scenario: A person adopts it deliberately
 
-- **WHEN** a person decides to adopt a version younger than the period
-- **THEN** the adoption proceeds, and the decision is attributable
+- GIVEN a version published for less than the defined period
+- WHEN a person decides to adopt it
+- THEN the adoption proceeds, and the decision is attributable
 
 ### Requirement: A dependency held below the latest version carries its reason
 
@@ -67,18 +73,21 @@ A hold MUST NOT outlive the condition that justifies it: when that condition no 
 
 #### Scenario: A dependency is held back
 
-- **WHEN** a dependency is held below the newest available version
-- **THEN** the record states what constrains it and what would release it
+- GIVEN a dependency held below the newest available version
+- WHEN the record is read
+- THEN it states what constrains the dependency and what would release it
 
 #### Scenario: The constraint that justified a hold is lifted
 
-- **WHEN** the condition a hold names no longer applies
-- **THEN** the hold is surfaced for removal rather than continuing to apply
+- GIVEN a hold that names the condition justifying it
+- WHEN that condition no longer applies
+- THEN the hold is surfaced for removal rather than continuing to apply
 
 #### Scenario: Two dependencies are held by the same constraint
 
-- **WHEN** one constraint holds more than one dependency below its latest version
-- **THEN** the record shows that they are released together, rather than presenting them as unrelated
+- GIVEN one constraint holding more than one dependency below its latest version
+- WHEN the record is read
+- THEN it shows that they are released together, rather than presenting them as unrelated
 
 ### Requirement: A change to dependencies is demonstrated before it lands
 
@@ -90,14 +99,16 @@ A tier that did not run SHALL NOT be counted as a pass. Where a tier cannot run,
 
 #### Scenario: Every tier runs and passes
 
-- **WHEN** a dependency change is verified and every tier runs
-- **THEN** the change is eligible to reach the release branch
+- GIVEN a change to the versions the application is built from
+- WHEN it is verified and every tier runs and passes
+- THEN the change is eligible to reach the release branch
 
 #### Scenario: A tier could not run
 
-- **WHEN** a dependency change is verified and a tier declines to run
-- **THEN** the change is reported as undemonstrated
-- **AND** the tier that did not run is named
+- GIVEN a change to the versions the application is built from
+- WHEN it is verified and a tier declines to run
+- THEN the change is reported as undemonstrated
+- AND the tier that did not run is named
 
 ### Requirement: Two builds of one revision resolve the same versions
 
@@ -105,10 +116,12 @@ The components an installation is built from SHALL be identified precisely enoug
 
 #### Scenario: The same revision is built twice
 
-- **WHEN** one revision is built on two occasions
-- **THEN** both builds resolve the same versions of every component
+- GIVEN one revision
+- WHEN it is built on two occasions
+- THEN both builds resolve the same versions of every component
 
 #### Scenario: A component is identified by a moving name
 
-- **WHEN** a component is identified by a name that can point at different content over time
-- **THEN** that is a defect in the build's reproducibility rather than an accepted convenience
+- GIVEN a component identified by a name that can point at different content over time
+- WHEN an installation is built from it
+- THEN that is a defect in the build's reproducibility rather than an accepted convenience
