@@ -205,9 +205,16 @@ export const Complete: Story = {
   },
 }
 
-/** The write seam, spied on. One per story, since `fn` remembers its calls. */
+/**
+ * The write seam, spied on, answering as the container does: the record as
+ * stored. One per story, since `fn` remembers its calls.
+ */
 function spying(): ComplianceWrites {
-  return { save: fn(() => Promise.resolve({})) }
+  return {
+    save: fn((values: Record<string, unknown>, read: number) =>
+      Promise.resolve({ ...campaignCompliance, ...values, version: read + 1 }),
+    ),
+  }
 }
 
 /**
@@ -253,6 +260,9 @@ export const SendsAChosenAnswer: Story = {
     await expect(args.writes!.save).toHaveBeenCalledWith(
       { nis2EntityClass: 'essential' },
       campaignCompliance.version,
+    )
+    await expect(canvas.getByRole('button', { name: /NIS2 classification/ })).toHaveTextContent(
+      'essential',
     )
   },
 }
