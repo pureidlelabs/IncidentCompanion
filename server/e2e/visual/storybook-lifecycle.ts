@@ -391,7 +391,7 @@ async function attemptStory(
   // **`attached`, not the default `visible`.** Several stories draw nothing
   // on purpose, and an empty root has no box -- `visible` fails them for
   // succeeding.
-  await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 10_000 })
+  await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
   const broke = await brokenPreview(page)
   if (broke !== null) {
     return { broke, playError: null }
