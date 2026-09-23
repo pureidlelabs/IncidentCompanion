@@ -20,6 +20,7 @@ import itertools
 import json
 import os
 import subprocess
+import time
 import uuid
 
 import pytest
@@ -80,6 +81,12 @@ class Analyst:
     def status(self, path: str, *args: str) -> int:
         answer = self.at_the_name(path, "-o", "/dev/null", "-w", "%{http_code}", *args)
         return int(answer.stdout or 0)
+
+    def statuses(self, path: str, count: int, *args: str) -> list[int]:
+        """`count` requests in one connection, each answer's status in order."""
+        answer = self.at_the_name(f"{path}?n=[1-{count}]", "-o", "/dev/null",
+                                  "-w", "%{http_code}\\n", *args)
+        return [int(code) for code in answer.stdout.split()]
 
     def sign_in(self, email: str, password: str) -> int:
         return self.status("/api/auth/sign-in/email", "-X", "POST",
@@ -241,3 +248,35 @@ def test_a_page_elsewhere_spends_nothing_of_the_analyst_s_budget(install):
     assert refused == [403] * 25, refused
     assert analyst.sign_in(_guess(), "not-the-password-at-all") == 401, (
         "a page the analyst visited spent their sign-in budget")
+
+
+#: What Chromium sends when another site's page fetches from the install and
+#: when it draws an image from it: the fetch carries that page's origin, the
+#: image carries none.
+_FETCHED = ("-H", "origin: https://evil.test", "-H", "sec-fetch-site: cross-site",
+            "-H", "sec-fetch-mode: cors", "-H", "sec-fetch-dest: empty")
+_DRAWN = ("-H", "sec-fetch-site: cross-site", "-H", "sec-fetch-mode: no-cors",
+          "-H", "sec-fetch-dest: image")
+
+
+def test_a_page_elsewhere_spends_nothing_the_analyst_asks_for(install):
+    """Another site's requests through the analyst's browser are refused before any limit counts them.
+
+    Thirteen rounds of 24, each inside a second, pass the application's 300 a
+    minute without tripping its 25 a second. A link from that site still opens
+    the install.
+    """
+    analyst = Analyst("browsing")
+    answers: list[int] = []
+    for _ in range(13):
+        answers += analyst.statuses("/api/health", 12, *_FETCHED)
+        answers += analyst.statuses("/api/health", 12, *_DRAWN)
+        time.sleep(1)
+    assert analyst.status("/api/health", "-H", "sec-fetch-site: same-origin",
+                          "-H", "sec-fetch-mode: cors", "-H", "sec-fetch-dest: empty") == 200, (
+        "a page the analyst visited spent the analyst's own budget")
+    assert set(answers) == {403}, (
+        f"another site's requests were answered: {sorted(set(answers))}, {answers.count(429)} refused as too many")
+    assert analyst.status("/", "-H", "sec-fetch-site: cross-site", "-H", "sec-fetch-mode: navigate",
+                          "-H", "sec-fetch-dest: document") == 200, "a link from another site was refused"
+
