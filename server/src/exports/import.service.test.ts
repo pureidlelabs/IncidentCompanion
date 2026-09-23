@@ -324,7 +324,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
         throw new UnprocessableEntityException({ message: 'this row breaks a rule' })
       }
     }
-    const refusing = new ImportService(new RefusesOneRow(db!))
+    const refusing = new ImportService(new RefusesOneRow(db!, suiteStore()))
     await refusing.fromCsv('systems', emptyCaseId, 'hostname\nWKS-REFUSED\n', ME)
 
     const result = await refusing.fromCsv(
