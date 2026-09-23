@@ -15,6 +15,7 @@ import type { NextFunction, Request, Response } from 'express'
 import { LiveGateway } from './live/live.gateway.js'
 import compression from 'compression'
 
+import { trustedOrigins } from './auth/trusted-origins.js'
 import { attribute, findTheEdge } from './wire/caller-address.js'
 import { noStoreOnTheApi, securityHeaders } from './wire/headers.js'
 import { retryAfterOnEveryRefusal } from './wire/retry-after.js'
@@ -54,7 +55,7 @@ export async function applyPlatform(
    */
   app.use(
     securityHeaders(
-      config.get('AUTH_BASE_URL', { infer: true }),
+      trustedOrigins(config.get('AUTH_BASE_URL', { infer: true }), 'production'),
       config.get('IC_IMPORTERS', { infer: true }).includes('sentinel'),
     ),
   )

@@ -6,8 +6,6 @@
 import helmet from 'helmet'
 import type { RequestHandler } from 'express'
 
-import { trustedOrigins } from '../auth/trusted-origins.js'
-
 /**
  * **CSRF is not in here, and that is a measurement rather than an omission.**
  * The session cookie is issued `HttpOnly; Secure; SameSite=Lax`, so a browser
@@ -17,7 +15,10 @@ import { trustedOrigins } from '../auth/trusted-origins.js'
  * deliberate decision rather than a default. What `Lax` does *not* cover is a
  * state change behind a `GET`, which is why no route may write on one.
  */
-export function securityHeaders(baseURL: string, importsFromSentinel: boolean): RequestHandler {
+export function securityHeaders(
+  ownOrigins: readonly string[],
+  importsFromSentinel: boolean,
+): RequestHandler {
   return helmet({
     contentSecurityPolicy: {
       useDefaults: false,
@@ -45,7 +46,7 @@ export function securityHeaders(baseURL: string, importsFromSentinel: boolean): 
          */
         connectSrc: [
           "'self'",
-          ...socketOrigins(baseURL),
+          ...socketOrigins(ownOrigins),
           ...(importsFromSentinel ? SENTINEL_ORIGINS : []),
         ],
         /** Nothing here is embedded, and nothing embeds this. */
@@ -76,13 +77,13 @@ export function securityHeaders(baseURL: string, importsFromSentinel: boolean): 
 const SENTINEL_ORIGINS = ['https://login.microsoftonline.com', 'https://management.azure.com']
 
 /**
- * The socket spelling of each origin the install answers as its own.
+ * The socket spelling of each of the install's own origins.
  *
  * An IPv6 literal is left out: a content policy has no syntax for one, and a
  * browser discards the source with a warning.
  */
-function socketOrigins(baseURL: string): string[] {
-  return trustedOrigins(baseURL, 'production')
+function socketOrigins(ownOrigins: readonly string[]): string[] {
+  return ownOrigins
     .filter((origin) => !origin.includes('['))
     .map((origin) => origin.replace(/^http/, 'ws'))
 }
