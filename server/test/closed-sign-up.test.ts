@@ -2,7 +2,7 @@
  * **Nothing signs itself up. The setup token claims the install, and an
  * administrator provisions every account after it.**
  *
- * **The route is not served at all** -- `disabledPaths` in `auth.config.ts`.
+ * **The route is not served at all** -- `offersOnly` in `auth.config.ts`.
  * Closing it only once the install has an account would leave a second,
  * unauthenticated way to become the **first administrator**, which is exactly
  * what the setup token exists to prevent; closed at every moment, claimed or
@@ -14,7 +14,7 @@
  *
  * **The in-process call is not a bypass and cannot become one.**
  * `setup.controller.ts` reaches `auth.api.signUpEmail()` directly, which
- * `disabledPaths` does not intercept - it is enforced in `onRequest`, the
+ * `offersOnly` does not intercept - it is enforced in `onRequest`, the
  * router's entry point. Nothing reaches that call without matching the token.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -88,10 +88,10 @@ describe.skipIf(!runnable)('signing yourself up', () => {
   })
 
   /**
-   * **The one door `disabledPaths` cannot close, and the only thing that
+   * **The one door `offersOnly` cannot close, and the only thing that
    * closes it.** `/sign-up/email` is refused over HTTP before any hook runs,
-   * so every case above is held by the path list. `setup.controller.ts` calls
-   * `signUpEmail` *in process* to skip the origin check, and `disabledPaths`
+   * so every case above is held by the allowlist. `setup.controller.ts` calls
+   * `signUpEmail` *in process* to skip the origin check, and `offersOnly`
    * does not intercept that -- which leaves the `before` hook in
    * `auth.config.ts` as the whole of the refusal on this path.
    *

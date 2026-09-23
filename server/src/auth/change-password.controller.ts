@@ -118,10 +118,9 @@ export class ChangePasswordController {
         /**
          * **The number is composed here and not in the hook**, because this
          * route is behind a session and the hook is not: it runs ahead of
-         * every endpoint's own checks, which is what makes it cover the
-         * library's routes and also what would hand the install's minimum to
-         * anybody who asked. An analyst changing their own password is owed
-         * the number; an anonymous caller is not.
+         * every endpoint's own checks and does not know whom it answers. An
+         * analyst changing their own password is owed the number; an
+         * anonymous caller is not.
          */
         const stored = await readPolicy(this.db)
         throw new UnprocessableEntityException({

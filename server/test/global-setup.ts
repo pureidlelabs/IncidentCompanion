@@ -46,6 +46,9 @@ export const ADMIN_URL =
     ) as { adminDatabaseUrl: string }
   ).adminDatabaseUrl
 
+/** The suffix of the database holding the schema and no account. */
+export const UNCLAIMED = '_unclaimed'
+
 const asRole = (url: string, role: string): string => {
   const at = new URL(url)
   at.username = role
@@ -281,6 +284,11 @@ export async function setup(): Promise<void> {
     cwd: PACKAGE_ROOT,
     env: { ...process.env, DATABASE_URL: asRole(url, 'ic_migrate') },
   })
+
+  // The schema with no account in it, for `unclaimedInstall` to clone. Nothing
+  // connects to it, which is what lets it serve as a template.
+  await runLock.query(`drop database if exists "${name}${UNCLAIMED}" with (force)`)
+  await runLock.query(`create database "${name}${UNCLAIMED}" template "${name}" owner ic_migrate`)
 
   // **What the suite queries through.** Not the owner and not an
   // administrator, so a test that asserts case scoping is asserting it against

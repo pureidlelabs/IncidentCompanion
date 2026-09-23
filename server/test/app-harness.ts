@@ -157,7 +157,7 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
   await app.listen(0, '127.0.0.1')
 
   const base = (await app.getUrl()).replace('[::1]', '127.0.0.1')
-  const document = openApiDocument(app)
+  const document = await openApiDocument(app)
 
   /**
    * **Mirrors what `main.ts` does after listening**, and it has to: without it
@@ -201,6 +201,56 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
   }
 }
 
+/**
+ * The app booted on an install that holds no account, in a database of its
+ * own cloned from the one `global-setup.ts` set aside. `owner` reaches that
+ * database as its owner, which may empty it again. Closing it drops the
+ * database. `null` where the run has no Postgres server to clone on.
+ */
+export async function unclaimedInstall(): Promise<(Harness & { owner: string }) | null> {
+  const given = process.env.DATABASE_URL
+  if (!given || process.env.IC_EMBEDDED_DATABASE_URL) {
+    declined('An unclaimed install', 'the in-process engine cannot clone a database')
+    return null
+  }
+  const { ADMIN_URL, UNCLAIMED } = await import('./global-setup.js')
+  const { Client } = await import('pg')
+  const test = new URL(given)
+  const clone = `${test.pathname.slice(1)}_claim_${String(process.pid)}`
+  const admin = new Client({ connectionString: new URL('/postgres', ADMIN_URL).toString() })
+  await admin.connect()
+  await admin.query(`drop database if exists "${clone}" with (force)`)
+  await admin.query(
+    `create database "${clone}" template "${test.pathname.slice(1)}${UNCLAIMED}" owner ic_migrate`,
+  )
+
+  const at = (role: string) => {
+    const url = new URL(given)
+    url.pathname = `/${clone}`
+    url.username = role
+    url.password = role
+    return url.toString()
+  }
+  const before = { app: given, seed: process.env.SEED_DATABASE_URL }
+  process.env.DATABASE_URL = at('ic_app')
+  process.env.SEED_DATABASE_URL = at('ic_seed')
+  const harness = await boot()
+  return {
+    ...harness,
+    owner: at('ic_migrate'),
+    close: async () => {
+      try {
+        await harness.close()
+      } finally {
+        process.env.DATABASE_URL = before.app
+        if (before.seed) process.env.SEED_DATABASE_URL = before.seed
+        await admin.query(`drop database if exists "${clone}" with (force)`)
+        await admin.end()
+      }
+    },
+  }
+}
+
 /** What every harness account ends up holding, so any of them can sign back in. */
 const HARNESS_PASSWORD = 'harness-password-1234'
 
@@ -233,8 +283,8 @@ export async function signUp(
    * **In process, because `/sign-up/email` is not served.** The setup token is
    * the only way to claim an install over HTTP, and it exists only in the
    * server's console output -- so a fixture would have to scrape a log. This
-   * is the call `setup.controller.ts` makes once the token matches, and
-   * `disabledPaths` does not intercept an in-process call.
+   * is the call `setup.controller.ts` makes once the token matches, and an
+   * in-process call does not pass the router that refuses it over HTTP.
    *
    * The install rule still applies: the first account becomes the
    * administrator, and `sharedAdmin` promotes by hand when a previous run left
@@ -491,7 +541,9 @@ export function operations(
       })
     }
   }
-  return found
+  // Last, because it ends the session a sweep asks with.
+  const ends = (one: Operation) => `${one.method} ${one.template}` === 'POST /api/auth/sign-out'
+  return [...found.filter((one) => !ends(one)), ...found.filter(ends)]
 }
 
 /**

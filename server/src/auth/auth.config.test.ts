@@ -9,8 +9,6 @@
  * library that stopped honouring `expiresIn` would leave every case green.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-// Re-exported by `better-auth/api`, which is a declared dependency;
-// `@better-auth/core` resolves only by hoisting and is not in package.json.
 import { getIP } from 'better-auth/api'
 
 import { createAuth } from './auth.config.js'
