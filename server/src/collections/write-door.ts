@@ -20,6 +20,20 @@ export const BULK_LIMIT = 1000
 
 export const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
 
+/** The rows a write names, each at the version it was read at. */
+export const selectionSchema = z
+  .array(
+    z
+      .object({
+        id: z.uuid(),
+        version: rowVersion().describe(
+          'The version the row was read at. A stale one is refused with 409.',
+        ),
+      })
+      .strict(),
+  )
+  .max(BULK_LIMIT)
+
 /**
  * Parse a body by hand, or throw the 422 the global pipe would have thrown.
  *

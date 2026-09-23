@@ -12,7 +12,7 @@ import { COLLECTION_SCHEMAS } from './domain/collections.js'
 import { fields, patchSchema } from './domain/field-spec.js'
 import { reportBlockSchema, reportSchema } from './domain/entities/report.js'
 import { caseSchema } from './cases/cases.dto.js'
-import { rowVersion } from './domain/column-bounds.js'
+import { BULK_LIMIT, selectionSchema } from './collections/write-door.js'
 import { timelineWriteSchema } from './domain/entities/timeline.js'
 
 /**
@@ -664,16 +664,6 @@ export function refusals(
   return out
 }
 
-/** A row as a write names it: by id, at the version it was read at. */
-const READ_ROW = z
-  .object({
-    id: z.uuid(),
-    version: rowVersion().describe(
-      'The version the row was read at. A stale one is refused with 409.',
-    ),
-  })
-  .strict()
-
 /**
  * `schema` with the version a write presents beside its fields, on every
  * branch of a union. The route takes it off before the fields are validated.
@@ -736,11 +726,10 @@ export function describeOperation(
 
   const patchForm = patchFormOf(PUBLISHABLE[resource]!)
   const partial = patchForm ? published(patchForm) : rows
-  const { $schema: _, ...read } = published(READ_ROW) as {
+  const { $schema: _, ...ids } = published(selectionSchema) as {
     $schema?: unknown
-    properties: { version: unknown }
+    items: { properties: { version: unknown } }
   }
-  const ids = { type: 'array', items: read }
 
   // The bulk bodies are envelopes, not arrays: `POST /bulk` takes
   // `{ entries: [...] }` and `PATCH /bulk` takes `{ ids, fields }` - one patch
@@ -751,7 +740,7 @@ export function describeOperation(
         ? {
             type: 'object',
             required: ['entries'],
-            properties: { entries: { type: 'array', maxItems: 1000, items: rows } },
+            properties: { entries: { type: 'array', maxItems: BULK_LIMIT, items: rows } },
           }
         : rows,
     )
@@ -765,13 +754,12 @@ export function describeOperation(
             properties: {
               ids: {
                 ...ids,
-                maxItems: 1000,
                 description: 'The rows to change, each at the version it was read at.',
               },
               fields: { ...partial, description: 'Applied to every row in `ids`.' },
             },
           }
-        : presenting(partial, read.properties.version),
+        : presenting(partial, ids.items.properties.version),
     )
   }
 
@@ -790,8 +778,13 @@ export function describeOperation(
         method === 'delete'
           ? ['Removed.', { type: 'object', properties: { deleted: { type: 'boolean' } } }]
           : bulk && method === 'post'
-            ? ['The ids minted, in the order the entries were given.',
-               { type: 'object', properties: { ids } }]
+            ? [
+                'The ids minted, in the order the entries were given.',
+                {
+                  type: 'object',
+                  properties: { ids: { type: 'array', items: { type: 'string', format: 'uuid' } } },
+                },
+              ]
             : bulk
               ? ['The rows as stored.', { type: 'array', items: rows }]
               : ['The row as stored, with its new `version`.', rows]

@@ -7,7 +7,12 @@
  * `version` property anywhere in a JSON body, `ids[].version` and
  * `targets[].rows[].version` included. A PATCH on a record whose read publishes
  * a version has to be one of them. DELETE is not held to that rule.
+ *
+ * A selection, the rows a door names each at its version, is refused one row
+ * past the bound the document publishes for it, and not at that bound.
  */
+import { randomUUID } from 'node:crypto'
+
 import type { OpenAPIObject } from '@nestjs/swagger'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -125,6 +130,19 @@ function bodyWith(
   return withRequired(document, at, {
     [head!]: bodyWith(document, properties[head!], rest, version),
   })
+}
+
+/** The schema `path` reaches from `schema`, through the branch that carries it. */
+function schemaAt(document: OpenAPIObject, schema: unknown, path: string[]): Schema {
+  const at = resolved(document, schema)
+  const [head, ...rest] = path
+  if (head === undefined) return at
+  const carrying = branches(at).find(
+    (branch) => Object.keys(schemaAt(document, branch, path)).length > 0,
+  )
+  if (carrying) return schemaAt(document, carrying, path)
+  const next = head === '[]' ? at['items'] : (at['properties'] as Record<string, Schema>)?.[head]
+  return next === undefined ? {} : schemaAt(document, next, rest)
 }
 
 /** One field `schema` lets a patch change, or nothing when none is plain enough to fill. */
@@ -282,4 +300,54 @@ describe.skipIf(!runnable)('every door that takes a version refuses one no reade
 
     expect(wrong).toEqual([])
   }, 120_000)
+
+  it('refuses a selection one row past the bound the document publishes, and no smaller one', async () => {
+    const selections = doors().flatMap((door) => {
+      const at = door.where.slice(0, door.where.lastIndexOf('[]'))
+      const array = schemaAt(harness.document, jsonBody(door.operation), at)
+      const row = resolved(harness.document, array['items'])['properties'] ?? {}
+      if (!door.where.includes('[]') || Object.keys(row).sort().join() !== 'id,version') return []
+      const body = bodyWith(harness.document, jsonBody(door.operation), door.where, 1)
+      return [{ ...door, at, body, bound: array['maxItems'] }]
+    })
+    expect(selections.length, 'no door takes a selection, so this sweeps nothing').toBeGreaterThan(
+      0,
+    )
+
+    const wrong: string[] = []
+    for (const door of selections) {
+      const where = door.at.map((key) => (key === '[]' ? 0 : key)).join('.')
+      if (typeof door.bound !== 'number') {
+        wrong.push(`${door.method} ${door.template} [${where}]: publishes no bound`)
+        continue
+      }
+      for (const size of [door.bound, door.bound + 1]) {
+        const body = structuredClone(door.body)
+        const rows = door.at.reduce<unknown>(
+          (into, key) => (into as Record<string, unknown>)[key === '[]' ? 0 : key],
+          body,
+        ) as Schema[]
+        rows.splice(0, 1, ...Array.from({ length: size }, () => ({ ...rows[0], id: randomUUID() })))
+        const response = await fetch(`${harness.base}${door.path}`, {
+          method: door.method,
+          headers: { cookie: admin.cookie, 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        const text = await response.text()
+        const issues = (JSON.parse(text) as { errors?: { code?: string; path?: unknown[] }[] })
+          .errors
+        const refused = (issues ?? []).some(
+          (issue) => issue.code === 'too_big' && issue.path?.join('.') === where,
+        )
+        if (refused !== size > door.bound || response.status >= 500) {
+          wrong.push(
+            `${door.method} ${door.template} [${where}] ${String(size)} rows: ` +
+              `${String(response.status)} ${text.slice(0, 160)}`,
+          )
+        }
+      }
+    }
+
+    expect(wrong, 'the bound a selection publishes is not the bound its door enforces').toEqual([])
+  }, 180_000)
 })
