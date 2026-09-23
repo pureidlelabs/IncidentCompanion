@@ -62,7 +62,7 @@ function sections(document: Uint8Array): Record<string, string> {
   const doc = new Y.Doc()
   Y.applyUpdate(doc, document)
   return Object.fromEntries(
-    [...doc.share.keys()].map((name) => [name, doc.getXmlFragment(name).toString()]),
+    [...doc.share.keys()].map((name) => [name, doc.getXmlFragment(name).toJSON()]),
   )
 }
 
