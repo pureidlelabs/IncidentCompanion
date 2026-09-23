@@ -19,7 +19,7 @@ import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { WebSocket as Client, type WebSocket } from 'ws'
-import { readSyncMessage, writeSyncStep2 } from 'y-protocols/sync'
+import { readSyncMessage } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
 import { LiveGateway } from './live.gateway.js'
@@ -369,13 +369,6 @@ function typed(text: string): { update: string; doc: Y.Doc } {
   return { update: wire(codec.frameUpdate(Y.encodeStateAsUpdate(doc))), doc }
 }
 
-/** A client answering a hello with everything it has - a write, not a read. */
-function answered(doc: Y.Doc): string {
-  const encoder = encoding.createEncoder()
-  writeSyncStep2(encoder, doc)
-  return wire(encoding.toUint8Array(encoder))
-}
-
 function filed(text: string): Y.Doc {
   const doc = new Y.Doc({ gc: false })
   doc.getXmlFragment('block-1').insert(0, [new Y.XmlText(text)])
@@ -454,14 +447,16 @@ const holding = (level: 'read' | 'write' | 'delete') =>
   }) as never
 
 /**
- * One admitted connection, with the report in whatever state the case needs.
+ * One admitted connection, whose prose applies each frame to `document`, or
+ * refuses it with `refusing` when that is set.
  *
- * The prose double stubs only the two methods that read the database; the codec
- * is the real one, so "the document did not move" is measured with the encoder
- * production uses rather than against a mock's call count.
+ * The prose double stubs what reads the database; the codec is the real one,
+ * so "the document did not move" is measured with the encoder production uses
+ * rather than against a mock's call count. Which frames a sent report refuses
+ * is `ProseService`'s, asserted in its own test.
  */
 async function connected(
-  sentAt: Date | null,
+  refusing: Date | null,
   document: Y.Doc,
   level: 'read' | 'write' | 'delete' = 'write',
 ): Promise<{ live: FakeSocket; relayed: Record<string, unknown>[] }> {
@@ -474,10 +469,11 @@ async function connected(
     },
   }
   const prose = {
-    resolve: () => Promise.resolve({ reportId: REPORT, sentAt }),
+    resolve: () => Promise.resolve({ table: 'reports', id: REPORT }),
     open: () => Promise.resolve(document),
     release: () => Promise.resolve(),
-    applySync: codec.applySync.bind(codec),
+    apply: (_caseId: string, _address: unknown, frame: Uint8Array, origin: unknown) =>
+      Promise.resolve(refusing ? { refused: refusing } : { reply: codec.applySync(document, frame, origin) }),
     frameUpdate: codec.frameUpdate.bind(codec),
     isStateRequest: codec.isStateRequest.bind(codec),
     addsNothing: codec.addsNothing.bind(codec),
@@ -497,87 +493,7 @@ async function connected(
   return { live, relayed }
 }
 
-/**
- * As `connected`, with the stamp read afresh on every `resolve` and the member
- * handed back - so a test can file the report mid-session and deliver the
- * `case.changed` the gateway would have received.
- */
-async function watched(
-  sentAt: () => Date | null,
-  document: Y.Doc,
-): Promise<{ live: FakeSocket; member: { send: (payload: string) => void } }> {
-  let member: { send: (payload: string) => void } | null = null
-  const channel = {
-    join: (joined: { send: (payload: string) => void }) => {
-      member = joined
-      return Promise.resolve()
-    },
-    leave: () => Promise.resolve(),
-    prose: () => undefined,
-  }
-  const prose = {
-    resolve: () => Promise.resolve({ reportId: REPORT, sentAt: sentAt() }),
-    open: () => Promise.resolve(document),
-    release: () => Promise.resolve(),
-    applySync: codec.applySync.bind(codec),
-    frameUpdate: codec.frameUpdate.bind(codec),
-    isStateRequest: codec.isStateRequest.bind(codec),
-    addsNothing: codec.addsNothing.bind(codec),
-    hello: codec.hello.bind(codec),
-  }
-  const gateway = new LiveGateway(
-    channel as unknown as CaseChannel,
-    {} as never,
-    caseWithNoCustomer,
-    prose as never,
-    audit as never,
-    holding('write'),
-  )
-  const live = new FakeSocket()
-  await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
-  if (!member) throw new Error('the gateway did not join the channel')
-  return { live, member }
-}
-
 describe('prose on a report that has been sent', () => {
-  /**
-   * **Readable, or the refusal is worse than the hole.** Refusing the field in
-   * `resolve` or `open` would leave an analyst unable to read what their own
-   * organisation filed; the gate is per frame for exactly this case.
-   */
-  it('answers a state request, so the filed text still loads', async () => {
-    const { live } = await connected(SENT, filed('the initial finding was a false positive'))
-
-    const mine = new Y.Doc({ gc: false })
-    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(mine)) })
-    await settle()
-
-    const [reply] = live.frames('prose.sync')
-    expect(reply, 'a filed report must still load').toBeDefined()
-    readSyncMessage(
-      decoderFor(reply!['update'] as string),
-      encoding.createEncoder(),
-      mine,
-      'the server',
-    )
-    expect(mine.getXmlFragment('block-1').toJSON()).toContain('false positive')
-  })
-
-  it.each([
-    ['an update', () => typed('quietly rewritten after filing').update],
-    ['a step 2', () => answered(typed('rewritten by answering a hello').doc)],
-  ])('refuses %s and leaves the document byte-identical', async (_name, build) => {
-    const document = filed('the initial finding was a false positive')
-    const before = Buffer.from(Y.encodeStateAsUpdate(document))
-    const { live } = await connected(SENT, document)
-
-    live.receive({ type: 'prose.sync', field: FIELD, update: build() })
-    await settle()
-
-    expect(Buffer.from(Y.encodeStateAsUpdate(document)).equals(before)).toBe(true)
-    expect(document.getXmlFragment('block-1').toJSON()).not.toContain('rewritten')
-  })
-
   it('tells the client why, and when the report was filed', async () => {
     const { live } = await connected(SENT, filed('as filed'))
 
@@ -605,73 +521,8 @@ describe('prose on a report that has been sent', () => {
   })
 })
 
-describe('a report filed while somebody is typing into it', () => {
-  /**
-   * **The window this closes, and why it was not theoretical.** `sentAt` is
-   * read once, when the connection opens the field. An analyst who had the
-   * section open when somebody else pressed Send therefore kept writing into a
-   * document the server was still accepting - the freeze that Send performs was
-   * not the freeze the socket enforced, and the two disagreed for as long as
-   * that connection held the field.
-   *
-   * **Closed off the fan-out the connection already receives**, not by a query
-   * per keystroke: `case.changed` names the scopes that moved, so a `reports`
-   * change drops the cached stamp and the next frame re-reads it. That is one
-   * extra read per filing rather than one per keystroke.
-   */
-  it('refuses the next update after the case says reports moved', async () => {
-    const document = new Y.Doc({ gc: false })
-    let sentAt: Date | null = null
-    const { live, member } = await watched(() => sentAt, document)
-
-    live.receive({ type: 'prose.sync', field: FIELD, update: typed('still a draft').update })
-    await settle()
-    expect(document.getXmlFragment('block-1').toJSON()).toContain('still a draft')
-
-    sentAt = SENT
-    member.send(JSON.stringify({ type: 'case.changed', scopes: ['reports'], by: 'Bob' }))
-    await settle()
-
-    live.receive({ type: 'prose.sync', field: FIELD, update: typed('written after the send').update })
-    await settle()
-
-    expect(document.getXmlFragment('block-1').toJSON()).not.toContain('written after the send')
-    expect(live.frames('prose.refused')).toEqual([
-      { type: 'prose.refused', field: FIELD, reason: 'report-sent', sentAt: SENT.toISOString() },
-    ])
-  })
-
-  /**
-   * **A change to something else must not cost a read.** Every write in the
-   * case fans out, so re-reading on any of them would be the per-keystroke
-   * query this avoids - a timeline entry saved while somebody writes is the
-   * ordinary case, not the exception.
-   */
-  it('does not re-read when the change was in another scope', async () => {
-    const document = new Y.Doc({ gc: false })
-    let reads = 0
-    const { live, member } = await watched(() => { reads += 1; return null }, document)
-
-    live.receive({ type: 'prose.sync', field: FIELD, update: typed('one').update })
-    await settle()
-    const afterOpen = reads
-
-    member.send(JSON.stringify({ type: 'case.changed', scopes: ['timeline'], by: 'Bob' }))
-    await settle()
-    live.receive({ type: 'prose.sync', field: FIELD, update: typed('two').update })
-    await settle()
-
-    expect(reads).toBe(afterOpen)
-  })
-})
-
 describe('prose on a draft report', () => {
-  /**
-   * **The other half of the gate.** A refusal keyed on nothing - refusing every
-   * update - passes every case above while making the product unusable, and
-   * only this one goes red.
-   */
-  it('applies the same update a sent report refuses', async () => {
+  it('applies an update', async () => {
     const document = new Y.Doc({ gc: false })
     const { live } = await connected(null, document)
 
@@ -732,11 +583,8 @@ describe('opening a field asks the client what it has', () => {
     expect(kinds(live)).toEqual([1, 0])
   })
 
-  it.each([
-    ['a filed report', SENT, 'write'],
-    ['a read-only analyst', null, 'read'],
-  ] as const)('does not refuse %s answering it with nothing new', async (_name, sentAt, level) => {
-    const { live } = await connected(sentAt, filed('as filed'), level)
+  it('does not refuse a read-only analyst answering it with nothing new', async () => {
+    const { live } = await connected(null, filed('as filed'), 'read')
     const mine = new Y.Doc({ gc: false })
 
     live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(mine)) })
@@ -1150,7 +998,7 @@ describe('two prose frames for one field arriving together', () => {
       prose: () => undefined,
     }
     const prose = {
-      resolve: () => Promise.resolve({ reportId: REPORT, sentAt: null }),
+      resolve: () => Promise.resolve({ table: 'reports', id: REPORT }),
       open: () => {
         readers += 1
         return Promise.resolve(document)
@@ -1159,7 +1007,8 @@ describe('two prose frames for one field arriving together', () => {
         readers -= 1
         return Promise.resolve()
       },
-      applySync: codec.applySync.bind(codec),
+      apply: (_caseId: string, _address: unknown, frame: Uint8Array, origin: unknown) =>
+        Promise.resolve({ reply: codec.applySync(document, frame, origin) }),
       frameUpdate: codec.frameUpdate.bind(codec),
       isStateRequest: codec.isStateRequest.bind(codec),
       addsNothing: codec.addsNothing.bind(codec),

@@ -9,6 +9,17 @@
 /** The SQLSTATE the store raises for a write to a sent report; its detail is the report as JSON. */
 export const SENT_REPORT_REFUSED = 'ICF01'
 
+/** The report a refused write named, where `error` is the store refusing a write to a sent report. */
+export function sentReportIn(error: unknown): { id: string; label: string | null; sentAt: Date } | undefined {
+  for (let at: unknown = error; at instanceof Object; at = (at as { cause?: unknown }).cause) {
+    const { code, detail } = at as { code?: unknown; detail?: unknown }
+    if (code !== SENT_REPORT_REFUSED || typeof detail !== 'string') continue
+    const report = JSON.parse(detail) as { reportId: string; label: string | null; sentAt: string }
+    return { id: report.reportId, label: report.label, sentAt: new Date(report.sentAt) }
+  }
+  return undefined
+}
+
 /**
  * `pg_trigger_depth() > 1` is a write issued by another trigger: a case
  * deleted with its reports, or an account deleted and its name nulled out of

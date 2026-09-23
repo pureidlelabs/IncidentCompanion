@@ -49,6 +49,7 @@ import * as Y from 'yjs'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { reports } from '../db/schema/report.js'
+import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
 import { withCase } from '../db/scope.js'
 
@@ -120,31 +121,6 @@ export interface ProseRecord {
 }
 
 /**
- * A record, plus the state a caller decides per frame from.
- *
- * `ProseRecord` alone is what opening, releasing and flushing need; only the
- * socket's per-frame refusal wants the stamp, and it is carried on the lookup
- * `resolve` already does because a second query for it would run per keystroke.
- */
-export interface ProseAddress extends ProseRecord {
-  /**
-   * When the record was frozen, or null.
-   *
-   * **Always null for a note**, which has nothing to be filed into: a note is
-   * the analyst's own scratchpad and never becomes a deliverable, so no state
-   * of it refuses a write. -> `domain/entities/case-note.ts`
-   *
-   * **Carried from the lookup `resolve` already does**, because the caller has
-   * to decide per frame whether an update may be applied and a second query
-   * for that would run per keystroke. It is the timestamp rather than a boolean
-   * so the refusal can say *when*, which is the only thing that makes the
-   * sentence actionable. -> `report/freeze.ts`
-   */
-  sentAt: Date | null
-}
-
-
-/**
  * How a document reaches the other instances.
  *
  * **Declared here rather than imported**, so the record does not depend on the
@@ -178,6 +154,20 @@ interface LiveDocument {
   timer: NodeJS.Timeout | null
   dirty: boolean
   unsubscribe: (() => void) | null
+  /** When the report was sent; a note is never sent. */
+  sealed: Date | null
+  /** Content waiting on a send that is deciding, or null when none is. */
+  deciding: (() => void)[] | null
+}
+
+/** What a connection's frame is answered with. */
+export type Applied = { refused: Date } | { reply: Uint8Array | null }
+
+/** A report's document held still for a send, at `bytes`. */
+export interface Seal {
+  readonly bytes: Uint8Array
+  /** The send's stamp, or null where it did not stamp. Gives back the reader `seal` took. */
+  settle(stamp: Date | null): Promise<void>
 }
 
 /**
@@ -239,7 +229,7 @@ export class ProseService implements OnApplicationShutdown {
    * The case is checked too - the block has to belong to the case whose socket
    * asked.
    */
-  async resolve(caseId: string, field: string): Promise<ProseAddress | null> {
+  async resolve(caseId: string, field: string): Promise<ProseRecord | null> {
     const parts = field.split(':')
     if (parts.length !== 3) return null
     const [table, rowId, column] = parts as [string, string, string]
@@ -261,20 +251,17 @@ export class ProseService implements OnApplicationShutdown {
           .where(and(eq(caseNotes.id, rowId), eq(caseNotes.caseId, caseId))),
       )
       if (!note) return null
-      // A note never freezes, so there is no state in which a frame for one is
-      // refused. Written as a literal rather than read from a column, because
-      // there is no column and inventing one would be the thing to maintain.
-      return { table, id: note.id, sentAt: null }
+      return { table, id: note.id }
     }
 
     const [report] = await withCase(this.db, caseId, (tx) =>
       tx
-        .select({ id: reports.id, sentAt: reports.sentAt })
+        .select({ id: reports.id })
         .from(reports)
         .where(and(eq(reports.id, rowId), eq(reports.caseId, caseId))),
     )
     if (!report) return null
-    return { table, id: report.id, sentAt: report.sentAt }
+    return { table, id: report.id }
   }
 
   /**
@@ -312,6 +299,7 @@ export class ProseService implements OnApplicationShutdown {
 
   private async build(caseId: string, address: ProseRecord): Promise<LiveDocument> {
     const doc = new Y.Doc({ gc: false })
+    let sealed: Date | null = null
     if (address.table === 'casenotes') {
       const [row] = await withCase(this.db, caseId, (tx) =>
         tx
@@ -330,17 +318,26 @@ export class ProseService implements OnApplicationShutdown {
     } else {
       const [row] = await withCase(this.db, caseId, (tx) =>
         tx
-          .select({ document: reports.document })
+          .select({ document: reports.document, sentAt: reports.sentAt })
           .from(reports)
           .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId))),
       )
       if (row?.document) Y.applyUpdate(doc, new Uint8Array(row.document))
+      sealed = row?.sentAt ?? null
     }
 
     // **Registered before the first update can land.** `doc.on('update')` is
     // attached here rather than by the caller, so there is no window in which
     // an update is applied to a document nothing is watching.
-    const entry: LiveDocument = { doc, readers: 1, timer: null, dirty: false, unsubscribe: null }
+    const entry: LiveDocument = {
+      doc,
+      readers: 1,
+      timer: null,
+      dirty: false,
+      unsubscribe: null,
+      sealed,
+      deciding: null,
+    }
     doc.on('update', (update: Uint8Array, origin: unknown) => {
       entry.dirty = true
       if (entry.timer) clearTimeout(entry.timer)
@@ -357,7 +354,7 @@ export class ProseService implements OnApplicationShutdown {
     // is a window in which another instance's edits are dropped silently.
     if (this.relay) {
       entry.unsubscribe = await this.relay.subscribe(caseId, (payload) => {
-        this.relayIn(address, doc, payload)
+        this.relayIn(address, entry, payload)
       })
     }
     return entry
@@ -391,7 +388,7 @@ export class ProseService implements OnApplicationShutdown {
    * without comment - a channel shared with other traffic is the price of not
    * standing up a second one.
    */
-  private relayIn(address: ProseRecord, doc: Y.Doc, payload: string): void {
+  private relayIn(address: ProseRecord, entry: LiveDocument, payload: string): void {
     let frame: Partial<ProseFrame>
     try {
       frame = JSON.parse(payload) as Partial<ProseFrame>
@@ -401,9 +398,16 @@ export class ProseService implements OnApplicationShutdown {
     if (frame.type !== 'prose.document') return
     if (frame.record !== recordOf(address)) return
     if (typeof frame.update !== 'string') return
+    if (entry.sealed) return
+    if (entry.deciding) {
+      entry.deciding.push(() => {
+        this.relayIn(address, entry, payload)
+      })
+      return
+    }
 
     try {
-      Y.applyUpdate(doc, new Uint8Array(Buffer.from(frame.update, 'base64')), REMOTE)
+      Y.applyUpdate(entry.doc, new Uint8Array(Buffer.from(frame.update, 'base64')), REMOTE)
     } catch (error) {
       this.log.warn(`dropping a relayed prose update for ${recordOf(address)}: ${String(error)}`)
     }
@@ -435,6 +439,63 @@ export class ProseService implements OnApplicationShutdown {
     held.unsubscribe?.()
     this.live.delete(key)
     held.doc.destroy()
+  }
+
+  /**
+   * Apply one connection's sync frame, and what to answer it with.
+   *
+   * Content for a sent report is refused with its stamp. Content arriving while
+   * a send decides waits for it: refused if the send stamps, applied if not.
+   * The document has to be open.
+   */
+  async apply(caseId: string, address: ProseRecord, frame: Uint8Array, origin: unknown): Promise<Applied> {
+    const holding = this.live.get(keyOf(caseId, address))
+    if (!holding) throw new Error(`${recordOf(address)} is not open`)
+    const held = await holding
+    if (!this.addsNothing(held.doc, frame)) {
+      if (held.sealed) return { refused: held.sealed }
+      const deciding = held.deciding
+      if (deciding) {
+        return new Promise((answer) => {
+          deciding.push(() => {
+            answer(this.apply(caseId, address, frame, origin))
+          })
+        })
+      }
+    }
+    return { reply: this.applySync(held.doc, frame, origin) }
+  }
+
+  /**
+   * Hold a report's document still while a send decides.
+   *
+   * Takes a reader, which `settle` gives back. A second seal waits for the
+   * first to settle.
+   */
+  async seal(caseId: string, reportId: string): Promise<Seal> {
+    const address = reportDocument(reportId)
+    await this.open(caseId, address)
+    const held = await this.live.get(keyOf(caseId, address))!
+    while (held.deciding) {
+      const waiting = held.deciding
+      await new Promise<void>((next) => waiting.push(next))
+    }
+    held.deciding = []
+    return {
+      bytes: Y.encodeStateAsUpdate(held.doc),
+      settle: async (stamp) => {
+        if (stamp) {
+          // The stamp stored these bytes, and nothing has been applied since.
+          held.sealed = stamp
+          held.dirty = false
+          if (held.timer) clearTimeout(held.timer)
+        }
+        const waiting = held.deciding ?? []
+        held.deciding = null
+        for (const go of waiting) go()
+        await this.release(caseId, address)
+      },
+    }
   }
 
   /**
@@ -547,6 +608,12 @@ export class ProseService implements OnApplicationShutdown {
               .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId))),
       )
     } catch (error) {
+      // Sent by a path this document did not see: nothing more is taken.
+      const sent = sentReportIn(error)
+      if (sent) {
+        held.sealed ??= sent.sentAt
+        return
+      }
       // **Marked dirty again**, so the next quiet moment or the last reader
       // leaving tries once more. Swallowing it silently is how a report loses
       // an afternoon to a transient database error nobody saw.

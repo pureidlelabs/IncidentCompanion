@@ -483,12 +483,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () =
     }
   })
 
-  it('counts the version up from the row, not from the copy it read first', async () => {
-    // Same window as the lost-race test, with the other analyst *editing*
-    // rather than sending. Arithmetic on the pre-render read drives the
-    // version backwards, and a client holding the true one is then refused on
-    // every later compare -- so the number stops identifying the row's state,
-    // which is the whole contract the API publishes for it.
+  it('refuses to send over a change made while the document was drawn, and leaves the draft holding it', async () => {
+    // The other analyst edits the report between the render and the stamp.
+    // Stamping anyway would send a document that is not the report they were
+    // answered 200 for.
     const { caseId, reportId } = await caseWithReport([{ kind: 'timeline' }])
     await addTimelineEntry(caseId, 'first')
 
@@ -498,27 +496,24 @@ describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () =
       .spyOn(render, 'render')
       .mockImplementation(async (...args: Parameters<typeof real>) => {
         const drawn = await real(...args)
-        // Two writes, so the gap is wider than an off-by-one and cannot be
-        // satisfied by the stale read happening to be one behind.
         await seed!
           .update(reports)
-          .set({ label: 'B first', version: before!.version + 1 })
-          .where(eq(reports.id, reportId))
-        await seed!
-          .update(reports)
-          .set({ label: 'B second', version: before!.version + 2 })
+          .set({ label: 'Renamed while it was drawn', version: before!.version + 1 })
           .where(eq(reports.id, reportId))
         return drawn
       })
 
     try {
-      await lifecycle.send(caseId, reportId, actorId)
+      await expect(lifecycle.send(caseId, reportId, actorId)).rejects.toMatchObject({
+        status: 409,
+        response: { moved: [reportId] },
+      })
     } finally {
       spy.mockRestore()
     }
 
     const [after] = await seed!.select().from(reports).where(eq(reports.id, reportId))
-    expect(after!.version).toBe(before!.version + 3)
+    expect(after).toMatchObject({ sentAt: null, label: 'Renamed while it was drawn', version: before!.version + 1 })
   })
 
   it('answers a report deleted mid-send with a 404, never with a stamp', async () => {

@@ -5,7 +5,7 @@
 import { Catch, ConflictException, type ArgumentsHost } from '@nestjs/common'
 import { BaseExceptionFilter } from '@nestjs/core'
 
-import { SENT_REPORT_REFUSED } from '../db/schema/store-guards.js'
+import { sentReportIn } from '../db/schema/store-guards.js'
 
 /**
  * One body for every refusal of a filed report, so a client can read `sentAt`
@@ -28,13 +28,8 @@ export function refusedBecauseSent(
 
 /** The store's refusal of a write to a sent report as the 409 every door answers, or undefined for any other error. */
 export function sentReportRefusal(error: unknown): ConflictException | undefined {
-  for (let at: unknown = error; at instanceof Object; at = (at as { cause?: unknown }).cause) {
-    const { code, detail } = at as { code?: unknown; detail?: unknown }
-    if (code !== SENT_REPORT_REFUSED || typeof detail !== 'string') continue
-    const report = JSON.parse(detail) as { reportId: string; label: string | null; sentAt: string }
-    return refusedBecauseSent({ id: report.reportId, label: report.label, sentAt: new Date(report.sentAt) }, 'edited')
-  }
-  return undefined
+  const report = sentReportIn(error)
+  return report && refusedBecauseSent(report, 'edited')
 }
 
 @Catch()

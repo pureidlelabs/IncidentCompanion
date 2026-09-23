@@ -8,6 +8,7 @@
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
+import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { writeSyncStep2 } from 'y-protocols/sync'
@@ -233,23 +234,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       expect(await prose.resolve(caseId, `reports:${reportId}:document`)).toEqual({
         table: 'reports',
         id: reportId,
-        sentAt: null,
       })
-    })
-
-    /**
-     * **The state the caller refuses a write on.** `live.gateway` decides per
-     * frame whether an update may be applied, and it decides from this - so a
-     * `resolve` that answers `sentAt: null` for a filed report reopens the
-     * whole door with every one of its own tests still green.
-     */
-    it('carries when a report was filed', async () => {
-      const { caseId, reportId } = await freshReport()
-      const sentAt = new Date('2026-08-01T09:30:00.000Z')
-      await seed!.update(reports).set({ sentAt }).where(eq(reports.id, reportId))
-
-      const address = await prose.resolve(caseId, `reports:${reportId}:document`)
-      expect(address?.sentAt?.toISOString()).toBe(sentAt.toISOString())
     })
 
     it('refuses a report belonging to another case', async () => {
@@ -276,6 +261,103 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       ]) {
         expect(await prose.resolve(caseId, key), key).toBeNull()
       }
+    })
+  })
+
+  /**
+   * **Readable, or the refusal is worse than the hole.** A sent report's text
+   * still loads; only a frame carrying content is refused.
+   */
+  describe('a sent report', () => {
+    const SENT = new Date('2026-08-01T09:30:00.000Z')
+
+    async function filed(): Promise<{ caseId: string; address: ReturnType<typeof reportDocument>; doc: Y.Doc }> {
+      const { caseId, reportId } = await freshReport()
+      const written = new Y.Doc({ gc: false })
+      written.getXmlFragment('block-1').insert(0, [new Y.XmlText('as filed')])
+      await seed!
+        .update(reports)
+        .set({ document: Buffer.from(Y.encodeStateAsUpdate(written)), sentAt: SENT })
+        .where(eq(reports.id, reportId))
+      const address = reportDocument(reportId)
+      return { caseId, address, doc: await prose.open(caseId, address) }
+    }
+
+    it('answers a state request, so the filed text still loads', async () => {
+      const { caseId, address } = await filed()
+      const mine = new Y.Doc({ gc: false })
+
+      const applied = await prose.apply(caseId, address, helloFrom(mine), 'a-socket')
+      Y.applyUpdate(mine, stepTwoPayload('reply' in applied ? applied.reply : null))
+
+      expect(mine.getXmlFragment('block-1').toJSON()).toContain('as filed')
+      await prose.release(caseId, address)
+    })
+
+    it.each([
+      ['an update', () => framed(typed('quietly rewritten after filing').update)],
+      ['a step 2', () => stepTwo(typed('rewritten by answering a hello').doc)],
+    ])('refuses %s with the stamp and leaves the document byte-identical', async (_name, frame) => {
+      const { caseId, address, doc } = await filed()
+      const before = Buffer.from(Y.encodeStateAsUpdate(doc))
+
+      expect(await prose.apply(caseId, address, frame(), 'a-socket')).toEqual({ refused: SENT })
+
+      expect(Buffer.from(Y.encodeStateAsUpdate(doc)).equals(before)).toBe(true)
+      await prose.release(caseId, address)
+    })
+
+    it('does not refuse a client answering with nothing new', async () => {
+      const { caseId, address, doc } = await filed()
+      const copy = new Y.Doc({ gc: false })
+      Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc))
+
+      expect(await prose.apply(caseId, address, stepTwo(copy), 'a-socket')).toEqual({ reply: null })
+      await prose.release(caseId, address)
+    })
+  })
+
+  describe('a document held while a send decides', () => {
+    async function held() {
+      const { caseId, reportId } = await freshReport()
+      const address = reportDocument(reportId)
+      const doc = await prose.open(caseId, address)
+      return { caseId, reportId, address, doc, seal: await prose.seal(caseId, reportId) }
+    }
+
+    it('keeps content waiting, and refuses it with the stamp the send settles on', async () => {
+      const { caseId, address, doc, seal } = await held()
+      const stamp = new Date('2026-09-01T12:00:00.000Z')
+
+      const waiting = prose.apply(caseId, address, framed(typed('typed while it was sent').update), 'a-socket')
+      await new Promise((wake) => setTimeout(wake, 50))
+      expect(doc.getXmlFragment('block-1').toJSON()).not.toContain('typed while')
+
+      await seal.settle(stamp)
+      expect(await waiting).toEqual({ refused: stamp })
+      expect(doc.getXmlFragment('block-1').toJSON()).not.toContain('typed while')
+      await prose.release(caseId, address)
+    })
+
+    it('applies what waited when the send does not stamp', async () => {
+      const { caseId, address, doc, seal } = await held()
+
+      const waiting = prose.apply(caseId, address, framed(typed('typed while a send failed').update), 'a-socket')
+      await seal.settle(null)
+
+      expect(await waiting).toEqual({ reply: null })
+      expect(doc.getXmlFragment('block-1').toJSON()).toContain('typed while a send failed')
+      await prose.release(caseId, address)
+    })
+
+    it('answers a state request without waiting', async () => {
+      const { caseId, address, seal } = await held()
+
+      const answered = await prose.apply(caseId, address, helloFrom(new Y.Doc()), 'a-socket')
+
+      expect('reply' in answered && answered.reply).toBeTruthy()
+      await seal.settle(null)
+      await prose.release(caseId, address)
     })
   })
 
@@ -413,19 +495,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live docum
   })
 
   describe('what a frame may address', () => {
-    /**
-     * **`sentAt` has to be null, and asserting the whole object is the point.**
-     * `live.gateway` refuses every frame carrying content while the stamp is
-     * set, so a `resolve` that put any date there would make every note in the
-     * app silently read-only - the text would load, the analyst would type, and
-     * nothing would be kept.
-     */
-    it('resolves a note in this case, with nothing that could freeze it', async () => {
+    it('resolves a note in this case', async () => {
       const { caseId, noteId } = await freshNote()
       expect(await prose.resolve(caseId, `casenotes:${noteId}:document`)).toEqual({
         table: 'casenotes',
         id: noteId,
-        sentAt: null,
       })
     })
 
@@ -588,6 +662,20 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live docum
     await prose.release(row.id, reportDocument(report!.id))
   })
 })
+
+/** A step 2 carrying everything `doc` holds, as a client answering a hello sends it. */
+function stepTwo(doc: Y.Doc): Uint8Array {
+  const encoder = encoding.createEncoder()
+  writeSyncStep2(encoder, doc)
+  return encoding.toUint8Array(encoder)
+}
+
+/** The update a step 2 reply carries. */
+function stepTwoPayload(reply: Uint8Array | null): Uint8Array {
+  const decoder = decoding.createDecoder(reply ?? new Uint8Array())
+  decoding.readVarUint(decoder)
+  return decoding.readVarUint8Array(decoder)
+}
 
 function framed(update: Uint8Array): Uint8Array {
   return new ProseFrames().update(update)

@@ -40,7 +40,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { cases } from '../db/schema/index.js'
 import { CaseChannel, type Member } from './case-channel.service.js'
-import { ProseService, type ProseAddress } from '../prose/prose.service.js'
+import { ProseService, type ProseRecord } from '../prose/prose.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
 import { ReachService, type Level } from '../access/reach.service.js'
@@ -77,15 +77,6 @@ export const STATUS: Record<Refusal, string> = {
   // oracle for which case ids are real.
   'no-such-case': '404 Not Found',
 }
-
-/**
- * The scope a filing moves, as `case-channel.service.ts` announces it.
- *
- * Spelled once: the fan-out names scopes as strings, so a typo here is a
- * watcher that never fires and a window that never closes, with nothing red.
- * `live.gateway.test.ts` drives the real string through a real frame.
- */
-const REPORTS_SCOPE = 'reports'
 
 /** The largest frame this socket will read, in bytes, sized for a prose sync update. */
 const MAX_FRAME_BYTES = 64 * 1024
@@ -136,15 +127,8 @@ export async function reachesCase(
 
 interface OpenDocument {
   /** Which record this document is - a report, or one case note. */
-  address: ProseAddress
+  address: ProseRecord
   doc: Y.Doc
-  /**
-   * When the record was frozen, or null. Refreshed on open and whenever
-   * `stale` is set, never per frame. **Always null for a note**, which has no
-   * state that refuses a write.
-   */
-  sentAt: Date | null
-  stale: boolean
   stop: () => void
 }
 
@@ -359,31 +343,7 @@ export class LiveGateway implements OnApplicationShutdown {
       // with the process, so two instances cannot mint the same id.
       sessionId: `${String(process.pid)}-${String(this.connections)}`,
       joinedAt: Date.now(),
-      /**
-       * **Watched on the way past, not intercepted.** Every frame the case
-       * fans out already reaches this connection; a `reports` change is the
-       * one that can have filed a document somebody here has open, so it
-       * drops the cached stamp rather than costing a query per keystroke.
-       * Anything unparseable is forwarded untouched - this is a listener on
-       * the way to the socket, and must never be able to swallow a frame.
-       */
       send: (payload) => {
-        try {
-          const frame = JSON.parse(payload) as { type?: unknown; scopes?: unknown }
-          if (
-            frame.type === 'case.changed' &&
-            Array.isArray(frame.scopes) &&
-            frame.scopes.includes(REPORTS_SCOPE)
-          ) {
-            for (const [, held] of opened) {
-              void held.then((one) => {
-                if (one) one.stale = true
-              })
-            }
-          }
-        } catch {
-          // Not JSON, or not a shape this knows. Forwarded regardless.
-        }
         live.send(payload)
       },
     }
@@ -528,17 +488,9 @@ export class LiveGateway implements OnApplicationShutdown {
    * document is the record; the answer goes to the sender and the update to
    * everyone else.
    *
-   * **A sent report's field is readable and not writable**, the same refusal
-   * `freeze.ts` makes at every collection door. The gate is per *frame*, not
-   * on `resolve` or `open`, so the text still loads and only a frame carrying
-   * content is refused. **A note never reaches it**: `resolve` answers a note
-   * with `sentAt: null` because there is no state a note can be in that
-   * refuses a write, so the branch below is dead for one of the two tables
-   * rather than being skipped for it.
-   *
-   * The sent state is re-read when `case.changed` says reports moved, never
-   * per frame - reading it once leaves a connection holding the field taking
-   * updates into a report that has since been filed.
+   * **A sent report's field is readable and not writable**: `ProseService`
+   * answers a frame carrying content with the report's stamp, and the text
+   * still loads.
    */
   private async onProse(
     member: Member,
@@ -575,17 +527,6 @@ export class LiveGateway implements OnApplicationShutdown {
       return
     }
 
-    /**
-     * **Re-read once, then decided.** The fan-out only says *reports moved*,
-     * so the stamp is fetched again rather than assumed to be a filing: a
-     * label edited on another report would otherwise freeze this one.
-     */
-    if (held.stale) {
-      const fresh = await this.prose.resolve(member.caseId, field)
-      held.sentAt = fresh?.sentAt ?? held.sentAt
-      held.stale = false
-    }
-
     const frame = Buffer.from(update, 'base64')
 
     // Admission asked only for read, so an edit asks for write. A state request
@@ -605,26 +546,26 @@ export class LiveGateway implements OnApplicationShutdown {
       }
     }
 
+    const applied = await this.prose.apply(member.caseId, held.address, frame, live)
     /**
      * **Told, not dropped.** A silently discarded update is the worst outcome
      * on this path: the analyst types, sees their own text, and it reaches
-     * nobody and nothing. This is the socket's form of the 409 `freeze.ts`
-     * raises at the HTTP door, and it names the same two things - the field
-     * and when the report was filed.
+     * nobody and nothing. It names what the 409 at the HTTP door names: the
+     * field and when the report was filed.
      */
-    if (held.sentAt && !this.prose.addsNothing(held.doc, frame)) {
+    if ('refused' in applied) {
       live.send(
         JSON.stringify({
           type: 'prose.refused',
           field,
           reason: 'report-sent',
-          sentAt: held.sentAt.toISOString(),
+          sentAt: applied.refused.toISOString(),
         }),
       )
       return
     }
 
-    const reply = this.prose.applySync(held.doc, frame, live)
+    const { reply } = applied
     // The server's own step 1 goes after the answer, so the client is ready first.
     for (const bytes of [reply, opens ? this.prose.hello(held.doc) : null]) {
       if (!bytes) continue
@@ -652,7 +593,6 @@ export class LiveGateway implements OnApplicationShutdown {
     if (!address) return null
 
     const doc = await this.prose.open(member.caseId, address)
-    const { sentAt } = address
 
     const onUpdate = (bytes: Uint8Array, origin: unknown) => {
       if (origin === live) return
@@ -669,8 +609,6 @@ export class LiveGateway implements OnApplicationShutdown {
     return {
       address,
       doc,
-      sentAt,
-      stale: false,
       stop: () => {
         doc.off('update', onUpdate)
         // As in `attach`: a release racing a closing Redis rejects, which `void` would leak.

@@ -35,7 +35,9 @@ export interface Block {
   version: number
   reportId: string
   position: number
+  kind: string
   heading: string
+  headingKey: string
 }
 
 /** A draft report holding one written block per heading, in that order. */
