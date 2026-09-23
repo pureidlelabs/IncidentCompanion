@@ -11,7 +11,8 @@
 # Acts on the install `compose.yaml` names, as `docker compose` would from the
 # repository root, so `IC_STACK_PROJECT` selects another one. A copy is
 # `db.dump` (the database, without anybody's session), `evidence.tar` (the
-# artefacts beside it) and `shape` (the store's shape it was taken under).
+# artefacts beside it), `shape` (the store's shape it was taken under) and
+# `SHA256SUMS` (each of those three as it was written).
 # Every command exits non-zero, having changed nothing, when it cannot finish.
 set -eu
 
@@ -30,6 +31,8 @@ fail() { echo "$*" >&2; exit 1; }
 
 # Sessions and one-time codes: restoring must not sign anybody back in.
 EPHEMERAL="session verification"
+
+PARTS="db.dump evidence.tar shape"
 
 SHAPE_SQL="select md5(string_agg(table_name || '.' || column_name || ':' || data_type || ':' || is_nullable,
   ',' order by table_name, column_name)) from information_schema.columns where table_schema = 'public'"
@@ -56,13 +59,20 @@ backup() {
   # every one the dump names.
   echo "==> the evidence, to $dir/evidence.tar"
   compose exec -T app tar -cf - -C /evidence . > "$dir/evidence.tar"
+  # shellcheck disable=SC2086 # one name per part
+  (cd "$dir" && sha256sum $PARTS) > "$dir/SHA256SUMS"
   verify "$dir"
 }
 
 verify() {
   dir="${1:?verify needs the directory a copy is in}"
-  for part in db.dump evidence.tar shape; do
+  for part in $PARTS SHA256SUMS; do
     [ -s "$dir/$part" ] || fail "$dir/$part is missing or empty -- this is not a whole copy"
+  done
+  # Damage that leaves a part readable passes every check below.
+  for part in $PARTS; do
+    grep -qxF "$(cd "$dir" && sha256sum "$part")" "$dir/SHA256SUMS" \
+      || fail "$dir/$part is not what was written when the copy was taken"
   done
 
   # The contents list is written first, so this reads a truncated archive

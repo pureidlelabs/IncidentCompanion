@@ -237,18 +237,40 @@ def test_the_shipped_stack_lives_through_its_lifecycle(stack, subtests):
                                    capture_output=True, text=True, timeout=900)
             assert taken.returncode == 0, taken.stdout[-2000:] + taken.stderr[-2000:]
 
+            def verify(copy_dir: Path) -> subprocess.CompletedProcess:
+                return subprocess.run(["sh", str(BACKUP), "verify", str(copy_dir)], env=install.env,
+                                      capture_output=True, text=True, timeout=900)
+
+            def reseal(copy_dir: Path) -> None:
+                """Record each part's digest as it now is, as a copy written that way would carry."""
+                sealed = subprocess.run(["sha256sum", "db.dump", "evidence.tar", "shape"], cwd=copy_dir,
+                                        capture_output=True, text=True, check=True).stdout
+                (copy_dir / "SHA256SUMS").write_text(sealed)
+
             with tarfile.open(copy / "evidence.tar") as archive:
                 artefact = next(member for member in archive if member.isfile())
             # Inside the artefact's bytes: cutting only the archive's padding damages nothing.
+            middle = artefact.offset_data + artefact.size // 2
             for part, keep in (("db.dump", (copy / "db.dump").stat().st_size * 3 // 4),
-                               ("evidence.tar", artefact.offset_data + artefact.size // 2)):
+                               ("evidence.tar", middle)):
                 damaged = copies / f"damaged-{part}"
                 shutil.copytree(copy, damaged)
                 with open(damaged / part, "r+b") as file:
                     file.truncate(keep)
-                refused = subprocess.run(["sh", str(BACKUP), "verify", str(damaged)], env=install.env,
-                                         capture_output=True, text=True, timeout=900)
-                assert refused.returncode != 0, f"a copy with a truncated {part} verified"
+                reseal(damaged)
+                assert verify(damaged).returncode != 0, f"a copy written with a truncated {part} verified"
+
+            flipped = copies / "flipped"
+            shutil.copytree(copy, flipped)
+            with open(flipped / "evidence.tar", "r+b") as file:
+                file.seek(middle)
+                byte = file.read(1)
+                file.seek(middle)
+                file.write(bytes([byte[0] ^ 0xFF]))
+            assert (flipped / "evidence.tar").stat().st_size == (copy / "evidence.tar").stat().st_size
+            refused = verify(flipped)
+            assert refused.returncode != 0, "a copy with one byte of an artefact changed verified"
+            assert "evidence.tar" in refused.stderr, refused.stderr[-2000:]
 
             other = stack("-restored")
             other.must("up", "--no-start")
@@ -259,6 +281,7 @@ def test_the_shipped_stack_lives_through_its_lifecycle(stack, subtests):
             elsewhere = copies / "elsewhere"
             shutil.copytree(copy, elsewhere)
             (elsewhere / "shape").write_text("0" * 32 + "\n")
+            reseal(elsewhere)
             untouched = other.fingerprint()
             refused = subprocess.run(["sh", str(BACKUP), "restore", str(elsewhere)], env=other.env,
                                      capture_output=True, text=True, timeout=900)
@@ -269,14 +292,12 @@ def test_the_shipped_stack_lives_through_its_lifecycle(stack, subtests):
                                       capture_output=True, text=True, timeout=900)
             assert returned.returncode == 0, returned.stdout[-2000:] + returned.stderr[-2000:]
             other.wait_for_health(200)
+            assert other.sql("select count(*) from session") == "0", "a restored copy carried sessions"
             restored = other.fingerprint()
             for key in ("files", "certificate"):
                 restored.pop(key)
             assert restored == {key: value for key, value in held["fingerprint"].items()
                                 if key not in ("files", "certificate")}
-            other.edge.cookies = dict(install.edge.cookies)
-            assert other.edge.request("GET", "/api/cases").status == 401, "a copied session signed in"
-            other.edge.cookies = {}
             answer = other.edge.request("POST", "/api/auth/sign-in/email",
                                         {"email": EMAIL, "password": PASSWORD})
             assert answer.status == 200, (answer.status, answer.body[:300])
@@ -285,6 +306,18 @@ def test_the_shipped_stack_lives_through_its_lifecycle(stack, subtests):
             held["other"] = other
             census = other.edge.request("GET", "/api/settings").json()["storage"]["artefacts"]
             assert census == {"expected": 1, "missing": 0}, census
+
+            # The install the copy came from, signed in afresh: its earlier session is held by
+            # Postgres alone since the stores restarted, and this one by the session cache too.
+            signed_in()
+            assert install.edge.request("GET", "/api/cases").status == 200
+            back = subprocess.run(["sh", str(BACKUP), "restore", str(copy)], env=install.env,
+                                  capture_output=True, text=True, timeout=900)
+            assert back.returncode == 0, back.stdout[-2000:] + back.stderr[-2000:]
+            install.wait_for_health(200)
+            assert install.edge.request("GET", "/api/cases").status == 401, "a session outlived the restore"
+            assert install.fingerprint() == held["fingerprint"]
+            signed_in()
         finally:
             shutil.rmtree(copies, ignore_errors=True)
 
