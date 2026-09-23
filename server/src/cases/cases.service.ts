@@ -11,6 +11,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   Optional,
   UnprocessableEntityException,
@@ -24,6 +25,7 @@ import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { CaseChannel } from '../live/case-channel.service.js'
 import { LiveGateway } from '../live/live.gateway.js'
+import { EvidenceStore } from '../evidence/store.js'
 import { timelineToWire } from '../domain/entities/timeline.js'
 import { isGapped } from '../domain/tiering.js'
 import { SEVERITY } from '../domain/vocabularies.js'
@@ -146,6 +148,7 @@ export class CasesService {
     @Inject(DATABASE) private readonly db: Database,
     @Optional() private readonly channel?: CaseChannel,
     @Optional() private readonly gateway?: LiveGateway,
+    @Optional() private readonly evidence?: EvidenceStore,
   ) {}
 
   /**
@@ -528,6 +531,10 @@ export class CasesService {
    * `change_feed` cascades with the case, so a delete row would be removed by
    * the statement that wrote it. Drops the socket too, or a connection stays
    * open on a case that is gone.
+   *
+   * Removes the case's artefacts once the row is gone. A failure there is
+   * logged, not thrown: the case is already deleted, and the next start
+   * removes what is left.
    */
   async remove(id: string, actorId: string): Promise<void> {
     const others = (await this.channel?.othersOn(id, actorId)) ?? []
@@ -540,6 +547,9 @@ export class CasesService {
 
     const deleted = await this.db.delete(cases).where(eq(cases.id, id)).returning({ id: cases.id })
     if (deleted.length === 0) throw new NotFoundException(`No case ${id}.`)
+    await this.evidence?.discardCase(id).catch((why: unknown) => {
+      new Logger(CasesService.name).warn(`artefacts of deleted case ${id} left for the next start: ${String(why)}`)
+    })
     this.channel?.announce(id, ['cases'], actorId)
     this.gateway?.dropCase(id)
   }

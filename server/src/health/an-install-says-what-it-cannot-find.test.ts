@@ -339,6 +339,7 @@ describe('the install saying it at start', () => {
   const censusOf = (held: Census | Error) =>
     ({
       take: () => (held instanceof Error ? Promise.reject(held) : Promise.resolve(held)),
+      sweep: () => Promise.resolve(0),
     }) as never
 
   it('reports what the census counted when the application comes up', async () => {

@@ -84,6 +84,7 @@ const MAY_IMPORT: Record<string, string[]> = {
   // `customers` because a case is opened *under* one: the door that raises a
   // case has to know which, and a reference is unique within it. The reverse
   // edge stays absent -- a customer knows nothing about cases.
+  // `evidence` because a deleted case takes its artefacts with it.
   cases: [
     'db',
     'domain',
@@ -94,6 +95,7 @@ const MAY_IMPORT: Record<string, string[]> = {
     'live',
     'install-activity',
     'customers',
+    'evidence',
   ],
   collections: ['db', 'domain', 'config', 'live', 'access', 'evidence', 'report'],
   /** No `cases`: one row per case, scoped by the `caseId` in the URL alone. */
@@ -228,8 +230,8 @@ const MAY_IMPORT: Record<string, string[]> = {
   // `auth` for `AdminOnly` on the two telemetry routes alone: what the install
   // is made of is an operator's, and the liveness probe beside them stays open.
   //
-  // `evidence` for the census, which asks the store what each case holds
-  // rather than reading its directory itself.
+  // `evidence` for the census and the sweep at start, which ask the store what
+  // each case holds rather than reading its directory themselves.
   health: ['config', 'db', 'domain', 'policy', 'auth', 'evidence'],
   spa: ['config'],
   test: ['db', 'config'],

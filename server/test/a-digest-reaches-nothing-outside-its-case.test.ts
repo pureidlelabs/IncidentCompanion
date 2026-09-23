@@ -13,6 +13,7 @@
  */
 import { createHash, randomBytes } from 'node:crypto'
 
+import { ConfigService } from '@nestjs/config'
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from '@zip.js/zip.js'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -24,6 +25,7 @@ import { CASE_NAME, EVIDENCE_PREFIX, MANIFEST_NAME, pack, readArchive } from '..
 import { cases } from '../src/db/schema/case.js'
 import { customers } from '../src/db/schema/customer.js'
 import { openTestPool } from './database.js'
+import { holders } from './evidence-on-disk.js'
 
 const STAMP = String(Date.now())
 const ISSUED = 'an-issued-password-long-enough'
@@ -37,6 +39,7 @@ const absent = () => digestOf(randomBytes(32))
 
 let h: Harness
 let admin: Persona
+let root = ''
 const made: string[] = []
 let customerB = ''
 
@@ -181,6 +184,7 @@ describe.skipIf(!(await bootable()))('an artefact is reached only through the ca
 
   beforeAll(async () => {
     h = await boot()
+    root = h.app.get(ConfigService).get<string>('EVIDENCE_DIR')!
     admin = await sharedAdmin(h)
     victim = await analyst('holder')
     insider = await analyst('insider')
@@ -296,4 +300,16 @@ describe.skipIf(!(await bootable()))('an artefact is reached only through the ca
     await reader.close()
     expect(names, 'the download names the file as the first case to hold these bytes called it').toEqual(['mine.eml'])
   }, 60_000)
+
+  it('leaves nothing of a deleted case to name', async () => {
+    await ok(call(victim, 'DELETE', `/api/cases/${caseB}`), 200)
+    await ok(call(victim, 'GET', `/api/cases/${caseB}`), 404)
+
+    expect(await holders(root, png), 'the deleted case\u2019s screenshot is still on disk').toEqual([])
+
+    const named = await throughRowsAndReport(outsider, text, pngDigest)
+    const control = await throughRowsAndReport(outsider, absent(), absent())
+    expect(leaked(named.draft, png)).toEqual([])
+    expect(named).toEqual(control)
+  }, 90_000)
 })

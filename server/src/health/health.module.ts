@@ -31,14 +31,22 @@ export class HealthModule implements OnApplicationBootstrap {
   constructor(private readonly census: ArtefactCensus) {}
 
   /**
-   * Say at start what this install expects beside it and cannot find.
+   * Remove what nothing names, then say what this install expects beside it
+   * and cannot find.
    *
-   * **Caught rather than propagated.** A census that cannot be taken is a
-   * missing directory or a database that is not up yet, and neither is a
-   * reason to refuse an install that holds every case and every record.
+   * **Caught rather than propagated.** A sweep or a census that cannot be
+   * taken is a missing directory or a database that is not up yet, and
+   * neither is a reason to refuse an install that holds every case and every
+   * record.
    */
   async onApplicationBootstrap(): Promise<void> {
     const log = new Logger('Evidence')
+    try {
+      const removed = await this.census.sweep()
+      if (removed > 0) log.log(`Removed ${String(removed)} stored artefacts nothing names.`)
+    } catch (why) {
+      log.warn(`Could not remove the artefacts nothing names: ${String(why)}`)
+    }
     let said
     try {
       said = saysAtStart(await this.census.take())

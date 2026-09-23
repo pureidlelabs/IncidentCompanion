@@ -1,5 +1,6 @@
 /**
- * What this install expects beside it, and what it cannot find.
+ * What this install expects beside it, what it cannot find, and what nothing
+ * names any more.
  *
  * Asks each case what its rows name and asks the store what that case holds.
  * -> `openspec/specs/state/design.md`
@@ -18,6 +19,15 @@ export interface Census {
   /** How many of those the install cannot find. */
   missing: number
 }
+
+/**
+ * How old unnamed bytes must be before the sweep removes them.
+ *
+ * **Bytes land before the row naming them commits**, an upload's for a moment
+ * and an archive's for the whole import, so a file younger than this may be
+ * about to be named.
+ */
+export const SWEEP_GRACE_MS = 60 * 60 * 1000
 
 /** The line this install says at start, or null when it has nothing to say. */
 export function saysAtStart(held: Census): { level: 'log' | 'warn'; message: string } | null {
@@ -57,4 +67,13 @@ export class ArtefactCensus {
     return { expected, missing }
   }
 
+  /**
+   * Remove the bytes no row and no sent report names, and every case's the
+   * database no longer holds. Answers how many files went.
+   */
+  async sweep(): Promise<number> {
+    const named = await artefactsNamed(this.db)
+    const kept = new Map([...named].map(([caseId, { kept }]) => [caseId, kept]))
+    return this.store.prune(kept, SWEEP_GRACE_MS)
+  }
 }

@@ -11,7 +11,7 @@
  */
 import { ATTACHMENT_MEGABYTES } from '../policy/keys.js'
 import { createHash } from 'node:crypto'
-import { mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, rename, rm, rmdir, stat, writeFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { basename, join } from 'node:path'
 
@@ -140,6 +140,34 @@ export class EvidenceStore {
   /** Remove everything this case holds. */
   async discardCase(caseId: string): Promise<void> {
     await rm(this.caseDir(caseId), { recursive: true, force: true })
+  }
+
+  /**
+   * Remove every file no case in `named` names, and every case directory
+   * `named` does not list, leaving anything written within `graceMs`.
+   *
+   * `named` is every case the install holds, each with the digests it names;
+   * a case missing from it is read as gone. Answers how many files went.
+   */
+  async prune(named: ReadonlyMap<string, ReadonlySet<string>>, graceMs: number): Promise<number> {
+    const before = Date.now() - graceMs
+    const dirs = await readdir(this.root, { withFileTypes: true }).catch(() => [])
+    let removed = 0
+    for (const entry of dirs) {
+      if (!entry.isDirectory() || !isCaseId(entry.name)) continue
+      const dir = join(this.root, entry.name)
+      const keep = named.get(entry.name)
+      for (const file of await readdir(dir)) {
+        if (keep?.has(file)) continue
+        const path = join(dir, file)
+        if ((await stat(path)).mtimeMs > before) continue
+        await rm(path, { force: true })
+        removed += 1
+      }
+      // Only once empty: a young file kept above keeps its directory.
+      if (!keep) await rmdir(dir).catch(() => undefined)
+    }
+    return removed
   }
 
   /**
