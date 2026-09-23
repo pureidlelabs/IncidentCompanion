@@ -54,7 +54,9 @@ const parts: [string, Part][] = [
     'the parts are reordered',
     {
       write: (writer, caseId, _reportId, blocks) =>
-        writer(`/cases/${caseId}/report_blocks/order`, 'POST', { ids: blocks.map((block) => block.id).reverse() }),
+        writer(`/cases/${caseId}/report_blocks/order`, 'POST', {
+          rows: blocks.map(({ id, version }) => ({ id, version })).reverse(),
+        }),
       shows: (stored, frozen, before) => {
         const reversed = before.map((block) => block.id).reverse().join()
         const mine = new Set(before.map((block) => block.id))

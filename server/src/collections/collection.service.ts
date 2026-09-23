@@ -529,13 +529,11 @@ export class CollectionService {
   /**
    * Renumber a collection's `orderBy` column to the order the caller sent.
    *
-   * **A reorder is a bulk write, and states its own version contract**: the
-   * caller named every row, so the list *is* the intent and there is no
-   * per-row version to check against. This is where it parts from
-   * `updateMany`, which patches a selection out of a longer collection and so
-   * carries the version each row was read at. What a reorder keeps is what
-   * every bulk write keeps - the freeze, the case boundary, attribution, and
-   * one change-feed row per row that moved.
+   * **A reorder is a bulk write, checked like one.** Every row carries the
+   * version it was read at, and one that moved since refuses the whole reorder
+   * with 409 and the rows that moved, and nothing is written. The scope's rows
+   * are locked in id order first, so two reorders of one scope queue rather
+   * than interleave or deadlock.
    *
    * **The whole collection or nothing.** A partial list means somebody added a
    * row while this screen was open, and applying it would interleave two orders
@@ -549,9 +547,10 @@ export class CollectionService {
   async reorder(
     def: CollectionDefinition,
     caseId: string,
-    ids: string[],
+    sent: { id: string; version: number }[],
     actorId: string,
   ): Promise<{ ids: string[] }> {
+    const ids = sent.map((row) => row.id)
     // **Declared, not derived.** Every collection has an `orderBy`, so asking
     // the table settles nothing; only a collection that names a `position`
     // column has somewhere to record an order an analyst chose.
@@ -603,13 +602,26 @@ export class CollectionService {
       }
 
       const current = (await tx
-        .select({ id: cols.id, position: order })
+        .select({ id: cols.id, position: order, version: cols.version })
         .from(def.table)
         .where(scope && rows[0] ? eq(scope, rows[0].scope as never) : undefined)
-        .orderBy(asc(order))) as { id: string; position: number }[]
+        .orderBy(asc(cols.id))
+        .for('update')) as { id: string; position: number; version: number }[]
       if (current.length !== ids.length) {
         throw new UnprocessableEntityException({
           message: `A reorder names every row in the ${def.orderWithin ?? 'collection'}, once each.`,
+        })
+      }
+
+      const read = new Map(current.map((row) => [row.id, row.version]))
+      const refused = sent.filter((row) => read.get(row.id) !== row.version).map((row) => row.id)
+      if (refused.length > 0) {
+        throw new ConflictException({
+          message:
+            refused.length === 1
+              ? 'One of those changed since you read it, so nothing was reordered.'
+              : `${String(refused.length)} of those changed since you read them, so nothing was reordered.`,
+          refused,
         })
       }
 

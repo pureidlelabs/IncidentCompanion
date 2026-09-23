@@ -151,8 +151,8 @@ test('a section moves down one place, and the order is written', async ({ browse
     await page.keyboard.press(DROP)
 
     const request_ = await posted
-    const body = JSON.parse(request_.postData() ?? '{}') as { ids?: string[] }
-    const sent = body.ids ?? []
+    const body = JSON.parse(request_.postData() ?? '{}') as { rows?: { id: string; version: number }[] }
+    const sent = (body.rows ?? []).map((row) => row.id)
     expect(sent.length, 'the drop posted no order').toBeGreaterThan(0)
 
     const answer = await request_.response()

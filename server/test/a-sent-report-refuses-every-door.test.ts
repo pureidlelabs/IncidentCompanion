@@ -61,7 +61,10 @@ describe.skipIf(!runnable)('a sent report, written to through the app', () => {
     ['a part is removed', () => call(`/cases/${caseId}/report_blocks/${parts[0]!.id}?version=${String(parts[0]!.version)}`, 'DELETE')],
     [
       'its parts are reordered',
-      () => call(`/cases/${caseId}/report_blocks/order`, 'POST', { ids: [parts[1]!.id, parts[0]!.id] }),
+      () =>
+        call(`/cases/${caseId}/report_blocks/order`, 'POST', {
+          rows: [parts[1]!, parts[0]!].map(({ id, version }) => ({ id, version })),
+        }),
     ],
     [
       'a draft part is moved into it',

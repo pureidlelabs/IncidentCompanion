@@ -34,14 +34,19 @@ function block(name: string, position: number): ReportBlock {
   return { id: name, position } as ReportBlock
 }
 
+/** A block as the screen holds it after reading it, at the version it was read at. */
+function held(name: string, position: number): ReportBlock {
+  return { id: name, position, version: position + 3 } as ReportBlock
+}
+
 const fetchMock = vi.fn<typeof fetch>()
 
 function harness() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  client.setQueryData(listKey, [block('a', 0), block('b', 1), block('c', 2)])
-  client.setQueryData<Case>(keys.case(CASE), { reportBlocks: [block('a', 0), block('b', 1), block('c', 2)] } as Case)
+  client.setQueryData(listKey, [held('a', 0), held('b', 1), held('c', 2)])
+  client.setQueryData<Case>(keys.case(CASE), { reportBlocks: [held('a', 0), held('b', 1), held('c', 2)] } as Case)
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
@@ -113,6 +118,46 @@ describe('reordering a table', () => {
       release(new Response(JSON.stringify({ ids: ['c', 'a', 'b'] }), { status: 200 }))
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
+  })
+
+  it('sends each row with the version the screen read it at', async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ids: ['c', 'a', 'b'] }), { status: 200 }))
+    const { hook } = harness()
+
+    act(() => {
+      hook.result.current.mutate({ ids: ['c', 'a', 'b'] })
+    })
+    await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
+
+    const init = fetchMock.mock.calls[0]?.[1]
+    expect(JSON.parse(init?.body as string)).toEqual({
+      rows: [
+        { id: 'c', version: 5 },
+        { id: 'a', version: 3 },
+        { id: 'b', version: 4 },
+      ],
+    })
+  })
+
+  it('puts the whole order back when a row moved since it was read', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ message: 'One of those changed since you read it.', refused: ['a'] }), {
+        status: 409,
+      }),
+    )
+    const { client, hook } = harness()
+
+    act(() => {
+      hook.result.current.mutate({ ids: ['c', 'a', 'b'] })
+    })
+    await waitFor(() => expect(hook.result.current.isError).toBe(true))
+
+    expect(hook.result.current.error?.status).toBe(409)
+    expect(rows(client).map((row) => [row.id, row.position])).toEqual([
+      ['a', 0],
+      ['b', 1],
+      ['c', 2],
+    ])
   })
 
   it('puts the whole order back when the API refuses it', async () => {

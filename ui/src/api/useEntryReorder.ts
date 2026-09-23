@@ -1,6 +1,10 @@
 /**
  * Set a whole table's order: optimistic resequence, POST, rollback on failure.
  *
+ * Each row goes with the version this screen holds for it, so a row somebody
+ * else changed since it was read refuses the whole reorder with 409 rather
+ * than being rearranged under them.
+ *
  * Same skeleton as the other three writes - cancel, snapshot, apply, restore on
  * error, invalidate on settled - and the fourth of the four rather than a
  * generic over them, for the reason `useEntryCreate` gives.
@@ -43,6 +47,24 @@ const ORDER_FIELD = 'position'
 export interface EntryOrder {
   /** Every id in the table, exactly once, in the order wanted. */
   ids: string[]
+}
+
+/**
+ * The ids as the route takes them, each with the version `held` has for it.
+ *
+ * Throws for an id `held` has no version for: a row created since the list
+ * was read, which the route would refuse anyway.
+ */
+export function versioned(
+  held: readonly { id: string; version?: number }[],
+  ids: readonly string[],
+): { id: string; version: number }[] {
+  const versions = new Map(held.map((row) => [row.id, row.version]))
+  return ids.map((id) => {
+    const version = versions.get(id)
+    if (version === undefined) throw new Error(`This screen holds no version for ${id}.`)
+    return { id, version }
+  })
 }
 
 /** The route echoes the ids it wrote. */
@@ -144,11 +166,16 @@ export function useEntryReorder<N extends CollectionName>(
   return useMutation<ReorderedEntries, ApiError, EntryOrder, OrderRollback<N>>({
     mutationKey: [...listKey, 'reorder'],
 
-    mutationFn: ({ ids }) =>
-      request<ReorderedEntries>(
+    mutationFn: ({ ids }) => {
+      const held = [
+        ...((client.getQueryData<Case>(caseKey)?.[onCase] ?? []) as { id: string; version?: number }[]),
+        ...((client.getQueryData<CollectionEntry[N][]>(listKey) ?? []) as { id: string; version?: number }[]),
+      ]
+      return request<ReorderedEntries>(
         `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}/order`,
-        { method: 'POST', body: { ids } },
-      ),
+        { method: 'POST', body: { rows: versioned(held, ids) } },
+      )
+    },
 
     onMutate: async ({ ids }) => {
       // The screens render from the case document, so the write lands there as well as on the list.

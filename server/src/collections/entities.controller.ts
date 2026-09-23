@@ -72,7 +72,8 @@ class EntityRowDto extends createZodDto(entityRowSchema) {}
 class EntityRowsDto extends createZodDto(z.array(entityRowSchema)) {}
 
 /**
- * What a reorder takes: every id in the scope, once each, in the order wanted.
+ * What a reorder takes: every row in the scope, once each, in the order wanted,
+ * with the version it was read at.
  *
  * **Declared as a DTO rather than parsed out of `unknown`**, so the published
  * document carries the shape. `documented-bodies.test.ts` generates a body from
@@ -80,7 +81,9 @@ class EntityRowsDto extends createZodDto(z.array(entityRowSchema)) {}
  * is one the document cannot describe, and the generated `{}` then reads as the
  * door refusing what the reference called valid.
  */
-const reorderBodySchema = z.object({ ids: z.array(z.uuid()).max(BULK_LIMIT) }).strict()
+const reorderBodySchema = z
+  .object({ rows: z.array(z.object({ id: z.uuid(), version: rowVersion() }).strict()).max(BULK_LIMIT) })
+  .strict()
 class ReorderBodyDto extends createZodDto(reorderBodySchema) {}
 class UpdatedManyDto extends createZodDto(
   z.object({
@@ -157,8 +160,8 @@ abstract class EntityReads {
     @Body() body: ReorderBodyDto,
     @Session() session: UserSession,
   ) {
-    const { ids } = parsed(reorderBodySchema, body) as { ids: string[] }
-    return this.collections.reorder(this.definition, caseId, ids, session.user.id)
+    const { rows } = parsed(reorderBodySchema, body) as { rows: { id: string; version: number }[] }
+    return this.collections.reorder(this.definition, caseId, rows, session.user.id)
   }
 
   @Post('bulk')
