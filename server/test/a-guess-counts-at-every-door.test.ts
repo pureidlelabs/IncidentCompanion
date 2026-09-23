@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import type { Database } from '../src/db/client.js'
 import { DATABASE } from '../src/db/db.module.js'
-import { account, installActivity, user } from '../src/db/schema/index.js'
+import { account, installActivity, signInLockout } from '../src/db/schema/index.js'
 import { LOCKOUT_AFTER_FAILURES } from '../src/policy/keys.js'
 import { boot, bootable, sharedAdmin, signIn, type Harness, type Persona } from './app-harness.js'
 
@@ -58,13 +58,24 @@ function signInAs(email: string, password: string) {
   })
 }
 
+/**
+ * The account's two runs taken together. Every attempt here is from one
+ * address, so at most one of them is moving.
+ */
 async function stateOf(who: Persona) {
-  const [row] = await db
-    .select({ failed: user.failedSignIns, lockedUntil: user.lockedUntil, hash: account.password })
-    .from(user)
-    .innerJoin(account, and(eq(account.userId, user.id), eq(account.providerId, 'credential')))
-    .where(eq(user.id, who.id))
-  return row!
+  const runs = await db
+    .select({ failures: signInLockout.failures, lockedUntil: signInLockout.lockedUntil })
+    .from(signInLockout)
+    .where(eq(signInLockout.userId, who.id))
+  const [held] = await db
+    .select({ hash: account.password })
+    .from(account)
+    .where(and(eq(account.userId, who.id), eq(account.providerId, 'credential')))
+  return {
+    failed: runs.reduce((sum, run) => sum + run.failures, 0),
+    lockedUntil: runs.find((run) => run.lockedUntil !== null)?.lockedUntil ?? null,
+    hash: held!.hash,
+  }
 }
 
 async function lastSeq(): Promise<bigint> {

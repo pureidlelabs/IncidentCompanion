@@ -6,8 +6,8 @@
  * The auth tables come from the Drizzle schema in `db/schema/`.
  */
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
-import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { APIError, createAuthMiddleware, getIP, getSessionFromCtx } from 'better-auth/api'
+import { and, eq, gte, sql } from 'drizzle-orm'
 
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
 import { recordInstallActivity } from '../install-activity/record.js'
@@ -24,7 +24,7 @@ import { Algorithm, hash as argonHash, verify as argonVerify } from '@node-rs/ar
 import type { Database } from '../db/client.js'
 import * as schema from '../db/schema/index.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_REFUSED, refusePassword } from './password-policy.js'
-import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
+import { REMEMBERED_MISSES, isLocked, lockMinutes, missOf, policyFrom } from './lockout.js'
 import { readPolicy } from '../policy/read.js'
 import { SESSION_LIFETIME_CEILING_MINUTES } from '../policy/keys.js'
 import { sessionEnded } from './session-ended.js'
@@ -125,88 +125,154 @@ const NOBODY_HOLDS = '-'
  * The check behind every door that verifies a password, and the lockout's
  * whole implementation.
  *
- * Runs the argon2 verify whatever the account's state, so a locked account
- * costs what a wrong password does. Answers `false` for a locked account's
- * right password and counts it, as it counts a wrong one; a right one on an
- * open account clears the count.
+ * The caller's address picks which of the account's two runs this answer
+ * belongs to: the familiar run where the account's right password has come
+ * from that address before, the other run otherwise. Answers `false` for the
+ * right password while that run is locked, counting nothing; a right one on an
+ * open run starts the run again and makes the address familiar.
+ *
+ * Runs the argon2 verify and the same statements whatever the run's state, so
+ * a locked run costs what a wrong password does.
  */
-async function checkPassword(db: Database, hash: string, password: string): Promise<boolean> {
-  if (await argonVerify(hash, password, ARGON2ID)) {
-    const [holder] = await db
-      .select({
-        id: schema.user.id,
-        failedSignIns: schema.user.failedSignIns,
-        lockedUntil: schema.user.lockedUntil,
-      })
-      .from(schema.account)
-      .innerJoin(schema.user, eq(schema.user.id, schema.account.userId))
-      .where(heldBy(hash))
-      .limit(1)
-    if (holder && !isLocked(holder, new Date())) {
-      if (holder.failedSignIns !== 0 || holder.lockedUntil !== null) {
-        await db.update(schema.user).set(CLEARED).where(eq(schema.user.id, holder.id))
-      }
+async function checkPassword(
+  db: Database,
+  secret: string,
+  hash: string,
+  password: string,
+): Promise<boolean> {
+  const right = await argonVerify(hash, password, ARGON2ID)
+  const address = callerOfThisCheck()
+  const now = new Date()
+  const run = await runOf(db, hash, address)
+  if (run && !isLocked(run.lockedUntil, now)) {
+    if (right) {
+      await startAgain(db, run, address)
       return true
     }
+    await countAgainst(db, { ...run, miss: missOf(secret, run.id, password) }, now)
+    return false
   }
-  await countAgainst(db, hash)
+  await countAgainst(db, undefined, now)
   return false
+}
+
+/**
+ * The address of the caller whose password is being checked, resolved as the
+ * library resolves it for its own limiter and the session it writes, or
+ * `null` where it resolves none.
+ */
+function callerOfThisCheck(): string | null {
+  const endpoint = tryGetCurrentAuthEndpointContext()
+  const headers = endpoint?.headers ?? endpoint?.request?.headers
+  return endpoint && headers ? getIP(headers, endpoint.context.options) : null
 }
 
 /** The credential row holding `hash`. */
 const heldBy = (hash: string) =>
   and(eq(schema.account.providerId, 'credential'), eq(schema.account.password, hash))
 
-/**
- * One more failure against the account holding `hash`, and the lock when it
- * is the last one the account had. Writes `account_locked` then, with the
- * address of the call being answered.
- *
- * **One statement increments and returns the count**, so two failures
- * arriving together cannot both read `n` and both write `n + 1`.
- *
- * A hash nobody holds writes nothing, at the cost of the same two statements.
- */
-async function countAgainst(db: Database, hash: string): Promise<void> {
-  const now = new Date()
-  // Read now: a threshold cached at boot ignores the change an administrator
-  // just made.
-  const stored = await readPolicy(db)
-  const policy = policyFrom({
-    afterFailures: stored['auth.lockoutAfterFailures'],
-    minutes: stored['auth.lockoutMinutes'],
-  })
-  const [row] = await db
-    .update(schema.user)
-    .set({ failedSignIns: sql`${schema.user.failedSignIns} + 1` })
-    .where(
-      inArray(
-        schema.user.id,
-        db.select({ id: schema.account.userId }).from(schema.account).where(heldBy(hash)),
-      ),
-    )
-    .returning({
+interface Run {
+  id: string
+  email: string
+  familiar: boolean
+  lockedUntil: Date | null
+}
+
+/** The account holding `hash`, and which of its runs an answer from `address` falls in. */
+async function runOf(db: Database, hash: string, address: string | null): Promise<Run | undefined> {
+  const familiar =
+    address === null
+      ? sql<boolean>`false`
+      : sql<boolean>`exists (select 1 from ${schema.familiarAddress} where ${schema.familiarAddress.userId} = ${schema.user.id} and ${schema.familiarAddress.address} = ${address})`
+  const [run] = await db
+    .select({
       id: schema.user.id,
       email: schema.user.email,
-      failedSignIns: schema.user.failedSignIns,
-      lockedUntil: schema.user.lockedUntil,
+      familiar,
+      lockedUntil: schema.signInLockout.lockedUntil,
     })
-  if (!row) return
+    .from(schema.account)
+    .innerJoin(schema.user, eq(schema.user.id, schema.account.userId))
+    .leftJoin(
+      schema.signInLockout,
+      and(eq(schema.signInLockout.userId, schema.user.id), eq(schema.signInLockout.familiar, familiar)),
+    )
+    .where(heldBy(hash))
+    .limit(1)
+  return run
+}
 
-  // `afterFailure` is handed the count *before* this failure, because the
-  // statement above already applied it.
-  const next = afterFailure(
-    { failedSignIns: row.failedSignIns - 1, lockedUntil: row.lockedUntil },
-    policy,
-    now,
-  )
-  if (next.lockedUntil === null || !next.justLocked) return
+/** The right password on an open run: the run is forgotten, and the address is familiar. */
+async function startAgain(db: Database, run: Run, address: string | null): Promise<void> {
+  const lockout = schema.signInLockout
+  await db
+    .delete(lockout)
+    .where(and(eq(lockout.userId, run.id), eq(lockout.familiar, run.familiar)))
+  if (address !== null && !run.familiar) {
+    await db.insert(schema.familiarAddress).values({ userId: run.id, address }).onConflictDoNothing()
+  }
+}
 
-  await db.update(schema.user).set({ lockedUntil: next.lockedUntil }).where(eq(schema.user.id, row.id))
+/**
+ * One more failure in `counted`'s run, unless it is a wrong password the run
+ * already holds, and the lock when it is the one that reaches the install's
+ * threshold. Writes `account_locked` then, with the address of the call being
+ * answered. `undefined` counts nothing, at the cost of the same statements.
+ *
+ * **One statement counts and returns the count**, and the lock is taken only
+ * from the count it saw, so failures arriving together are each counted and
+ * lock the run once.
+ */
+async function countAgainst(
+  db: Database,
+  counted: (Run & { miss: string }) | undefined,
+  now: Date,
+): Promise<void> {
+  // Read now: a threshold cached at boot ignores the change an administrator
+  // just made.
+  const policy = policyFrom(await readPolicy(db))
+  const lockout = schema.signInLockout
+  const miss = counted?.miss ?? ''
+  const { rows } = await db.execute<{ failures: number; locks: number }>(sql`
+    insert into ${lockout} (user_id, familiar, failures, misses)
+    select ${counted?.id ?? null}::text, ${counted?.familiar ?? false}::boolean, 1, array[${miss}::text]
+    where ${counted !== undefined}::boolean
+    on conflict (user_id, familiar) do update set
+      failures = ${lockout}.failures + 1,
+      misses = (${lockout}.misses || excluded.misses)[greatest(cardinality(${lockout}.misses) + 2 - ${REMEMBERED_MISSES}::int, 1):]
+    where not (${miss}::text = any(${lockout}.misses))
+      and (${lockout}.locked_until is null or ${lockout}.locked_until <= ${now.toISOString()}::timestamptz)
+    returning failures, locks`)
+  const [after] = rows
+  if (!counted || !after || after.failures < policy.afterFailures) return
+
+  const minutes = lockMinutes(policy, after.locks)
+  const [locked] = await db
+    .update(lockout)
+    .set({
+      failures: 0,
+      locks: sql`${lockout.locks} + 1`,
+      lockedUntil: new Date(now.getTime() + minutes * 60_000),
+    })
+    .where(
+      and(
+        eq(lockout.userId, counted.id),
+        eq(lockout.familiar, counted.familiar),
+        gte(lockout.failures, policy.afterFailures),
+        eq(lockout.locks, after.locks),
+      ),
+    )
+    .returning({ locks: lockout.locks })
+  if (!locked) return
+
   await recordInstallActivity(db, {
     event: 'account_locked',
-    target: row.email,
-    detail: { failures: String(next.failedSignIns), minutes: String(policy.minutes) },
+    target: counted.email,
+    detail: {
+      failures: String(after.failures),
+      minutes: String(minutes),
+      sources: counted.familiar ? 'familiar' : 'unfamiliar',
+    },
     headers: Object.fromEntries(
       (tryGetCurrentAuthEndpointContext() as { headers?: Headers } | undefined)?.headers?.entries() ??
         [],
@@ -488,30 +554,6 @@ export function authOptions(
           defaultValue: false,
           input: false,
         },
-        /**
-         * **The lockout's two, declared here rather than only in Drizzle.**
-         * `auth.schema.test.ts` holds the two schemas level and fails on a
-         * column nothing asks for - which is the check that catches a column
-         * left behind by a removed plugin, and it cannot tell that from a
-         * column this app added on purpose. Declaring them is how the app says
-         * which one this is.
-         *
-         * **`input: false` on both, and that is the security half.** Without
-         * it Better Auth accepts them in a sign-up or update body, so an
-         * account could hand itself `failedSignIns: 0` on the way past the
-         * control that counts them.
-         */
-        failedSignIns: {
-          type: 'number',
-          required: false,
-          defaultValue: 0,
-          input: false,
-        },
-        lockedUntil: {
-          type: 'date',
-          required: false,
-          input: false,
-        },
       },
     },
     /**
@@ -613,7 +655,8 @@ export function authOptions(
          * **An address with no account costs what an account does.** The
          * library hashes instead of verifying for one, so `checkPassword`
          * never runs and would leave the account-holding answer slower by its
-         * two statements. Counting against a hash nobody holds spends them.
+         * statements. Asking for the run of a hash nobody holds and counting
+         * nothing spends them.
          */
         if (signingIn && typeof attempted === 'string' && attempted !== '') {
           const [holds] = await db
@@ -621,7 +664,10 @@ export function authOptions(
             .from(schema.user)
             .where(sameAddress(attempted))
             .limit(1)
-          if (!holds) await countAgainst(db, NOBODY_HOLDS)
+          if (!holds) {
+            await runOf(db, NOBODY_HOLDS, null)
+            await countAgainst(db, undefined, new Date())
+          }
         }
         /**
          * **The target is ours, and the identifier they typed is not.**
@@ -818,7 +864,7 @@ export function authOptions(
       minPasswordLength: MINIMUM_PASSWORD_LENGTH,
       password: {
         hash: (password) => argonHash(password, ARGON2ID),
-        verify: ({ hash, password }) => checkPassword(db, hash, password),
+        verify: ({ hash, password }) => checkPassword(db, secret, hash, password),
       },
     },
   } satisfies BetterAuthOptions
