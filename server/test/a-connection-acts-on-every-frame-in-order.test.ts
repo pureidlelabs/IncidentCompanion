@@ -101,6 +101,11 @@ describe.skipIf(!runnable)('a connection acts on every frame, in order', () => {
       (claim) => claim.entry_id,
     )
 
+  /** Both sockets are one analyst, so the roster is one participant counting connections. */
+  const connectionsIn = (frames: Record<string, unknown>[]): number =>
+    ((frames.filter((frame) => frame['type'] === 'presence').at(-1)?.['roster'] ?? []) as { connections: number }[])
+      .reduce((sum, participant) => sum + participant.connections, 0)
+
   it('acts on a claim sent the moment the connection opens', async () => {
     const caseId = await aCase()
     const row = await aRow(caseId, 'claimed-on-open')
@@ -149,6 +154,27 @@ describe.skipIf(!runnable)('a connection acts on every frame, in order', () => {
       heldIn(frames).filter((held) => rows.includes(held)),
       'a release overtaken by its own claim left the row held',
     ).toEqual([])
+  }, 30_000)
+
+  it('acts on what follows a frame that is JSON and not an object, and still leaves', async () => {
+    const caseId = await aCase()
+    const row = await aRow(caseId, 'after-null')
+    const watcher = await connect(caseId)
+    await expect.poll(() => watcher.frames.length, { timeout: 10_000 }).toBeGreaterThan(0)
+
+    const { live, closed } = await connect(caseId)
+    for (const odd of ['null', '7', '"claim"', '[]', 'true']) live.send(odd)
+    live.send(JSON.stringify({ type: 'claim', table: 'systems', id: row }))
+    await expect
+      .poll(() => heldIn(watcher.frames), { timeout: 5_000, message: 'a frame behind the odd one was dropped' })
+      .toContain(row)
+
+    live.close()
+    await closed
+    await expect
+      .poll(() => connectionsIn(watcher.frames), { timeout: 5_000, message: 'the connection never left the roster' })
+      .toBe(1)
+    expect(heldIn(watcher.frames), 'the connection left its claim behind').toEqual([])
   }, 30_000)
 
   /** Prose rather than a claim: the roster hides a claim whose session never joined, so only prose can show it was acted on. */

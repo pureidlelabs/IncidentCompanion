@@ -17,7 +17,8 @@ import type { AddressInfo } from 'node:net'
 
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { Logger } from '@nestjs/common'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket as Client, type WebSocket } from 'ws'
 import { readSyncMessage, writeSyncStep2 } from 'y-protocols/sync'
 import * as Y from 'yjs'
@@ -412,7 +413,7 @@ class FakeSocket {
       .filter((frame) => frame['type'] === type)
   }
 
-  receive(frame: Record<string, unknown>): void {
+  receive(frame: unknown): void {
     for (const handler of this.handlers.get('message') ?? []) {
       handler(Buffer.from(JSON.stringify(frame)))
     }
@@ -1197,8 +1198,12 @@ describe('two prose frames for one field arriving together', () => {
  * guards on the same door.
  */
 describe('frames that arrive while the socket is still joining', () => {
-  /** The channel with the join held open until the test finishes it. */
-  function midJoin(document: Y.Doc) {
+  /**
+   * The channel with the join held open until the test finishes it. A `slow`
+   * level lookup lets a frame behind it overtake it; an `immediate` one lets a
+   * frame acted on too early land before the join does.
+   */
+  function midJoin(document: Y.Doc, lookup: 'slow' | 'immediate' = 'slow') {
     const order: string[] = []
     const left: string[] = []
     let finish: () => void = () => undefined
@@ -1246,10 +1251,12 @@ describe('frames that arrive while the socket is still joining', () => {
       addsNothing: codec.addsNothing.bind(codec),
       hello: codec.hello.bind(codec),
     }
-    /** A level lookup that takes its time, so a frame behind it could overtake it. */
-    const slowWrite = {
+    const levels = {
       defaultCustomerId: () => Promise.resolve('a-default-customer'),
-      levelFor: () => new Promise((resolve) => setTimeout(() => { resolve('write') }, 20)),
+      levelFor: () =>
+        lookup === 'immediate'
+          ? Promise.resolve('write')
+          : new Promise((resolve) => setTimeout(() => { resolve('write') }, 20)),
     } as never
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
@@ -1257,9 +1264,9 @@ describe('frames that arrive while the socket is still joining', () => {
       caseWithNoCustomer,
       prose as never,
       audit as never,
-      slowWrite,
+      levels,
     )
-    return { gateway, order, left, releasedHolding, readers: () => readers, finish: () => { finish() } }
+    return { gateway, channel, order, left, releasedHolding, readers: () => readers, finish: () => { finish() } }
   }
 
   const ROW = '44444444-4444-4444-8444-444444444444'
@@ -1290,7 +1297,7 @@ describe('frames that arrive while the socket is still joining', () => {
    * nor the subscription.
    */
   it('takes a claim that beat the roster, and not before the roster has it', async () => {
-    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }))
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
     const live = new FakeSocket()
 
     const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
@@ -1343,5 +1350,64 @@ describe('frames that arrive while the socket is still joining', () => {
     ])
     expect(readers(), 'a frame behind the end opened a reader nothing gives back').toBe(0)
     expect(order.at(-1), 'the connection left before it had finished').toBe('leave')
+  })
+
+  it('carries on past a frame whose action fails, and still leaves', async () => {
+    const { gateway, channel, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    channel.claim = () => Promise.reject(new Error('the store went away'))
+    const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    finish()
+    await opening
+
+    live.receive({ type: 'claim', table: 'systems', id: ROW })
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    live.drop()
+    await wait(50)
+    warned.mockRestore()
+
+    expect(order, 'a failed frame stopped what came behind it').toEqual(['join', `release systems/${ROW}`, 'leave'])
+  })
+
+  /** Silent, as for a frame that is not JSON: a warning per frame is a log any admitted client can fill. */
+  it('ignores a frame that is JSON and not an object, as it ignores one that is not JSON', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    finish()
+    await opening
+
+    for (const odd of [null, 7, 'claim', [], true]) live.receive(odd)
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    live.drop()
+    await wait(50)
+    // Read before the restore, which empties the record of calls.
+    const logged = warned.mock.calls.map((call) => String(call[0]))
+    warned.mockRestore()
+
+    expect(order, 'a frame behind the odd one, or the end, was dropped').toEqual([
+      'join',
+      `release systems/${ROW}`,
+      'leave',
+    ])
+    expect(logged, 'a frame the client got wrong was logged as a failure to apply it').toEqual([])
+  })
+
+  it('ends a connection with more frames waiting than the bound, and acts on those within it', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    for (let n = 0; n < 256; n += 1) live.receive({ type: 'release', table: 'systems', id: ROW })
+    expect(live.terminated, 'ended while the backlog was within the bound').toBe(false)
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    expect(live.terminated, 'a backlog past the bound was held').toBe(true)
+
+    finish()
+    await opening
+    await wait(50)
+    expect(order.filter((step) => step.startsWith('release')), 'a frame within the bound was dropped').toHaveLength(256)
   })
 })
