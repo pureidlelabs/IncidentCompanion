@@ -70,8 +70,8 @@ RUN mise install --system && mise reshim
 
 # **A shim applies the workspace's `[env]` to the program it starts and to
 # nothing else**, so a shell sees it only through activation. Interactive
-# shells only; everything scripted keeps the shims. `/etc/zsh` is made first: zsh arrives with the `common-utils` feature,
-# after this image builds.
+# shells only; everything scripted keeps the shims. `/etc/zsh` is made first:
+# zsh arrives with the `common-utils` feature, after this image builds.
 RUN printf '\neval "$(mise activate bash)"\n' >> /etc/bash.bashrc \
     && mkdir -p /etc/zsh \
     && printf '\neval "$(mise activate zsh)"\n' >> /etc/zsh/zshrc

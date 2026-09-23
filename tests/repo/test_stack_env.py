@@ -80,6 +80,7 @@ def _isolated_mise(state: Path, tree: Path, path: str) -> dict[str, str]:
         "PATH": path,
         "MISE_TRUSTED_CONFIG_PATHS": str(tree),
         "MISE_AUTO_INSTALL": "0",
+        "MISE_SYSTEM_CONFIG_FILE": str(state / "system.toml"),
         **{f"MISE_{d}_DIR": str(state / d.lower()) for d in ("CONFIG", "DATA", "STATE", "CACHE")},
     }
 
