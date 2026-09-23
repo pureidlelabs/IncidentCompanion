@@ -8,7 +8,8 @@ import { join } from 'node:path'
 
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from '@zip.js/zip.js'
 
-import { ARTEFACT_PASSWORD } from '../src/evidence/store.js'
+import { ARTEFACT_PASSWORD, EvidenceStore } from '../src/evidence/store.js'
+import { defaultPolicy } from '../src/policy/read.js'
 
 async function files(root: string): Promise<string[]> {
   const found = await readdir(root, { recursive: true, withFileTypes: true }).catch(() => [])
@@ -44,4 +45,12 @@ export async function age(root: string, hours: number, spared: readonly string[]
   for (const path of await files(root)) {
     if (!spared.includes(path)) await utimes(path, then, then)
   }
+}
+
+/** The store over the suite's evidence directory, for a service a test builds by hand. */
+export function suiteStore(): EvidenceStore {
+  return new EvidenceStore(
+    { get: () => process.env['EVIDENCE_DIR'] } as never,
+    { read: () => Promise.resolve(defaultPolicy()) } as never,
+  )
 }

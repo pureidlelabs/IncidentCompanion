@@ -6,12 +6,13 @@
  * `only-the-store-opens-the-evidence-directory.test.ts`.
  * -> `openspec/specs/state/design.md`
  *
- * Nothing is ever overwritten - a write to a digest the case holds is a
- * no-op. The cap says what this is for: a screenshot, an `.eml`, a log export.
+ * Nothing is ever overwritten - a write to a digest the case holds leaves the
+ * file as it is. The cap says what this is for: a screenshot, an `.eml`, a log
+ * export.
  */
 import { ATTACHMENT_MEGABYTES } from '../policy/keys.js'
 import { createHash } from 'node:crypto'
-import { mkdir, readdir, rename, rm, rmdir, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, rename, rm, rmdir, stat, utimes, writeFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { basename, join } from 'node:path'
 
@@ -126,6 +127,10 @@ export class EvidenceStore {
       const partial = `${held}.${process.pid}.partial`
       await writeFile(partial, await this.wrap(Buffer.concat(chunks), memberName(name, hash)))
       await rename(partial, held)
+    } else {
+      // Stored again is stored now: `prune`'s grace is read off this time.
+      const now = new Date()
+      await utimes(held, now, now)
     }
 
     return { hash, hashAlgorithm: 'sha256', sizeBytes: size }
@@ -143,29 +148,38 @@ export class EvidenceStore {
   }
 
   /**
-   * Remove every file no case in `named` names, and every case directory
-   * `named` does not list, leaving anything written within `graceMs`.
+   * Remove, of what was written before `graceMs` ago, every file in a case of
+   * `named` that its set does not name, every file of a case in `deleted`, and
+   * every digest-named file outside a case directory. Answers how many went.
    *
    * `named` is every case the install holds, each with the digests it names;
-   * a case missing from it is read as gone. Answers how many files went.
+   * `deleted` is every case the install recorded deleting. A case directory in
+   * neither is left whole.
    */
-  async prune(named: ReadonlyMap<string, ReadonlySet<string>>, graceMs: number): Promise<number> {
+  async prune(
+    named: ReadonlyMap<string, ReadonlySet<string>>,
+    deleted: ReadonlySet<string>,
+    graceMs: number,
+  ): Promise<number> {
     const before = Date.now() - graceMs
-    const dirs = await readdir(this.root, { withFileTypes: true }).catch(() => [])
+    const aged = async (path: string) => (await stat(path)).mtimeMs <= before
     let removed = 0
-    for (const entry of dirs) {
-      if (!entry.isDirectory() || !isCaseId(entry.name)) continue
-      const dir = join(this.root, entry.name)
-      const keep = named.get(entry.name)
-      for (const file of await readdir(dir)) {
-        if (keep?.has(file)) continue
-        const path = join(dir, file)
-        if ((await stat(path)).mtimeMs > before) continue
+    for (const entry of await readdir(this.root, { withFileTypes: true }).catch(() => [])) {
+      const path = join(this.root, entry.name)
+      if (entry.isFile() && isDigest(entry.name.slice(0, 64)) && (await aged(path))) {
         await rm(path, { force: true })
         removed += 1
       }
+      if (!entry.isDirectory() || !isCaseId(entry.name)) continue
+      const keep = named.get(entry.name)
+      if (!keep && !deleted.has(entry.name)) continue
+      for (const file of await readdir(path)) {
+        if (keep?.has(file) || !(await aged(join(path, file)))) continue
+        await rm(join(path, file), { force: true })
+        removed += 1
+      }
       // Only once empty: a young file kept above keeps its directory.
-      if (!keep) await rmdir(dir).catch(() => undefined)
+      if (!keep) await rmdir(path).catch(() => undefined)
     }
     return removed
   }

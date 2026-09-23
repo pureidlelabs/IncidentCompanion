@@ -1,10 +1,9 @@
 /**
- * Only the evidence store opens the evidence directory, so every artefact
- * leaves through a method that takes the case holding it.
- *
- * Reads the source text. A module that is handed the directory and imports
- * any file or directory accessor is one that could read bytes without a case;
- * `statfs` asks the volume how full it is and opens nothing.
+ * A tripwire for the one spelling a second reader of the evidence directory
+ * most likely takes: a module that names `EVIDENCE_DIR` and imports a file or
+ * directory accessor. `statfs` asks the volume how full it is and opens
+ * nothing. A module handed the path by another passes it, and a caller naming
+ * another case to the store is not seen here at all.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'

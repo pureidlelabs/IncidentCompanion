@@ -16,6 +16,7 @@ import { cases } from '../db/schema/index.js'
 import { DEMO_CASES, type DemoCase } from './catalogue.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
 import { DemoContentSeeder } from './content.seeder.js'
+import { EvidenceStore } from '../evidence/store.js'
 
 /**
  * Write each demo's regulatory record, in the transaction that made the cases.
@@ -73,6 +74,7 @@ export class DemoSeederService {
     @Inject(DATABASE) private readonly reads: Database,
     @Inject(SEED_DATABASE) private readonly db: Database | null,
     private readonly content: DemoContentSeeder,
+    private readonly evidence: EvidenceStore,
   ) {}
 
   /**
@@ -99,14 +101,16 @@ export class DemoSeederService {
    * action. **Destructive by design** -- every demo case is deleted before it
    * is written again, which is exactly why this may not run on boot in a
    * process that has replicas.
+   *
+   * Removes the deleted demonstrations' artefacts once the rebuild commits.
    */
   async reseed(): Promise<number> {
     if (!this.db) throw new Error(seedRoleMissing('the demo cases'))
-    return this.db.transaction(async (tx) => {
+    const { rebuilt, removed } = await this.db.transaction(async (tx) => {
       // The change feed's rows for a demo go with it: they describe writes to
       // a case that no longer exists, and a picker replaying them would show
       // activity on nothing.
-      await tx.delete(cases).where(eq(cases.isDemo, true))
+      const removed = await tx.delete(cases).where(eq(cases.isDemo, true)).returning({ id: cases.id })
       /**
        * **A demo case is opened under a customer like any other.** This writes
        * the row itself rather than going through `CasesService.create`, so
@@ -155,7 +159,9 @@ export class DemoSeederService {
       })
 
       await fillCompliance(tx, ids, startedAt)
-      return rows.length
+      return { rebuilt: rows.length, removed }
     })
+    for (const { id } of removed) await this.evidence.discardCase(id)
+    return rebuilt
   }
 }

@@ -1489,6 +1489,23 @@ def test_what_must_survive_is_on_a_named_volume_and_is_mounted():
     )
 
 
+def test_the_demo_rebuild_reaches_the_evidence_the_server_writes():
+    """*A demonstration case is removed: it leaves nothing behind.*
+
+    The seed one-shot deletes every demonstration and removes their artefacts
+    itself, since their removal leaves no record for the server to act on. On
+    a mount of its own, or none, it removes them from a directory the server
+    never wrote.
+    """
+    services = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))["services"]
+    evidence = [entry for entry in services["app"]["volumes"] if ":/evidence" in str(entry)]
+    assert evidence, "the server mounts no evidence volume, so this reads nothing"
+    assert evidence[0] in (services["seed"].get("volumes") or []), (
+        "the demo rebuild does not mount the server's evidence volume, so a removed "
+        "demonstration's artefacts stay on it for good"
+    )
+
+
 def test_the_ephemeral_store_is_given_nowhere_to_survive():
     """*Nothing else MUST be*, and Redis is the one that would be tempting.
 

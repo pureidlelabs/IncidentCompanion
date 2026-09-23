@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, readFile, rm, truncate, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat, truncate, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
@@ -169,6 +169,44 @@ describe('an artefact held per case', () => {
       await expect(store.discardCase(attempt), attempt).rejects.toThrow()
     }
     expect(await store.verify(CASE, stored.hash)).toBe(true)
+  })
+})
+
+describe('removing what nothing names', () => {
+  const HOUR = 3_600_000
+  const aged = (path: string) => utimes(path, new Date(Date.now() - 2 * HOUR), new Date(Date.now() - 2 * HOUR))
+
+  it('keeps a case the database does not hold until the install records deleting it', async () => {
+    const unheld = randomUUID()
+    const stored = await store.put(unheld, bytesOf('beside a database that never held its case'))
+    await aged(join(root, unheld, stored.hash))
+
+    await store.prune(new Map(), new Set(), HOUR)
+    expect(await store.held(unheld), 'a database that does not hold a case was read as its deletion').toEqual(new Set([stored.hash]))
+
+    await store.prune(new Map(), new Set([unheld]), HOUR)
+    expect(await store.held(unheld)).toEqual(new Set())
+  })
+
+  it('removes what the flat layout left at the top of the directory', async () => {
+    const flat = join(root, 'a'.repeat(64))
+    await writeFile(flat, 'left by a store that kept no case')
+    await aged(flat)
+
+    await store.prune(new Map(), new Set(), HOUR)
+
+    await expect(stat(flat), 'nothing reads the flat layout, and its file is still there').rejects.toThrow()
+  })
+
+  it('counts bytes stored again as new, however old the copy they found', async () => {
+    const mine = randomUUID()
+    const first = await store.put(mine, bytesOf('attached, removed, attached again'))
+    await aged(join(root, mine, first.hash))
+    await store.put(mine, bytesOf('attached, removed, attached again'))
+
+    await store.prune(new Map([[mine, new Set()]]), new Set(), HOUR)
+
+    expect(await store.held(mine), 'bytes stored a moment ago went before their row could name them').toEqual(new Set([first.hash]))
   })
 })
 

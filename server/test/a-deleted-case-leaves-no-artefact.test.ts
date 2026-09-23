@@ -6,7 +6,7 @@
  * half boots a second install over the same directory and database, which is
  * the only way to run what an install does as it comes up.
  */
-import { randomBytes } from 'node:crypto'
+import { randomBytes, randomInt } from 'node:crypto'
 
 import { ConfigService } from '@nestjs/config'
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from '@zip.js/zip.js'
@@ -25,6 +25,10 @@ import {
 } from './app-harness.js'
 import { CASE_NAME, EVIDENCE_PREFIX, pack, sha256 } from '../src/archive/format.js'
 import { cases } from '../src/db/schema/case.js'
+import { DATABASE } from '../src/db/db.module.js'
+import type { Database } from '../src/db/client.js'
+import { DemoSeederService } from '../src/demos/seeder.service.js'
+import { recordInstallActivity } from '../src/install-activity/record.js'
 import { openTestPool } from './database.js'
 import { age, holders } from './evidence-on-disk.js'
 
@@ -122,14 +126,30 @@ describe.skipIf(!(await bootable()))('what a case stored goes when nothing names
     expect(await holders(root, carried), 'a refused import left its artefact behind').toEqual([])
   })
 
+  it('takes a demonstration case\u2019s artefacts with it when the demos are rebuilt', async () => {
+    const bytes = unique('held by a demonstration case')
+    const caseId = await opened('A demonstration, rebuilt')
+    await attach(caseId, await row(caseId, 'sample'), bytes)
+    await seed.update(cases).set({ isDemo: true }).where(eq(cases.id, caseId))
+    expect(await holders(root, bytes), 'the attach stored nothing, so the rebuild below proves nothing').toHaveLength(1)
+
+    await h.app.get(DemoSeederService, { strict: false }).reseed()
+
+    expect(await holders(root, bytes), 'the demos were rebuilt and a removed demonstration\u2019s artefact is still on disk').toEqual([])
+  })
+
   describe('at the next start', () => {
     const orphan = unique('its row was deleted')
-    const dead = unique('its case went by a path that never told the store')
+    const unrecorded = unique('its case is not in the database, which never recorded deleting it')
+    const recorded = unique('its case was deleted and the removal never happened')
+    const both = unique('attached in two cases, and one of them removed its row')
     const young = unique('its row was deleted a moment ago')
     const named = unique('still named by its row')
     let png = Buffer.alloc(0)
     let live = ''
     let filed = ''
+    let keeper = ''
+    let keeperRow = ''
     let second: Harness | undefined
 
     beforeAll(async () => {
@@ -144,8 +164,16 @@ describe.skipIf(!(await bootable()))('what a case stored goes when nothing names
 
       await attach(live, await row(live, 'named'), named)
 
+      keeper = await opened('Keeps its copy')
+      keeperRow = await row(keeper, 'kept')
+      await attach(keeper, keeperRow, both)
+      const dropped = await row(live, 'dropped')
+      await attach(live, dropped, both)
+      await ok(call('DELETE', `/api/cases/${live}/evidence/${dropped}?version=${String(await versionOf(live, dropped))}`), 200)
+
       // A sent report's figure, whose row then names other bytes: only the frozen tree names the image.
-      png = await sharp({ create: { width: 23, height: 17, channels: 3, background: { r: 201, g: 7, b: 99 } } }).png().toBuffer()
+      const background = { r: randomInt(256), g: randomInt(256), b: randomInt(256) }
+      png = await sharp({ create: { width: 23, height: 17, channels: 3, background } }).png().toBuffer()
       const shot = await row(live, 'shot')
       await attach(live, shot, png)
       const report = await ok(call('POST', `/api/cases/${live}/reports`, { label: 'Filed' }), 201)
@@ -155,9 +183,21 @@ describe.skipIf(!(await bootable()))('what a case stored goes when nothing names
       expect(sent.ok, await sent.clone().text()).toBe(true)
       await attach(live, shot, unique('replaced the screenshot'))
 
-      const gone = await opened('Removed past the store')
-      await attach(gone, await row(gone, 'dead'), dead)
-      await seed.delete(cases).where(eq(cases.id, gone))
+      // What a database restored or rebuilt beside this directory looks like: the case is not in it.
+      const absent = await opened('Not in this database')
+      await attach(absent, await row(absent, 'unrecorded'), unrecorded)
+      await seed.delete(cases).where(eq(cases.id, absent))
+
+      // A deletion the install recorded, whose removal a stop cut short.
+      const lost = await opened('Deleted, its removal cut short')
+      await attach(lost, await row(lost, 'recorded'), recorded)
+      await seed.delete(cases).where(eq(cases.id, lost))
+      const wrote = await recordInstallActivity(h.app.get<Database>(DATABASE), {
+        event: 'case_deleted',
+        target: 'Deleted, its removal cut short',
+        detail: { caseId: lost },
+      })
+      expect(wrote, 'the deletion record did not land, so the case below proves nothing').toBe(true)
 
       await age(root, 24, await holders(root, young))
       second = await boot()
@@ -171,8 +211,17 @@ describe.skipIf(!(await bootable()))('what a case stored goes when nothing names
       expect(await holders(root, orphan)).toEqual([])
     })
 
-    it('removes bytes whose case went without telling the store', async () => {
-      expect(await holders(root, dead)).toEqual([])
+    it('keeps a case\u2019s bytes when the database neither holds the case nor recorded deleting it', async () => {
+      expect(await holders(root, unrecorded), 'a database that does not hold a case was read as its deletion').toHaveLength(1)
+    })
+
+    it('removes a case\u2019s bytes once the install has recorded deleting it', async () => {
+      expect(await holders(root, recorded)).toEqual([])
+    })
+
+    it('removes one case\u2019s copy its rows stopped naming, though another case names the same bytes', async () => {
+      expect(await holders(root, both), 'a case kept bytes because another case names them').toHaveLength(1)
+      await ok(call('GET', `/api/cases/${keeper}/evidence/${keeperRow}/file`), 200)
     })
 
     it('keeps bytes a row names', async () => {

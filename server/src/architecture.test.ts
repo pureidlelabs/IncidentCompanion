@@ -72,8 +72,9 @@ const MAY_IMPORT: Record<string, string[]> = {
   db: ['config'],
   config: [],
   // `customers` for the same reason `cases` has it: a demo raises cases, and a
-  // case is opened under a customer.
-  demos: ['db', 'domain', 'config', 'customers'],
+  // case is opened under a customer. `evidence` because a rebuild removes the
+  // artefacts of the demonstrations it deletes, which leave no other trace.
+  demos: ['db', 'domain', 'config', 'customers', 'evidence'],
   /**
    * `wire` for the one decision three folders share: whether the caller's
    * claimed address may be believed. It is a leaf, so the edge cannot become

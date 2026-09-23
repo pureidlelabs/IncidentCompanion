@@ -9,7 +9,7 @@ import { Inject, Injectable } from '@nestjs/common'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import { artefactsNamed, type Named } from './artefacts-named.js'
+import { artefactsNamed, casesDeleted, type Named } from './artefacts-named.js'
 import { EvidenceStore } from '../evidence/store.js'
 
 /** What the install expects, and how much of it is not there. */
@@ -73,11 +73,11 @@ export class ArtefactCensus {
   }
 
   /**
-   * Remove the bytes no row and no sent report names, and every case's the
-   * database no longer holds. Answers how many files went.
+   * Remove the bytes no row and no sent report names, and every case's whose
+   * deletion the install recorded. Answers how many files went.
    */
   async sweep(named: Map<string, Named>): Promise<number> {
     const kept = new Map([...named].map(([caseId, { kept }]) => [caseId, kept]))
-    return this.store.prune(kept, SWEEP_GRACE_MS)
+    return this.store.prune(kept, await casesDeleted(this.db), SWEEP_GRACE_MS)
   }
 }
