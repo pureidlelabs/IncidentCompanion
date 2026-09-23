@@ -831,7 +831,13 @@ export async function openAddDialog(page: Page): Promise<boolean> {
    * wrong door on twenty screens reports twenty covered screens.
    */
   const trigger = page.locator('main').getByRole('button', { name: /^(Add|New) / }).first()
-  if ((await trigger.count()) === 0) return false
+  // Waited for, not counted: a section still mounting its header has no door
+  // yet, and `settle` cannot tell that from a section that never has one.
+  const found = await trigger.waitFor({ state: 'visible', timeout: 5_000 }).then(
+    () => true,
+    () => false,
+  )
+  if (!found) return false
   await trigger.click()
   await expect(page.locator(DIALOG), 'pressed Add and no dialog opened').toBeVisible({
     timeout: 10_000,
