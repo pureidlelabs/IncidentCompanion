@@ -23,6 +23,8 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core'
 import type { z } from 'zod'
 
+import { COLLECTION_SCHEMAS } from '../domain/collections.js'
+import { derivedFields } from '../domain/field-spec.js'
 import { isScope } from '../domain/scopes.lists.js'
 import type { CollectionName, Scope } from '../domain/wire.js'
 
@@ -68,7 +70,8 @@ function groupByCollection(targets: BulkRow[]): [BulkTarget, BulkRow[]][] {
 
 /** Refuses a change naming a field the collection derives, with 422 naming it. */
 function refuseDerived(def: CollectionDefinition, patch: Record<string, unknown>): void {
-  const named = (def.derived ?? []).filter((field) => field in patch)
+  const schema = COLLECTION_SCHEMAS[def.name]
+  const named = (schema ? derivedFields(schema) : []).filter((field) => field in patch)
   if (named.length > 0) {
     throw new UnprocessableEntityException({
       message: `${named.join(', ')} follows the record's live document and is not written here.`,
@@ -118,8 +121,6 @@ export interface CollectionDefinition {
   readonly orderWithin?: string
   /** Which schema a row validates against for the reference check; absent, `COLLECTION_SCHEMAS`. */
   readonly schemaFor?: (values: Record<string, unknown>) => z.ZodObject | undefined
-  /** Fields taken on create and written by nothing but their own writer afterwards. */
-  readonly derived?: readonly string[]
   /** Refuses the values being written where one names a term the install does not serve. */
   readonly refuseUnservedTerm?: (db: Executor, rows: readonly Record<string, unknown>[]) => Promise<void>
 }

@@ -1,3 +1,4 @@
+import { derivedFields } from '../domain/field-spec.js'
 /**
  * **The same act through two doors reaches the same answer.**
  *
@@ -25,7 +26,6 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
-import { DEFINITIONS } from './definitions.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
@@ -86,7 +86,7 @@ function aPatchableTextField(collection: string): string | null {
   const schema = COLLECTION_SCHEMAS[collection]
   if (!schema) return null
   const patch = patchSchema(schema)
-  const derived = DEFINITIONS[collection as keyof typeof DEFINITIONS]?.derived ?? []
+  const derived = COLLECTION_SCHEMAS[collection] ? derivedFields(COLLECTION_SCHEMAS[collection]) : []
   for (const key of Object.keys(schema.shape)) {
     if (derived.includes(key)) continue
     if (patch.safeParse({ [key]: 'two doors' }).success) return key

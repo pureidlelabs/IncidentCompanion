@@ -62,7 +62,7 @@ export const DEFINITIONS: Readonly<Record<Collection, CollectionDefinition>> = {
   methods: ordered('methods', methods),
   timeline: TIMELINE_COLLECTION,
   actions: ordered('actions', actions),
-  casenotes: { ...ordered('casenotes', caseNotes), derived: ['note'] },
+  casenotes: ordered('casenotes', caseNotes),
   reports: REPORTS_COLLECTION,
   report_blocks: REPORT_BLOCKS_COLLECTION,
 }

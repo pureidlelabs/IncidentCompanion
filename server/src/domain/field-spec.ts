@@ -66,6 +66,9 @@ export interface FieldMeta {
   label: string
   kind: FieldKind
 
+  /** Written by the store from the record's live document: seeded on create, never patched. */
+  derived?: true
+
   /**
    * The vocabulary this field's options come from. The options are **inlined**
    * when the spec is served, with the name travelling beside them so a client
@@ -318,11 +321,19 @@ export function hasCrossFieldRule(schema: z.ZodObject): boolean {
  * the row the write leaves behind, and `CollectionService` checks it there.
  * -> `collections/collection.service.ts`, `refuseIfCrossFieldRuleBroken`
  */
+/** The fields a schema marks as derived, which a patch does not offer. */
+export function derivedFields(schema: z.ZodObject): string[] {
+  return Object.entries(schema.shape)
+    .filter(([, sub]) => fields.get(sub as z.ZodType)?.derived)
+    .map(([name]) => name)
+}
+
 export function patchSchema(schema: z.ZodObject): z.ZodObject {
+  const derived = new Set(derivedFields(schema))
   return z
     .object(
       Object.fromEntries(
-        Object.entries(schema.shape).map(([name, sub]) => {
+        Object.entries(schema.shape).filter(([name]) => !derived.has(name)).map(([name, sub]) => {
           const field = sub as z.ZodType & { def?: { type?: string; innerType?: z.ZodType } }
           const inner = field.def?.type === 'default' ? field.def.innerType! : field
           return [name, inner.optional()]

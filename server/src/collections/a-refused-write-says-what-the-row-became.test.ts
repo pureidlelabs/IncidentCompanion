@@ -1,3 +1,5 @@
+import { derivedFields } from '../domain/field-spec.js'
+import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 /**
  * **A write refused for being stale names the version the row actually
  * reached**, across every collection rather than one.
@@ -16,7 +18,6 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
-import { DEFINITIONS } from './definitions.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
@@ -74,7 +75,7 @@ function collections(): { name: string; make: () => Writable }[] {
 }
 
 function aStringFieldOf(row: Record<string, unknown>, collection: string): [string, string] | null {
-  const derived = DEFINITIONS[collection as keyof typeof DEFINITIONS]?.derived ?? []
+  const derived = COLLECTION_SCHEMAS[collection] ? derivedFields(COLLECTION_SCHEMAS[collection]) : []
   for (const [key, value] of Object.entries(row)) {
     if (NOT_A_PATCH.has(key) || derived.includes(key)) continue
     if (typeof value === 'string' && value.length > 0) return [key, value]
