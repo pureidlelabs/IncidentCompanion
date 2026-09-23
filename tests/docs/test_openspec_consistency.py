@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -298,3 +299,61 @@ def test_the_tree_being_landed_carries_nothing_in_flight() -> None:
         "these changes would land unarchived; sync each into specs/ and move it to "
         f"changes/archive/ in this branch: {in_flight}"
     )
+
+def _requirements(text: str) -> dict[str, set[str]]:
+    """Every `### Requirement:` in `text`, with the scenario titles under it."""
+    return {
+        block.splitlines()[0].strip(): set(re.findall(r"^#### Scenario: (.+?)\s*$", block, flags=re.M))
+        for block in re.split(r"^### Requirement: ", text, flags=re.M)[1:]
+    }
+
+
+def _landing_archives() -> list[Path]:
+    """The archived changes this tree adds to `origin/main`."""
+    def git(*args: str) -> str:
+        done = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+        assert done.returncode == 0, (
+            f"git {' '.join(args)} failed, so nothing can say which changes this tree lands: "
+            f"{done.stderr.strip()}"
+        )
+        return done.stdout
+
+    base = git("merge-base", "origin/main", "HEAD").strip()
+    landed = set(git("ls-tree", "--name-only", f"{base}:openspec/changes/archive").split())
+    return sorted(p for p in (OPENSPEC / "changes" / "archive").iterdir()
+                  if p.is_dir() and p.name not in landed)
+
+
+@pytest.mark.skipif(not LANDING, reason="a branch carries its own change in flight until it lands")
+def test_every_change_the_landing_archives_is_folded_into_specs() -> None:
+    """Archived is not folded: each delta this tree archives must already read in `specs/`."""
+    #: (capability, requirement) -> its scenarios, or None where the delta removes it.
+    owed: dict[tuple[str, str], set[str] | None] = {}
+    for change in _landing_archives():
+        for delta in sorted(change.glob("specs/*/spec.md")):
+            capability = delta.parent.name
+            for op, body in re.findall(r"^## (ADDED|MODIFIED|REMOVED|RENAMED) Requirements\s*$"
+                                       r"(.*?)(?=^## |\Z)", delta.read_text(), flags=re.M | re.S):
+                if op == "RENAMED":
+                    for old, new in re.findall(r"FROM:\s*`?### Requirement:\s*(.+?)`?\s*$\s*"
+                                               r"^\s*[-*]?\s*TO:\s*`?### Requirement:\s*(.+?)`?\s*$",
+                                               body, flags=re.M):
+                        owed[(capability, old)] = None
+                        owed.setdefault((capability, new), set())
+                    continue
+                names = _requirements(body) if op != "REMOVED" else dict.fromkeys(
+                    re.findall(r"^\s*[-*]?\s*`?### Requirement:\s*(.+?)`?\s*$", body, flags=re.M))
+                for name, scenarios in names.items():
+                    owed[(capability, name)] = scenarios if op != "REMOVED" else None
+    wrong = []
+    for (capability, name), scenarios in owed.items():
+        spec = OPENSPEC / "specs" / capability / "spec.md"
+        held = _requirements(spec.read_text()) if spec.exists() else {}
+        if scenarios is None and name in held:
+            wrong.append(f"{capability} :: {name} is removed by its delta and still in specs/")
+        elif scenarios is not None and name not in held:
+            wrong.append(f"{capability} :: {name} is in its delta and not in specs/")
+        elif scenarios and held[name] != scenarios:
+            wrong.append(f"{capability} :: {name} has scenarios {sorted(held[name] ^ scenarios)} "
+                         "in its delta or in specs/, and not both")
+    assert not wrong, "\n  ".join(["these archived deltas were never synced into specs/:", *wrong])
