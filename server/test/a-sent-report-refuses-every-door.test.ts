@@ -3,8 +3,10 @@
  * serves, each as a browser would send it.
  *
  * Every refusal is the same 409 naming the report and its stamp, so a client
- * can say "sent at X" wherever it lands, and the parts are what was sent.
+ * can say "sent at X" wherever it lands, and the install's audit records the
+ * refusal with that status. The parts are what was sent.
  */
+import { Client } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
@@ -81,6 +83,24 @@ describe.skipIf(!runnable)('a sent report, written to through the app', () => {
     const body = (await answered.json()) as { reportId?: string; sentAt?: string }
     expect({ status: answered.status, reportId: body.reportId }).toEqual({ status: 409, reportId: sent.id })
     expect(Number.isNaN(Date.parse(body.sentAt ?? ''))).toBe(false)
+  })
+
+  it('records every refused write in the audit with the status it answered', async () => {
+    const owner = new Client({ connectionString: process.env.TEST_DATABASE_URL })
+    await owner.connect()
+    try {
+      const since = (await owner.query<{ at: Date }>('select clock_timestamp() as at')).rows[0]!.at
+      const answered = await doors[2]![1]()
+      await new Promise((wake) => setTimeout(wake, 300))
+      const { rows } = await owner.query<{ detail: { status?: string } }>(
+        `select detail from install_activity where at >= $1 and target_label like 'PATCH %report_blocks%'`,
+        [since],
+      )
+      expect(answered.status).toBe(409)
+      expect(rows.map((row) => row.detail.status)).toEqual(['409'])
+    } finally {
+      await owner.end()
+    }
   })
 
   it('holds the parts that were sent, and no others', async () => {
