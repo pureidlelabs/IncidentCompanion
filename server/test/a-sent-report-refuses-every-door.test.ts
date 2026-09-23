@@ -23,6 +23,7 @@ describe.skipIf(!runnable)('a sent report, written to through the app', () => {
   let parts: Block[]
   let elsewhere: Block
   let drawn: { id: string; version: number }
+  let corrected: { id: string; version: number }
 
   beforeAll(async () => {
     harness = await boot()
@@ -32,6 +33,8 @@ describe.skipIf(!runnable)('a sent report, written to through the app', () => {
     const draft = await aDraft(call, caseId, ['Summary', 'Findings'])
     const other = await aDraft(call, caseId, ['Elsewhere'])
     elsewhere = other.blocks[0]!
+    const earlier = await aDraft(call, caseId, ['Earlier'])
+    corrected = (await (await call(`/cases/${caseId}/reports/${earlier.id}`)).json()) as { id: string; version: number }
     const owner = new Client({ connectionString: process.env.TEST_DATABASE_URL })
     await owner.connect()
     drawn = (
@@ -41,6 +44,7 @@ describe.skipIf(!runnable)('a sent report, written to through the app', () => {
       )
     ).rows[0]!
     await owner.query('update report_blocks set evidence_id = $1 where id = $2', [drawn.id, draft.blocks[1]!.id])
+    await owner.query('update reports set supersedes = $1 where id = $2', [corrected.id, draft.id])
     await owner.end()
     const answered = await call(`/cases/${caseId}/reports/${draft.id}/send`, 'POST')
     expect(answered.ok, await answered.text()).toBe(true)
@@ -91,6 +95,10 @@ describe.skipIf(!runnable)('a sent report, written to through the app', () => {
       'the evidence one of its parts draws is deleted',
       () => call(`/cases/${caseId}/evidence/${drawn.id}?version=${String(drawn.version)}`, 'DELETE'),
     ],
+    [
+      'the draft it corrects is deleted',
+      () => call(`/cases/${caseId}/reports/${corrected.id}?version=${String(corrected.version)}`, 'DELETE'),
+    ],
   ]
 
   it.each(doors)('answers 409 naming the report and its stamp when %s', async (_what, write) => {
@@ -118,7 +126,9 @@ describe.skipIf(!runnable)('a sent report, written to through the app', () => {
     }
   })
 
-  it('holds the parts that were sent, and no others', async () => {
+  it('holds the parts that were sent, and no others, and still names what it corrects', async () => {
     expect(await blocksOf(call, caseId, sent.id)).toEqual(parts)
+    const row = (await (await call(`/cases/${caseId}/reports/${sent.id}`)).json()) as { supersedes: string | null }
+    expect(row.supersedes).toBe(corrected.id)
   })
 })
