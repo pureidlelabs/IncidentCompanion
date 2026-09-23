@@ -7,7 +7,10 @@
  * which is what another analyst's screen draws.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import * as encoding from 'lib0/encoding'
 import { WebSocket } from 'ws'
+import { writeUpdate } from 'y-protocols/sync'
+import * as Y from 'yjs'
 
 import { PresenceStore } from '../src/live/presence.store.js'
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
@@ -26,7 +29,6 @@ interface Claim {
 describe.skipIf(!runnable)('a connection acts on every frame, in order', () => {
   let harness: Harness
   let admin: Persona
-  let store: PresenceStore
   /** What the next preparation does before it completes: nothing, wait, or fail. */
   let preparing: 'ordinary' | 'slow' | 'failing' = 'ordinary'
   const sockets: WebSocket[] = []
@@ -43,11 +45,13 @@ describe.skipIf(!runnable)('a connection acts on every frame, in order', () => {
   beforeAll(async () => {
     harness = await boot()
     admin = await sharedAdmin(harness)
-    store = harness.app.get(PresenceStore, { strict: false })
+    const store = harness.app.get(PresenceStore, { strict: false })
     const join = store.join.bind(store)
     store.join = async (...args: Parameters<typeof join>) => {
-      if (preparing === 'slow') await pause(SLOW_JOIN_MS)
-      if (preparing === 'failing') throw new Error('preparing the connection failed')
+      const mode = preparing
+      // Failing late, so what the socket sent on open is already waiting when it does.
+      if (mode !== 'ordinary') await pause(SLOW_JOIN_MS)
+      if (mode === 'failing') throw new Error('preparing the connection failed')
       return join(...args)
     }
   }, 90_000)
@@ -147,26 +151,33 @@ describe.skipIf(!runnable)('a connection acts on every frame, in order', () => {
     ).toEqual([])
   }, 30_000)
 
+  /** Prose rather than a claim: the roster hides a claim whose session never joined, so only prose can show it was acted on. */
   it('acts on nothing sent over a connection whose preparation fails', async () => {
     const caseId = await aCase()
-    const row = await aRow(caseId, 'never-claimed')
-    const watcher = await connect(caseId)
-    await expect.poll(() => watcher.frames.length, { timeout: 10_000 }).toBeGreaterThan(0)
+    const note = await call('POST', `/api/cases/${caseId}/casenotes`, { note: 'as it was' })
+    const id = String(note.body['id'])
+
+    const typed = new Y.Doc()
+    typed.getXmlFragment('note').insert(0, [new Y.XmlText('sent while it was being prepared')])
+    const encoder = encoding.createEncoder()
+    writeUpdate(encoder, Y.encodeStateAsUpdate(typed))
+    const update = Buffer.from(encoding.toUint8Array(encoder)).toString('base64')
 
     preparing = 'failing'
-    let failed
     try {
-      failed = await connect(caseId, (live) => {
-        live.send(JSON.stringify({ type: 'claim', table: 'systems', id: row }))
+      const failed = await connect(caseId, (live) => {
+        live.send(JSON.stringify({ type: 'prose.sync', field: `casenotes:${id}:document`, update }))
       })
+      await failed.closed
     } finally {
       preparing = 'ordinary'
     }
-    await failed.closed
 
-    // A claim acted on would be redrawn to the watcher within this time.
-    await pause(500)
-    expect(heldIn(watcher.frames), 'a frame on a connection that was never ready was acted on').not.toContain(row)
-    expect((await store.claims(caseId)).map((claim) => claim.entryId)).not.toContain(row)
+    // Past the flush a reader's departure triggers, had one been opened.
+    await pause(1500)
+    const stored = await call('GET', `/api/cases/${caseId}/casenotes/${id}`)
+    expect(String(stored.body['note']), 'a frame on a connection that was never ready was acted on').not.toContain(
+      'sent while it was being prepared',
+    )
   }, 30_000)
 })
