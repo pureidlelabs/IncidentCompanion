@@ -275,7 +275,8 @@ class Stack:
             time.sleep(0.5)
         # The client, not the stack. Its whole group: the compose plugin under
         # `docker` treats its parent's death as Ctrl-C and stops every container.
-        os.killpg(process.pid, signal.SIGKILL)
+        if process.poll() is None:
+            os.killpg(process.pid, signal.SIGKILL)
         process.wait()
         assert token, "the first start printed no setup token:\n" + "".join(lines[-80:])
         return token[0]
