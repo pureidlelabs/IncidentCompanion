@@ -158,12 +158,14 @@ if expensive; then
   # only `ci.yml`'s `containers` job set it, so a detailed sweep here reported
   # the tier as run having executed none of it. That is the shape `CLAUDE.md`
   # records for the browser tier -- a run against nothing exits 0 -- arriving
-  # through an environment variable instead of a missing server.
-  step "repository: suite (with the container files)" \
-    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 ./test.sh -q
+  # through an environment variable instead of a missing server. The lifecycle
+  # tier opts in the same way.
+  step "repository: suite (with the container files and the lifecycle)" \
+    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 INCIDENTCOMPANION_LIFECYCLE_TESTS=1 ./test.sh -q
 elif behaviour; then
-  step "repository: suite" ./test.sh -q --ignore=tests/docker
+  step "repository: suite" ./test.sh -q --ignore=tests/docker --ignore=tests/lifecycle
   SKIPPED+=("tests/docker -- builds containers; ./verify.sh --detailed runs it")
+  SKIPPED+=("tests/lifecycle -- builds and runs the shipped stack; ./verify.sh --detailed runs it")
 fi
 
 # ------------------------------------------------------------------ hooks

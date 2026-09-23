@@ -29,10 +29,6 @@ from tests._must_run import declined
 from tests._repo import REPO_ROOT
 from tests.lifecycle._stack import PolicyWatcher, Stack
 
-pytestmark = pytest.mark.skipif(
-    os.environ.get("INCIDENTCOMPANION_LIFECYCLE_TESTS", "") != "1",
-    reason="opt-in: set INCIDENTCOMPANION_LIFECYCLE_TESTS=1 (builds and runs the shipped stack)")
-
 BACKUP = REPO_ROOT / "docker" / "backup.sh"
 PASSWORD = "lifecycle-passphrase-1234"
 EMAIL = "first.administrator@example.test"
@@ -50,6 +46,8 @@ def terminal(argv: list[str]) -> list[str]:
 
 @pytest.fixture(scope="module")
 def stack():
+    if os.environ.get("INCIDENTCOMPANION_LIFECYCLE_TESTS", "") != "1":
+        declined("The lifecycle tier", "INCIDENTCOMPANION_LIFECYCLE_TESTS is not 1 (it builds and runs the shipped stack)")
     if not shutil.which("docker") or subprocess.run(["docker", "info"], capture_output=True).returncode:
         declined("The lifecycle tier", "no Docker daemon is reachable")
     secrets = subprocess.run(["sh", str(REPO_ROOT / "docker" / "secrets.sh")], capture_output=True, text=True)
