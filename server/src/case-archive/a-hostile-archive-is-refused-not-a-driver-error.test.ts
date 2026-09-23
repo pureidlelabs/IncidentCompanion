@@ -30,7 +30,14 @@ import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
 import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
-import { CASE_NAME, EVIDENCE_PREFIX, MANIFEST_NAME, pack, readArchive } from '../archive/format.js'
+import {
+  CASE_NAME,
+  EVIDENCE_PREFIX,
+  MANIFEST_NAME,
+  PROSE_PREFIX,
+  pack,
+  readArchive,
+} from '../archive/format.js'
 import { cases, cloudApps, systems, timeline, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
@@ -179,6 +186,22 @@ describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row t
       'a value no column can hold reached the database, so the operator meets a driver ' +
         'error naming column names instead of a refusal',
     ).rejects.toThrow('this archive states a value in evidence that this install cannot write')
+  })
+
+  it('refuses a report whose prose is not a document', async () => {
+    const withReport = await tamperedWith(await exported(), 'reports', [
+      { id: 'rep-1', label: 'The report' },
+    ])
+    const { members } = await readArchive(withReport, LIMITS)
+    const { [MANIFEST_NAME]: _old, ...rest } = members
+    const hostile = await pack(
+      { ...rest, [`${PROSE_PREFIX}rep-1.ydoc`]: new TextEncoder().encode('not a document') },
+      'omitted',
+    )
+
+    await expect(importer.load(hostile, '', actorId)).rejects.toThrow(
+      "this archive's prose for report rep-1 is unreadable",
+    )
   })
 
   it('names the collection and the field rather than the column that overflowed', async () => {

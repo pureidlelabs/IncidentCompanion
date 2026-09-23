@@ -46,3 +46,22 @@ function textIn(node: Y.XmlFragment | Y.XmlElement | Y.XmlText | Y.XmlHook): str
   }
   return ''
 }
+
+/**
+ * `source`'s block fragments under new block ids, encoded, or null when none of
+ * `rekey`'s blocks holds anything. A fragment `rekey` does not name is left behind.
+ */
+export function rekeyed(source: Y.Doc, rekey: ReadonlyMap<string, string>): Uint8Array | null {
+  const target = new Y.Doc({ gc: false })
+  let wrote = false
+  for (const [oldId, newId] of rekey) {
+    const fragment = fragmentFor(source, oldId)
+    if (fragment.length === 0) continue
+    // Cloned node by node: there is no rename in the CRDT.
+    fragmentFor(target, newId).insert(0, fragment.toArray().map((node) => node.clone()) as never)
+    wrote = true
+  }
+  const encoded = wrote ? Y.encodeStateAsUpdate(target) : null
+  target.destroy()
+  return encoded
+}
