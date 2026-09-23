@@ -105,6 +105,7 @@
 | Administrative events are logged | An entry is edited | demonstrated | server/src/install-activity/record.test.ts |
 | Administrative events are logged | The record is read | demonstrated | server/src/install-audit/read.test.ts |
 | Administrative events are logged | Where the record goes is changed | unbuilt | Not built: there is no destination to change. -> #13 |
+| Administrative events are logged | A session is refused after its account is gone | demonstrated | server/test/an-identity-the-install-does-not-hold-reaches-nothing.test.ts |
 
 ## analysis
 
@@ -464,6 +465,7 @@
 | A change reaches every open screen, and says only what changed | A screen re-reads after an announcement | demonstrated | ui/src/api/every-consumer-re-announces.test.ts |
 | Written prose is edited together, not saved over | Two analysts write in one section | demonstrated | ui/src/api/proseSync.test.ts |
 | Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | ui/src/api/proseSync.test.ts |
+| Written prose is edited together, not saved over | One of the writers loses write before the words are stored | demonstrated | server/test/words-typed-together-outlive-one-writer-losing-reach.test.ts |
 | A reconnection catches up rather than starts over | A connection drops briefly | demonstrated | ui/src/api/a-reconnect-re-reads-the-case.test.tsx |
 | A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
@@ -602,9 +604,10 @@
 | A caller asks for what it needs and receives no more | A screen needs a handful of fields | unbuilt | Not built: no route takes a field selection. -> #59 |
 | A caller asks for what it needs and receives no more | A record grows a field | unbuilt | Not built: no route takes a field selection. -> #59 |
 | A caller asks for what it needs and receives no more | A caller wants everything | demonstrated | server/test/openapi-contract.test.ts |
-| Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | demonstrated | server/src/db/the-store-refuses-what-its-caller-does-not-reach.test.ts |
+| Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | demonstrated | server/test/a-route-that-forgets-its-guard-serves-nothing.test.ts |
 | Reach is enforced where the data is, not where the request arrives | A new way to read a record is added | demonstrated | server/test/a-route-that-forgets-its-guard-serves-nothing.test.ts |
 | Reach is enforced where the data is, not where the request arrives | A route forgets to ask | demonstrated | server/test/a-route-that-forgets-its-guard-serves-nothing.test.ts |
+| Reach is enforced where the data is, not where the request arrives | A route forgets to ask before it writes | demonstrated | server/test/a-route-that-forgets-its-guard-serves-nothing.test.ts |
 | A read tells a caller what it is looking at | A caller reads and later writes | demonstrated | server/test/openapi-contract.test.ts |
 | A read tells a caller what it is looking at | Somebody wrote first | demonstrated | server/src/collections/a-refused-write-says-what-the-row-became.test.ts |
 | The interface describes itself, and the description is generated | A route is added | demonstrated | server/test/openapi-contract.test.ts |
