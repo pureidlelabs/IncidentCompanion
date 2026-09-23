@@ -119,6 +119,9 @@ def test_naming_the_install_is_the_one_act_that_reaches_it_from_elsewhere():
     app = spec["services"]["app"]["environment"]
     assert app["AUTH_BASE_URL"] == "https://ic.lan.test:8443", (
         "the application believes it is reached somewhere other than its name")
+    assert app["IC_EDGE"] == "nginx", (
+        "the application is not told which peer is its edge, so it believes an "
+        "address from nobody")
 
     unnamed = _resolved()
     assert unnamed["services"]["nginx"]["environment"]["IC_NAME"] == ""
@@ -278,21 +281,21 @@ NGINX_PROXY = REPO_ROOT / "docker" / "nginx" / "ic-proxy.inc"
 
 
 def test_the_edge_overwrites_the_client_ip_header_for_every_location():
-    """The header the app trusts must be set here, on every path.
+    """The chain the app believes from the edge must be set here, on every path.
 
-    `auth.config.ts` trusts `x-real-ip` in production, and the only thing
-    stopping a caller forging it is nginx overwriting it. No running suite can
-    see that, so it is asserted against the config text.
+    The app walks `X-Forwarded-For` from the right and believes what the edge
+    put there, so a caller's own value has to be discarded rather than
+    extended. `tests/docker/test_ingress.py` drives it; this holds every path.
 
     Three vertices, because any one alone is satisfied by the wrong file: the
-    `X-Real-IP` overwrite, a `default_server` that closes on an unknown
-    hostname, and every `location` including the proxy fragment.
+    overwrite, a `default_server` that closes on an unknown hostname, and every
+    `location` including the proxy fragment.
     """
     proxy = NGINX_PROXY.read_text(encoding="utf-8")
-    assert re.search(r"^\s*proxy_set_header\s+X-Real-IP\s+\$remote_addr\s*;",
+    assert re.search(r"^\s*proxy_set_header\s+X-Forwarded-For\s+\$remote_addr\s*;",
                      proxy, re.MULTILINE), (
-        "the edge does not overwrite X-Real-IP from the peer address, so the "
-        "header auth.config.ts trusts is whatever the caller sent")
+        "the edge does not overwrite X-Forwarded-For with the peer address, so "
+        "the chain the app believes from it starts with whatever the caller sent")
 
     conf = NGINX_CONF.read_text(encoding="utf-8")
 
@@ -309,7 +312,7 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
 
     # **Every location either forwards through the fragment or answers for
     # itself.** The first is the original invariant: the fragment is the only
-    # thing that overwrites `X-Real-IP`, so a location reaching the app without
+    # thing that overwrites `X-Forwarded-For`, so a location reaching the app without
     # it forwards whatever the caller sent. The second is the exemption the
     # refusal handlers need -- `error_page 429` renders them, they return a
     # literal, and no upstream is reached for a header to survive into.
@@ -319,7 +322,7 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
     assert not stray, (
         f"location(s) {stray} neither include ic-proxy.inc nor answer for "
         f"themselves -- one that reaches the app without the fragment forwards "
-        f"the caller's own X-Real-IP")
+        f"the caller's own X-Forwarded-For")
 
 
 def test_the_only_published_port_belongs_to_the_tls_edge():

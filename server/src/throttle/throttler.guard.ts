@@ -4,7 +4,7 @@
  *
  * **Two things the stock guard does not do.**
  *
- * `getTracker` reads `x-real-ip`, because behind nginx `req.ip` is nginx on
+ * `getTracker` asks `callerAddress`, because behind nginx `req.ip` is nginx on
  * every request: the stock tracker would count the whole install as one caller
  * and let the busiest analyst refuse everybody else. -> `../wire/caller-address.ts`
  *
@@ -31,7 +31,7 @@ export class AuditedThrottlerGuard extends ThrottlerGuard {
 
   protected override getTracker(req: Record<string, unknown>): Promise<string> {
     const request = req as unknown as Request
-    const found = callerAddress(request.headers, request.socket?.remoteAddress)
+    const found = callerAddress(request.headers)
     return Promise.resolve(found ?? NO_ADDRESS)
   }
 

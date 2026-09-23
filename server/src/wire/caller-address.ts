@@ -1,102 +1,94 @@
 /**
- * Whether the caller's claimed address may be believed, and what it is.
+ * Who a request is attributed to: resolved once, by Better Auth's own rule,
+ * for the rate limiters, the audit and the session record alike.
  *
- * **Behind nginx every request arrives from nginx.** `req.ip` is the proxy's
- * address on every call, so a limiter keyed on it counts the whole install as
- * one caller: the first busy analyst spends the budget and everybody else is
- * refused. A per-address limit built that way is not a weak control, it is a
- * denial-of-service aimed at the install by whoever is busiest.
- *
- * **`x-real-ip` and nothing else, and only in production.** `ic-proxy.inc`
- * sets it with `proxy_set_header X-Real-IP $remote_addr` - overwrite, not
- * append - so a caller's own value is discarded rather than extended, and that
- * overwrite is the only reason the header can be trusted at all. Outside
- * production there is no proxy to have done it, so the same header is whatever
- * the caller typed.
- *
- * **`x-forwarded-for` is never read, in any mode.** nginx overwrites that one
- * too, but depending on it would make the app's trust a property of a proxy
- * that may not be there - a limit with a `next bucket please` button, and an
- * audit a caller writes their own address into.
- *
- * **Here rather than beside any one reader, because three decisions read it
- * and they must not disagree.** The rate limiter's bucket, Better Auth's own
- * limiter and the audit's `ip_address` are one question asked three times;
- * `ip_address` is also a partition column of the audit's run window, so a
- * caller who can set it keeps every failure of theirs a run of one.
+ * The door (`attribute`) writes the one fact the library cannot see, the TCP
+ * peer, onto the end of `x-forwarded-for`, and keeps what came before only
+ * when that peer is the edge. Better Auth then walks the chain from the right,
+ * skipping the edge as a trusted proxy. -> `openspec/specs/deployment/design.md`
  */
+import { lookup } from 'node:dns/promises'
+import type { IncomingHttpHeaders } from 'node:http'
 
-/** The one spelling a caller cannot choose for themselves, where a proxy set it. */
-export const TRUSTED_ADDRESS_HEADER = 'x-real-ip'
+import { getIP } from 'better-auth/api'
+
+const CHAIN = 'x-forwarded-for'
+
+/** The edge's addresses, replaced in place so the object below always reads the current set. */
+const edge: string[] = []
 
 /**
- * The mode this decision reads, which is not the one `env.ts` resolves.
+ * `advanced.ipAddress` for Better Auth, and the rule `callerAddress` applies.
  *
- * **Unset means untrusted here, and `env.ts` has no default to fall back on.**
- * `production` is what makes the header believable, so a deployment that says
- * nothing must not be taken to have a proxy in front of it -- which is why the
- * schema refuses to start rather than choosing for the operator. The fallback
- * below is for the readers that have not been through that check, and it falls
- * the safe way. The shipped image sets the variable; so does the dev script.
- * Unset is neither of them.
+ * Handed to the library by reference: the edge's addresses are filled in after
+ * the auth instance is built, and whenever the edge is found again.
  */
-export function addressMode(): string {
-  return process.env['NODE_ENV'] ?? 'development'
+export const ADDRESS_RULE = { ipAddressHeaders: [CHAIN], trustedProxies: edge }
+
+let edgeName: string | undefined
+let lookedUpAt = 0
+
+/** How long a miss waits before the edge is looked up again. */
+const LOOKUP_INTERVAL_MS = 5_000
+
+/**
+ * Look the edge up by name and replace the addresses believed as it.
+ *
+ * `name` unset names no edge: every request is then attributed to its own
+ * peer. A name that does not resolve leaves the set empty rather than
+ * throwing, since the edge starts after the application.
+ */
+export async function findTheEdge(name: string | undefined): Promise<void> {
+  edgeName = name
+  lookedUpAt = Date.now()
+  const found = name
+    ? await lookup(name, { all: true }).then(
+        (answers) => answers.map(({ address }) => address),
+        () => [],
+      )
+    : []
+  edge.splice(0, edge.length, ...found)
 }
 
 /**
- * Which headers may name the caller, empty where none may.
+ * Rewrite `x-forwarded-for` so the chain ends at the TCP peer, before anything
+ * reads an address. Call once per request, first.
  *
- * Better Auth takes the list rather than a value, so this is the shape that
- * reader needs; `[]` is not the same as unset, because the library reads
- * `ipAddressHeaders || DEFAULT_IP_HEADERS` and an empty array is truthy.
+ * A peer that is not the edge is attributed to itself, whatever it sent. A
+ * miss looks the edge up again at most once per interval, in the background,
+ * so a recreated edge is found and a flood of direct callers costs nothing.
  */
-export function trustedAddressHeaders(mode: string = addressMode()): string[] {
-  return mode === 'production' ? [TRUSTED_ADDRESS_HEADER] : []
-}
-
-/**
- * The address to attribute a request to, or `null` when there is none to trust.
- *
- * `socket` is used only where no header may be believed, so a caller that has
- * no socket to offer - the audit, writing from a request it was handed rather
- * than one it is holding - passes `undefined` and gets `null` outside
- * production.
- *
- * **`null` is a real answer and the caller must decide what it means.**
- * Falling back to "one shared bucket" silently reintroduces the whole-install
- * limit this exists to avoid, so the choice is made where it can be seen.
- */
-export function callerAddress(
-  headers: Record<string, string | string[] | undefined>,
-  socket: string | undefined,
-  mode: string = addressMode(),
-): string | null {
-  const trusted = trustedAddressHeaders(mode)
-  if (trusted.length > 0) {
-    for (const name of trusted) {
-      const value = headers[name]
-      const one = Array.isArray(value) ? value[0] : value
-      if (typeof one === 'string' && one.trim() !== '') return one.trim()
-    }
-    // **Never the socket here, and that is why this returns rather than falls
-    // through.** Behind nginx the socket is nginx, so a request that arrived
-    // without the header would be attributed to the proxy - the whole-install
-    // bucket, on exactly the request that lost its header.
-    return null
+export function attribute(headers: IncomingHttpHeaders, socketPeer: string | undefined): void {
+  const peer = socketPeer?.replace(/^::ffff:/, '')
+  const handed = headers[CHAIN]
+  delete headers[CHAIN]
+  if (!peer) return
+  if (edge.includes(peer)) {
+    headers[CHAIN] = typeof handed === 'string' && handed !== '' ? `${handed}, ${peer}` : peer
+    return
   }
-  // No proxy outside production, so the socket is the only honest answer.
-  return typeof socket === 'string' && socket.trim() !== '' ? socket.trim() : null
+  headers[CHAIN] = peer
+  if (edgeName && Date.now() - lookedUpAt >= LOOKUP_INTERVAL_MS) void findTheEdge(edgeName)
+}
+
+/**
+ * The address to attribute a request to, or `null` when there is none.
+ *
+ * `headers` must have passed `attribute`. Better Auth answers `127.0.0.1`
+ * rather than `null` in development and test.
+ */
+export function callerAddress(headers: IncomingHttpHeaders | Record<string, string>): string | null {
+  const asked = new Headers()
+  for (const [name, value] of Object.entries(headers)) {
+    if (typeof value === 'string') asked.set(name, value)
+  }
+  return getIP(asked, { advanced: { ipAddress: ADDRESS_RULE } })
 }
 
 /**
  * **A caller with no address is counted as one bucket per route, not as one
  * bucket for everybody.** Both wrong answers are worse: sharing a single
  * bucket lets one unidentifiable caller lock out every other unidentifiable
- * caller, and skipping the limit lets an attacker opt out of it by arriving
- * without the header.
- *
- * In production this only happens if nginx is bypassed - which means somebody
- * reached port 8080 directly, and the compose file publishes nothing.
+ * caller, and skipping the limit lets an attacker opt out of it.
  */
 export const NO_ADDRESS = 'no-address'

@@ -44,7 +44,7 @@ async function bootstrap(): Promise<void> {
    *
    * Two hops to `server/`, because swc compiles this to `dist/src/main.js`.
    */
-  applyPlatform(app, {
+  await applyPlatform(app, {
     bundle: bundlePath(app.get(ConfigService)),
     vendor: join(__dirname, '..', '..', 'vendor', 'redoc'),
   })

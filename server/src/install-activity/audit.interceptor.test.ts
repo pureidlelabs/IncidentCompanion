@@ -167,7 +167,7 @@ describe('the audit boundary', () => {
   /**
    * **Never the URL the caller typed.** A path carries whatever they put in
    * it, so recording it verbatim writes attacker-chosen text into the audit -
-   * the same objection that keeps `x-forwarded-for` out of `ipAddress`.
+   * the same objection that keeps a presented address out of `ipAddress`.
    */
   it('records the matched route, not the path the caller sent', async () => {
     const { lines, interceptor } = harness()
@@ -240,15 +240,11 @@ describe('the audit boundary', () => {
   })
 
   /**
-   * **Where the address is filtered, and why it is not asserted here.** This
-   * boundary hands `record` the request's headers verbatim; `record.ts` is
-   * what takes `x-real-ip` and refuses `x-forwarded-for`, and
-   * `record.test.ts` asserts exactly that against a stored row.
-   *
-   * Written down because asserting on what the interceptor *passes* rather
-   * than on what is *stored* shows the forwarded header in the argument and
-   * reads as a live defect. It is not one -- the filtering happens one layer
-   * down.
+   * **Where the address is decided, and why it is not asserted here.** This
+   * boundary hands `record` the request's headers, which the platform layer
+   * rewrote on arrival; `wire/caller-address.ts` is the one rule, and
+   * `test/a-caller-is-attributed-to-itself.test.ts` asserts it against a
+   * stored row.
    */
   it('hands the headers on rather than deciding the address itself', async () => {
     const { lines, interceptor } = harness()

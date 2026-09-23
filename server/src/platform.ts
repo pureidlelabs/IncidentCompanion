@@ -10,10 +10,12 @@
 import { ConfigService } from '@nestjs/config'
 import type { Env } from './config/env.js'
 import type { NestExpressApplication } from '@nestjs/platform-express'
+import type { NextFunction, Request, Response } from 'express'
 
 import { LiveGateway } from './live/live.gateway.js'
 import compression from 'compression'
 
+import { attribute, findTheEdge } from './wire/caller-address.js'
 import { noStoreOnTheApi, securityHeaders } from './wire/headers.js'
 import { retryAfterOnEveryRefusal } from './wire/retry-after.js'
 
@@ -24,10 +26,19 @@ import { retryAfterOnEveryRefusal } from './wire/retry-after.js'
  * mounts, because the SPA is served by Express middleware that runs before
  * Nest's router and would otherwise get no policy.
  */
-export function applyPlatform(
+export async function applyPlatform(
   app: NestExpressApplication,
   options: { bundle?: string; vendor?: string } = {},
-): void {
+): Promise<void> {
+  const config = app.get<ConfigService<Env, true>>(ConfigService)
+
+  /** Who each request is from, settled before anything reads an address. */
+  await findTheEdge(config.get('IC_EDGE', { infer: true }))
+  app.use((request: Request, _response: Response, next: NextFunction) => {
+    attribute(request.headers, request.socket.remoteAddress)
+    next()
+  })
+
   /**
    * Compression, registered before the static mounts so it also covers the SPA
    * bundle - the largest thing this server sends. It buys bytes, not
@@ -41,7 +52,6 @@ export function applyPlatform(
    * so the destinations the policy names cannot drift from the address the
    * application believes it is at.
    */
-  const config = app.get<ConfigService<Env, true>>(ConfigService)
   app.use(
     securityHeaders(
       config.get('AUTH_BASE_URL', { infer: true }),

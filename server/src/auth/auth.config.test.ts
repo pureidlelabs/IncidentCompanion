@@ -8,13 +8,14 @@
  * **Nothing here expires a real session.** These read `auth.options`, so a
  * library that stopped honouring `expiresIn` would leave every case green.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 // Re-exported by `better-auth/api`, which is a declared dependency;
 // `@better-auth/core` resolves only by hoisting and is not in package.json.
 import { getIP } from 'better-auth/api'
 
 import { createAuth } from './auth.config.js'
 import { MINIMUM_PASSWORD_LENGTH } from './password-policy.js'
+import { ADDRESS_RULE } from '../wire/caller-address.js'
 import {
   SESSION_IDLE_CEILING_MINUTES,
   SESSION_LIFETIME_CEILING_MINUTES,
@@ -60,110 +61,24 @@ describe('how long a session outlives the analyst', () => {
  * its limiter on `createRateLimitKey(getIP(...) ?? NO_TRUSTED_IP_KEY, path)`,
  * so moving `getIP`'s answer is moving the bucket.
  *
- * **Asserted as "the header cannot move the key", not as a fixed value.** In
- * test and development `getIP` falls back to `127.0.0.1` and in production to
- * `null`, so pinning either spelling makes this a test about `NODE_ENV`. What
- * must hold everywhere is that two forged headers resolve to the same key and
- * neither resolves to what the caller asked for.
+ * Only `x-forwarded-for` is read, and only after the platform layer has
+ * rewritten it; `test/a-caller-is-attributed-to-itself.test.ts` holds that
+ * half. Every other spelling is a bypass if it is ever read.
  */
 describe('who the rate limiter thinks is calling', () => {
-  // `unstubEnvs` is off by default, so a failing assertion would otherwise
-  // leak a stubbed mode into the rest of the file.
-  afterEach(() => {
-    vi.unstubAllEnvs()
-  })
-
-  /**
-   * **Every spelling except the one the proxy controls.** `x-real-ip` is
-   * overwritten by nginx on every request and the app publishes no port, so it
-   * is the one header a caller cannot set. Every other spelling is still a
-   * bypass if it is ever trusted, and `x-forwarded-for` is the library's own
-   * default.
-   *
-   * **Run against the shipped list, which means building it under the mode
-   * that produces it.** The setting reads the process mode, so the
-   * module-level handle carries `[]` while the suite runs, and `getIP` refuses
-   * every spelling on an empty list for a reason that has nothing to do with
-   * which spellings are trusted. Adding `x-forwarded-for` to the trusted list
-   * has to turn these red, and against `[]` it does not.
-   */
-  it.each(['x-forwarded-for', 'cf-connecting-ip', 'forwarded', 'true-client-ip'])(
-    'will not let a forged %s pick the bucket',
+  it.each(['x-real-ip', 'cf-connecting-ip', 'forwarded', 'true-client-ip'])(
+    'will not let %s pick the bucket',
     (header) => {
-      vi.stubEnv('NODE_ENV', 'production')
-      const shipped = createAuth(db, 'not-a-real-secret-for-tests', 'https://127.0.0.1:8124')
-      try {
-        const one = getIP(new Headers({ [header]: '9.9.9.9' }), shipped.options)
-        const two = getIP(new Headers({ [header]: '8.8.8.8' }), shipped.options)
+      const one = getIP(new Headers({ [header]: '9.9.9.9' }), auth.options)
+      const two = getIP(new Headers({ [header]: '8.8.8.8' }), auth.options)
 
-        expect(one, 'the caller chose their own rate-limit bucket').not.toBe('9.9.9.9')
-        expect(two, 'the caller chose their own rate-limit bucket').not.toBe('8.8.8.8')
-        expect(
-          one,
-          'two forged headers resolve differently, so a caller gets a fresh ' +
-            'brute-force budget per request by varying one header',
-        ).toBe(two)
-      } finally {
-        vi.unstubAllEnvs()
-      }
+      expect(one, 'the caller chose their own rate-limit bucket').not.toBe('9.9.9.9')
+      expect(one, 'two presented addresses resolve differently').toBe(two)
     },
   )
 
-  /**
-   * The list itself, because the assertions above can only refuse the
-   * spellings they happen to enumerate -- and because adding a second entry
-   * here would reintroduce the bypass without changing any of them.
-   *
-   * **Built under a stubbed mode rather than read off `auth`.** The setting
-   * resolves the process mode, not this constructor's argument, so a
-   * production list is only reachable by saying so here -- and asserting it
-   * off the module-level handle would assert whatever mode the suite runs
-   * under. -> `wire/caller-address.ts`
-   */
-  it('trusts exactly the one header the proxy overwrites', () => {
-    vi.stubEnv('NODE_ENV', 'production')
-    const shipped = createAuth(db, 'not-a-real-secret-for-tests', 'https://127.0.0.1:8124')
-    expect(shipped.options.advanced?.ipAddress?.ipAddressHeaders).toEqual(['x-real-ip'])
-    vi.unstubAllEnvs()
-  })
-
-  /**
-   * **The trust is a property of the topology, so it may not outlive it.**
-   * `x-real-ip` is safe in the container because nginx overwrites it and the
-   * app publishes no port. `dev-node.sh` binds `0.0.0.0` with no proxy at all,
-   * so there the same setting is a bypass anyone on the network can use -- the
-   * header is absent only while nobody chooses to send one.
-   */
-  describe('outside production', () => {
-    const dev = createAuth(db, 'not-a-real-secret-for-tests', 'http://127.0.0.1:8124', 'development')
-
-    /**
-     * **Asserted per mode, because the constructor's argument no longer
-     * decides this.** An assertion read off a handle built with
-     * `'development'` would pass for any third argument and is a test about
-     * the suite's own `NODE_ENV`, which is how a case stops being able to
-     * fail.
-     */
-    it.each(['development', 'test'])(
-      'trusts no client-IP header where the mode is %o',
-      (mode) => {
-        vi.stubEnv('NODE_ENV', mode)
-        try {
-          const built = createAuth(db, 'not-a-real-secret-for-tests', 'http://127.0.0.1:8124')
-          expect(built.options.advanced?.ipAddress?.ipAddressHeaders).toEqual([])
-        } finally {
-          vi.unstubAllEnvs()
-        }
-      },
-    )
-
-    it('will not let a forged x-real-ip pick the bucket', () => {
-      const one = getIP(new Headers({ 'x-real-ip': '9.9.9.9' }), dev.options)
-      const two = getIP(new Headers({ 'x-real-ip': '8.8.8.8' }), dev.options)
-
-      expect(one).not.toBe('9.9.9.9')
-      expect(one, 'a dev caller picks their own brute-force budget').toBe(two)
-    })
+  it('reads the rule every other reader of the address reads', () => {
+    expect(auth.options.advanced.ipAddress).toBe(ADDRESS_RULE)
   })
 
   /**

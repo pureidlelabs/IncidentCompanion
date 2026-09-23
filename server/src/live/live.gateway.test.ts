@@ -117,7 +117,7 @@ function gatewayWith(
 const request = (
   url: string,
   headers: Record<string, string> = { origin: 'http://localhost:5174', host: 'localhost:5174' },
-) => ({ url, headers }) as unknown as IncomingMessage
+) => ({ url, headers, socket: { remoteAddress: '127.0.0.1' } }) as unknown as IncomingMessage
 
 /**
  * A reach stand-in that admits whatever the stub database says exists.
