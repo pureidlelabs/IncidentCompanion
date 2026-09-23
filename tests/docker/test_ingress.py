@@ -201,19 +201,28 @@ def test_the_install_believes_an_address_only_from_its_edge(install):
     assert _session_addresses(ACCOUNT)[-1] == forger.address
 
 
-@pytest.mark.parametrize("origin,status", [
-    (ORIGIN, 401),
-    (f"http://{NAME}:{PORT}", 403),
-    (f"https://localhost:{PORT}", 403),
+@pytest.mark.parametrize("origin,own", [
+    (ORIGIN, True),
+    (f"http://{NAME}:{PORT}", False),
+    (f"https://{NAME}:{PORT + 1}", False),
+    (f"https://localhost:{PORT}", False),
 ])
-def test_a_socket_at_the_name_admits_only_the_install_s_origin(install, origin, status):
-    """The origins sign-in refuses are refused a socket too. No cookie: 401 is past the origin check."""
-    analyst = Analyst("socket")
+def test_the_install_answers_only_to_its_own_origin(install, origin, own):
+    """A sign-in and a socket are admitted by the same origins: the install's own, and no other spelling.
+
+    No cookie and no account: 401 is past the origin check, 403 is refused by it.
+    """
+    analyst = Analyst("origin")
+    expected = 401 if own else 403
     assert analyst.status(
         "/api/cases/00000000-0000-4000-8000-000000000000/live", "--http1.1",
         "-H", "Connection: Upgrade", "-H", "Upgrade: websocket",
         "-H", "Sec-WebSocket-Version: 13", "-H", "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==",
-        "-H", f"Origin: {origin}") == status
+        "-H", f"Origin: {origin}") == expected, "the socket"
+    assert analyst.status("/api/auth/sign-in/email", "-X", "POST",
+                          "-H", "content-type: application/json", "-H", f"origin: {origin}",
+                          "--data", json.dumps({"email": _guess(), "password": "not-it-at-all"})
+                          ) == expected, "the sign-in"
 
 
 def test_a_page_elsewhere_spends_nothing_of_the_analyst_s_budget(install):
