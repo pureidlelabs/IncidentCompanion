@@ -8,6 +8,6 @@
 
 - [x] 2.1 Answer a reorder with each row's version, write it back and run one screen's reorders one at a time, and verify with `server/e2e/reorder-keyboard.spec.ts`
 
-## 3. What a sent report points at stays
+## 3. What a sent report corrects stays named
 
-- [x] 3.1 Pass only a case's or an account's removal through the freeze, and verify with `server/test/a-sent-report-refuses-every-door.test.ts`
+- [x] 3.1 Pass only a case's, an account's or a piece of evidence's removal through the freeze, and verify with `server/test/a-sent-report-refuses-every-door.test.ts`

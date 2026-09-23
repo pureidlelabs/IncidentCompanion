@@ -524,7 +524,7 @@
 | A sent report is frozen, and the freeze is one rule | A part is moved into a sent report | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
 | A sent report is frozen, and the freeze is one rule | A new way to write a part is added | demonstrated | server/src/report/the-store-refuses-a-sent-report.test.ts |
 | A sent report is frozen, and the freeze is one rule | Prose reaches a sent report | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
-| A sent report is frozen, and the freeze is one rule | What a sent report points at is removed | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
+| A sent report is frozen, and the freeze is one rule | The report a sent report corrects is removed | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
 | Sending stamps and preserves in one act | A report is sent | undemonstrated |  |
 | Sending stamps and preserves in one act | The document cannot be produced | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
 | Sending stamps and preserves in one act | The case changes after sending | undemonstrated |  |

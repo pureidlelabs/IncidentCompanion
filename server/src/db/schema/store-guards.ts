@@ -21,11 +21,13 @@ export function sentReportIn(error: unknown): { id: string; label: string | null
 }
 
 export const storeGuards: readonly string[] = [
-  // Which write the store issues for another passes: the case's removal, or an account's.
+  // Which write the store issues for another passes: the case's removal, an
+  // account's, or a piece of evidence's, whose figure a sent report froze by content.
   `create or replace function the_freeze_passes(case_id uuid, old jsonb, new jsonb) returns boolean
      language sql security definer set search_path = pg_catalog as $$
      select not exists (select 1 from public.cases c where c.id = the_freeze_passes.case_id)
-         or coalesce(new - 'created_by' - 'updated_by' = old - 'created_by' - 'updated_by', false)
+         or coalesce(new - 'created_by' - 'updated_by' - 'evidence_id'
+                     = old - 'created_by' - 'updated_by' - 'evidence_id', false)
    $$`,
   `create or replace function refuse_a_change_to_a_sent_report() returns trigger
      language plpgsql as $$

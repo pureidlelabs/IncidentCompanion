@@ -87,7 +87,7 @@ The rules the store keeps are statements the schema's own tooling does not manag
 
 A part's write waits for a send already deciding on its report and then reads the stamp that send left. That is what closes the window between checking a report and writing to it: the check and the write are one statement.
 
-A write issued by the store itself on behalf of another write passes: a case deleted with its reports, and an account deleted and nulled out of what it wrote. Neither is a change to what was sent. No other such write passes, so removing what a sent report points at, the evidence a part draws or the draft it corrects, is refused with the sent report's refusal.
+A write issued by the store itself on behalf of another write passes: a case deleted with its reports, and an account deleted and nulled out of what it wrote. A piece of evidence removed from under a sent figure passes too, clearing the part's pointer to it: the figure was frozen with the document, and is drawn by its content. None of the three is a change to what was sent. No other such write passes, so removing the report a sent report corrects is refused with the sent report's refusal.
 
 The refusal names the report and when it was sent, and every door answers it with the one refusal a client can read.
 

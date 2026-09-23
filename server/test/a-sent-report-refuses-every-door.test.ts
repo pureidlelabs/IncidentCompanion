@@ -22,7 +22,6 @@ describe.skipIf(!runnable)('a sent report, written to through the app', () => {
   let sent: { id: string; version: number }
   let parts: Block[]
   let elsewhere: Block
-  let drawn: { id: string; version: number }
   let corrected: { id: string; version: number }
 
   beforeAll(async () => {
@@ -37,13 +36,6 @@ describe.skipIf(!runnable)('a sent report, written to through the app', () => {
     corrected = (await (await call(`/cases/${caseId}/reports/${earlier.id}`)).json()) as { id: string; version: number }
     const owner = new Client({ connectionString: process.env.TEST_DATABASE_URL })
     await owner.connect()
-    drawn = (
-      await owner.query<{ id: string; version: number }>(
-        `insert into evidence (case_id, name) values ($1, 'screenshot') returning id, version`,
-        [caseId],
-      )
-    ).rows[0]!
-    await owner.query('update report_blocks set evidence_id = $1 where id = $2', [drawn.id, draft.blocks[1]!.id])
     await owner.query('update reports set supersedes = $1 where id = $2', [corrected.id, draft.id])
     await owner.end()
     const answered = await call(`/cases/${caseId}/reports/${draft.id}/send`, 'POST')
@@ -91,10 +83,6 @@ describe.skipIf(!runnable)('a sent report, written to through the app', () => {
     ['it is deleted', () => call(`/cases/${caseId}/reports/${sent.id}?version=${String(sent.version)}`, 'DELETE')],
     ['its missing sections are restored', () => call(`/cases/${caseId}/reports/${sent.id}/restore-sections`, 'POST')],
     ['it is sent again', () => call(`/cases/${caseId}/reports/${sent.id}/send`, 'POST')],
-    [
-      'the evidence one of its parts draws is deleted',
-      () => call(`/cases/${caseId}/evidence/${drawn.id}?version=${String(drawn.version)}`, 'DELETE'),
-    ],
     [
       'the draft it corrects is deleted',
       () => call(`/cases/${caseId}/reports/${corrected.id}?version=${String(corrected.version)}`, 'DELETE'),

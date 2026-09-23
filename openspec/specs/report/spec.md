@@ -65,12 +65,12 @@ Once a report has been sent it MUST NOT change. Not its parts, not their order, 
 - AND they are told the report was sent, and when
 - AND the report still holds exactly the prose that was sent
 
-#### Scenario: What a sent report points at is removed
+#### Scenario: The report a sent report corrects is removed
 
-- GIVEN a sent report correcting an earlier draft, with a part drawing a piece of evidence
-- WHEN anybody removes that evidence or that draft
+- GIVEN a sent report correcting an earlier one
+- WHEN anybody removes the earlier one
 - THEN it is refused, naming the sent report and when it was sent
-- AND the sent report still points at both
+- AND the sent report still names the report it corrects
 
 ### Requirement: Sending stamps and preserves in one act
 

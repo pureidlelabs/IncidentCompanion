@@ -113,7 +113,6 @@ describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, wr
     ['a part is removed', () => sql`delete from report_blocks where id = ${sentBlock}`],
     ['a draft part is moved into it', () => sql`update report_blocks set report_id = ${sentId} where id = ${draftBlock}`],
     ['one of its parts is moved out', () => sql`update report_blocks set report_id = ${draftId} where id = ${sentBlock}`],
-    ['the evidence one of its parts draws is deleted', () => sql`delete from evidence where id = ${drawn}`],
     ['the draft it corrects is deleted', () => sql`delete from reports where id = ${corrected}`],
   ]
 
@@ -155,6 +154,23 @@ describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, wr
     expect(await rows(sql`select updated_by, sent_at is not null as sent from reports where id = ${draftId}`)).toEqual([
       { updated_by: null, sent: true },
     ])
+  })
+
+  it('lets the evidence a sent figure draws go, clearing only the pointer to it', async () => {
+    const [was] = await snapshot()
+
+    expect(await refusedAsApp(caseId, sql`delete from evidence where id = ${drawn}`)).toEqual({})
+
+    const [now] = (await snapshot()) as [{ blocks: { id: string; evidence_id: string | null }[] }]
+    const pointer = (row: { blocks: { id: string; evidence_id: string | null }[] }) =>
+      row.blocks.find((block) => block.id === sentBlock)?.evidence_id
+    expect(pointer(was as never)).toBe(drawn)
+    expect(pointer(now)).toBeNull()
+    const cleared = (row: { blocks: { id: string }[] }) => ({
+      ...row,
+      blocks: row.blocks.map((block) => ({ ...block, evidence_id: null })),
+    })
+    expect(cleared(now)).toEqual(cleared(was as never))
   })
 
   it('lets the case be deleted with its sent report in it', async () => {
