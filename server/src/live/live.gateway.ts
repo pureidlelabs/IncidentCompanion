@@ -398,8 +398,9 @@ export class LiveGateway implements OnApplicationShutdown {
      * report document, and the refcount in `ProseService` is what keeps it
      * alive for the second when the first closes.
      *
-     * The promise, not the document, so two frames for one field in one tick
-     * take one reader between them.
+     * The promise, not the document: a `reports` change arrives outside the
+     * frame sequence, so one announced while a document is still opening has
+     * to mark it stale once it has opened.
      */
     const opened = new Map<string, Promise<OpenDocument | null>>()
 
@@ -466,6 +467,10 @@ export class LiveGateway implements OnApplicationShutdown {
         .then(async () => {
           if (await ready) await this.onFrame(member, live, opened, claims, raw)
         })
+        // One failed frame must not stop the ones behind it, nor the leave.
+        .catch((error: unknown) => {
+          this.log.warn(`could not apply a frame from ${member.sessionId}: ${String(error)}`)
+        })
         .finally(() => {
           waiting -= 1
         })
@@ -474,7 +479,7 @@ export class LiveGateway implements OnApplicationShutdown {
     await joined
   }
 
-  /** One frame from the client, acted on to completion. Never rejects. */
+  /** One frame from the client, acted on to completion. */
   private async onFrame(
     member: Member,
     live: WebSocket,
@@ -482,40 +487,37 @@ export class LiveGateway implements OnApplicationShutdown {
     claims: Set<string>,
     raw: Buffer,
   ): Promise<void> {
-    let message: { type?: unknown; table?: unknown; id?: unknown; field?: unknown; update?: unknown }
+    let message: { type?: unknown; table?: unknown; id?: unknown; field?: unknown; update?: unknown } | null
     try {
       message = JSON.parse(raw.toString()) as typeof message
     } catch {
       return // A frame this build does not understand is ignored, not fatal.
     }
+    // `null` parses, and reading a field off it throws.
+    if (typeof message !== 'object' || message === null) return
 
-    try {
-      /**
-       * **Prose is routed before the claim gate**, which requires `table` and
-       * `id` and returns early without them. A prose frame carries `field` and
-       * `update` instead, so leaving it below that check is a socket that
-       * silently drops every keystroke - which is exactly what it did.
-       */
-      if (message.type === 'prose.sync' || message.type === 'prose.awareness') {
-        const field = typeof message.field === 'string' ? message.field : null
-        const update = typeof message.update === 'string' ? message.update : null
-        if (!field || !update) return
-        await this.onProse(member, live, opened, message.type, field, update)
-        return
-      }
+    /**
+     * **Prose is routed before the claim gate**, which requires `table` and
+     * `id` and returns early without them. A prose frame carries `field` and
+     * `update` instead, so leaving it below that check is a socket that
+     * silently drops every keystroke - which is exactly what it did.
+     */
+    if (message.type === 'prose.sync' || message.type === 'prose.awareness') {
+      const field = typeof message.field === 'string' ? message.field : null
+      const update = typeof message.update === 'string' ? message.update : null
+      if (!field || !update) return
+      await this.onProse(member, live, opened, message.type, field, update)
+      return
+    }
 
-      const table = typeof message.table === 'string' ? message.table : null
-      const id = typeof message.id === 'string' ? message.id : null
-      if (!table || !id) return
+    const table = typeof message.table === 'string' ? message.table : null
+    const id = typeof message.id === 'string' ? message.id : null
+    if (!table || !id) return
 
-      if (message.type === 'claim') await this.onClaim(member, live, claims, table, id)
-      if (message.type === 'release') {
-        claims.delete(`${table}:${id}`)
-        await this.channel.release(member, table, id)
-      }
-    } catch (error) {
-      // One failed frame must not stop the ones behind it.
-      this.log.warn(`could not apply a ${String(message.type)}: ${String(error)}`)
+    if (message.type === 'claim') await this.onClaim(member, live, claims, table, id)
+    if (message.type === 'release') {
+      claims.delete(`${table}:${id}`)
+      await this.channel.release(member, table, id)
     }
   }
 
@@ -535,15 +537,13 @@ export class LiveGateway implements OnApplicationShutdown {
     if (!CLAIM_TABLE.test(table) || !CLAIM_ID.test(id)) return
     const field = `${table}:${id}`
     if (!claims.has(field) && claims.size >= CLAIMS_PER_CONNECTION) return
-    // Counted before the await: a loop of frames arrives in one tick.
-    claims.add(field)
 
     const level = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
     if (level !== 'write' && level !== 'delete') {
-      claims.delete(field)
       live.send(JSON.stringify({ type: 'claim.refused', table, id, reason: 'read-only' }))
       return
     }
+    claims.add(field)
     await this.channel.claim(member, table, id)
   }
 
