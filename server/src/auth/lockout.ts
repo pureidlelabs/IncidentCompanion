@@ -10,8 +10,9 @@
  * carries a password one and is a hosted plugin needing an API key, which core
  * may not have.
  *
- * The arithmetic lives here rather than beside the password check so a unit test can
- * hold it. What `checkPassword` in `auth.config.ts` owns is when to ask.
+ * The arithmetic lives here rather than beside the password check so a unit
+ * test can hold it. What `checkPassword` in `auth.config.ts` owns is when to
+ * ask.
  * -> <https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html>
  */
 import {
