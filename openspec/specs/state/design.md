@@ -8,11 +8,9 @@
 
 **Evidence is deduplicated within a case and never across one.** The same bytes attached in two cases are two stored artefacts.
 
-**Inside a case the database holds, the database is the authority on what the case holds.** An evidence directory is kept with the database it was written beside; bytes that database's evidence records and sent reports do not name are removed at start, whichever copy is newer.
+**Nothing is removed at start.** What the database does not name is counted and left: the database may be older than the directory, rebuilt, or not the one the directory was written beside, and the bytes may be the only copy. An operator decides what to do with them.
 
-**A case the database does not hold is not a deleted case.** Its artefacts leave the install on the install's record of its deletion, or with the rebuild that removes a demonstration. Bytes of a case no database holds and no record says was deleted stay until an operator removes them.
-
-**A deleted or replaced evidence row's bytes go at the next start**, not at the moment of deletion.
+**One process writes an install's evidence.** Acts on one case's artefacts are put in order within that process.
 
 # Design
 
@@ -68,9 +66,11 @@ The wrapping is applied on the way in and is what the store holds. Nothing in th
 
 **An import creates its case before its artefacts land**, so they are stored under the case they belong to and a refused import removes that case's artefacts whole.
 
-**Deletion removes a case's artefacts after the case is gone.** A failure there does not undo the deletion; the start removes what is left, because the record of the deletion outlives the case. A demonstration's removal leaves no record, so the rebuild that removes demonstrations removes their artefacts once it commits, from the directory the server writes.
+**Bytes leave a case at the moment the case stops naming them.** Deleting a record, alone or in a selection, replacing its file, and an attachment refused because its record moved each ask the case, once the write has committed, whether anything in it still names those bytes -- another record, or a report it sent, read by the definition render draws from -- and remove them if not. Reading an archive asks the same of every member it stored, once the new case has committed.
 
-**At start, before the install serves, what nothing names is removed.** The cases are asked once, for the removal and the count together: what each case's evidence records say it holds and which figures its sent reports place, read by the definition render draws from, naming the case in every question. Every other file in that case goes. A case the database does not list goes only when the install's record of deletions names it, and a database that does not list a case is read as knowing nothing about it. What an earlier layout left outside any case directory goes too, since nothing reads it. A file written within the last hour is left, because an upload's bytes land before the row naming them commits and an import's before its whole case does; storing bytes a case already holds counts as writing them.
+**Within a case, the bytes landing and the record naming them are one act.** An attachment is hashed and sealed before it waits; the wait covers placing the file and writing the record, and a removal in that case waits for it, so it never finds bytes another record is about to name.
+
+**A case's deletion takes its directory with it**, in the same ordered act as its deletion. A failure there does not undo the deletion; it is logged, and the census counts what is left. The demo rebuild removes the directories of the demonstrations it deletes, from the directory the server writes.
 
 ## Recovery is exercised, not assumed
 
@@ -81,6 +81,8 @@ An install can produce a copy of its durable state and return to that copy. Retu
 An install reconciles the artefacts its records name against the artefacts it holds, at start and on demand, so a restore reports what it is short of instead of waiting to be found out.
 
 **Holding the bytes is the question, not naming a digest.** A record carries the digest of the file it stands for whether the bytes are here or in an evidence locker somewhere else, and evidence held elsewhere is the ordinary case rather than the exception. Counting every digest would tell an install that received a handover without its files that it has lost them, at every start, with no action that clears it -- and a standing false alarm is how the line stops being read, which is the failure the requirement exists to prevent.
+
+**What nothing names is counted beside it and never removed**: files in a case its records and sent reports leave out, in a directory whose case the database does not hold, and outside any case. It is said at start and served with the other counts.
 
 **The count is said twice because two moments ask it.** At start, for the operator watching a restore come up; in the install's own description, for the same operator once the restore is finished and the start-up line has scrolled away. The second is also what reports the evidence whole again when the artefacts are put back.
 

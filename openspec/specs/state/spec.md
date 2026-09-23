@@ -242,9 +242,9 @@ Nothing produced MUST say whether the install holds an artefact another case sto
 
 The same bytes attached in two cases MUST be held by each on its own, so that neither case's fate reaches the other's and neither is told what the other called the file.
 
-What a case stored MUST leave the install with the case. Bytes a case holds that none of its evidence records says it holds, and that no report it sent was sent with, MUST NOT outlive the next start.
+What a case stored MUST leave the install with the case. Bytes MUST leave a case once nothing in it names them: when the evidence record naming them is deleted or comes to name other bytes, unless another of its records still names them or a report it sent was sent with them. Bytes that arrive for no record the case keeps MUST NOT stay either.
 
-A database that does not hold a case MUST NOT be read as that case's deletion. A database rebuilt, or restored from an older copy, beside the artefacts would otherwise remove what it was restored to find: what a case stored leaves the install when the install records the case's deletion, or when demonstration content is removed.
+Starting an install MUST remove nothing it finds beside it. A database restored from an older copy, rebuilt, or pointed at the wrong directory has no record of bytes that may be the only copy there is, so the install MUST say how many stored artefacts nothing in it names, at start and in its own description, and leave them for an operator.
 
 #### Scenario: A digest is named in another case
 
@@ -276,14 +276,37 @@ A database that does not hold a case MUST NOT be read as that case's deletion. A
 
 #### Scenario: An artefact nothing names any more
 
-- GIVEN bytes a case holds whose evidence record was deleted or now names other bytes, and which no report the case sent was sent with
-- WHEN the install next starts
-- THEN they are gone
+- GIVEN bytes an evidence record of a case names
+- WHEN the record is deleted, alone or in a selection, or comes to name other bytes
+- THEN the bytes are gone from that case
+- AND bytes another of its records still names, or another case holds, are kept
 - AND every report the case sent still draws each figure it was sent with
+
+#### Scenario: Bytes are attached while a record naming them goes
+
+- GIVEN bytes one evidence record of a case names
+- WHEN the same bytes are attached to another of its records as the first is deleted
+- THEN the second record's file is still served
+
+#### Scenario: Bytes arrive that no record comes to name
+
+- GIVEN an attachment refused because its record changed while the bytes arrived
+- OR an archive carrying bytes none of its records name
+- WHEN the attachment is refused, or the archive is read in
+- THEN the case holds none of those bytes
 
 #### Scenario: The install starts beside a database that does not hold a case
 
 - GIVEN artefacts a case stored
-- AND a database, rebuilt or restored from an older copy, that does not hold the case and records no deletion of it
+- AND a database, rebuilt or restored from an older copy, that does not hold the case
 - WHEN the install starts
 - THEN the case's artefacts are still there
+- AND the install says how many stored artefacts nothing names
+
+#### Scenario: The install starts beside a database older than a record
+
+- GIVEN bytes an evidence record of a case named
+- AND a database restored from a copy that holds the case but not that record
+- WHEN the install starts
+- THEN the bytes are still there
+- AND the install says how many stored artefacts nothing names

@@ -592,7 +592,10 @@
 | An artefact is reached only through the case that holds it | A handover is read in by somebody who does not reach the case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | An artefact is reached only through the case that holds it | The same artefact is attached in two cases | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | An artefact is reached only through the case that holds it | An artefact nothing names any more | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | Bytes are attached while a record naming them goes | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | Bytes arrive that no record comes to name | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
 | An artefact is reached only through the case that holds it | The install starts beside a database that does not hold a case | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | The install starts beside a database older than a record | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
 
 ## the-api
 
