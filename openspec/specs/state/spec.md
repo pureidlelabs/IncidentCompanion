@@ -194,7 +194,6 @@ Nothing MUST expand, execute or interpret an artefact to decide what it is.
 
 What it MUST do is state the assumption: an install MUST be able to tell an operator that its durable state, including evidence, is stored unencrypted by the application and relies on the storage beneath it. An operator who has not encrypted that storage MUST be able to learn it from the application rather than from an auditor.
 
-
 ### Requirement: What is stored can be recovered, and the recovery is proven
 
 An install MUST be able to produce a copy of its durable state, and MUST be able to return to that copy.
@@ -206,6 +205,8 @@ Ephemeral state MUST NOT be part of a copy. Restoring MUST NOT restore somebody'
 **Evidence is copied beside the database, not inside it.** Artefacts are large, they never change once written, and copying them into every database dump would make the routine copy expensive enough that an operator takes it less often — which is the failure that matters more than any of the others here.
 
 The cost of that is two things an operator must keep together, and the application MUST answer it rather than leave it to discipline. A copy of the database MUST name which artefacts it expects to find beside it, so that a restore can say what is missing rather than discovering it when somebody opens a case. Neither copy MUST be presented as sufficient alone.
+
+A copy MUST be checked before it is trusted, and a copy the install cannot return to whole MUST be refused before anything is changed.
 
 #### Scenario: An install is restored from a copy
 
@@ -234,3 +235,16 @@ The cost of that is two things an operator must keep together, and the applicati
 - WHEN the artefacts are put back beside it
 - THEN the evidence is whole again
 - AND nothing had to be re-recorded
+
+#### Scenario: A damaged copy is checked
+
+- GIVEN a copy whose database or evidence was cut short after it was taken
+- WHEN it is checked
+- THEN it is refused, saying which part is not whole
+
+#### Scenario: A copy from another shape is restored
+
+- GIVEN a copy taken under a different shape of the store
+- WHEN it is restored
+- THEN it is refused, saying what the copy is and what was expected
+- AND the install is as it was before the attempt

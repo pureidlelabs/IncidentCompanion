@@ -52,6 +52,12 @@ The wrapping is applied on the way in and is what the store holds. Nothing in th
 
 An install can produce a copy of its durable state and return to that copy. Returning is an ordinary operator action with a stated procedure rather than something first attempted under pressure.
 
+A copy is taken from the running install: the database as one consistent dump without session or verification rows, then the shape of the store, then an archive of the evidence directory. Evidence is never rewritten, so an archive taken after the dump holds every artefact the dump names.
+
+Checking a copy restores its database into a scratch database, which a truncated dump cannot survive, refuses a copy carrying session rows or lacking their tables, and requires every artefact the restored rows name to be in the evidence archive.
+
+Returning to a copy checks it first, and refuses a copy taken under another shape of the store before changing anything. It then stops the application and the edge, replaces the database in one transaction as the identity that owns the schema, empties the ephemeral store so nobody stays signed in, replaces the evidence directory, and starts the install again, which runs preparation over the restored store. It replaces the install's state; it does not merge.
+
 ## What an install expects beside it is counted at start, and never fatal
 
 An install reconciles the artefacts its records name against the artefacts it holds, at start and on demand, so a restore reports what it is short of instead of waiting to be found out.
