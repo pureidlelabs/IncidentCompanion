@@ -114,6 +114,79 @@ test.describe('a case field another analyst saves while this one is in it', () =
     }
   })
 
+  test('stores this analyst value over theirs when this analyst keeps it', async ({
+    browser,
+    baseURL,
+  }) => {
+    const api = await asAdminApi(baseURL ?? '')
+    const caseId = await fixtureCaseId(api)
+    await api.dispose()
+    const a = await asPersona(browser, ADMIN)
+    const b = await asPersona(browser, ANALYST)
+    try {
+      const mark = String(Date.now())
+      await properties(a.page, caseId)
+      await properties(b.page, caseId)
+      const sent = patchesFrom(a.page, caseId)
+
+      const analyst = a.page.getByRole('textbox', { name: 'Analyst', exact: true })
+      await analyst.fill(`A ${mark}`)
+      const repaint = nextRead(a.page, caseId)
+      await save(b.page, 'Analyst', `B ${mark}`)
+      await repaint
+      const band = a.page.getByRole('group', { name: /changed Analyst/ })
+      await band.getByRole('button', { name: 'Keep mine' }).click()
+      await settle(a.page)
+
+      await expect(band).toHaveCount(0)
+      await expect(analyst).toHaveValue(`A ${mark}`)
+      expect({
+        stored: (await stored(baseURL ?? '', caseId)).analyst,
+        statuses: sent.map((one) => one.status),
+      }).toEqual({ stored: `A ${mark}`, statuses: [200] })
+    } finally {
+      await a.context.close()
+      await b.context.close()
+    }
+  })
+
+  test('stores nothing when this analyst takes the other value, and shows it', async ({
+    browser,
+    baseURL,
+  }) => {
+    const api = await asAdminApi(baseURL ?? '')
+    const caseId = await fixtureCaseId(api)
+    await api.dispose()
+    const a = await asPersona(browser, ADMIN)
+    const b = await asPersona(browser, ANALYST)
+    try {
+      const mark = String(Date.now())
+      await properties(a.page, caseId)
+      await properties(b.page, caseId)
+      const sent = patchesFrom(a.page, caseId)
+
+      const analyst = a.page.getByRole('textbox', { name: 'Analyst', exact: true })
+      await analyst.fill(`A ${mark}`)
+      const repaint = nextRead(a.page, caseId)
+      await save(b.page, 'Analyst', `B ${mark}`)
+      await repaint
+      const band = a.page.getByRole('group', { name: /changed Analyst/ })
+      await band.getByRole('button', { name: 'Take theirs' }).click()
+      await analyst.blur()
+      await settle(a.page)
+
+      await expect(analyst).toHaveValue(`B ${mark}`)
+      await expect(band).toHaveCount(0)
+      expect({ stored: (await stored(baseURL ?? '', caseId)).analyst, sent }).toEqual({
+        stored: `B ${mark}`,
+        sent: [],
+      })
+    } finally {
+      await a.context.close()
+      await b.context.close()
+    }
+  })
+
   test('sends nothing for a field this analyst only put the cursor in', async ({
     browser,
     baseURL,
