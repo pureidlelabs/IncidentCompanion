@@ -126,7 +126,7 @@ An administrator can grant themselves data access, and that is deliberate. The p
 
 The size and shape of the installation and the resources of the host it runs on MUST be reachable by an administrator alone.
 
-That is its storage, its open connections, how many rows each of its tables holds, and the memory, processor and free space available to it. None of it is what a case holds, and none of it is an account's own.
+That is its storage and how much it holds there, its open connections, how many rows each of its tables holds, and the memory, processor and free space available to it. None of it is what a case holds, and none of it is an account's own.
 
 **A count of rows answers the question the route beside it refuses.** Who may sign in is management-plane, so the account list is an administrator's; a per-table row count reports how many accounts exist without naming them. A boundary one route holds and the table beside it reports around is not held.
 
@@ -137,7 +137,7 @@ Where a screen is drawn for these facts, it MUST NOT be offered to an account th
 #### Scenario: An analyst asks what the install holds
 
 - GIVEN an account signed in as an analyst
-- WHEN they request the install's table sizes and row counts
+- WHEN they request where the install keeps its data, how many artefacts it holds, or its table sizes and row counts
 - THEN they are refused
 
 #### Scenario: An analyst asks what the host has left
