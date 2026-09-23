@@ -11,6 +11,7 @@ import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CasesService } from '../cases/cases.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DEMO_REPORTS } from '../demos/reports.js'
 import { LibraryService } from '../library/library.service.js'
 import { ProseService } from '../prose/prose.service.js'
@@ -72,7 +73,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('filing the demo reports', (
 
     await reseedDemos(seed!)
 
-    const cases_ = new CasesService(db!, {
+    const cases_ = new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)

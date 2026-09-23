@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 import { reseedDemos } from '../../test/demo-fixture.js'
@@ -65,7 +66,7 @@ function collections(): { name: string; make: () => Writable }[] {
     return {
       name: path.replace('api/cases/:caseId/', ''),
       make: () =>
-        new (controller as new (s: CollectionService) => Writable)(new CollectionService(db!)),
+        new (controller as new (s: CollectionService) => Writable)(new CollectionService(db!, suiteStore())),
     }
   })
 }

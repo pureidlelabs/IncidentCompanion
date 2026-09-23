@@ -238,5 +238,5 @@ A missing classification is work, not a fault: a dashed edge, never a danger col
 | What is the app for? | `openspec/constitution.md`, and the capability specifications beside it |
 | Which token, and measured at what? | `ui/src/styles/tokens.css` |
 | Why is this component shaped like that? | its own docstring |
-| What is coming? | `openspec/changes/`, where work in flight is a delta against the specifications |
+| What is coming? | the open issues, and `openspec/changes/` on the branch doing the work, where it is a delta against the specifications |
 | What an analyst-facing string may say | `rules/writing-style.md`, and `tests/docs/test_ui_copy.py`, which enforces it |

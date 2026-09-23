@@ -12,7 +12,7 @@
  * discriminated union, and per-kind patch validation.
  */
 import { CreatedIdsDto, DeletedDto } from './acknowledged.js'
-import { BULK_LIMIT, bulkBodySchema, parsed, versionRead } from './write-door.js'
+import { BULK_LIMIT, bulkBodySchema, parsed, selectionSchema, versionRead } from './write-door.js'
 import {
   Inject,
   UnprocessableEntityException,
@@ -53,7 +53,6 @@ import { actionSchema } from '../domain/entities/action.js'
 import { caseNoteSchema } from '../domain/entities/case-note.js'
 import { reportBlockSchema, reportSchema } from '../domain/entities/report.js'
 import { caseOwnedRowSchema, patchSchema } from '../domain/field-spec.js'
-import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * What an entity route answers with: the envelope guaranteed and verified, the
@@ -199,9 +198,7 @@ abstract class EntityReads {
     const selection = parsed(
       z
         .object({
-          ids: z
-            .array(z.object({ id: z.uuid(), version: rowVersion() }).strict())
-            .max(BULK_LIMIT),
+          ids: selectionSchema,
           fields: z.record(z.string(), z.unknown()),
         })
         .strict(),

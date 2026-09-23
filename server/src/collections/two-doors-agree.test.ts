@@ -26,6 +26,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, user } from '../db/schema/index.js'
 import { BULK_TARGETS, COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { patchSchema } from '../domain/field-spec.js'
@@ -64,7 +65,9 @@ function controllerFor(name: string): Doors {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Doors)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Doors)(
+    new CollectionService(db!, suiteStore()),
+  )
 }
 
 /**

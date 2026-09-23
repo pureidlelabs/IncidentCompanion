@@ -23,6 +23,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, reportBlocks, reports, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { reseedDemos } from '../../test/demo-fixture.js'
@@ -53,10 +54,9 @@ function controllerFor(name: string): Arrangeable {
   const channel = {
     announce: () => {},
     othersOn: () => Promise.resolve([]),
-    holderOf: () => Promise.resolve(null),
   }
   return new (found as new (s: CollectionService) => Arrangeable)(
-    new CollectionService(db!, channel as never),
+    new CollectionService(db!, suiteStore(), channel as never),
   )
 }
 

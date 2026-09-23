@@ -107,7 +107,7 @@ This is an **agent-driven** operation - you will read delta specs and directly e
 
 5. **Validate updated main specs**
 
-   Run `openspec validate --specs` with the same selected-root flags used earlier. If validation fails, report the problems and do not claim the sync succeeded.
+   Run `npx --no-install openspec validate --all --strict` with the same selected-root flags used earlier. If validation fails, report the problems and do not claim the sync succeeded.
 
 6. **Show summary**
 

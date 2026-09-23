@@ -127,23 +127,6 @@ export class CaseChannel {
   }
 
   /**
-   * Who holds this row, if anyone - for the write path rather than the screen.
-   *
-   * **A claim is advisory until something reads it before writing.** The
-   * pencil being disabled is a property of one browser; this is what makes
-   * "checked out" true of the API as well.
-   */
-  async holderOf(
-    caseId: string,
-    table: string,
-    entryId: string,
-  ): Promise<{ userId: string; username: string } | null> {
-    const held = await this.store.claims(caseId)
-    const one = held.find((claim) => claim.table === table && claim.entryId === entryId)
-    return one ? { userId: one.userId, username: one.username } : null
-  }
-
-  /**
    * The other analysts on this case, by display name.
    *
    * **By `userId`, so a second tab is not a second person.** The roster is per

@@ -20,6 +20,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 import { reseedDemos } from '../../test/demo-fixture.js'
@@ -105,7 +106,7 @@ describe.skipIf(!db)('the entity collections serve their rows', () => {
       controller as new (s: CollectionService) => {
         list(id: string): Promise<unknown[]>
       }
-    )(new CollectionService(db!))
+    )(new CollectionService(db!, suiteStore()))
     expect(await instance.list(caseId)).toHaveLength(expected)
   })
 
@@ -123,7 +124,7 @@ describe.skipIf(!db)('the entity collections serve their rows', () => {
     const accountsController = ENTITY_CONTROLLERS.find(
       (c) => Reflect.getMetadata(PATH_METADATA, c) === 'api/cases/:caseId/accounts',
     )!
-    const service = new CollectionService(db!)
+    const service = new CollectionService(db!, suiteStore())
     const rows = (await new (
       accountsController as new (s: CollectionService) => {
         list(id: string): Promise<Record<string, unknown>[]>

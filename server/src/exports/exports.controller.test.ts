@@ -12,6 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { ExportsController } from './exports.controller.js'
 import { ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, systems, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { reseedDemos } from '../../test/demo-fixture.js'
@@ -44,7 +45,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('exporting a collection as C
     await reseedDemos(seed!)
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
-    const collections = new CollectionService(db!)
+    const collections = new CollectionService(db!, suiteStore())
     controller = new ExportsController(collections, new ImportService(collections))
 
     /**

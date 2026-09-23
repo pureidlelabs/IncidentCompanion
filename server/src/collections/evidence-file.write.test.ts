@@ -27,6 +27,7 @@ import { withCase } from '../db/scope.js'
 import { evidenceSchema } from '../domain/entities/evidence.js'
 import { patchSchema } from '../domain/field-spec.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -167,10 +168,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     store = new EvidenceStore({ get: () => root } as never, policy)
     cases_ = new CasesService(
       db!,
+      store,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
     controller = new EvidenceFileController(db!, store)
-    rows = new EvidenceController(new CollectionService(db!))
+    rows = new EvidenceController(new CollectionService(db!, suiteStore()))
   })
 
   afterAll(async () => {
@@ -285,22 +287,22 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
    * body, and writes against the version it read, so a patch landing in between
    * is the ordinary case rather than a contrived one. -> #638
    *
-   * Arranged inside `put`, which is where an upload's time actually goes.
+   * Arranged inside `seal`, which is where an upload's time actually goes.
    */
   it('answers a row that moved mid-upload with a conflict naming the version it reached', async () => {
     const { caseId, id } = await caseWithRow()
     const [before] = await seed!.select().from(evidence).where(eq(evidence.id, id))
-    const racing = {
-      put: async (request: never, name?: string) => {
+    const racing = Object.assign(Object.create(store) as EvidenceStore, {
+      seal: async (request: never, name?: string) => {
         await rows.update(
           caseId,
           id,
           { version: before!.version, name: 'Renamed while uploading' },
           { user: { id: actorId } } as never,
         )
-        return store.put(request, name)
+        return store.seal(request, name)
       },
-    } as unknown as EvidenceStore
+    })
 
     await expect(
       new EvidenceFileController(db!, racing).attach(caseId, id, upload('mail body'), {
@@ -312,6 +314,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     const [after] = await seed!.select().from(evidence).where(eq(evidence.id, id))
     expect(after!.name).toBe('Renamed while uploading')
     expect(after!.storedAt).toBeNull()
+    expect(await store.held(caseId), 'the refused attach left its bytes in the case').toEqual(new Set())
   })
 
   it('hands back a zip under `infected`, holding the exact bytes', async () => {
@@ -369,7 +372,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
       user: { id: actorId },
     } as never)
     const [row] = await seed!.select().from(evidence).where(eq(evidence.id, id))
-    expect(Buffer.from((await store.read(row!.hash))!).toString()).toBe('the exact bytes')
+    expect(Buffer.from((await store.read(caseId, row!.hash))!).toString()).toBe('the exact bytes')
   })
 
   it('names the download after the file, not after the digest', async () => {
@@ -428,7 +431,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
       user: { id: actorId },
     } as never)
     const [row] = await seed!.select().from(evidence).where(eq(evidence.id, id))
-    await rm(join(root, row!.hash), { force: true })
+    await rm(join(root, caseId, row!.hash), { force: true })
 
     await expect(
       controller.download(caseId, id, recorder() as never),
@@ -448,7 +451,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     ).rejects.toMatchObject({ status: 404 })
   })
 
-  it('stores identical content once, under the one digest', async () => {
+  it('names identical content by one digest, and holds it in each case that attached it', async () => {
     const a = await caseWithRow()
     const b = await caseWithRow()
     const first = await controller.attach(a.caseId, a.id, upload('same bytes'), {
@@ -459,41 +462,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     } as never)
 
     expect(second.hash).toBe(first.hash)
-    // And both rows still resolve, which is the half that would break if the
-    // store had treated the second write as a collision.
-    expect(await store.verify(first.hash)).toBe(true)
-  })
-
-  /**
-   * What happens to the bytes when the row naming them is deleted.
-   *
-   * **The store is retain-on-delete, and these pin it rather than endorse it.**
-   * `EvidenceStore.forget` has no caller outside this file, so a deleted
-   * evidence row leaves its artefact on disk for the life of the install. The
-   * second and third tests are the reason that is not simply a bug to fix in
-   * `CollectionService.remove`: the digest is shared across cases, and the
-   * count that would make a delete safe is not visible from where the delete
-   * runs.
-   */
-  it('leaves the artefact on disk when the row naming it is deleted', async () => {
-    const { caseId, id } = await caseWithRow()
-    const written = await controller.attach(caseId, id, upload('an orphan in waiting'), {
-      user: { id: actorId },
-    } as never)
-    const [row] = await seed!.select().from(evidence).where(eq(evidence.id, id))
-
-    await rows.remove(caseId, id, String(row!.version), { user: { id: actorId } } as never)
-
-    expect(await seed!.select().from(evidence).where(eq(evidence.id, id))).toHaveLength(0)
-    // **Retained, deliberately.** Change this only alongside a decision about
-    // how long a deleted artefact is kept - it is malware in an evidence
-    // store, so both answers are a product call rather than a cleanup.
-    expect(await store.verify(written.hash)).toBe(true)
+    expect(await store.verify(a.caseId, first.hash)).toBe(true)
+    expect(await store.verify(b.caseId, second.hash)).toBe(true)
   })
 
   it("keeps another case's attachment when one of two rows naming a digest goes", async () => {
-    // The case a naive fix destroys: dedup means the first delete is deleting
-    // somebody else's evidence.
     const a = await caseWithRow()
     const b = await caseWithRow()
     const first = await controller.attach(a.caseId, a.id, upload('one artefact, two cases'), {
@@ -514,10 +487,9 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
   })
 
   it('cannot see the other case that names a digest from inside the scoped write', async () => {
-    // Why the count belongs in a sweep rather than in the delete. Row-level
-    // security is what a case-scoped transaction is for, so a reference count
-    // taken there answers "one" over an artefact two cases hold - and a delete
-    // conditioned on it destroys the other one.
+    // Why each case holds its own copy rather than the install counting who
+    // names one: a count taken inside a case scope answers "one" over an
+    // artefact two cases hold.
     const a = await caseWithRow()
     const b = await caseWithRow()
     const first = await controller.attach(a.caseId, a.id, upload('counted from inside'), {

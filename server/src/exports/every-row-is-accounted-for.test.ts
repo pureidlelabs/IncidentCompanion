@@ -25,6 +25,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { ExportsController } from './exports.controller.js'
 import { ImportService, type OnDuplicate } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, user } from '../db/schema/index.js'
 import { IMPORTABLE } from '../domain/collections.js'
 import { TABLES, type BulkTarget } from '../collections/registry.js'
@@ -100,7 +101,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('every row in the file is ac
     const [blank] = await seed!.insert(cases).values({ title: 'Blank' }).returning()
     emptyCaseId = blank!.id
 
-    const collections = new CollectionService(db!)
+    const collections = new CollectionService(db!, suiteStore())
     service = new ImportService(collections)
     exports_ = new ExportsController(collections, service)
   })

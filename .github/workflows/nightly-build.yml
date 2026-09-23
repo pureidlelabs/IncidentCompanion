@@ -1,10 +1,9 @@
 # What `main` actually is, nightly.
 #
-# `ci.yml` decides whether a change broke what it touched and deliberately runs
-# nothing else, which is only safe while something establishes the record it
-# measures against. It also catches what a path rule cannot: two branches green
-# apart and broken together, and drift that arrives from no merge at all -- a
-# moved base image, a yanked package, a runner changed underneath the pins.
+# `ci.yml`'s merge group decides whether the tree that lands is sound. This asks
+# what the tiers no merge group runs say, and catches drift that arrives from
+# no merge at all -- a moved base image, a yanked package, a runner changed
+# underneath the pins.
 #
 # **It runs `ci.yml` rather than restating it**, so a tier cannot exist in one
 # file and not the other. `all: true` replaces the scope, and each tier reports
@@ -100,3 +99,49 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       all: true
+
+  # **A red night is said where somebody reads it.** A scheduled run reports
+  # to no pull request, so a failure opens one issue labelled `nightly-red`,
+  # or comments on the one already open. -> #89
+  report:
+    needs: [changed, nightly]
+    if: failure()
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: File the failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # The backticks are markdown for the issue and the interpolation is
+          # jq's, so neither is the shell's to expand.
+          # shellcheck disable=SC2016
+          failed="$(gh api "/repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | "- `\(.name)`"' | sort -u)"
+          [ -n "$failed" ] || failed="- (no job reported a failure; the run itself did)"
+
+          {
+            echo "**The nightly build of \`$HEAD_SHA\` failed.** [The run]($RUN_URL)"
+            echo
+            echo "Failed:"
+            echo "$failed"
+          } > body.md
+
+          gh label create nightly-red --repo "$REPO" \
+            --color B60205 --description 'The nightly build failed' 2>/dev/null || true
+          open="$(gh issue list --repo "$REPO" --label nightly-red --state open \
+            --json number --jq '.[0].number // empty')"
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body-file body.md
+          else
+            gh issue create --repo "$REPO" --title 'The nightly build is red' \
+              --label nightly-red --label bug --body-file body.md
+          fi

@@ -13,7 +13,8 @@
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq, inArray } from 'drizzle-orm'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Logger } from '@nestjs/common'
@@ -21,6 +22,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ArtefactCensus, saysAtStart, type Census } from './artefact-census.service.js'
 import { HealthModule } from './health.module.js'
+import { EvidenceStore } from '../evidence/store.js'
 import { cases, evidence, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
@@ -119,7 +121,14 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     })
   }
 
-  const census = () => new ArtefactCensus(db!, { get: () => root } as never)
+  const storeAt = (dir: string) => new EvidenceStore({ get: () => dir } as never, {} as never)
+  const census = () => new ArtefactCensus(db!, storeAt(root))
+
+  /** Bytes under `hash` in the directory the store keeps `forCase`'s artefacts in. */
+  const placed = async (hash: string, forCase = caseId) => {
+    await mkdir(join(root, forCase), { recursive: true })
+    await writeFile(join(root, forCase, hash), 'here')
+  }
 
   /**
    * What this test added, against what the install already held.
@@ -140,7 +149,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     const before = await census().take()
     await record(hashFor('a'))
     await record(hashFor('b'))
-    await writeFile(join(root, hashFor('a')), 'here')
+    await placed(hashFor('a'))
 
     const held = await since(before)
 
@@ -173,7 +182,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     const before = await census().take()
     await record('')
     await record(hashFor('d'))
-    await writeFile(join(root, hashFor('d')), 'here')
+    await placed(hashFor('d'))
 
     const held = await since(before)
 
@@ -206,10 +215,18 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     expect(held.missing, 'an install that never held those bytes is told it has lost them').toBe(0)
   })
 
+  it('does not count bytes held for another case as this case\u2019s', async () => {
+    const before = await census().take()
+    await record(hashFor('i'))
+    await placed(hashFor('i'), randomUUID())
+
+    expect((await since(before)).missing, 'a digest found under another case was counted as held').toBe(1)
+  })
+
   it('says nothing is missing on an install that holds them all', async () => {
     const before = await census().take()
     await record(hashFor('e'))
-    await writeFile(join(root, hashFor('e')), 'here')
+    await placed(hashFor('e'))
 
     expect((await since(before)).missing).toBe(0)
   })
@@ -224,7 +241,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     await record(hashFor('f'))
     expect((await since(before)).missing).toBe(1)
 
-    await writeFile(join(root, hashFor('f')), 'restored')
+    await placed(hashFor('f'))
 
     expect(
       (await since(before)).missing,
@@ -243,7 +260,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
    * answer a healthy install gives, and the exact silence #179 is about.
    */
   it('counts what the install holds when the application asks', async () => {
-    const asApp = () => new ArtefactCensus(appDb!, { get: () => root } as never)
+    const asApp = () => new ArtefactCensus(appDb!, storeAt(root))
     const before = await asApp().take()
     await record(hashFor('g'))
 
@@ -253,6 +270,20 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
       now.expected - before.expected,
       'the application sees no artefact it expects, so an install short of them cannot say so',
     ).toBe(1)
+  })
+
+  it('counts the bytes nothing names, and removes none of them', async () => {
+    await record(hashFor('1'))
+    await placed(hashFor('1'))
+    await placed(hashFor('2'))
+    await placed(hashFor('3'), randomUUID())
+    await writeFile(join(root, hashFor('4')), 'left by a store that kept no case')
+
+    const held = await census().take()
+
+    expect(held.unnamed, 'bytes nothing names were not counted').toBe(3)
+    expect(await storeAt(root).held(caseId)).toEqual(new Set([hashFor('1'), hashFor('2')]))
+    expect(await readdir(root), 'the census removed something').toHaveLength(3)
   })
 
   /**
@@ -269,9 +300,9 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
   it('reports nothing expected on an install holding no evidence', async () => {
     const empty = { select: () => ({ from: () => Promise.resolve([]) }) }
 
-    const held = await new ArtefactCensus(empty as never, { get: () => root } as never).take()
+    const held = await new ArtefactCensus(empty as never, storeAt(root)).take()
 
-    expect(held).toEqual({ expected: 0, missing: 0 })
+    expect(held).toEqual({ expected: 0, missing: 0, unnamed: 0 })
   })
 })
 
@@ -285,14 +316,14 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
  * severity is not.
  */
 describe('what an install says at start', () => {
-  it('says nothing at all when it expects no artefacts', () => {
+  it('says nothing at all when it expects no artefacts and holds none nothing names', () => {
     // The state a fresh install is in. A line here would have every new
     // install report on a restore that never happened.
-    expect(saysAtStart({ expected: 0, missing: 0 })).toBeNull()
+    expect(saysAtStart({ expected: 0, missing: 0, unnamed: 0 })).toEqual([])
   })
 
   it('warns with both numbers when it cannot find some of them', () => {
-    const said = saysAtStart({ expected: 9, missing: 4 })
+    const [said] = saysAtStart({ expected: 9, missing: 4, unnamed: 0 })
 
     expect(said?.level, 'an install short of its evidence reports at the ordinary level').toBe(
       'warn',
@@ -304,10 +335,18 @@ describe('what an install says at start', () => {
   it('confirms rather than staying silent when it holds them all', () => {
     // Silence cannot be told from a check that did not run, which is the
     // reading an operator who has just put a directory back needs to rule out.
-    const said = saysAtStart({ expected: 9, missing: 0 })
+    const [said] = saysAtStart({ expected: 9, missing: 0, unnamed: 0 })
 
     expect(said?.level).toBe('log')
     expect(said?.message).toContain('9')
+  })
+
+  it('warns how many stored artefacts nothing names', () => {
+    const said = saysAtStart({ expected: 0, missing: 0, unnamed: 7 })
+
+    expect(said).toHaveLength(1)
+    expect(said[0]?.level, 'bytes nothing names are reported below the ordinary level').toBe('warn')
+    expect(said[0]?.message, 'the line does not say how many').toContain('7')
   })
 })
 
@@ -321,16 +360,27 @@ describe('what an install says at start', () => {
 describe('the install saying it at start', () => {
   const censusOf = (held: Census | Error) =>
     ({
+      named: () => Promise.resolve(new Map()),
       take: () => (held instanceof Error ? Promise.reject(held) : Promise.resolve(held)),
     }) as never
 
   it('reports what the census counted when the application comes up', async () => {
     const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
 
-    await new HealthModule(censusOf({ expected: 9, missing: 4 })).onApplicationBootstrap()
+    await new HealthModule(censusOf({ expected: 9, missing: 4, unnamed: 0 })).onApplicationBootstrap()
 
     expect(warn, 'nothing was said at start, so the census answers only when asked').toHaveBeenCalledOnce()
     expect(warn.mock.calls[0]?.[0]).toContain('4')
+    warn.mockRestore()
+  })
+
+  it('reports what nothing names when the application comes up', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+
+    await new HealthModule(censusOf({ expected: 0, missing: 0, unnamed: 5 })).onApplicationBootstrap()
+
+    expect(warn, 'the install came up without saying it holds bytes nothing names').toHaveBeenCalledOnce()
+    expect(warn.mock.calls[0]?.[0]).toContain('5')
     warn.mockRestore()
   })
 

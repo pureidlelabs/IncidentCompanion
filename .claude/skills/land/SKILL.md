@@ -70,7 +70,7 @@ Clear the bytecode cache between mutations. A same-size, same-second revert matc
 find tests .claude -name __pycache__ -type d -exec rm -rf {} +
 ```
 
-**Did this change replace something?** Then the predecessor and its tests are in scope for *this* landing, not a later sweep — a superseded implementation never fails, because its own tests keep certifying it (four instances landed that way before this step existed; −846 lines). Retire them together, re-anchoring any property only the old tests held; the `dead-code-hunt` skill owns the steps. Genuinely deferring the removal is a decision, so it goes in the report and in a change under `openspec/changes/`, not into silence.
+**Did this change replace something?** Then the predecessor and its tests are in scope for *this* landing, not a later sweep — a superseded implementation never fails, because its own tests keep certifying it (four instances landed that way before this step existed; −846 lines). Retire them together, re-anchoring any property only the old tests held; the `dead-code-hunt` skill owns the steps. Genuinely deferring the removal is a decision, so it goes in the report and in an issue, not into silence.
 
 ## 3 — What the suite cannot see
 
@@ -122,13 +122,19 @@ The second is the half that is easy to skip: a sweep for the full old path does 
 **Only if the branch touched `openspec/`.** The delta lives under `openspec/changes/<id>/` while the branch is live; landing is where it becomes what the application says it does.
 
 ```bash
-npx --no-install openspec validate --strict
+npx --no-install openspec validate --all --strict
 ```
 
 Then sync the delta into `openspec/specs/`, archive the change into `openspec/changes/archive/`, and commit both on the branch — the `openspec-sync-specs` and `openspec-archive-change` skills drive the two steps.
 
+```bash
+IC_LANDING=1 $(bash scripts/venv_python.sh) -m pytest tests/docs/test_openspec_consistency.py -q
+```
+
+`IC_LANDING=1` arms the two checks the merge queue's run arms by itself: `openspec/changes/` holds nothing but `archive/`, and every change the branch archives reads in `openspec/specs/`. A change left behind or archived unsynced is refused there, so finding it here is cheaper.
+
 - **Before the merge, not after.** A change archived afterwards is one the release branch never carried, and `specs/` then describes a release that has already moved.
-- **`validate --strict` is owed whenever the branch touched `openspec/`**, at the same moment as the lint. It is a fact rather than a judgement, so depth does not apply. → `rules/git-workflow.md` §7a
+- **`validate --all --strict` is owed whenever the branch touched `openspec/`**, at the same moment as the lint. It is a fact rather than a judgement, so depth does not apply. → `rules/git-workflow.md` §7a
 - **The CLI is a pinned dev dependency**, so `npx --no-install openspec` runs the local binary and refuses rather than reaching npm, where `openspec` unscoped is somebody else's package. `openspec` itself is not on `PATH`.
 
 ## 7 — The lint, and it does not scale with the review

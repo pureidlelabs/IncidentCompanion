@@ -22,7 +22,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { readFile } from 'node:fs/promises'
+import { readFile, rm } from 'node:fs/promises'
 import { Client } from 'pg'
 
 import { applySchema } from '../scripts/apply-schema.mjs'
@@ -217,12 +217,21 @@ export async function teardown(): Promise<void> {
   runLock = undefined
 }
 
+/**
+ * Empties the evidence directory `vitest.config.mts` gives the suite, which
+ * belongs with the database made fresh beside it. Never an overridden one.
+ */
+async function clearSuiteEvidence(): Promise<void> {
+  await rm(fileURLToPath(new URL('../.evidence-suite', import.meta.url)), { recursive: true, force: true })
+}
+
 export async function setup(): Promise<void> {
   // **Asked for explicitly**, so the hermetic path can be exercised on a
   // machine where a server *is* reachable - otherwise it is only ever tested by
   // not having one, which is the configuration nobody runs.
   if (process.env.IC_TEST_DB === 'embedded') {
     await embedded()
+    await clearSuiteEvidence()
     await provisionPersonas()
     return
   }
@@ -235,6 +244,7 @@ export async function setup(): Promise<void> {
     await admin.connect()
   } catch {
     await embedded()
+    await clearSuiteEvidence()
     await provisionPersonas()
     return
   }
@@ -250,6 +260,7 @@ export async function setup(): Promise<void> {
   // push rather than a stale database.
   await runLock.query(`drop database if exists "${name}" with (force)`)
   await runLock.query(`create database "${name}" owner ic_migrate`)
+  await clearSuiteEvidence()
 
   // The roles are cluster-wide and already exist; this grants them on the
   // database just created and revokes what Postgres hands out by default.

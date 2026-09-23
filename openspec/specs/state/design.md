@@ -6,6 +6,12 @@
 
 **A copy that has never been restored is not a backup.** Producing one is not the whole obligation; returning to one has to be something an operator has done deliberately before an incident.
 
+**Evidence is deduplicated within a case and never across one.** The same bytes attached in two cases are two stored artefacts.
+
+**Nothing is removed at start.** What the database does not name is counted and left: the database may be older than the directory, rebuilt, or not the one the directory was written beside, and the bytes may be the only copy. An operator decides what to do with them.
+
+**One process writes an install's evidence.** Acts on one case's artefacts are put in order within that process.
+
 # Design
 
 ## Two kinds of state, decided rather than inherited
@@ -48,6 +54,24 @@ Evidence is a file taken from a compromised system, stored inside the wrapping t
 
 The wrapping is applied on the way in and is what the store holds. Nothing in the path between the store and the analyst is asked to treat the contents as inert; the wrapping is what makes that unnecessary.
 
+## An artefact belongs to the case that stored it
+
+**A case is the key, and the digest is only a name within it.** Every way into the store takes the case the bytes belong to, and the case decides where they live, so no path names bytes by digest alone. Only the store opens the evidence directory, and it answers no question without a case; which case a caller may name is decided by the caller's reach before the store is asked. A case id is checked before a path is built from it, as a digest is.
+
+**Deduplication inside a case is what content addressing is for there**: two rows naming one attachment hold one file. Across cases it would make one case's upload, deletion and filename observable from another.
+
+**An output asks only about what the case says it holds.** An evidence row carrying a digest and no record of the bytes being stored is evidence held elsewhere, and an export neither reads it nor counts it as lost.
+
+**A sent report keeps its figures.** The figures a sent report froze are named by that report for as long as it exists, so they travel in an archive and survive the removal of the rows that first placed them.
+
+**An import creates its case before its artefacts land**, so they are stored under the case they belong to and a refused import removes that case's artefacts whole.
+
+**Bytes leave a case at the moment the case stops naming them.** Deleting a record, alone or in a selection, replacing its file, and an attachment refused because its record moved each ask the case, once the write has committed, whether anything in it still names those bytes -- another record, or a report it sent, read by the definition render draws from -- and remove them if not. Reading an archive asks the same of every member it stored, once the new case has committed.
+
+**Within a case, the bytes landing and the record naming them are one act.** An attachment is hashed and sealed before it waits; the wait covers placing the file and writing the record, and a removal in that case waits for it, so it never finds bytes another record is about to name.
+
+**A case's deletion takes its directory with it**, in the same ordered act as its deletion. A failure there does not undo the deletion; it is logged, and the census counts what is left. The demo rebuild removes the directories of the demonstrations it deletes, from the directory the server writes.
+
 ## Recovery is exercised, not assumed
 
 An install can produce a copy of its durable state and return to that copy. Returning is an ordinary operator action with a stated procedure rather than something first attempted under pressure.
@@ -63,6 +87,8 @@ Returning to a copy checks it first, and refuses a copy taken under another shap
 An install reconciles the artefacts its records name against the artefacts it holds, at start and on demand, so a restore reports what it is short of instead of waiting to be found out.
 
 **Holding the bytes is the question, not naming a digest.** A record carries the digest of the file it stands for whether the bytes are here or in an evidence locker somewhere else, and evidence held elsewhere is the ordinary case rather than the exception. Counting every digest would tell an install that received a handover without its files that it has lost them, at every start, with no action that clears it -- and a standing false alarm is how the line stops being read, which is the failure the requirement exists to prevent.
+
+**What nothing names is counted beside it and never removed**: files in a case its records and sent reports leave out, in a directory whose case the database does not hold, and outside any case. It is said at start and served with the other counts.
 
 **The count is said twice because two moments ask it.** At start, for the operator watching a restore come up; in the install's own description, for the same operator once the restore is finished and the start-up line has scrolled away. The second is also what reports the evidence whole again when the artefacts are put back.
 

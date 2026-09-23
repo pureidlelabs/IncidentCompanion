@@ -16,6 +16,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, changeFeed, reportBlocks, reports, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { reseedDemos } from '../../test/demo-fixture.js'
@@ -48,7 +49,7 @@ function controllerFor(name: string): Reorderable {
     othersOn: () => Promise.resolve([]),
   }
   return new (found as new (s: CollectionService) => Reorderable)(
-    new CollectionService(db!, channel as never),
+    new CollectionService(db!, suiteStore(), channel as never),
   )
 }
 

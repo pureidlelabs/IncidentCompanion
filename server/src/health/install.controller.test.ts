@@ -38,10 +38,13 @@ function configOf(over: Record<string, unknown> = {}) {
  * The census, stubbed: what it counts is `artefact-census.service.ts`'s own
  * case, and what this file asks is whether the description carries it.
  */
-const censusOf = (held = { expected: 0, missing: 0 }) =>
+const censusOf = (held = { expected: 0, missing: 0, unnamed: 0 }) =>
   ({ take: () => Promise.resolve(held) }) as never
 
-const settingsOf = (over?: Record<string, unknown>, held?: { expected: number; missing: number }) =>
+const settingsOf = (
+  over?: Record<string, unknown>,
+  held?: { expected: number; missing: number; unnamed: number },
+) =>
   new InstallSettingsController(configOf(over), policy, censusOf(held)).read()
 
 describe('redacting a connection string', () => {
@@ -134,7 +137,7 @@ describe('the install settings document', () => {
    * field is what says whole again when the artefacts are put back. -> #179
    */
   it('says how many artefacts it expects and how many it cannot find', async () => {
-    const storage = (await settingsOf(undefined, { expected: 12, missing: 3 })).storage
+    const storage = (await settingsOf(undefined, { expected: 12, missing: 3, unnamed: 0 })).storage
 
     expect(storage.artefacts.expected, 'the description does not say what it expects').toBe(12)
     expect(storage.artefacts.missing, 'an install short of its evidence reports none gone').toBe(3)
@@ -147,9 +150,15 @@ describe('the install settings document', () => {
    * only together are one test.
    */
   it('still says what it expects on an install that holds them all', async () => {
-    const storage = (await settingsOf(undefined, { expected: 12, missing: 0 })).storage
+    const storage = (await settingsOf(undefined, { expected: 12, missing: 0, unnamed: 0 })).storage
 
-    expect(storage.artefacts).toEqual({ expected: 12, missing: 0 })
+    expect(storage.artefacts).toEqual({ expected: 12, missing: 0, unnamed: 0 })
+  })
+
+  it('says how many stored artefacts nothing names', async () => {
+    const storage = (await settingsOf(undefined, { expected: 12, missing: 0, unnamed: 5 })).storage
+
+    expect(storage.artefacts.unnamed, 'the description hides bytes nothing names').toBe(5)
   })
 })
 

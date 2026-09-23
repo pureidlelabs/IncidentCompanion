@@ -17,6 +17,7 @@
  * it is the PNG-signature assertion in `figure-render.test.ts`, which drives
  * the service against a real store. Read the two together.
  */
+import { randomUUID } from 'node:crypto'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -144,7 +145,8 @@ describe('a figure in any format the analyst can attach', () => {
    */
   it('reads back what it stored, for the store the render service uses', async () => {
     const bytes = await bytesOf('png')
-    const stored = await store.put(Readable.from([bytes]) as never, 'shot.png')
-    expect(await store.read(stored.hash)).toEqual(new Uint8Array(bytes))
+    const caseId = randomUUID()
+    const stored = await store.put(caseId, Readable.from([bytes]) as never, 'shot.png')
+    expect(await store.read(caseId, stored.hash)).toEqual(new Uint8Array(bytes))
   }, 30_000)
 })
