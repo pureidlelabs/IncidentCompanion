@@ -442,12 +442,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
     expect(result.missingFiles).toBe(0)
   })
 
-  /**
-   * **Each section's text under the block that took its place.** The import
-   * gives every block a new id, and a fragment left under the old one is
-   * text no block reads: the report opens with headings and nothing under
-   * them. -> #1142
-   */
+  /** A fragment left under an old block id is text no block reads. -> #1142 */
   it('carries each section of prose onto the block it now belongs to', async () => {
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })

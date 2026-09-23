@@ -444,9 +444,7 @@ export class ArchiveImportService {
         }
       }
 
-      // **The prose is written after the reports exist**, filed under the new
-      // report id and each fragment under the new id of its block: a fragment
-      // left under an old block id is text no block reads. -> #1142
+      // After the reports exist: each document under its report's new id, each fragment under its block's.
       const archivedBlocks = Array.isArray(record.reportBlocks)
         ? (record.reportBlocks as { id?: unknown; reportId?: unknown }[])
         : []
