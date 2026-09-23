@@ -23,6 +23,7 @@ import ast
 import os
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -826,24 +827,78 @@ def test_the_expensive_mode_starts_what_its_question_needs() -> None:
     assert "STARTED_SERVICES" in text, "nothing reports the stack it left behind"
 
 
-def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
-    """A flag change turns the gate into a no-op that still looks like a run.
+#: The one command every document prescribes for the spec tree.
+OPENSPEC_GATE = "npx --no-install openspec validate --all --strict"
 
-    `validate --strict` alone prints usage and exits 1, and its item count is
-    zero — the same shape a clean run has if nothing reads the total.
+
+def openspec_prescriptions() -> list[tuple[str, str]]:
+    """Every tracked line that runs the CLI's `validate`, as `(where, command)`."""
+    found = subprocess.run(  # noqa: S603
+        ["git", "grep", "-n", "-e", "openspec validate", "--", ".",
+         ":!openspec/changes/archive", ":!.claude/review"],
+        cwd=REPO_ROOT, capture_output=True, text=True, check=False,
+    ).stdout
+    prescribed = []
+    for row in found.splitlines():
+        where, _, rest = row.partition(":")
+        line = rest.partition(":")[2]
+        match = re.search(r"\b(?:npx|npm exec|dlx|bunx)\b[^`'\"]*openspec validate[^`'\"]*", line)
+        if match:
+            prescribed.append((where, match.group(0)))
+    return prescribed
+
+
+def run_openspec(command: str, cwd: Path) -> tuple[int, int, int]:
+    """`command` run in `cwd`, as its exit code and the passed and failed totals it printed."""
+    done = subprocess.run(command, shell=True, cwd=cwd,  # noqa: S602
+                          capture_output=True, text=True, timeout=120, check=False)
+    totals = re.search(r"Totals: (\d+) passed, (\d+) failed", done.stdout + done.stderr)
+    assert totals, f"`{command}` printed no totals:\n{done.stdout}{done.stderr}"
+    return done.returncode, int(totals[1]), int(totals[2])
+
+
+def test_every_prescribed_openspec_command_is_the_one_that_validates() -> None:
+    """A prescription that validates nothing reads, in every document, like a gate.
+
+    `validate --strict` alone prints usage and exits 1; `--specs` alone leaves
+    every change in flight unread. Anything but the `--no-install` spelling can
+    fetch `openspec` unscoped from npm, which is somebody else's package.
     """
-    rules = (REPO_ROOT / ".claude" / "rules" / "git-workflow.md").read_text(encoding="utf-8")
-    commands = re.findall(r"^(npx --no-install openspec validate .+)$", rules,
-                          flags=re.MULTILINE)
-    assert commands, "the rules prescribe no openspec validate command"
+    prescribed = openspec_prescriptions()
+    assert len(prescribed) >= 4, f"the prescriptions are no longer found: {prescribed}"
+    stray = [f"{where}: {command.strip()}" for where, command in prescribed
+             if command.strip() != OPENSPEC_GATE]
+    assert not stray, f"these prescribe something other than `{OPENSPEC_GATE}`:\n  " + "\n  ".join(stray)
 
-    # **Every line naming the CLI is held to the one form, and the absence is
-    # the half a positive check cannot hold.** The rules prescribe two
-    # commands, so a check that only asks whether *some* line is right passes
-    # while its sibling reaches the registry. Matching every runner spelling
-    # rather than one: `-y`, `npm exec`, `dlx`, `bunx` and a bare
-    # `openspec@latest` all fetch, and `openspec` unscoped on npm belongs to
-    # somebody else.
+
+def test_the_openspec_gate_passes_this_tree_and_refuses_a_broken_one(tmp_path: Path) -> None:
+    """The verdict is the exit code, and the exit code is obeyed.
+
+    The broken tree is a copy with one requirement that carries no scenario,
+    which strict validation refuses. The CLI reads `openspec/` from where it
+    stands, and the copy borrows this checkout's install so `--no-install`
+    finds the pinned binary there too.
+    """
+    code, passed, failed = run_openspec(OPENSPEC_GATE, REPO_ROOT)
+    assert (code, failed) == (0, 0) and passed > 0, (code, passed, failed)
+
+    shutil.copytree(REPO_ROOT / "openspec", tmp_path / "openspec")
+    (tmp_path / "node_modules").symlink_to(REPO_ROOT / "node_modules")
+    (tmp_path / "package.json").write_text("{}")
+    assert run_openspec(OPENSPEC_GATE, tmp_path)[0::2] == (0, 0), "the copy is not the tree"
+
+    spec = tmp_path / "openspec" / "specs" / "accounts-and-access" / "spec.md"
+    spec.write_text(spec.read_text(encoding="utf-8") + (
+        "\n### Requirement: A requirement nothing could show false\n\n"
+        "The application MUST do a thing.\n"), encoding="utf-8")
+    code, _, failed = run_openspec(OPENSPEC_GATE, tmp_path)
+    assert code != 0 and failed >= 1, (
+        f"a requirement with no scenario passed the gate: exit {code}, {failed} failed")
+
+
+def test_no_line_runs_the_cli_in_a_form_that_can_fetch() -> None:
+    """`-y`, `npm exec`, `dlx`, `bunx` and a bare `openspec@latest` all reach the registry."""
+    rules = (REPO_ROOT / ".claude" / "rules" / "git-workflow.md").read_text(encoding="utf-8")
     runners = re.compile(r"\bnpx\b|\bnpm exec\b|\bdlx\b|\bbunx\b")
     stray = [
         line.strip()
@@ -855,15 +910,6 @@ def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
         f"a line runs the CLI in a form that can reach the registry, rather "
         f"than `npx --no-install openspec`: {stray}"
     )
-    # The binary is local, so each command takes about a second. The timeout
-    # is a guard against a hang rather than a budget for a download.
-    for command in commands:
-        done = subprocess.run(command, shell=True, cwd=REPO_ROOT,
-                              capture_output=True, text=True, timeout=120)
-        total = re.search(r"Totals: (\d+) passed", done.stdout)
-        assert total and int(total.group(1)) > 0, (
-            f"`{command}` validated nothing:\n{done.stdout}{done.stderr}")
-
 
 
 def test_the_renovate_validator_is_the_pinned_one() -> None:
