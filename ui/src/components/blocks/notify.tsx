@@ -86,12 +86,9 @@ export const toast = Object.assign(
 /**
  * Say what a refused write means, in the analyst's terms.
  *
- * The server sends two different 409s and they need different sentences:
- * `refuseIfHeldByAnother` answers one for a row somebody has *open*, and the
- * version check answers one for a row somebody has *written*. `heldBy` is
- * what distinguishes them -- telling the analyst their colleague saved first
- * when nobody saved anything sends them looking for a change that is not
- * there.
+ * A version refusal is another analyst having written first: the screen is
+ * behind rather than broken, and it names no refused field, so it is a
+ * warning rather than the refusal card.
  */
 export function reportWriteFailure(
   error: unknown,
@@ -99,14 +96,7 @@ export function reportWriteFailure(
   options?: WriteFailureOptions,
 ): void {
   if (error instanceof ApiError && error.writeConflict) {
-    const holder = (error.body as { heldBy?: string } | null)?.heldBy
-    // Neither is an error: one is a row somebody has open, the other a row
-    // somebody has already changed. The screen is behind, not broken - and
-    // neither names a refused field, so neither gets the card.
-    toast.warning(
-      holder ? `${holder} has ${what} open.` : `Another analyst saved ${what} first.`,
-      { description: error.message },
-    )
+    toast.warning(`Another analyst saved ${what} first.`, { description: error.message })
     return
   }
 
@@ -144,8 +134,7 @@ export function reportWriteFailure(
 
 /**
  * Report a bulk PATCH's stale ids. Silent when nothing is missing, like
- * every write: the optimistic rows are the confirmation. A missing id is one
- * whose row another session has since deleted.
+ * every write. A missing id is one whose row another session has since deleted.
  */
 export function reportBulkMissing(missing: readonly string[], what: string): void {
   if (missing.length === 0) return
@@ -154,19 +143,18 @@ export function reportBulkMissing(missing: readonly string[], what: string): voi
 }
 
 /**
- * Report a bulk PATCH's refused ids: rows another analyst changed while this
- * selection was held, which the version check turned away.
+ * Name the rows a bulk PATCH left alone because another analyst changed them
+ * after this selection was read.
  *
  * **Separate from `reportBulkMissing`, because the two send an analyst to
  * different places.** A missing row is gone and there is nothing to look at. A
  * refused one is still on screen, holding somebody else's change, and is worth
- * rereading before the patch is tried again.
+ * rereading before the patch is tried again -- so it is named.
  */
-export function reportBulkRefused(refused: readonly string[], what: string): void {
-  if (refused.length === 0) return
-  const count = refused.length
-  const [subject, verb] = count === 1 ? ['it', 'was'] : ['them', 'were']
-  toast.warning(`${String(count)} ${what} changed since you read ${subject} and ${verb} not updated.`)
+export function reportBulkRefused(names: readonly string[]): void {
+  if (names.length === 0) return
+  const [subject, verb] = names.length === 1 ? ['it', 'was'] : ['them', 'were']
+  toast.warning(`${names.join(', ')} changed since you read ${subject} and ${verb} not updated.`)
 }
 
 /**

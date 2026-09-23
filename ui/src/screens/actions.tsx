@@ -1,8 +1,10 @@
 import { useMemo, useState, type ReactNode } from 'react'
 
 import type { ActionEntry, Case } from '@/api/model'
+import type { Drawn, Read } from '@/api/rowWrite'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 import { formSpec, type Specs } from '@/api/specs'
-import { BulkActionBar, bulkFieldsFor } from '@/components/blocks/bulk-actions'
+import { BulkActionBar, bulkFieldsFor, selected } from '@/components/blocks/bulk-actions'
 import { Collection } from '@/components/blocks/collection'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { SelectCell, TextCell } from '@/components/blocks/data-cell'
@@ -53,10 +55,10 @@ import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
  */
 export interface ActionWrites {
   /** `entry` null creates. Resolves with the stored row. */
-  save: (entry: ActionEntry | null, fields: Partial<ActionEntry>) => Promise<ActionEntry>
+  save: (entry: Drawn<ActionEntry> | null, fields: Partial<ActionEntry>) => Promise<ActionEntry>
   /** One patch across a named selection. Resolves with the stored rows. */
-  patch: (ids: readonly string[], fields: Partial<ActionEntry>) => Promise<readonly ActionEntry[]>
-  remove: (ids: readonly string[]) => Promise<void>
+  patch: (rows: readonly BulkPatchRow[], fields: Partial<ActionEntry>) => Promise<readonly ActionEntry[]>
+  remove: (rows: readonly BulkPatchRow[]) => Promise<void>
 }
 
 export interface ActionsScreenProps {
@@ -105,10 +107,10 @@ function galleryWrites(rows: readonly ActionEntry[]): ActionWrites {
   return {
     save: (entry, fields) =>
       Promise.resolve(
-        entry ? { ...entry, ...fields } : { ...BLANK_ACTION, ...fields, id: localId('action') },
+        entry ? { ...entry, ...fields, version: entry.version + 1 } : { ...BLANK_ACTION, ...fields, id: localId('action') },
       ),
-    patch: (ids, fields) =>
-      Promise.resolve(ids.map((id) => ({ ...BLANK_ACTION, ...found(id), ...fields, id }))),
+    patch: (chosen, fields) =>
+      Promise.resolve(chosen.map(({ id }) => ({ ...BLANK_ACTION, ...found(id), ...fields, id }))),
     remove: () => Promise.resolve(),
   }
 }
@@ -125,7 +127,7 @@ export function ActionsScreen({
   const [rows, setRows] = useCaseRows(kase, (one) => one.actions)
   const [query, setQuery] = useState(search)
 
-  const [deleting, setDeleting] = useState<string[] | null>(null)
+  const [deleting, setDeleting] = useState<BulkPatchRow[] | null>(null)
   const editor = useRowEditor<ActionEntry>()
 
   /** One write path. Omitted, the gallery answers for itself. */
@@ -187,7 +189,8 @@ export function ActionsScreen({
         setRows((current) => current.map((row) => (row.id === id ? { ...row, ...fields } : row)))
       },
       remove: (id) => {
-        setDeleting([id])
+        const found = rows.find((row) => row.id === id)
+        if (found) setDeleting([selected(found)])
       },
       edit: (id) => {
         const found = rows.find((row) => row.id === id)
@@ -204,7 +207,7 @@ export function ActionsScreen({
    * resolves and stays open with the reason when it does not, so closing here
    * would throw the draft away before the server had answered for it.
    */
-  const save = (entry: ActionEntry | null, fields: Partial<ActionEntry>) =>
+  const save = (entry: Drawn<ActionEntry> | null, fields: Partial<ActionEntry>) =>
     inFlight(entry ? [entry.id] : [], async () => {
       const stored = await write.save(entry, fields)
       setRows((current) =>
@@ -234,10 +237,10 @@ export function ActionsScreen({
         <BulkActionBar
           table={table}
           fields={bulkFields}
-          onApply={(ids, fields) => {
-            void inFlight(ids, async () => {
+          onApply={(chosen, fields) => {
+            void inFlight(chosen.map((row) => row.id), async () => {
               const stored = new Map(
-                (await write.patch(ids, fields)).map((row) => [row.id, row] as const),
+                (await write.patch(chosen, fields)).map((row) => [row.id, row] as const),
               )
               setRows((current) => current.map((row) => stored.get(row.id) ?? row))
             })
@@ -265,17 +268,19 @@ export function ActionsScreen({
       }}
     >
       <ConfirmDeleteDialog
-        ids={deleting}
+        rows={deleting}
         onOpenChange={(isOpen) => {
           if (!isOpen) setDeleting(null)
         }}
+        named={(id) => rows.find((row) => row.id === id)?.task}
+        // **Returned**, so a refusal keeps the dialog open and names the rows that moved.
         onConfirm={() => {
           const doomed = deleting ?? []
-          table.resetRowSelection()
-          void inFlight(doomed, async () => {
+          const gone = new Set(doomed.map((row) => row.id))
+          return inFlight([...gone], async () => {
             await write.remove(doomed)
-            const gone = new Set(doomed)
-            setRows((current) => current.filter((row) => !gone.has(row.id)))
+            table.resetRowSelection()
+            setRows((was) => was.filter((row) => !gone.has(row.id)))
           })
         }}
         title={(count) => (count === 1 ? 'Delete this task?' : `Delete ${String(count)} tasks?`)}
@@ -290,8 +295,12 @@ export function ActionsScreen({
           collection="actions"
           title={editor.editing ? 'Edit task' : 'Add task'}
           form={formSpec<ActionEntry>(specs, 'ACTION_FIELDS')}
-          {...(editor.editing ? { entry: editor.editing } : {})}
-          onCreate={(fields) => save(editor.editing, fields)}
+          {...(editor.editing
+            ? { entry: editor.editing, served: rows.find((row) => row.id === editor.editing?.id) }
+            : {})}
+          onCreate={(fields, read?: Read) =>
+            save(editor.editing && read !== undefined ? { ...editor.editing, version: read } : null, fields)
+          }
         />
       )}
     </Collection>

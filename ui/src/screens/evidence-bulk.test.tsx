@@ -13,6 +13,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
 import { EvidenceScreen, type EvidenceWrites } from './evidence'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 
 /** Two entries identical in every field but their id, as a run would be. */
 function twin(entry: EvidenceEntry, id: string): EvidenceEntry {
@@ -36,7 +37,7 @@ function rowCheckboxes(): HTMLElement[] {
 
 describe('bulk delete', () => {
   it('removes exactly the ticked id and leaves its identical twin', async () => {
-    const remove = vi.fn((_ids: readonly string[]) => Promise.resolve())
+    const remove = vi.fn((_rows: readonly BulkPatchRow[]) => Promise.resolve())
     const writes: EvidenceWrites = {
       save: vi.fn(() => Promise.reject(new Error('not exercised'))),
       patch: vi.fn(() => Promise.resolve([])),
@@ -58,7 +59,7 @@ describe('bulk delete', () => {
     await waitFor(() => {
       expect(remove).toHaveBeenCalledTimes(1)
     })
-    expect(remove.mock.calls[0]?.[0]).toEqual(['twin-a'])
+    expect(remove.mock.calls[0]?.[0]?.map((row) => row.id)).toEqual(['twin-a'])
 
     await waitFor(() => {
       expect(screen.getAllByRole('row')).toHaveLength(before - 1)
@@ -66,7 +67,7 @@ describe('bulk delete', () => {
   })
 
   it('sends every ticked id and none of the untouched rows, on a delete of more than one', async () => {
-    const remove = vi.fn((_ids: readonly string[]) => Promise.resolve())
+    const remove = vi.fn((_rows: readonly BulkPatchRow[]) => Promise.resolve())
     const writes: EvidenceWrites = {
       save: vi.fn(() => Promise.reject(new Error('not exercised'))),
       patch: vi.fn(() => Promise.resolve([])),
@@ -95,14 +96,14 @@ describe('bulk delete', () => {
     await waitFor(() => {
       expect(remove).toHaveBeenCalledTimes(1)
     })
-    expect(new Set(remove.mock.calls[0]?.[0])).toEqual(new Set(['ev-a', 'ev-c']))
+    expect(new Set(remove.mock.calls[0]?.[0]?.map((row) => row.id))).toEqual(new Set(['ev-a', 'ev-c']))
   })
 })
 
 describe('bulk edit', () => {
   it('patches only the ticked ids with the chosen field, leaving the third row named separately', async () => {
-    const patch = vi.fn((ids: readonly string[], fields: Partial<EvidenceEntry>) =>
-      Promise.resolve(ids.map((id) => ({ ...lead, ...fields, id }))),
+    const patch = vi.fn((rows: readonly BulkPatchRow[], fields: Partial<EvidenceEntry>) =>
+      Promise.resolve(rows.map(({ id }) => ({ ...lead, ...fields, id }))),
     )
     const writes: EvidenceWrites = {
       save: vi.fn(() => Promise.reject(new Error('not exercised'))),
@@ -132,7 +133,7 @@ describe('bulk edit', () => {
     await waitFor(() => {
       expect(patch).toHaveBeenCalledTimes(1)
     })
-    expect(new Set(patch.mock.calls[0]?.[0])).toEqual(new Set(['ev-1', 'ev-2']))
+    expect(new Set(patch.mock.calls[0]?.[0]?.map((row) => row.id))).toEqual(new Set(['ev-1', 'ev-2']))
     expect(patch.mock.calls[0]?.[1]).toEqual({ type: 'disk image' })
   })
 })

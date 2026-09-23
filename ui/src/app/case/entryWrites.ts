@@ -7,7 +7,9 @@ import {
 
 import { ApiError } from '@/api/client'
 import type { CollectionEntry, CollectionName, GenericCreateCollectionName } from '@/api/model'
+import type { Drawn, Read } from '@/api/rowWrite'
 import type { BulkDeleteVars, BulkDeleted } from '@/api/useBulkDelete'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 
 /**
  * The write path every collection container shares.
@@ -73,24 +75,22 @@ export async function announced<T>(
 /**
  * Delete a selection of one collection's rows, as one act.
  *
- * All or nothing: each row travels with the version it was read at, so a row
- * another analyst has edited refuses the whole selection. -> #682
+ * All or nothing: each row travels with the version it was read at when the
+ * analyst pressed Delete, so a row another analyst has edited since refuses
+ * the whole selection. -> #682
  */
 export async function removeSelection(
   bulkDelete: { mutateAsync: (vars: BulkDeleteVars) => Promise<BulkDeleted> },
   collection: CollectionName,
-  ids: readonly string[],
-  rowsNow: () => readonly { id: string; version: number }[],
+  rows: readonly BulkPatchRow[],
   many: string,
 ): Promise<void> {
-  if (ids.length === 0) return
-  const now = rowsNow()
-  const rows = ids.map((id) => ({
-    id,
-    version: now.find((one) => one.id === id)?.version ?? 0,
-  }))
-  const written = await announcing(many, () =>
-    bulkDelete.mutateAsync({ targets: { [collection]: rows } }),
+  if (rows.length === 0) return
+  const written = await announcing(
+    many,
+    () => bulkDelete.mutateAsync({ targets: { [collection]: [...rows] } }),
+    // The confirmation says which rows moved, so the refusal is its to draw.
+    { refused: () => undefined },
   )
   // A row another analyst had already deleted comes back under `missing`,
   // and is told rather than discarded.
@@ -100,7 +100,7 @@ export async function removeSelection(
   )
 }
 
-/** What a container hands this helper: the four mutations, already bound. */
+/** What a container hands this helper: the mutations, already bound. */
 export interface EntryMutations<N extends CollectionName> {
   create: {
     mutateAsync: (vars: { fields: Partial<CollectionEntry[N]> }) => Promise<CollectionEntry[N]>
@@ -108,83 +108,70 @@ export interface EntryMutations<N extends CollectionName> {
   patch: {
     mutateAsync: (vars: {
       entryId: string
-      version: number
+      version: Read
       fields: Partial<CollectionEntry[N]>
       base?: Partial<CollectionEntry[N]> | undefined
     }) => Promise<CollectionEntry[N]>
   }
   bulk: {
-    mutateAsync: (vars: {
-      ids: { id: string; version: number }[]
-      fields: Partial<CollectionEntry[N]>
-    }) => Promise<{
+    mutateAsync: (vars: { ids: BulkPatchRow[]; fields: Partial<CollectionEntry[N]> }) => Promise<{
       updated: string[]
       missing: string[]
       refused: string[]
     }>
   }
-  remove: { mutateAsync: (vars: { entryId: string; version: number }) => Promise<unknown> }
   bulkDelete: { mutateAsync: (vars: BulkDeleteVars) => Promise<BulkDeleted> }
 }
 
 /**
  * @param noun - what a refusal calls the thing, in the analyst's words.
- * @param rowsNow - the rows as the case currently holds them, for the version a
- * delete and a bulk patch each have to name, and for reading a bulk patch's
- * answer back.
  * @param reread - the case, re-fetched, because `PATCH bulk` answers with ids.
+ * @param nameOf - what the analyst calls one row, for saying which rows moved.
  * @param collection - the table a delete names, which the bulk route groups by.
  */
 export function entryWrites<N extends GenericCreateCollectionName>(
   mutations: EntryMutations<N>,
   noun: { one: string; many: string },
-  rowsNow: () => readonly CollectionEntry[N][],
   reread: () => Promise<readonly CollectionEntry[N][]>,
+  nameOf: (row: CollectionEntry[N]) => string,
   collection: CollectionName,
 ) {
   return {
-    save: (entry: CollectionEntry[N] | null, fields: Partial<CollectionEntry[N]>) =>
+    save: (entry: Drawn<CollectionEntry[N]> | null, fields: Partial<CollectionEntry[N]>) =>
       announcing(noun.one, () =>
         entry === null
           ? mutations.create.mutateAsync({ fields })
           : mutations.patch.mutateAsync({
               entryId: (entry as { id: string }).id,
-              version: (entry as { version: number }).version,
+              version: entry.version,
               fields,
-              base: entry,
+              base: entry as unknown as Partial<CollectionEntry[N]>,
             }),
       ),
 
-    patch: async (ids: readonly string[], fields: Partial<CollectionEntry[N]>) => {
-      // **The version travels per row, read off the rows on screen.** A
-      // selection is a slice of what the analyst read, so a moved row is
-      // turned away on its own.
-      const now = rowsNow()
-      const named: { id: string; version: number }[] = []
-      // **A selected row the case no longer holds is counted missing here.**
-      // The server cannot be asked about a row without a version, and dropping
-      // it silently would take it out of the count the analyst is told.
-      const gone: string[] = []
-      for (const id of ids) {
-        const row = now.find((one) => (one as { id: string }).id === id)
-        if (row) named.push({ id, version: (row as { version: number }).version })
-        else gone.push(id)
-      }
-
+    /** One patch across a selection, as it was read when Edit was pressed. */
+    patch: async (rows: readonly BulkPatchRow[], fields: Partial<CollectionEntry[N]>) => {
       const written = await announcing(noun.many, () =>
-        mutations.bulk.mutateAsync({ ids: named, fields }),
+        mutations.bulk.mutateAsync({ ids: [...rows], fields }),
       )
-      reportBulkMissing([...gone, ...written.missing], noun.many)
-      reportBulkRefused(written.refused, noun.many)
       const held = await reread()
-      // `updated`, not the ids sent: a row somebody else deleted comes back
-      // under `missing`, and returning it would show a row the case has not.
-      return written.updated.flatMap((id) =>
-        held.filter((row) => (row as { id: string }).id === id),
+      const named = (id: string) => held.find((row) => (row as { id: string }).id === id)
+      reportBulkMissing(written.missing, noun.many)
+      reportBulkRefused(
+        written.refused.map((id) => {
+          const row = named(id)
+          return row ? nameOf(row) : id
+        }),
       )
+      // `updated`, not the rows sent: a row somebody else deleted comes back
+      // under `missing`, and returning it would show a row the case has not.
+      return written.updated.flatMap((id) => {
+        const row = named(id)
+        return row ? [row] : []
+      })
     },
 
-    remove: (ids: readonly string[]) =>
-      removeSelection(mutations.bulkDelete, collection, ids, rowsNow, noun.many),
+    remove: (rows: readonly BulkPatchRow[]) =>
+      removeSelection(mutations.bulkDelete, collection, rows, noun.many),
   }
 }

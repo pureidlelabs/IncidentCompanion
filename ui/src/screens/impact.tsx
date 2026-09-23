@@ -2,7 +2,9 @@ import { Plus, ShieldAlert } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 
 import type { Case, ImpactEntry } from '@/api/model'
+import type { Drawn, Read } from '@/api/rowWrite'
 import { fieldOf, formSpec, type Specs } from '@/api/specs'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 import { BulkActionBar, bulkFieldsFor } from '@/components/blocks/bulk-actions'
 import { Collection } from '@/components/blocks/collection'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
@@ -58,11 +60,12 @@ import {
  * selection is made.
  */
 export interface ImpactWrites {
-  /** `entry` null creates. Resolves with the stored row. */
-  save: (entry: ImpactEntry | null, fields: Partial<ImpactEntry>) => Promise<ImpactEntry>
-  /** One patch across a named selection. Resolves with the stored rows. */
-  patch: (ids: readonly string[], fields: Partial<ImpactEntry>) => Promise<readonly ImpactEntry[]>
-  remove: (ids: readonly string[]) => Promise<void>
+  /** `entry` null creates; otherwise the row as the analyst read it. Resolves with the stored row. */
+  save: (entry: Drawn<ImpactEntry> | null, fields: Partial<ImpactEntry>) => Promise<ImpactEntry>
+  /** One patch across a selection, as it was read. Resolves with the stored rows. */
+  patch: (rows: readonly BulkPatchRow[], fields: Partial<ImpactEntry>) => Promise<readonly ImpactEntry[]>
+  /** Delete a selection, as it was read. */
+  remove: (rows: readonly BulkPatchRow[]) => Promise<void>
 }
 
 export interface ImpactScreenProps {
@@ -114,10 +117,10 @@ function galleryWrites(rows: readonly ImpactEntry[]): ImpactWrites {
   return {
     save: (entry, fields) =>
       Promise.resolve(
-        entry ? { ...entry, ...fields } : { ...BLANK_IMPACT, ...fields, id: localId('impact') },
+        entry ? { ...entry, ...fields, version: entry.version + 1 } : { ...BLANK_IMPACT, ...fields, id: localId('impact') },
       ),
-    patch: (ids, fields) =>
-      Promise.resolve(ids.map((id) => ({ ...BLANK_IMPACT, ...found(id), ...fields, id }))),
+    patch: (chosen, fields) =>
+      Promise.resolve(chosen.map(({ id }) => ({ ...BLANK_IMPACT, ...found(id), ...fields, id }))),
     remove: () => Promise.resolve(),
   }
 }
@@ -133,7 +136,7 @@ export function ImpactScreen({
 }: ImpactScreenProps) {
   const [query, setQuery] = useState(search)
   const [rows, setRows] = useCaseRows(kase, (one) => one.impact)
-  const [deleting, setDeleting] = useState<string[] | null>(null)
+  const [deleting, setDeleting] = useState<BulkPatchRow[] | null>(null)
   const editor = useRowEditor<ImpactEntry>()
 
   /** One write path. Omitted, the gallery answers for itself. */
@@ -245,7 +248,7 @@ export function ImpactScreen({
    * resolves and stays open with the reason when it does not, so closing here
    * would throw the draft away before the server had answered for it.
    */
-  const save = (entry: ImpactEntry | null, fields: Partial<ImpactEntry>) =>
+  const save = (entry: Drawn<ImpactEntry> | null, fields: Partial<ImpactEntry>) =>
     inFlight(entry ? [entry.id] : [], async () => {
       const stored = await write.save(entry, fields)
       setRows((current) =>
@@ -275,10 +278,10 @@ export function ImpactScreen({
         <BulkActionBar
           table={table}
           fields={bulkFields}
-          onApply={(ids, fields) => {
-            void inFlight(ids, async () => {
+          onApply={(chosen, fields) => {
+            void inFlight(chosen.map((row) => row.id), async () => {
               const stored = new Map(
-                (await write.patch(ids, fields)).map((row) => [row.id, row] as const),
+                (await write.patch(chosen, fields)).map((row) => [row.id, row] as const),
               )
               setRows((current) => current.map((row) => stored.get(row.id) ?? row))
             })
@@ -323,18 +326,23 @@ export function ImpactScreen({
       }}
     >
       <ConfirmDeleteDialog
-        ids={deleting}
+        rows={deleting}
         onOpenChange={(isOpen) => {
           if (!isOpen) setDeleting(null)
         }}
+        named={(id) => rows.find((row) => row.id === id)?.label}
+        // **Returned**, so a refusal keeps the dialog open and names the rows that moved.
         onConfirm={() => {
           const doomed = deleting ?? []
-          table.resetRowSelection()
-          void inFlight(doomed, async () => {
-            await write.remove(doomed)
-            const gone = new Set(doomed)
-            setRows((current) => current.filter((row) => !gone.has(row.id)))
-          })
+          return inFlight(
+            doomed.map((row) => row.id),
+            async () => {
+              await write.remove(doomed)
+              table.resetRowSelection()
+              const gone = new Set(doomed.map((row) => row.id))
+              setRows((current) => current.filter((row) => !gone.has(row.id)))
+            },
+          )
         }}
         title={(count) =>
           count === 1 ? 'Delete this record?' : `Delete ${String(count)} records?`
@@ -355,8 +363,12 @@ export function ImpactScreen({
           // reference field with no options draws every chip as "(missing
           // reference)".
           references={referenceOptions(kase)}
-          {...(editor.editing ? { entry: editor.editing } : {})}
-          onCreate={(fields) => save(editor.editing, fields)}
+          {...(editor.editing
+            ? { entry: editor.editing, served: rows.find((row) => row.id === editor.editing?.id) }
+            : {})}
+          onCreate={(fields, read?: Read) =>
+            save(editor.editing && read !== undefined ? { ...editor.editing, version: read } : null, fields)
+          }
         />
       )}
     </Collection>

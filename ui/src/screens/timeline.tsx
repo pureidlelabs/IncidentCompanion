@@ -3,9 +3,11 @@ import { ArrowDownWideNarrow, ArrowUpWideNarrow, CalendarClock } from 'lucide-re
 import { Fragment, useCallback, useMemo, useState, type ReactNode } from 'react'
 
 import { isEvent, type Case, type TimelineEntry } from '@/api/model'
+import { drawn, type Drawn, type Read } from '@/api/rowWrite'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 import { formSpec, type Specs } from '@/api/specs'
 import { TIMELINE_WRITE_SCHEMAS } from '@contract/collections'
-import { BulkActionBar } from '@/components/blocks/bulk-actions'
+import { BulkActionBar, selected } from '@/components/blocks/bulk-actions'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { selectionColumn, useEntityTable, type EntityTable } from '@/components/blocks/data-table'
 import { EmptyState } from '@/components/blocks/empty-state'
@@ -20,7 +22,6 @@ import {
   PickerRow,
 } from '@/components/blocks/filter-bar'
 import { fieldLabel, labelFor } from '@/components/blocks/case-queue'
-import { MergeReview } from '@/components/blocks/merge-review'
 import { RowContextMenu, type RowMenuGroup } from '@/components/blocks/row-menu'
 import { AddAction, CountMeta } from '@/components/blocks/section-head'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
@@ -88,11 +89,12 @@ export type TimelineFields = Partial<Record<string, unknown>>
 export interface TimelineWrites {
   /** `entry` null creates. Resolves with the stored row. */
   save: (
-    entry: TimelineEntry | null,
+    entry: Drawn<TimelineEntry> | null,
     fields: TimelineFields,
     kind: 'event' | 'action',
   ) => Promise<TimelineEntry>
-  remove: (ids: readonly string[]) => Promise<void>
+  /** Delete a selection, as it was read. */
+  remove: (rows: readonly BulkPatchRow[]) => Promise<void>
 }
 
 /** Which of the two forms a stored row answers to. */
@@ -111,7 +113,7 @@ function galleryWrites(): TimelineWrites {
     save: (entry, fields, kind) =>
       Promise.resolve(
         entry
-          ? { ...entry, ...fields }
+          ? ({ ...entry, ...fields, version: entry.version + 1 } as TimelineEntry)
           : {
               ...(kind === 'event' ? BLANK_EVENT : BLANK_ACTION),
               ...fields,
@@ -137,8 +139,6 @@ export interface TimelineScreenProps {
   missing?: string
   /** Open narrowed to what an import left flagged for review. */
   unreviewed?: boolean
-  /** A row write another analyst got in first with. */
-  refusal?: { field: string; row: string; by: string }
   /**
    * The case is still being read.
    *
@@ -186,7 +186,6 @@ export function TimelineScreen({
   phases: initialPhases = [],
   missing = '',
   unreviewed = false,
-  refusal,
   busy = false,
   problem,
   onRetry,
@@ -269,8 +268,8 @@ export function TimelineScreen({
   const runs = useMemo(() => runsOf(visible), [visible])
   const gaps = useMemo(() => gapsBefore(runs.map((run) => run.lead)), [runs])
 
-  /** Rows queued for the delete confirmation. `null` closes the dialog. */
-  const [deleting, setDeleting] = useState<string[] | null>(null)
+  /** Rows queued for the delete confirmation, as they were read. `null` closes the dialog. */
+  const [deleting, setDeleting] = useState<BulkPatchRow[] | null>(null)
 
   /**
    * Selection over the visible entries, kept by the same TanStack instance
@@ -336,16 +335,18 @@ export function TimelineScreen({
         // A row write like any other, so it leaves through the same door the
         // dialog does -- a reviewed flag another analyst has already set is
         // refused by the same version check.
-        void write.save(entry, { unreviewed: action.unreviewed }, kindOf(entry)).then((stored) => {
-          setEntries((current) => current.map((row) => (row.id === entry.id ? stored : row)))
-        })
+        void write
+          .save(drawn(entry), { unreviewed: action.unreviewed }, kindOf(entry))
+          .then((stored) => {
+            setEntries((current) => current.map((row) => (row.id === entry.id ? stored : row)))
+          })
         return
       case 'edit':
         editor.edit(entry)
         return
       case 'delete':
         // Asked, not written. Both doors that offer a row delete arrive here.
-        setDeleting([entry.id])
+        setDeleting([selected(entry)])
         return
     }
   }
@@ -581,13 +582,6 @@ export function TimelineScreen({
         error={problem}
         {...(onRetry ? { refetch: onRetry } : {})}
       >
-        {/* Above the body rather than in it: the body is swapped whole for an
-          empty state when a filter matches nothing, and the row the refusal
-          names is exactly the row a filter may be hiding. */}
-        {refusal && (
-          <MergeReview field={refusal.field} by={refusal.by} row={refusal.row} className="mb-3" />
-        )}
-
         {visible.length === 0 ? (
           <EmptyState
             icon={CalendarClock}
@@ -748,15 +742,21 @@ export function TimelineScreen({
                 : TIMELINE_WRITE_SCHEMAS.action.omit({ kind: true })
             }
             references={referenceOptions(kase)}
-            {...(editor.editing ? { entry: editor.editing } : {})}
+            {...(editor.editing
+              ? {
+                  entry: editor.editing,
+                  served: entries.find((row) => row.id === editor.editing?.id),
+                }
+              : {})}
             // **Answered, not fired and forgotten.** The dialog closes itself
             // when this resolves and stays open with the reason when it does
             // not, so closing here would throw the draft away before the
             // server had answered for it. The door the row came through is
             // forgotten once the write has landed, for the same reason.
-            onCreate={(fields) => {
+            onCreate={(fields, read?: Read) => {
               const editing = editor.editing
-              return write.save(editing, fields, writing).then((stored) => {
+              const drawnAt = editing && read !== undefined ? { ...editing, version: read } : null
+              return write.save(drawnAt, fields, writing).then((stored) => {
                 setEntries((current) =>
                   editing
                     ? current.map((row) => (row.id === editing.id ? stored : row))
@@ -770,15 +770,19 @@ export function TimelineScreen({
         )}
 
         <ConfirmDeleteDialog
-          ids={deleting}
+          rows={deleting}
           onOpenChange={(isOpen) => {
             if (!isOpen) setDeleting(null)
           }}
+          named={(id) => entries.find((one) => one.id === id)?.description}
+          // **Returned**, so a refusal keeps the dialog open and names the entries that moved.
           onConfirm={() => {
             const doomed = deleting ?? []
-            table.resetRowSelection()
-            void write.remove(doomed).then(() => {
-              setEntries((current) => withoutTimelineEntries(current, new Set(doomed)))
+            return write.remove(doomed).then(() => {
+              table.resetRowSelection()
+              setEntries((current) =>
+                withoutTimelineEntries(current, new Set(doomed.map((row) => row.id))),
+              )
             })
           }}
           title={(count) => {
@@ -786,7 +790,7 @@ export function TimelineScreen({
             // The control just pressed was `Delete <description>`, so the
             // question uses the same words rather than asking about an entry
             // the analyst has to work out.
-            const named = entries.find((one) => one.id === deleting?.[0])?.description
+            const named = entries.find((one) => one.id === deleting?.[0]?.id)?.description
             return named ? `Delete ${named}?` : 'Delete this entry?'
           }}
           consequence={

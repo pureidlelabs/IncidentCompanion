@@ -6,8 +6,8 @@ import { referencesHolding, refusedRows } from '@/api/useBulkDelete'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 
 export interface ConfirmDeleteDialogProps {
-  /** The rows to delete. `null` closes the dialog; `[]` opens it on nothing. */
-  ids: string[] | null
+  /** The rows to delete, as the caller holds them; only the count is read. `null` closes the dialog. */
+  rows: readonly unknown[] | null
   onOpenChange: (open: boolean) => void
   /** May return a promise. A rejection keeps the dialog open and shows the reason. */
   onConfirm: () => unknown
@@ -15,6 +15,8 @@ export interface ConfirmDeleteDialogProps {
   title: (count: number) => string
   /** What confirming does. Replaced by the server's reason after a refusal. */
   consequence: string
+  /** A row's name by id, so a refusal can say which rows moved. */
+  named?: ((id: string) => string | undefined) | undefined
 }
 
 
@@ -26,13 +28,16 @@ export interface ConfirmDeleteDialogProps {
  * selection was read. Each is counted where the body names them, because a
  * selection spanning tables cannot be corrected from a single number.
  */
-function refusalMessage(error: unknown): string {
+function refusalMessage(error: unknown, named?: (id: string) => string | undefined): string {
   if (!(error instanceof ApiError)) return 'Could not delete.'
-  const moved = refusedRows(error).length
+  const refused = refusedRows(error)
+  const moved = refused.length
   if (moved > 0) {
+    const names = refused.map((id) => named?.(id)).filter((name): name is string => Boolean(name))
+    const which = names.length > 0 ? `: ${names.join(', ')}` : ''
     return moved === 1
-      ? '1 of the selected rows changed since you read it. Nothing was deleted.'
-      : `${String(moved)} of the selected rows changed since you read them. Nothing was deleted.`
+      ? `1 of the selected rows changed since you read it${which}. Nothing was deleted.`
+      : `${String(moved)} of the selected rows changed since you read them${which}. Nothing was deleted.`
   }
   const blocked = Object.keys(referencesHolding(error)).length
   if (blocked === 0) return error.message
@@ -47,23 +52,24 @@ function refusalMessage(error: unknown): string {
  * - Attempt-then-explain: the dialog stays open on a refusal and replaces
  *   `consequence` with the server's reason in the destructive colour.
  * - `onConfirm` may be synchronous, in which case the dialog closes at once.
- * - State resets whenever `ids` goes from `null` to a list.
+ * - State resets whenever `rows` goes from `null` to a list.
  */
 export function ConfirmDeleteDialog({
-  ids,
+  rows,
   onOpenChange,
   onConfirm,
   title,
   consequence,
+  named,
 }: ConfirmDeleteDialogProps) {
-  const about = ids ?? []
+  const about = rows ?? []
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [trackedIds, setTrackedIds] = useState(ids)
+  const [tracked, setTracked] = useState(rows)
 
-  if (ids !== trackedIds) {
-    setTrackedIds(ids)
-    if (ids !== null) {
+  if (rows !== tracked) {
+    setTracked(rows)
+    if (rows !== null) {
       setError(null)
       setPending(false)
     }
@@ -75,7 +81,7 @@ export function ConfirmDeleteDialog({
     try {
       result = onConfirm()
     } catch (thrown) {
-      setError(refusalMessage(thrown))
+      setError(refusalMessage(thrown, named))
       return
     }
     if (isThenable(result)) {
@@ -86,7 +92,7 @@ export function ConfirmDeleteDialog({
         onOpenChange(false)
       } catch (thrown) {
         setPending(false)
-        setError(refusalMessage(thrown))
+        setError(refusalMessage(thrown, named))
       }
       return
     }
@@ -95,7 +101,7 @@ export function ConfirmDeleteDialog({
 
   return (
     <AlertDialog
-      isOpen={ids !== null}
+      isOpen={rows !== null}
       onOpenChange={onOpenChange}
       tone="destructive"
       title={title(about.length)}

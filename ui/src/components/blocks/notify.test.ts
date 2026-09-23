@@ -123,27 +123,19 @@ describe('reporting a refused write', () => {
   })
 
   /**
-   * **A 409 is not an error and keeps its sentence.** One is a row somebody
-   * has open, where nothing was saved and waiting is the move; the other is a
-   * row somebody has changed, where the screen is behind. Neither is a list of
-   * refused fields, so neither gets the card.
+   * **A 409 is not an error and keeps its sentence.** The row somebody has
+   * changed is where the screen is behind, and it is not a list of refused
+   * fields, so it does not get the card. A hold on the row is a courtesy and
+   * never the reason a write was refused, so nothing in the body names one.
    */
-  it('warns rather than refusing when another analyst holds the row', async () => {
+  it('warns that somebody saved first, whatever the refusal carries', async () => {
     const { ApiError } = await import('@/api/client')
 
-    reportWriteFailure(new ApiError(409, 'Open elsewhere.', { heldBy: 'Ada' }), 'Systems')
-
-    expect(raised().content.title).toBe('Ada has Systems open.')
-    expect(raised().content.tone).toBe('warning')
-    expect(raised().content.render).toBeUndefined()
-  })
-
-  it('warns that somebody saved first when the conflict names no holder', async () => {
-    const { ApiError } = await import('@/api/client')
-
-    reportWriteFailure(new ApiError(409, 'Version behind.', {}), 'Systems')
+    reportWriteFailure(new ApiError(409, 'Version behind.', { heldBy: 'Ada' }), 'Systems')
 
     expect(raised().content.title).toBe('Another analyst saved Systems first.')
+    expect(raised().content.tone).toBe('warning')
+    expect(raised().content.render).toBeUndefined()
   })
 
   /**

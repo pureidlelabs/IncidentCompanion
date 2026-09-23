@@ -266,6 +266,7 @@ export const RefusedForReferences: Story = {
   args: {
     writes: {
       save: () => Promise.resolve({}),
+      patch: () => Promise.resolve(),
       remove: () =>
         Promise.reject(
           new ApiError(409, 'Some of those are still referenced.', {
@@ -289,15 +290,6 @@ export const RefusedForReferences: Story = {
         await screen.findByText(/of the selected rows (is|are) still referenced/),
       ).toBeVisible()
     })
-  },
-}
-
-/** A write another analyst got in first with, reported above the table. */
-export const RefusedWrite: Story = {
-  name: 'A refused write',
-  args: {
-    refusal: { field: 'Verdict', row: 'DC-01', by: 'R. Okonkwo' },
-    scope: 'assets',
   },
 }
 
