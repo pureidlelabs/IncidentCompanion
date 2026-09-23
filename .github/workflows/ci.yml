@@ -559,9 +559,10 @@ jobs:
   # **A shard per chunk**, because `workers: 1` is a statement about one
   # machine and a runner is a machine each.
   #
-  # **A pull request walks light, the nightly walks both.** Most kinds are
-  # geometry, but `low-contrast` and `paints-past-the-corner` read colour -- so
-  # a dark-only regression in those reaches the nightly and not the branch.
+  # **A pull request and the merge group walk light, the nightly both.** Most
+  # kinds are geometry, but `low-contrast` and `paints-past-the-corner` read
+  # colour -- so a dark-only regression in those reaches the nightly and not
+  # the branch, and the merge group's `gate` says so.
   gallery:
     if: >-
       !failure() && !cancelled() &&
@@ -684,6 +685,8 @@ jobs:
           # to wait for. Its absence is a limit on what a green merge group
           # says, and it is printed there. -> #89
           NIGHTLY_ONLY: browser
+          # The gallery's grounds only `inputs.all` walks, printed alike.
+          NIGHTLY_GROUNDS: dark
         run: |
           # Assigned rather than piped into the loop, so a `jq` that fails
           # fails the step instead of feeding it nothing to refuse.
@@ -716,13 +719,16 @@ jobs:
             esac
           done <<< "$results"
           if [ "$failed" = true ]; then exit 1; fi
+          if [ "$GITHUB_EVENT_NAME" = merge_group ]; then
+            for ground in $NIGHTLY_GROUNDS; do nightly="$nightly gallery($ground)"; done
+          fi
           if [ -n "$left_out" ]; then
             {
               echo "advisory: this run left out${left_out}."
               echo 'The merge group runs every tier, and its gate is the verdict that lands.'
             } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
           elif [ -n "$nightly" ]; then
-            echo "every tier reported success but${nightly}, which runs nightly and is not in this verdict" \
+            echo "every tier reported success but${nightly}, which run nightly and are not in this verdict" \
               | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
           else
             echo 'every tier reported success'

@@ -172,7 +172,7 @@ Every issue meant to close is in that list, or the body is wrong.
 
 ### The merge queue
 
-**Merging adds the pull request to a queue rather than merging it.** The queue builds the branch onto the `main` it would land on, runs every tier against *that* tree whatever the diff -- the nightly-only one `gate` names in `NIGHTLY_ONLY` aside -- and merges only if none failed or skipped. A green pull request is not a green landing — its run is scoped by path and advisory, and a tier it left out runs here.
+**Merging adds the pull request to a queue rather than merging it.** The queue builds the branch onto the `main` it would land on, runs every tier against *that* tree whatever the diff -- what `gate` leaves to the nightly by name in `NIGHTLY_ONLY` and `NIGHTLY_GROUNDS` aside -- and merges only if none failed or skipped. A green pull request is not a green landing — its run is scoped by path and advisory, and a tier it left out runs here.
 
 **It squashes.** Every commit on the branch becomes one commit on `main`, parented on the previous tip, so the branch tip is never an ancestor of what lands. Every ancestry test answers about ancestry rather than about content: `git branch -d`, `git merge-base --is-ancestor`, `git log <base>..<branch>`.
 

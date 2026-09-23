@@ -1061,7 +1061,7 @@ def run_gate(
             "NEEDS": json.dumps({name: {"result": r} for name, r in results.items()}),
             "ALL": want_all,
             "GITHUB_EVENT_NAME": event,
-            "NIGHTLY_ONLY": gate_env()["NIGHTLY_ONLY"],
+            **{k: v for k, v in gate_env().items() if k.startswith("NIGHTLY_")},
         },
         check=False,
     )
@@ -1137,6 +1137,24 @@ def test_the_gate_exempts_exactly_the_nightly_tier() -> None:
     said = run_gate({"lint": "success", **dict.fromkeys(exempt, "skipped")}, "merge_group")
     assert all(name in said.stdout for name in exempt), (
         f"a green merge group does not say which tier it did not run:\n{said.stdout}"
+    )
+
+
+def test_a_green_merge_group_names_every_ground_the_gallery_left_to_the_nightly() -> None:
+    """The gallery walks some grounds only when every tier is asked for, which no merge group does."""
+    step = next(s for s in ci_jobs()["gallery"]["steps"] if "VISUAL_GROUNDS" in (s.get("env") or {}))
+    every, merged = re.fullmatch(
+        r"\$\{\{ inputs\.all && '([^']*)' \|\| '([^']*)' \}\}", step["env"]["VISUAL_GROUNDS"]
+    ).groups()
+    left = set(every.split(",")) - set(merged.split(","))
+    assert set(gate_env().get("NIGHTLY_GROUNDS", "").split()) == left, (
+        f"the gallery leaves {sorted(left)} to the nightly; the gate says "
+        f"{gate_env().get('NIGHTLY_GROUNDS')!r}"
+    )
+    exempt = dict.fromkeys(gate_env()["NIGHTLY_ONLY"].split(), "skipped")
+    said = run_gate({"lint": "success", "gallery": "success", **exempt}, "merge_group")
+    assert said.returncode == 0 and all(ground in said.stdout for ground in left), (
+        f"a green merge group does not say the gallery left {sorted(left)} out:\n{said.stdout}"
     )
 
 
