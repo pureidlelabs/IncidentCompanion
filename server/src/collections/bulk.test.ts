@@ -15,8 +15,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { BulkDeleteController, bulkDeleteBodySchema } from './bulk-delete.controller.js'
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
 import {
   actions,
   cases,
@@ -32,6 +30,7 @@ import {
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { camelKeys } from '../wire/naming.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -132,7 +131,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () =
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     const [two] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
     caseId = one!.id
@@ -494,7 +493,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('deleting a selection that s
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = one!.id
     session = { user: { id: ACTOR } }

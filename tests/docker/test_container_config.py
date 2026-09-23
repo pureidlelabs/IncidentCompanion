@@ -765,9 +765,9 @@ def test_the_stack_seeds_as_a_one_shot_before_the_server_starts():
             f"server answers while TCP is still refused, so the chain starts "
             f"against a database that is not accepting")
 
-    # A one-shot that restarts is not a one-shot: compose would run the seed
-    # again every time it exits, and the demo reseed *deletes* first.
-    for one_shot in ("roles", "migrate", "seed"):
+    # A one-shot that restarts is not a one-shot: compose would run it again
+    # every time it exits.
+    for one_shot in ONE_SHOTS:
         assert str(stack["services"][one_shot].get("restart", "no")) == "no", (
             f"{one_shot} is not pinned to `restart: no`, so compose may run it "
             f"again on exit")

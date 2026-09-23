@@ -24,11 +24,15 @@ const SEED_ENTRY = read('../src/seed.ts')
 const HARNESS = read('./app-harness.ts')
 const DEV_LAUNCHER = read('../../dev-node.sh')
 
-/** What a seeded install has, and the method that puts each one there. */
+/**
+ * What a seeded install has, and the call that puts each one there. The
+ * harness writes the demo cases as shipped rather than once, because the
+ * suite's install is already claimed.
+ */
 const SEEDERS = [
   { what: 'the built-in library', call: 'seedBuiltIns(' },
   { what: 'the language pack', call: 'seedBuiltIn(' },
-  { what: 'the demo cases', call: 'reseed(' },
+  { what: 'the demo cases', call: 'seedOnce(', harness: 'reseedDemos(' },
   { what: 'the demo reports', call: 'fileDeclared(' },
 ]
 
@@ -46,9 +50,9 @@ describe('what a seeded install is', () => {
     // The harness splits them: product data on every boot, demo content on
     // request. Both halves have to exist somewhere in the file, or a test tier
     // is asserting against a shape no deployment produces.
-    for (const { what, call } of SEEDERS) {
+    for (const { what, call, harness } of SEEDERS) {
       expect(
-        HARNESS.includes(call),
+        HARNESS.includes(harness ?? call),
         `the test harness can never seed ${what}, so no test covers an install that has it`,
       ).toBe(true)
     }

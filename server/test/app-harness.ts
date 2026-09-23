@@ -26,7 +26,7 @@ import { AuthService } from '@thallesp/nestjs-better-auth'
 import type { Auth } from '../src/auth/auth.config.js'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { Test } from '@nestjs/testing'
-import { DATABASE } from '../src/db/db.module.js'
+import { DATABASE, SEED_DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
 import { installPreferences } from '../src/db/schema/index.js'
 import { putSettingsBack } from './install-settings.js'
@@ -495,19 +495,18 @@ export function operations(
 }
 
 /**
- * Seed the demo cases and their reports into a booted harness.
+ * Seed the demo cases, as shipped, and their reports into a booted harness.
  *
  * **Explicit, rather than inherited from boot.** Seeding runs as a one-shot
- * (`src/seed.ts`) so replicas cannot race on a reseed that *deletes* every demo
- * case first, which means no test gets demo data without asking. A test that
- * reads it therefore says so.
+ * (`src/seed.ts`), so no test gets demo data without asking. A test that reads
+ * it therefore says so.
  *
  * The order is the seed entry's, for the reason given there: the reports need
  * the cases, and inheriting that from the module graph is what made it fragile.
  */
 export async function seedDemoContent(harness: Harness): Promise<void> {
-  const { DemoSeederService } = await import('../src/demos/seeder.service.js')
   const { DemoReportSender } = await import('../src/demo-reports/sender.service.js')
-  await harness.app.get(DemoSeederService, { strict: false }).reseed()
+  const { reseedDemos } = await import('./demo-fixture.js')
+  await reseedDemos(harness.app.get<Database>(SEED_DATABASE, { strict: false }))
   await harness.app.get(DemoReportSender, { strict: false }).fileDeclared()
 }

@@ -25,12 +25,11 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { ExportsController } from './exports.controller.js'
 import { ImportService, type OnDuplicate } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, user } from '../db/schema/index.js'
 import { IMPORTABLE } from '../domain/collections.js'
 import { TABLES, type BulkTarget } from '../collections/registry.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -81,7 +80,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('every row in the file is ac
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
 

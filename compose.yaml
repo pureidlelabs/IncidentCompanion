@@ -255,8 +255,6 @@ services:
     # `--demos` is the laptop shape and would not be passed in a deployment;
     # drop it and `/api/demos` is empty.
     command: ["node", "dist/src/seed.js", "--demos"]
-    # Not decorative: compose otherwise re-runs a one-shot on exit, and this
-    # one deletes the demo cases before writing them.
     restart: "no"
 
   # The store's shape, one-shot: `scripts/apply-schema.mts`, in one transaction
