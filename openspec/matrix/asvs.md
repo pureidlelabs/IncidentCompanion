@@ -21,7 +21,6 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V6.3.2 | No default accounts present or enabled | accounts-and-access :: An account is provisioned, never self-created |
 | V6.3.3 | Multi-factor, or a combination of single factors | **Unbuilt.** accounts-and-access :: A second factor is available, and enforcing it is the install's policy |
 | V6.4.1 | System-generated initial secrets are securely random | **Unbuilt.** accounts-and-access :: An install can be recovered without another administrator |
-| V6.4.2 | No password hints or knowledge-based authentication | **Unbuilt.** accounts-and-access :: An install can be recovered without another administrator |
 | V6.4.4 | A lost factor requires proofing at enrolment level | **Unbuilt.** accounts-and-access :: A second factor is available, and enforcing it is the install's policy |
 | V7.2.4 | A new session token on authentication; the old one ended | accounts-and-access :: A session belongs to its holder and ends when it should |
 | V7.3.1, V7.3.2 | An inactivity timeout and an absolute maximum lifetime | accounts-and-access :: A session belongs to its holder and ends when it should |
@@ -29,7 +28,6 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V7.4.2 | All sessions ended when an account is disabled | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
 | V7.5.2 | A user can see and end their own sessions | accounts-and-access :: A session belongs to its holder and ends when it should |
 | V7.6.1 | Session lifetime between relying party and provider behaves as documented | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
-| V10.4.2, V10.4.4 | An authorization code used once; a client allowed only the grants it needs | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
 | V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | cases :: Reaching a case is decided in one place, by customer |
 | V8.2.2 | Data-specific access restricted to explicit permissions | customers :: A customer cannot be removed out from under its cases |
 | V8.1.2, V8.2.3 | Field-level access restricted to explicit permissions, read and write | the-api :: Reach is enforced where the data is, not where the request arrives |
@@ -94,7 +92,8 @@ A control at Level 2 that no written requirement answers. Not deviations — unf
 | V16.5.2, V16.5.3 | Operating securely when an external resource fails, and failing without falling open | deployment. Previously credited to the audit-logging requirement, which does not answer it: how the install behaves when a part underneath it fails is not a property of the record it keeps |
 | V12.3.3, V12.3.4 | Protected transport between internal components, on trusted certificates | deployment. Traffic between the parts of an install crosses a boundary the operator owns and nothing else shares, and the specification does not say whether that is enough |
 | V6.1.1, V6.1.3, V7.1.1, V7.1.2, V8.1.1 | The documentation these controls require | these specifications are that documentation, and this matrix is how it is found |
-| V10.4.1, V10.4.3, V10.4.6, V10.4.8, V10.4.10 | Redirect allowlist, short-lived codes, proof key for code exchange, refresh expiry, client authentication | accounts-and-access, where federation is written as behaviour and not yet as protocol |
+| V10.1.1, V10.1.2, V10.2.1, V10.2.2, V10.5.1, V10.5.2, V10.5.3, V10.5.4, V10.5.5 | A relying party's defences: tokens kept from what does not need them, values accepted only from a flow it began, request forgery and mix-up in the code flow, and an ID token's replay, subject, audience, issuer and forced logout | accounts-and-access, where federation is written as behaviour and not yet as protocol |
+| V6.4.2 | No password hints or knowledge-based authentication | accounts-and-access. Nothing offers either; what no requirement says is that nothing may |
 | V15.1.1, V15.2.1 | Documented remediation time frames for vulnerable components and for updating in general, and no component kept past them | dependencies, which offers a corrected version at once and does not say by when it must be adopted |
 
 ## Deviations
@@ -110,3 +109,5 @@ The constitution's deviation register is the one list of controls knowingly unme
 V4.4.3 and V4.4.4, dedicated connection tokens. Both are conditional on the application's standard session management not being usable over a connection. It is usable here — the same session admits a connection as admits a request — so a second credential would be a second thing to revoke, and its absence is the correct answer rather than a gap.
 
 V17 WebRTC.
+
+V10.3, V10.4, V10.6 and V10.7: a resource server's, an authorization server's and an OpenID provider's controls, and consent. An install federates its sign-in as a relying party, accepts no access token from anybody and issues no code, token or consent of its own.
