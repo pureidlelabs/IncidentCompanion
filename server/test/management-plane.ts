@@ -47,6 +47,9 @@ export const MANAGEMENT_PLANE: readonly string[] = [
   // back how many accounts exist to anybody who can reach this.
   'GET /api/health/activity',
   'GET /api/health/resources',
+  // Where the install keeps its data, and how many artefacts it holds across
+  // every customer.
+  'GET /api/settings',
   // Reading the retention window is an administrator's, and changing it is
   // the one setting whose change destroys evidence.
   'GET /api/install/audit/retention',

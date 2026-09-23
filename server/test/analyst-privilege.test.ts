@@ -78,7 +78,7 @@ describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
    * comparison and this is a direction check -- and these two are the ones
    * whose gate is newest.
    */
-  it.each(['/api/health/activity', '/api/health/resources'])(
+  it.each(['/api/health/activity', '/api/health/resources', '/api/settings'])(
     'answers an administrator at %s',
     async (path) => {
       const response = await fetch(`${harness.base}${path}`, {
