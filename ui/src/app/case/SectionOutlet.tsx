@@ -1,9 +1,10 @@
-import { FileQuestion } from 'lucide-react'
+import { CloudOff, FileQuestion } from 'lucide-react'
 
 import { elementFor } from './section-elements'
 import { canonicalSlug } from '@/components/blocks/case-sections'
 import { useSectionName } from '@/app/useCaseId'
 import { EmptyState } from '@/components/blocks/empty-state'
+import { useSentinelOffered } from '@/api/importPlatforms'
 
 /**
  * Resolves `:section` against the registry.
@@ -23,8 +24,19 @@ import { EmptyState } from '@/components/blocks/empty-state'
  */
 export function SectionOutlet() {
   const slug = useSectionName()
-  const element = elementFor(canonicalSlug(slug))
+  const canonical = canonicalSlug(slug)
+  const sentinel = useSentinelOffered()
+  const element = elementFor(canonical)
 
+  if (canonical === 'import-sentinel' && sentinel !== true) {
+    return sentinel === undefined ? null : (
+      <EmptyState
+        icon={CloudOff}
+        title="Importing from Sentinel is off"
+        detail="This install's operator has not turned on importing from Sentinel."
+      />
+    )
+  }
   if (element === undefined) {
     return (
       <EmptyState

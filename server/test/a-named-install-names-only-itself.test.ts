@@ -9,7 +9,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { WebSocket } from 'ws'
 
-import { boot, bootable, type Harness } from './app-harness.js'
+import { boot, bootable, sharedAdmin, type Harness } from './app-harness.js'
 import { sourcesOf } from './content-policy.js'
 
 const runnable = await bootable()
@@ -38,6 +38,12 @@ describe.skipIf(!runnable)('an install named ir.example.org that imports from Se
         'https://management.azure.com',
       ])
     }
+  }, 60_000)
+
+  it('offers the importer the operator turned on', async () => {
+    const admin = await sharedAdmin(harness)
+    const offered = await fetch(`${harness.base}/api/imports`, { headers: { cookie: admin.cookie } })
+    expect(await offered.json()).toEqual({ sentinel: true })
   }, 60_000)
 
   /**

@@ -122,6 +122,12 @@ describe.skipIf(!runnable)('every response', () => {
     const csp = (await headersOf('/')).get('content-security-policy') ?? ''
     expect(sourcesOf(csp, 'connect-src')).toEqual(["'self'", 'ws://127.0.0.1', 'ws://localhost'])
   }, 60_000)
+
+  it('offers no importer the operator did not turn on', async () => {
+    const admin = await sharedAdmin(harness)
+    const offered = await fetch(`${harness.base}/api/imports`, { headers: { cookie: admin.cookie } })
+    expect(await offered.json()).toEqual({ sentinel: false })
+  }, 60_000)
 })
 
 /**

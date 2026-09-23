@@ -7,6 +7,7 @@ import { ImportSentinelContainer } from '@/app/case/ImportSentinelContainer'
 import { NewCaseContainer } from '@/app/picker/NewCaseContainer'
 import { sessionRows } from '@/components/blocks/session-menu'
 import { useSession } from '@/api/useSession'
+import { useSentinelOffered } from '@/api/importPlatforms'
 import { useGround } from '@/lib/useGround'
 
 import {
@@ -66,6 +67,7 @@ const PANES: Readonly<
 export function PickerRoute() {
   const [pane, setPane] = useState<PickerPane>('cases')
   const session = useSession()
+  const sentinel = useSentinelOffered()
   const { theme, setTheme } = useGround()
   const [account, setAccount] = useState(false)
   const [about, setAbout] = useState(false)
@@ -110,9 +112,14 @@ export function PickerRoute() {
         onFromImporter={() => {
           setDoor('importer')
         }}
-        onLiveSource={() => {
-          setDoor('live')
-        }}
+        // Drawn refused where the install does not import from Sentinel.
+        onLiveSource={
+          sentinel === true
+            ? () => {
+                setDoor('live')
+              }
+            : undefined
+        }
       />
       <ArchiveDoor isOpen={reading} onOpenChange={setReading} />
       <AccountContainer isOpen={account} onOpenChange={setAccount} />

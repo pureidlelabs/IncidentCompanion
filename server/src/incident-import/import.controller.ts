@@ -16,12 +16,14 @@
 import {
   Body,
   Controller,
+  Get,
   Inject,
   Param,
   ParseUUIDPipe,
   Post,
   UseGuards,
 } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
@@ -31,11 +33,14 @@ import { CasesService } from '../cases/cases.service.js'
 import { asOneAct } from '../db/act.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import type { Env } from '../config/env.js'
 import {
   commitBodySchema,
   importedSchema,
+  platformsSchema,
   previewBodySchema,
   previewResultSchema,
+  type ImportPlatforms,
 } from '../domain/incident-import.js'
 import { ImportService } from './import.service.js'
 import { caseSeverityOf } from './providers/sentinel/severity.js'
@@ -45,6 +50,7 @@ class PreviewBodyDto extends createZodDto(previewBodySchema) {}
 class PreviewResultDto extends createZodDto(previewResultSchema) {}
 class CommitBodyDto extends createZodDto(commitBodySchema) {}
 class IncidentImportedDto extends createZodDto(importedSchema) {}
+class ImportPlatformsDto extends createZodDto(platformsSchema) {}
 
 /**
  * The start door's body: an import, plus what the case is called.
@@ -132,7 +138,19 @@ export class StartImportController {
     private readonly imports: ImportService,
     private readonly cases: CasesService,
     @Inject(DATABASE) private readonly db: Database,
+    private readonly config: ConfigService<Env, true>,
   ) {}
+
+  /** Which platforms the client may offer to import from, as the operator set them. */
+  @Get()
+  @ZodResponse({
+    status: 200,
+    type: ImportPlatformsDto,
+    description: 'The detection platforms this install imports from.',
+  })
+  platforms(): ImportPlatforms {
+    return { sentinel: this.config.get('IC_SENTINEL_IMPORTER', { infer: true }) }
+  }
 
   /**
    * What an incident would become in a case that does not exist yet.
