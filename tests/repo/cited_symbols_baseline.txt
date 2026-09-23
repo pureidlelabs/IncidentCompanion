@@ -105,7 +105,6 @@ measureElement
 mergeProps
 noValidate
 onExpandedChange
-onRequest
 onResizeEnd
 partialRecord
 peerOptional
