@@ -67,7 +67,7 @@ function collections(): { name: string; make: () => Writable }[] {
     return {
       name: path.replace('api/cases/:caseId/', ''),
       make: () =>
-        new (controller as new (s: CollectionService) => Writable)(new CollectionService(db!)),
+        new (controller as new (s: CollectionService) => Writable)(new CollectionService(db!, suiteStore())),
     }
   })
 }

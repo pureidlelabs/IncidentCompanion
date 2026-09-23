@@ -146,9 +146,9 @@ export class CasesService {
    */
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    private readonly evidence: EvidenceStore,
     @Optional() private readonly channel?: CaseChannel,
     @Optional() private readonly gateway?: LiveGateway,
-    @Optional() private readonly evidence?: EvidenceStore,
   ) {}
 
   /**
@@ -532,9 +532,9 @@ export class CasesService {
    * the statement that wrote it. Drops the socket too, or a connection stays
    * open on a case that is gone.
    *
-   * Removes the case's artefacts once the row is gone. A failure there is
-   * logged, not thrown: the case is already deleted, and the next start
-   * removes what is left.
+   * Removes the case's artefacts once the row is gone, with no attach in the
+   * case between the two. A failure there is logged, not thrown: the case is
+   * already deleted, and the census counts what is left.
    */
   async remove(id: string, actorId: string): Promise<void> {
     const others = (await this.channel?.othersOn(id, actorId)) ?? []
@@ -545,11 +545,18 @@ export class CasesService {
       })
     }
 
-    const deleted = await this.db.delete(cases).where(eq(cases.id, id)).returning({ id: cases.id })
-    if (deleted.length === 0) throw new NotFoundException(`No case ${id}.`)
-    await this.evidence?.discardCase(id).catch((why: unknown) => {
-      new Logger(CasesService.name).warn(`artefacts of deleted case ${id} left for the next start: ${String(why)}`)
+    const deleted = await this.evidence.exclusive(id, async () => {
+      const gone = await this.db.delete(cases).where(eq(cases.id, id)).returning({ id: cases.id })
+      if (gone.length > 0) {
+        await this.evidence.discardCase(id).catch((why: unknown) => {
+          new Logger(CasesService.name).warn(
+            `artefacts of deleted case ${id} left in the store: ${String(why)}`,
+          )
+        })
+      }
+      return gone
     })
+    if (deleted.length === 0) throw new NotFoundException(`No case ${id}.`)
     this.channel?.announce(id, ['cases'], actorId)
     this.gateway?.dropCase(id)
   }

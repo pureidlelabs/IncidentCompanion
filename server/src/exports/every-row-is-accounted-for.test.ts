@@ -102,7 +102,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('every row in the file is ac
     const [blank] = await seed!.insert(cases).values({ title: 'Blank' }).returning()
     emptyCaseId = blank!.id
 
-    const collections = new CollectionService(db!)
+    const collections = new CollectionService(db!, suiteStore())
     service = new ImportService(collections)
     exports_ = new ExportsController(collections, service)
   })

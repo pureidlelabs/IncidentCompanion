@@ -27,6 +27,7 @@ import { withCase } from '../db/scope.js'
 import { evidenceSchema } from '../domain/entities/evidence.js'
 import { patchSchema } from '../domain/field-spec.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -167,10 +168,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     store = new EvidenceStore({ get: () => root } as never, policy)
     cases_ = new CasesService(
       db!,
+      store,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
     controller = new EvidenceFileController(db!, store)
-    rows = new EvidenceController(new CollectionService(db!))
+    rows = new EvidenceController(new CollectionService(db!, suiteStore()))
   })
 
   afterAll(async () => {
@@ -285,22 +287,22 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
    * body, and writes against the version it read, so a patch landing in between
    * is the ordinary case rather than a contrived one. -> #638
    *
-   * Arranged inside `put`, which is where an upload's time actually goes.
+   * Arranged inside `seal`, which is where an upload's time actually goes.
    */
   it('answers a row that moved mid-upload with a conflict naming the version it reached', async () => {
     const { caseId, id } = await caseWithRow()
     const [before] = await seed!.select().from(evidence).where(eq(evidence.id, id))
-    const racing = {
-      put: async (at: string, request: never, name?: string) => {
+    const racing = Object.assign(Object.create(store) as EvidenceStore, {
+      seal: async (request: never, name?: string) => {
         await rows.update(
           caseId,
           id,
           { version: before!.version, name: 'Renamed while uploading' },
           { user: { id: actorId } } as never,
         )
-        return store.put(at, request, name)
+        return store.seal(request, name)
       },
-    } as unknown as EvidenceStore
+    })
 
     await expect(
       new EvidenceFileController(db!, racing).attach(caseId, id, upload('mail body'), {
@@ -312,6 +314,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an evidence attachment', ()
     const [after] = await seed!.select().from(evidence).where(eq(evidence.id, id))
     expect(after!.name).toBe('Renamed while uploading')
     expect(after!.storedAt).toBeNull()
+    expect(await store.held(caseId), 'the refused attach left its bytes in the case').toEqual(new Set())
   })
 
   it('hands back a zip under `infected`, holding the exact bytes', async () => {

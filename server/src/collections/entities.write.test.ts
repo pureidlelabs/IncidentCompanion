@@ -62,7 +62,7 @@ function controllerFor(name: string): Writable {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Writable)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Writable)(new CollectionService(db!, suiteStore()))
 }
 
 describe.skipIf(!db || !hasConcurrentConnections())('writing an entity', () => {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, readFile, rm, stat, truncate, utimes, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat, truncate, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
@@ -172,41 +172,128 @@ describe('an artefact held per case', () => {
   })
 })
 
-describe('removing what nothing names', () => {
-  const HOUR = 3_600_000
-  const aged = (path: string) => utimes(path, new Date(Date.now() - 2 * HOUR), new Date(Date.now() - 2 * HOUR))
+describe('removing what a case no longer names', () => {
+  it('removes the digests it is given from that case and leaves another case\u2019s copy', async () => {
+    const [mine, theirs] = [randomUUID(), randomUUID()]
+    const going = await store.put(mine, bytesOf('released by one case'))
+    const staying = await store.put(mine, bytesOf('still named in that case'))
+    await store.put(theirs, bytesOf('released by one case'))
 
-  it('keeps a case the database does not hold until the install records deleting it', async () => {
-    const unheld = randomUUID()
-    const stored = await store.put(unheld, bytesOf('beside a database that never held its case'))
-    await aged(join(root, unheld, stored.hash))
+    await store.forget(mine, [going.hash])
 
-    await store.prune(new Map(), new Set(), HOUR)
-    expect(await store.held(unheld), 'a database that does not hold a case was read as its deletion').toEqual(new Set([stored.hash]))
-
-    await store.prune(new Map(), new Set([unheld]), HOUR)
-    expect(await store.held(unheld)).toEqual(new Set())
+    expect(await store.held(mine)).toEqual(new Set([staying.hash]))
+    expect(await store.verify(theirs, going.hash)).toBe(true)
   })
 
-  it('removes what the flat layout left at the top of the directory', async () => {
-    const flat = join(root, 'a'.repeat(64))
+  it('leaves no directory behind for a case it emptied', async () => {
+    const emptied = randomUUID()
+    const only = await store.put(emptied, bytesOf('the only artefact'))
+
+    await store.forget(emptied, [only.hash])
+
+    await expect(stat(join(root, emptied)), 'an empty directory outlived its last artefact').rejects.toThrow()
+  })
+
+  it('refuses a name that is not a digest rather than removing something else', async () => {
+    const kept = await store.put(CASE, bytesOf('beside a traversal to remove'))
+    for (const attempt of ['..', '*', '', `${kept.hash}/..`]) {
+      await expect(store.forget(CASE, [attempt]), attempt).rejects.toThrow()
+    }
+    expect(await store.verify(CASE, kept.hash)).toBe(true)
+  })
+})
+
+describe('counting what nothing names', () => {
+  it('counts a case\u2019s unnamed bytes, a case nothing holds, and a file outside any case, and removes none', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'evidence-unnamed-'))
+    const own = new EvidenceStore(configFor(dir), policy)
+    const [held, unheld] = [randomUUID(), randomUUID()]
+    const named = await own.put(held, bytesOf('named by its row'))
+    const orphan = await own.put(held, bytesOf('its row is gone'))
+    const stray = await own.put(unheld, bytesOf('its case is not in the database'))
+    const flat = join(dir, 'a'.repeat(64))
     await writeFile(flat, 'left by a store that kept no case')
-    await aged(flat)
 
-    await store.prune(new Map(), new Set(), HOUR)
+    const count = await own.unnamed(new Map([[held, new Set([named.hash])]]))
 
-    await expect(stat(flat), 'nothing reads the flat layout, and its file is still there').rejects.toThrow()
+    expect(count).toBe(3)
+    expect(await own.held(held)).toEqual(new Set([named.hash, orphan.hash]))
+    expect(await own.held(unheld)).toEqual(new Set([stray.hash]))
+    expect((await stat(flat)).isFile()).toBe(true)
+    await rm(dir, { recursive: true, force: true })
   })
 
-  it('counts bytes stored again as new, however old the copy they found', async () => {
-    const mine = randomUUID()
-    const first = await store.put(mine, bytesOf('attached, removed, attached again'))
-    await aged(join(root, mine, first.hash))
-    await store.put(mine, bytesOf('attached, removed, attached again'))
+  it('counts nothing in a directory that is not there', async () => {
+    const gone = new EvidenceStore(configFor(join(tmpdir(), randomUUID())), policy)
 
-    await store.prune(new Map([[mine, new Set()]]), new Set(), HOUR)
+    expect(await gone.unnamed(new Map())).toBe(0)
+  })
+})
 
-    expect(await store.held(mine), 'bytes stored a moment ago went before their row could name them').toEqual(new Set([first.hash]))
+describe('one act at a time on a case\u2019s artefacts', () => {
+  const later = () => {
+    let settle = () => {}
+    const settled = new Promise<void>((resolve) => (settle = resolve))
+    return { settled, settle }
+  }
+
+  it('starts an act on a case only once the one before it has finished', async () => {
+    const one = randomUUID()
+    const first = later()
+    const order: string[] = []
+
+    const a = store.exclusive(one, async () => {
+      order.push('first starts')
+      await first.settled
+      order.push('first ends')
+    })
+    const b = store.exclusive(one, () => {
+      order.push('second starts')
+      return Promise.resolve()
+    })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    first.settle()
+    await Promise.all([a, b])
+
+    expect(order).toEqual(['first starts', 'first ends', 'second starts'])
+  })
+
+  it('does not hold another case\u2019s act behind it', async () => {
+    const blocked = later()
+    const held = store.exclusive(randomUUID(), () => blocked.settled)
+
+    await expect(store.exclusive(randomUUID(), () => Promise.resolve('ran'))).resolves.toBe('ran')
+    blocked.settle()
+    await held
+  })
+
+  it('runs the next act after one that failed', async () => {
+    const one = randomUUID()
+    const failed = store.exclusive(one, () => Promise.reject(new Error('refused')))
+
+    await expect(failed).rejects.toThrow('refused')
+    await expect(store.exclusive(one, () => Promise.resolve('ran'))).resolves.toBe('ran')
+  })
+
+  it('holds a case across every store over the directory', async () => {
+    const one = randomUUID()
+    const other = new EvidenceStore(configFor(root), policy)
+    const first = later()
+    const order: string[] = []
+
+    const a = store.exclusive(one, async () => {
+      await first.settled
+      order.push('first')
+    })
+    const b = other.exclusive(one, () => {
+      order.push('second')
+      return Promise.resolve()
+    })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    first.settle()
+    await Promise.all([a, b])
+
+    expect(order, 'two modules\u2019 stores let two acts on one case interleave').toEqual(['first', 'second'])
   })
 })
 

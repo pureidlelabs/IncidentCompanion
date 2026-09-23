@@ -28,6 +28,7 @@ import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { COLLECTIONS } from '../domain/collections.js'
 import { cases, evidence, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -52,7 +53,7 @@ function batchDoorFor(name: string): Bulk {
     (one) => Reflect.getMetadata(PATH_METADATA, one) === `api/cases/:caseId/${name}`,
   )
   if (!found) throw new Error(`no controller is mounted at ${name}`)
-  return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!, suiteStore()))
 }
 
 // One teardown for the file rather than one per `describe`, which is the trap

@@ -93,7 +93,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
 
     announced = []
     present = []
-    service = new CasesService(db!, {
+    service = new CasesService(db!, suiteStore(), {
       announce: (caseId: string, scopes: string[]) => announced.push({ caseId, scopes }),
       othersOn: () => Promise.resolve(present),
     } as never)

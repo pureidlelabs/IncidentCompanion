@@ -14,7 +14,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq, inArray } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Logger } from '@nestjs/common'
@@ -272,6 +272,20 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     ).toBe(1)
   })
 
+  it('counts the bytes nothing names, and removes none of them', async () => {
+    await record(hashFor('1'))
+    await placed(hashFor('1'))
+    await placed(hashFor('2'))
+    await placed(hashFor('3'), randomUUID())
+    await writeFile(join(root, hashFor('4')), 'left by a store that kept no case')
+
+    const held = await census().take()
+
+    expect(held.unnamed, 'bytes nothing names were not counted').toBe(3)
+    expect(await storeAt(root).held(caseId)).toEqual(new Set([hashFor('1'), hashFor('2')]))
+    expect(await readdir(root), 'the census removed something').toHaveLength(3)
+  })
+
   /**
    * **An install with no evidence at all is not a broken one**, which is the
    * state a fresh install is in: answering anything but zero there would
@@ -288,7 +302,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
 
     const held = await new ArtefactCensus(empty as never, storeAt(root)).take()
 
-    expect(held).toEqual({ expected: 0, missing: 0 })
+    expect(held).toEqual({ expected: 0, missing: 0, unnamed: 0 })
   })
 })
 
@@ -302,14 +316,14 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
  * severity is not.
  */
 describe('what an install says at start', () => {
-  it('says nothing at all when it expects no artefacts', () => {
+  it('says nothing at all when it expects no artefacts and holds none nothing names', () => {
     // The state a fresh install is in. A line here would have every new
     // install report on a restore that never happened.
-    expect(saysAtStart({ expected: 0, missing: 0 })).toBeNull()
+    expect(saysAtStart({ expected: 0, missing: 0, unnamed: 0 })).toEqual([])
   })
 
   it('warns with both numbers when it cannot find some of them', () => {
-    const said = saysAtStart({ expected: 9, missing: 4 })
+    const [said] = saysAtStart({ expected: 9, missing: 4, unnamed: 0 })
 
     expect(said?.level, 'an install short of its evidence reports at the ordinary level').toBe(
       'warn',
@@ -321,10 +335,18 @@ describe('what an install says at start', () => {
   it('confirms rather than staying silent when it holds them all', () => {
     // Silence cannot be told from a check that did not run, which is the
     // reading an operator who has just put a directory back needs to rule out.
-    const said = saysAtStart({ expected: 9, missing: 0 })
+    const [said] = saysAtStart({ expected: 9, missing: 0, unnamed: 0 })
 
     expect(said?.level).toBe('log')
     expect(said?.message).toContain('9')
+  })
+
+  it('warns how many stored artefacts nothing names', () => {
+    const said = saysAtStart({ expected: 0, missing: 0, unnamed: 7 })
+
+    expect(said).toHaveLength(1)
+    expect(said[0]?.level, 'bytes nothing names are reported below the ordinary level').toBe('warn')
+    expect(said[0]?.message, 'the line does not say how many').toContain('7')
   })
 })
 
@@ -340,16 +362,25 @@ describe('the install saying it at start', () => {
     ({
       named: () => Promise.resolve(new Map()),
       take: () => (held instanceof Error ? Promise.reject(held) : Promise.resolve(held)),
-      sweep: () => Promise.resolve(0),
     }) as never
 
   it('reports what the census counted when the application comes up', async () => {
     const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
 
-    await new HealthModule(censusOf({ expected: 9, missing: 4 })).onApplicationBootstrap()
+    await new HealthModule(censusOf({ expected: 9, missing: 4, unnamed: 0 })).onApplicationBootstrap()
 
     expect(warn, 'nothing was said at start, so the census answers only when asked').toHaveBeenCalledOnce()
     expect(warn.mock.calls[0]?.[0]).toContain('4')
+    warn.mockRestore()
+  })
+
+  it('reports what nothing names when the application comes up', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+
+    await new HealthModule(censusOf({ expected: 0, missing: 0, unnamed: 5 })).onApplicationBootstrap()
+
+    expect(warn, 'the install came up without saying it holds bytes nothing names').toHaveBeenCalledOnce()
+    expect(warn.mock.calls[0]?.[0]).toContain('5')
     warn.mockRestore()
   })
 

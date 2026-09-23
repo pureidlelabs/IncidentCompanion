@@ -46,7 +46,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('exporting a collection as C
     await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
-    const collections = new CollectionService(db!)
+    const collections = new CollectionService(db!, suiteStore())
     controller = new ExportsController(collections, new ImportService(collections))
 
     /**

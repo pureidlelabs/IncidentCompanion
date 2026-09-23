@@ -31,36 +31,22 @@ export class HealthModule implements OnApplicationBootstrap {
   constructor(private readonly census: ArtefactCensus) {}
 
   /**
-   * Remove what nothing names, then say what this install expects beside it
-   * and cannot find.
+   * Say what this install expects beside it, what it cannot find, and what it
+   * holds that nothing names.
    *
-   * **Caught rather than propagated.** A sweep or a census that cannot be
-   * taken is a missing directory or a database that is not up yet, and
-   * neither is a reason to refuse an install that holds every case and every
-   * record.
+   * **Caught rather than propagated.** A census that cannot be taken is a
+   * missing directory or a database that is not up yet, and neither is a
+   * reason to refuse an install that holds every case and every record.
    */
   async onApplicationBootstrap(): Promise<void> {
     const log = new Logger('Evidence')
-    let named
+    let held
     try {
-      named = await this.census.named()
-    } catch (why) {
-      log.warn(`Could not ask the cases which artefacts they name: ${String(why)}`)
-      return
-    }
-    try {
-      const removed = await this.census.sweep(named)
-      if (removed > 0) log.log(`Removed ${String(removed)} stored artefacts nothing names.`)
-    } catch (why) {
-      log.warn(`Could not remove the artefacts nothing names: ${String(why)}`)
-    }
-    let said
-    try {
-      said = saysAtStart(await this.census.take(named))
+      held = await this.census.take()
     } catch (why) {
       log.warn(`Could not count the artefacts this install expects: ${String(why)}`)
       return
     }
-    if (said) log[said.level](said.message)
+    for (const said of saysAtStart(held)) log[said.level](said.message)
   }
 }

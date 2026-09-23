@@ -66,7 +66,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
     const [blank] = await seed!.insert(cases).values({ title: 'Blank' }).returning()
     emptyCaseId = blank!.id
 
-    const collections = new CollectionService(db!)
+    const collections = new CollectionService(db!, suiteStore())
     service = new ImportService(collections)
     exports_ = new ExportsController(collections, service)
   })
@@ -306,7 +306,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
    * check is inert in all of them; this one wires a holder to switch it on.
    */
   it('carries on when another analyst is holding one of the rows', async () => {
-    const held = new CollectionService(db!, {
+    const held = new CollectionService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
       holderOf: () => Promise.resolve({ userId: 'robin', username: 'Robin' }),

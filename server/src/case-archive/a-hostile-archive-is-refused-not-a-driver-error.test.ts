@@ -80,6 +80,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row t
     store = new EvidenceStore({ get: () => root } as never, policy)
     const cases_ = new CasesService(
       db!,
+      store,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
     exporter = new ArchiveExportService(cases_, store, policy)

@@ -66,7 +66,9 @@ function controllerFor(name: string): Doors {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Doors)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Doors)(
+    new CollectionService(db!, suiteStore()),
+  )
 }
 
 /**

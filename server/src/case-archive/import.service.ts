@@ -21,6 +21,7 @@ import { defaultCustomer } from '../customers/customers.service.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { EvidenceStore } from '../evidence/store.js'
+import { release } from '../report/artefacts-named.js'
 import { BadArchive, CASE_NAME, EVIDENCE_PREFIX, PROSE_PREFIX, readArchive } from '../archive/format.js'
 import { MalformedEnvelope, WrongPassphrase, isSealed, open } from '../archive/envelope.js'
 import { PolicyService } from '../policy/policy.service.js'
@@ -276,7 +277,7 @@ export class ArchiveImportService {
     // Nothing else names the case the archive would have been, so all of it goes.
     const refused = async (error: unknown): Promise<never> => {
       await this.store.discardCase(caseId).catch((why: unknown) => {
-        this.log.warn(`artefacts of a refused import left for the next start: ${String(why)}`)
+        this.log.warn(`artefacts of a refused import left in the store: ${String(why)}`)
       })
       throw error
     }
@@ -308,7 +309,7 @@ export class ArchiveImportService {
       held.add(stored.hash)
     }
 
-    return this.db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx) => {
       // **Trimmed, as the three HTTP doors trim.** `createCaseSchema` and the
       // patch schema both `.trim()`, so an archive carrying ` INC-9 ` would
       // otherwise store a padded reference that collides with nothing and is
@@ -495,6 +496,9 @@ export class ArchiveImportService {
         unresolvedReferences: unresolved.size,
       }
     }).catch(refused)
+    // What the archive carried and nothing in the new case names.
+    await this.store.exclusive(caseId, () => release(this.db, this.store, caseId, held))
+    return result
   }
 
   private async unsealed(archive: Buffer, passphrase: string): Promise<Buffer> {

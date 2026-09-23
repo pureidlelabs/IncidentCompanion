@@ -1493,9 +1493,8 @@ def test_the_demo_rebuild_reaches_the_evidence_the_server_writes():
     """*A demonstration case is removed: it leaves nothing behind.*
 
     The seed one-shot deletes every demonstration and removes their artefacts
-    itself, since their removal leaves no record for the server to act on. On
-    a mount of its own, or none, it removes them from a directory the server
-    never wrote.
+    itself, and nothing else removes them. On a mount of its own, or none, it
+    removes them from a directory the server never wrote.
     """
     services = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))["services"]
     evidence = [entry for entry in services["app"]["volumes"] if ":/evidence" in str(entry)]

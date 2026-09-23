@@ -127,7 +127,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
       .onConflictDoNothing()
     session = { user: { id: actorId } }
 
-    const cases_ = new CasesService(db!, {
+    const cases_ = new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)
@@ -137,7 +137,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
     const prose = new ProseService(db!)
     const render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
     lifecycle = new ReportLifecycleService(db!, { entry: () => Promise.resolve(undefined) } as never, render, prose)
-    collections = new CollectionService(db!)
+    collections = new CollectionService(db!, suiteStore())
     controller = new ReportsController(collections)
   })
 

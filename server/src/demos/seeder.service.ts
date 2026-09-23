@@ -110,7 +110,10 @@ export class DemoSeederService {
       // The change feed's rows for a demo go with it: they describe writes to
       // a case that no longer exists, and a picker replaying them would show
       // activity on nothing.
-      const removed = await tx.delete(cases).where(eq(cases.isDemo, true)).returning({ id: cases.id })
+      const removed = await tx
+        .delete(cases)
+        .where(eq(cases.isDemo, true))
+        .returning({ id: cases.id })
       /**
        * **A demo case is opened under a customer like any other.** This writes
        * the row itself rather than going through `CasesService.create`, so
@@ -161,7 +164,8 @@ export class DemoSeederService {
       await fillCompliance(tx, ids, startedAt)
       return { rebuilt: rows.length, removed }
     })
-    for (const { id } of removed) await this.evidence.discardCase(id)
+    for (const { id } of removed)
+      await this.evidence.exclusive(id, () => this.evidence.discardCase(id))
     return rebuilt
   }
 }

@@ -193,6 +193,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
     store = new EvidenceStore({ get: () => root } as never, policy)
     cases_ = new CasesService(
       db!,
+      store,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
     exporter = new ArchiveExportService(cases_, store, policy)

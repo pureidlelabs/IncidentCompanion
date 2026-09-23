@@ -32,6 +32,7 @@ import { english } from './document/packs.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import type { FigureNode } from './document/model.js'
 import { defaultPolicy } from '../policy/read.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -92,10 +93,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
       .returning()
     caseId = row!.id
 
-    collections = new CollectionService(db!)
+    collections = new CollectionService(db!, suiteStore())
     render = new ReportRenderService(
       db!,
-      new CasesService(db!),
+      new CasesService(db!, suiteStore()),
       new ProseService(db!),
       englishOnly,
       store,

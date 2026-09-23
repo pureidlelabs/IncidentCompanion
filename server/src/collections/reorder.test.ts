@@ -50,7 +50,7 @@ function controllerFor(name: string): Reorderable {
     othersOn: () => Promise.resolve([]),
   }
   return new (found as new (s: CollectionService) => Reorderable)(
-    new CollectionService(db!, channel as never),
+    new CollectionService(db!, suiteStore(), channel as never),
   )
 }
 

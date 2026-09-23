@@ -83,7 +83,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
      */
     await seed!.update(systems).set({ analyst: 'Nobody' }).where(eq(systems.id, rowId))
 
-    collections = new CollectionService(db!)
+    collections = new CollectionService(db!, suiteStore())
     service = new ConflictsService(db!, collections)
   })
 
@@ -360,7 +360,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
     let asked: unknown[] = []
     function holding(holder: { userId: string; username: string } | null): CollectionService {
       asked = []
-      return new CollectionService(db!, {
+      return new CollectionService(db!, suiteStore(), {
         announce: () => {},
         holderOf: (...args: unknown[]) => {
           asked = args

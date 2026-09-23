@@ -31,6 +31,7 @@ import { evidence } from '../src/db/schema/entities.js'
 import { reports } from '../src/db/schema/report.js'
 import { user } from '../src/db/schema/auth.js'
 import { hasConcurrentConnections, openTestPool } from './database.js'
+import { suiteStore } from './evidence-on-disk.js'
 
 const ANALYST = 'cross-case-analyst'
 
@@ -52,7 +53,7 @@ let ourReport = ''
 
 describe.skipIf(!db || !hasConcurrentConnections())('a report section naming evidence', () => {
   beforeAll(async () => {
-    service = new CollectionService(db!)
+    service = new CollectionService(db!, suiteStore())
 
     const now = new Date()
     await seed!

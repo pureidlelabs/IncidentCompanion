@@ -75,7 +75,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('filing the demo reports', (
     const seeder = new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore())
     await seeder.reseed()
 
-    const cases_ = new CasesService(db!, {
+    const cases_ = new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)

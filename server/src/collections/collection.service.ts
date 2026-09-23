@@ -21,7 +21,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common'
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
-import type { PgTable } from 'drizzle-orm/pg-core'
+import type { PgColumn, PgTable } from 'drizzle-orm/pg-core'
 import type { z } from 'zod'
 
 import { isScope } from '../domain/scopes.lists.js'
@@ -42,7 +42,14 @@ import {
   refuseIfCrossFieldRuleBroken,
 } from './write-guards.js'
 import { CaseChannel } from '../live/case-channel.service.js'
+import { EvidenceStore } from '../evidence/store.js'
+import { evidence } from '../db/schema/entities.js'
+import { release } from '../report/artefacts-named.js'
 import type { ClosedRowGuard } from '../report/freeze.js'
+
+/** The digest a deleted evidence row named, so the bytes can leave the case with it. */
+const digestOf = (collection: string): Record<string, PgColumn> =>
+  collection === 'evidence' ? { hash: columnOf(evidence, 'hash') } : {}
 
 /** One row of a selection: which collection it is in, and what it was read at. */
 interface BulkRow {
@@ -128,6 +135,7 @@ export class CollectionService {
    */
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    private readonly store: EvidenceStore,
     @Optional() private readonly channel?: CaseChannel,
   ) {}
 
@@ -239,7 +247,8 @@ export class CollectionService {
     deleted: { collection: string; id: string }[]
     missing: { collection: string; id: string }[]
   }> {
-    const outcome = await withCase(this.db, caseId, async (tx) => {
+    const released: (string | null)[] = []
+    const deleting = () => withCase(this.db, caseId, async (tx) => {
       const deleted: { collection: string; id: string }[] = []
       const refused: string[] = []
 
@@ -259,9 +268,16 @@ export class CollectionService {
               sql`(${id}, ${version}) IN (${sql.join(pairs, sql`, `)})`,
             ),
           )
-          .returning({ id, version })) as { id: string; version: number }[]
+          .returning({ id, version, ...digestOf(collection) })) as {
+          id: string
+          version: number
+          hash?: string | null
+        }[]
 
-        for (const row of gone) deleted.push({ collection, id: row.id })
+        for (const row of gone) {
+          deleted.push({ collection, id: row.id })
+          released.push(row.hash ?? null)
+        }
 
         if (gone.length > 0) {
           await tx.insert(changeFeed).values(
@@ -319,6 +335,11 @@ export class CollectionService {
           .filter((t) => !answered.has(`${t.collection}:${t.id}`))
           .map((t) => ({ collection: t.collection, id: t.id })),
       }
+    })
+    const outcome = await this.store.exclusive(caseId, async () => {
+      const answer = await deleting()
+      await release(this.db, this.store, caseId, released)
+      return answer
     })
 
     // Filtered rather than cast: `collection` here came back from a delete
@@ -825,7 +846,7 @@ export class CollectionService {
     await def.refuseIfClosed?.(this.db, caseId, { ids: [id] })
     await def.refuseUnservedTerm?.(this.db, caseId, { ids: [id] })
     const cols = columns(def)
-    const removed = await withCase(this.db, caseId, async (tx) => {
+    const deleting = () => withCase(this.db, caseId, async (tx) => {
       const deleted = (await tx
         .delete(def.table)
         .where(
@@ -835,9 +856,12 @@ export class CollectionService {
             eq(cols.version, expectedVersion),
           ),
         )
-        .returning({ id: cols.id })) as { id: string }[]
+        .returning({ id: cols.id, ...digestOf(def.name) })) as {
+        id: string
+        hash?: string | null
+      }[]
 
-      if (deleted.length === 0) return false
+      if (deleted.length === 0) return deleted
 
       await tx.insert(changeFeed).values({
         caseId,
@@ -848,7 +872,12 @@ export class CollectionService {
         actorId,
         fields: [],
       })
-      return true
+      return deleted
+    })
+    const removed = await this.store.exclusive(caseId, async () => {
+      const gone = await deleting()
+      await release(this.db, this.store, caseId, gone.map((row) => row.hash))
+      return gone.length > 0
     })
 
     if (removed) this.announce(caseId, [def.name], actorId)
