@@ -19,6 +19,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, systems, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
@@ -61,7 +62,7 @@ function controllerFor(name: string): Writable {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Writable)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Writable)(new CollectionService(db!, suiteStore()))
 }
 
 describe.skipIf(!db || !hasConcurrentConnections())('writing an entity', () => {
@@ -70,7 +71,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing an entity', () => {
 
   beforeAll(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
     // **Attribution is a real foreign key**, so the actor has to exist - a

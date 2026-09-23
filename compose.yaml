@@ -249,6 +249,8 @@ services:
       # Shares `ic-install` to read the `AUTH_SECRET` the server minted, rather
       # than the entrypoint minting a second one.
       - "ic-install:/install:z"
+      # The demo rebuild removes the artefacts of the demonstrations it deletes.
+      - "ic-evidence:/evidence:z"
     # `--demos` is the laptop shape and would not be passed in a deployment;
     # drop it and `/api/demos` is empty.
     command: ["node", "dist/src/seed.js", "--demos"]

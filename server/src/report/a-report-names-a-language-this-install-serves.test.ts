@@ -6,6 +6,7 @@ import { CollectionService } from '../collections/collection.service.js'
 import { REPORTS_COLLECTION } from '../collections/definitions.js'
 import { cases, reportLanguage, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * **The language a report is stored with is one this install can print it in.**
@@ -57,7 +58,7 @@ describe.skipIf(!db)('the language a report is written with', () => {
       builtin: false,
     })
 
-    collections = new CollectionService(db!)
+    collections = new CollectionService(db!, suiteStore())
   })
 
   afterAll(async () => {

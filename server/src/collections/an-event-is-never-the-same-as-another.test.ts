@@ -34,6 +34,7 @@ import { CollectionService } from './collection.service.js'
 import { TIMELINE_COLLECTION as TIMELINE } from './definitions.js'
 import { cases, timeline, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const EVENTS = [
   'timeline',
@@ -87,7 +88,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a collection whose rows are
   let caseId = ''
 
   beforeAll(async () => {
-    service = new CollectionService(db!)
+    service = new CollectionService(db!, suiteStore())
     const now = new Date()
     await seed!
       .insert(user)

@@ -13,6 +13,7 @@ import { ExportsController } from './exports.controller.js'
 import { ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, systems, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
@@ -42,10 +43,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('exporting a collection as C
 
   beforeAll(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
-    const collections = new CollectionService(db!)
+    const collections = new CollectionService(db!, suiteStore())
     controller = new ExportsController(collections, new ImportService(collections))
 
     /**

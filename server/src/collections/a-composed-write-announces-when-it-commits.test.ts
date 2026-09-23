@@ -29,6 +29,7 @@ import { TABLES } from './registry.js'
 import { cases, user } from '../db/schema/index.js'
 import { asOneAct, ComposedWithoutAnAct, whenCommitted } from '../db/act.js'
 import { openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env['DATABASE_URL'] ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -88,7 +89,7 @@ describe.skipIf(!db)('a write composed into a larger act', () => {
 
   it('announces once the act it was composed into has committed', async () => {
     const channel = recorder()
-    const collections = new CollectionService(db!, channel as never)
+    const collections = new CollectionService(db!, suiteStore(), channel as never)
 
     await asOneAct(db!, async (tx) => {
       await collections.createMany(
@@ -114,7 +115,7 @@ describe.skipIf(!db)('a write composed into a larger act', () => {
 
   it('announces nothing when the act it was composed into rolls back', async () => {
     const channel = recorder()
-    const collections = new CollectionService(db!, channel as never)
+    const collections = new CollectionService(db!, suiteStore(), channel as never)
 
     await expect(
       asOneAct(db!, async (tx) => {
@@ -138,7 +139,7 @@ describe.skipIf(!db)('a write composed into a larger act', () => {
 
   it('announces immediately when it opened its own transaction', async () => {
     const channel = recorder()
-    const collections = new CollectionService(db!, channel as never)
+    const collections = new CollectionService(db!, suiteStore(), channel as never)
 
     await collections.createMany(
       DEFINITION(),
@@ -162,7 +163,7 @@ describe.skipIf(!db)('a write composed into a larger act', () => {
    */
   it('refuses a write composed into a transaction no act opened', async () => {
     const channel = recorder()
-    const collections = new CollectionService(db!, channel as never)
+    const collections = new CollectionService(db!, suiteStore(), channel as never)
 
     await expect(
       db!.transaction(async (tx) => {
@@ -188,7 +189,7 @@ describe.skipIf(!db)('a write composed into a larger act', () => {
    */
   it('announces across collections when the act commits, and not before', async () => {
     const channel = recorder()
-    const collections = new CollectionService(db!, channel as never)
+    const collections = new CollectionService(db!, suiteStore(), channel as never)
 
     await asOneAct(db!, async (tx) => {
       await collections.createAcross(

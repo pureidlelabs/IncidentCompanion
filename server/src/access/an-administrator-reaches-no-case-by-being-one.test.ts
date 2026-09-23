@@ -31,6 +31,7 @@ import { customers } from '../db/schema/customer.js'
 import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
 import { user } from '../db/schema/auth.js'
 import { openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -67,7 +68,7 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
   beforeAll(async () => {
     guard = new CaseAccessGuard(db!, new ReachService(db!), new InstallActivityService(db!))
     groupsService = new GroupsService(db!)
-    casesService = new CasesService(db!)
+    casesService = new CasesService(db!, suiteStore())
 
     const now = new Date()
     await seed!

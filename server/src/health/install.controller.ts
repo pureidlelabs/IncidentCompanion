@@ -68,12 +68,13 @@ export const installSettingsSchema = z.object({
      */
     encryptionNote: z.string(),
     /**
-     * How many artefacts this install holds the bytes of, and how many of
-     * those it cannot find beside it.
+     * How many artefacts this install holds the bytes of, how many of those
+     * it cannot find beside it, and how many stored artefacts no case names.
      */
     artefacts: z.object({
       expected: z.number().int(),
       missing: z.number().int(),
+      unnamed: z.number().int(),
     }),
   }),
   limits: z.object({

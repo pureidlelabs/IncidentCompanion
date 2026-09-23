@@ -47,6 +47,7 @@ node_modules
 # Evidence artefacts a dev run attaches. Content-addressed bytes from a real
 # incident are the last thing that should reach a repository going public.
 .evidence/
+.evidence-suite/
 
 # Left behind when Storybook cannot bind its port.
 ui/debug-storybook.log

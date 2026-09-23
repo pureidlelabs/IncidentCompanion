@@ -35,6 +35,7 @@ import { english } from './document/packs.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -124,7 +125,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a sent report, when the cas
       })
       .onConflictDoNothing()
 
-    const cases_ = new CasesService(db!, {
+    const cases_ = new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)

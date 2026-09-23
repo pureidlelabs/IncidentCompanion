@@ -1,73 +1,76 @@
 /**
- * What this install expects to find beside it, and what it cannot.
+ * What this install expects beside it, what it cannot find, and what nothing
+ * names.
  *
- * Counts the artefacts the evidence rows say this install holds against the
- * names in `EVIDENCE_DIR`. Reads names, never bytes, and never throws for an
- * absent directory. -> `openspec/specs/state/design.md`
+ * Asks each case what its rows name and asks the store what it holds. Removes
+ * nothing. -> `openspec/specs/state/design.md`
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-import type { Env } from '../config/env.js'
-import { readdir } from 'node:fs/promises'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import { artefactsNamed } from '../db/artefacts-named.js'
+import { EvidenceStore } from '../evidence/store.js'
+import { artefactsNamed } from '../report/artefacts-named.js'
 
-/** What the install expects, and how much of it is not there. */
+/** What the install expects, how much of it is not there, and what it holds that nothing names. */
 export interface Census {
-  /** Distinct artefacts the rows name. */
+  /** Artefacts the rows name, once per case holding one. */
   expected: number
   /** How many of those the install cannot find. */
   missing: number
+  /** Stored artefacts no case's rows or sent reports name. */
+  unnamed: number
 }
 
-/** The line this install says at start, or null when it has nothing to say. */
-export function saysAtStart(held: Census): { level: 'log' | 'warn'; message: string } | null {
-  if (held.expected === 0) return null
-  if (held.missing === 0) {
-    return {
+/** What this install says at start, a line per finding. */
+export function saysAtStart(held: Census): { level: 'log' | 'warn'; message: string }[] {
+  const said: { level: 'log' | 'warn'; message: string }[] = []
+  if (held.expected > 0 && held.missing === 0) {
+    said.push({
       level: 'log',
       message: `All ${String(held.expected)} attached artefacts are beside this install.`,
-    }
+    })
   }
-  return {
-    level: 'warn',
-    message:
-      `${String(held.missing)} of ${String(held.expected)} attached artefacts are not beside ` +
-      'this install. A database restored without its evidence directory reads as well until ' +
-      'somebody opens a case that has evidence on it.',
+  if (held.missing > 0) {
+    said.push({
+      level: 'warn',
+      message:
+        `${String(held.missing)} of ${String(held.expected)} attached artefacts are not beside ` +
+        'this install. A database restored without its evidence directory reads as well until ' +
+        'somebody opens a case that has evidence on it.',
+    })
   }
+  if (held.unnamed > 0) {
+    said.push({
+      level: 'warn',
+      message:
+        `${String(held.unnamed)} stored artefacts are named by no case in this database. ` +
+        'They are kept: a database older than its evidence directory, or not its own, ' +
+        'has no row for bytes that may be the only copy.',
+    })
+  }
+  return said
 }
 
 @Injectable()
 export class ArtefactCensus {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
-    private readonly config: ConfigService<Env, true>,
+    private readonly store: EvidenceStore,
   ) {}
 
-  /**
-   * Count what this install holds against what is on disk.
-   *
-   * A directory that is not there is read as holding nothing, which is the
-   * state this exists to report rather than an error to raise: an install
-   * restored without its artefacts has no such directory at all.
-   */
+  /** Count what each case's rows name against what the store holds. */
   async take(): Promise<Census> {
-    const wanted = await artefactsNamed(this.db)
-    if (wanted.size === 0) return { expected: 0, missing: 0 }
-
-    const root = this.config.get('EVIDENCE_DIR', { infer: true })
-    let held: Set<string>
-    try {
-      held = new Set(await readdir(root))
-    } catch {
-      held = new Set()
-    }
-
+    let expected = 0
     let missing = 0
-    for (const hash of wanted) if (!held.has(hash)) missing += 1
-    return { expected: wanted.size, missing }
+    const kept = new Map<string, Set<string>>()
+    for (const [caseId, named] of await artefactsNamed(this.db)) {
+      kept.set(caseId, named.kept)
+      if (named.stored.size === 0) continue
+      const held = await this.store.held(caseId)
+      expected += named.stored.size
+      for (const hash of named.stored) if (!held.has(hash)) missing += 1
+    }
+    return { expected, missing, unnamed: await this.store.unnamed(kept) }
   }
 }
