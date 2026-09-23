@@ -49,11 +49,13 @@ describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, wr
   let sentBlock = ''
   let draftId = ''
   let draftBlock = ''
+  let corrected = ''
+  let drawn = ''
   let before: unknown[] = []
 
   const snapshot = () =>
     rows(sql`
-      select r.id, r.label, r.document, r.sent_at, r.version,
+      select r.id, r.label, r.document, r.sent_at, r.version, r.supersedes,
              (select json_agg(b order by b.id) from report_blocks b where b.report_id = r.id) as blocks
         from reports r where r.id = ${sentId}`)
 
@@ -80,6 +82,11 @@ describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, wr
     sentBlock = await block(sentId)
     draftId = await report('Still a draft')
     draftBlock = await block(draftId)
+    // What the sent report points at: the draft it corrects, and the evidence a part draws.
+    corrected = await report('Corrected by the filed one')
+    drawn = String((await rows(sql`insert into evidence (case_id, name) values (${caseId}, 'screenshot') returning id`))[0]!['id'])
+    await seed!.execute(sql`update reports set supersedes = ${corrected} where id = ${sentId}`)
+    await seed!.execute(sql`update report_blocks set kind = 'figure', evidence_id = ${drawn} where id = ${sentBlock}`)
     // The stamp is the last write a report takes.
     await seed!.execute(sql`update reports set sent_at = now(), frozen = '{}'::jsonb, frozen_at = now() where id = ${sentId}`)
     before = await snapshot()
@@ -106,6 +113,8 @@ describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, wr
     ['a part is removed', () => sql`delete from report_blocks where id = ${sentBlock}`],
     ['a draft part is moved into it', () => sql`update report_blocks set report_id = ${sentId} where id = ${draftBlock}`],
     ['one of its parts is moved out', () => sql`update report_blocks set report_id = ${draftId} where id = ${sentBlock}`],
+    ['the evidence one of its parts draws is deleted', () => sql`delete from evidence where id = ${drawn}`],
+    ['the draft it corrects is deleted', () => sql`delete from reports where id = ${corrected}`],
   ]
 
   it.each(attacks)('refuses the application when %s, naming the report', async (_what, statement) => {
@@ -152,10 +161,16 @@ describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, wr
     const doomed = String(
       (await rows(sql`insert into cases (title, created_by) values ('Doomed', ${account}) returning id`))[0]!['id'],
     )
-    const filed = String(
-      (await rows(sql`insert into reports (case_id, label) values (${doomed}, 'Filed') returning id`))[0]!['id'],
+    const draft = String(
+      (await rows(sql`insert into reports (case_id, label) values (${doomed}, 'Draft') returning id`))[0]!['id'],
     )
-    await seed!.execute(sql`insert into report_blocks (case_id, report_id) values (${doomed}, ${filed})`)
+    const filed = String(
+      (await rows(sql`insert into reports (case_id, label, supersedes) values (${doomed}, 'Filed', ${draft}) returning id`))[0]!['id'],
+    )
+    const shown = String(
+      (await rows(sql`insert into evidence (case_id, name) values (${doomed}, 'screenshot') returning id`))[0]!['id'],
+    )
+    await seed!.execute(sql`insert into report_blocks (case_id, report_id, kind, evidence_id) values (${doomed}, ${filed}, 'figure', ${shown})`)
     await seed!.execute(sql`update reports set sent_at = now() where id = ${filed}`)
 
     await seed!.execute(sql`delete from cases where id = ${doomed}`)

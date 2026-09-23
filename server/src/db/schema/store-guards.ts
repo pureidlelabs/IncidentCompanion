@@ -20,16 +20,18 @@ export function sentReportIn(error: unknown): { id: string; label: string | null
   return undefined
 }
 
-/**
- * `pg_trigger_depth() > 1` is a write issued by another trigger: a case
- * deleted with its reports, or an account deleted and its name nulled out of
- * the rows it wrote.
- */
 export const storeGuards: readonly string[] = [
+  // Which write the store issues for another passes: the case's removal, or an account's.
+  `create or replace function the_freeze_passes(case_id uuid, old jsonb, new jsonb) returns boolean
+     language sql security definer set search_path = pg_catalog as $$
+     select not exists (select 1 from public.cases c where c.id = the_freeze_passes.case_id)
+         or coalesce(new - 'created_by' - 'updated_by' = old - 'created_by' - 'updated_by', false)
+   $$`,
   `create or replace function refuse_a_change_to_a_sent_report() returns trigger
      language plpgsql as $$
    begin
-     if old.sent_at is not null and pg_trigger_depth() < 2 then
+     if old.sent_at is not null
+        and (pg_trigger_depth() < 2 or not public.the_freeze_passes(old.case_id, to_jsonb(old), to_jsonb(new))) then
        raise exception 'report % was sent at %', old.id, old.sent_at
          using errcode = '${SENT_REPORT_REFUSED}',
                detail = json_build_object('reportId', old.id, 'label', old.label, 'sentAt', old.sent_at)::text;
@@ -47,7 +49,8 @@ export const storeGuards: readonly string[] = [
    declare
      report record;
    begin
-     if pg_trigger_depth() < 2 then
+     if pg_trigger_depth() < 2
+        or not public.the_freeze_passes(coalesce(old.case_id, new.case_id), to_jsonb(old), to_jsonb(new)) then
        for report in
          select id, label, sent_at from public.reports
           where id in (old.report_id, new.report_id)
