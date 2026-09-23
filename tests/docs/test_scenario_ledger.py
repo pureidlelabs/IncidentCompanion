@@ -17,6 +17,8 @@ import re
 
 import pytest
 
+from tests import certify
+from tests._ledger import citations
 from tests._ledger import rows as ledger_rows
 from tests._repo import REPO_ROOT
 
@@ -94,13 +96,26 @@ def test_what_a_status_owes_is_present(row: tuple[str, str, str, str, str]) -> N
 
     if status == "demonstrated":
         assert evidence, (
-            f"{capability}: {scenario!r} is demonstrated by nothing. Name what demonstrates "
-            "it, as a path from the repository root."
+            f"{capability}: {scenario!r} is demonstrated by nothing. Name the tests that "
+            "demonstrate it, as `path :: describe > case`."
         )
-        assert (ROOT / evidence).exists(), (
-            f"{capability}: {scenario!r} cites {evidence!r}, which does not exist. A citation "
-            "that has moved is a scenario counted as demonstrated by nothing."
-        )
+        for path, title in citations(evidence):
+            assert title, (
+                f"{capability}: {scenario!r} cites {path!r}, a file rather than a test in it. "
+                "A path existing demonstrates nothing; name the case, as `path :: describe > case`."
+            )
+            assert (ROOT / path).is_file(), (
+                f"{capability}: {scenario!r} cites {path!r}, which does not exist. A citation "
+                "that has moved is a scenario counted as demonstrated by nothing."
+            )
+            reaching = {"server", "screen", "containers"} | (
+                {"client"} if certify.renders_a_screen(path) else set()
+            )
+            assert reaching & set(certify.owners(path)), (
+                f"{capability}: {scenario!r} cites {path!r}, which no certifying run reads at the "
+                "product's entry point: a repository check, a Playwright spec, or a client test "
+                "that renders no screen."
+            )
 
     if status == "undemonstrable":
         assert evidence, (
