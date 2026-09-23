@@ -38,11 +38,16 @@ export function applyPlatform(
   /**
    * **Where the install is reached, read from the one value that decides it.**
    * `AUTH_BASE_URL` is what `trustedOrigins` derives the CSRF allowlist from,
-   * so the address HSTS is judged against cannot drift from the address the
+   * so the destinations the policy names cannot drift from the address the
    * application believes it is at.
    */
   const config = app.get<ConfigService<Env, true>>(ConfigService)
-  app.use(securityHeaders(config.get('AUTH_BASE_URL', { infer: true })))
+  app.use(
+    securityHeaders(
+      config.get('AUTH_BASE_URL', { infer: true }),
+      config.get('IC_SENTINEL_IMPORTER', { infer: true }),
+    ),
+  )
   app.use(noStoreOnTheApi())
   app.use(retryAfterOnEveryRefusal())
 

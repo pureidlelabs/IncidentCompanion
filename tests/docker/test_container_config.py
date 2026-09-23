@@ -1833,3 +1833,10 @@ def test_the_edge_says_hsts_at_a_name_and_never_at_loopback():
     assert "preload" not in values, (
         "preload submits the install to a browser list it cannot withdraw from"
     )
+
+
+def test_the_sentinel_importer_is_off_until_the_operator_turns_it_on():
+    """The application is handed the operator's switch, and nothing when it is unset."""
+    assert _resolved()["services"]["app"]["environment"]["IC_SENTINEL_IMPORTER"] == ""
+    on = _resolved(IC_SENTINEL_IMPORTER="on")
+    assert on["services"]["app"]["environment"]["IC_SENTINEL_IMPORTER"] == "on"

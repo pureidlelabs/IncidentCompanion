@@ -15,6 +15,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
+import { sourcesOf } from './content-policy.js'
 
 /**
  * **`skipIf` here is a boot check, not a gap in the gate.** `bootable()` is
@@ -102,43 +103,24 @@ describe.skipIf(!runnable)('every response', () => {
   }, 60_000)
 
   /**
-   * **No HSTS, deliberately.** The app binds loopback under a certificate it
-   * mints itself; pinning a browser to https for `127.0.0.1` would apply to
-   * every other project on that machine.
+   * **The application never holds the protected connection, so it says
+   * nothing about it.** The edge answers HSTS from the host it was reached
+   * at; `a-named-install-names-only-itself.test.ts` holds the named half.
    */
   it('does not pin the whole of localhost to https', async () => {
     expect((await headersOf('/')).get('strict-transport-security')).toBeNull()
   }, 60_000)
 
   /**
-   * **The socket is the product, so the policy has to admit it.** Presence,
-   * claims and the repaint all ride `wss:`, and a policy that forgot it would
-   * leave every screen silently un-live with nothing failing on the server.
+   * **Exactly the install's own socket, and no destination the operator did
+   * not choose.** A scheme on its own admits every host speaking it, which a
+   * wildcard check does not see; the import platform is named only on an
+   * install that turned importing from it on, which this one did not.
+   * `a-named-install-names-only-itself.test.ts` holds the other half.
    */
-  it('admits the case socket', async () => {
+  it('names only the install itself as a destination, with no scheme on its own', async () => {
     const csp = (await headersOf('/')).get('content-security-policy') ?? ''
-    expect(csp).toContain('wss:')
-  }, 60_000)
-
-  /**
-   * **The importer's transport, which the policy has to list.** The browser
-   * signs in to Azure and queries ARM itself, so the whole feature is
-   * `connect-src` and nothing else: under `'self' wss:` every file of it is
-   * dead in the shipped product with nothing failing on the server.
-   *
-   * **Exact origins, and the second assertion is the one that matters.**
-   * `https://management.azure.com.evil.test` is a prefix of nothing but is one
-   * careless wildcard away from being admitted, and `assertArmUrl` checks
-   * `URL.origin` for exactly that reason.
-   */
-  it('admits the two Azure origins the Sentinel importer needs, and no wildcard', async () => {
-    const csp = (await headersOf('/')).get('content-security-policy') ?? ''
-    expect(csp).toContain('https://login.microsoftonline.com')
-    expect(csp).toContain('https://management.azure.com')
-
-    const connect = csp.split(';').find((one) => one.trim().startsWith('connect-src')) ?? ''
-    expect(connect, 'a wildcard admits every host under it').not.toMatch(/\*/)
-    expect(connect, 'a scheme-only source admits every https host').not.toMatch(/\shttps:(\s|$)/)
+    expect(sourcesOf(csp, 'connect-src')).toEqual(["'self'", 'ws://127.0.0.1', 'ws://localhost'])
   }, 60_000)
 })
 

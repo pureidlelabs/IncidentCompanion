@@ -91,6 +91,16 @@ const schema = z.object({
 
   /** `key=value,key=value`, the standard's own shape, sent with every batch. */
   OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
+
+  /**
+   * Whether analysts may import incidents from Microsoft Sentinel, which puts
+   * Azure's two origins in every page's content policy. Off unless the
+   * operator turns it on.
+   */
+  IC_SENTINEL_IMPORTER: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.stringbool().default(false),
+  ),
 })
 
 export type Env = z.infer<typeof schema>

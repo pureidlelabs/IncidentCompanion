@@ -124,6 +124,7 @@ services:
       # carry the destination's credential and reach the exporter unread.
       OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      IC_SENTINEL_IMPORTER: ${IC_SENTINEL_IMPORTER:-}
     volumes:
       # `:z` relabels for SELinux (RHEL, Rocky, Alma), where its absence fails
       # every write and reads as a broken app. A no-op elsewhere.
