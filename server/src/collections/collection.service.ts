@@ -28,7 +28,7 @@ import { derivedFields } from '../domain/field-spec.js'
 import { isScope } from '../domain/scopes.lists.js'
 import type { CollectionName, Scope } from '../domain/wire.js'
 
-import { coerceTimes, columnOf } from '../db/column-access.js'
+import { coerceTimes, columnOf, wired } from '../db/column-access.js'
 import { whenCommitted } from '../db/act.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -309,7 +309,7 @@ export class CollectionService {
     const cols = columns(def)
     return withCase(on, caseId, (tx) =>
       tx
-        .select()
+        .select(wired(def.table))
         .from(def.table)
         .where(eq(cols.caseId, caseId))
         .orderBy(asc(cols.order)),
@@ -336,7 +336,7 @@ export class CollectionService {
       const [row] = (await tx
         .insert(def.table)
         .values({ ...coerceTimes(def.table, values), caseId, createdBy: actorId, updatedBy: actorId })
-        .returning()) as { id: string; version: number }[]
+        .returning(wired(def.table))) as { id: string; version: number }[]
 
       await tx.insert(changeFeed).values({
         caseId,
@@ -441,7 +441,7 @@ export class CollectionService {
               updatedBy: actorId,
             })) as never,
           )
-          .returning()) as { id: string; version: number }[]
+          .returning(wired(def.table))) as { id: string; version: number }[]
         inserted.push(...batch)
       }
 
@@ -616,7 +616,7 @@ export class CollectionService {
             version: sql`${cols.version} + 1`,
           })
           .where(and(eq(cols.id, id), eq(cols.caseId, caseId)))
-          .returning()) as { id: string; version: number }[]
+          .returning(wired(def.table))) as { id: string; version: number }[]
         if (row) moved.push(row)
       }
 
@@ -704,7 +704,7 @@ export class CollectionService {
             sql`(${cols.id}, ${cols.version}) IN (${sql.join(pairs, sql`, `)})`,
           ),
         )
-        .returning()) as { id: string; version: number }[]
+        .returning(wired(def.table))) as { id: string; version: number }[]
 
       if (updated.length > 0) {
         await tx.insert(changeFeed).values(
@@ -844,7 +844,7 @@ export class CollectionService {
     const cols = columns(def)
     const [row] = await withCase(this.db, caseId, (tx) =>
       tx
-        .select()
+        .select(wired(def.table))
         .from(def.table)
         .where(and(eq(cols.id, id), eq(cols.caseId, caseId))),
     )

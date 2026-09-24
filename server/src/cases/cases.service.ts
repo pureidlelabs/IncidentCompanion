@@ -16,7 +16,7 @@ import {
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, asc, desc, eq, getTableColumns, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import { defaultCustomer } from '../customers/customers.service.js'
@@ -31,7 +31,7 @@ import { isGapped } from '../domain/tiering.js'
 import { SEVERITY } from '../domain/vocabularies.js'
 import { withCase, type Executor } from '../db/scope.js'
 import { inSeries } from '../db/in-series.js'
-import { columnOf } from '../db/column-access.js'
+import { columnOf, wired } from '../db/column-access.js'
 import type { PgTable } from 'drizzle-orm/pg-core'
 import type { Transaction } from '../db/client.js'
 import type { CaseTemplate } from '../library/kinds.js'
@@ -119,16 +119,6 @@ export interface ReportStub {
 
 
 export type CaseWithCollections = CaseRow & Record<CaseCollection, unknown[]>
-
-/**
- * A note without its Yjs document.
- *
- * **`select()` on a table with a bytea column sends the blob.** A note's
- * document is the same shape as a report's and there is one per note, so a
- * whole-row select puts every one of them in the case document -- and the
- * screen reads its words from `note`, which this keeps.
- */
-const { document: _noteDocument, ...WIRED_NOTE } = getTableColumns(caseNotes)
 
 const EMPTY_COLLECTIONS = Object.fromEntries(
   // `[] as unknown[]`, or `fromEntries` infers `never[]` and the assertion
@@ -265,8 +255,8 @@ export class CasesService {
       () => tx.select().from(evidence).where(eq(evidence.caseId, id)),
       () => tx.select().from(methods).where(eq(methods.caseId, id)),
       () => tx.select().from(actions).where(eq(actions.caseId, id)),
-      () => tx.select(WIRED_NOTE).from(caseNotes).where(eq(caseNotes.caseId, id)),
-      () => tx.select().from(reports).where(eq(reports.caseId, id)),
+      () => tx.select(wired(caseNotes)).from(caseNotes).where(eq(caseNotes.caseId, id)),
+      () => tx.select(wired(reports)).from(reports).where(eq(reports.caseId, id)),
       () => tx
         .select()
         .from(reportBlocks)
