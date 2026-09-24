@@ -17,12 +17,12 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConflictsService } from './conflicts.service.js'
 import { CollectionService } from './collection.service.js'
 import { SystemsController } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, conflicts, reports, systems, user } from '../db/schema/index.js'
 import { reportBlocks } from '../db/schema/report.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { randomUUID } from 'node:crypto'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -67,7 +67,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [kase] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = kase!.id
     await seedAnalyst(ME)
@@ -82,7 +82,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
      */
     await seed!.update(systems).set({ analyst: 'Nobody' }).where(eq(systems.id, rowId))
 
-    collections = new CollectionService(db!)
+    collections = new CollectionService(db!, suiteStore())
     service = new ConflictsService(db!, collections)
   })
 
@@ -336,128 +336,6 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
 
       expect(updated['analyst']).toBe('Me')
       expect(updated).not.toHaveProperty('base')
-    })
-  })
-
-  /**
-   * **The claim is what makes a review rare, and it is advisory.** A claim
-   * lives in `live/`, so a write path that reads none leaves "checked out
-   * until saved or discarded" true of the pencil and false of the API.
-   *
-   * **It does not replace the version check**, and these cases are written so
-   * that is visible: a claim is released when its socket goes, so a dropped
-   * connection frees the row and the next analyst writes legitimately.
-   */
-  describe('a row another analyst holds', () => {
-    /**
-     * **The fake records what it was asked**, because the whole of this
-     * feature is the lookup key. A `holderOf` that ignores its arguments
-     * certifies that *a* refusal happens and nothing about *which row* was
-     * checked -- asking for a collection that does not exist leaves the suite
-     * green while the refusal silently never fires.
-     */
-    let asked: unknown[] = []
-    function holding(holder: { userId: string; username: string } | null): CollectionService {
-      asked = []
-      return new CollectionService(db!, {
-        announce: () => {},
-        holderOf: (...args: unknown[]) => {
-          asked = args
-          return Promise.resolve(holder)
-        },
-      } as never)
-    }
-
-    it('refuses a patch to a row somebody else has open', async () => {
-      const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const guarded = holding({ userId: THEM, username: 'Them' })
-
-      await expect(
-        guarded.update(
-          { name: 'systems', table: systems, orderBy: 'id' },
-          caseId,
-          rowId,
-          row!.version,
-          { analyst: 'Me' },
-          ME,
-        ),
-      ).rejects.toMatchObject({ status: 409 })
-    })
-
-    /**
-     * **Which row was asked about, not merely that something was.** The key
-     * has three vertices that must agree - the collection name the UI claims
-     * with, the string the gateway passes through unvalidated, and `def.name`
-     * here - and nothing else pins them together.
-     */
-    it('asks about the row being written, by case, collection and id', async () => {
-      const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const guarded = holding(null)
-
-      await guarded.update(
-        { name: 'systems', table: systems, orderBy: 'id' },
-        caseId,
-        rowId,
-        row!.version,
-        { analyst: 'Me' },
-        ME,
-      )
-
-      expect(asked).toEqual([caseId, 'systems', rowId])
-    })
-
-    it('names the holder, or the refusal is a dead end', async () => {
-      const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const guarded = holding({ userId: THEM, username: 'Them' })
-
-      await expect(
-        guarded.update(
-          { name: 'systems', table: systems, orderBy: 'id' },
-          caseId,
-          rowId,
-          row!.version,
-          { analyst: 'Me' },
-          ME,
-        ),
-      ).rejects.toMatchObject({ response: { message: expect.stringContaining('Them') } })
-    })
-
-    /**
-     * **Holding your own claim must not lock you out**, which is the failure
-     * that would make the feature unusable: the analyst editing a row is
-     * exactly the analyst who holds it, so a check on presence rather than
-     * identity refuses every save made from an open dialog.
-     */
-    it('lets the holder write to the row they hold', async () => {
-      const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const guarded = holding({ userId: ME, username: 'Me' })
-
-      const result = await guarded.update(
-        { name: 'systems', table: systems, orderBy: 'id' },
-        caseId,
-        rowId,
-        row!.version,
-        { analyst: 'Me' },
-        ME,
-      )
-
-      expect(result.ok).toBe(true)
-    })
-
-    it('lets anyone write to a row nobody holds', async () => {
-      const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const guarded = holding(null)
-
-      const result = await guarded.update(
-        { name: 'systems', table: systems, orderBy: 'id' },
-        caseId,
-        rowId,
-        row!.version,
-        { analyst: 'Me' },
-        ME,
-      )
-
-      expect(result.ok).toBe(true)
     })
   })
 

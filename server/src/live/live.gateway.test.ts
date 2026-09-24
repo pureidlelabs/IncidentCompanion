@@ -17,7 +17,8 @@ import type { AddressInfo } from 'node:net'
 
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { Logger } from '@nestjs/common'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket as Client, type WebSocket } from 'ws'
 import { readSyncMessage, writeSyncStep2 } from 'y-protocols/sync'
 import * as Y from 'yjs'
@@ -405,7 +406,7 @@ class FakeSocket {
       .filter((frame) => frame['type'] === type)
   }
 
-  receive(frame: Record<string, unknown>): void {
+  receive(frame: unknown): void {
     for (const handler of this.handlers.get('message') ?? []) {
       handler(Buffer.from(JSON.stringify(frame)))
     }
@@ -1182,5 +1183,228 @@ describe('two prose frames for one field arriving together', () => {
     await settle()
 
     expect(readers, 'a reader was never given back, so the document is never destroyed').toBe(0)
+  })
+})
+
+/**
+ * **The browser speaks first, and the gateway has not finished joining.**
+ * `handleUpgrade` writes the 101 before `open` runs, so the socket is live in
+ * the browser while the roster join is still in flight over Redis. The harness
+ * tier drives this over a real socket in
+ * `test/a-connection-acts-on-every-frame-in-order.test.ts`; these are the fast
+ * guards on the same door.
+ */
+describe('frames that arrive while the socket is still joining', () => {
+  /**
+   * The channel with the join held open until the test finishes it. A `slow`
+   * level lookup lets a frame behind it overtake it; an `immediate` one lets a
+   * frame acted on too early land before the join does.
+   */
+  function midJoin(document: Y.Doc, lookup: 'slow' | 'immediate' = 'slow') {
+    const order: string[] = []
+    const left: string[] = []
+    let finish: () => void = () => undefined
+    const channel = {
+      join: () =>
+        new Promise<void>((resolve) => {
+          finish = () => {
+            order.push('join')
+            resolve()
+          }
+        }),
+      leave: () => {
+        order.push('leave')
+        left.push('leave')
+        return Promise.resolve()
+      },
+      prose: () => undefined,
+      claim: (_member: unknown, table: string, id: string) => {
+        order.push(`claim ${table}/${id}`)
+        return Promise.resolve()
+      },
+      release: (_member: unknown, table: string, id: string) => {
+        order.push(`release ${table}/${id}`)
+        return Promise.resolve()
+      },
+    }
+    /** What the document held each time a reader was given back, and how many are still out. */
+    const releasedHolding: string[] = []
+    let readers = 0
+    const prose = {
+      resolve: () => Promise.resolve({ reportId: REPORT, sentAt: null }),
+      open: () => {
+        readers += 1
+        return Promise.resolve(document)
+      },
+      release: () => {
+        readers -= 1
+        releasedHolding.push(document.getXmlFragment('block-1').toJSON())
+        order.push('reader released')
+        return Promise.resolve()
+      },
+      applySync: codec.applySync.bind(codec),
+      frameUpdate: codec.frameUpdate.bind(codec),
+      isStateRequest: codec.isStateRequest.bind(codec),
+      addsNothing: codec.addsNothing.bind(codec),
+      hello: codec.hello.bind(codec),
+    }
+    const levels = {
+      defaultCustomerId: () => Promise.resolve('a-default-customer'),
+      levelFor: () =>
+        lookup === 'immediate'
+          ? Promise.resolve('write')
+          : new Promise((resolve) => setTimeout(() => { resolve('write') }, 20)),
+    } as never
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      {} as never,
+      caseWithNoCustomer,
+      prose as never,
+      audit as never,
+      levels,
+    )
+    return { gateway, channel, order, left, releasedHolding, readers: () => readers, finish: () => { finish() } }
+  }
+
+  const ROW = '44444444-4444-4444-8444-444444444444'
+  const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
+
+  it('answers a state request that beat the roster, so the editor is built', async () => {
+    const document = new Y.Doc({ gc: false })
+    document.getXmlFragment('block-1').insert(0, [new Y.XmlText('what was already written')])
+    const { gateway, finish } = midJoin(document)
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
+    await settle()
+    finish()
+    await opening
+    await wait(50)
+
+    expect(
+      live.frames('prose.sync'),
+      'the state request was dropped, so the editor never leaves its loading state',
+    ).not.toEqual([])
+  })
+
+  /**
+   * **After the join, not merely eventually.** `CaseChannel.claim` announces the
+   * roster, and until the join returns this member is in neither the local room
+   * nor the subscription.
+   */
+  it('takes a claim that beat the roster, and not before the roster has it', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.receive({ type: 'claim', table: 'casenotes', id: ROW })
+    await settle()
+    finish()
+    await opening
+    await wait(50)
+
+    expect(order, 'the claim was dropped, or taken before the roster held its author').toEqual([
+      'join',
+      `claim casenotes/${ROW}`,
+    ])
+  })
+
+  it('acts on a release after the claim sent before it, however long the claim takes', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }))
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    finish()
+    await opening
+
+    live.receive({ type: 'claim', table: 'systems', id: ROW })
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    await wait(50)
+
+    expect(order, 'the release overtook its own claim').toEqual([
+      'join',
+      `claim systems/${ROW}`,
+      `release systems/${ROW}`,
+    ])
+  })
+
+  /** A tab that sends and closes at once: its words land before its reader goes. */
+  it('acts on what arrived before the socket went, then gives its reader back and leaves', async () => {
+    const document = new Y.Doc({ gc: false })
+    const { gateway, order, releasedHolding, readers, finish } = midJoin(document)
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
+    live.receive({ type: 'prose.sync', field: FIELD, update: typed('sent as the tab closed').update })
+    live.drop()
+    finish()
+    await opening
+    await wait(100)
+
+    expect(releasedHolding, 'the reader went before the words that needed it').toEqual([
+      expect.stringContaining('sent as the tab closed'),
+    ])
+    expect(readers(), 'a frame behind the end opened a reader nothing gives back').toBe(0)
+    expect(order.at(-1), 'the connection left before it had finished').toBe('leave')
+  })
+
+  it('carries on past a frame whose action fails, and still leaves', async () => {
+    const { gateway, channel, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    channel.claim = () => Promise.reject(new Error('the store went away'))
+    const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    finish()
+    await opening
+
+    live.receive({ type: 'claim', table: 'systems', id: ROW })
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    live.drop()
+    await wait(50)
+    warned.mockRestore()
+
+    expect(order, 'a failed frame stopped what came behind it').toEqual(['join', `release systems/${ROW}`, 'leave'])
+  })
+
+  /** Silent, as for a frame that is not JSON: a warning per frame is a log any admitted client can fill. */
+  it('ignores a frame that is JSON and not an object, as it ignores one that is not JSON', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    finish()
+    await opening
+
+    for (const odd of [null, 7, 'claim', [], true]) live.receive(odd)
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    live.drop()
+    await wait(50)
+    // Read before the restore, which empties the record of calls.
+    const logged = warned.mock.calls.map((call) => String(call[0]))
+    warned.mockRestore()
+
+    expect(order, 'a frame behind the odd one, or the end, was dropped').toEqual([
+      'join',
+      `release systems/${ROW}`,
+      'leave',
+    ])
+    expect(logged, 'a frame the client got wrong was logged as a failure to apply it').toEqual([])
+  })
+
+  it('ends a connection with more frames waiting than the bound, and acts on those within it', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    for (let n = 0; n < 256; n += 1) live.receive({ type: 'release', table: 'systems', id: ROW })
+    expect(live.terminated, 'ended while the backlog was within the bound').toBe(false)
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    expect(live.terminated, 'a backlog past the bound was held').toBe(true)
+
+    finish()
+    await opening
+    await wait(50)
+    expect(order.filter((step) => step.startsWith('release')), 'a frame within the bound was dropped').toHaveLength(256)
   })
 })

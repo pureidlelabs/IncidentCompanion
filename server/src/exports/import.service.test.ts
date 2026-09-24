@@ -8,15 +8,16 @@
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
+import { UnprocessableEntityException } from '@nestjs/common'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { ExportsController } from './exports.controller.js'
 import { CSV_IMPORT, ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { accounts, cases, changeFeed, evidence, impact, systems, timeline, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -45,7 +46,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
 
@@ -65,7 +66,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
     const [blank] = await seed!.insert(cases).values({ title: 'Blank' }).returning()
     emptyCaseId = blank!.id
 
-    const collections = new CollectionService(db!)
+    const collections = new CollectionService(db!, suiteStore())
     service = new ImportService(collections)
     exports_ = new ExportsController(collections, service)
   })
@@ -296,35 +297,44 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
   })
 
   /**
-   * **A replace against a row somebody else has open must not abandon the
-   * import.** `update` throws when another analyst holds a row, and an uncaught
-   * throw commits the fresh rows and leaves every later collision unattempted -
-   * a partial import, which is the worst outcome.
-   *
-   * The service every other case here builds has no live channel, so the claim
-   * check is inert in all of them; this one wires a holder to switch it on.
+   * **A row the store could not write is a failure, not a refusal.** Counting
+   * it refused tells the analyst their file met a newer edit when the write
+   * never happened, and records a review nobody can resolve.
    */
-  it('carries on when another analyst is holding one of the rows', async () => {
-    const held = new CollectionService(db!, {
-      announce: () => {},
-      othersOn: () => Promise.resolve([]),
-      holderOf: () => Promise.resolve({ userId: 'robin', username: 'Robin' }),
-    } as never)
-    const withClaims = new ImportService(held)
+  it('fails the import when a replacement cannot be written, rather than counting it refused', async () => {
+    class StoreGoesAway extends CollectionService {
+      override update(): never {
+        throw new Error('the connection to the store was lost')
+      }
+    }
+    const failing = new ImportService(new StoreGoesAway(db!, suiteStore()))
 
-    await withClaims.fromCsv('systems', emptyCaseId, 'hostname\nWKS-HELD\n', ME)
+    await failing.fromCsv('systems', emptyCaseId, 'hostname\nWKS-UNWRITTEN\n', ME)
 
-    const result = await withClaims.fromCsv(
+    await expect(
+      failing.fromCsv('systems', emptyCaseId, 'hostname,system_type\nWKS-UNWRITTEN,server\n', ME, 'replace'),
+    ).rejects.toThrow('the connection to the store was lost')
+  })
+
+  /** A row the write door refuses is one row: the rest of the file still lands. */
+  it('counts a row the write door refuses and carries on', async () => {
+    class RefusesOneRow extends CollectionService {
+      override update(): never {
+        throw new UnprocessableEntityException({ message: 'this row breaks a rule' })
+      }
+    }
+    const refusing = new ImportService(new RefusesOneRow(db!, suiteStore()))
+    await refusing.fromCsv('systems', emptyCaseId, 'hostname\nWKS-REFUSED\n', ME)
+
+    const result = await refusing.fromCsv(
       'systems',
       emptyCaseId,
-      'hostname,system_type\nWKS-HELD,server\n',
+      'hostname,system_type\nWKS-REFUSED,server\nWKS-FRESH-BESIDE,laptop\n',
       ME,
       'replace',
     )
-    expect(result).toEqual({ added: 0, skipped: 0, replaced: 0, refused: 1, unlinked: 0, unlinkedBy: {} })
 
-    const rows = await seed!.select().from(systems).where(eq(systems.caseId, emptyCaseId))
-    expect(rows.map((row) => row.systemType)).not.toContain('server')
+    expect(result).toMatchObject({ added: 1, replaced: 0, refused: 1 })
   })
 
   /**

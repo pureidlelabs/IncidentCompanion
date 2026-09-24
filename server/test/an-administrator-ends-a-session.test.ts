@@ -3,7 +3,7 @@
  *
  * *THEN the next request that session makes is refused*, and *THEN none of them
  * is served further*. Both are stated MUSTs with nothing behind them until now:
- * Better Auth's own `/admin/revoke-user-session*` paths are in `disabledPaths`,
+ * Better Auth's own `/admin/revoke-user-session*` paths are not served,
  * deliberately, and the application route that was to stand in front of them
  * was never written. -> #204
  *

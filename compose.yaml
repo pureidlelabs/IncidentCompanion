@@ -10,12 +10,13 @@ services:
     # `no-new-privileges` is the other half: a dropped capability comes back
     # through any setuid binary left in the image. -> #185
     cap_drop: [ALL]
-    # Postgres prepares its data directory and its socket directory as root,
-    # then drops to the `postgres` user for the server itself. Each of these
-    # was measured by taking it away: without CHOWN and FOWNER the entrypoint
-    # refuses with `chown`/`chmod: Operation not permitted`.
-    cap_add: [CHOWN, FOWNER, SETGID, SETUID]
+    # **Started as the user the image owns its directories by**, so the
+    # entrypoint's root-only branch -- a `chown` walk over the data directory,
+    # which a root without DAC_READ_SEARCH cannot enter on a second start --
+    # never runs, and the bounding set is empty.
+    user: postgres
     security_opt: [no-new-privileges:true]
+    restart: unless-stopped
     # Pinned to the minor, so two machines run the same engine.
     image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
     environment:
@@ -41,6 +42,7 @@ services:
   redis:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    restart: unless-stopped
     # **Started as the user the image already owns `/data` by**, so there is no
     # privilege to drop and none to keep. The entrypoint would drop root itself
     # given SETGID and SETUID, and then hold them for the life of the process;
@@ -84,6 +86,7 @@ services:
   app:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    restart: unless-stopped
     build:
       context: .
       dockerfile: docker/app/Dockerfile
@@ -256,21 +259,20 @@ services:
       # Shares `ic-install` to read the `AUTH_SECRET` the server minted, rather
       # than the entrypoint minting a second one.
       - "ic-install:/install:z"
+      # The demo rebuild removes the artefacts of the demonstrations it deletes.
+      - "ic-evidence:/evidence:z"
     # `--demos` is the laptop shape and would not be passed in a deployment;
     # drop it and `/api/demos` is empty.
     command: ["node", "dist/src/seed.js", "--demos"]
-    # Not decorative: compose otherwise re-runs a one-shot on exit, and this
-    # one deletes the demo cases before writing them.
     restart: "no"
 
-  # The schema push, one-shot: `docker compose run --rm migrate`.
+  # The store's shape, one-shot: `scripts/apply-schema.mts`, in one transaction
+  # that changes nothing when nothing changed and refuses any loss (exit 2).
   #
   # **The build stage, not the runtime image**: `drizzle-kit` is a devDependency
   # reading TypeScript from `src/db/schema/`, and a tool that rewrites schemas
   # does not belong in the image facing the network. Its own role, because
   # `ic_migrate` owns the schema and `ic_app` has no DDL at all.
-  #
-  # **Pushed, not migrated**, while the Node move settles.
   migrate:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -284,14 +286,10 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgres://ic_migrate:${IC_PG_MIGRATE_PASSWORD:?run docker/secrets.sh once before the first start}@postgres:5432/incidentcompanion
-    # **`npm run`, never `npx`** -- `--no-install` is not the offline form and
-    # resolves the `latest` dist-tag past this project's pin.
-    #
-    # **`--workspace server`, because the working directory is the repository
-    # root and `db:push` is the server's script.** Without it npm answers
-    # *Missing script: "db:push"* and `--silent` suppresses that, so the one-shot
-    # exits 1 with empty logs.
-    command: ["npm", "run", "--silent", "--workspace", "server", "db:push", "--", "--force"]
+    working_dir: /repo/server
+    # **`node`, never `npm run`**: npm checks the registry for its own update,
+    # which is an outbound request from an install nobody pointed anywhere.
+    command: ["node", "--import", "tsx", "scripts/apply-schema.mts"]
     restart: "no"
 
 # **All Docker-managed, and not interchangeable with a bind.** Whether a

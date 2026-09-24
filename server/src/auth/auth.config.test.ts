@@ -8,9 +8,7 @@
  * **Nothing here expires a real session.** These read `auth.options`, so a
  * library that stopped honouring `expiresIn` would leave every case green.
  */
-import { describe, expect, it } from 'vitest'
-// Re-exported by `better-auth/api`, which is a declared dependency;
-// `@better-auth/core` resolves only by hoisting and is not in package.json.
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getIP } from 'better-auth/api'
 
 import { createAuth } from './auth.config.js'

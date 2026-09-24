@@ -15,13 +15,12 @@ import {
   ConflictException,
   Inject,
   Injectable,
-  Logger,
   NotFoundException,
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common'
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
-import type { PgTable } from 'drizzle-orm/pg-core'
+import type { PgColumn, PgTable } from 'drizzle-orm/pg-core'
 import type { z } from 'zod'
 
 import { isScope } from '../domain/scopes.lists.js'
@@ -42,7 +41,14 @@ import {
   refuseIfCrossFieldRuleBroken,
 } from './write-guards.js'
 import { CaseChannel } from '../live/case-channel.service.js'
+import { EvidenceStore } from '../evidence/store.js'
+import { evidence } from '../db/schema/entities.js'
+import { release } from '../report/artefacts-named.js'
 import type { ClosedRowGuard } from '../report/freeze.js'
+
+/** The digest a deleted evidence row named, so the bytes can leave the case with it. */
+const digestOf = (collection: string): Record<string, PgColumn> =>
+  collection === 'evidence' ? { hash: columnOf(evidence, 'hash') } : {}
 
 /** One row of a selection: which collection it is in, and what it was read at. */
 interface BulkRow {
@@ -120,14 +126,13 @@ export interface CollectionDefinition {
 
 @Injectable()
 export class CollectionService {
-  private readonly log = new Logger(CollectionService.name)
-
   /**
    * The channel is optional for the tests, which build this service by hand
    * against a pool. Nest always injects it.
    */
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    private readonly store: EvidenceStore,
     @Optional() private readonly channel?: CaseChannel,
   ) {}
 
@@ -149,49 +154,6 @@ export class CollectionService {
     // would call it composed and queue its announcement onto somebody's act.
     if (on === undefined || !nested(on)) tell()
     else whenCommitted(tell)
-  }
-
-  /**
-   * Refuse a write to a row another analyst has open, with 409 and the
-   * holder's name.
-   *
-   * **Not a lock, and no substitute for the version check.** A lost connection
-   * frees the row and the next analyst writes legitimately; what catches the
-   * first analyst's later save is the version. A caller with no socket - the
-   * API door - holds no claim at all.
-   *
-   * Compared by `userId`: a display name is not unique, and the holder writing
-   * to their own row is the normal case. -> `live/case-channel.service.ts`
-   */
-  private async refuseIfHeldByAnother(
-    caseId: string,
-    entity: string,
-    id: string,
-    actorId: string,
-  ): Promise<void> {
-    /**
-     * **A store that cannot answer means nobody is known to hold this.** The
-     * claim is advisory, and the live layer is the one dependency this write
-     * does not need: refusing here turns a Redis outage into a 500 on every
-     * row edit, before the write, so the analyst loses the edit and is told
-     * nothing. The announce one layer along already takes this view -- *a
-     * missed repaint is the right failure* -- and the guard that matters is
-     * the version check, which is in Postgres and unaffected. -> #173
-     */
-    const holder = await this.channel?.holderOf(caseId, entity, id).catch((error: unknown) => {
-      // **Logged rather than swallowed.** A guard that stops working with no
-      // signal is the failure this codebase keeps finding elsewhere; the
-      // catch is deliberately broad, so a parse fault in `claims()` would
-      // otherwise read as "nobody holds this" for ever, silently.
-      this.log.warn(`could not read who holds ${entity} ${id}: ${String(error)}`)
-      return null
-    })
-    if (holder && holder.userId !== actorId) {
-      throw new ConflictException({
-        message: `${holder.username} has this open.`,
-        heldBy: holder.username,
-      })
-    }
   }
 
   /**
@@ -239,7 +201,8 @@ export class CollectionService {
     deleted: { collection: string; id: string }[]
     missing: { collection: string; id: string }[]
   }> {
-    const outcome = await withCase(this.db, caseId, async (tx) => {
+    const released: (string | null)[] = []
+    const deleting = () => withCase(this.db, caseId, async (tx) => {
       const deleted: { collection: string; id: string }[] = []
       const refused: string[] = []
 
@@ -259,9 +222,16 @@ export class CollectionService {
               sql`(${id}, ${version}) IN (${sql.join(pairs, sql`, `)})`,
             ),
           )
-          .returning({ id, version })) as { id: string; version: number }[]
+          .returning({ id, version, ...digestOf(collection) })) as {
+          id: string
+          version: number
+          hash?: string | null
+        }[]
 
-        for (const row of gone) deleted.push({ collection, id: row.id })
+        for (const row of gone) {
+          deleted.push({ collection, id: row.id })
+          released.push(row.hash ?? null)
+        }
 
         if (gone.length > 0) {
           await tx.insert(changeFeed).values(
@@ -319,6 +289,11 @@ export class CollectionService {
           .filter((t) => !answered.has(`${t.collection}:${t.id}`))
           .map((t) => ({ collection: t.collection, id: t.id })),
       }
+    })
+    const outcome = await this.store.exclusive(caseId, async () => {
+      const answer = await deleting()
+      await release(this.db, this.store, caseId, released)
+      return answer
     })
 
     // Filtered rather than cast: `collection` here came back from a delete
@@ -782,7 +757,6 @@ export class CollectionService {
     // moving a block into a sent report is a write to that report.
     await def.refuseIfClosed?.(this.db, caseId, { ids: [id], rows: [patch] })
     await def.refuseUnservedTerm?.(this.db, caseId, { ids: [id], rows: [patch] })
-    await this.refuseIfHeldByAnother(caseId, def.name, id, actorId)
 
     /**
      * **Checked in its own scoped transaction, ahead of the write.**
@@ -825,7 +799,7 @@ export class CollectionService {
     await def.refuseIfClosed?.(this.db, caseId, { ids: [id] })
     await def.refuseUnservedTerm?.(this.db, caseId, { ids: [id] })
     const cols = columns(def)
-    const removed = await withCase(this.db, caseId, async (tx) => {
+    const deleting = () => withCase(this.db, caseId, async (tx) => {
       const deleted = (await tx
         .delete(def.table)
         .where(
@@ -835,9 +809,12 @@ export class CollectionService {
             eq(cols.version, expectedVersion),
           ),
         )
-        .returning({ id: cols.id })) as { id: string }[]
+        .returning({ id: cols.id, ...digestOf(def.name) })) as {
+        id: string
+        hash?: string | null
+      }[]
 
-      if (deleted.length === 0) return false
+      if (deleted.length === 0) return deleted
 
       await tx.insert(changeFeed).values({
         caseId,
@@ -848,7 +825,12 @@ export class CollectionService {
         actorId,
         fields: [],
       })
-      return true
+      return deleted
+    })
+    const removed = await this.store.exclusive(caseId, async () => {
+      const gone = await deleting()
+      await release(this.db, this.store, caseId, gone.map((row) => row.hash))
+      return gone.length > 0
     })
 
     if (removed) this.announce(caseId, [def.name], actorId)

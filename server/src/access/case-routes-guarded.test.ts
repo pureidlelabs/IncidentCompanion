@@ -212,9 +212,11 @@ describe.skipIf(!runnable)('every case route goes through CaseAccessGuard', () =
 
   beforeAll(async () => {
     harness = await boot()
-    published = operations(harness.document).map(
-      (operation) => `${operation.method} ${operation.template}`,
-    )
+    // The authentication library's operations are mounted by the library
+    // rather than held in Nest's container, and none is about a case.
+    published = operations(harness.document)
+      .filter((operation) => !operation.template.startsWith('/api/auth/'))
+      .map((operation) => `${operation.method} ${operation.template}`)
     mounted = new Map(handlers(harness).map((handler) => [handler.route, handler]))
   }, 90_000)
 

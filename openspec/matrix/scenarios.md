@@ -20,9 +20,9 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| An account is provisioned, never self-created | An install with no accounts is claimed | undemonstrated | |
+| An account is provisioned, never self-created | An install with no accounts is claimed | demonstrated | server/test/two-claims-leave-one-account-and-one-session.test.ts |
 | An account is provisioned, never self-created | Somebody reaches the service first | undemonstrated | |
-| An account is provisioned, never self-created | Two claims arrive together | undemonstrated | |
+| An account is provisioned, never self-created | Two claims arrive together | demonstrated | server/test/two-claims-leave-one-account-and-one-session.test.ts |
 | An account is provisioned, never self-created | The claim is attempted twice | demonstrated | server/test/a-second-claim-is-refused-and-recorded.test.ts |
 | An account is provisioned, never self-created | A new account reaches nothing | demonstrated | server/test/a-new-account-reaches-only-the-default-customer.test.ts |
 | An address names one account, whatever case it is spelled in | An account is created in a second spelling of an address already held | demonstrated | server/test/an-account-is-administered-by-any-spelling-of-its-address.test.ts |
@@ -32,6 +32,11 @@
 | Managing the install and reaching case data are separate grants | An administrator has granted themselves no data access | demonstrated | server/src/access/an-administrator-reaches-no-case-by-being-one.test.ts |
 | Managing the install and reaching case data are separate grants | An analyst with wide data access administers nothing | demonstrated | server/test/wide-reach-administers-nothing.test.ts |
 | Managing the install and reaching case data are separate grants | An administrator grants themselves access | demonstrated | server/src/access/groups.controller.test.ts |
+| What the install is made of is management-plane | An analyst asks what the install holds | demonstrated | server/test/analyst-privilege.test.ts |
+| What the install is made of is management-plane | An analyst asks what the host has left | demonstrated | server/test/analyst-privilege.test.ts |
+| What the install is made of is management-plane | An administrator asks the same questions | demonstrated | server/test/analyst-privilege.test.ts |
+| What the install is made of is management-plane | The rail offers a pane nobody behind it would answer | undemonstrated | |
+| What the install is made of is management-plane | Something asks whether the install is serving | undemonstrated | |
 | Case data is reached through groups, at a level | A group is built for a sector | demonstrated | server/src/access/reach.test.ts |
 | Case data is reached through groups, at a level | Two memberships disagree | demonstrated | server/src/access/reach.test.ts |
 | Case data is reached through groups, at a level | A level is reduced while the analyst is working | demonstrated | server/src/access/a-reduced-level-refuses-the-next-write.test.ts |
@@ -42,6 +47,8 @@
 | Case data is reached through groups, at a level | An administrator disposes of a case nobody has attributed | demonstrated | server/src/access/case-access.guard.test.ts |
 | Case data is reached through groups, at a level | An analyst is refused the same deletion | demonstrated | server/src/access/case-access.guard.test.ts |
 | Case data is reached through groups, at a level | A group raises an account above the floor | demonstrated | server/src/access/case-access.guard.test.ts |
+| Case data is reached through groups, at a level | A list is asked for by an analyst in no group | undemonstrated | |
+| Case data is reached through groups, at a level | Reach is withdrawn after the case was opened | undemonstrated | |
 | An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts |
 | An install can be recovered without another administrator | The install is claimed | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | An install can be recovered without another administrator | An install runs on a single administrator | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
@@ -53,9 +60,11 @@
 | An install can be recovered without another administrator | The credential is lost | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | demonstrated | server/test/account-lockout.test.ts |
 | Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | demonstrated | server/test/account-lockout.test.ts |
-| Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/password-hold-clears.test.ts |
+| Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/a-held-account-reaches-only-its-way-out.test.ts |
 | Authentication resists guessing, and says so to the auditor | The install raises its password minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts |
 | Authentication resists guessing, and says so to the auditor | An account holds a password shorter than a raised minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts |
+| Authentication resists guessing, and says so to the auditor | A password is guessed at through a door other than sign-in | demonstrated | server/test/a-guess-counts-at-every-door.test.ts |
+| Authentication resists guessing, and says so to the auditor | A locked account's password is offered where it is changed | demonstrated | server/test/a-guess-counts-at-every-door.test.ts |
 | A second factor is available, and enforcing it is the install's policy | The policy is off | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | An analyst enrols anyway | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | The policy is turned on | unbuilt | Not built: no second factor. Kept normative. -> #59 |
@@ -85,8 +94,8 @@
 | A verb the roster offers is refused on the account performing it | An administrator sets the role their account already holds | demonstrated | server/test/an-administrator-does-not-act-on-their-own-row.test.ts |
 | A verb the roster offers is refused on the account performing it | The same verbs on somebody else | demonstrated | server/test/an-administrator-does-not-act-on-their-own-row.test.ts |
 | A session belongs to its holder and ends when it should | An administrator ends a session | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
-| A session belongs to its holder and ends when it should | A session goes idle | demonstrated | server/test/a-session-past-its-window-is-refused.test.ts |
-| A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | unbuilt | Not built: a session has an idle window and no absolute cap. -> #203 |
+| A session belongs to its holder and ends when it should | A session goes idle | undemonstrated | |
+| A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | undemonstrated | |
 | A session belongs to its holder and ends when it should | An analyst reviews their own sessions | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
 | A session belongs to its holder and ends when it should | Every session is ended at once | demonstrated | server/test/an-administrator-ends-a-session.test.ts |
 | An administrator can see who reaches what, and why | An administrator reviews access | unbuilt | Not built: whether an account is local or the provider's, and its second factor. -> #59 |
@@ -104,6 +113,12 @@
 | Administrative events are logged | An entry is edited | demonstrated | server/src/install-activity/record.test.ts |
 | Administrative events are logged | The record is read | demonstrated | server/src/install-audit/read.test.ts |
 | Administrative events are logged | Where the record goes is changed | unbuilt | Not built: there is no destination to change. -> #13 |
+| Administrative events are logged | An analyst ends their own session | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
+| Administrative events are logged | An ending that ends nothing | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
+| An install serves only the account operations it offers | A caller asks for an account operation the install does not offer | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
+| An install serves only the account operations it offers | An operation is asked for by another spelling | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
+| An install serves only the account operations it offers | A held account asks for an operation the install offers | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
+| An install serves only the account operations it offers | An analyst takes another account's name | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
 
 ## analysis
 
@@ -140,8 +155,12 @@
 | Reading an archive cannot be made to cost more than the install will spend | An archive describing more content than the install accepts | demonstrated | server/src/archive/format.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is read in | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | demonstrated | server/src/case-archive/round-trip.test.ts |
+| Reading an archive creates a case; it never overwrites one | An archive names an artefact it does not carry | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is attributed | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive states where its rows came from | demonstrated | server/src/case-archive/round-trip.test.ts |
+| An archive is refused where its reference is already held | The install still holds the case the archive was made from | undemonstrated | |
+| An archive is refused where its reference is already held | The reference is free | undemonstrated | |
+| An archive is refused where its reference is already held | The archive carries no reference | undemonstrated | |
 | Reading an archive says how complete the case it made is | An archive carries rows that name what it left behind | demonstrated | ui/src/components/blocks/notify.test.ts |
 | Reading an archive says how complete the case it made is | A case names a row that is not in it | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive says how complete the case it made is | The exporting install had lost material the case records | demonstrated | ui/src/components/blocks/notify.test.ts |
@@ -157,7 +176,7 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| A case is identified by what an analyst recognises it by | A reference is reused within a customer | unbuilt | Not built: nothing refuses a reference already used. -> #220 |
+| A case is identified by what an analyst recognises it by | A reference is reused within a customer | undemonstrated | |
 | A case is identified by what an analyst recognises it by | The same reference is used for two customers | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | demonstrated | server/src/cases/customer.controller.test.ts |
 | A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
@@ -194,6 +213,9 @@
 | The description is retrievable, so what a case may hold is answerable from the application | An install has been extended | demonstrated | server/src/library/what-this-install-holds-is-what-is-described.test.ts |
 | Every write is attributed, checked and announced as one act | Two analysts write to one row | demonstrated | server/src/db/mutate.test.ts |
 | Every write is attributed, checked and announced as one act | A write succeeds | demonstrated | server/src/db/mutate.test.ts |
+| Every write is attributed, checked and announced as one act | A write composed into an act that commits | undemonstrated | |
+| Every write is attributed, checked and announced as one act | A write composed into an act that does not commit | undemonstrated | |
+| Every write is attributed, checked and announced as one act | A write composed into nothing that declared an act | undemonstrated | |
 | A reference points inside its own case, and the store alone cannot enforce it | A row references another case's row | demonstrated | server/src/collections/reference-check.test.ts |
 | A reference points inside its own case, and the store alone cannot enforce it | A reference is added to what a row is | demonstrated | server/src/collections/method-references.test.ts |
 | A reference points inside its own case, and the store alone cannot enforce it | A referenced row is removed | demonstrated | server/src/collections/method-references.test.ts |
@@ -288,12 +310,30 @@
 | A row says which door it came through, and the install decides that | A file claims an origin of its own | demonstrated | server/src/exports/import.service.test.ts |
 | A row says which door it came through, and the install decides that | A collection that records no origin | demonstrated | server/src/exports/import.service.test.ts |
 
+## dependencies
+
+| Requirement | Scenario | Status | Evidence or reason |
+| --- | --- | --- | --- |
+| What is available is answerable without reading the tree | A newer version exists and nothing has adopted it | undemonstrated | |
+| What is available is answerable without reading the tree | Nothing is outstanding | undemonstrated | |
+| A published vulnerability is answered without waiting | A vulnerability is published against an adopted version | undemonstrated | |
+| A published vulnerability is answered without waiting | The vulnerable dependency is not a direct one | undemonstrated | |
+| A version is observed before it is adopted unattended | A version is newer than the minimum period | undemonstrated | |
+| A version is observed before it is adopted unattended | A person adopts it deliberately | undemonstrated | |
+| A dependency held below the latest version carries its reason | A dependency is held back | undemonstrated | |
+| A dependency held below the latest version carries its reason | The constraint that justified a hold is lifted | unbuilt | Not built: no hold is recorded in a form a check reads, so a hold outlives its reason silently. Kept normative. |
+| A dependency held below the latest version carries its reason | Two dependencies are held by the same constraint | unbuilt | Not built: no record relates two holds to the constraint they share. Kept normative. |
+| A change to dependencies is demonstrated before it lands | Every tier runs and passes | undemonstrated | |
+| A change to dependencies is demonstrated before it lands | A tier could not run | unbuilt | Not built: `gate` counts a skipped tier as a pass. -> #1163 |
+| Two builds of one revision resolve the same versions | The same revision is built twice | undemonstrated | |
+| Two builds of one revision resolve the same versions | A component is identified by a moving name | undemonstrated | |
+
 ## deployment
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | It comes up with one command and no preparation | A first start on a clean machine | demonstrated | tests/docker/test_container_runtime.py |
-| It comes up with one command and no preparation | A second start | demonstrated | tests/docker/test_container_config.py |
+| It comes up with one command and no preparation | A second start | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | It comes up with one command and no preparation | A dependency is slow | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | What an install exposes | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | The application is addressed directly | undemonstrated |  |
@@ -306,14 +346,19 @@
 | The connection is protected, and there is no way to turn that off | The install is given a new name | demonstrated | tests/docker/test_container_config.py |
 | The connection is protected, and there is no way to turn that off | A supplied certificate does not cover a new name | demonstrated | tests/docker/test_container_config.py |
 | Setting up is separate from running, and runs once | Preparation runs before serving | demonstrated | tests/docker/test_container_runtime.py |
-| Setting up is separate from running, and runs once | An install is started again | demonstrated | tests/docker/test_container_config.py |
+| Setting up is separate from running, and runs once | An install is started again | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | Setting up is separate from running, and runs once | Preparation fails | demonstrated | tests/docker/test_container_config.py |
-| What must survive is named, and what must not is not | The install is rebuilt | demonstrated | tests/docker/test_container_config.py |
+| Setting up is separate from running, and runs once | Preparation runs again beside a serving application | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
+| Setting up is separate from running, and runs once | A new version would discard stored data | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| Setting up is separate from running, and runs once | Preparation is run by hand | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| What must survive is named, and what must not is not | The install is rebuilt | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | What must survive is named, and what must not is not | Something not named is lost | demonstrated | tests/docker/test_container_config.py |
 | An install can say whether it is well, and what is wrong | A component has started but cannot answer | demonstrated | server/src/health/dependencies.health.test.ts |
-| An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | server/src/health/dependencies.health.test.ts |
+| An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| An install can say whether it is well, and what is wrong | A component stops unexpectedly | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | The application runs with no more than it needs | The application attempts something outside its work | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
 | The application runs with no more than it needs | A part is examined for what it can do | demonstrated | tests/docker/test_container_config.py |
+| An install with nothing configured reaches nothing outside itself | An install lives its whole life with nothing configured | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 
 ## evaluation
 
@@ -347,6 +392,9 @@
 | An import is matched against what the case already holds | An imported thing is already in the case | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | The case changed while the import was reviewed | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | An event is imported twice | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
+| One import proposes each thing once, however many incidents name it | Two incidents name the same host | undemonstrated | |
+| One import proposes each thing once, however many incidents name it | One incident states a qualifier the other omits | undemonstrated | |
+| One import proposes each thing once, however many incidents name it | An event from the second incident names the shared thing | undemonstrated | |
 | An imported row says that it was imported, and that nobody has read it | An imported row is read back | demonstrated | server/test/incident-import.test.ts |
 | An imported row says that it was imported, and that nobody has read it | A platform's data claims to be something else | demonstrated | server/src/incident-import/an-imported-row-says-so.test.ts |
 | An imported row says that it was imported, and that nobody has read it | An analyst reviews an imported row | unbuilt | Not built: `unreviewed` is owned by the server and no route clears it. -> #168 |
@@ -427,6 +475,14 @@
 | The interface has one vocabulary, and it is not invented per screen | An analyst has asked for less motion | undemonstrated | |
 | What two screens both need is derived once | Two screens show the same derived answer | demonstrated | ui/src/lib/shared-derivations.rule.test.ts |
 | What two screens both need is derived once | A derivation needs to know its caller | demonstrated | ui/src/lib/lib-is-shared-and-therefore-pure.rule.test.ts |
+| A part's own documentation states what its caller owns | A part needs something the caller must supply | undemonstrated | |
+| A part's own documentation states what its caller owns | A part is documented beside itself rather than within itself | undemonstrated | |
+| A part's own documentation states what its caller owns | A part's documented behaviour is not its actual behaviour | undemonstrated | |
+| A composition is exercised as a composition | A composition refuses an action | undemonstrated | |
+| A composition is exercised as a composition | A composition is mid-write | undemonstrated | |
+| A screen is exercised at the extremes of what it may hold | A screen is given almost nothing | undemonstrated | |
+| A screen is exercised at the extremes of what it may hold | A screen is given far more than expected | undemonstrated | |
+| A screen is exercised at the extremes of what it may hold | A screen supplies its own content | undemonstrated | |
 
 ## library
 
@@ -459,16 +515,20 @@
 | A claim warns; it does not lock | An analyst claims an entry | demonstrated | server/src/live/case-channel.service.test.ts |
 | A claim warns; it does not lock | Two analysts claim the same entry | demonstrated | server/src/live/presence.store.test.ts |
 | A claim warns; it does not lock | A holder disappears | demonstrated | server/src/live/presence.store.test.ts |
-| A claim warns; it does not lock | Somebody writes to a claimed entry | demonstrated | server/src/live/a-claim-is-not-a-lock.test.ts |
+| A claim warns; it does not lock | Somebody writes to a claimed entry | demonstrated | server/test/a-claimed-row-is-written-through-every-door.test.ts |
 | A change reaches every open screen, and says only what changed | Another analyst writes | demonstrated | server/test/change-feed-wiring.test.ts |
 | A change reaches every open screen, and says only what changed | What travels over the connection | demonstrated | server/src/live/case-channel.service.test.ts |
 | A change reaches every open screen, and says only what changed | A screen re-reads after an announcement | demonstrated | ui/src/api/every-consumer-re-announces.test.ts |
 | Written prose is edited together, not saved over | Two analysts write in one section | demonstrated | ui/src/api/proseSync.test.ts |
-| Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | ui/src/api/proseSync.test.ts |
-| A reconnection catches up rather than starts over | A connection drops briefly | demonstrated | ui/src/api/a-reconnect-re-reads-the-case.test.tsx |
+| Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts |
+| A reconnection catches up rather than starts over | A connection drops briefly | undemonstrated | |
 | A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
+| An open connection is listening | A screen writes before the connection is ready | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts |
+| An open connection is listening | Preparing the connection does not complete | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
+| An open connection is listening | Frames are acted on in the order sent | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
+| An open connection is listening | A frame the install cannot read | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
 
 ## preferences
 
@@ -545,7 +605,7 @@
 | Which languages an install can write reports in is the administrator's to change | An incomplete language is managed | demonstrated | ui/src/components/blocks/languages-pane.stories.tsx |
 | A report is for an audience, and the audience decides what it owes | A report is created | unbuilt | Not built: a report records no audience. -> #228 |
 | A report is for an audience, and the audience decides what it owes | A layout omits something the audience requires | unbuilt | Not built: what a report owes is read from its layout, not its audience. -> #228 |
-| A report never carries another customer's data | A report carries a row from another customer | unbuilt | Not built: the boundary is held at the write, and no export refuses. -> #227 |
+| A report never carries another customer's data | A report carries a row from another customer | unbuilt | Not built: the boundary is held at the write and at the evidence store, and no export refuses. -> #227 |
 | A report never carries another customer's data | The offending part is removed | unbuilt | Not built: no export refusal to lift. -> #227 |
 | Material an audience does not expect is named, and the analyst decides | An internal note is in a customer report | unbuilt | Not built: no audience, so nothing to measure material against. -> #229 |
 | Material an audience does not expect is named, and the analyst decides | The analyst sends it anyway | unbuilt | Not built: nothing records what was named and sent anyway. -> #229 |
@@ -570,13 +630,13 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | What may be lost and what may not are separated by design | The ephemeral store is emptied | demonstrated | server/test/losing-the-ephemeral-store-loses-no-investigation.test.ts |
-| What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | demonstrated | tests/docker/test_container_config.py |
-| What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | undemonstrated | |
+| What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | demonstrated | server/test/health-names-a-lost-store.test.ts |
+| What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | The application cannot reach a row it should not, even by mistake | A query forgets its boundary | demonstrated | server/src/db/scope.test.ts |
 | The application cannot reach a row it should not, even by mistake | The application attempts to widen its own reach | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
 | The application cannot reach a row it should not, even by mistake | A new table holding case data is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
 | Changing the shape of the store is a separate power | The application attempts to change the schema | demonstrated | server/src/db/scope.test.ts |
-| Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/src/db/policy-push.test.ts |
+| Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write and its record are one act | demonstrated | server/src/db/mutate.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write arrives against a version that has moved | demonstrated | server/src/db/mutate.test.ts |
 | The store is not migrated while the shape is still moving | Data from an older shape is presented | demonstrated | server/src/archive/format.test.ts |
@@ -587,10 +647,21 @@
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | demonstrated | server/src/health/install.controller.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | An operator asks what protects the state at rest | demonstrated | server/src/health/install.controller.test.ts |
-| What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
+| What is stored can be recovered, and the recovery is proven | An install is restored from a copy | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | demonstrated | server/src/health/an-install-says-what-it-cannot-find.test.ts |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | demonstrated | server/src/evidence/artefacts-put-back-make-the-evidence-whole.test.ts |
+| What is stored can be recovered, and the recovery is proven | A damaged copy is checked | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| What is stored can be recovered, and the recovery is proven | A copy from another shape is restored | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| An artefact is reached only through the case that holds it | A digest is named in another case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | Reach is withdrawn from an analyst who read a digest | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | A handover is read in by somebody who does not reach the case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | The same artefact is attached in two cases | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
+| An artefact is reached only through the case that holds it | An artefact nothing names any more | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | Bytes are attached while a record naming them goes | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | Bytes arrive that no record comes to name | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | The install starts beside a database that does not hold a case | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
+| An artefact is reached only through the case that holds it | The install starts beside a database older than a record | demonstrated | server/test/a-deleted-case-leaves-no-artefact.test.ts |
 
 ## the-api
 
@@ -603,12 +674,13 @@
 | A caller asks for what it needs and receives no more | A caller wants everything | demonstrated | server/test/openapi-contract.test.ts |
 | Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
 | Reach is enforced where the data is, not where the request arrives | A new way to read a record is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
-| A read tells a caller what it is looking at | A caller reads and later writes | demonstrated | server/test/openapi-contract.test.ts |
+| A read tells a caller what it is looking at | A caller reads and later writes | undemonstrated | |
 | A read tells a caller what it is looking at | Somebody wrote first | demonstrated | server/src/collections/a-refused-write-says-what-the-row-became.test.ts |
 | The interface describes itself, and the description is generated | A route is added | demonstrated | server/test/openapi-contract.test.ts |
 | The interface describes itself, and the description is generated | A route changes shape | undemonstrated | |
+| The interface describes itself, and the description is generated | A route served by a library the application mounts | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts |
-| A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/src/domain/a-refusal-names-the-field-it-is-about.test.ts |
+| A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/every-write-door-refuses-a-version-past-its-column.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts |
 | What a request costs is bounded before it runs | Another caller asks too often | demonstrated | tests/docker/test_ingress.py |

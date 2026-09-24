@@ -11,6 +11,7 @@ import { CasesService } from './cases.service.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { LibraryService } from '../library/library.service.js'
+import { EvidenceStore } from '../evidence/store.js'
 
 @Module({
   // **`LiveModule`, because `CaseChannel` is injected `@Optional()`.**
@@ -24,7 +25,14 @@ import { LibraryService } from '../library/library.service.js'
     ActivityController,
     CaseCustomerController,
   ],
-  providers: [CasesService, DemoSeederService, DemoContentSeeder, CaseAccessGuard, LibraryService],
+  providers: [
+    CasesService,
+    DemoSeederService,
+    DemoContentSeeder,
+    CaseAccessGuard,
+    LibraryService,
+    EvidenceStore,
+  ],
   exports: [CasesService, DemoSeederService],
 })
 export class CasesModule {}

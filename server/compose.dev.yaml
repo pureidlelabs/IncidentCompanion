@@ -9,11 +9,10 @@ name: ${IC_COMPOSE_PROJECT:-incidentcompanion-node-dev}
 
 services:
   postgres:
-    # **The same drop the deployed stack makes**, for the same reason: these
-    # engines open no raw socket and make no device node. Postgres prepares
-    # its directories as root and drops to its own user, which is the four.
+    # **The same user and the same empty bounding set as the deployed
+    # stack**, so the suite runs the engine the way an install does.
     cap_drop: [ALL]
-    cap_add: [CHOWN, FOWNER, SETGID, SETUID]
+    user: postgres
     security_opt: [no-new-privileges:true]
     # Pinned to the minor, not `18-alpine`, so two machines run the same
     # engine. Latest as of 2026-08-09; bump deliberately.

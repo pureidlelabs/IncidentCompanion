@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm, truncate, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { mkdtemp, readFile, rm, stat, truncate, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
@@ -22,6 +23,7 @@ const policy = { read: () => Promise.resolve(POLICY_DEFAULTS) } as never
 
 let root = ''
 let store: EvidenceStore
+const CASE = randomUUID()
 
 /** The store reads one key off a ConfigService and nothing else. */
 const configFor = (dir: string) => ({ get: () => dir }) as never
@@ -39,58 +41,58 @@ afterAll(async () => {
 
 describe('keeping an artefact', () => {
   it('returns the digest of what it was given, and can read it back', async () => {
-    const stored = await store.put(bytesOf('proxy log line\n'))
+    const stored = await store.put(CASE, bytesOf('proxy log line\n'))
 
     expect(stored.hashAlgorithm).toBe('sha256')
     expect(stored.sizeBytes).toBe(15)
     expect(isDigest(stored.hash)).toBe(true)
 
-    const back = await store.open(stored.hash)
+    const back = await store.open(CASE, stored.hash)
     expect(back).not.toBeNull()
   })
 
   it('stores identical content once', async () => {
-    const first = await store.put(bytesOf('same bytes'))
-    const second = await store.put(bytesOf('same bytes'))
+    const first = await store.put(CASE, bytesOf('same bytes'))
+    const second = await store.put(CASE, bytesOf('same bytes'))
 
     expect(second.hash).toBe(first.hash)
   })
 
   it('gives different content different names', async () => {
-    const a = await store.put(bytesOf('one'))
-    const b = await store.put(bytesOf('two'))
+    const a = await store.put(CASE, bytesOf('one'))
+    const b = await store.put(CASE, bytesOf('two'))
 
     expect(a.hash).not.toBe(b.hash)
   })
 
   it('verifies by re-reading, and notices tampering', async () => {
-    const stored = await store.put(bytesOf('original evidence'))
-    expect(await store.verify(stored.hash)).toBe(true)
+    const stored = await store.put(CASE, bytesOf('original evidence'))
+    expect(await store.verify(CASE, stored.hash)).toBe(true)
 
-    await writeFile(join(root, stored.hash), 'tampered')
+    await writeFile(join(root, CASE, stored.hash), 'tampered')
 
-    expect(await store.verify(stored.hash)).toBe(false)
+    expect(await store.verify(CASE, stored.hash)).toBe(false)
   })
 
   it('reports an artefact this install does not hold', async () => {
     const absent = 'a'.repeat(64)
 
-    expect(await store.open(absent)).toBeNull()
-    expect(await store.verify(absent)).toBe(false)
+    expect(await store.open(CASE, absent)).toBeNull()
+    expect(await store.verify(CASE, absent)).toBe(false)
   })
 
   it('refuses a name that is not a digest', async () => {
     for (const attempt of ['../../etc/passwd', 'evidence/../../secret', '', 'nothex!']) {
       expect(isDigest(attempt), attempt).toBe(false)
-      expect(await store.open(attempt), attempt).toBeNull()
+      expect(await store.open(CASE, attempt), attempt).toBeNull()
     }
   })
 
   it('keeps a member name that climbs from reaching the container', async () => {
-    const stored = await store.put(bytesOf('a traversing name'), '../../etc/passwd')
+    const stored = await store.put(CASE, bytesOf('a traversing name'), '../../etc/passwd')
 
     const reader = new ZipReader(
-      new Uint8ArrayReader(new Uint8Array(await readFile(join(root, stored.hash)))),
+      new Uint8ArrayReader(new Uint8Array(await readFile(join(root, CASE, stored.hash)))),
       {
         password: ARTEFACT_PASSWORD,
       },
@@ -113,8 +115,185 @@ describe('keeping an artefact', () => {
       }
     }
 
-    await expect(store.put(endless())).rejects.toThrow(/at most/)
+    await expect(store.put(CASE, endless())).rejects.toThrow(/at most/)
     expect(handed).toBeLessThanOrEqual(MAX_ATTACHMENT_BYTES + chunk.length)
+  })
+})
+
+/**
+ * A digest names content and never a case, so the store is asked for bytes
+ * only through the case that put them there.
+ */
+describe('an artefact held per case', () => {
+  it('answers another case as holding nothing, whoever holds the digest', async () => {
+    const [mine, theirs] = [randomUUID(), randomUUID()]
+    const stored = await store.put(mine, bytesOf('held by one case'))
+
+    expect(await store.read(theirs, stored.hash)).toBeNull()
+    expect(await store.open(theirs, stored.hash)).toBeNull()
+    expect(await store.verify(theirs, stored.hash)).toBe(false)
+    expect(await store.held(theirs)).toEqual(new Set())
+    expect(await store.held(mine)).toEqual(new Set([stored.hash]))
+  })
+
+  it('names the entry for each case as that case named it', async () => {
+    const [first, later] = [randomUUID(), randomUUID()]
+    await store.put(first, bytesOf('one artefact, two cases'), 'acme-ceo-mailbox.eml')
+    const again = await store.put(later, bytesOf('one artefact, two cases'), 'mine.eml')
+
+    const reader = new ZipReader(
+      new Uint8ArrayReader(new Uint8Array(await readFile(join(root, later, again.hash)))),
+      { password: ARTEFACT_PASSWORD },
+    )
+    const names = (await reader.getEntries()).map((entry) => entry.filename)
+    await reader.close().catch(() => {})
+    expect(names).toEqual(['mine.eml'])
+  })
+
+  it('discards one case whole and leaves another\u2019s copy of the same bytes', async () => {
+    const [gone, kept] = [randomUUID(), randomUUID()]
+    const stored = await store.put(gone, bytesOf('shared by two cases'))
+    await store.put(kept, bytesOf('shared by two cases'))
+
+    await store.discardCase(gone)
+
+    expect(await store.held(gone)).toEqual(new Set())
+    expect(await store.verify(kept, stored.hash)).toBe(true)
+  })
+
+  it('refuses a case that is not a case id, so no path climbs out of the store', async () => {
+    const stored = await store.put(CASE, bytesOf('beside a traversal'))
+    for (const attempt of ['..', '../..', `${CASE}/..`, '', 'not-a-case']) {
+      await expect(store.put(attempt, bytesOf('x')), attempt).rejects.toThrow()
+      await expect(store.read(attempt, stored.hash), attempt).rejects.toThrow()
+      await expect(store.discardCase(attempt), attempt).rejects.toThrow()
+    }
+    expect(await store.verify(CASE, stored.hash)).toBe(true)
+  })
+})
+
+describe('removing what a case no longer names', () => {
+  it('removes the digests it is given from that case and leaves another case\u2019s copy', async () => {
+    const [mine, theirs] = [randomUUID(), randomUUID()]
+    const going = await store.put(mine, bytesOf('released by one case'))
+    const staying = await store.put(mine, bytesOf('still named in that case'))
+    await store.put(theirs, bytesOf('released by one case'))
+
+    await store.forget(mine, [going.hash])
+
+    expect(await store.held(mine)).toEqual(new Set([staying.hash]))
+    expect(await store.verify(theirs, going.hash)).toBe(true)
+  })
+
+  it('leaves no directory behind for a case it emptied', async () => {
+    const emptied = randomUUID()
+    const only = await store.put(emptied, bytesOf('the only artefact'))
+
+    await store.forget(emptied, [only.hash])
+
+    await expect(stat(join(root, emptied)), 'an empty directory outlived its last artefact').rejects.toThrow()
+  })
+
+  it('refuses a name that is not a digest rather than removing something else', async () => {
+    const kept = await store.put(CASE, bytesOf('beside a traversal to remove'))
+    for (const attempt of ['..', '*', '', `${kept.hash}/..`]) {
+      await expect(store.forget(CASE, [attempt]), attempt).rejects.toThrow()
+    }
+    expect(await store.verify(CASE, kept.hash)).toBe(true)
+  })
+})
+
+describe('counting what nothing names', () => {
+  it('counts a case\u2019s unnamed bytes, a case nothing holds, and a file outside any case, and removes none', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'evidence-unnamed-'))
+    const own = new EvidenceStore(configFor(dir), policy)
+    const [held, unheld] = [randomUUID(), randomUUID()]
+    const named = await own.put(held, bytesOf('named by its row'))
+    const orphan = await own.put(held, bytesOf('its row is gone'))
+    const stray = await own.put(unheld, bytesOf('its case is not in the database'))
+    const flat = join(dir, 'a'.repeat(64))
+    await writeFile(flat, 'left by a store that kept no case')
+
+    const count = await own.unnamed(new Map([[held, new Set([named.hash])]]))
+
+    expect(count).toBe(3)
+    expect(await own.held(held)).toEqual(new Set([named.hash, orphan.hash]))
+    expect(await own.held(unheld)).toEqual(new Set([stray.hash]))
+    expect((await stat(flat)).isFile()).toBe(true)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('counts nothing in a directory that is not there', async () => {
+    const gone = new EvidenceStore(configFor(join(tmpdir(), randomUUID())), policy)
+
+    expect(await gone.unnamed(new Map())).toBe(0)
+  })
+})
+
+describe('one act at a time on a case\u2019s artefacts', () => {
+  const later = () => {
+    let settle = () => {}
+    const settled = new Promise<void>((resolve) => (settle = resolve))
+    return { settled, settle }
+  }
+
+  it('starts an act on a case only once the one before it has finished', async () => {
+    const one = randomUUID()
+    const first = later()
+    const order: string[] = []
+
+    const a = store.exclusive(one, async () => {
+      order.push('first starts')
+      await first.settled
+      order.push('first ends')
+    })
+    const b = store.exclusive(one, () => {
+      order.push('second starts')
+      return Promise.resolve()
+    })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    first.settle()
+    await Promise.all([a, b])
+
+    expect(order).toEqual(['first starts', 'first ends', 'second starts'])
+  })
+
+  it('does not hold another case\u2019s act behind it', async () => {
+    const blocked = later()
+    const held = store.exclusive(randomUUID(), () => blocked.settled)
+
+    await expect(store.exclusive(randomUUID(), () => Promise.resolve('ran'))).resolves.toBe('ran')
+    blocked.settle()
+    await held
+  })
+
+  it('runs the next act after one that failed', async () => {
+    const one = randomUUID()
+    const failed = store.exclusive(one, () => Promise.reject(new Error('refused')))
+
+    await expect(failed).rejects.toThrow('refused')
+    await expect(store.exclusive(one, () => Promise.resolve('ran'))).resolves.toBe('ran')
+  })
+
+  it('holds a case across every store over the directory', async () => {
+    const one = randomUUID()
+    const other = new EvidenceStore(configFor(root), policy)
+    const first = later()
+    const order: string[] = []
+
+    const a = store.exclusive(one, async () => {
+      await first.settled
+      order.push('first')
+    })
+    const b = other.exclusive(one, () => {
+      order.push('second')
+      return Promise.resolve()
+    })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    first.settle()
+    await Promise.all([a, b])
+
+    expect(order, 'two modules\u2019 stores let two acts on one case interleave').toEqual(['first', 'second'])
   })
 })
 
@@ -138,9 +317,9 @@ describe('the seal at rest', () => {
    * the position an endpoint scanner walking the volume is in.
    */
   it('seals the artefact, so the container will not open without the password', async () => {
-    const stored = await store.put(bytesOf(marker.repeat(64)))
+    const stored = await store.put(CASE, bytesOf(marker.repeat(64)))
 
-    const onDisk = await readFile(join(root, stored.hash))
+    const onDisk = await readFile(join(root, CASE, stored.hash))
     expect(onDisk.subarray(0, 2).toString()).toBe('PK')
     expect(onDisk.toString('latin1')).not.toContain(marker)
 
@@ -162,14 +341,14 @@ describe('the seal at rest', () => {
    * carrying a silently shortened artefact is worse than one missing it.
    */
   it('refuses a truncated container rather than reading it short', async () => {
-    const stored = await store.put(bytesOf(marker.repeat(128)))
-    const held = join(root, stored.hash)
+    const stored = await store.put(CASE, bytesOf(marker.repeat(128)))
+    const held = join(root, CASE, stored.hash)
 
     const whole = await readFile(held)
     await truncate(held, whole.length - 64)
 
-    await expect(store.read(stored.hash)).rejects.toThrow()
-    expect(await store.verify(stored.hash)).toBe(false)
+    await expect(store.read(CASE, stored.hash)).rejects.toThrow()
+    expect(await store.verify(CASE, stored.hash)).toBe(false)
   })
 
   /**
@@ -180,8 +359,8 @@ describe('the seal at rest', () => {
    * no digest to compare against.
    */
   it('refuses a container whose ciphertext was altered', async () => {
-    const stored = await store.put(bytesOf(marker.repeat(128)))
-    const held = join(root, stored.hash)
+    const stored = await store.put(CASE, bytesOf(marker.repeat(128)))
+    const held = join(root, CASE, stored.hash)
 
     const whole = await readFile(held)
     // Mid-file, so it lands in the encrypted stream rather than in the local
@@ -191,8 +370,8 @@ describe('the seal at rest', () => {
     whole[at] = whole[at]! ^ 0xff
     await writeFile(held, whole)
 
-    await expect(store.read(stored.hash)).rejects.toThrow()
-    expect(await store.verify(stored.hash)).toBe(false)
+    await expect(store.read(CASE, stored.hash)).rejects.toThrow()
+    expect(await store.verify(CASE, stored.hash)).toBe(false)
   })
 })
 
@@ -223,7 +402,7 @@ describe('the ceiling an artefact is capped against', () => {
 
   it('refuses what the install refuses, at the number the install states', async () => {
     await expect(
-      cappedAt(1).put(Readable.from([Buffer.alloc(2 * 1024 * 1024, 7)]) as AsyncIterable<Buffer>),
+      cappedAt(1).put(CASE, Readable.from([Buffer.alloc(2 * 1024 * 1024, 7)]) as AsyncIterable<Buffer>),
       'a 2MB artefact was stored under a 1MB ceiling',
     ).rejects.toThrow(/at most 1MB/)
   })
@@ -231,7 +410,7 @@ describe('the ceiling an artefact is capped against', () => {
   it('takes what the install allows, at a ceiling the constant would refuse', async () => {
     // **Under the compile-time default and over a lowered one**, so the two
     // cannot both be right: this is the direction the constant cannot express.
-    const stored = await cappedAt(2).put(megabyte())
+    const stored = await cappedAt(2).put(CASE, megabyte())
 
     expect(stored.sizeBytes).toBe(1024 * 1024)
   })

@@ -99,6 +99,9 @@ const CLAIM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
 /** How many rows one connection may hold at once. A browser holds one. */
 const CLAIMS_PER_CONNECTION = 64
 
+/** How many frames one connection may have waiting to be acted on before it is ended. */
+const FRAMES_WAITING = 256
+
 /**
  * Whether this analyst may be admitted to a socket on this case.
  *
@@ -392,8 +395,9 @@ export class LiveGateway implements OnApplicationShutdown {
      * report document, and the refcount in `ProseService` is what keeps it
      * alive for the second when the first closes.
      *
-     * The promise, not the document, so two frames for one field in one tick
-     * take one reader between them.
+     * The promise, not the document: a `reports` change arrives outside the
+     * frame sequence, so one announced while a document is still opening has
+     * to mark it stale once it has opened.
      */
     const opened = new Map<string, Promise<OpenDocument | null>>()
 
@@ -401,37 +405,41 @@ export class LiveGateway implements OnApplicationShutdown {
     const claims = new Set<string>()
 
     const joined = this.channel.join(member)
+    /**
+     * **Settled, not fulfilled.** `PresenceStore.join` starts the heartbeat
+     * and `CaseChannel.join` then announces the roster, so a join that rejects
+     * in that last step has already armed the interval, and the leave has to
+     * run after it anyway. Leaving after a partial join is safe: `leave` clears
+     * the interval and deletes keys that may not exist.
+     */
+    const ready = joined.then(
+      () => true,
+      () => false,
+    )
+
+    /**
+     * **Every frame, and then the connection's own end, one at a time in the
+     * order they arrived**, all behind the join. A join that failed acts on
+     * none of them. -> `openspec/specs/live/design.md`
+     */
+    let order: Promise<void> = Promise.resolve()
+    let waiting = 0
 
     let gone = false
     const close = () => {
       if (gone) return
       gone = true
       this.admitted.delete(live)
-      // **Released before the roster changes.** The last reader out flushes
-      // the document, and a closing tab must not leave the report newer in
-      // memory than on disk.
-      // A document still opening when the socket goes is released when it arrives.
-      for (const [, held] of opened) {
-        void held.then((one) => {
-          one?.stop()
+      order = order
+        .then(async () => {
+          await ready
+          // **Released before the roster changes.** The last reader out flushes
+          // the document, and a closing tab must not leave the report newer in
+          // memory than on disk.
+          for (const [, held] of opened) (await held.catch(() => null))?.stop()
+          opened.clear()
+          await this.channel.leave(member)
         })
-      }
-      opened.clear()
-      /**
-       * **Chained onto the join rather than run now**, or a socket that goes
-       * mid-handshake is deleted from a roster it has not been written to yet
-       * and the write lands after it.
-       *
-       * **Settled, not fulfilled.** `PresenceStore.join` starts the heartbeat
-       * and `CaseChannel.join` then announces the roster, so a join that
-       * rejects in that last step has already armed the interval -- and a
-       * `.then` chain skips the leave exactly there, leaving the ghost this
-       * whole change is about. Leaving after a partial join is safe: `leave`
-       * clears the interval and deletes keys that may not exist.
-       */
-      joined
-        .catch(() => undefined)
-        .then(() => this.channel.leave(member))
         .catch((error: unknown) => {
           this.log.warn(`could not release ${member.sessionId}: ${String(error)}`)
         })
@@ -445,53 +453,74 @@ export class LiveGateway implements OnApplicationShutdown {
      */
     live.on('close', close)
     live.on('error', close)
-
-    await joined
-
     live.on('message', (raw: Buffer) => {
-      let message: { type?: unknown; table?: unknown; id?: unknown; field?: unknown; update?: unknown }
-      try {
-        message = JSON.parse(raw.toString()) as typeof message
-      } catch {
-        return // A frame this build does not understand is ignored, not fatal.
-      }
-
-      // Caught: a frame from the client is not awaited, so a store failure
-      // here would otherwise be an unhandled rejection and the process.
-      const failed = (error: unknown) => {
-        this.log.warn(`could not apply a ${String(message.type)}: ${String(error)}`)
-      }
-
-      /**
-       * **Prose is routed before the claim gate**, which requires `table` and
-       * `id` and returns early without them. A prose frame carries `field` and
-       * `update` instead, so leaving it below that check is a socket that
-       * silently drops every keystroke - which is exactly what it did.
-       */
-      if (message.type === 'prose.sync' || message.type === 'prose.awareness') {
-        const field = typeof message.field === 'string' ? message.field : null
-        const update = typeof message.update === 'string' ? message.update : null
-        if (!field || !update) return
-        this.onProse(member, live, opened, message.type, field, update).catch(failed)
+      if (gone) return
+      // ponytail: one fixed cap; a per-type budget if a client legitimately bursts past it.
+      if (++waiting > FRAMES_WAITING) {
+        live.terminate()
         return
       }
-
-      const table = typeof message.table === 'string' ? message.table : null
-      const id = typeof message.id === 'string' ? message.id : null
-      if (!table || !id) return
-
-      if (message.type === 'claim') this.onClaim(member, live, claims, table, id).catch(failed)
-      if (message.type === 'release') {
-        claims.delete(`${table}:${id}`)
-        this.channel.release(member, table, id).catch(failed)
-      }
+      order = order
+        .then(async () => {
+          if (await ready) await this.onFrame(member, live, opened, claims, raw)
+        })
+        // One failed frame must not stop the ones behind it, nor the leave.
+        .catch((error: unknown) => {
+          this.log.warn(`could not apply a frame from ${member.sessionId}: ${String(error)}`)
+        })
+        .finally(() => {
+          waiting -= 1
+        })
     })
 
+    await joined
+  }
+
+  /** One frame from the client, acted on to completion. */
+  private async onFrame(
+    member: Member,
+    live: WebSocket,
+    opened: Map<string, Promise<OpenDocument | null>>,
+    claims: Set<string>,
+    raw: Buffer,
+  ): Promise<void> {
+    let message: { type?: unknown; table?: unknown; id?: unknown; field?: unknown; update?: unknown } | null
+    try {
+      message = JSON.parse(raw.toString()) as typeof message
+    } catch {
+      return // A frame this build does not understand is ignored, not fatal.
+    }
+    // `null` parses, and reading a field off it throws.
+    if (typeof message !== 'object' || message === null) return
+
+    /**
+     * **Prose is routed before the claim gate**, which requires `table` and
+     * `id` and returns early without them. A prose frame carries `field` and
+     * `update` instead, so leaving it below that check is a socket that
+     * silently drops every keystroke - which is exactly what it did.
+     */
+    if (message.type === 'prose.sync' || message.type === 'prose.awareness') {
+      const field = typeof message.field === 'string' ? message.field : null
+      const update = typeof message.update === 'string' ? message.update : null
+      if (!field || !update) return
+      await this.onProse(member, live, opened, message.type, field, update)
+      return
+    }
+
+    const table = typeof message.table === 'string' ? message.table : null
+    const id = typeof message.id === 'string' ? message.id : null
+    if (!table || !id) return
+
+    if (message.type === 'claim') await this.onClaim(member, live, claims, table, id)
+    if (message.type === 'release') {
+      claims.delete(`${table}:${id}`)
+      await this.channel.release(member, table, id)
+    }
   }
 
   /**
-   * One claim frame. A claim takes write on the case, because a held row refuses
-   * every other writer; admission asked only for read. `release` is not gated:
+   * One claim frame. A claim says its holder is editing, so it takes write on
+   * the case; admission asked only for read. `release` is not gated:
    * `PresenceStore.release` refuses a field another session holds.
    */
   private async onClaim(
@@ -505,15 +534,13 @@ export class LiveGateway implements OnApplicationShutdown {
     if (!CLAIM_TABLE.test(table) || !CLAIM_ID.test(id)) return
     const field = `${table}:${id}`
     if (!claims.has(field) && claims.size >= CLAIMS_PER_CONNECTION) return
-    // Counted before the await: a loop of frames arrives in one tick.
-    claims.add(field)
 
     const level = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
     if (level !== 'write' && level !== 'delete') {
-      claims.delete(field)
       live.send(JSON.stringify({ type: 'claim.refused', table, id, reason: 'read-only' }))
       return
     }
+    claims.add(field)
     await this.channel.claim(member, table, id)
   }
 

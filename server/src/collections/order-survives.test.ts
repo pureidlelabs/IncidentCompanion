@@ -23,10 +23,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, reportBlocks, reports, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -54,10 +54,9 @@ function controllerFor(name: string): Arrangeable {
   const channel = {
     announce: () => {},
     othersOn: () => Promise.resolve([]),
-    holderOf: () => Promise.resolve(null),
   }
   return new (found as new (s: CollectionService) => Arrangeable)(
-    new CollectionService(db!, channel as never),
+    new CollectionService(db!, suiteStore(), channel as never),
   )
 }
 
@@ -90,7 +89,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an arrangement an analyst m
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = one!.id
     // A draft, because a sent report refuses every block write.

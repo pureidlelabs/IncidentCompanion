@@ -3,7 +3,16 @@
 # with no environment set. `openssl` is not in `nginx:alpine` and mints the pair.
 FROM nginx:1.31-alpine@sha256:62ff2089abf5a9ed33bd232895bef5e22f7bb4b200675cec49a5ebc48e3d4ac8
 
-RUN apk add --no-cache openssl
+# **The base image's IPv6 step goes**: it runs `apk manifest`, which fetches
+# the package index over HTTPS on every start, since neither the base image nor
+# `--no-cache` keeps one -- an outbound request from an install nobody pointed
+# anywhere. `default.conf` is this project's, so the
+# step had nothing to edit anyway.
+RUN apk add --no-cache openssl \
+ && rm /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+
+# In `conf.d/`, so it lands in the http context the upstream needs.
+COPY docker/nginx/upstream.conf /etc/nginx/conf.d/upstream.conf
 
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 # Outside `conf.d/`, which nginx includes wholesale into the http context -- a

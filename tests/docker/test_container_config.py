@@ -39,6 +39,9 @@ MAIN_TS = REPO_ROOT / "server" / "src" / "main.ts"
 
 NODE_STACK = REPO_ROOT / "compose.yaml"
 
+#: Run once per `up` and exit; every other service is meant to be running.
+ONE_SHOTS = {"roles", "migrate", "seed"}
+
 
 #: Stand-ins for what `docker/secrets.sh` writes, so compose resolves the file.
 _CREDENTIALS = {name: "x" for name in (
@@ -167,12 +170,17 @@ def test_the_container_command_is_exec_form():
             "SIGTERM never reaches node")
 
 
+#: A service that mounts a volume may pin only the user its image already owns
+#: the mount point by. `postgres` ships `/var/lib/postgresql` as its own.
+OWNS_ITS_MOUNT = {"postgres": "postgres"}
+
+
 def test_every_volume_is_docker_managed():
-    """Every volume is Docker-managed, and no service pins `user:`.
+    """Every volume is Docker-managed, and no service pins another `user:`.
 
     The two are one property. A managed volume is created owned by the image's
-    user, so a service pinning a uid cannot write its own mount point and the
-    entrypoint dies before node starts.
+    user, so a service pinning any other uid cannot write its own mount point
+    and the entrypoint dies before the server starts.
     """
     spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
     volumes = spec.get("volumes", {})
@@ -193,6 +201,7 @@ def test_every_volume_is_docker_managed():
         name
         for name, service in spec.get("services", {}).items()
         if service.get("user") and service.get("volumes")
+        and OWNS_ITS_MOUNT.get(name) != service.get("user")
     ]
     assert not pinned, (
         f"{pinned} pin `user:` and mount a volume, so a managed volume owned by the image's "
@@ -801,9 +810,9 @@ def test_the_stack_seeds_as_a_one_shot_before_the_server_starts():
             f"server answers while TCP is still refused, so the chain starts "
             f"against a database that is not accepting")
 
-    # A one-shot that restarts is not a one-shot: compose would run the seed
-    # again every time it exits, and the demo reseed *deletes* first.
-    for one_shot in ("roles", "migrate", "seed"):
+    # A one-shot that restarts is not a one-shot: compose would run it again
+    # every time it exits.
+    for one_shot in ONE_SHOTS:
         assert str(stack["services"][one_shot].get("restart", "no")) == "no", (
             f"{one_shot} is not pinned to `restart: no`, so compose may run it "
             f"again on exit")
@@ -1675,6 +1684,22 @@ def test_what_must_survive_is_on_a_named_volume_and_is_mounted():
     )
 
 
+def test_the_demo_rebuild_reaches_the_evidence_the_server_writes():
+    """*A demonstration case is removed: it leaves nothing behind.*
+
+    The seed one-shot deletes every demonstration and removes their artefacts
+    itself, and nothing else removes them. On a mount of its own, or none, it
+    removes them from a directory the server never wrote.
+    """
+    services = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))["services"]
+    evidence = [entry for entry in services["app"]["volumes"] if ":/evidence" in str(entry)]
+    assert evidence, "the server mounts no evidence volume, so this reads nothing"
+    assert evidence[0] in (services["seed"].get("volumes") or []), (
+        "the demo rebuild does not mount the server's evidence volume, so a removed "
+        "demonstration's artefacts stay on it for good"
+    )
+
+
 def test_the_ephemeral_store_is_given_nowhere_to_survive():
     """*Nothing else MUST be*, and Redis is the one that would be tempting.
 
@@ -1747,10 +1772,6 @@ JUSTIFIED_CAPABILITIES: dict[str, set[str]] = {
     # bind. Each of the three was measured by removing it and watching the
     # container refuse to start.
     "nginx": {"CHOWN", "SETGID", "SETUID"},
-    # Postgres prepares its data and socket directories as root, then drops to
-    # the `postgres` user. Without CHOWN and FOWNER its entrypoint refuses with
-    # `chown`/`chmod: Operation not permitted`.
-    "postgres": {"CHOWN", "FOWNER", "SETGID", "SETUID"},
 }
 
 
@@ -1781,6 +1802,52 @@ def test_every_service_drops_the_capabilities_it_does_not_use():
         assert asked <= allowed, (
             f"{name} asks for {sorted(asked - allowed)}, which nothing here justifies"
         )
+
+
+def test_every_long_lived_service_is_started_again_unless_stopped():
+    """A store or the server that stops without being asked is started again.
+
+    Without a policy a crash, an out-of-memory kill or a daemon restart leaves
+    the install down until somebody runs `up`, and the edge answers 502.
+    """
+    services = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))["services"]
+    long_lived = sorted(set(services) - ONE_SHOTS)
+    assert long_lived, "compose.yaml declares no long-lived service"
+    unrestarted = [name for name in long_lived
+                   if str(services[name].get("restart", "no")) != "unless-stopped"]
+    assert not unrestarted, (
+        f"{unrestarted} are not `restart: unless-stopped`, so one that stops "
+        "unexpectedly stays stopped")
+
+
+PACKAGE_MANAGERS = {"npm", "npx", "yarn", "pnpm", "corepack"}
+
+
+def test_no_service_runs_a_package_manager():
+    """No service starts a package manager, one-shots included. -> Article V
+
+    npm checks the registry for its own update on a schedule, so a one-shot
+    run through it makes an outbound request from an install nobody pointed
+    anywhere.
+    """
+    services = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))["services"]
+
+    def words(value) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return value.replace(";", " ").replace("&&", " ").split()
+        return [word for item in value for word in words(str(item))]
+
+    running = {
+        name: {Path(word).name for word in
+               words(service.get("command")) + words(service.get("entrypoint"))
+               + words((service.get("healthcheck") or {}).get("test"))}
+        for name, service in services.items()
+    }
+    offending = {name: sorted(found & PACKAGE_MANAGERS)
+                 for name, found in running.items() if found & PACKAGE_MANAGERS}
+    assert not offending, f"these services run a package manager: {offending}"
 
 
 def test_no_service_can_gain_privileges_through_a_setuid_binary():

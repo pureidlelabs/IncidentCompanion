@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config'
 import { z } from 'zod'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 
+import { AdminOnly } from '../auth/admin-only.js'
 import { PolicyService } from '../policy/policy.service.js'
 import { ArtefactCensus } from './artefact-census.service.js'
 import type { Env } from '../config/env.js'
@@ -67,12 +68,13 @@ export const installSettingsSchema = z.object({
      */
     encryptionNote: z.string(),
     /**
-     * How many artefacts this install holds the bytes of, and how many of
-     * those it cannot find beside it.
+     * How many artefacts this install holds the bytes of, how many of those
+     * it cannot find beside it, and how many stored artefacts no case names.
      */
     artefacts: z.object({
       expected: z.number().int(),
       missing: z.number().int(),
+      unnamed: z.number().int(),
     }),
   }),
   limits: z.object({
@@ -96,6 +98,7 @@ export class InstallSettingsController {
     private readonly census: ArtefactCensus,
   ) {}
 
+  @AdminOnly()
   @Get('settings')
   @ZodResponse({
     status: 200,
