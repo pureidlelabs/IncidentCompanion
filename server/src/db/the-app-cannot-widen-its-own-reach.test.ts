@@ -222,7 +222,8 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
     const { rows } = await pool!.query<{ name: string }>(`
       select distinct p.proname::text as name from pg_proc p
         join pg_namespace n on n.oid = p.pronamespace
-       where n.nspname = 'public' and p.proname like 'ic\\_%'
+       where n.nspname = 'public' and (p.proname like 'ic\\_%' or p.prosecdef)
+         and p.prorettype <> 'trigger'::regtype
          and has_function_privilege('ic_app', p.oid, 'execute')
        order by 1`)
     expect(
