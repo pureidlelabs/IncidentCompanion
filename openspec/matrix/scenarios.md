@@ -664,7 +664,7 @@
 | A version is what a write is checked against, and it lives with the row | An analyst keeps their own value | demonstrated | server/e2e/two-analysts-one-record.spec.ts |
 | A version is what a write is checked against, and it lives with the row | An analyst takes the other value | demonstrated | server/e2e/two-analysts-one-record.spec.ts |
 | A version is what a write is checked against, and it lives with the row | One analyst changes a record faster than it is answered | demonstrated | server/e2e/typing-alone-over-a-slow-link.spec.ts |
-| A version is what a write is checked against, and it lives with the row | A refused change is not shown as made | demonstrated | ui/src/api/every-write-hook-shows-only-answers.test.tsx |
+| A version is what a write is checked against, and it lives with the row | A refused change is not shown as made | demonstrated | ui/src/app/case/overview-writes-against-what-was-read.test.tsx |
 | A version is what a write is checked against, and it lives with the row | A change made in a dialog is refused | demonstrated | server/e2e/a-selection-is-acted-on-as-it-was-read.spec.ts |
 | The store is not migrated while the shape is still moving | Data from an older shape is presented | demonstrated | server/src/archive/format.test.ts |
 | What is kept forever is decided, not defaulted | A record reaches the end of its life | demonstrated | server/src/install-activity/prune.test.ts |
