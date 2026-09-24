@@ -20,11 +20,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 /**
  * Every collection the client asks for, `reports` and `report_blocks`
@@ -75,7 +74,7 @@ describe.skipIf(!db)('the entity collections serve their rows', () => {
 
   beforeAll(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
+    await reseedDemos(seed!)
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
   })

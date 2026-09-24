@@ -662,6 +662,34 @@ jobs:
           sh docker/secrets.sh
           .venv/bin/python -m pytest tests/docker -q -n auto
 
+  # --------------------------------------------------------------- lifecycle
+  # **The shipped `compose.yaml`, through its whole life**: first start, a
+  # write, preparation again, stop and start, down and up, each store
+  # restarted under the server, a crash, an unordered start, a copy returned
+  # to and a shape that would lose data, with the stack's network captured
+  # throughout. Anything the images are built from can break it, so the
+  # server, the client and the container files all scope it in.
+  lifecycle:
+    needs: scope
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
+      (needs.scope.outputs.server == 'true' || needs.scope.outputs.client == 'true' ||
+       needs.scope.outputs.containers == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The shipped stack's lifecycle
+        env:
+          INCIDENTCOMPANION_LIFECYCLE_TESTS: '1'
+          IC_SUITE_MUST_RUN: '1'
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q -r requirements-dev.txt
+          .venv/bin/python -m pytest tests/lifecycle -q -rA
+
   # ---------------------------------------------------------------- the gate
   # **The one check to require on `main`.** `always()` is what makes it report
   # on a run where a tier failed; without it a failed dependency skips this
@@ -673,7 +701,7 @@ jobs:
     if: always()
     needs:
       [scope, lint, build, repository, server-suite, client-suite, client-screen, browser,
-       gallery, devcontainer, containers]
+       gallery, devcontainer, containers, lifecycle]
     runs-on: ubuntu-24.04
     steps:
       - name: Every tier

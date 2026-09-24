@@ -1,7 +1,6 @@
 server/src/auth/auth.config.ts:advanced
 server/src/auth/auth.config.ts:after
 server/src/auth/auth.config.ts:before
-server/src/auth/auth.config.ts:disabledPaths
 server/src/auth/auth.config.ts:failedSignIns
 server/src/auth/auth.config.ts:hooks
 server/src/auth/auth.config.ts:rateLimit

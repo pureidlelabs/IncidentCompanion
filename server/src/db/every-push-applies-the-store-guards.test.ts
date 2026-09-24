@@ -3,8 +3,8 @@
  *
  * The guards are taken out of the suite's database first, so a push that did
  * not apply them leaves them absent rather than left over from global setup.
- * The shipped one-shot's command is read from `compose.yaml` rather than
- * restated, and run from the repository root, where the image runs it.
+ * The shipped one-shot's command and working directory are read from
+ * `compose.yaml` rather than restated; the image's `/repo` is this checkout.
  */
 import { execFile } from 'node:child_process'
 import { readFileSync } from 'node:fs'
@@ -25,13 +25,15 @@ const SERVER = fileURLToPath(new URL('../..', import.meta.url))
 
 const TRIGGERS = storeGuards.flatMap((statement) => /create or replace trigger (\w+)/.exec(statement)?.[1] ?? [])
 
-/** The migrate one-shot's `command:`, as `compose.yaml` ships it. */
-function composeMigrate(): string[] {
+/** The migrate one-shot's `command:` and `working_dir:`, as `compose.yaml` ships them. */
+function composeMigrate(): [string, string[], string] {
   const compose = readFileSync(`${ROOT}/compose.yaml`, 'utf8')
   const service = compose.slice(compose.indexOf('\n  migrate:\n'))
   const command = /\n {4}command: (\[.*\])\n/.exec(service)?.[1]
-  if (!command) throw new Error('compose.yaml names no command for the migrate service')
-  return JSON.parse(command) as string[]
+  const dir = /\n {4}working_dir: \/repo(\/\S*)?\n/.exec(service)
+  if (!command || !dir) throw new Error('compose.yaml names no command or no /repo working_dir for the migrate service')
+  const [program, ...args] = JSON.parse(command) as string[]
+  return [program!, args, `${ROOT}${dir[1]?.slice(1) ?? ''}`]
 }
 
 async function onMigrate<T>(work: (client: Client) => Promise<T>): Promise<T> {
@@ -81,14 +83,8 @@ describe.skipIf(!APP_URL || isEmbedded(APP_URL))('preparing a database', () => {
   })
 
   const pushes: [string, () => [string, string[], string]][] = [
-    ['the push every script runs', () => ['npm', ['run', '--silent', 'db:push', '--', '--force'], SERVER]],
-    [
-      'the shipped migrate one-shot',
-      () => {
-        const [command, ...args] = composeMigrate()
-        return [command!, args, ROOT]
-      },
-    ],
+    ['the push every script runs', () => ['npm', ['run', '--silent', 'db:push'], SERVER]],
+    ['the shipped migrate one-shot', composeMigrate],
   ]
 
   it.each(pushes)('puts them back after %s', async (_name, how) => {

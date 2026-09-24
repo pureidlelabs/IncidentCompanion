@@ -12,7 +12,7 @@
  * app ships and what an install adds are the same kind of thing.
  */
 import { Inject, Injectable, UnprocessableEntityException } from '@nestjs/common'
-import { eq, inArray } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 
 import { DATABASE, SEED_DATABASE, seedRoleMissing } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -110,6 +110,9 @@ export class LanguageService {
           builtin: true,
           updatedAt: new Date(),
         },
+        // An unchanged pack is not written, so a second seed changes nothing.
+        setWhere: sql`(${reportLanguage.label}, ${reportLanguage.strings}, ${reportLanguage.builtin})
+          is distinct from (excluded.label, excluded.strings, excluded.builtin)`,
       })
   }
 

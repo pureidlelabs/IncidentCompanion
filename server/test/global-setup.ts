@@ -16,20 +16,16 @@
  * superuser ignores every policy, and `FORCE` does not apply to it. So this
  * provisions as the administrator and hands the suite `ic_app`.
  *
- * **Pushed, not migrated.** There are no installs to upgrade, so the schema is
- * applied straight from the TypeScript.
+ * **The schema is applied by the step an install runs**,
+ * `server/scripts/apply-schema.mts`, so every suite prepares its database the
+ * way `migrate` does.
  */
-import { execFile, execFileSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { readFile, rm } from 'node:fs/promises'
-import { promisify } from 'node:util'
 import { Client } from 'pg'
 
-const run = promisify(execFile)
-
-/** The package root: `drizzle.config.ts` resolves against it, and it is not
- *  always the directory a run was typed from. */
-const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url))
+import { applySchema } from '../scripts/apply-schema.mjs'
 
 /** Provisions databases and roles. Never what a test queries through.
  *
@@ -45,6 +41,9 @@ export const ADMIN_URL =
       }),
     ) as { adminDatabaseUrl: string }
   ).adminDatabaseUrl
+
+/** The suffix of the database holding the schema and no account. */
+export const UNCLAIMED = '_unclaimed'
 
 const asRole = (url: string, role: string): string => {
   const at = new URL(url)
@@ -117,10 +116,7 @@ async function embedded(): Promise<void> {
   // Before the push, so the roles exist for it to grant to.
   await apply()
 
-  await run('npm', ['run', '--silent', 'db:push', '--', '--force'], {
-    cwd: PACKAGE_ROOT,
-    env: { ...process.env, DATABASE_URL: server.url },
-  })
+  await applySchema(server.url)
 
   /**
    * **And again after it, which is not belt and braces.** The grants in
@@ -277,10 +273,12 @@ export async function setup(): Promise<void> {
   await onFresh.query(roles)
   await onFresh.end()
 
-  await run('npm', ['run', '--silent', 'db:push', '--', '--force'], {
-    cwd: PACKAGE_ROOT,
-    env: { ...process.env, DATABASE_URL: asRole(url, 'ic_migrate') },
-  })
+  await applySchema(asRole(url, 'ic_migrate'))
+
+  // The schema with no account in it, for `unclaimedInstall` to clone. Nothing
+  // connects to it, which is what lets it serve as a template.
+  await runLock.query(`drop database if exists "${name}${UNCLAIMED}" with (force)`)
+  await runLock.query(`create database "${name}${UNCLAIMED}" template "${name}" owner ic_migrate`)
 
   // **What the suite queries through.** Not the owner and not an
   // administrator, so a test that asserts case scoping is asserting it against

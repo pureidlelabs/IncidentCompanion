@@ -20,9 +20,9 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| An account is provisioned, never self-created | An install with no accounts is claimed | undemonstrated | |
+| An account is provisioned, never self-created | An install with no accounts is claimed | demonstrated | server/test/two-claims-leave-one-account-and-one-session.test.ts |
 | An account is provisioned, never self-created | Somebody reaches the service first | undemonstrated | |
-| An account is provisioned, never self-created | Two claims arrive together | undemonstrated | |
+| An account is provisioned, never self-created | Two claims arrive together | demonstrated | server/test/two-claims-leave-one-account-and-one-session.test.ts |
 | An account is provisioned, never self-created | The claim is attempted twice | demonstrated | server/test/a-second-claim-is-refused-and-recorded.test.ts |
 | An account is provisioned, never self-created | A new account reaches nothing | demonstrated | server/test/a-new-account-reaches-only-the-default-customer.test.ts |
 | An address names one account, whatever case it is spelled in | An account is created in a second spelling of an address already held | demonstrated | server/test/an-account-is-administered-by-any-spelling-of-its-address.test.ts |
@@ -60,9 +60,11 @@
 | An install can be recovered without another administrator | The credential is lost | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | demonstrated | server/test/account-lockout.test.ts |
 | Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | demonstrated | server/test/account-lockout.test.ts |
-| Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/password-hold-clears.test.ts |
+| Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/a-held-account-reaches-only-its-way-out.test.ts |
 | Authentication resists guessing, and says so to the auditor | The install raises its password minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts |
 | Authentication resists guessing, and says so to the auditor | An account holds a password shorter than a raised minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts |
+| Authentication resists guessing, and says so to the auditor | A password is guessed at through a door other than sign-in | demonstrated | server/test/a-guess-counts-at-every-door.test.ts |
+| Authentication resists guessing, and says so to the auditor | A locked account's password is offered where it is changed | demonstrated | server/test/a-guess-counts-at-every-door.test.ts |
 | A second factor is available, and enforcing it is the install's policy | The policy is off | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | An analyst enrols anyway | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | The policy is turned on | unbuilt | Not built: no second factor. Kept normative. -> #59 |
@@ -111,6 +113,12 @@
 | Administrative events are logged | An entry is edited | demonstrated | server/src/install-activity/record.test.ts |
 | Administrative events are logged | The record is read | demonstrated | server/src/install-audit/read.test.ts |
 | Administrative events are logged | Where the record goes is changed | unbuilt | Not built: there is no destination to change. -> #13 |
+| Administrative events are logged | An analyst ends their own session | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
+| Administrative events are logged | An ending that ends nothing | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
+| An install serves only the account operations it offers | A caller asks for an account operation the install does not offer | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
+| An install serves only the account operations it offers | An operation is asked for by another spelling | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
+| An install serves only the account operations it offers | A held account asks for an operation the install offers | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
+| An install serves only the account operations it offers | An analyst takes another account's name | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
 
 ## analysis
 
@@ -329,7 +337,7 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | It comes up with one command and no preparation | A first start on a clean machine | demonstrated | tests/docker/test_container_runtime.py |
-| It comes up with one command and no preparation | A second start | demonstrated | tests/docker/test_container_config.py |
+| It comes up with one command and no preparation | A second start | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | It comes up with one command and no preparation | A dependency is slow | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | What an install exposes | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | The application is addressed directly | demonstrated | tests/docker/test_container_config.py |
@@ -339,14 +347,19 @@
 | The connection is protected, and there is no way to turn that off | A supplied certificate cannot be used | demonstrated | tests/docker/test_container_config.py |
 | The connection is protected, and there is no way to turn that off | Somebody wants it unprotected | demonstrated | tests/docker/test_container_config.py |
 | Setting up is separate from running, and runs once | Preparation runs before serving | demonstrated | tests/docker/test_container_runtime.py |
-| Setting up is separate from running, and runs once | An install is started again | demonstrated | tests/docker/test_container_config.py |
+| Setting up is separate from running, and runs once | An install is started again | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | Setting up is separate from running, and runs once | Preparation fails | demonstrated | tests/docker/test_container_config.py |
-| What must survive is named, and what must not is not | The install is rebuilt | demonstrated | tests/docker/test_container_config.py |
+| Setting up is separate from running, and runs once | Preparation runs again beside a serving application | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
+| Setting up is separate from running, and runs once | A new version would discard stored data | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| Setting up is separate from running, and runs once | Preparation is run by hand | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| What must survive is named, and what must not is not | The install is rebuilt | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | What must survive is named, and what must not is not | Something not named is lost | demonstrated | tests/docker/test_container_config.py |
 | An install can say whether it is well, and what is wrong | A component has started but cannot answer | demonstrated | server/src/health/dependencies.health.test.ts |
-| An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | server/src/health/dependencies.health.test.ts |
+| An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| An install can say whether it is well, and what is wrong | A component stops unexpectedly | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | The application runs with no more than it needs | The application attempts something outside its work | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
 | The application runs with no more than it needs | A part is examined for what it can do | demonstrated | tests/docker/test_container_config.py |
+| An install with nothing configured reaches nothing outside itself | An install lives its whole life with nothing configured | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 
 ## evaluation
 
@@ -627,14 +640,14 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | What may be lost and what may not are separated by design | The ephemeral store is emptied | demonstrated | server/test/losing-the-ephemeral-store-loses-no-investigation.test.ts |
-| What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | demonstrated | tests/docker/test_container_config.py |
-| What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | undemonstrated | |
+| What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | demonstrated | server/test/health-names-a-lost-store.test.ts |
+| What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | The application cannot reach a row it should not, even by mistake | A query forgets its boundary | demonstrated | server/src/db/scope.test.ts |
 | The application cannot reach a row it should not, even by mistake | The application attempts to widen its own reach | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
 | The application cannot reach a row it should not, even by mistake | A new table holding case data is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
 | Changing the shape of the store is a separate power | The application attempts to change the schema | demonstrated | server/src/db/scope.test.ts |
-| Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/src/db/policy-push.test.ts |
-| A version is what a write is checked against, and it lives with the row | A write and its record are one act | undemonstrated |  |
+| Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
+| A version is what a write is checked against, and it lives with the row | A write and its record are one act | demonstrated | server/src/db/mutate.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write arrives against a version that has moved | demonstrated | server/src/db/mutate.test.ts |
 | The store is not migrated while the shape is still moving | Data from an older shape is presented | demonstrated | server/src/archive/format.test.ts |
 | What is kept forever is decided, not defaulted | A record reaches the end of its life | demonstrated | server/src/install-activity/prune.test.ts |
@@ -644,10 +657,12 @@
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | demonstrated | server/src/health/install.controller.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | An operator asks what protects the state at rest | demonstrated | server/src/health/install.controller.test.ts |
-| What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
+| What is stored can be recovered, and the recovery is proven | An install is restored from a copy | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | demonstrated | server/src/health/an-install-says-what-it-cannot-find.test.ts |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | demonstrated | server/src/evidence/artefacts-put-back-make-the-evidence-whole.test.ts |
+| What is stored can be recovered, and the recovery is proven | A damaged copy is checked | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| What is stored can be recovered, and the recovery is proven | A copy from another shape is restored | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | An artefact is reached only through the case that holds it | A digest is named in another case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | An artefact is reached only through the case that holds it | Reach is withdrawn from an analyst who read a digest | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | An artefact is reached only through the case that holds it | A handover is read in by somebody who does not reach the case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
@@ -673,6 +688,7 @@
 | A read tells a caller what it is looking at | Somebody wrote first | demonstrated | server/src/collections/a-refused-write-says-what-the-row-became.test.ts |
 | The interface describes itself, and the description is generated | A route is added | demonstrated | server/test/openapi-contract.test.ts |
 | The interface describes itself, and the description is generated | A route changes shape | undemonstrated | |
+| The interface describes itself, and the description is generated | A route served by a library the application mounts | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts |
 | A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/every-write-door-refuses-a-version-past-its-column.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |

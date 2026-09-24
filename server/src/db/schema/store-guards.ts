@@ -1,9 +1,7 @@
 /**
- * Rules the store keeps itself, applied after every schema push.
- *
- * `drizzle-kit` manages neither functions nor triggers, so these are plain
- * statements, each idempotent: applying the list twice leaves what applying it
- * once left.
+ * Idempotent statements the Drizzle schema cannot express -- functions,
+ * triggers -- applied by `server/scripts/apply-schema.mts` after the tables,
+ * in the same transaction.
  */
 
 /** The SQLSTATE the store raises for a write to a sent report; its detail is the report as JSON. */

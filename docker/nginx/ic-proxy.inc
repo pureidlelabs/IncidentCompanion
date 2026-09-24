@@ -2,7 +2,7 @@
 # **Shared so a header added for one path cannot be forgotten for another** --
 # the locations differ only in their rate limits, and a header difference would
 # be invisible until one route behaved differently.
-proxy_pass http://app:8080;
+proxy_pass http://ic_app;
 proxy_http_version 1.1;
 
 # **Overwrite, never append, and the app depends on it.** In production

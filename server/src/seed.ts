@@ -2,10 +2,11 @@
  * Seeding, as a one-shot that exits - not as something every server does on boot.
  *
  *     node dist/src/seed.js            the built-in library and language pack
- *     node dist/src/seed.js --demos    ...and rebuild the demo cases and reports
+ *     node dist/src/seed.js --demos    ...and the demo cases and reports, once,
+ *                                      on an install nobody has claimed
  *
  * Runs as a one-shot rather than from a bootstrap hook, so replicas cannot
- * race: the demo reseed deletes every demo case before rebuilding it.
+ * race. Safe to run again: it writes only what is missing or changed.
  *
  * **The step order is declared here**, never inherited from which module
  * imports which - a refactor can reverse that silently.
@@ -71,11 +72,15 @@ async function seed(): Promise<void> {
     log.log('Language pack written')
 
     if (wantsDemos) {
-      const rebuilt = await app.get(DemoSeederService, { strict: false }).reseed()
-      log.log(`Demo cases rebuilt: ${String(rebuilt)}`)
-      await app.get(DemoReportSender, { strict: false }).fileDeclared()
+      const written = await app.get(DemoSeederService, { strict: false }).seedOnce()
+      if (written > 0) {
+        await app.get(DemoReportSender, { strict: false }).fileDeclared()
+        log.log(`Demo cases written: ${String(written)}`)
+      } else {
+        log.log('Demo cases left as they are: the install is claimed or already has them')
+      }
     } else {
-      log.log('Demo content skipped \u2014 pass --demos to rebuild it')
+      log.log('Demo content skipped \u2014 pass --demos to write it')
     }
 
     /**
