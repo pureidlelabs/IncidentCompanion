@@ -91,15 +91,15 @@ export const TABLES = [
   ['reportBlocks', reportBlocks],
 ] as const
 
-/**
- * `values` with each timestamp column's ISO string read as a `Date`.
- * Throws `BadArchive` for a string no date can be read from.
- */
 /** How many rows a case record describes, across every table an import writes. */
 export function rowsIn(record: Record<string, unknown>): number {
   return TABLES.reduce((sum, [name]) => sum + (Array.isArray(record[name]) ? (record[name] as unknown[]).length : 0), 0)
 }
 
+/**
+ * `values` with each timestamp column's ISO string read as a `Date`.
+ * Throws `BadArchive` for a string no date can be read from.
+ */
 export function coercedTimes(
   collection: string,
   table: PgTable,
