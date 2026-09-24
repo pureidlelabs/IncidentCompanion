@@ -9,9 +9,16 @@ import type {
   NetworkIndicator,
   SystemEntry,
 } from '@/api/model'
+import { editedAt, type Read } from '@/api/rowWrite'
 import { fieldOf, formSpec, type Specs } from '@/api/specs'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 import { Absent } from '@/components/ui/absent'
-import { BulkActionBar, bulkFieldsFor, type BulkField } from '@/components/blocks/bulk-actions'
+import {
+  BulkActionBar,
+  bulkFieldsFor,
+  selected,
+  type BulkField,
+} from '@/components/blocks/bulk-actions'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { BooleanCell, ReferenceCell, SelectCell, TextCell } from '@/components/blocks/data-cell'
 import {
@@ -26,7 +33,6 @@ import { EntityDialog, type ReferenceOptions } from '@/components/blocks/entity-
 import { EmptyState, type EmptyOffer } from '@/components/blocks/empty-state'
 import { FilterControls } from '@/components/blocks/filter-controls'
 import { useFilters } from '@/components/blocks/filter-set'
-import { MergeReview } from '@/components/blocks/merge-review'
 import { FieldToneBadge, ROLE_INK, paintFor } from '@/components/blocks/severity-badge'
 import type { FieldToneSpec } from '@/api/specs'
 import { TableToolbar } from '@/components/blocks/table-toolbar'
@@ -96,8 +102,6 @@ export interface EntityScopeTableProps {
   search?: string
   /** A row to scroll to and flash, as an entity link's `?highlight=` does. */
   highlightId?: string
-  /** A write another analyst refused, drawn above the table. */
-  refusal?: { field: string; row: string; by: string }
   /** Rejects a delete rather than performing it, for the refused-write story. */
   refuseDelete?: (() => Promise<never>) | undefined
   /** Omitted in the gallery, where a row is written into the local copy only. */
@@ -124,14 +128,21 @@ export interface EntityScopeTableProps {
  * write here does.
  */
 export interface EntityWrites {
-  /** `entry` null creates. Resolves with the stored row. */
+  /** `entry` null creates; otherwise the row as the analyst read it. Resolves with the stored row. */
   save: (
     collection: CollectionName,
-    entry: { id: string; version: number } | null,
+    entry: { id: string; version: Read } | null,
     fields: object,
   ) => Promise<Record<string, unknown>>
+  /** One patch across a selection of one kind, as it was read. */
+  patch: (
+    collection: CollectionName,
+    rows: readonly BulkPatchRow[],
+    fields: object,
+  ) => Promise<void>
+  /** Delete a selection, whichever tables it spans, as it was read. */
   remove: (
-    rows: readonly { collection: CollectionName; id: string; version: number }[],
+    rows: readonly { collection: CollectionName; id: string; version: Read }[],
   ) => Promise<void>
 }
 
@@ -156,7 +167,6 @@ export function EntityScopeTable({
   onScope,
   search = '',
   highlightId,
-  refusal,
   refuseDelete,
   writes,
   busy = false,
@@ -178,7 +188,7 @@ export function EntityScopeTable({
   }
 
   const [query, setQuery] = useState(search)
-  const [deleting, setDeleting] = useState<string[] | null>(null)
+  const [deleting, setDeleting] = useState<BulkPatchRow[] | null>(null)
   const [highlight, setHighlight] = useState(highlightId)
   const editor = useRowEditor<{ kind: EntityKind; entry: Record<string, unknown> }>()
   // Scoped, the row above names the kind. Unscoped there are five to pick
@@ -270,16 +280,13 @@ export function EntityScopeTable({
     [chooseScope],
   )
 
-  const remove = async (ids: readonly string[]) => {
+  const remove = async (chosen: readonly BulkPatchRow[]) => {
     // The kind is resolved before the rows go, since `findRow` reads `source`.
-    const doomed = ids
-      .map((id) => findRow(id))
-      .filter((found) => found !== null)
-      .map((found) => ({
-        collection: found.kind.collection,
-        id: String(found.entry.id),
-        version: (found.entry as { version?: number }).version ?? 0,
-      }))
+    // The version is the one read when Delete was pressed, never this one.
+    const doomed = chosen.flatMap((row) => {
+      const found = findRow(row.id)
+      return found ? [{ collection: found.kind.collection, id: row.id, version: row.version }] : []
+    })
     if (!writes || doomed.length === 0) return
 
     /**
@@ -290,7 +297,9 @@ export function EntityScopeTable({
      * -> `api/useBulkDelete.ts`
      */
     await writes.remove(doomed)
-    setSource((current) => (current ? withoutRows(current, new Set(ids)) : current))
+    setSource((current) =>
+      current ? withoutRows(current, new Set(doomed.map((row) => row.id))) : current,
+    )
   }
 
   /** The row behind an id, with the kind that says which form describes it. */
@@ -303,33 +312,32 @@ export function EntityScopeTable({
     return null
   }
 
-  const save = (target: EntityKind, entry: Record<string, unknown> | null, fields: object) => {
-    const row: Record<string, unknown> = entry
-      ? { ...fields, id: entry.id }
-      : { ...fields, id: localId(target.slug), version: 1 }
-    // Held so a refusal can put the table back, since the row below is drawn
-    // before the write that justifies it has answered.
-    const before = source
-    setSource((current) => (current ? withRow(current, target.slug, row) : current))
-    // The new row is what the analyst just described, so the table scrolls to
-    // it rather than leaving them to find it in eighty.
-    setHighlight(String(row.id))
+  const save = (
+    target: EntityKind,
+    entry: Record<string, unknown> | null,
+    fields: object,
+    read: Read | undefined,
+  ) => {
     if (!writes) {
-      // Nothing to wait on, so the dialog closes as it always did.
+      // The gallery answers for itself: the row is what the analyst described.
+      const row: Record<string, unknown> = entry
+        ? { ...fields, id: entry.id }
+        : { ...fields, id: localId(target.slug), version: 1 }
+      setSource((current) => (current ? withRow(current, target.slug, row) : current))
+      setHighlight(String(row.id))
       editor.close()
       return
     }
-    const stored = entry
-      ? { id: String(entry.id), version: (entry as { version?: number }).version ?? 0 }
-      : null
+    const stored = editedAt(entry && { id: String(entry.id) }, read)
     // **Returned, not discarded.** `EntityDialog` closes itself when the write
     // lands and keeps the draft when it does not, so closing here as well threw
     // away everything typed on a refusal. -> #194, and the contract in #183.
-    return writes.save(target.collection, stored, fields).catch((error: unknown) => {
-      // The row above was written on the strength of a write that did not
-      // happen, and a table showing it as saved is the untruthful half of this.
-      setSource(before)
-      throw error
+    // Nothing is drawn before the answer: the table takes the row the server stored.
+    return writes.save(target.collection, stored, fields).then((row) => {
+      setSource((current) => (current ? withRow(current, target.slug, row) : current))
+      // The new row is what the analyst just described, so the table scrolls to
+      // it rather than leaving them to find it in eighty.
+      setHighlight(String(row.id))
     })
   }
 
@@ -442,15 +450,6 @@ export function EntityScopeTable({
               ...(onRetry ? { refetch: onRetry } : {}),
             }}
           >
-            {refusal && (
-              <MergeReview
-                field={refusal.field}
-                by={refusal.by}
-                row={refusal.row}
-                className="mb-3"
-              />
-            )}
-
             {source && specs && (
               <ScopeBody
                 scope={scope}
@@ -467,28 +466,25 @@ export function EntityScopeTable({
                   const found = findRow(id)
                   if (found) editor.edit(found)
                 }}
-                onBulkApply={(slug, ids, patch) => {
-                  setSource((current) =>
-                    current ? withPatched(current, slug, ids, patch) : current,
-                  )
+                onBulkApply={(slug, chosen, patch) => {
                   const collection = kindFor(slug)?.collection
-                  if (writes && collection) {
-                    // One row at a time: the version check is per row, and the block
-                    // holds the version each of these was read at.
-                    for (const id of ids) {
-                      const found = findRow(id)
-                      if (found) {
-                        void writes.save(
-                          collection,
-                          {
-                            id: String(found.entry.id),
-                            version: (found.entry as { version?: number }).version ?? 0,
-                          },
-                          patch,
-                        )
-                      }
-                    }
+                  if (!writes) {
+                    setSource((current) =>
+                      current
+                        ? withPatched(
+                            current,
+                            slug,
+                            chosen.map((row) => row.id),
+                            patch,
+                          )
+                        : current,
+                    )
+                    return
                   }
+                  // One request for the selection, each row at the version it was read at.
+                  // The table follows the case read again once it is answered.
+                  if (collection)
+                    void writes.patch(collection, chosen, patch).catch(() => undefined)
                 }}
               />
             )}
@@ -514,7 +510,7 @@ export function EntityScopeTable({
           form={formSpec(specs, creatingKind.form)}
           references={references}
           onCreate={(fields) => {
-            return save(creatingKind, null, fields)
+            return save(creatingKind, null, fields, undefined)
           }}
         />
       )}
@@ -531,16 +527,18 @@ export function EntityScopeTable({
           form={formSpec(specs, editor.editing.kind.form)}
           references={references}
           entry={editor.editing.entry}
-          onCreate={(fields) => {
+          served={findRow(String(editor.editing.entry.id))?.entry}
+          onCreate={(fields, read?: Read) => {
             const open_ = editor.editing
-            if (open_) return save(open_.kind, open_.entry, fields)
+            if (open_) return save(open_.kind, open_.entry, fields, read)
             return undefined
           }}
         />
       )}
 
       <ConfirmDeleteDialog
-        ids={deleting}
+        rows={deleting}
+        named={(id) => rows.find((row) => row.id === id)?.identity}
         onOpenChange={(isOpen) => {
           if (!isOpen) setDeleting(null)
         }}
@@ -615,11 +613,12 @@ interface BodyProps {
   highlightId: string | undefined
   onOpen: (row: EntityRowView) => void
   onScope: (next: EntityScope) => void
-  onDelete: (ids: string[]) => void
+  /** The selection, as it was read when Delete was pressed. */
+  onDelete: (rows: BulkPatchRow[]) => void
   onEdit: (id: string) => void
   onBulkApply: (
     slug: EntityKind['slug'],
-    ids: readonly string[],
+    rows: readonly BulkPatchRow[],
     patch: Record<string, unknown>,
   ) => void
 }
@@ -692,7 +691,8 @@ function MixedTable({
       pendingIds: new Set(),
       commit: () => undefined,
       remove: (id) => {
-        onDelete([id])
+        const found = rows.find((row) => row.id === id)
+        if (found) onDelete([selected(found)])
       },
       edit: onEdit,
     },
@@ -737,7 +737,7 @@ function MixedTable({
 }
 
 /** One kind, on its own columns, narrowed by the ids the search left. */
-function KindTable<TData extends { id: string }>({
+function KindTable<TData extends { id: string; version: number }>({
   kase,
   specs,
   rows,
@@ -778,10 +778,12 @@ function KindTable<TData extends { id: string }>({
       // A cell's own edit is one field of one row, which is the same write the
       // bulk bar makes over many.
       commit: (id, fields) => {
-        if (kind) onBulkApply(kind.slug, [id], fields)
+        const found = data.find((row) => row.id === id)
+        if (kind && found) onBulkApply(kind.slug, [selected(found)], fields)
       },
       remove: (id) => {
-        onDelete([id])
+        const found = data.find((row) => row.id === id)
+        if (found) onDelete([selected(found)])
       },
       edit: onEdit,
       ...(kind ? { collection: kind.collection } : {}),
@@ -793,8 +795,8 @@ function KindTable<TData extends { id: string }>({
         <BulkActionBar
           table={table}
           fields={bulkFields}
-          onApply={(ids, patch) => {
-            if (kind) onBulkApply(kind.slug, ids, patch)
+          onApply={(chosen, patch) => {
+            if (kind) onBulkApply(kind.slug, chosen, patch)
           }}
           onRequestDelete={onDelete}
         />

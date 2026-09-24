@@ -1,0 +1,2 @@
+- [x] 1.1 Narrow the containment sentence to what the install generates
+- [x] 1.2 Tell the analyst an unsealed archive can be changed without that showing

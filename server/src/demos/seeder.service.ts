@@ -11,7 +11,7 @@ import { count, eq } from 'drizzle-orm'
 
 import { DATABASE, SEED_DATABASE, seedRoleMissing } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import type { Executor } from '../db/scope.js'
+import { withReach, type Executor } from '../db/scope.js'
 import { cases, user } from '../db/schema/index.js'
 import { DEMO_CASES, type DemoCase } from './catalogue.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
@@ -63,11 +63,8 @@ export class DemoSeederService {
   /**
    * **Two handles, because reading demo cases and writing them are not the
    * same privilege.** `seedOnce` writes across every case, which is the seed
-   * role's job. `cards` only reads, and `cases` carries no
-   * row-level security -- `CasesService.list` reads the same table through
-   * `DATABASE` for `GET /api/cases`. Read it through the seed role and
-   * `/api/demos` answers `[]` on any install whose seeding ran somewhere the
-   * serving process cannot see, which a Job is.
+   * role's job. `cards` only reads, as whoever is asking, so it names the
+   * demo cases they reach and no others.
    */
   constructor(
     @Inject(DATABASE) private readonly reads: Database,
@@ -81,10 +78,12 @@ export class DemoSeederService {
    * not stored on the case.
    */
   async cards(): Promise<(DemoCase & { id: string })[]> {
-    const rows = await this.reads
-      .select({ id: cases.id, reference: cases.reference })
-      .from(cases)
-      .where(eq(cases.isDemo, true))
+    const rows = await withReach(this.reads, (tx) =>
+      tx
+        .select({ id: cases.id, reference: cases.reference })
+        .from(cases)
+        .where(eq(cases.isDemo, true)),
+    )
 
     const byReference = new Map(rows.map((row) => [row.reference, row.id]))
     return DEMO_CASES.flatMap((demo) => {

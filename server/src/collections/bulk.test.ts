@@ -11,6 +11,7 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { BulkDeleteController, bulkDeleteBodySchema } from './bulk-delete.controller.js'
 import { CollectionService } from './collection.service.js'
@@ -118,7 +119,7 @@ function controllerFor(name: string): Bulk {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!, suiteStore()))
+  return new (found as new (s: CollectionService) => Bulk)(as(ACTOR, new CollectionService(db!, suiteStore())))
 }
 
 describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () => {
@@ -490,7 +491,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () =
 describe.skipIf(!db || !hasConcurrentConnections())('deleting a selection that spans collections', () => {
   let caseId: string
   let session: Session
-  const controller = () => new BulkDeleteController(new CollectionService(db!, suiteStore()))
+  const controller = () => as(ACTOR, new BulkDeleteController(new CollectionService(db!, suiteStore())))
 
   beforeEach(async () => {
     await seed!.delete(cases)
@@ -760,7 +761,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('deleting a selection that s
       .insert(reportBlocks)
       .values({ caseId, reportId: paper!.id, kind: 'figure', evidenceId: artefact!.id })
     // Stamped last: the store refuses a part added to a sent report.
-    await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, paper!.id))
+    await seed!.update(reports).set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() }).where(eq(reports.id, paper!.id))
 
     const result = await controller().remove(
       caseId,

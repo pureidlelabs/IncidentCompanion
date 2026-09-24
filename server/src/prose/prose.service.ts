@@ -3,10 +3,9 @@
  *
  * **Two kinds of record, and the granularity differs on purpose.** A report is
  * one document with a fragment per block - one awareness roster, so an outline
- * can say *"Bob is in section 4"*, and one restore point per report rather
- * than one per section. A **note** is one document on its own, because a note
- * is created, read and deleted on its own and a case-wide document would keep
- * a fragment for every note that ever went.
+ * can say *"Bob is in section 4"*. A **note** is one document on its own,
+ * because a note is created, read and deleted on its own and a case-wide
+ * document would keep a fragment for every note that ever went.
  *
  * **The codec, not a second server.** `y-protocols` is the state-vector
  * exchange every Yjs transport speaks, and it rides the case socket that
@@ -50,10 +49,11 @@ import * as Y from 'yjs'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { changeFeed } from '../db/schema/change-feed.js'
-import { reports } from '../db/schema/report.js'
+import { reportBlocks, reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
-import { withCase } from '../db/scope.js'
+import { actingAs, principalNow, withCase, type Executor } from '../db/scope.js'
+import { fragmentFor } from '../domain/prose-fields.js'
 
 /**
  * The one fragment a note's document holds.
@@ -141,6 +141,8 @@ export interface ProseRelay {
  * not published back. The client end uses the same idea for the same reason.
  */
 const REMOTE = Symbol('remote')
+/** A section pruned on a stored copy, applied to the live document: relayed, and not a new edit. */
+const PRUNED = Symbol('pruned')
 
 /** What one instance sends the others when a document moves. */
 interface ProseFrame {
@@ -315,7 +317,7 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   private async build(caseId: string, address: ProseRecord): Promise<LiveDocument> {
-    const doc = new Y.Doc({ gc: false })
+    const doc = new Y.Doc()
     let sealed: Date | null = null
     if (address.table === 'casenotes') {
       const [row] = await withCase(this.db, caseId, (tx) =>
@@ -368,6 +370,10 @@ export class ProseService implements OnApplicationShutdown {
       saving: Promise.resolve(),
     }
     doc.on('update', (update: Uint8Array, origin: unknown) => {
+      if (origin === PRUNED) {
+        void this.relayOut(caseId, address, update)
+        return
+      }
       entry.dirty = true
       if (entry.timer) clearTimeout(entry.timer)
       entry.timer = setTimeout(() => {
@@ -439,6 +445,36 @@ export class ProseService implements OnApplicationShutdown {
       Y.applyUpdate(entry.doc, new Uint8Array(Buffer.from(frame.update, 'base64')), REMOTE)
     } catch (error) {
       this.log.warn(`dropping a relayed prose update for ${recordOf(address)}: ${String(error)}`)
+    }
+  }
+
+  /**
+   * A copy of `doc` holding no fragment whose section `tx` cannot find, so a
+   * late edit to a removed one is not kept. `doc` itself is left as it is.
+   */
+  private async prunedCopy(tx: Executor, reportId: string, doc: Y.Doc): Promise<Y.Doc> {
+    const live = await tx.select({ id: reportBlocks.id }).from(reportBlocks).where(eq(reportBlocks.reportId, reportId))
+    const kept = new Set(live.map((block) => block.id))
+    const copy = new Y.Doc()
+    Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc))
+    for (const name of [...copy.share.keys()]) {
+      const fragment = fragmentFor(copy, name)
+      if (!kept.has(name) && fragment.length > 0) fragment.delete(0, fragment.length)
+    }
+    return copy
+  }
+
+  /** Empty a removed section's fragment, and store the report without it. Call after its block row is deleted. */
+  async clearSection(caseId: string, reportId: string, blockId: string): Promise<void> {
+    const address = reportDocument(reportId)
+    const doc = await this.open(caseId, address)
+    try {
+      const fragment = fragmentFor(doc, blockId)
+      if (fragment.length === 0) return
+      fragment.delete(0, fragment.length)
+      await this.flush(caseId, address)
+    } finally {
+      await this.release(caseId, address)
     }
   }
 
@@ -634,10 +670,16 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   /**
-   * Write the document to its row, naming whoever wrote into it since the last
-   * write: `updated_by` is the latest of them, and each gets a feed row in the
-   * same transaction. Then tells the `onSaved` listener. Resolves once every
-   * flush queued before it has run too. Public so a test can force it.
+   * Write the document to its row, as the latest analyst who wrote into it
+   * since it was last stored and whom the store still lets write it, or else as
+   * whoever is asking. `updated_by` names the latest who wrote, and everyone
+   * who wrote gets a feed row in the same transaction. Then tells the `onSaved` listener.
+   * Resolves once every flush queued before it has run too. Public so a test
+   * can force it.
+   *
+   * A document no edit on this instance has touched, flushed with nobody
+   * asking, is left to the instance that took the edit. One nobody may write
+   * stays unsaved and is logged, and the next flush tries again.
    *
    * **The row's version is deliberately not bumped.** `reports.version` guards
    * the analyst-facing fields against a concurrent edit; the document is a
@@ -654,45 +696,69 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   private async store(caseId: string, address: ProseRecord, held: LiveDocument): Promise<void> {
-    const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
     const writers = [...held.writers.values()]
+    const asking = principalNow()
+    const candidates = writers.map((writer) => writer.id).reverse()
+    if (asking && !candidates.includes(asking)) candidates.push(asking)
+    if (candidates.length === 0) return
     held.writers.clear()
     held.dirty = false
     const by = writers.at(-1)
     const attributed = by ? { updatedBy: by.id, updatedAt: new Date() } : {}
     try {
-      await withCase(this.db, caseId, async (tx) => {
-        const [row] = await (address.table === 'casenotes'
-          ? tx
-              .update(caseNotes)
-              // **`note` is re-derived from the document on every flush.**
-              // The document is the record; the column is the projection the
-              // index row, the search and the CSV export read, and a note has
-              // no heading to find it by instead. A note's creation writes the
-              // column once, as the document's first words; this is its only
-              // writer after that.
-              .set({ document: bytes, note: noteText(held.doc), ...attributed })
-              .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
-              .returning({ version: caseNotes.version })
-          : tx
-              .update(reports)
-              .set({ document: bytes, ...attributed })
-              .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
-              .returning({ version: reports.version }))
-        if (!row || writers.length === 0) return
-        await tx.insert(changeFeed).values(
-          writers.map((writer) => ({
-            caseId,
-            entity: address.table,
-            entityId: address.id,
-            op: 'update' as const,
-            version: row.version,
-            actorId: writer.id,
-            fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
-          })),
+      for (const who of candidates) {
+        let pruned: Y.Doc | null = null
+        const stored = await actingAs(who, () =>
+          withCase(this.db, caseId, async (tx) => {
+            // A copy: a writer who cannot see the sections prunes them all, and
+            // only a store that took it reaches the live document.
+            if (address.table === 'reports') pruned = await this.prunedCopy(tx, address.id, held.doc)
+            const bytes = Buffer.from(Y.encodeStateAsUpdate(pruned ?? held.doc))
+            const [row] = await (address.table === 'casenotes'
+              ? tx
+                  .update(caseNotes)
+                  // **`note` is re-derived from the document on every flush.**
+                  // The document is the record; the column is the projection the
+                  // index row, the search and the CSV export read, and a note has
+                  // no heading to find it by instead. A note's creation writes the
+                  // column once, as the document's first words; this is its only
+                  // writer after that.
+                  .set({ document: bytes, note: noteText(held.doc), ...attributed })
+                  .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
+                  .returning({ version: caseNotes.version })
+              : tx
+                  .update(reports)
+                  .set({ document: bytes, ...attributed })
+                  .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
+                  .returning({ version: reports.version }))
+            // No row is the store refusing this writer, which raises nothing.
+            if (!row) return false
+            if (writers.length > 0) {
+              await tx.insert(changeFeed).values(
+                writers.map((writer) => ({
+                  caseId,
+                  entity: address.table,
+                  entityId: address.id,
+                  op: 'update' as const,
+                  version: row.version,
+                  actorId: writer.id,
+                  fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
+                })),
+              )
+            }
+            return true
+          }),
         )
-      })
-      if (writers.length > 0) this.saved?.(caseId, address, writers)
+        if (pruned) {
+          const copy: Y.Doc = pruned
+          if (stored) Y.applyUpdate(held.doc, Y.encodeStateAsUpdate(copy, Y.encodeStateVector(held.doc)), PRUNED)
+          copy.destroy()
+        }
+        if (!stored) continue
+        if (writers.length > 0) this.saved?.(caseId, address, writers)
+        return
+      }
+      throw new Error('the store took it from nobody who wrote it, or its row is gone')
     } catch (error) {
       // Sent by a path this document did not see: nothing more is taken.
       const sent = sentReportIn(error)

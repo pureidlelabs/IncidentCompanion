@@ -14,8 +14,8 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { withCase } from '../db/scope.js'
-import { cases, systems } from '../db/schema/index.js'
+import { actingAs, withCase } from '../db/scope.js'
+import { cases, systems, user } from '../db/schema/index.js'
 import { danglingReferences } from './reference-check.js'
 import { eventSchema } from '../domain/entities/timeline.js'
 import { reportBlockSchema } from '../domain/entities/report.js'
@@ -31,6 +31,12 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/** Who the store is asked for: an account every default-customer case is open to. */
+const READER = 'reference-check-reader'
+/** `withCase` as the analyst this file writes as. */
+const scoped: typeof withCase = (on, caseId, work) =>
+  actingAs(READER, () => withCase(on, caseId, work))
+
 describe.skipIf(!db || !hasConcurrentConnections())('references that leave the case', () => {
   let mine = ''
   let theirCase = ''
@@ -38,6 +44,17 @@ describe.skipIf(!db || !hasConcurrentConnections())('references that leave the c
   let theirHost = ''
 
   beforeAll(async () => {
+    await seed!
+      .insert(user)
+      .values({
+        id: READER,
+        name: READER,
+        email: `${READER}@example.test`,
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoNothing()
     const [a] = await seed!.insert(cases).values({ title: 'Refs mine' }).returning()
     const [b] = await seed!.insert(cases).values({ title: 'Refs theirs' }).returning()
     mine = a!.id
@@ -61,7 +78,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('references that leave the c
   })
 
   it('accepts a reference to a row in the same case', async () => {
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, eventSchema, { systemId: myHost }),
     )
 
@@ -69,7 +86,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('references that leave the c
   })
 
   it('refuses a reference to another case\u2019s row', async () => {
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, eventSchema, { systemId: theirHost }),
     )
 
@@ -81,12 +98,12 @@ describe.skipIf(!db || !hasConcurrentConnections())('references that leave the c
    * checked them before this - any string could be put in one.
    */
   it('checks every id in a list, not just the first', async () => {
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, eventSchema, { accountIds: [] }),
     )
     expect(dangling).toEqual([])
 
-    const mixed = await withCase(db!, mine, (tx) =>
+    const mixed = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, eventSchema, {
         systemId: myHost,
         sourceSystemId: theirHost,
@@ -96,7 +113,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('references that leave the c
   })
 
   it('passes over an absent or empty reference', async () => {
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, eventSchema, { systemId: null, description: 'no refs here' }),
     )
 
@@ -110,7 +127,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('references that leave the c
    */
   it('refuses an id that exists nowhere, indistinguishably', async () => {
     const nowhere = '11111111-1111-4111-8111-111111111111'
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, eventSchema, { systemId: nowhere }),
     )
 
@@ -130,7 +147,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('references that leave the c
       .values({ caseId: theirCase, label: 'Theirs', tlp: 'TLP:RED' })
       .returning()
 
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, reportBlockSchema, { reportId: theirs!.id }),
     )
 
@@ -143,7 +160,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('references that leave the c
       .values({ caseId: mine, label: 'Ours', tlp: 'TLP:RED' })
       .returning()
 
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, reportBlockSchema, { reportId: ours!.id }),
     )
 

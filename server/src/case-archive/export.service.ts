@@ -1,15 +1,15 @@
 /**
  * A case, out, as a `.iccase`.
  *
- * Three kinds of member: `case.json` is the record, `prose/<report>.ydoc` the
- * Yjs document behind each report's written blocks, and `evidence/<digest>`
- * the artefact bytes.
+ * Three kinds of member: `case.json` is the record, `prose/<report>.ydoc` and
+ * `prose/casenotes/<note>.ydoc` the Yjs documents behind each report's written
+ * blocks and each note, and `evidence/<digest>` the artefact bytes.
  *
  * **Whether the files travel is the analyst's choice per export, and the
  * manifest records it** - an import cannot tell a backup from a handover
  * without being told.
  */
-import { Inject, Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common'
 
 import { textOf } from '../domain/text-of.js'
 import { CasesService } from '../cases/cases.service.js'
@@ -18,12 +18,17 @@ import { figureHashes } from '../report/document/model.js'
 import {
   CASE_NAME,
   EVIDENCE_PREFIX,
+  NOTE_PROSE_PREFIX,
   PROSE_PREFIX,
   pack,
   type Attachments,
 } from '../archive/format.js'
 import { WeakPassphrase, seal } from '../archive/envelope.js'
+import { rowsIn } from './import.service.js'
 import { PolicyService } from '../policy/policy.service.js'
+import { NOTE_FRAGMENT, ProseService, reportDocument, type ProseRecord } from '../prose/prose.service.js'
+import { rekeyed } from '../domain/prose-fields.js'
+import { WRITTEN_BLOCK } from '../report/block-kinds.js'
 
 export interface ExportRequest {
   caseId: string
@@ -54,7 +59,19 @@ export class ArchiveExportService {
     private readonly cases: CasesService,
     @Inject(EvidenceStore) private readonly store: EvidenceStore,
     private readonly policy: PolicyService,
+    private readonly prose: ProseService,
   ) {}
+
+  /** The named fragments of a live document, as they read, or null when none holds anything. */
+  private async asItReads(caseId: string, address: ProseRecord, fragments: readonly string[]): Promise<Uint8Array | null> {
+    if (fragments.length === 0) return null
+    const doc = await this.prose.open(caseId, address)
+    try {
+      return rekeyed(doc, new Map(fragments.map((name) => [name, name])))
+    } finally {
+      await this.prose.release(caseId, address)
+    }
+  }
 
   async build(request: ExportRequest): Promise<ExportedArchive> {
     /**
@@ -65,7 +82,8 @@ export class ArchiveExportService {
      * **Read now, like every other bound**: a minimum cached at boot is one an
      * administrator cannot raise without a restart. -> `policy/read.ts`
      */
-    const minimumChars = (await this.policy.read())['evidence.passphraseChars']
+    const policy = await this.policy.read()
+    const minimumChars = policy['evidence.passphraseChars']
     if (request.passphrase && request.passphrase.length < minimumChars) {
       throw new WeakPassphrase(`A passphrase is at least ${String(minimumChars)} characters.`)
     }
@@ -74,26 +92,41 @@ export class ArchiveExportService {
       string,
       unknown
     >
+    const ceiling = policy['evidence.archiveRows']
+    const rows = rowsIn(data)
+    if (rows > ceiling) {
+      throw new UnprocessableEntityException({
+        message: `This case holds ${rows.toLocaleString('en-GB')} rows, and an archive carries at most ${ceiling.toLocaleString('en-GB')}.`,
+      })
+    }
     const members: Record<string, Uint8Array> = {}
     const omitted: string[] = []
 
-    // **The Yjs documents come out of the case record and ride separately.**
-    // Left in the JSON they would be a base64 blob in the file a human is
-    // meant to read, and the JSON is the half that has to stay greppable.
+    // **The Yjs documents ride beside the record, as each one reads.** Left in
+    // the JSON they would be a base64 blob in the file a human is meant to
+    // read; copied from the stored column they would carry every deletion.
     const reports = (data.reports ?? []) as {
       id: string
-      document?: Buffer | null
+      document?: unknown
       frozen?: unknown
     }[]
-    const carried = reports.map((report) => {
-      const { document, ...rest } = report
-      if (document && document.length > 0) {
-        members[`${PROSE_PREFIX}${report.id}.ydoc`] = new Uint8Array(document)
-      }
-      return rest
-    })
+    const blocks = (data.reportBlocks ?? []) as { id: string; reportId: string; kind: string }[]
+    const carried: Record<string, unknown>[] = []
+    for (const { document: _stored, ...report } of reports) {
+      const written = blocks.filter((block) => block.reportId === report.id && block.kind === WRITTEN_BLOCK)
+      const read = await this.asItReads(request.caseId, reportDocument(report.id), written.map((block) => block.id))
+      if (read) members[`${PROSE_PREFIX}${report.id}.ydoc`] = read
+      carried.push(report)
+    }
+    const notes = (data.casenotes ?? []) as { id: string; document?: unknown }[]
+    const carriedNotes: Record<string, unknown>[] = []
+    for (const { document: _stored, ...note } of notes) {
+      const read = await this.asItReads(request.caseId, { table: 'casenotes', id: note.id }, [NOTE_FRAGMENT])
+      if (read) members[`${NOTE_PROSE_PREFIX}${note.id}.ydoc`] = read
+      carriedNotes.push(note)
+    }
 
-    const record = { ...data, reports: carried }
+    const record = { ...data, reports: carried, casenotes: carriedNotes }
     members[CASE_NAME] = new TextEncoder().encode(JSON.stringify(record, null, 2))
 
     const attachments: Attachments = request.includeFiles ? 'included' : 'omitted'

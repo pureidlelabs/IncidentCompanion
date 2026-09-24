@@ -1,16 +1,9 @@
 /**
- * The one mutation shape: optimistic apply, per-row PATCH, rollback on failure.
+ * Change one row: a PATCH of the fields that changed.
  *
  * Sends **only the fields that changed, for one row**, so two writers collide
  * only on the same field of the same entry. There is no route that takes a
  * whole case.
- *
- * **A patch that does not name the version it read is refused with a 400
- * before the server looks at a field**, so `version` is required on the type:
- * omitting it is a compile error rather than something an analyst meets. It is
- * the version of the row the analyst was looking at and **the caller supplies
- * it** - this hook must not read one out of the cache, which would adopt
- * another analyst's row as the base.
  *
  * **`base` rides beside the patch** and is what the form was rendered from.
  * The server keeps no copy of that, so without it a refusal cannot tell "we
@@ -19,15 +12,12 @@
  * **No undo affordance**; point-in-time restore replaces it.
  */
 
-import {
-  useMutation,
-  useQueryClient,
-  type UseMutationResult,
-} from '@tanstack/react-query'
+import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 
 import { request, type ApiError } from './client'
-import { COLLECTION_TO_CASE_KEY, type Case, type CollectionEntry, type CollectionName } from './model'
+import type { CollectionEntry, CollectionName } from './model'
 import { keys } from './queryKeys'
+import { rowKey, writeRow, type Read } from './rowWrite'
 
 /**
  * What a successful PATCH answers with: **the row as stored**.
@@ -35,22 +25,13 @@ import { keys } from './queryKeys'
  * The route declares it -- `@ZodResponse({ type: EntityRowDto, description:
  * 'The row as stored after the patch.' })` -- and returns `asRow(result.row)`
  * over a `.loose()` schema, so nothing is stripped on the way out.
- *
- * A caller that wants what the server stored, which is every collection
- * screen, has it without a refetch: a refused version check cannot then leave
- * a merged copy on screen.
  */
 export type WrittenEntry<N extends CollectionName> = CollectionEntry[N]
 
 export interface EntryPatch<N extends CollectionName> {
   entryId: string
-  /**
-   * The version of the row the analyst was looking at.
-   *
-   * **Required, and never read from the cache here.** See the module
-   * docstring: a cached version is another analyst's row adopted as your base.
-   */
-  version: number
+  /** The version of the row the analyst was looking at. */
+  version: Read
   /** Only what changed. Sending a whole row defeats the point of the helper. */
   fields: Partial<Omit<CollectionEntry[N], 'id'>>
   /**
@@ -63,66 +44,34 @@ export interface EntryPatch<N extends CollectionName> {
   base?: Partial<Omit<CollectionEntry[N], 'id'>> | undefined
 }
 
-interface Rollback<N extends CollectionName> {
-  previous: CollectionEntry[N][] | undefined
-  previousCase: Case | undefined
-}
-
 export function useEntryMutation<N extends CollectionName>(
   caseId: string,
   collection: N,
-): UseMutationResult<WrittenEntry<N>, ApiError, EntryPatch<N>, Rollback<N>> {
+): UseMutationResult<WrittenEntry<N>, ApiError, EntryPatch<N>> {
   const client = useQueryClient()
   const listKey = keys.collection(caseId, collection)
-  const caseKey = keys.case(caseId)
-  const onCase = COLLECTION_TO_CASE_KEY[collection]
 
-  return useMutation<WrittenEntry<N>, ApiError, EntryPatch<N>, Rollback<N>>({
+  return useMutation<WrittenEntry<N>, ApiError, EntryPatch<N>>({
     // Named so `usePendingEntryIds` can find every in-flight write to this
     // table. Without it a section has only `isPending`, which is one boolean
-    // for however many rows are in flight - two concurrent edits then share
-    // one spinner and it sits on whichever row went last.
+    // for however many rows are in flight.
     mutationKey: [...listKey, 'patch'],
 
     // `version` and `base` ride *beside* the fields rather than inside them:
     // the server destructures both out before validating, and `.strict()`
     // refuses anything else it does not recognise as a column.
     mutationFn: ({ entryId, version, fields, base }) =>
-      request<WrittenEntry<N>>(
-        `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}/${encodeURIComponent(entryId)}`,
-        { method: 'PATCH', body: { version, ...(base ? { base } : {}), ...fields } },
+      writeRow(
+        client,
+        rowKey(caseId, collection, entryId),
+        version,
+        (at) =>
+          request<WrittenEntry<N>>(
+            `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}/${encodeURIComponent(entryId)}`,
+            { method: 'PATCH', body: { version: at, ...(base ? { base } : {}), ...fields } },
+          ),
+        (stored) => (stored as { version: number }).version,
       ),
-
-    onMutate: async ({ entryId, fields }) => {
-      // Without this an in-flight refetch that started before the edit lands
-      // after it and overwrites the optimistic row with the stale server copy.
-      // The screens render from the case document, so it is guarded as well as the list.
-      await Promise.all([
-        client.cancelQueries({ queryKey: listKey }),
-        client.cancelQueries({ queryKey: caseKey, exact: true }),
-      ])
-      const previous = client.getQueryData<CollectionEntry[N][]>(listKey)
-      const previousCase = client.getQueryData<Case>(caseKey)
-
-      const apply = (rows: CollectionEntry[N][] | undefined) =>
-        rows?.map((row) =>
-          (row as { id: string }).id === entryId ? { ...row, ...fields } : row,
-        )
-      client.setQueryData<CollectionEntry[N][]>(listKey, apply)
-      client.setQueryData<Case>(caseKey, (kase) =>
-        kase && { ...kase, [onCase]: apply(kase[onCase] as CollectionEntry[N][]) },
-      )
-      return { previous, previousCase }
-    },
-
-    onError: (_error, _patch, context) => {
-      // The whole list, not the one row: `previous` is the snapshot taken
-      // above, and restoring a single row would keep any *other* optimistic
-      // edit that the same failure also invalidated.
-      if (!context) return
-      client.setQueryData(listKey, context.previous)
-      client.setQueryData(caseKey, context.previousCase)
-    },
 
     onSettled: () => {
       // On success too, and the second line is why: the case carries figures

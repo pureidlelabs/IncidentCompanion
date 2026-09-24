@@ -18,7 +18,7 @@
  * by nothing, with the suite still passing. -> `CLAUDE.md`
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render } from '@testing-library/react'
+import { act, cleanup, render, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -28,6 +28,9 @@ import { useCaseChanges } from './useCaseChanges'
 
 /** The watchers the hook registers, so a test can drive the connection. */
 const watchers = new Set<(up: boolean) => void>()
+
+/** What the link reports on registering: up, as a screen mounting into an open socket sees. */
+let upOnRegister = true
 
 const link = {
   send: () => {
@@ -40,7 +43,7 @@ const link = {
     watchers.add(listener)
     // The real link reports the current state on registration, and it is
     // connected by the time a screen mounts.
-    listener(true)
+    listener(upOnRegister)
     return () => {
       watchers.delete(listener)
     }
@@ -84,6 +87,7 @@ function mount(client: QueryClient, caseId = 'C-1') {
 afterEach(() => {
   cleanup()
   watchers.clear()
+  upOnRegister = true
   vi.useRealTimers()
   vi.restoreAllMocks()
 })
@@ -120,7 +124,10 @@ describe('a reconnect re-reads the case', () => {
     restore()
     vi.advanceTimersByTime(500)
 
-    expect(invalidate, 'nothing was re-read, so the screen keeps its pre-drop rows').toHaveBeenCalled()
+    expect(
+      invalidate,
+      'nothing was re-read, so the screen keeps its pre-drop rows',
+    ).toHaveBeenCalled()
     const keysAsked = invalidate.mock.calls.map(([one]) => JSON.stringify(one?.queryKey))
     expect(keysAsked).toContain(JSON.stringify(keys.case('C-1')))
   })
@@ -138,5 +145,238 @@ describe('a reconnect re-reads the case', () => {
     vi.advanceTimersByTime(500)
 
     expect(invalidate).not.toHaveBeenCalled()
+  })
+})
+
+describe('a screen says when it is not live', () => {
+  function live(client: QueryClient) {
+    return renderHook(() => useCaseChanges('C-1'), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    }).result
+  }
+
+  it('is behind from the drop until the case has been read again', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    const reading: { settle: () => void } = { settle: () => undefined }
+    vi.spyOn(client, 'invalidateQueries').mockImplementation(
+      () =>
+        new Promise<void>((done) => {
+          reading.settle = done
+        }),
+    )
+    const result = live(client)
+    expect(result.current.behind).toBe(false)
+
+    act(() => {
+      drop()
+    })
+    expect(result.current.behind, 'the drop left the screen presenting itself as current').toBe(
+      true,
+    )
+
+    act(() => {
+      restore()
+      vi.advanceTimersByTime(500)
+    })
+    expect(result.current.behind, 'the line cleared before the case was read again').toBe(true)
+
+    await act(async () => {
+      reading.settle()
+      await Promise.resolve()
+    })
+    expect(result.current).toMatchObject({ behind: false, failed: false })
+  })
+
+  it('stays behind when the socket drops again before the read after its return', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    vi.spyOn(client, 'invalidateQueries').mockResolvedValue(undefined)
+    const result = live(client)
+
+    act(() => {
+      drop()
+      restore()
+      drop()
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+      await Promise.resolve()
+    })
+
+    expect(result.current.behind, 'a read that landed while the socket was down cleared the line').toBe(
+      true,
+    )
+  })
+
+  it('stays behind when a read asked for while the socket is down comes back', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    vi.spyOn(client, 'invalidateQueries').mockRejectedValueOnce(new Error('503')).mockResolvedValue(undefined)
+    const result = live(client)
+
+    act(() => {
+      drop()
+      restore()
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+      await Promise.resolve()
+    })
+    expect(result.current.failed).toBe(true)
+    act(() => {
+      drop()
+    })
+    await act(async () => {
+      result.current.reread()
+      await Promise.resolve()
+    })
+
+    expect(result.current.behind, 'a read asked for while the socket was down cleared the line').toBe(true)
+  })
+
+  it('waits for the read after the latest return, not one from before it', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    const reads: (() => void)[] = []
+    vi.spyOn(client, 'invalidateQueries').mockImplementation(
+      () =>
+        new Promise<void>((done) => {
+          reads.push(done)
+        }),
+    )
+    const result = live(client)
+
+    act(() => {
+      drop()
+      restore()
+      vi.advanceTimersByTime(500)
+      drop()
+      restore()
+    })
+    await act(async () => {
+      for (const done of reads.splice(0)) done()
+      await Promise.resolve()
+    })
+
+    expect(result.current.behind, 'a read issued before the latest drop cleared the line').toBe(true)
+  })
+
+  it('stays behind when a read asked for while the socket was down lands after it returns', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    const reads: (() => void)[] = []
+    vi.spyOn(client, 'invalidateQueries').mockImplementation(
+      () =>
+        new Promise<void>((done) => {
+          reads.push(done)
+        }),
+    )
+    const result = live(client)
+
+    act(() => {
+      drop()
+    })
+    act(() => {
+      result.current.reread()
+    })
+    act(() => {
+      restore()
+    })
+    await act(async () => {
+      reads.shift()?.()
+      await Promise.resolve()
+    })
+
+    expect(result.current.behind, 'a read asked for while the socket was down cleared the line').toBe(true)
+  })
+
+  it('keeps a current screen current when an older read fails after a newer one landed', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    const reads: { done: () => void; fail: () => void }[] = []
+    vi.spyOn(client, 'invalidateQueries').mockImplementation(
+      () =>
+        new Promise<void>((done, fail) => {
+          reads.push({ done, fail: () => fail(new Error('503')) })
+        }),
+    )
+    const result = live(client)
+
+    act(() => {
+      drop()
+      restore()
+      vi.advanceTimersByTime(500)
+      drop()
+      restore()
+      vi.advanceTimersByTime(500)
+    })
+    const [older, newer] = reads
+    await act(async () => {
+      newer?.done()
+      await Promise.resolve()
+      older?.fail()
+      await Promise.resolve()
+    })
+
+    expect(result.current, 'an older read failing overwrote a current screen').toMatchObject({
+      behind: false,
+      failed: false,
+    })
+  })
+
+  it('starts another case live, whatever the last one was', () => {
+    const client = new QueryClient()
+    vi.spyOn(client, 'invalidateQueries').mockResolvedValue(undefined)
+    const { result, rerender } = renderHook(({ caseId }: { caseId: string }) => useCaseChanges(caseId), {
+      initialProps: { caseId: 'C-1' },
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    })
+
+    act(() => {
+      drop()
+    })
+    expect(result.current.behind).toBe(true)
+    act(() => {
+      restore()
+    })
+    rerender({ caseId: 'C-2' })
+
+    expect(result.current.behind, 'the last case\'s drop was carried to this one').toBe(false)
+  })
+
+  it('says the read failed, and reads again when asked', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    const invalidate = vi.spyOn(client, 'invalidateQueries').mockRejectedValue(new Error('503'))
+    const result = live(client)
+
+    act(() => {
+      drop()
+      restore()
+      vi.advanceTimersByTime(500)
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(result.current).toMatchObject({ behind: true, failed: true })
+
+    invalidate.mockResolvedValue(undefined)
+    await act(async () => {
+      result.current.reread()
+      await Promise.resolve()
+    })
+    expect(result.current).toMatchObject({ behind: false, failed: false })
+  })
+
+  it('is not behind while a socket is still opening for the first time', () => {
+    upOnRegister = false
+    const result = live(new QueryClient())
+
+    expect(result.current.behind).toBe(false)
   })
 })

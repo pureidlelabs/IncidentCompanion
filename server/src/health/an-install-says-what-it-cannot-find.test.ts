@@ -23,7 +23,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ArtefactCensus, saysAtStart, type Census } from './artefact-census.service.js'
 import { HealthModule } from './health.module.js'
 import { EvidenceStore } from '../evidence/store.js'
-import { cases, evidence, user } from '../db/schema/index.js'
+import { cases, evidence, reports, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 /**
@@ -286,6 +286,21 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
     expect(await readdir(root), 'the census removed something').toHaveLength(3)
   })
 
+  it('does not count a figure a sent report froze as named by nothing', async () => {
+    await db!.insert(reports).values({
+      caseId,
+      frozen: { sections: [{ nodes: [{ type: 'figure', hash: hashFor('f') }] }] },
+      frozenAt: new Date(),
+      sentAt: new Date(),
+    })
+    await placed(hashFor('f'))
+    await placed(hashFor('5'))
+
+    const held = await new ArtefactCensus(appDb!, storeAt(root)).take()
+
+    expect(held.unnamed, 'the figure of the sent report was counted as named by nothing').toBe(1)
+  })
+
   /**
    * **An install with no evidence at all is not a broken one**, which is the
    * state a fresh install is in: answering anything but zero there would
@@ -298,7 +313,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
    * part under test.
    */
   it('reports nothing expected on an install holding no evidence', async () => {
-    const empty = { select: () => ({ from: () => Promise.resolve([]) }) }
+    const empty = { execute: () => Promise.resolve({ rows: [] }) }
 
     const held = await new ArtefactCensus(empty as never, storeAt(root)).take()
 

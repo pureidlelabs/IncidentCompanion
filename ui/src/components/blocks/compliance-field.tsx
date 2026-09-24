@@ -21,10 +21,21 @@ import { chosen, optionShape, valueOf, type OptionGroup } from './compliance-ans
  * under it, and anything else keeps the column. `optionShape` owns both
  * thresholds and the reason for each.
  */
+/**
+ * Whether a field is typed into, and so written when it is left rather than
+ * as each keystroke arrives. Every other kind is answered in one act.
+ */
+export function typedAnswer(spec: ComplianceFieldSpec): boolean {
+  return spec.computedFrom === undefined && !ONE_ACT.has(spec.kind)
+}
+
+const ONE_ACT = new Set(['check', 'multi_csv', 'multi_lines', 'event_datetime', 'select', 'ground'])
+
 export function ComplianceControl({
   spec,
   record,
   onSet,
+  onLeave,
 }: {
   spec: ComplianceFieldSpec
   record: ComplianceRecord
@@ -37,6 +48,8 @@ export function ComplianceControl({
    * splitting a joined string.
    */
   onSet: (name: string, value: unknown) => void
+  /** The analyst left a typed field. */
+  onLeave?: ((name: string) => void) | undefined
 }) {
   const value = valueOf(record, spec)
 
@@ -148,7 +161,12 @@ export function ComplianceControl({
   }
 
   return (
-    <Field label={spec.label}>
+    <Field
+      label={spec.label}
+      onBlur={() => {
+        onLeave?.(spec.name)
+      }}
+    >
       {(ids) => (
         <Input
           {...ids}

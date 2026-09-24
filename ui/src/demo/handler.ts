@@ -210,6 +210,37 @@ function patch(
   return json(row)
 }
 
+/**
+ * A selection edited at once, answered as the route answers: which rows took
+ * it, which had moved since they were read, and which were not there.
+ *
+ * The fields are judged against every row before any is written, so a value
+ * the collection will not take refuses the whole selection.
+ */
+function bulkPatch(state: DemoState, collection: string, body: Record<string, unknown>): Response {
+  const rows = rowsOf(state, collection)
+  if (rows === null) return refuse(501, UNAVAILABLE)
+  const { ids, fields } = body as { ids?: { id?: unknown; version?: unknown }[]; fields?: unknown }
+  if (!Array.isArray(ids) || typeof fields !== 'object' || fields === null) {
+    return refuse(422, 'A bulk patch names its rows and the fields it changes.')
+  }
+  const changes = fields as Record<string, unknown>
+  if (Object.keys(changes).length === 0) return refuse(422, EMPTY_PATCH)
+  for (const row of rows.filter((candidate) => ids.some((named) => named.id === candidate.id))) {
+    const refused = patchProblems(collection, row, changes)
+    if (refused !== null) return refused
+  }
+
+  const answer = { updated: [] as string[], refused: [] as string[], missing: [] as string[] }
+  for (const { id, version } of ids) {
+    const status = patch(state, collection, String(id), { ...changes, version }).status
+    ;(status === 200 ? answer.updated : status === 409 ? answer.refused : answer.missing).push(
+      String(id),
+    )
+  }
+  return json(answer)
+}
+
 function remove(state: DemoState, collection: string, id: string): Response {
   const rows = rowsOf(state, collection)
   if (rows === null) return refuse(501, UNAVAILABLE)
@@ -443,6 +474,9 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
     // as ids they reached the single-row patch, which answered `No such entry.`
     // for a bulk edit - a refusal that is not the demo's and is not true.
     const row = at[3] ?? ''
+    if (at.length === 4 && row === 'bulk' && method === 'PATCH') {
+      return bulkPatch(state, collection, body)
+    }
     if (at.length === 4 && (row === 'bulk' || row === 'order')) return refuse(501, UNAVAILABLE)
     if (at.length === 4 && method === 'PATCH') return patch(state, collection, row, body)
     if (at.length === 4 && method === 'DELETE') return remove(state, collection, row)

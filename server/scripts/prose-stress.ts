@@ -2,8 +2,8 @@
  * What does a real report cost - in bytes, in a flush, and to render?
  *
  * **Nothing stressed this tier, and three of its decisions are only defensible
- * with numbers.** The document is `gc: false`, so it keeps every edit ever made
- * rather than the current text; it is re-encoded whole on every flush; and one
+ * with numbers.** The document collects deleted content, so it grows with the
+ * structure of every edit rather than its text; it is re-encoded whole on every flush; and one
  * document holds every section of the report, so the cost is the *report's*,
  * not a section's. Each of those is a deliberate choice, and each has a size at
  * which it stops being a good one.
@@ -39,8 +39,8 @@ const ROUNDS = Number(process.env.ROUNDS ?? 60)
  * Rewrite the section rather than appending to it.
  *
  * **This is the profile that costs.** Appending grows the document by roughly
- * what was typed; *rewriting* the same paragraph over and over grows it by
- * every version, because `gc: false` keeps what was deleted. An analyst
+ * what was typed; *rewriting* the same paragraph over and over still grows it,
+ * by the bookkeeping each deletion leaves even once its text is collected. An analyst
  * redrafting a summary twenty times is the ordinary case, not the pathological
  * one.
  */
@@ -60,10 +60,9 @@ async function anAnalyst(db: ReturnType<typeof drizzle>): Promise<string> {
  * One editing round on one section: type a sentence, then delete part of an
  * earlier one.
  *
- * **The deletion is the point.** With `gc: false` a delete does not shrink the
- * document - it records that the text was removed and keeps what it was, which
- * is what makes point-in-time restore possible and what makes the growth curve
- * worth measuring.
+ * **The deletion is the point.** A delete collects the text and keeps a record
+ * that something was removed, so the document still grows, and the growth curve
+ * is worth measuring.
  */
 function edit(doc: Y.Doc, blockId: string, round: number): void {
   const fragment = doc.getXmlFragment(blockId)

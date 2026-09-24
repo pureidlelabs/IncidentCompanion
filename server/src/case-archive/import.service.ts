@@ -22,13 +22,25 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { release } from '../report/artefacts-named.js'
-import { BadArchive, CASE_NAME, EVIDENCE_PREFIX, PROSE_PREFIX, readArchive } from '../archive/format.js'
+import { withReach } from '../db/scope.js'
+import {
+  BadArchive,
+  CASE_NAME,
+  EVIDENCE_PREFIX,
+  NOTE_PROSE_PREFIX,
+  PROSE_PREFIX,
+  readArchive,
+} from '../archive/format.js'
+import { NOTE_FRAGMENT, noteText } from '../prose/prose.service.js'
 import { MalformedEnvelope, WrongPassphrase, isSealed, open } from '../archive/envelope.js'
 import { PolicyService } from '../policy/policy.service.js'
 import { REFERENCE_FIELD_NAMES } from '../domain/collections.js'
+import { crossFieldIssue } from '../domain/field-spec.js'
 import { importStamp } from '../db/import-stamp.js'
 import { rekeyed } from '../domain/prose-fields.js'
-import { archiveRowSchema } from './rows.js'
+import { defangDocument } from '../report/document/defang.js'
+import type { Document } from '../report/document/model.js'
+import { archiveRowSchema, baseOf } from './rows.js'
 import { coerceTimes } from '../db/column-access.js'
 import { z } from 'zod'
 import * as Y from 'yjs'
@@ -82,6 +94,18 @@ export const TABLES = [
   ['reports', reports],
   ['reportBlocks', reportBlocks],
 ] as const
+
+/** A report's sent stamp and preserved document, which are written together or not at all. */
+interface Lifecycle {
+  sentAt: Date | null
+  frozen: Document | null
+  frozenAt: Date | null
+}
+
+/** How many rows a case record describes, across every table an import writes. */
+export function rowsIn(record: Record<string, unknown>): number {
+  return TABLES.reduce((sum, [name]) => sum + (Array.isArray(record[name]) ? (record[name] as unknown[]).length : 0), 0)
+}
 
 /**
  * `values` with each timestamp column's ISO string read as a `Date`.
@@ -269,6 +293,14 @@ export class ArchiveImportService {
     if (typeof record.title !== 'string' || !record.title.trim()) {
       throw new BadArchive('this archive names no case')
     }
+    // Counted before anything is stored, so a small file cannot describe work the install then does.
+    const rows = rowsIn(record)
+    const ceiling = stored_['evidence.archiveRows']
+    if (rows > ceiling) {
+      throw new BadArchive(
+        `this archive describes ${rows.toLocaleString('en-GB')} rows, and this install reads at most ${ceiling.toLocaleString('en-GB')}`,
+      )
+    }
 
     // **Minted here rather than by the insert**, so the artefacts land in the
     // case before the rows that point at them: a row written first would, for
@@ -309,7 +341,7 @@ export class ArchiveImportService {
       held.add(stored.hash)
     }
 
-    const result = await this.db.transaction(async (tx) => {
+    const result = await withReach(this.db, async (tx) => {
       // **Trimmed, as the three HTTP doors trim.** `createCaseSchema` and the
       // patch schema both `.trim()`, so an archive carrying ` INC-9 ` would
       // otherwise store a padded reference that collides with nothing and is
@@ -381,7 +413,7 @@ export class ArchiveImportService {
        */
       const remap = new Map<string, string>()
       /** A sent report's stamp, by its new id: the store refuses its parts once it is stamped. */
-      const stamps = new Map<string, Date>()
+      const stamps = new Map<string, Lifecycle>()
       let rows = 0
 
       for (const [name, table] of TABLES) {
@@ -426,11 +458,17 @@ export class ArchiveImportService {
               values.storedAt = null
             }
           }
-          let stamp: Date | null = null
+          // A report's lifecycle is written last, in one statement, once its parts are in.
+          let stamp: Lifecycle | null = null
           if (name === 'reports') {
-            values.document = null
-            if (values.sentAt instanceof Date) stamp = values.sentAt
+            stamp = {
+              sentAt: values.sentAt instanceof Date ? values.sentAt : null,
+              frozen: values.frozen ? defangDocument(values.frozen as Document) : null,
+              frozenAt: values.frozenAt instanceof Date ? values.frozenAt : null,
+            }
             values.sentAt = null
+            values.frozen = null
+            values.frozenAt = null
           }
 
           // **What only the database knows.** A column's range and length are
@@ -455,26 +493,32 @@ export class ArchiveImportService {
               `this archive states a value in ${name} that this install cannot write`,
             )
           }
+          // The collection's rules spanning fields, on the row as stored, as its own door runs them.
+          const rules = baseOf(name, one)
+          const issue = rules && written ? crossFieldIssue(rules, written) : null
+          if (issue) throw new BadArchive(`this archive states a row in ${name} its rules refuse: ${issue}`)
           if (typeof one.id === 'string' && written?.id) remap.set(one.id, written.id)
           if (stamp && written?.id) stamps.set(written.id, stamp)
           rows += 1
         }
       }
 
-      // After the reports exist: each document under its report's new id, each fragment under its block's.
+      // After the rows exist: each document under its record's new id, each fragment under its block's.
       const archivedBlocks = Array.isArray(record.reportBlocks)
         ? (record.reportBlocks as { id?: unknown; reportId?: unknown }[])
         : []
       for (const [name, bytes] of Object.entries(members)) {
         if (!name.startsWith(PROSE_PREFIX)) continue
-        const oldId = name.slice(PROSE_PREFIX.length).replace(/\.ydoc$/, '')
+        const note = name.startsWith(NOTE_PROSE_PREFIX)
+        const oldId = name.slice((note ? NOTE_PROSE_PREFIX : PROSE_PREFIX).length).replace(/\.ydoc$/, '')
         const fresh = remap.get(oldId)
         if (!fresh) {
-          this.log.warn(`archive carries prose for report ${oldId}, which it does not describe`)
+          this.log.warn(`archive carries prose for ${note ? 'note' : 'report'} ${oldId}, which it does not describe`)
           continue
         }
         const rekey = new Map<string, string>()
-        for (const block of archivedBlocks) {
+        if (note) rekey.set(NOTE_FRAGMENT, NOTE_FRAGMENT)
+        for (const block of note ? [] : archivedBlocks) {
           const now = typeof block.id === 'string' ? remap.get(block.id) : undefined
           if (block.reportId === oldId && now) rekey.set(block.id as string, now)
         }
@@ -482,19 +526,34 @@ export class ArchiveImportService {
         try {
           Y.applyUpdate(source, bytes)
         } catch {
-          throw new BadArchive(`this archive's prose for report ${oldId} is unreadable`)
+          throw new BadArchive(`this archive's prose for ${note ? 'note' : 'report'} ${oldId} is unreadable`)
         }
         const document = rekeyed(source, rekey)
         source.destroy()
         if (!document) continue
+        if (note) {
+          const read = new Y.Doc()
+          Y.applyUpdate(read, document)
+          await tx
+            .update(caseNotes)
+            .set({ document: Buffer.from(document), note: noteText(read) })
+            .where(sql`${caseNotes.id} = ${fresh}`)
+          read.destroy()
+          continue
+        }
         await tx
           .update(reports)
           .set({ document: Buffer.from(document) })
           .where(sql`${reports.id} = ${fresh}`)
       }
 
-      for (const [id, sentAt] of stamps) {
-        await tx.update(reports).set({ sentAt }).where(sql`${reports.id} = ${id}`)
+      for (const [id, lifecycle] of stamps) {
+        if (!lifecycle.sentAt && !lifecycle.frozen && !lifecycle.frozenAt) continue
+        try {
+          await tx.update(reports).set(lifecycle).where(sql`${reports.id} = ${id}`)
+        } catch {
+          throw new BadArchive('this archive states a report in reports that is sent and not preserved, or the reverse')
+        }
       }
 
       this.log.log(`imported ${String(rows)} rows as case ${caseId}`)

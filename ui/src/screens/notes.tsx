@@ -560,7 +560,7 @@ export function NotesScreen({
       </AsyncBoundary>
 
       <ConfirmDeleteDialog
-        ids={deleting ? [deleting.id] : null}
+        rows={deleting ? [deleting.id] : null}
         onOpenChange={(isOpen) => {
           if (!isOpen) setDeleting(null)
         }}

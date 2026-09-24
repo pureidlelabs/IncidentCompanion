@@ -53,6 +53,7 @@ describe('what the app says about itself', () => {
       'issuesUrl',
       'license',
       'makerUrl',
+      'presenceBoundSeconds',
       'repoUrl',
       'siteUrl',
       'version',

@@ -10,7 +10,7 @@ import { sql, type SQL } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { withCase } from '../db/scope.js'
+import { actingAs, withCase } from '../db/scope.js'
 import { SENT_REPORT_REFUSED } from '../db/schema/store-guards.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
@@ -31,9 +31,12 @@ function refusal(error: unknown): { code?: string; detail?: string } {
   return {}
 }
 
+/** The case's author, and who each attack is written as, so only the store guard refuses it. */
+const account = `store-freeze-${String(process.pid)}`
+
 async function refusedAsApp(caseId: string, statement: SQL): Promise<{ code?: string; detail?: string }> {
   try {
-    await withCase(app!, caseId, (tx) => tx.execute(statement))
+    await actingAs(account, () => withCase(app!, caseId, (tx) => tx.execute(statement)))
   } catch (error) {
     return refusal(error)
   }
@@ -43,7 +46,6 @@ async function refusedAsApp(caseId: string, statement: SQL): Promise<{ code?: st
 const rows = async (query: SQL) => (await seed!.execute(query)).rows
 
 describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, written to past the application', () => {
-  const account = `store-freeze-${String(process.pid)}`
   let caseId = ''
   let sentId = ''
   let sentBlock = ''
@@ -147,7 +149,7 @@ describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, wr
       insert into "user" (id, name, email, email_verified, created_at, updated_at)
       values (${other}, 'Leaver', ${`${other}@example.test`}, true, now(), now())`)
     await seed!.execute(sql`update reports set updated_by = ${other} where id = ${draftId}`)
-    await seed!.execute(sql`update reports set sent_at = now(), frozen = '{}'::jsonb where id = ${draftId}`)
+    await seed!.execute(sql`update reports set sent_at = now(), frozen = '{}'::jsonb, frozen_at = now() where id = ${draftId}`)
 
     await seed!.execute(sql`delete from "user" where id = ${other}`)
 
@@ -187,7 +189,7 @@ describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, wr
       (await rows(sql`insert into evidence (case_id, name) values (${doomed}, 'screenshot') returning id`))[0]!['id'],
     )
     await seed!.execute(sql`insert into report_blocks (case_id, report_id, kind, evidence_id) values (${doomed}, ${filed}, 'figure', ${shown})`)
-    await seed!.execute(sql`update reports set sent_at = now() where id = ${filed}`)
+    await seed!.execute(sql`update reports set sent_at = now(), frozen = '{}'::jsonb, frozen_at = now() where id = ${filed}`)
 
     await seed!.execute(sql`delete from cases where id = ${doomed}`)
 

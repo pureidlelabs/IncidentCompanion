@@ -34,7 +34,7 @@ export async function withProseFlags(
 
   const docs = new Map<string, Y.Doc>()
   for (const row of documents) {
-    const doc = new Y.Doc({ gc: false })
+    const doc = new Y.Doc()
     if (row.document) Y.applyUpdate(doc, new Uint8Array(row.document))
     docs.set(row.id, doc)
   }

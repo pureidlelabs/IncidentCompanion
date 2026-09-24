@@ -20,6 +20,7 @@ import { Readable } from 'node:stream'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
@@ -93,14 +94,14 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
       .returning()
     caseId = row!.id
 
-    collections = new CollectionService(db!, suiteStore())
-    render = new ReportRenderService(
+    collections = as(actorId, new CollectionService(db!, suiteStore()))
+    render = as(actorId, new ReportRenderService(
       db!,
       new CasesService(db!, suiteStore()),
       new ProseService(db!),
       englishOnly,
       store,
-    )
+    ))
   }, 60_000)
 
   /** A 400x300 artefact in the store, and the evidence row that names it. */
@@ -270,7 +271,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
     const { document_ } = await render.render(caseId, reportId)
     await seed!
       .update(reports)
-      .set({ frozen: document_, frozenAt: new Date() })
+      .set({ sentAt: new Date(), frozen: document_, frozenAt: new Date() })
       .where(eq(reports.id, reportId))
 
     const again = await render.render(caseId, reportId)
@@ -297,7 +298,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
     // document keeps the size it was sent at.
     await seed!
       .update(reports)
-      .set({ frozen: document_, frozenAt: new Date() })
+      .set({ sentAt: new Date(), frozen: document_, frozenAt: new Date() })
       .where(eq(reports.id, reportId))
 
     const again = await render.render(caseId, reportId)

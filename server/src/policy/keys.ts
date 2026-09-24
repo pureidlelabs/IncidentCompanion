@@ -27,12 +27,14 @@ import { z } from 'zod'
  * **Ten and fifteen minutes is Better Auth's own default** for the lockout it
  * ships for two-factor. The ceiling on the threshold is what stops the control
  * being turned off by setting it to a thousand; the floor on the duration is
- * what stops it being over before an attacker notices.
+ * what stops it being over before an attacker notices. A day is the longest
+ * any lock may last, and by default a run that keeps locking reaches it.
  */
 export const LOCKOUT_AFTER_FAILURES = 10
 export const LOCKOUT_CEILING_FAILURES = 100
 export const LOCKOUT_MINUTES = 15
 export const LOCKOUT_FLOOR_MINUTES = 5
+export const LOCKOUT_MAX_MINUTES = 24 * 60
 
 /**
  * The idle window. **Thirty minutes, and the ceiling is the point.**
@@ -85,6 +87,11 @@ export const ATTACHMENT_MEGABYTES = 256
 export const ARCHIVE_MEGABYTES = 512
 export const EVIDENCE_FLOOR_MEGABYTES = 1
 
+/** How many rows one archive may describe, read and written alike. */
+export const ARCHIVE_ROWS = 100_000
+export const ARCHIVE_ROWS_FLOOR = 1_000
+export const ARCHIVE_ROWS_CEILING = 1_000_000
+
 /**
  * **What the shipped edge will carry, and therefore the most an operator may
  * ask for.** `compose.yaml` gives the app no `ports:` -- nginx is the only door
@@ -119,7 +126,8 @@ const bounded = (floor: number, ceiling: number, fallback: number) => ({
  */
 export const POLICY_SETTINGS = {
   'auth.lockoutAfterFailures': bounded(1, LOCKOUT_CEILING_FAILURES, LOCKOUT_AFTER_FAILURES),
-  'auth.lockoutMinutes': bounded(LOCKOUT_FLOOR_MINUTES, 24 * 60, LOCKOUT_MINUTES),
+  'auth.lockoutMinutes': bounded(LOCKOUT_FLOOR_MINUTES, LOCKOUT_MAX_MINUTES, LOCKOUT_MINUTES),
+  'auth.lockoutMaxMinutes': bounded(LOCKOUT_FLOOR_MINUTES, LOCKOUT_MAX_MINUTES, LOCKOUT_MAX_MINUTES),
   'auth.sessionIdleMinutes': bounded(
     SESSION_IDLE_FLOOR_MINUTES,
     SESSION_IDLE_CEILING_MINUTES,
@@ -146,6 +154,7 @@ export const POLICY_SETTINGS = {
     EVIDENCE_CEILING_MEGABYTES,
     ARCHIVE_MEGABYTES,
   ),
+  'evidence.archiveRows': bounded(ARCHIVE_ROWS_FLOOR, ARCHIVE_ROWS_CEILING, ARCHIVE_ROWS),
   'evidence.passphraseChars': bounded(PASSPHRASE_FLOOR, PASSPHRASE_CEILING, PASSPHRASE_CHARS),
 } as const
 

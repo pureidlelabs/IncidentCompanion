@@ -19,10 +19,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Case } from './model'
 import { keys } from './queryKeys'
 import { setSession } from './session'
+import { drawn } from './rowWrite'
 import { useCaseMutation } from './useCaseMutation'
 
 const CASE = 'DEMO-CAMPAIGN'
 const caseKey = keys.case(CASE)
+const at = (version: number) => drawn({ version }).version
 
 const stored = { id: CASE, title: 'Before', customer: 'Acme', version: 7 } as unknown as Case
 
@@ -70,11 +72,11 @@ afterEach(() => {
 
 describe('writing the case\u2019s own fields', () => {
   it('names the version it read, which the server refuses a patch without', async () => {
-    fetchMock.mockResolvedValue(ok({ caseId: CASE }))
+    fetchMock.mockResolvedValue(ok({ id: CASE, version: 8 }))
     const { hook } = harness()
 
     act(() => {
-      hook.result.current.mutate({ version: 7, fields: { customer: 'Globex' } })
+      hook.result.current.mutate({ version: at(7), fields: { customer: 'Globex' } })
     })
 
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
@@ -88,7 +90,7 @@ describe('writing the case\u2019s own fields', () => {
    * make the check pass on a save built from the older value.
    */
   it('sends the version the caller read, not the one in the cache', async () => {
-    fetchMock.mockResolvedValue(ok({ caseId: CASE }))
+    fetchMock.mockResolvedValue(ok({ id: CASE, version: 8 }))
     const { client, hook } = harness()
 
     client.setQueryData<Case>(caseKey, (current) =>
@@ -96,21 +98,21 @@ describe('writing the case\u2019s own fields', () => {
     )
 
     act(() => {
-      hook.result.current.mutate({ version: 7, fields: { customer: 'Globex' } })
+      hook.result.current.mutate({ version: at(7), fields: { customer: 'Globex' } })
     })
 
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
     expect(sentBody().version).toBe(7)
   })
 
-  it('still applies the edit optimistically and rolls it back on refusal', async () => {
+  it('leaves the case as served when the write is refused', async () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ message: 'Validation failed' }), { status: 422 }),
     )
     const { client, hook } = harness()
 
     act(() => {
-      hook.result.current.mutate({ version: 7, fields: { customer: 'Globex' } })
+      hook.result.current.mutate({ version: at(7), fields: { customer: 'Globex' } })
     })
 
     await waitFor(() => expect(hook.result.current.isError).toBe(true))

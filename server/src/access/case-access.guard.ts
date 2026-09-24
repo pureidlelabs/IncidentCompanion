@@ -16,16 +16,13 @@ import {
   CanActivate,
   ForbiddenException,
   ExecutionContext,
-  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  SetMetadata,
 } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
+import type { ServerResponse } from 'node:http'
 
-import { DATABASE } from '../db/db.module.js'
-import type { Database } from '../db/client.js'
-import { cases } from '../db/schema/index.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { routeOf } from '../install-activity/route-of.js'
 import { RANK, ReachService, type Level } from './reach.service.js'
@@ -37,6 +34,14 @@ const enough = (held: Level | null, needed: Level): boolean =>
   held !== null && RANK.indexOf(held) >= RANK.indexOf(needed)
 
 const READING = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+export const CASE_LEVEL = 'caseLevel'
+
+/**
+ * The level a guarded handler needs, stated where the method would say more:
+ * a handler that writes only the caller's own records about a case needs read.
+ */
+export const CaseLevel = (level: Level): MethodDecorator => SetMetadata(CASE_LEVEL, level)
 
 /**
  * The level this request needs, from its method and its path.
@@ -89,10 +94,9 @@ export function levelNeeded(method: string, path: string): Level {
  * side, where a mounted middleware sees `req.path` as `/`.
  *
  * And a guarded route's path need not contain `cases` at all:
- * `recent-cases/:caseId` is guarded and answers `write` because
- * `'recent-cases'` is not the segment `'cases'`. That is the right answer for
- * the wrong reason -- rename the controller to `cases/recent` and removing an
- * entry from a personal list silently becomes a case deletion.
+ * `recent-cases/:caseId` would derive `write`, and only because
+ * `'recent-cases'` is not the segment `'cases'`. It states its own level
+ * instead, which is what `CaseLevel` is for.
  *
  * **Both are the same weakness: a level decided from the shape of a string.**
  * Deriving it from the handler Nest is about to invoke cannot be fooled by
@@ -104,13 +108,13 @@ export function levelNeeded(method: string, path: string): Level {
 @Injectable()
 export class CaseAccessGuard implements CanActivate {
   constructor(
-    @Inject(DATABASE) private readonly db: Database,
     private readonly reach: ReachService,
     private readonly activity: InstallActivityService,
   ) {}
 
   /**
-   * Record a reach this guard refused, naming the case and the customer.
+   * Record a reach this guard refused, naming the case and the customer, once
+   * the response has closed.
    *
    * **The guard records it rather than the boundary, because only the guard
    * knows.** Nest runs a guard before its pre-controller interceptors, so a
@@ -120,31 +124,30 @@ export class CaseAccessGuard implements CanActivate {
    * distinction the 404 exists to destroy. What the caller is told and what
    * the log is told are opposite by design, and this is where both are known.
    *
-   * Awaited, so the line is written before the caller is refused. The recorder
-   * catches and logs, so a throw cannot turn a refusal into a 500 -- but a
-   * stall is not a throw: the pool sets no connection timeout, so an exhausted
-   * one leaves the refusal hanging rather than answering. The two
-   * checkouts this guard already makes carry the same exposure, so awaiting a
-   * third adds no class of failure that was not here. -> #75
+   * Written once the response has closed, so the answer does the same work
+   * whether a line is owed or not. The recorder catches and logs.
    */
-  private async refused(
+  private refusedOnceAnswered(
+    response: Pick<ServerResponse, 'once'>,
     request: {
       method: string
       headers?: Record<string, unknown>
       session?: { user?: { id?: string; name?: string; email?: string } }
     },
     detail: Record<string, string>,
-  ): Promise<void> {
+  ): void {
     const who = request.session?.user
-    await this.activity.record({
-      event: 'access_denied',
-      outcome: 'failure',
-      actor: { id: who?.id ?? null, label: who?.name ?? who?.email ?? null },
-      // The route pattern, as the boundary records it: what was asked for goes
-      // in `detail`, where it is an id this application generated.
-      target: `${request.method} ${routeOf(request as never)}`,
-      detail,
-      headers: request.headers as never,
+    response.once('close', () => {
+      void this.activity.record({
+        event: 'access_denied',
+        outcome: 'failure',
+        actor: { id: who?.id ?? null, label: who?.name ?? who?.email ?? null },
+        // The route pattern, as the boundary records it: what was asked for goes
+        // in `detail`, where it is an id this application generated.
+        target: `${request.method} ${routeOf(request as never)}`,
+        detail,
+        headers: request.headers as never,
+      })
     })
   }
 
@@ -177,17 +180,11 @@ export class CaseAccessGuard implements CanActivate {
     /**
      * **Checked here because a guard runs before the pipes.** Every case route
      * declares `ParseUUIDPipe` on this parameter and every one of them still
-     * answered 500 for `/api/cases/undefined/...`: this query ran first and
-     * Postgres refused the cast. The pipe is still right; it is simply not the
-     * first thing to see the value.
+     * answered 500 for `/api/cases/undefined/...`: the reach query ran first
+     * and Postgres refused the cast. The pipe is still right; it is simply not
+     * the first thing to see the value.
      */
     if (!UUID.test(caseId)) throw new BadRequestException(`${caseId} is not a case id.`)
-
-    const [row] = await this.db
-      .select({ id: cases.id, customerId: cases.customerId })
-      .from(cases)
-      .where(eq(cases.id, caseId))
-    if (!row) throw new NotFoundException(`No case ${caseId}.`)
 
     const userId = request.session?.user?.id ?? request.user?.id
     // A guarded route with no session is a wiring fault in the same way a
@@ -199,16 +196,6 @@ export class CaseAccessGuard implements CanActivate {
       )
     }
 
-    /**
-     * **A case attributed to nobody is the default customer's.** Cases predate
-     * the customer directory and carry no `customerId`, and the default is
-     * exactly the record for an incident whose origin is not yet known - so
-     * treating them as anything else would strand them behind a grant nobody
-     * can be given.
-     */
-    const defaultCustomerId = await this.reach.defaultCustomerId()
-    const customerId = row.customerId ?? defaultCustomerId
-    const held = customerId ? await this.reach.levelFor(userId, customerId) : null
     /**
      * **`request.path`, because the raw target is the caller's string and this
      * one is Express's.** Reading `originalUrl` meant re-parsing bytes the
@@ -238,7 +225,20 @@ export class CaseAccessGuard implements CanActivate {
         'This route is guarded as a case route and carries no parsed path.',
       )
     }
-    const needed = levelNeeded(request.method, request.path)
+    const needed =
+      (Reflect.getMetadata(CASE_LEVEL, context.getHandler()) as Level | undefined) ??
+      levelNeeded(request.method, request.path)
+
+    const reached = await this.reach.levelOnCase(userId, caseId)
+    const held = reached?.level ?? null
+    const refused = (heldAs: string): void => {
+      this.refusedOnceAnswered(context.switchToHttp().getResponse(), request, {
+        case: caseId,
+        ...(reached?.customerId ? { customer: reached.customerId } : {}),
+        needed,
+        held: heldAs,
+      })
+    }
 
     /**
      * **404 where they reach nothing, 403 where they reach it too weakly.**
@@ -248,23 +248,13 @@ export class CaseAccessGuard implements CanActivate {
      * with a 404 would only be confusing.
      */
     if (held === null) {
-      await this.refused(request, {
-        case: caseId,
-        ...(customerId ? { customer: customerId } : {}),
-        needed,
-        held: 'none',
-      })
+      // An absent case is nobody's reach refused, so only a case that exists
+      // leaves a line.
+      if (reached) refused('none')
       throw new NotFoundException(`No case ${caseId}.`)
     }
     if (!enough(held, needed)) {
-      // `held` is non-null only where a customer resolved, which the types
-      // cannot see from here.
-      await this.refused(request, {
-        case: caseId,
-        ...(customerId ? { customer: customerId } : {}),
-        needed,
-        held,
-      })
+      refused(held)
       throw new ForbiddenException(
         needed === 'delete'
           ? 'Deleting a case needs read, write and delete on its customer.'

@@ -18,6 +18,7 @@ import { z } from 'zod'
 
 import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS } from '../domain/collections.js'
 import { reportBlockSchema, reportSchema } from '../domain/entities/report.js'
+import { documentSchema } from '../report/document/model.js'
 
 /**
  * The collection behind each key of the case document, where the two differ.
@@ -60,11 +61,10 @@ const CARRIED: Readonly<Record<string, z.ZodRawShape>> = {
     contentType: z.string().nullable().optional(),
     originalFilename: z.string(),
   },
-  casenotes: { document: z.unknown() },
   reports: {
     sentAt: when,
-    document: z.unknown(),
-    frozen: z.unknown(),
+    // The one declaration `send` writes through and every painter reads.
+    frozen: documentSchema.nullable(),
     frozenAt: when,
   },
   timeline: {
@@ -94,7 +94,7 @@ const SUPPLIED: Readonly<Record<string, z.ZodObject>> = {
  * waved through: that is the case where an action's fields could be written
  * onto an event.
  */
-function baseOf(collection: string, row: Record<string, unknown>): z.ZodObject | undefined {
+export function baseOf(collection: string, row: Record<string, unknown>): z.ZodObject | undefined {
   if (collection === 'timeline') {
     const kind = row['kind']
     return kind === 'event' || kind === 'action' ? TIMELINE_WRITE_SCHEMAS[kind] : undefined

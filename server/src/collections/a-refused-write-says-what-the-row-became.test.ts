@@ -16,6 +16,7 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
@@ -68,7 +69,7 @@ function collections(): { name: string; make: () => Writable }[] {
     return {
       name: path.replace('api/cases/:caseId/', ''),
       make: () =>
-        new (controller as new (s: CollectionService) => Writable)(new CollectionService(db!, suiteStore())),
+        new (controller as new (s: CollectionService) => Writable)(as('stale-writer', new CollectionService(db!, suiteStore()))),
     }
   })
 }

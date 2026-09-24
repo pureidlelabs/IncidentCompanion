@@ -12,6 +12,20 @@ import { cn } from '@/lib/cn'
  */
 const AttributionContext = createContext<Attribution | undefined>(undefined)
 
+/**
+ * Who wrote a row at a version, for naming the analyst behind a value in dispute.
+ *
+ * Answers `Another analyst` where the record of the row's last write is for
+ * another version, or where there is no record to read.
+ */
+export function useWriterOf(table: string, entryId: string | undefined): (version: number) => string {
+  const attribution = useContext(AttributionContext)
+  return (version) => {
+    const stamp = entryId === undefined ? undefined : stampFor(attribution, table, entryId)
+    return stamp?.version === version && stamp.by !== '' ? stamp.by : 'Another analyst'
+  }
+}
+
 export function AttributionProvider(
   { value, children }: { value: Attribution | undefined; children: ReactNode },
 ) {

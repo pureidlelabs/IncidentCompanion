@@ -26,7 +26,7 @@ class Relay {
   /** Every message the relay was given, for asserting what went on the wire. */
   readonly sent: { from: number; message: Message }[] = []
   /** The authoritative document, as `ProseService` holds one per field. */
-  readonly doc = new Y.Doc({ gc: false })
+  readonly doc = new Y.Doc()
   /** The row's markdown, which the server seeds a cold document from. */
   row: string | null = null
   private seeded = false
@@ -424,40 +424,6 @@ describe('after destroy', () => {
     channel.destroy()
 
     expect(relay.sent.filter((s) => s.message.type === 'prose.sync')).toEqual([])
-  })
-})
-
-describe('history', () => {
-  /**
-   * **Garbage collection is silent and one-way.** A `Y.Doc` collects deleted
-   * content on the transaction that deletes it, so a document built with the
-   * default `gc: true` has no past to return - and flipping the flag later
-   * recovers nothing already dropped. Both tests below fail on a default
-   * document, one by throwing and one by returning the wrong text.
-   */
-  it('reconstructs a past state after the text was deleted', () => {
-    const channel = connected()
-    type(channel, 'the initial finding was a false positive')
-    const past = Y.snapshot(channel.doc)
-    channel.doc.getText('body').delete(0, 12)
-
-    expect(Y.createDocFromSnapshot(channel.doc, past).getText('body').toJSON())
-      .toBe('the initial finding was a false positive')
-    channel.destroy()
-  })
-
-  it('keeps the deleted content in what the server was sent', () => {
-    // The wire copy is the one that matters: a collected document exports a
-    // record with the history already missing, so every later reader inherits
-    // the loss whatever flag *they* open with.
-    const channel = connected()
-    type(channel, 'the initial finding was a false positive')
-    const past = Y.snapshot(channel.doc)
-    channel.doc.getText('body').delete(0, 12)
-
-    expect(Y.createDocFromSnapshot(relay.doc, past).getText('body').toJSON())
-      .toBe('the initial finding was a false positive')
-    channel.destroy()
   })
 })
 

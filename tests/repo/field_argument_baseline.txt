@@ -1,11 +1,9 @@
 server/src/auth/auth.config.ts:after
 server/src/auth/auth.config.ts:before
-server/src/auth/auth.config.ts:failedSignIns
 server/src/auth/auth.config.ts:hooks
 server/src/auth/auth.config.ts:rateLimit
 server/src/auth/session-store.ts:delete
 server/src/auth/session-store.ts:get
-server/src/db/schema/auth.ts:failedSignIns
 server/src/db/schema/install-activity.ts:classUid
 server/src/domain/field-spec.ts:applicableWhen
 server/src/domain/field-spec.ts:tier

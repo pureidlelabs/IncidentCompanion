@@ -4,6 +4,10 @@
 
 **The application is not the authority for a federated account's credentials**, and does not duplicate what the provider guards. Password rules, lockout and the second factor are the local account's business only.
 
+**Familiarity is by address, and an address is what the install can know about a machine.** Where the network hands an address to another machine, the familiarity goes with it; analysts behind one address are one source. An account that has never signed in has no familiar address, so guessing can hold its holder's first sign-in until the lock lifts or an administrator releases it, and a holder on a new machine meets whatever the unfamiliar run holds.
+
+**An administrator releases a lock by resetting the password.** The reset clears both runs; the addresses the account knows survive it.
+
 **Nothing here sends a message.** There is no channel out, so no credential is reset by email and no approval is requested from anyone. That is what makes a recovery credential necessary rather than a convenience.
 
 **A second factor is not required by default**, and whether to require it is the install's policy rather than the product's position. The product owes the mechanism and an honest statement of what leaving it off costs.
@@ -40,11 +44,19 @@ A recovery credential is issued when the install is claimed. It restores adminis
 
 ## Local sign-in resists guessing
 
-A local account locks after a number of consecutive failures the install sets, for a duration the install sets, and an administrator can release it.
+The control follows Microsoft Entra smart lockout, where familiar and unfamiliar locations have separate lockout counters so that attackers are locked out while the genuine user keeps signing in, and the OWASP Authentication Cheat Sheet, which associates the failure counter with the account rather than with the source address. → <https://learn.microsoft.com/en-us/entra/identity/authentication/howto-password-smart-lockout>, <https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html>
 
-The lock lives where a password is verified rather than at any door, so every door that checks one counts into the same run and refuses a locked account's right password as a wrong one, including a door added later. The verification costs a locked account what it costs a wrong password, and an address with no account costs what an account does.
+A failure counts in one of the account's two runs. The address that chooses the run is the caller's as the authentication library resolves it for its own rate limit and for the session it writes, so the lock, the limit and the session record answer who called from one resolution. An address the account's right password has been given from is familiar and its failures count in the familiar run; every other failure, including one with no address at all, counts in the unfamiliar run. A run locks at the install's threshold and locks only the addresses it counts for. A right password on an open run forgets that run and makes the address familiar; a right password while its run is locked is answered as a wrong one and counts nothing.
 
-The threshold an install may set is bounded above, so no stored setting turns the control off while a screen still shows a number. The bound is NIST SP 800-63B's limit of no more than 100 consecutive failed attempts against one account.
+The first lock of a run lasts the install's duration, and each later one twice the one before, up to the install's maximum: the exponential lockout the cheat sheet describes, stepped per lock rather than per attempt. A lock resets its run's count, so a lock that has lifted takes the install's threshold to fall again, and one failure per lapse holds nobody out. The consecutive count is forgotten by a right password in that run or by a release. While a run is locked nothing is counted in it and its lock is not extended.
+
+A run remembers its last three wrong passwords, as Entra tracks the last three bad password hashes, and a password it remembers does not count again. What it keeps is a message authentication code under the install's secret over the account and the password: holding the store without the secret confirms no guess, and one guess at two accounts is kept as two unrelated values. Holding both the store and the secret tests a remembered guess at the speed of that code, not of the password hash, so the secret is the boundary.
+
+The lock lives where a password is verified rather than at any door, so every door that checks one counts into the same runs and refuses a locked run's right password as a wrong one, including a door added later. Every refusal there runs the same statements whether its run is open or locked, so a locked run costs what a wrong password does, and the record of a failure at an address with no account spends them too. Failures arriving together are each counted, and the lock is taken only from the count its failure saw, so they lock the run once. A run is keyed by the caller's whole address, never by the network it sits on: one IPv6 network is one LAN, not one machine. A holder whose machine rotates temporary IPv6 addresses is unfamiliar after each rotation until their next right password, so a guesser can lock them out in that interval.
+
+The runs and the familiar addresses are held in the database beside the accounts. A lock that a restart or a cache flush lifts is a control the ephemeral store can switch off.
+
+The threshold an install may set is bounded above, so no stored setting turns the control off while a screen still shows a number. The bound is NIST SP 800-63B's limit of no more than 100 consecutive failed attempts against one account. The longest lock an install may set is a day.
 
 A second factor can be enrolled on any account whether or not the install requires one. Whether it is required is a single install-level policy evaluated at sign-in, and an install that has not turned it on is told plainly what that falls short of.
 
@@ -64,7 +76,7 @@ A session ends after an idle period the install sets, and independently at an ab
 
 For every account the install knows: whether it is local or the provider's, whether it holds the management grant, when it last signed in, whether it carries a second factor, and every customer it reaches with the level and the membership that grants it.
 
-Every sign-in is recorded with its outcome and how it was attempted. Every refusal of a customer or a case is recorded with who was refused and what they asked for. Every change to who reaches what is recorded with the actor, the subject and the time — including an administrator granting themselves, where the actor and the subject are the same account.
+Every sign-in is recorded with its outcome and how it was attempted. Every refusal of a customer or a case is recorded with who was refused and what they asked for; a line names its actor's account only where the install holds it, and keeps the name the session carried either way, so a session that outlived its account is recorded under the name it was issued to. Every change to who reaches what is recorded with the actor, the subject and the time — including an administrator granting themselves, where the actor and the subject are the same account.
 
 The record cannot be suppressed by whoever it would record, and where an event cannot be recorded the act it describes does not happen.
 

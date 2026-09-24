@@ -109,6 +109,13 @@ Nothing MUST be built on a claim as though it were a lock. The record of who wro
 - WHEN another writes to it anyway
 - THEN the write is judged on the version it was made against, not on the claim
 
+#### Scenario: An analyst opens an entry another holds
+
+- GIVEN an entry held by one analyst
+- WHEN another opens it
+- THEN they are told who holds it
+- AND they may still edit it
+
 ### Requirement: A change reaches every open screen, and says only what changed
 
 A write anywhere MUST reach every screen open on that case, so that an analyst reading a case sees what another has just done without asking for it.
@@ -158,11 +165,19 @@ Where an analyst is disconnected while writing, their work MUST survive and MUST
 - THEN what they wrote is present
 - AND merged with whatever arrived while they were away
 
+#### Scenario: One of the writers loses write before the words are stored
+
+- GIVEN two analysts writing in one passage
+- WHEN one of them loses write before what both typed is stored
+- THEN both sets of words are stored
+
 ### Requirement: A reconnection catches up rather than starts over
 
 A connection that drops and returns MUST leave the analyst where they were. They MUST NOT have to reload to trust what is on their screen.
 
 An install MUST NOT present a screen as current when it cannot know that it is. Where a gap cannot be filled, the analyst MUST be told to re-read rather than shown stale content silently.
+
+A screen MUST say it is not live for as long as its connection is down, and until what changed while it was down has been read again.
 
 #### Scenario: A connection drops briefly
 
@@ -178,11 +193,22 @@ An install MUST NOT present a screen as current when it cannot know that it is. 
 - THEN the analyst is told their screen may be stale
 - AND it is not presented as current
 
+#### Scenario: A connection is lost
+
+- GIVEN an analyst with a case open
+- WHEN their connection drops
+- THEN the screen says it is not live
+- AND it goes on saying so until what changed while it was down has been read again
+
 ### Requirement: The connection dies with the reach that admitted it
 
 Reach withdrawn while an analyst is connected MUST end the connection. A connection admitted once MUST NOT outlive the reach that admitted it.
 
-This covers every way reach ends: the session ended, the group revoked, the customer moved, the account disabled at the identity provider, the case deleted.
+This covers every way reach ends: the session ended, the group revoked, the customer moved, the account disabled at the identity provider, the case deleted. A connection acts only while the session that opened it would be served an ordinary request now, so a session whose window has closed, or whose account must change its password or no longer exists, ends its connections too, whether or not they are sending anything.
+
+Ending one session MUST end only the connections that session opened, so an analyst connected from two places keeps the other.
+
+A refusal over a connection MUST be recorded as the same refusal of an ordinary request is.
 
 A connection MUST be carried over the same protected transport every other request uses. There is no plain connection, and no setting that permits one.
 
@@ -199,6 +225,33 @@ A connection MUST be carried over the same protected transport every other reque
 - WHEN it is deleted
 - THEN their connections end
 - AND nothing further about it reaches them
+
+#### Scenario: A session ends while its connection is silent
+
+- GIVEN an analyst connected to a case who sends nothing
+- WHEN the session's window closes
+- THEN the connection ends
+
+#### Scenario: An account is held while connected
+
+- GIVEN an analyst connected to a case
+- WHEN an administrator resets their password and holds the account
+- THEN nothing more they send is acted on
+- AND the connection ends
+
+#### Scenario: An analyst signs out in one of two places
+
+- GIVEN an analyst connected to one case from two places
+- WHEN they sign out in one
+- THEN that place's connection ends
+- AND the other keeps working
+
+#### Scenario: A connection is refused an edit
+
+- GIVEN a read-only analyst connected to a case
+- WHEN they try to edit over the connection
+- THEN it is refused
+- AND the refusal is recorded as a refused request is
 
 ### Requirement: Written prose is attributed like any other write
 
@@ -266,3 +319,21 @@ Where preparing the connection does not complete, the connection MUST end, and n
 - WHEN the screen then claims an entry, and the connection ends
 - THEN the claim is acted on
 - AND the analyst leaves the roster
+
+### Requirement: Deleted prose is not kept
+
+Text an analyst deletes from a report or a note MUST NOT be recoverable afterwards: not by a reader who arrives later, not by an archive, and not by any read of the record. A section removed from a report MUST take its prose with it.
+
+A copy of the store taken before the deletion still holds what it held; that is the install's own copy, and returning to it is the state spec's act.
+
+#### Scenario: A reader arrives after text was deleted
+
+- GIVEN a report from which an analyst deleted text
+- WHEN another reader opens it, or the record is read
+- THEN the deleted text is not there
+
+#### Scenario: A section is removed
+
+- GIVEN a report section with prose in it
+- WHEN the section is removed
+- THEN its prose is gone from the report

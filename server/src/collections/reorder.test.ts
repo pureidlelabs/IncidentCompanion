@@ -13,6 +13,7 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { and, eq, isNull, ne } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
@@ -54,7 +55,7 @@ function controllerFor(name: string): Reorderable {
     othersOn: () => Promise.resolve([]),
   }
   return new (found as new (s: CollectionService) => Reorderable)(
-    new CollectionService(db!, suiteStore(), channel as never),
+    as('reorder-analyst', new CollectionService(db!, suiteStore(), channel as never)),
   )
 }
 
@@ -241,7 +242,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('reordering a collection tha
 
   it('refuses to reorder the blocks of a report that has been sent', async () => {
     const before = await blocksOf()
-    await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
+    await seed!.update(reports).set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() }).where(eq(reports.id, reportId))
 
     await expect(
       controllerFor('report_blocks').reorder(

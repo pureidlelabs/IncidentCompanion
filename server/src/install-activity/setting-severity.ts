@@ -34,8 +34,10 @@ const LOOSENS: Record<string, 'up' | 'down'> = {
   'auth.minPasswordLength': 'down',
   'auth.lockoutAfterFailures': 'up',
   'auth.lockoutMinutes': 'down',
+  'auth.lockoutMaxMinutes': 'down',
   'evidence.attachmentMegabytes': 'up',
   'evidence.archiveMegabytes': 'up',
+  'evidence.archiveRows': 'up',
   'evidence.passphraseChars': 'down',
   'audit.runWindowMinutes': 'up',
 }

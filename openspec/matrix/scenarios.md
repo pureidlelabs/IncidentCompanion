@@ -47,6 +47,7 @@
 | Case data is reached through groups, at a level | An administrator disposes of a case nobody has attributed | undemonstrated | |
 | Case data is reached through groups, at a level | An analyst is refused the same deletion | undemonstrated | |
 | Case data is reached through groups, at a level | A group raises an account above the floor | undemonstrated | |
+| Case data is reached through groups, at a level | An identity the install does not hold | undemonstrated | |
 | Case data is reached through groups, at a level | A list is asked for by an analyst in no group | undemonstrated | |
 | Case data is reached through groups, at a level | Reach is withdrawn after the case was opened | undemonstrated | |
 | An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts :: changing a role > through the app’s own route > refuses the demotion, and leaves the role alone |
@@ -60,6 +61,12 @@
 | An install can be recovered without another administrator | The credential is lost | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | demonstrated | server/test/account-lockout.test.ts :: locking an account after repeated failures > shuts the account, and then refuses the right password |
 | Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | demonstrated | server/test/account-lockout.test.ts :: locking an account after repeated failures > answers a locked account exactly as a wrong password ; server/test/account-lockout.test.ts :: locking an account after repeated failures > answers a malformed attempt the same whether or not the account is locked |
+| Authentication resists guessing, and says so to the auditor | Another machine guesses at an analyst's account | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | Guesses arrive from many machines | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | The holder's own machine guesses | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | The same wrong password is offered again | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | A lock follows a lock | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | An administrator releases an account | undemonstrated | |
 | Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/a-held-account-reaches-only-its-way-out.test.ts :: an account that must change its password > is refused everything else the install publishes |
 | Authentication resists guessing, and says so to the auditor | The install raises its password minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > refuses a password under the install's minimum at this app's own door ; server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > serves no door of the library's own that writes a password ; server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > refuses one an administrator chooses for a new account ; server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > refuses one an administrator resets an account to ; server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > takes one that meets the raised minimum |
 | Authentication resists guessing, and says so to the auditor | An account holds a password shorter than a raised minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > still signs in an account whose password predates the raise |
@@ -113,6 +120,7 @@
 | Administrative events are logged | An entry is edited | undemonstrated | |
 | Administrative events are logged | The record is read | undemonstrated | |
 | Administrative events are logged | Where the record goes is changed | unbuilt | Not built: there is no destination to change. -> #13 |
+| Administrative events are logged | A session is refused after its account is gone | undemonstrated | |
 | Administrative events are logged | An analyst ends their own session | undemonstrated | |
 | Administrative events are logged | An ending that ends nothing | undemonstrated | |
 | An install serves only the account operations it offers | A caller asks for an account operation the install does not offer | undemonstrated | |
@@ -146,13 +154,20 @@
 | An archive is one file holding the whole case | A case is archived | undemonstrated | |
 | An archive is one file holding the whole case | An analyst archives without the attachments | undemonstrated | |
 | An archive is one file holding the whole case | Expected material is not found | undemonstrated | |
+| An archive is one file holding the whole case | Deleted text does not travel | undemonstrated | |
+| An archive is one file holding the whole case | A removed section does not travel | undemonstrated | |
+| An archive is one file holding the whole case | A note's prose is archived | undemonstrated | |
+| An archive is one file holding the whole case | A case larger than an archive may carry | undemonstrated | |
 | An archive says what it should contain, and is checked against it | An archive is read | undemonstrated | |
 | An archive says what it should contain, and is checked against it | An archive has been altered | undemonstrated | |
+| An archive says what it should contain, and is checked against it | A sealed archive is altered by somebody without its secret | undemonstrated | |
+| An archive says what it should contain, and is checked against it | An analyst archives without sealing | undemonstrated | |
 | An analyst can seal an archive, and the seal is theirs to hold | An analyst seals an archive | undemonstrated | |
 | An analyst can seal an archive, and the seal is theirs to hold | The install is asked to open a sealed archive | undemonstrated | |
 | An analyst can seal an archive, and the seal is theirs to hold | A secret too weak to be worth having | undemonstrated | |
 | Reading an archive cannot be made to cost more than the install will spend | An archive declares more work than the install produces | undemonstrated | |
 | Reading an archive cannot be made to cost more than the install will spend | An archive describing more content than the install accepts | undemonstrated | |
+| Reading an archive cannot be made to cost more than the install will spend | An archive describing more rows than the install writes | undemonstrated | |
 | Reading an archive creates a case; it never overwrites one | An archive is read in | undemonstrated | |
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | undemonstrated | |
 | Reading an archive creates a case; it never overwrites one | An archive names an artefact it does not carry | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts :: an artefact is reached only through the case that holds it > serves an account that reaches nothing of customer B none of it by naming its digests |
@@ -171,6 +186,10 @@
 | An archive's rows are checked against what this install can hold | An archive is refused after some of its rows were sound | undemonstrated | |
 | An archive's rows are checked against what this install can hold | An archive carries a field this install does not know | undemonstrated | |
 | An archive's rows are checked against what this install can hold | An archive leaves a column out | undemonstrated | |
+| An archive's rows are checked against what this install can hold | An archive states a value in a field its other fields make inapplicable | undemonstrated | |
+| An archive's rows are checked against what this install can hold | An archive's report is sent without its document, or the reverse | undemonstrated | |
+| An archive's rows are checked against what this install can hold | An archive carries a report it says was sent | undemonstrated | |
+| An archive's rows are checked against what this install can hold | An archive's record plants a note document | undemonstrated | |
 
 ## cases
 
@@ -179,6 +198,8 @@
 | A case is identified by what an analyst recognises it by | A reference is reused within a customer | undemonstrated | |
 | A case is identified by what an analyst recognises it by | The same reference is used for two customers | undemonstrated | |
 | A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | undemonstrated | |
+| A case is identified by what an analyst recognises it by | The mover reaches the customer that already uses the reference | undemonstrated | |
+| A case is identified by what an analyst recognises it by | A case carrying a reference is moved to a customer the mover does not reach | undemonstrated | |
 | A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | undemonstrated | |
 | A case is identified by what an analyst recognises it by | A case gains its reference later | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts :: a case reference > is accepted later, and the change says who made it |
 | A case says where its work sits | An analyst scans the case list | undemonstrated | |
@@ -194,6 +215,7 @@
 | Reaching a case is decided in one place, by customer | An unknown customer becomes known | undemonstrated | |
 | Reaching a case is decided in one place, by customer | A case's customer changes under an analyst | undemonstrated | |
 | Reaching a case is decided in one place, by customer | A case is opened before the customer is known | undemonstrated | |
+| Reaching a case is decided in one place, by customer | A case is reached over a live connection | undemonstrated | |
 | Demonstration content is distinguishable from real work | An install carries both | undemonstrated | |
 | Demonstration content is distinguishable from real work | A count is taken across cases | undemonstrated | |
 | An analyst can return to recent work | An analyst returns after closing the application | undemonstrated | |
@@ -224,6 +246,7 @@
 | Only some collections have an identity, and the rest are events | A second way of creating rows is added | undemonstrated | |
 | Doing something to many rows obeys every rule that governs one | Some rows in a bulk write have moved | undemonstrated | |
 | Doing something to many rows obeys every rule that governs one | A bulk write crosses the case boundary | undemonstrated | |
+| Doing something to many rows obeys every rule that governs one | A row in a selection changes while the act is being confirmed | undemonstrated | |
 | Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | undemonstrated | |
 | Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | undemonstrated | |
 | Order an analyst chose is theirs, and is not a property of the data | Two analysts reorder at once | undemonstrated | |
@@ -442,6 +465,7 @@
 | A line says who, what, and to what, and never says what was written | A caller invents a route | undemonstrated | |
 | A line says who, what, and to what, and never says what was written | A caller reaches the application without passing the one way in | undemonstrated | |
 | A line says who, what, and to what, and never says what was written | An install whose one way in started last | undemonstrated | |
+| A line says who, what, and to what, and never says what was written | An administrator reads a line about a case they do not reach | undemonstrated | |
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | undemonstrated | |
 | Refusals are recorded, and a run of them is louder than one | One failure and a run of them | undemonstrated | |
 | Refusals are recorded, and a run of them is louder than one | One caller, a different account each time | undemonstrated | |
@@ -514,24 +538,33 @@
 | A connection is admitted by its own checks, and their absence is silent | A held account connects | undemonstrated | |
 | A connection is admitted by its own checks, and their absence is silent | A check is removed | undemonstrated | |
 | Presence says who is here now, and stops saying it by itself | An analyst joins | undemonstrated | |
-| Presence says who is here now, and stops saying it by itself | A connection is lost without warning | unbuilt | Not built: the bound is served nowhere, so no install states it. -> #134 |
+| Presence says who is here now, and stops saying it by itself | A connection is lost without warning | undemonstrated | |
 | Presence says who is here now, and stops saying it by itself | An analyst is in two places | undemonstrated | |
 | A claim warns; it does not lock | An analyst claims an entry | undemonstrated | |
 | A claim warns; it does not lock | Two analysts claim the same entry | undemonstrated | |
 | A claim warns; it does not lock | A holder disappears | undemonstrated | |
 | A claim warns; it does not lock | Somebody writes to a claimed entry | demonstrated | server/test/a-claimed-row-is-written-through-every-door.test.ts :: a row another analyst holds > takes every write another analyst makes, judged on its version alone |
+| A claim warns; it does not lock | An analyst opens an entry another holds | undemonstrated | |
 | A change reaches every open screen, and says only what changed | Another analyst writes | undemonstrated | |
 | A change reaches every open screen, and says only what changed | What travels over the connection | undemonstrated | |
 | A change reaches every open screen, and says only what changed | A screen re-reads after an announcement | undemonstrated | |
 | Written prose is edited together, not saved over | Two analysts write in one section | undemonstrated | |
 | Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts :: an editor that drops and returns > receives what another analyst wrote while it was away, and merges what it wrote ; server/test/a-reconnected-editor-loses-nothing.test.ts :: an editor that drops and returns > loses nothing typed while down across network delays |
+| Written prose is edited together, not saved over | One of the writers loses write before the words are stored | undemonstrated | |
 | A reconnection catches up rather than starts over | A connection drops briefly | undemonstrated | |
-| A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
+| A reconnection catches up rather than starts over | The gap is too large to fill | undemonstrated | |
+| A reconnection catches up rather than starts over | A connection is lost | undemonstrated | |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/reach-withdrawn-ends-what-was-open.test.ts :: an analyst whose reach is taken away > ends the connection it already had open ; server/test/reach-withdrawn-ends-what-was-open.test.ts :: an analyst whose reach is taken away > ends the connection when the customer leaves the group instead |
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts :: the case socket > the connection dies with the reach that admitted it > closes when the case underneath it is deleted |
+| The connection dies with the reach that admitted it | A session ends while its connection is silent | undemonstrated | |
+| The connection dies with the reach that admitted it | An account is held while connected | undemonstrated | |
+| The connection dies with the reach that admitted it | An analyst signs out in one of two places | undemonstrated | |
+| The connection dies with the reach that admitted it | A connection is refused an edit | undemonstrated | |
 | Written prose is attributed like any other write | One of two analysts present writes | undemonstrated | |
 | Written prose is attributed like any other write | Two analysts write before one save | undemonstrated | |
 | Written prose is attributed like any other write | Words typed just before the report is sent | undemonstrated | |
+| Deleted prose is not kept | A reader arrives after text was deleted | undemonstrated | |
+| Deleted prose is not kept | A section is removed | undemonstrated | |
 | An open connection is listening | A screen writes before the connection is ready | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts :: an editor that drops and returns > makes a field opened before its connection is up ready |
 | An open connection is listening | Preparing the connection does not complete | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts :: a connection acts on every frame, in order > acts on nothing sent over a connection whose preparation fails |
 | An open connection is listening | Frames are acted on in the order sent | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts :: a connection acts on every frame, in order > leaves nothing held when a release is sent right behind its claim |
@@ -590,6 +623,9 @@
 | A sent report is frozen, and the freeze is one rule | A new way to write a part is added | undemonstrated | |
 | A sent report is frozen, and the freeze is one rule | Prose reaches a sent report | undemonstrated | |
 | A sent report is frozen, and the freeze is one rule | The report a sent report corrects is removed | undemonstrated | |
+| A report is sent and preserved, or neither | Any writer states half a sent report | undemonstrated | |
+| What the install generates in a document leaving it carries no live indicator | A report leaves the install | undemonstrated | |
+| What the install generates in a document leaving it carries no live indicator | A preserved document is read in with a live address | undemonstrated | |
 | Sending stamps and preserves in one act | A report is sent | undemonstrated | |
 | Sending stamps and preserves in one act | The document cannot be produced | undemonstrated | |
 | Sending stamps and preserves in one act | The case changes after sending | undemonstrated | |
@@ -650,10 +686,21 @@
 | The application cannot reach a row it should not, even by mistake | A query forgets its boundary | undemonstrated | |
 | The application cannot reach a row it should not, even by mistake | The application attempts to widen its own reach | undemonstrated | |
 | The application cannot reach a row it should not, even by mistake | A new table holding case data is added | undemonstrated | |
+| The application cannot reach a row it should not, even by mistake | An operation names a case its caller does not reach | undemonstrated | |
+| The application cannot reach a row it should not, even by mistake | Nobody is named as asking | undemonstrated | |
 | Changing the shape of the store is a separate power | The application attempts to change the schema | undemonstrated | |
 | Changing the shape of the store is a separate power | A schema change is applied | undemonstrated | |
 | A version is what a write is checked against, and it lives with the row | A write and its record are one act | undemonstrated | |
 | A version is what a write is checked against, and it lives with the row | A write arrives against a version that has moved | undemonstrated | |
+| A version is what a write is checked against, and it lives with the row | A record is served again while an analyst is changing a field | undemonstrated | |
+| A version is what a write is checked against, and it lives with the row | A record is served again with a change to another field | undemonstrated | |
+| A version is what a write is checked against, and it lives with the row | A field the analyst only visited follows the server | undemonstrated | |
+| A version is what a write is checked against, and it lives with the row | Leaving a field in collision stores nothing | undemonstrated | |
+| A version is what a write is checked against, and it lives with the row | An analyst keeps their own value | undemonstrated | |
+| A version is what a write is checked against, and it lives with the row | An analyst takes the other value | undemonstrated | |
+| A version is what a write is checked against, and it lives with the row | One analyst changes a record faster than it is answered | undemonstrated | |
+| A version is what a write is checked against, and it lives with the row | A refused change is not shown as made | undemonstrated | |
+| A version is what a write is checked against, and it lives with the row | A change made in a dialog is refused | undemonstrated | |
 | The store is not migrated while the shape is still moving | Data from an older shape is presented | undemonstrated | |
 | What is kept forever is decided, not defaulted | A record reaches the end of its life | undemonstrated | |
 | What is kept forever is decided, not defaulted | A retention period is shortened below an obligation | unbuilt | Not built: no retention period names an obligation. -> #240 |
@@ -689,6 +736,8 @@
 | A caller asks for what it needs and receives no more | A caller wants everything | undemonstrated | |
 | Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | undemonstrated | |
 | Reach is enforced where the data is, not where the request arrives | A new way to read a record is added | undemonstrated | |
+| Reach is enforced where the data is, not where the request arrives | A route forgets to ask | undemonstrated | |
+| Reach is enforced where the data is, not where the request arrives | A route forgets to ask before it writes | undemonstrated | |
 | A read tells a caller what it is looking at | A caller reads and later writes | undemonstrated | |
 | A read tells a caller what it is looking at | Somebody wrote first | undemonstrated | |
 | The interface describes itself, and the description is generated | A route is added | undemonstrated | |
@@ -696,6 +745,8 @@
 | The interface describes itself, and the description is generated | A route served by a library the application mounts | undemonstrated | |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts :: not there and not yours look alike > answers a case out of reach exactly as it answers one that is not there ; server/test/not-there-and-not-yours-look-alike.test.ts :: not there and not yours look alike > refuses with not-found rather than forbidden |
 | A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/every-write-door-refuses-a-version-past-its-column.test.ts :: every door that takes a version refuses one no reader produced > refuses a version no reader could have read at 422, naming it, at each of them |
+| A refusal says which of the caller's problems it is | A caller times the refusal | undemonstrable | A duration is measured, and a refusal's reveals nothing only as a distribution. What makes the two take the same time is shown by server/test/a-refusal-does-the-same-work-whether-or-not-the-case-exists.test.ts, which asserts the same statements before either answer; that is evidence of the mechanism, not a demonstration of the clock. |
+| A refusal says which of the caller's problems it is | A write depends on another customer's data | undemonstrated | |
 | What a request costs is bounded before it runs | A caller asks for too much at once | undemonstrated | |
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts :: a caller asking faster than the install permits > lets the permitted number through and refuses the rest ; server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts :: a caller asking faster than the install permits > names how long the caller must wait |
 | What a request costs is bounded before it runs | Another caller asks too often | undemonstrated | |

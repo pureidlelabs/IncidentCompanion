@@ -302,6 +302,33 @@ export function hasCrossFieldRule(schema: z.ZodObject): boolean {
   return (checks?.length ?? 0) > 0
 }
 
+/**
+ * What `schema`'s rules spanning fields refuse in `row`, or null. `row` is a
+ * whole row as stored or as it will be, timestamps as `Date` or as strings.
+ */
+export function crossFieldIssue(schema: z.ZodObject, row: Record<string, unknown>): string | null {
+  if (!hasCrossFieldRule(schema)) return null
+  // **The stored half comes out of Drizzle, the patch half off the wire, and
+  // they spell a time differently.** A `timestamp` column reads back as a
+  // `Date`; the schemas declare `z.iso.datetime()`, a string. Parsing the
+  // merge without this refuses a patch that never touched the time, and only
+  // on rows where the timestamp is set -- which is why it survived the first
+  // two tests here.
+  //
+  // **On the value, not the column type**, so a `date()` column in date mode
+  // is caught as well -- a `columnType.startsWith('PgTimestamp')` predicate,
+  // which is what `coerceTimes` uses, would let one through.
+  //
+  // The open half: a field declared `z.iso.date()` would be handed a full
+  // datetime and reject it. No schema has one today; add the date-only
+  // spelling here when the first does.
+  const wire = Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key, value instanceof Date ? value.toISOString() : value]),
+  )
+  const parsed = schema.safeParse(wire)
+  return parsed.success ? null : (parsed.error.issues[0]?.message ?? 'Invalid')
+}
+
 /** The fields a schema marks as derived, which a patch does not offer. */
 export function derivedFields(schema: z.ZodObject): string[] {
   return Object.entries(schema.shape)

@@ -287,7 +287,7 @@ export class DemoContentSeeder {
         .returning({ id: reports.id })
 
       const reportId = row!.id
-      const doc = new Y.Doc({ gc: false })
+      const doc = new Y.Doc()
       let wrote = false
 
       for (const [position, block] of report.blocks.entries()) {

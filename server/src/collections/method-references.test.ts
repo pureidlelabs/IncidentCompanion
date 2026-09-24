@@ -17,8 +17,8 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { withCase } from '../db/scope.js'
-import { cases, methods, systems, timeline } from '../db/schema/index.js'
+import { actingAs, withCase } from '../db/scope.js'
+import { cases, methods, systems, timeline, user } from '../db/schema/index.js'
 import { danglingReferences } from './reference-check.js'
 import { referenceFieldsOf } from '../domain/references.js'
 import { methodSchema } from '../domain/entities/method.js'
@@ -79,6 +79,13 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/** Who the store is asked for: an account every default-customer case is open to. */
+const READER = 'method-references-reader'
+/** `withCase` as the analyst this file writes as. */
+const scoped: typeof withCase = (on, caseId, work) => actingAs(READER, () => withCase(on, caseId, work))
+
+
+
 /**
  * **Closed once, at the file level.** Two describes share the pool, and a
  * teardown inside the first one closes it under the second - which fails as
@@ -96,6 +103,10 @@ describe.skipIf(!db)('a method reference that leaves the case', () => {
   let theirMethod = ''
 
   beforeAll(async () => {
+    await seed!
+      .insert(user)
+      .values({ id: READER, name: READER, email: `${READER}@example.test`, emailVerified: true, createdAt: new Date(), updatedAt: new Date() })
+      .onConflictDoNothing()
     const [a] = await seed!.insert(cases).values({ title: 'Methods mine' }).returning()
     const [b] = await seed!.insert(cases).values({ title: 'Methods theirs' }).returning()
     mine = a!.id
@@ -117,7 +128,7 @@ describe.skipIf(!db)('a method reference that leaves the case', () => {
   })
 
   it('accepts a method in the same case', async () => {
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, eventWriteSchema, { methodIds: [myMethod] }),
     )
 
@@ -129,7 +140,7 @@ describe.skipIf(!db)('a method reference that leaves the case', () => {
    * all, so without this check any string at all could sit in it.
    */
   it('refuses a timeline entry citing another case\u2019s method', async () => {
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, eventWriteSchema, { methodIds: [theirMethod] }),
     )
 
@@ -137,7 +148,7 @@ describe.skipIf(!db)('a method reference that leaves the case', () => {
   })
 
   it('refuses one bad id hidden in a list of good ones', async () => {
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, eventWriteSchema, { methodIds: [myMethod, theirMethod] }),
     )
 
@@ -145,7 +156,7 @@ describe.skipIf(!db)('a method reference that leaves the case', () => {
   })
 
   it('refuses an activity citing another case\u2019s method, not only an event', async () => {
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, actionWriteSchema, { methodIds: [theirMethod] }),
     )
 
@@ -153,7 +164,7 @@ describe.skipIf(!db)('a method reference that leaves the case', () => {
   })
 
   it('refuses an evidence row citing another case\u2019s method', async () => {
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, evidenceSchema, { methodId: theirMethod }),
     )
 
@@ -161,7 +172,7 @@ describe.skipIf(!db)('a method reference that leaves the case', () => {
   })
 
   it('refuses an entity citing another case\u2019s method', async () => {
-    const dangling = await withCase(db!, mine, (tx) =>
+    const dangling = await scoped(db!, mine, (tx) =>
       danglingReferences(tx, systemSchema, { methodId: theirMethod }),
     )
 

@@ -16,7 +16,7 @@ import type { PgTable } from 'drizzle-orm/pg-core'
 
 import type { Database } from './client.js'
 import { changeFeed } from './schema/change-feed.js'
-import { columnOf, columnsOf } from './column-access.js'
+import { columnOf, columnsOf, wired } from './column-access.js'
 import { withCase } from './scope.js'
 
 export interface Refused {
@@ -94,7 +94,7 @@ export async function updateVersioned<T extends { version: number }>(
         version: sql`${version} + 1`,
       })
       .where(and(...scope, eq(version, expectedVersion)))
-      .returning()) as T[]
+      .returning(wired(table))) as T[]
 
     if (updated.length === 0) {
       // Scoped too, or a refusal leaks the version of a row in another case.

@@ -6,6 +6,18 @@
 
 **A copy that has never been restored is not a backup.** Producing one is not the whole obligation; returning to one has to be something an operator has done deliberately before an incident.
 
+**There is no system principal.** Everything the serving application reads or writes of a case is done for somebody. The few acts that have to see past every caller's reach -- counting the cases behind a customer, a customer merge's reference check and move, how many cases stand in each state, and which digests each case names -- are acts the store performs and answers narrowly: counts, identifiers and digests, never a case's contents. Every act the application may call is one of three kinds: it answers about the principal or one case they name; it answers an administrator and refuses anybody else, which the merge's acts and the tally of cases do; or it is asked for nobody and answers only identifiers and digests, which the census's digests are. An act is classed before it can be called.
+
+**Words accepted from a writer who has since lost write are stored only through a writer who still has it.** Where nobody who wrote into a live document since it was last stored may still write it, the words stay unsaved and the install logs it.
+
+**The seeding role is the one exemption.** It writes cases nobody is asking for, on an install that may hold no account yet, so each table exempts it by a policy of its own, and the seed one-shot acts as it throughout. Nothing that serves a request connects as it for case data.
+
+**The principal lives within one process.** It is held for a request or a socket frame in the process serving it.
+
+**The server's check stays per row.** A write names the version of the whole record, and nothing here adds a per-field version to the wire. What is per field is the client's judgement of a refusal: a change to a field nobody else moved is sent again against the version that moved it, and only a field somebody else changed is a collision.
+
+**A tab is the writer the chain orders.** Two tabs of one analyst are two writers, each with its own view of the record, and are checked against each other as two analysts are.
+
 **Evidence is deduplicated within a case and never across one.** The same bytes attached in two cases are two stored artefacts.
 
 **Nothing is removed at start.** What the database does not name is counted and left: the database may be older than the directory, rebuilt, or not the one the directory was written beside, and the bytes may be the only copy. An operator decides what to do with them.
@@ -34,6 +46,18 @@ The serving identity does not own the schema and cannot read past a boundary or 
 
 The shape-changing identity is not available to the running application.
 
+## The store decides reach, and knows who is asking
+
+**One decision.** The store answers two questions: the level an account holds over a customer, and whether a case exists, whose it is and the level an account holds over it. The level is the strongest of the role's floor, which the store also answers on its own, and every group grant. The route guard, the live connection, every list of cases, every row-level policy and what an administrator is shown of somebody's reach ask them, and nothing in the application settles a level of its own; the administrator's view works out only which grant names the level, the floor where it already gives it. A case with no customer is the default customer's. An account the install does not hold reaches nothing, the default customer included: the default's floor is an account's by role, and a membership goes with its account.
+
+**The same work either way.** The case question resolves the customer and the level whether or not the case exists and says separately whether it is there, so an absent case and one out of reach are answered after one question each. A refused reach is recorded once the answer has gone.
+
+**The decision reads past the caller.** The functions answering it read the rows they decide about as the tables' owner, with a fixed search path and every table named by schema, and only the serving and seeding identities may call them. Every schema application creates them before the policies that call them.
+
+**Who is asking is set once.** A request names its principal when it arrives, as the account its session belongs to; a socket names it per frame, as the account the connection admitted. Every scope opened for case data carries the principal beside the case, and a scope with nobody named is refused before it reaches the store. Work that outlives the frame that asked for it carries the principals of the frames that asked: a live document keeps everyone who wrote into it since it was last stored, and stores itself as the latest of them the store still lets write it. A row the store refuses to change raises nothing, so an update matching nothing is read as a refusal: the document stays unsaved, keeps its writers, and is logged and tried again.
+
+**One policy per command.** Every table holding a case's rows answers a row only to a scope naming its case and a principal who reaches it: read to see a row, write to add, change or remove one. A case itself is answered by its own customer, and destroying one needs delete. A visit to a case is its analyst's alone while they reach the case, and removing one asks only whose it is, so a list pruned after reach was withdrawn still drops what it no longer shows. A record the first reader raises from defaults may be raised at read. A write the store refuses for reach, inside the scope that names a case, is answered as that case not being there, with the refusal kept as its cause.
+
 ## A version travels with the row
 
 Anything an analyst may change carries a version that moves when it does. A write states the version it was made against and is refused where that no longer matches.
@@ -41,6 +65,47 @@ Anything an analyst may change carries a version that moves when it does. A writ
 A refusal is an answer rather than an error: it means somebody wrote first, and the caller is told which fields moved so a merge can be raised naming them.
 
 The check, the change and the record of the change succeed or fail together, in one act. A change stored while its record is not leaves every other screen believing something untrue.
+
+## A version is captured with what the analyst looked at
+
+A write's version is taken where the analyst read the value it carries, never where the request leaves. Three places read a row for a write:
+
+- **A change to a field** holds the version the record had when the analyst began changing that field, the value it held then, and the value the analyst has put there.
+- **A selection** holds the version each row had when the analyst pressed the act, and the dialog confirming it acts on those.
+- **A dialog** holds the row as it opened, and holds each field it changes the way a form does.
+
+A version read at send time is not a fourth kind. The type that carries a read version is minted only at these places, so a caller handing the version it happens to have in hand does not compile.
+
+## A record served again moves a change's version only where the field did not move
+
+Every time the record is served newer than a held change was read at, each held field is judged against it:
+
+- the server holds the analyst's value: the change is settled and the hold goes;
+- the analyst's value is the one they started from: nothing of theirs is left, and the field follows the server;
+- the field still holds the value the change began from: nobody else touched it, and the hold takes the newer version;
+- otherwise somebody else changed it: the field keeps the analyst's value and shows the other beside it.
+
+A field with no hold follows the server. The caret alone holds nothing. A hold with a write out is not judged until that write is answered, because its answer decides it.
+
+## A collision is settled by a choice, never by leaving
+
+A held field showing another analyst's value is not written when the analyst leaves it. Keeping their own writes it against the version that holds the other value. Taking the other's drops the hold. Both are presses made with both values on screen.
+
+A refusal of a field nobody else moved, which happens when the other write landed but its announcement had not, is sent again against the newer version once the record is read again. A refusal of a field somebody else moved becomes the collision above.
+
+## One tab's writes to a record leave in order, chained through its own answers
+
+Writes to one record leave one after another from the tab that made them. A write queued behind the tab's own earlier write to the same record is sent against the version that earlier write produced, when it was read at the version the earlier one was sent against. The chain records only transitions this tab's own answers reported, so a record read again never lends a queued write a newer version.
+
+The chain is the tab's own, not the request library's: a queued request that waits for the tab to be visible holds the analyst's last answer until they come back, and loses it if they close the tab.
+
+## The screen holds only answers
+
+No write is drawn before it is answered, and no copy of the record is put back after a refusal. What the analyst is changing lives in their hold or their dialog until the server answers; the record itself changes only when it is read again. A copy put back after a refusal can hold another write's refused value, and a copy drawn before the answer can show a value the server refused.
+
+## A form writes a field when the analyst leaves it
+
+Text and numbers are written on leaving the field. A choice made in one act — a select, a box, a set of options — is written as it is made. A keystroke is not an answer, and writing each one records partial values the analyst never meant and recomputes a verdict through each of them.
 
 ## Everything that accumulates has a stated life
 
@@ -94,4 +159,4 @@ An install reconciles the artefacts its records name against the artefacts it ho
 
 **A shortfall never refuses the start.** An install missing an artefact still holds every case and every record, so failing to start would withdraw the whole product to report a gap in part of it. A count that cannot be taken is said and stepped over for the same reason.
 
-**The reconciliation asks case by case.** Records of evidence are reachable only within the case they belong to, and a question asked outside any case is answered with an empty set rather than a refusal -- so the direct form of the question reports every install as expecting nothing, which is indistinguishable from an install that is whole. Asking within each case in turn asks only what the application may already ask, at the cost of one act per case each time the count is taken.
+**The reconciliation is the store's to answer.** Records of evidence are reachable only by somebody who reaches their case, and the count is taken at start, for nobody -- so a question asked as the application is answered with an empty set, which reports every install as expecting nothing and is indistinguishable from one that is whole. The store answers it itself, with the digests its records name and nothing else.

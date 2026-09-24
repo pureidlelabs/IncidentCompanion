@@ -2,7 +2,6 @@ import { useMemo, type ReactNode } from 'react'
 
 import { useAttribution } from '@/api/attribution'
 import { useCasePresence } from '@/api/presence'
-import { useCaseChanges } from '@/api/useCaseChanges'
 import { AttributionProvider } from '@/components/blocks/detail-grid'
 import { EntityCardProvider } from '@/components/blocks/entity-card'
 import { ClaimsProvider, type RowClaims } from '@/components/blocks/presence'
@@ -58,13 +57,7 @@ export const NO_CLAIMS: RowClaims = {
   you: undefined,
 }
 
-/**
- * `CaseProviders` reading the case it is given, for the app.
- *
- * Subscribing here rather than in each section: a section that is not on
- * screen still holds a cached query, and that is the one the analyst meets
- * stale when they navigate back to it.
- */
+/** `CaseProviders` reading the case it is given, for the app. */
 export function CaseProvidersLive({
   caseId,
   children,
@@ -72,7 +65,6 @@ export function CaseProvidersLive({
   caseId: string
   children: ReactNode
 }) {
-  useCaseChanges(caseId)
   const attribution = useAttribution(caseId)
   const presence = useCasePresence(caseId)
   const me = useSession()?.userId

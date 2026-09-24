@@ -3,11 +3,13 @@
  * with a field per block, so a block row says what the section *is* and where
  * it sits, never what it says.
  *
- * `document` is bytea because it holds Yjs' binary encoding, history included.
+ * `document` is bytea because it holds Yjs' binary encoding of the prose as it reads.
  * A frozen report keeps its rendered tree: it is the compliance artefact, so
  * re-rendering must not be able to produce something else.
  */
+import { sql } from 'drizzle-orm'
 import {
+  check,
   index,
   integer,
   jsonb,
@@ -48,8 +50,8 @@ export const reports = pgTable(
     /**
      * The collaborative document holding every written block's prose.
      *
-     * **One per report rather than one per block**, so the whole report has a
-     * single restore point and report-wide presence is expressible at all.
+     * **One per report rather than one per block**, so report-wide presence is
+     * expressible at all.
      */
     document: bytea('document'),
 
@@ -86,6 +88,11 @@ export const reports = pgTable(
     index('reports_case_idx').on(t.caseId),
     // Nullable, so every report that replaces nothing is unaffected.
     uniqueIndex('reports_supersedes_idx').on(t.supersedes),
+    // Sent and preserved, or neither, whichever writer: send, an archive, a seeder.
+    check(
+      'reports_sent_is_preserved',
+      sql`(${t.sentAt} is null) = (${t.frozen} is null) and (${t.frozen} is null) = (${t.frozenAt} is null)`,
+    ),
     ...caseScoped(t.caseId),
   ],
 )

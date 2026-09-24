@@ -45,6 +45,7 @@ describe('how loud a settings change is', () => {
     ['auth.lockoutAfterFailures', 10, 50],
     ['auth.minPasswordLength', 16, 12],
     ['auth.lockoutMinutes', 60, 15],
+    ['auth.lockoutMaxMinutes', 1440, 60],
     ['evidence.attachmentMegabytes', 256, 2048],
     ['evidence.passphraseChars', 20, 12],
     ['audit.runWindowMinutes', 5, 60],
@@ -56,6 +57,7 @@ describe('how loud a settings change is', () => {
     ['auth.sessionIdleMinutes', 480, 30],
     ['auth.lockoutAfterFailures', 50, 10],
     ['auth.minPasswordLength', 12, 16],
+    ['auth.lockoutMaxMinutes', 60, 1440],
     ['evidence.attachmentMegabytes', 2048, 256],
   ])('files tightening %s quietly', (key, from, to) => {
     expect(severityOfSettingChange(key, from, to)).toBe('Low')

@@ -36,13 +36,13 @@ function anEntry() {
  * row with a toolbar of its own -- and a test naming it would be asserting
  * against the sort rather than against the delete.
  */
-function firstDelete(): { button: HTMLElement; id: string } {
+function firstDelete(): { button: HTMLElement; id: string; version: number } {
   const button = screen.getAllByRole('button', { name: /^Delete / })[0]
   if (!button) throw new Error('the screen drew no row with a delete')
   const described = (button.getAttribute('aria-label') ?? '').replace(/^Delete /, '')
   const entry = campaignCase.timeline.find((one) => one.description === described)
   if (!entry) throw new Error(`no fixture entry is described ${described}`)
-  return { button, id: entry.id }
+  return { button, id: entry.id, version: entry.version }
 }
 
 function spies(): TimelineWrites {
@@ -90,7 +90,7 @@ describe('deleting one timeline entry', () => {
     expect(dialog).not.toBeNull()
     await user.click(within(dialog!).getByRole('button', { name: /^delete/i }))
 
-    expect(writes.remove).toHaveBeenCalledWith([row.id])
+    expect(writes.remove).toHaveBeenCalledWith([{ id: row.id, version: row.version }])
   })
 
   /**
