@@ -59,6 +59,20 @@ function advance(lane: Lane, read: number): number {
   return version
 }
 
+/**
+ * The row an edit writes against, at the version the analyst read; null for a create.
+ *
+ * @throws where an edit arrives with no read version, which would otherwise be written as a new row
+ */
+export function editedAt<T extends object>(
+  editing: T | null | undefined,
+  read: Read | undefined,
+): (T & { version: Read }) | null {
+  if (!editing) return null
+  if (read === undefined) throw new Error('An edit reached its save without the version it was read at.')
+  return { ...editing, version: read }
+}
+
 /** The key a record's writes are ordered by. */
 export function rowKey(caseId: string, table: string, id: string): string {
   return `${caseId}:${table}:${id}`

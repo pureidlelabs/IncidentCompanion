@@ -6,7 +6,7 @@ import { QueryClient, focusManager } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { request } from './client'
-import { drawn, writeRow, writeRows } from './rowWrite'
+import { drawn, editedAt, writeRow, writeRows } from './rowWrite'
 import { setTransport } from './transport'
 
 const LATENCY = 40
@@ -143,5 +143,19 @@ describe('one tab writing one record', () => {
     await Promise.all([single, many])
 
     expect(order).toEqual(['single', 'many at 8'])
+  })
+})
+
+describe('the row an edit writes against', () => {
+  it('is nothing for a create', () => {
+    expect(editedAt(null, undefined)).toBeNull()
+  })
+
+  it('carries the version the analyst read', () => {
+    expect(editedAt({ id: 'r-1' }, drawn({ version: 4 }).version)).toEqual({ id: 'r-1', version: 4 })
+  })
+
+  it('refuses an edit that arrives without a read version rather than creating a row', () => {
+    expect(() => editedAt({ id: 'r-1' }, undefined)).toThrow()
   })
 })

@@ -9,7 +9,7 @@ import type {
   NetworkIndicator,
   SystemEntry,
 } from '@/api/model'
-import type { Read } from '@/api/rowWrite'
+import { editedAt, type Read } from '@/api/rowWrite'
 import { fieldOf, formSpec, type Specs } from '@/api/specs'
 import type { BulkPatchRow } from '@/api/useBulkPatch'
 import { Absent } from '@/components/ui/absent'
@@ -328,7 +328,7 @@ export function EntityScopeTable({
       editor.close()
       return
     }
-    const stored = entry && read !== undefined ? { id: String(entry.id), version: read } : null
+    const stored = editedAt(entry && { id: String(entry.id) }, read)
     // **Returned, not discarded.** `EntityDialog` closes itself when the write
     // lands and keeps the draft when it does not, so closing here as well threw
     // away everything typed on a refusal. -> #194, and the contract in #183.

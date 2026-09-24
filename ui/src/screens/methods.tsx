@@ -2,7 +2,7 @@ import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import type { Case, MethodEntry } from '@/api/model'
-import type { Drawn, Read } from '@/api/rowWrite'
+import { editedAt, type Drawn, type Read } from '@/api/rowWrite'
 import type { BulkPatchRow } from '@/api/useBulkPatch'
 import { formSpec, type Specs } from '@/api/specs'
 import { suggestionsFor } from '@/api/suggestions'
@@ -356,7 +356,7 @@ export function MethodsScreen({
             ? { entry: editor.editing, served: rows.find((row) => row.id === editor.editing?.id) }
             : {})}
           onCreate={(fields, read?: Read) =>
-            save(editor.editing && read !== undefined ? { ...editor.editing, version: read } : null, fields)
+            save(editedAt(editor.editing, read), fields)
           }
         />
       )}

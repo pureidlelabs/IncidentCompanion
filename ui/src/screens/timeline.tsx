@@ -3,7 +3,7 @@ import { ArrowDownWideNarrow, ArrowUpWideNarrow, CalendarClock } from 'lucide-re
 import { Fragment, useCallback, useMemo, useState, type ReactNode } from 'react'
 
 import { isEvent, type Case, type TimelineEntry } from '@/api/model'
-import { drawn, type Drawn, type Read } from '@/api/rowWrite'
+import { drawn, editedAt, type Drawn, type Read } from '@/api/rowWrite'
 import type { BulkPatchRow } from '@/api/useBulkPatch'
 import { formSpec, type Specs } from '@/api/specs'
 import { TIMELINE_WRITE_SCHEMAS } from '@contract/collections'
@@ -755,7 +755,7 @@ export function TimelineScreen({
             // forgotten once the write has landed, for the same reason.
             onCreate={(fields, read?: Read) => {
               const editing = editor.editing
-              const drawnAt = editing && read !== undefined ? { ...editing, version: read } : null
+              const drawnAt = editedAt(editing, read)
               return write.save(drawnAt, fields, writing).then((stored) => {
                 setEntries((current) =>
                   editing
