@@ -124,6 +124,13 @@ ALLOWED_SKIPS: dict[tuple[str, str], str] = {
         for name in _needs_edge_image()
     },
     **{
+        ("repository", f"tests/repo/test_stack_env.py :: {name}"): "mise is not installed on the runner"
+        for name in (
+            "test_mise_evaluates_a_fresh_clone_without_recursing",
+            "test_mise_hands_the_sourced_script_its_own_node",
+        )
+    },
+    **{
         ("repository", f".claude/tests/test_hooks_import_on_the_oldest_python.py :: {name}[NOTSET]"): "no hook guard exists"
         for name in (
             "test_every_guard_names_a_python_floor",

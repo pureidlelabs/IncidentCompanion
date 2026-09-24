@@ -351,7 +351,7 @@
 | A dependency held below the latest version carries its reason | The constraint that justified a hold is lifted | unbuilt | Not built: no hold is recorded in a form a check reads, so a hold outlives its reason silently. Kept normative. |
 | A dependency held below the latest version carries its reason | Two dependencies are held by the same constraint | unbuilt | Not built: no record relates two holds to the constraint they share. Kept normative. |
 | A change to dependencies is demonstrated before it lands | Every tier runs and passes | undemonstrated | |
-| A change to dependencies is demonstrated before it lands | A tier could not run | unbuilt | Not built: `gate` counts a skipped tier as a pass. -> #1163 |
+| A change to dependencies is demonstrated before it lands | A tier could not run | undemonstrated | |
 | Two builds of one revision resolve the same versions | The same revision is built twice | undemonstrated | |
 | Two builds of one revision resolve the same versions | A component is identified by a moving name | undemonstrated | |
 
