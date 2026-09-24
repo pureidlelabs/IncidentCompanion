@@ -300,3 +300,52 @@ test.describe('an entry another analyst has open', () => {
     }
   })
 })
+
+test.describe('a newer record served while a refused write is out', () => {
+  test.setTimeout(120_000)
+
+  test('stores a field nobody else changed once the refusal lands', async ({ browser, baseURL }) => {
+    const api = await asAdminApi(baseURL ?? '')
+    const caseId = await fixtureCaseId(api)
+    const a = await asPersona(browser, ADMIN)
+    try {
+      const mark = String(Date.now())
+      await properties(a.page, caseId)
+      // Latency in A's browser only: reads answer late, a write answers later.
+      // Recorded here, because a fulfilled request finishes no request event.
+      const sent: { version: unknown; status: number }[] = []
+      await a.page.route(`**/api/cases/${caseId}`, async (route) => {
+        const answer = await route.fetch()
+        const writing = route.request().method() === 'PATCH'
+        if (writing) {
+          const { version } = route.request().postDataJSON() as { version?: unknown }
+          sent.push({ version, status: answer.status() })
+        }
+        await new Promise((done) => setTimeout(done, writing ? 2000 : 800))
+        await route.fulfill({ response: answer })
+      })
+      const analyst = a.page.getByRole('textbox', { name: 'Analyst', exact: true })
+      await analyst.fill(`A analyst ${mark}`)
+
+      // Another session changes a different field; the server announces it to A.
+      const now = (await (await api.get(`/api/cases/${caseId}`)).json()) as { version: number }
+      const other = await api.patch(`/api/cases/${caseId}`, {
+        data: { detectionSource: `B source ${mark}`, version: now.version },
+      })
+      expect(other.status()).toBe(200)
+      await analyst.blur()
+
+      await expect
+        .poll(async () => (await stored(baseURL ?? '', caseId)).analyst, { timeout: 30_000 })
+        .toBe(`A analyst ${mark}`)
+      await expect(a.page.getByText('Not saved yet')).toHaveCount(0)
+      expect(sent).toEqual([
+        { version: now.version, status: 409 },
+        { version: now.version + 1, status: 200 },
+      ])
+    } finally {
+      await api.dispose()
+      await a.context.close()
+    }
+  })
+})
