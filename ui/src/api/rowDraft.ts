@@ -121,6 +121,12 @@ export function useRowDraft(
   if (given !== served) {
     setGiven(served)
     if (served) setHolds((current) => reconcile(current, served))
+  } else if (
+    served &&
+    Object.values(holds).some((hold) => hold.refused && !hold.sending && served.version > hold.read)
+  ) {
+    // Refused after the newer record arrived: no new one may follow, so judge against it.
+    setHolds((current) => reconcile(current, served))
   }
 
   const update = (
