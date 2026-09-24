@@ -16,6 +16,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CustomersService } from './customers.service.js'
 import { MERGE_FACTS, ORGANISATION_FACTS } from './organisation-facts.js'
@@ -23,7 +24,7 @@ import { ComplianceService } from '../compliance/compliance.service.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
 import { cases, customers, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
-import { clearCustomers } from '../../test/customers.js'
+import { clearCustomers, reaches } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -67,6 +68,8 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
       .insert(user)
       .values({
         id: ANALYST,
+        // A merge is an administrator's to make, and the store asks.
+        role: 'admin',
         name: 'Merging Analyst',
         email: 'merging@example.test',
         emailVerified: true,
@@ -75,8 +78,8 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
       })
       .onConflictDoNothing()
 
-    service = new CustomersService(db!)
-    compliance = new ComplianceService(db!, new InstallPreferencesService(db!))
+    service = as(ANALYST, new CustomersService(db!))
+    compliance = as(ANALYST, new ComplianceService(db!, new InstallPreferencesService(db!)))
     theDefault = (await service.ensureDefault()).id
 
     const [a] = await seed!
@@ -89,6 +92,10 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
       .returning()
     losing = a!.id
     surviving = b!.id
+    // Reading a case's copy is reaching the case, which an administrator does
+    // through a group like anybody else.
+    await reaches(seed!, ANALYST, losing)
+    await reaches(seed!, ANALYST, surviving)
   })
 
   const aCase = async (title: string, against: string, reference?: string) => {
@@ -254,20 +261,27 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
     ).rejects.toMatchObject({ response: { message: expect.stringContaining('homeMemberState') } })
   })
 
-  /** *A reference collides across the merge.* */
-  it('refuses a merge whose cases collide on a reference, naming both', async () => {
+  /**
+   * *A reference collides across the merge.* The two cases are named by id
+   * and the reference they share, and by nothing either case says: the
+   * administrator merging need reach neither customer.
+   */
+  it('refuses a merge whose cases collide on a reference, naming both and neither title', async () => {
     const mine = await aCase('Mine', losing, 'INC-2026-001')
     const theirs = await aCase('Theirs', surviving, 'INC-2026-001')
 
-    // *the analyst is told which two cases collide* - a reference alone leaves
-    // them to go and find both.
-    await expect(
-      service.merge({ losing, surviving, choices: SETTLED, actorId: ANALYST }),
-    ).rejects.toMatchObject({
-      response: {
-        message: expect.stringMatching(/Mine.*Theirs.*INC-2026-001|Theirs.*Mine.*INC-2026-001/s),
-      },
-    })
+    const refused = (await service
+      .merge({ losing, surviving, choices: SETTLED, actorId: ANALYST })
+      .catch((error: unknown) => error)) as { response?: { message?: string; collisions?: unknown } }
+
+    expect(refused.response?.collisions).toEqual([
+      { reference: 'INC-2026-001', cases: [mine, theirs] },
+    ])
+    expect(refused.response?.message).toContain(mine)
+    expect(refused.response?.message).toContain(theirs)
+    expect(refused.response?.message, 'the refusal quoted a case it need not be shown').not.toMatch(
+      /Mine|Theirs/,
+    )
 
     expect(await customerOf(mine), 'a refused merge moved a case anyway').toBe(losing)
     expect(await customerOf(theirs)).toBe(surviving)

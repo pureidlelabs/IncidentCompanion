@@ -47,6 +47,8 @@ const asking = (caseId: string, method: string) =>
   ({
     getHandler: () => () => undefined,
     switchToHttp: () => ({
+      // The refusal is recorded once the answer closes, which these never do.
+      getResponse: () => ({ once: () => undefined }),
       getRequest: () => ({
         params: { caseId },
         method,
@@ -64,7 +66,7 @@ describe.skipIf(!db)('an analyst whose level is reduced while they work', () => 
   let sector: string
 
   beforeAll(async () => {
-    guard = new CaseAccessGuard(db!, new ReachService(db!), new InstallActivityService(db!))
+    guard = new CaseAccessGuard(new ReachService(db!), new InstallActivityService(db!))
     groupsService = new GroupsService(db!)
 
     const now = new Date()

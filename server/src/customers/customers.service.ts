@@ -17,11 +17,11 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
+import { eq, inArray, isNull, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import type { Executor } from '../db/scope.js'
+import { withReach, type Executor } from '../db/scope.js'
 import { customers } from '../db/schema/customer.js'
 import { cases } from '../db/schema/case.js'
 import { groupCustomers } from '../db/schema/groups.js'
@@ -104,7 +104,7 @@ export class CustomersService {
    * the time it is acted on.
    */
   async remove(id: string): Promise<{ name: string }> {
-    return this.db.transaction(async (tx) => {
+    return withReach(this.db, async (tx) => {
       const [row] = await tx
         .select({ isDefault: customers.isDefault, name: customers.name })
         .from(customers)
@@ -118,11 +118,11 @@ export class CustomersService {
         })
       }
 
-      const [counted] = await tx
-        .select({ count: sql<number>`count(*)::int` })
-        .from(cases)
-        .where(eq(cases.customerId, id))
-      const count = counted?.count ?? 0
+      // Counted by the store for an administrator, who need reach none of them.
+      const { rows: counted } = await tx.execute<{ count: number }>(
+        sql`select ic_cases_behind(${id}::uuid) as count`,
+      )
+      const count = counted[0]?.count ?? 0
       if (count > 0) {
         throw new ConflictException({
           message: `${String(count)} case${count === 1 ? '' : 's'} stand behind this customer. Move them first.`,
@@ -169,7 +169,7 @@ export class CustomersService {
       throw new UnprocessableEntityException({ message: 'A customer cannot be merged into itself.' })
     }
 
-    return this.db.transaction(async (tx) => {
+    return withReach(this.db, async (tx) => {
       const rows = await tx.select().from(customers).where(inArray(customers.id, [losing, surviving]))
       const from = rows.find((row) => row.id === losing)
       const into = rows.find((row) => row.id === surviving)
@@ -250,31 +250,28 @@ export class CustomersService {
        * unattributed case sits under the default customer.
        * -> `openspec/specs/customers/design.md`
        *
-       * **The cases are named, not the references.** The scenario asks that
-       * the analyst be told *which two cases collide*, and a reference alone
-       * leaves them to go and find both.
+       * **The cases are named by id and the reference they share, never by
+       * title.** The administrator merging need reach neither customer, so
+       * what a case says is not theirs to read; its id is enough to find it.
        */
-      const mine = await tx
-        .select({ id: cases.id, title: cases.title, reference: cases.reference })
-        .from(cases)
-        .where(and(eq(cases.customerId, losing), ne(cases.reference, '')))
-      const theirs = await tx
-        .select({ id: cases.id, title: cases.title, reference: cases.reference })
-        .from(cases)
-        .where(and(eq(cases.customerId, surviving), ne(cases.reference, '')))
-
-      const byReference = new Map(theirs.map((row) => [row.reference, row]))
-      const clashing = mine.flatMap((one) => {
-        const other = one.reference === null ? undefined : byReference.get(one.reference)
-        return other ? [`"${one.title}" and "${other.title}" both carry ${one.reference ?? ''}`] : []
-      })
-      if (clashing.length > 0) {
+      const { rows: shared } = await tx.execute<{
+        reference: string
+        losing_case: string
+        surviving_case: string
+      }>(sql`select reference, losing_case, surviving_case from ic_references_shared(${losing}::uuid, ${surviving}::uuid)`)
+      if (shared.length > 0) {
         throw new ConflictException({
-          message: `${clashing.join('; ')}. Change one reference before merging.`,
+          message:
+            `${shared.map((one) => `${one.reference} is carried by case ${one.losing_case} and case ${one.surviving_case}`).join('; ')}. ` +
+            'Change one reference before merging.',
+          collisions: shared.map((one) => ({
+            reference: one.reference,
+            cases: [one.losing_case, one.surviving_case],
+          })),
         })
       }
 
-      await tx.update(cases).set({ customerId: surviving }).where(eq(cases.customerId, losing))
+      await tx.execute(sql`select ic_move_cases(${losing}::uuid, ${surviving}::uuid)`)
 
       /**
        * **A merge moves everything the losing record held, and it held its
@@ -326,11 +323,6 @@ export class CustomersService {
   async ensureDefault(): Promise<{ id: string; name: string }> {
     return defaultCustomer(this.db)
   }
-
-  /** Put every case carrying no customer under the default. */
-  async attributeUnattributed(): Promise<number> {
-    return attributeUnattributedCases(this.db)
-  }
 }
 
 /**
@@ -344,9 +336,10 @@ export class CustomersService {
  * one customer's could both hold one ticket number, which is exactly the state
  * the rule forbids.
  *
- * **A step at boot rather than a migration**, because this schema is pushed
- * rather than migrated: there is no file for a backfill to live in, and the
- * boot hook beside it already ensures the row this points at.
+ * **A step of the seeding one-shot rather than a migration**, because this
+ * schema is pushed rather than migrated and there is no file for a backfill to
+ * live in. It writes cases nobody is asking for, which only the seeding role
+ * may. -> `seed.ts`
  */
 export async function attributeUnattributedCases(on: Executor): Promise<number> {
   const fallback = await defaultCustomer(on)

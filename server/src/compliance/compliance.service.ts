@@ -22,7 +22,7 @@ import type { Policy } from '../domain/compliance-policy.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
-import { withCase } from '../db/scope.js'
+import { withCase, withReach } from '../db/scope.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
 import { unofferedTerms } from '../domain/entities/case-compliance.js'
 import { cases } from '../db/schema/case.js'
@@ -95,9 +95,10 @@ export class ComplianceService {
           .onConflictDoNothing(),
       )
     } catch (error) {
-      // A case that is not there fails at the insert, not at the read below:
-      // `caseId` is a foreign key. Caught rather than pre-checked, which stays
-      // correct when the case is deleted between the check and the insert.
+      // A case that is not there fails at the insert rather than at the read
+      // below, as a foreign key; one out of reach is answered by `withCase`.
+      // Caught rather than pre-checked, which stays correct when the case goes
+      // between the two.
       if (!isMissingParent(error)) throw error
       throw new NotFoundException(`No case ${caseId}.`)
     }
@@ -116,10 +117,9 @@ export class ComplianceService {
    * read off the case row, never taken from a caller.
    */
   private async customerFacts(caseId: string): Promise<Record<string, unknown>> {
-    const [row] = await this.db
-      .select({ customerId: cases.customerId })
-      .from(cases)
-      .where(eq(cases.id, caseId))
+    const [row] = await withReach(this.db, (tx) =>
+      tx.select({ customerId: cases.customerId }).from(cases).where(eq(cases.id, caseId)),
+    )
     if (!row?.customerId) return {}
 
     const [customer] = await this.db
@@ -143,10 +143,9 @@ export class ComplianceService {
    */
   async moved(caseId: string): Promise<string[]> {
     const row = await this.read(caseId)
-    const [self] = await this.db
-      .select({ customerId: cases.customerId })
-      .from(cases)
-      .where(eq(cases.id, caseId))
+    const [self] = await withReach(this.db, (tx) =>
+      tx.select({ customerId: cases.customerId }).from(cases).where(eq(cases.id, caseId)),
+    )
     if (!self?.customerId) return []
 
     const [customer] = await this.db

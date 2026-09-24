@@ -53,7 +53,7 @@ import { changeFeed } from '../db/schema/change-feed.js'
 import { reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
-import { withCase } from '../db/scope.js'
+import { actingAs, principalNow, withCase } from '../db/scope.js'
 
 /**
  * The one fragment a note's document holds.
@@ -634,10 +634,16 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   /**
-   * Write the document to its row, naming whoever wrote into it since the last
-   * write: `updated_by` is the latest of them, and each gets a feed row in the
-   * same transaction. Then tells the `onSaved` listener. Resolves once every
-   * flush queued before it has run too. Public so a test can force it.
+   * Write the document to its row, as the latest analyst who wrote into it
+   * since it was last stored and whom the store still lets write it, or else as
+   * whoever is asking. `updated_by` names the latest who wrote, and everyone
+   * who wrote gets a feed row in the same transaction. Then tells the `onSaved` listener.
+   * Resolves once every flush queued before it has run too. Public so a test
+   * can force it.
+   *
+   * A document no edit on this instance has touched, flushed with nobody
+   * asking, is left to the instance that took the edit. One nobody may write
+   * stays unsaved and is logged, and the next flush tries again.
    *
    * **The row's version is deliberately not bumped.** `reports.version` guards
    * the analyst-facing fields against a concurrent edit; the document is a
@@ -654,45 +660,60 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   private async store(caseId: string, address: ProseRecord, held: LiveDocument): Promise<void> {
-    const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
     const writers = [...held.writers.values()]
+    const asking = principalNow()
+    const candidates = writers.map((writer) => writer.id).reverse()
+    if (asking && !candidates.includes(asking)) candidates.push(asking)
+    if (candidates.length === 0) return
+    const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
     held.writers.clear()
     held.dirty = false
     const by = writers.at(-1)
     const attributed = by ? { updatedBy: by.id, updatedAt: new Date() } : {}
     try {
-      await withCase(this.db, caseId, async (tx) => {
-        const [row] = await (address.table === 'casenotes'
-          ? tx
-              .update(caseNotes)
-              // **`note` is re-derived from the document on every flush.**
-              // The document is the record; the column is the projection the
-              // index row, the search and the CSV export read, and a note has
-              // no heading to find it by instead. A note's creation writes the
-              // column once, as the document's first words; this is its only
-              // writer after that.
-              .set({ document: bytes, note: noteText(held.doc), ...attributed })
-              .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
-              .returning({ version: caseNotes.version })
-          : tx
-              .update(reports)
-              .set({ document: bytes, ...attributed })
-              .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
-              .returning({ version: reports.version }))
-        if (!row || writers.length === 0) return
-        await tx.insert(changeFeed).values(
-          writers.map((writer) => ({
-            caseId,
-            entity: address.table,
-            entityId: address.id,
-            op: 'update' as const,
-            version: row.version,
-            actorId: writer.id,
-            fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
-          })),
+      for (const who of candidates) {
+        const stored = await actingAs(who, () =>
+          withCase(this.db, caseId, async (tx) => {
+            const [row] = await (address.table === 'casenotes'
+              ? tx
+                  .update(caseNotes)
+                  // **`note` is re-derived from the document on every flush.**
+                  // The document is the record; the column is the projection the
+                  // index row, the search and the CSV export read, and a note has
+                  // no heading to find it by instead. A note's creation writes the
+                  // column once, as the document's first words; this is its only
+                  // writer after that.
+                  .set({ document: bytes, note: noteText(held.doc), ...attributed })
+                  .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
+                  .returning({ version: caseNotes.version })
+              : tx
+                  .update(reports)
+                  .set({ document: bytes, ...attributed })
+                  .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
+                  .returning({ version: reports.version }))
+            // No row is the store refusing this writer, which raises nothing.
+            if (!row) return false
+            if (writers.length > 0) {
+              await tx.insert(changeFeed).values(
+                writers.map((writer) => ({
+                  caseId,
+                  entity: address.table,
+                  entityId: address.id,
+                  op: 'update' as const,
+                  version: row.version,
+                  actorId: writer.id,
+                  fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
+                })),
+              )
+            }
+            return true
+          }),
         )
-      })
-      if (writers.length > 0) this.saved?.(caseId, address, writers)
+        if (!stored) continue
+        if (writers.length > 0) this.saved?.(caseId, address, writers)
+        return
+      }
+      throw new Error('the store took it from nobody who wrote it, or its row is gone')
     } catch (error) {
       // Sent by a path this document did not see: nothing more is taken.
       const sent = sentReportIn(error)

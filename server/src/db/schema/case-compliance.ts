@@ -123,5 +123,8 @@ export const caseCompliance = pgTable(
 
     ...rowVersioning,
   },
-  (t) => [...caseScoped(t.caseId), figuresWithinReach('case_compliance_figures_within_reach', t)],
+  (t) => [
+    ...caseScoped(t.caseId, 'read'),
+    figuresWithinReach('case_compliance_figures_within_reach', t),
+  ],
 )

@@ -9,6 +9,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { unattended } from '../db/scope.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
@@ -73,16 +74,19 @@ describe.skipIf(!db || !hasConcurrentConnections())('filing the demo reports', (
 
     await reseedDemos(seed!)
 
-    const cases_ = new CasesService(db!, suiteStore(), {
+    // **On the seeding role throughout, as the seed one-shot runs it**: the
+    // demos stand under the default customer on an install that may hold no
+    // account, so no principal could file them. -> `src/seed.ts`
+    const cases_ = new CasesService(seed!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)
-    const prose = new ProseService(db!)
-    const languages = new LanguageService(db!, seed)
-    const render = new ReportRenderService(db!, cases_, prose, languages, noFigures())
-    sender = new DemoReportSender(seed, new ReportLifecycleService(db!, library, render, prose))
+    const prose = new ProseService(seed!)
+    const languages = new LanguageService(seed!, seed)
+    const render = new ReportRenderService(seed!, cases_, prose, languages, noFigures())
+    sender = new DemoReportSender(seed, new ReportLifecycleService(seed!, library, render, prose))
 
-    await sender.fileDeclared()
+    await unattended(() => sender.fileDeclared())
   }, 180_000)
 
   afterAll(async () => {
