@@ -22,7 +22,7 @@ describe('a sign-out whose line cannot be written', () => {
         throw new Error('the store did not answer')
       },
     }
-    const hook = authOptions(failing as never, 'not-a-real-secret-for-tests', 'https://127.0.0.1:8124')
+    const hook = authOptions(failing as never, 'not-a-real-secret-for-tests', 'https://ic.example.test')
       .databaseHooks.session.delete.after
 
     await hook({ id: 's-1', userId: 'u-1' }, { path: '/sign-out' }).catch(() => undefined)
