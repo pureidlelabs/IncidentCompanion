@@ -10,14 +10,15 @@ services:
     # `no-new-privileges` is the other half: a dropped capability comes back
     # through any setuid binary left in the image. -> #185
     cap_drop: [ALL]
-    # Postgres prepares its data directory and its socket directory as root,
-    # then drops to the `postgres` user for the server itself. Each of these
-    # was measured by taking it away: without CHOWN and FOWNER the entrypoint
-    # refuses with `chown`/`chmod: Operation not permitted`.
-    cap_add: [CHOWN, FOWNER, SETGID, SETUID]
+    # **Started as the user the image owns its directories by**, so the
+    # entrypoint's root-only branch -- a `chown` walk over the data directory,
+    # which a root without DAC_READ_SEARCH cannot enter on a second start --
+    # never runs, and the bounding set is empty.
+    user: postgres
     security_opt: [no-new-privileges:true]
+    restart: unless-stopped
     # Pinned to the minor, so two machines run the same engine.
-    image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+    image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
     environment:
       POSTGRES_USER: incidentcompanion
       POSTGRES_PASSWORD: ${IC_STACK_PG_PASSWORD:?run docker/secrets.sh once before the first start}
@@ -41,6 +42,7 @@ services:
   redis:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    restart: unless-stopped
     # **Started as the user the image already owns `/data` by**, so there is no
     # privilege to drop and none to keep. The entrypoint would drop root itself
     # given SETGID and SETUID, and then hold them for the life of the process;
@@ -84,6 +86,7 @@ services:
   app:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    restart: unless-stopped
     build:
       context: .
       dockerfile: docker/app/Dockerfile
@@ -114,16 +117,19 @@ services:
       # process's.** It stays `https` although this server speaks plaintext:
       # Better Auth picks the `__Secure-` cookie prefix from the scheme, and
       # the browser's connection is the one the prefix describes. Interpolated
-      # from the published port rather than written twice -- a base URL naming
-      # a port the stack does not publish breaks sign-in an hour after a
-      # healthy first run.
-      AUTH_BASE_URL: https://localhost:${IC_STACK_PORT:-443}
+      # from the name and the published port rather than written twice -- a
+      # base URL naming a port the stack does not publish breaks sign-in an
+      # hour after a healthy first run.
+      AUTH_BASE_URL: https://${IC_NAME:-localhost}:${IC_STACK_PORT:-443}
       PORT: "8080"
       # **Where the audit goes, when the operator has somewhere.** An OTLP/HTTP
       # logs endpoint; empty means this install is the record. The headers
       # carry the destination's credential and reach the exporter unread.
       OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      IC_IMPORTERS: ${IC_IMPORTERS:-}
+      # The one peer whose account of who is calling is believed.
+      IC_EDGE: nginx
     volumes:
       # `:z` relabels for SELinux (RHEL, Rocky, Alma), where its absence fails
       # every write and reads as a broken app. A no-op elsewhere.
@@ -167,18 +173,22 @@ services:
     depends_on:
       app:
         condition: service_started
+    environment:
+      # The name analysts reach the install at: certified, served, and the only
+      # name answered. Unset serves loopback.
+      IC_NAME: ${IC_NAME:-}
     ports:
-      # **The `127.0.0.1:` prefix is the confinement, not the container's
-      # bind.** Docker's forwarding rules sit ahead of the host's chains, so a
-      # bare port number is reachable from the LAN with a host firewall
-      # apparently blocking it. Note also that per-IP limits at the edge are a
-      # *global* ceiling here: every caller arrives as the bridge gateway.
+      # **The host address is the confinement, not the container's bind.**
+      # Docker's forwarding rules sit ahead of the host's chains, so a bare port
+      # number is reachable from the LAN with a host firewall apparently
+      # blocking it. Unset is loopback; `IC_LISTEN` is the operator's act of
+      # putting the install on a network.
       # **8443 inside, so nothing has to be allowed to bind a low port.** The
       # host still answers on 443 by default; what changed is that the
       # container needs no CAP_NET_BIND_SERVICE to listen, which would
       # otherwise be a capability granted for one bind and present for every
       # other. -> #185
-      - "127.0.0.1:${IC_STACK_PORT:-443}:8443"
+      - "${IC_LISTEN:-127.0.0.1}:${IC_STACK_PORT:-443}:8443"
     volumes:
       # `:z` relabels for SELinux (RHEL, Rocky, Alma), where its absence fails
       # every read and reads as a broken certificate. A no-op elsewhere.
@@ -254,18 +264,15 @@ services:
     # `--demos` is the laptop shape and would not be passed in a deployment;
     # drop it and `/api/demos` is empty.
     command: ["node", "dist/src/seed.js", "--demos"]
-    # Not decorative: compose otherwise re-runs a one-shot on exit, and this
-    # one deletes the demo cases before writing them.
     restart: "no"
 
-  # The schema push, one-shot: `docker compose run --rm migrate`.
+  # The store's shape, one-shot: `scripts/apply-schema.mts`, in one transaction
+  # that changes nothing when nothing changed and refuses any loss (exit 2).
   #
   # **The build stage, not the runtime image**: `drizzle-kit` is a devDependency
   # reading TypeScript from `src/db/schema/`, and a tool that rewrites schemas
   # does not belong in the image facing the network. Its own role, because
   # `ic_migrate` owns the schema and `ic_app` has no DDL at all.
-  #
-  # **Pushed, not migrated**, while the Node move settles.
   migrate:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -279,14 +286,10 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgres://ic_migrate:${IC_PG_MIGRATE_PASSWORD:?run docker/secrets.sh once before the first start}@postgres:5432/incidentcompanion
-    # **`npm run`, never `npx`** -- `--no-install` is not the offline form and
-    # resolves the `latest` dist-tag past this project's pin.
-    #
-    # **`--workspace server`, because the working directory is the repository
-    # root and `db:push` is the server's script.** Without it npm answers
-    # *Missing script: "db:push"* and `--silent` suppresses that, so the one-shot
-    # exits 1 with empty logs.
-    command: ["npm", "run", "--silent", "--workspace", "server", "db:push", "--", "--force"]
+    working_dir: /repo/server
+    # **`node`, never `npm run`**: npm checks the registry for its own update,
+    # which is an outbound request from an install nobody pointed anywhere.
+    command: ["node", "--import", "tsx", "scripts/apply-schema.mts"]
     restart: "no"
 
 # **All Docker-managed, and not interchangeable with a bind.** Whether a

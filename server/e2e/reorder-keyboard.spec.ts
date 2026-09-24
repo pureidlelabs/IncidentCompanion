@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Browser, type Page } from '@playwright/test'
 
 import { ADMIN, asAdminApi, asPersona, demoCase, section, settle } from './support/app.js'
 
@@ -71,7 +71,8 @@ async function announced(page: Page): Promise<string> {
   return (await page.locator('[role="status"], [aria-live]').allInnerTexts()).join(' | ').trim()
 }
 
-test('moves a report section with the keyboard, and keeps it', async ({ browser, baseURL }) => {
+/** Sign in as the administrator and open the demo case's first draft report. */
+async function openADraft(browser: Browser, baseURL: string | undefined): Promise<Page> {
   const { page } = await asPersona(browser, ADMIN)
 
   const api = await asAdminApi(baseURL ?? '')
@@ -111,6 +112,11 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   await page.goto(`/cases/${demo}/timeline`)
   await settle(page)
   await openDraft()
+  return page
+}
+
+test('moves a report section with the keyboard, and keeps it', async ({ browser, baseURL }) => {
+  const page = await openADraft(browser, baseURL)
 
   /**
    * **Relative to whatever order it finds, because this spec writes.** The
@@ -213,4 +219,59 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   ).toBeVisible({ timeout: 15_000 })
 
   expect(await gripOrder(page), 'the move was not written to the case').toEqual(after)
+})
+
+/**
+ * Two moves of one section, the second made while the first is still on its
+ * way: the first write is held at the network until the second drop, as a slow
+ * server holds it. Both have to be taken, and the section kept two places down.
+ */
+test('moves a section twice in a row, the second before the first is answered, and keeps both', async ({
+  browser,
+  baseURL,
+}) => {
+  const page = await openADraft(browser, baseURL)
+  const answered: number[] = []
+  page.on('response', (response) => {
+    if (response.url().includes('/report_blocks/order') && response.request().method() === 'POST') {
+      answered.push(response.status())
+    }
+  })
+  let release: () => void = () => undefined
+  const held = new Promise<void>((go) => {
+    release = go
+  })
+  let first = true
+  await page.route('**/report_blocks/order', async (route) => {
+    if (first) {
+      first = false
+      await held
+    }
+    await route.continue()
+  })
+
+  const before = await gripOrder(page)
+  expect(before.length, 'the outline has too few sections to move one twice').toBeGreaterThan(2)
+
+  const move = async (index: number) => {
+    const moving = await takeGrip(page, index)
+    await page.keyboard.press('Enter')
+    await settle(page)
+    await page.keyboard.press('ArrowDown')
+    await settle(page)
+    await page.keyboard.press(DROP)
+    await settle(page)
+    return moving
+  }
+  const moving = await move(0)
+  expect(await move(1), 'the second move took hold of another section').toBe(moving)
+  release()
+
+  await expect.poll(() => answered.length, { timeout: 15_000 }).toBe(2)
+  expect(answered).toEqual([200, 200])
+
+  await page.reload()
+  await settle(page)
+  await expect(page.locator('[aria-label="Report sections"]')).toBeVisible({ timeout: 15_000 })
+  expect((await gripOrder(page)).indexOf(moving), 'the section was not kept two places down').toBe(2)
 })

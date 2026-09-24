@@ -206,6 +206,8 @@ Ephemeral state MUST NOT be part of a copy. Restoring MUST NOT restore somebody'
 
 The cost of that is two things an operator must keep together, and the application MUST answer it rather than leave it to discipline. A copy of the database MUST name which artefacts it expects to find beside it, so that a restore can say what is missing rather than discovering it when somebody opens a case. Neither copy MUST be presented as sufficient alone.
 
+A copy MUST be checked before it is trusted, and a copy the install cannot return to whole MUST be refused before anything is changed.
+
 #### Scenario: An install is restored from a copy
 
 - GIVEN a copy of an install's durable state
@@ -233,6 +235,19 @@ The cost of that is two things an operator must keep together, and the applicati
 - WHEN the artefacts are put back beside it
 - THEN the evidence is whole again
 - AND nothing had to be re-recorded
+
+#### Scenario: A damaged copy is checked
+
+- GIVEN a copy whose database or evidence was cut short or altered after it was taken
+- WHEN it is checked
+- THEN it is refused, saying which part is not whole
+
+#### Scenario: A copy from another shape is restored
+
+- GIVEN a copy taken under a different shape of the store
+- WHEN it is restored
+- THEN it is refused, saying what the copy is and what was expected
+- AND the install is as it was before the attempt
 
 ### Requirement: An artefact is reached only through the case that holds it
 

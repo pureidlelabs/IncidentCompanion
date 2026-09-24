@@ -26,7 +26,7 @@ import { AuthService } from '@thallesp/nestjs-better-auth'
 import type { Auth } from '../src/auth/auth.config.js'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { Test } from '@nestjs/testing'
-import { DATABASE } from '../src/db/db.module.js'
+import { DATABASE, SEED_DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
 import { installPreferences } from '../src/db/schema/index.js'
 import { putSettingsBack } from './install-settings.js'
@@ -109,6 +109,8 @@ export async function bootable(): Promise<boolean> {
 export interface Harness {
   app: INestApplication
   base: string
+  /** Where a browser reaches the install, which its own origins derive from. */
+  origin: string
   document: OpenAPIObject
   close(): Promise<void>
 }
@@ -167,7 +169,7 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
    * rather than as being late.
    */
   const { applyPlatform } = await import('../src/platform.js')
-  applyPlatform(app)
+  await applyPlatform(app)
   await app.init()
   // Port 0: the OS picks a free one, so concurrent runs never collide.
   await app.listen(0, '127.0.0.1')
@@ -176,7 +178,7 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
   server.on('upgrade', () => tag('socket'))
 
   const base = (await app.getUrl()).replace('[::1]', '127.0.0.1')
-  const document = openApiDocument(app)
+  const document = await openApiDocument(app)
 
   /**
    * **Mirrors what `main.ts` does after listening**, and it has to: without it
@@ -206,6 +208,7 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
   return {
     app,
     base,
+    origin: new URL(process.env.AUTH_BASE_URL).origin,
     document,
     close: async () => {
       // **The app closes whatever the restore does.** A harness left listening
@@ -215,6 +218,56 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
         await putSettingsBack(db, settingsAtBoot)
       } finally {
         await app.close()
+      }
+    },
+  }
+}
+
+/**
+ * The app booted on an install that holds no account, in a database of its
+ * own cloned from the one `global-setup.ts` set aside. `owner` reaches that
+ * database as its owner, which may empty it again. Closing it drops the
+ * database. `null` where the run has no Postgres server to clone on.
+ */
+export async function unclaimedInstall(): Promise<(Harness & { owner: string }) | null> {
+  const given = process.env.DATABASE_URL
+  if (!given || process.env.IC_EMBEDDED_DATABASE_URL) {
+    declined('An unclaimed install', 'the in-process engine cannot clone a database')
+    return null
+  }
+  const { ADMIN_URL, UNCLAIMED } = await import('./global-setup.js')
+  const { Client } = await import('pg')
+  const test = new URL(given)
+  const clone = `${test.pathname.slice(1)}_claim_${String(process.pid)}`
+  const admin = new Client({ connectionString: new URL('/postgres', ADMIN_URL).toString() })
+  await admin.connect()
+  await admin.query(`drop database if exists "${clone}" with (force)`)
+  await admin.query(
+    `create database "${clone}" template "${test.pathname.slice(1)}${UNCLAIMED}" owner ic_migrate`,
+  )
+
+  const at = (role: string) => {
+    const url = new URL(given)
+    url.pathname = `/${clone}`
+    url.username = role
+    url.password = role
+    return url.toString()
+  }
+  const before = { app: given, seed: process.env.SEED_DATABASE_URL }
+  process.env.DATABASE_URL = at('ic_app')
+  process.env.SEED_DATABASE_URL = at('ic_seed')
+  const harness = await boot()
+  return {
+    ...harness,
+    owner: at('ic_migrate'),
+    close: async () => {
+      try {
+        await harness.close()
+      } finally {
+        process.env.DATABASE_URL = before.app
+        if (before.seed) process.env.SEED_DATABASE_URL = before.seed
+        await admin.query(`drop database if exists "${clone}" with (force)`)
+        await admin.end()
       }
     },
   }
@@ -252,8 +305,8 @@ export async function signUp(
    * **In process, because `/sign-up/email` is not served.** The setup token is
    * the only way to claim an install over HTTP, and it exists only in the
    * server's console output -- so a fixture would have to scrape a log. This
-   * is the call `setup.controller.ts` makes once the token matches, and
-   * `disabledPaths` does not intercept an in-process call.
+   * is the call `setup.controller.ts` makes once the token matches, and an
+   * in-process call does not pass the router that refuses it over HTTP.
    *
    * The install rule still applies: the first account becomes the
    * administrator, and `sharedAdmin` promotes by hand when a previous run left
@@ -268,10 +321,11 @@ export async function signIn(
   harness: Harness,
   email: string,
   password = HARNESS_PASSWORD,
+  headers: Record<string, string> = {},
 ): Promise<Persona> {
   const response = await fetch(`${harness.base}/api/auth/sign-in/email`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { ...headers, 'content-type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
   if (!response.ok) {
@@ -510,23 +564,24 @@ export function operations(
       })
     }
   }
-  return found
+  // Last, because it ends the session a sweep asks with.
+  const ends = (one: Operation) => `${one.method} ${one.template}` === 'POST /api/auth/sign-out'
+  return [...found.filter((one) => !ends(one)), ...found.filter(ends)]
 }
 
 /**
- * Seed the demo cases and their reports into a booted harness.
+ * Seed the demo cases, as shipped, and their reports into a booted harness.
  *
  * **Explicit, rather than inherited from boot.** Seeding runs as a one-shot
- * (`src/seed.ts`) so replicas cannot race on a reseed that *deletes* every demo
- * case first, which means no test gets demo data without asking. A test that
- * reads it therefore says so.
+ * (`src/seed.ts`), so no test gets demo data without asking. A test that reads
+ * it therefore says so.
  *
  * The order is the seed entry's, for the reason given there: the reports need
  * the cases, and inheriting that from the module graph is what made it fragile.
  */
 export async function seedDemoContent(harness: Harness): Promise<void> {
-  const { DemoSeederService } = await import('../src/demos/seeder.service.js')
   const { DemoReportSender } = await import('../src/demo-reports/sender.service.js')
-  await harness.app.get(DemoSeederService, { strict: false }).reseed()
+  const { reseedDemos } = await import('./demo-fixture.js')
+  await reseedDemos(harness.app.get<Database>(SEED_DATABASE, { strict: false }))
   await harness.app.get(DemoReportSender, { strict: false }).fileDeclared()
 }

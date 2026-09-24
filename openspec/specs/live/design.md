@@ -8,6 +8,10 @@
 
 **Presence and claims are disposable.** Losing all of it costs a repaint. Nothing durable is inferred from either.
 
+**Prose is attributed per saved change and per writer, never per word.** Two analysts writing into one passage before a save are both named for it, and nothing says which words each wrote. That is the attribution every other write carries: who changed a record, never which characters.
+
+**Only a writer on this process is named for a save it made.** Prose arriving from another process is named by the process it was written on.
+
 **Order is kept per connection, and nowhere wider.** Two connections, including two tabs of one analyst, are two writers whose frames interleave however they arrive; prose merges them and a version check judges everything else.
 
 # Design
@@ -61,3 +65,11 @@ Where the gap cannot be filled, the analyst is told to re-read. A screen is neve
 Reach withdrawn while an analyst is connected ends the connection. A connection admitted once does not outlive its admission.
 
 That covers every way reach ends: the session ended, the group revoked, the customer moved, the account disabled at the provider, the case deleted. Reach is therefore re-checked on the connection's own terms rather than trusted from the moment it opened.
+
+## A save names whoever wrote into it
+
+Each connection's change to prose is remembered against the analyst it came from, where it changed the document; a frame that changed nothing names nobody. A save stores the words, names the latest writer on the record, and writes a record of the change per writer, all in one act. A save that fails keeps its writers for the next one. Saves of one record run one at a time and in order, so a later save never lands before an earlier one.
+
+A send holds a report's prose still only after saving what was typed and not yet saved, this same way, and after waiting out a save already under way, so the words a send stores are already named. A save that fails there leaves the report unsent.
+
+Once stored, the save is announced to the case and recorded in the install's audit, one line per writer, as the collection routes record a write.

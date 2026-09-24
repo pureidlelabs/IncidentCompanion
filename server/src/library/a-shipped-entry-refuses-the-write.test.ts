@@ -93,11 +93,12 @@ describe.skipIf(!db)('an entry that ships with the app', () => {
    * The other half of the requirement: *the copy MUST be the install's own, and
    * MUST NOT be overwritten by an upgrade.*
    *
-   * **The upgrade is `seedBuiltIns` run a second time**, which is what an
-   * upgrade does to this table -- an upsert on `(kind, name)` that rewrites
-   * label, description, position and payload.
+   * **The upgrade is `seedBuiltIns` run over a built-in whose stored label
+   * differs from what ships**, which is what an upgrade does to this table --
+   * an upsert on `(kind, name)` that rewrites label, description, position and
+   * payload where they changed.
    *
-   * **A built-in's `updatedAt` is the control.** The upsert stamps it, so an
+   * **That built-in's `updatedAt` is the control.** The upsert stamps it, so an
    * advance proves the reseed reached these rows; without that, an operator's
    * entry surviving says only that nothing ran.
    */
@@ -117,10 +118,11 @@ describe.skipIf(!db)('an entry that ships with the app', () => {
       .from(library)
       .where(and(eq(library.kind, slug), eq(library.name, name)))
     const shippedBefore = await shippedIn(slug)
+    await seed!.update(library).set({ label: 'what an older version shipped' }).where(eq(library.id, shippedBefore!.id))
 
     await service.seedBuiltIns()
 
-    const shippedAfter = await shippedIn(slug)
+    const [shippedAfter] = await seed!.select().from(library).where(eq(library.id, shippedBefore!.id))
     expect(
       shippedAfter!.updatedAt.getTime(),
       'no built-in was restamped, so the reseed did not reach this table and the entry ' +

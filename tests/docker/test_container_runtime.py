@@ -546,6 +546,13 @@ def test_the_app_answers_on_the_published_port(running_container):
     assert _wait_for_app(HEALTH) == 200
 
 
+def test_an_install_at_loopback_is_never_told_to_stay_protected(running_container):
+    """A loopback address is every application on the machine, so no response pins it."""
+    _wait_for_app(HEALTH)
+    with urllib.request.urlopen(HEALTH, timeout=10, context=_UNVERIFIED) as answer:
+        assert answer.headers.get_all("Strict-Transport-Security") is None
+
+
 def test_docker_stop_shuts_down_gracefully_rather_than_being_killed(
         running_container):
     """Not 137, and back well inside the grace period.
@@ -700,24 +707,20 @@ NO_SUCH_CASE = "/api/cases/00000000-0000-0000-0000-000000000000/live"
 
 
 def test_a_socket_upgrade_survives_the_proxy(running_container):
-    """The forwarded `Host` carries the published port, or every socket dies.
+    """The install's own origin opens a socket through the edge.
 
     Presence, claims, the change fan-out and the report CRDT all ride this
-    handshake, and `LiveGateway.sameOrigin` compares the forwarded `Host`
-    against the browser's `Origin`. `proxy_set_header Host $host` drops the
-    port; `$http_host` keeps it.
+    handshake.
 
     **401, not 200**: this probe carries no cookie, so reaching the session
-    check is the pass. Under a port-stripping proxy the same request answers
-    **403** -- refused as cross-origin before authentication is considered.
-    Measured both ways on this port.
+    check is the pass. A refusal as cross-origin answers **403** before
+    authentication is considered.
     """
     _wait_for_app(HEALTH)
 
     assert _upgrade(f"https://localhost:{PORT}", NO_SUCH_CASE) == 401, (
-        "the upgrade was refused before the session check -- the edge is "
-        "forwarding a Host the browser's Origin cannot match, so every "
-        "WebSocket in the app is dead while every HTTP route answers")
+        "the install's own origin was refused before the session check, so "
+        "every WebSocket in the app is dead while every HTTP route answers")
 
 
 def test_a_socket_upgrade_from_another_origin_is_refused(running_container):

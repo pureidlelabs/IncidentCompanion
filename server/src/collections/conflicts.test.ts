@@ -17,13 +17,13 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConflictsService } from './conflicts.service.js'
 import { CollectionService } from './collection.service.js'
 import { SystemsController } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, conflicts, reports, systems, user } from '../db/schema/index.js'
 import { reportBlocks } from '../db/schema/report.js'
+import { sentReportRefusal } from '../report/freeze.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { randomUUID } from 'node:crypto'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -68,7 +68,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
+    await reseedDemos(seed!)
     const [kase] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = kase!.id
     await seedAnalyst(ME)
@@ -439,7 +439,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
 
       await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
 
-      await expect(service.resolve(caseId, ME, 'mine')).rejects.toThrow(/sent report/i)
+      await expect(service.resolve(caseId, ME, 'mine')).rejects.toSatisfy((error) => sentReportRefusal(error) !== undefined)
 
       const [row] = await seed!.select().from(reports).where(eq(reports.id, reportId))
       expect(row!.label, 'the frozen report kept its own label').toBe('Before it was sent')
@@ -522,7 +522,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
       })
       await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
 
-      await expect(service.resolve(caseId, ME, 'mine')).rejects.toThrow(/sent report/i)
+      await expect(service.resolve(caseId, ME, 'mine')).rejects.toSatisfy((error) => sentReportRefusal(error) !== undefined)
 
       const [after] = await seed!
         .select()

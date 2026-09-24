@@ -115,6 +115,8 @@ export interface CaseFrameProps {
   openReport?: string | null | undefined
   /** Where a row points. The gallery sends it nowhere real. */
   hrefFor?: ((slug: string) => string) | undefined
+  /** Rail rows this install does not offer, left out of the rail. */
+  absent?: readonly string[] | undefined
   children: ReactNode
 }
 
@@ -156,6 +158,7 @@ export function CaseFrame({
   reports,
   openReport,
   hrefFor = (slug) => `/${slug}`,
+  absent,
   children,
 }: CaseFrameProps) {
   const open = groupHolding(section)
@@ -213,18 +216,20 @@ export function CaseFrame({
                 testId={`rail-${(group.label ?? 'top').toLowerCase()}`}
               >
                 <RailList>
-                  {group.rows.map((row) => (
-                    <Row
-                      key={row.slug}
-                      row={row}
-                      section={section}
-                      fragment={fragment}
-                      counts={counts}
-                      hrefFor={hrefFor}
-                      reports={reports}
-                      openReport={openReport}
-                    />
-                  ))}
+                  {group.rows
+                    .filter((row) => !absent?.includes(row.slug))
+                    .map((row) => (
+                      <Row
+                        key={row.slug}
+                        row={row}
+                        section={section}
+                        fragment={fragment}
+                        counts={counts}
+                        hrefFor={hrefFor}
+                        reports={reports}
+                        openReport={openReport}
+                      />
+                    ))}
                 </RailList>
               </RailGroup>
             ))}

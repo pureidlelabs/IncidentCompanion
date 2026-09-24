@@ -73,9 +73,8 @@ const schema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(8080),
 
   /**
-   * Required, with no default: two security decisions read it and the closed
-   * setting is a different value for each.
-   * -> `openspec/specs/deployment/design.md`
+   * Required, with no default: a security decision reads it, and a default
+   * is a choice made for the operator. -> `openspec/specs/deployment/design.md`
    */
   NODE_ENV: z.enum(['development', 'test', 'production']),
 
@@ -91,6 +90,29 @@ const schema = z.object({
 
   /** `key=value,key=value`, the standard's own shape, sent with every batch. */
   OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
+
+  /**
+   * The host name of the edge in front of this process: the one peer whose
+   * account of who is calling is believed. Absent names none, and every
+   * request is attributed to its own peer.
+   */
+  IC_EDGE: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().min(1).optional(),
+  ),
+
+  /**
+   * The detection platforms analysts may import incidents from, comma
+   * separated. `sentinel` puts Azure's two origins in every page's content
+   * policy. None unless the operator names one; an unknown name refuses start.
+   */
+  IC_IMPORTERS: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim() !== ''
+        ? value.split(',').map((one) => one.trim())
+        : [],
+    z.array(z.enum(['sentinel'])),
+  ),
 })
 
 export type Env = z.infer<typeof schema>

@@ -101,7 +101,7 @@ def test_verify_sh_turns_the_mode_on_where_it_certifies():
     tiers = [
         "browser tier (the app)",
         "browser tier (the kit)",
-        "repository: suite (with the container files)",
+        "repository: suite (with the container files and the lifecycle)",
         "server: suite",
     ]
     assert sorted(armed) == tiers, (
@@ -115,7 +115,7 @@ def test_verify_sh_turns_the_mode_on_where_it_certifies():
 #: A module that loses its whole tier to its environment, and the phrase naming the gap. -> #1080
 A_MISSING_ENVIRONMENT_IS_A_DECLINE = {
     "tests/docker/test_container_runtime.py": "no Docker daemon is reachable",
-    "tests/docker/test_backup_restores.py": "no Postgres container could be raised",
+    "tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py": "no Docker daemon is reachable",
     "tests/docker/test_services_can_write_where_they_must.py": "docker is not on PATH",
     "tests/repo/test_a_linked_dependency_is_servable.py": "vite is installed in neither",
     "tests/contract/test_workspaces.py": "nothing is installed in this checkout",
@@ -137,3 +137,17 @@ def test_a_tier_lost_to_its_environment_declines_rather_than_skips(module, gap) 
         f"{module} declines its tier with {opener.strip()!r} rather than through "
         "`declined`, so a certifying run reports success having run none of it"
     )
+
+
+def test_the_certifying_sweep_opts_in_to_every_opt_in_tier() -> None:
+    """An opt-in the certifying sweep does not set is a tier it skips while its step says it ran."""
+    read = {name for path in (REPO_ROOT / "tests").rglob("*.py")
+            for name in re.findall(r'os\.environ\.get\(\s*"(INCIDENTCOMPANION_[A-Z_]+_TESTS)"',
+                                   path.read_text(encoding="utf-8"))}
+    assert read, "no test module reads an opt-in variable, so this checks nothing"
+    joined = (REPO_ROOT / "verify.sh").read_text(encoding="utf-8").replace("\\\n", " ")
+    certifying = [line for line in joined.splitlines() if "IC_SUITE_MUST_RUN=1" in line and "./test.sh" in line]
+    assert certifying, "verify.sh runs ./test.sh in no certifying step"
+    for name in sorted(read):
+        assert all(f"{name}=1" in line for line in certifying), (
+            f"verify.sh's certifying ./test.sh step does not set {name}=1, so that tier skips there")

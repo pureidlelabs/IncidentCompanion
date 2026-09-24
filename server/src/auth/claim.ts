@@ -17,9 +17,9 @@
  * the window rather than shortening it, and a failure rolls the row back rather
  * than needing it handed back.
  *
- * **So a losing caller has created an account.** It is refused and the account
- * is taken back, which leaves exactly one administrator either way -- the
- * property the requirement asks for.
+ * **So a losing caller has created an account, and never a session.** It is
+ * refused and the account is taken back, which leaves exactly one
+ * administrator either way; only the winner is signed in, after it has won.
  *
  * **Not a unique index on the administrator role**, which would also settle it
  * and would forbid a second administrator for ever. That is a decision about

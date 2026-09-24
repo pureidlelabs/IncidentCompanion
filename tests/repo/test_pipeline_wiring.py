@@ -409,6 +409,7 @@ EXPENSIVE_TIER = (
     "devcontainer",
     "containers",
     "gallery",
+    "lifecycle",
 )
 
 #: Gated on `inputs.all` alone, so neither event this workflow triggers on

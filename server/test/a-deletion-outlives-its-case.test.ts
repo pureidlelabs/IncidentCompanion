@@ -28,7 +28,6 @@ import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { boot, bootable, grantsItselfDelete, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 import { openTestPool } from './database.js'
 import { holders } from './evidence-on-disk.js'
-import { DemoSeederService } from '../src/demos/seeder.service.js'
 import { EvidenceStore } from '../src/evidence/store.js'
 import { cases, evidence, installActivity } from '../src/db/schema/index.js'
 
@@ -277,12 +276,4 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
     await leftNothing(id, artefact)
   }, 90_000)
 
-  it('leaves nothing behind a demonstration case the demos are rebuilt over', async () => {
-    const { id, artefact } = await demonstration()
-
-    await harness.app.get(DemoSeederService, { strict: false }).reseed()
-    expect(await db!.select().from(cases).where(eq(cases.id, id)), 'the rebuild kept the case, so this proves nothing').toHaveLength(0)
-
-    await leftNothing(id, artefact)
-  }, 90_000)
 })

@@ -1,22 +1,21 @@
 /**
- * What a demo reset must and must not touch.
+ * What the demo catalogue writes, and that seeding an install somebody has
+ * claimed writes none of it again.
  *
- * The two halves fail in opposite directions and only one is obvious: a reset
- * that misses a demo leaves a showcase someone scribbled on, and a reset whose
- * `where` is wrong deletes an analyst's real work. The second is why the
- * negative case is here rather than assumed from reading the query.
+ * The suite's database is claimed before any file runs (`global-setup.ts`), so
+ * the first write of an unclaimed install is driven by the lifecycle tier.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { DemoContentSeeder } from './content.seeder.js'
-import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from './seeder.service.js'
 import { DEMO_CASES } from './catalogue.js'
 import { cases } from '../db/schema/index.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
 import { openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -33,12 +32,9 @@ const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
-// **The seeding role, matching how Nest wires it.** Generating demos writes
-// rows into every case and deletes all of them, which the request-serving role
-// is refused. Built on `db` this suite would fail on the first insert.
-const seeder = seed ? new DemoSeederService(seed, seed, new DemoContentSeeder(), suiteStore()) : null
+const seeder = seed ? new DemoSeederService(seed, seed, new DemoContentSeeder()) : null
 
-describe.skipIf(!db)('rebuilding the demo cases', () => {
+describe.skipIf(!db)('the demo cases', () => {
   beforeEach(async () => {
     await seed!.delete(cases)
   })
@@ -48,8 +44,8 @@ describe.skipIf(!db)('rebuilding the demo cases', () => {
     await pool!.end()
   })
 
-  it('creates one case per demo', async () => {
-    const count = await seeder!.reseed()
+  it('the catalogue writes one case per demo', async () => {
+    const count = await reseedDemos(seed!)
     expect(count).toBe(DEMO_CASES.length)
 
     const rows = await seed!.select().from(cases).where(eq(cases.isDemo, true))
@@ -59,7 +55,7 @@ describe.skipIf(!db)('rebuilding the demo cases', () => {
   })
 
   it('writes the regulatory record, which no demo used to carry', async () => {
-    await seeder!.reseed()
+    await reseedDemos(seed!)
 
     const [breach] = await seed!
       .select()
@@ -79,7 +75,7 @@ describe.skipIf(!db)('rebuilding the demo cases', () => {
   it('puts awareness far enough back that the Article 33 clock has run out', async () => {
     // The reading this demo exists for, and one a case seeded at this instant
     // cannot reach -- which is what `startedDaysAgo` is for.
-    await seeder!.reseed()
+    await reseedDemos(seed!)
 
     const [breach] = await seed!
       .select()
@@ -95,7 +91,7 @@ describe.skipIf(!db)('rebuilding the demo cases', () => {
   })
 
   it('starts a demo in the past, so its timeline is not in the future', async () => {
-    await seeder!.reseed()
+    await reseedDemos(seed!)
 
     const [campaign] = await seed!
       .select()
@@ -104,36 +100,15 @@ describe.skipIf(!db)('rebuilding the demo cases', () => {
     expect(campaign!.openedAt.getTime()).toBeLessThan(Date.now())
   })
 
-  it('discards whatever was written to a demo', async () => {
-    await seeder!.reseed()
-    await seed!.update(cases).set({ title: 'scribbled on' }).where(eq(cases.isDemo, true))
+  it('seeding a claimed install again replaces nothing and adds nothing', async () => {
+    await reseedDemos(seed!)
+    await seed!.update(cases).set({ title: 'an analyst wrote here' }).where(eq(cases.reference, 'DEMO-2026-047'))
+    const before = await seed!.select({ id: cases.id, title: cases.title }).from(cases).orderBy(cases.id)
 
-    await seeder!.reseed()
+    expect(await seeder!.seedOnce()).toBe(0)
+    expect(await seeder!.seedOnce()).toBe(0)
 
-    const rows = await seed!.select().from(cases).where(eq(cases.isDemo, true))
-    expect(rows.map((r) => r.title)).not.toContain('scribbled on')
-  })
-
-  it('leaves a real case alone', async () => {
-    // The half that costs an analyst their work if the `where` is wrong. A
-    // seeder that deleted everything would pass the two tests above.
-    await seed!.insert(cases).values({ reference: 'INC-9001', title: 'A real analyst case' })
-
-    await seeder!.reseed()
-
-    const real = await seed!.select().from(cases).where(eq(cases.isDemo, false))
-    expect(real).toHaveLength(1)
-    expect(real[0]!.title).toBe('A real analyst case')
-  })
-
-  it('does not accumulate demos across repeated resets', async () => {
-    // Insert-without-delete is the obvious implementation and adds the whole
-    // catalogue again on every restart, which looks fine until a later boot.
-    await seeder!.reseed()
-    await seeder!.reseed()
-    await seeder!.reseed()
-
-    const rows = await seed!.select().from(cases).where(eq(cases.isDemo, true))
-    expect(rows).toHaveLength(DEMO_CASES.length)
+    expect(await seed!.select({ id: cases.id, title: cases.title }).from(cases).orderBy(cases.id)).toEqual(before)
+    expect(before.map((row) => row.title)).toContain('an analyst wrote here')
   })
 })

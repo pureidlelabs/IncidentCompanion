@@ -68,6 +68,7 @@ OWNED: dict[str, tuple[tuple[str, re.Pattern[str]], ...]] = {
         ("tests/docker/test_stack_images.py", PYTEST),
     ),
     "containers": (("tests/docker/", PYTEST),),
+    "lifecycle": (("tests/lifecycle/", PYTEST),),
 }
 
 #: Files named like a test that no report here holds, and why that is not a

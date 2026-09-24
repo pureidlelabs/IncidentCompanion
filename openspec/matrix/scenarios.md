@@ -60,9 +60,11 @@
 | An install can be recovered without another administrator | The credential is lost | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | demonstrated | server/test/account-lockout.test.ts :: locking an account after repeated failures > shuts the account, and then refuses the right password |
 | Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | demonstrated | server/test/account-lockout.test.ts :: locking an account after repeated failures > answers a locked account exactly as a wrong password ; server/test/account-lockout.test.ts :: locking an account after repeated failures > answers a malformed attempt the same whether or not the account is locked |
-| Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/password-hold-clears.test.ts :: an account setting its own password > is refused the app until it does |
+| Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/a-held-account-reaches-only-its-way-out.test.ts :: an account that must change its password > is refused everything else the install publishes |
 | Authentication resists guessing, and says so to the auditor | The install raises its password minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > refuses a password under the install's minimum at this app's own door ; server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > refuses one at Better Auth's own change-password route, which no controller guards ; server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > refuses one an administrator chooses for a new account ; server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > refuses one an administrator resets an account to ; server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > refuses one at the library's reset route, which reaches no controller ; server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > takes one that meets the raised minimum |
 | Authentication resists guessing, and says so to the auditor | An account holds a password shorter than a raised minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts :: a raised password minimum > still signs in an account whose password predates the raise |
+| Authentication resists guessing, and says so to the auditor | A password is guessed at through a door other than sign-in | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | A locked account's password is offered where it is changed | undemonstrated | |
 | A second factor is available, and enforcing it is the install's policy | The policy is off | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | An analyst enrols anyway | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | The policy is turned on | unbuilt | Not built: no second factor. Kept normative. -> #59 |
@@ -111,6 +113,12 @@
 | Administrative events are logged | An entry is edited | undemonstrated | |
 | Administrative events are logged | The record is read | undemonstrated | |
 | Administrative events are logged | Where the record goes is changed | unbuilt | Not built: there is no destination to change. -> #13 |
+| Administrative events are logged | An analyst ends their own session | undemonstrated | |
+| Administrative events are logged | An ending that ends nothing | undemonstrated | |
+| An install serves only the account operations it offers | A caller asks for an account operation the install does not offer | undemonstrated | |
+| An install serves only the account operations it offers | An operation is asked for by another spelling | undemonstrated | |
+| An install serves only the account operations it offers | A held account asks for an operation the install offers | undemonstrated | |
+| An install serves only the account operations it offers | An analyst takes another account's name | undemonstrated | |
 
 ## analysis
 
@@ -218,9 +226,13 @@
 | Doing something to many rows obeys every rule that governs one | A bulk write crosses the case boundary | undemonstrated | |
 | Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | undemonstrated | |
 | Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | undemonstrated | |
+| Order an analyst chose is theirs, and is not a property of the data | Two analysts reorder at once | undemonstrated | |
+| Order an analyst chose is theirs, and is not a property of the data | An analyst moves a row twice in a row | undemonstrated | |
 | What comes in and goes out is the same description | An analyst previews an import | demonstrated | server/test/incident-import.test.ts :: importing an incident > the door inside a case > previews without writing anything |
 | What comes in and goes out is the same description | A row in an import is malformed | undemonstrated | |
 | What comes in and goes out is the same description | An export is imported back | undemonstrated | |
+| A field derived from a row's prose has one writer | A derived field is written | undemonstrated | |
+| A field derived from a row's prose has one writer | A row's first words are opened again | undemonstrated | |
 
 ## compliance
 
@@ -330,19 +342,27 @@
 | There is one way in, and it is the only thing exposed | What an install exposes | undemonstrated | |
 | There is one way in, and it is the only thing exposed | The application is addressed directly | undemonstrated | |
 | There is one way in, and it is the only thing exposed | An operator wants it reachable from the network | undemonstrated | |
+| There is one way in, and it is the only thing exposed | The install is reached at a name it was not given | undemonstrated | |
 | The connection is protected, and there is no way to turn that off | An install has no certificate | demonstrated | tests/docker/test_container_runtime.py :: test_the_app_answers_on_the_published_port ; tests/docker/test_container_runtime.py :: test_the_edge_keeps_the_private_key_owner_only |
 | The connection is protected, and there is no way to turn that off | The operator supplies a certificate | undemonstrated | |
 | The connection is protected, and there is no way to turn that off | A supplied certificate cannot be used | undemonstrated | |
 | The connection is protected, and there is no way to turn that off | Somebody wants it unprotected | undemonstrated | |
+| The connection is protected, and there is no way to turn that off | The install is given a new name | undemonstrated | |
+| The connection is protected, and there is no way to turn that off | A supplied certificate does not cover a new name | undemonstrated | |
 | Setting up is separate from running, and runs once | Preparation runs before serving | undemonstrated | |
 | Setting up is separate from running, and runs once | An install is started again | undemonstrated | |
 | Setting up is separate from running, and runs once | Preparation fails | undemonstrated | |
+| Setting up is separate from running, and runs once | Preparation runs again beside a serving application | undemonstrated | |
+| Setting up is separate from running, and runs once | A new version would discard stored data | undemonstrated | |
+| Setting up is separate from running, and runs once | Preparation is run by hand | undemonstrated | |
 | What must survive is named, and what must not is not | The install is rebuilt | undemonstrated | |
 | What must survive is named, and what must not is not | Something not named is lost | undemonstrated | |
 | An install can say whether it is well, and what is wrong | A component has started but cannot answer | undemonstrated | |
 | An install can say whether it is well, and what is wrong | A dependency fails while running | undemonstrated | |
+| An install can say whether it is well, and what is wrong | A component stops unexpectedly | undemonstrated | |
 | The application runs with no more than it needs | The application attempts something outside its work | undemonstrated | |
 | The application runs with no more than it needs | A part is examined for what it can do | undemonstrated | |
+| An install with nothing configured reaches nothing outside itself | An install lives its whole life with nothing configured | undemonstrated | |
 
 ## evaluation
 
@@ -420,6 +440,8 @@
 | A line says who, what, and to what, and never says what was written | A request carrying a password | undemonstrated | |
 | A line says who, what, and to what, and never says what was written | A caller asserts their own address | undemonstrated | |
 | A line says who, what, and to what, and never says what was written | A caller invents a route | undemonstrated | |
+| A line says who, what, and to what, and never says what was written | A caller reaches the application without passing the one way in | undemonstrated | |
+| A line says who, what, and to what, and never says what was written | An install whose one way in started last | undemonstrated | |
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | undemonstrated | |
 | Refusals are recorded, and a run of them is louder than one | One failure and a run of them | undemonstrated | |
 | Refusals are recorded, and a run of them is louder than one | One caller, a different account each time | undemonstrated | |
@@ -507,6 +529,9 @@
 | A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/reach-withdrawn-ends-what-was-open.test.ts :: an analyst whose reach is taken away > ends the connection it already had open ; server/test/reach-withdrawn-ends-what-was-open.test.ts :: an analyst whose reach is taken away > ends the connection when the customer leaves the group instead |
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts :: the case socket > the connection dies with the reach that admitted it > closes when the case underneath it is deleted |
+| Written prose is attributed like any other write | One of two analysts present writes | undemonstrated | |
+| Written prose is attributed like any other write | Two analysts write before one save | undemonstrated | |
+| Written prose is attributed like any other write | Words typed just before the report is sent | undemonstrated | |
 | An open connection is listening | A screen writes before the connection is ready | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts :: an editor that drops and returns > makes a field opened before its connection is up ready |
 | An open connection is listening | Preparing the connection does not complete | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts :: a connection acts on every frame, in order > acts on nothing sent over a connection whose preparation fails |
 | An open connection is listening | Frames are acted on in the order sent | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts :: a connection acts on every frame, in order > leaves nothing held when a release is sent right behind its claim |
@@ -563,15 +588,23 @@
 | A sent report is frozen, and the freeze is one rule | A sent report is edited | undemonstrated | |
 | A sent report is frozen, and the freeze is one rule | A part is moved into a sent report | undemonstrated | |
 | A sent report is frozen, and the freeze is one rule | A new way to write a part is added | undemonstrated | |
+| A sent report is frozen, and the freeze is one rule | Prose reaches a sent report | undemonstrated | |
+| A sent report is frozen, and the freeze is one rule | The report a sent report corrects is removed | undemonstrated | |
 | Sending stamps and preserves in one act | A report is sent | undemonstrated | |
 | Sending stamps and preserves in one act | The document cannot be produced | undemonstrated | |
 | Sending stamps and preserves in one act | The case changes after sending | undemonstrated | |
+| Sending stamps and preserves in one act | A part changes while the report is being sent | undemonstrated | |
+| Sending stamps and preserves in one act | Prose is typed while the report is being sent | undemonstrated | |
+| Sending stamps and preserves in one act | A send that fails while prose is typed | undemonstrated |  |
+| Sending stamps and preserves in one act | A send is recorded | undemonstrated | |
 | A correction is a new report, not an edit | A sent report is wrong | undemonstrated | |
 | A correction is a new report, not an edit | Two corrections race | undemonstrated | |
+| A correction is a new report, not an edit | A correction is recorded | undemonstrated | |
 | The destination decides what a part may be | A report is exported | undemonstrated | |
 | The destination decides what a part may be | A part cannot be drawn by a format | undemonstrated | |
 | A report says what is missing before it is sent | A report is checked before sending | undemonstrated | |
 | A report says what is missing before it is sent | A section was removed and is wanted back | undemonstrated | |
+| A report says what is missing before it is sent | Two analysts restore the missing sections at once | undemonstrated | |
 | The application's own words are in the report's language; the analyst's are the analyst's | A report is produced in a second language | undemonstrated | |
 | The application's own words are in the report's language; the analyst's are the analyst's | A report is composed in a second language | undemonstrated | |
 | The application's own words are in the report's language; the analyst's are the analyst's | The language a report is produced in is changed | demonstrated | ui/src/app/case/the-heading-pack-is-fetched-for-the-open-report.test.tsx :: the language the heading pack is fetched in > follows the report when the analyst changes it |
@@ -633,6 +666,8 @@
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | undemonstrated | |
+| What is stored can be recovered, and the recovery is proven | A damaged copy is checked | undemonstrated | |
+| What is stored can be recovered, and the recovery is proven | A copy from another shape is restored | undemonstrated | |
 | An artefact is reached only through the case that holds it | A digest is named in another case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts :: an artefact is reached only through the case that holds it > shows the holder their own artefacts in every output the others are checked in ; server/test/a-digest-reaches-nothing-outside-its-case.test.ts :: an artefact is reached only through the case that holds it > serves an account that reaches nothing of customer B none of it by naming its digests |
 | An artefact is reached only through the case that holds it | Reach is withdrawn from an analyst who read a digest | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts :: an artefact is reached only through the case that holds it > serves an analyst whose reach to it was withdrawn none of it by naming its digests |
 | An artefact is reached only through the case that holds it | A handover is read in by somebody who does not reach the case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts :: an artefact is reached only through the case that holds it > gives a stranger re-reading a handover none of what it withheld |
@@ -658,10 +693,14 @@
 | A read tells a caller what it is looking at | Somebody wrote first | undemonstrated | |
 | The interface describes itself, and the description is generated | A route is added | undemonstrated | |
 | The interface describes itself, and the description is generated | A route changes shape | undemonstrated | |
+| The interface describes itself, and the description is generated | A route served by a library the application mounts | undemonstrated | |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts :: not there and not yours look alike > answers a case out of reach exactly as it answers one that is not there ; server/test/not-there-and-not-yours-look-alike.test.ts :: not there and not yours look alike > refuses with not-found rather than forbidden |
 | A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/every-write-door-refuses-a-version-past-its-column.test.ts :: every door that takes a version refuses one no reader produced > refuses a version no reader could have read at 422, naming it, at each of them |
 | What a request costs is bounded before it runs | A caller asks for too much at once | undemonstrated | |
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts :: a caller asking faster than the install permits > lets the permitted number through and refuses the rest ; server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts :: a caller asking faster than the install permits > names how long the caller must wait |
+| What a request costs is bounded before it runs | Another caller asks too often | undemonstrated | |
+| What a request costs is bounded before it runs | A page on another site asks on the analyst's behalf | undemonstrated | |
+| What a request costs is bounded before it runs | A page on another site calls the install on the analyst's behalf | undemonstrated | |
 | A fact can be asked for across cases | An indicator is asked about across cases | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
 | A fact can be asked for across cases | A question spans a boundary | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
 | The description is valid against the version it declares | A schema uses a keyword the declared version has no spelling for | undemonstrated | |
@@ -674,17 +713,20 @@
 | --- | --- | --- | --- |
 | The browser is told what the application may do, on every response | A response is read by a browser | demonstrated | server/test/security-headers.test.ts :: every response > carries one content policy, on the application and on the API alike |
 | The browser is told what the application may do, on every response | The policy is read for what it permits | demonstrated | server/test/security-headers.test.ts :: every response > carries one content policy, on the application and on the API alike ; server/test/security-headers.test.ts :: every response > does not permit eval, whose only reason has been deleted |
-| The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | demonstrated | server/test/security-headers.test.ts :: every response > admits the two Azure origins the Sentinel importer needs, and no wildcard |
+| The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| The browser is told what the application may do, on every response | An install pointed at nothing outside itself | undemonstrated | |
+| The browser is told what the application may do, on every response | The analyst's browser must reach an import platform | undemonstrated | |
 | The application refuses to be framed | A page tries to embed the application | demonstrated | server/test/security-headers.test.ts :: every response > refuses to be framed, and refuses to be sniffed |
 | Case data is not left on the analyst's disk | An analyst reads a case and signs out | demonstrated | server/test/security-headers.test.ts :: what a browser may keep > refuses the browser a copy of /api/cases |
 | Case data is not left on the analyst's disk | An unchanging asset is served | demonstrated | server/test/security-headers.test.ts :: what a browser may keep > leaves a route that asked to be cached alone |
 | An install reached at its own name tells the browser to keep it protected | An install reached at its own name | undemonstrated | |
 | An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | undemonstrated | |
-| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | server/test/security-headers.test.ts :: every response > does not pin the whole of localhost to https |
+| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | tests/docker/test_container_runtime.py :: test_an_install_at_loopback_is_never_told_to_stay_protected |
 | The application answers only to itself | The install is reached at a loopback address | undemonstrated | |
 | The application answers only to itself | The unprotected spelling of the install | undemonstrated | |
 | The application answers only to itself | Another port on the same host | undemonstrated | |
 | The application answers only to itself | The install cannot tell where it is | undemonstrated | |
+| The application answers only to itself | A socket is opened from the unprotected spelling of the install | undemonstrated | |
 | A development convenience cannot exist in a running install | A running install | undemonstrated | |
 | A development convenience cannot exist in a running install | A development install with no port named | undemonstrated | |
 | A request for data is never answered with a page | A caller asks for a route the interface does not have | demonstrated | server/test/a-data-request-is-never-a-page.test.ts :: a request for data is never answered with a page > /api/nonsense says it does not exist, in JSON ; server/test/a-data-request-is-never-a-page.test.ts :: a request for data is never answered with a page > /api/cases/abc/timeline/deeper/still says it does not exist, in JSON |

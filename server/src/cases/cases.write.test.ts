@@ -39,6 +39,7 @@ import {
   timeline,
   user,
 } from '../db/schema/index.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -116,7 +117,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
     }
     controller = new CasesController(
       service,
-      new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()),
+      new DemoSeederService(seed!, seed, new DemoContentSeeder()),
       library,
       {
         caseCreated: recorder('case_created'),
@@ -648,7 +649,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
      */
     it('deletes a demo case rather than protecting it', async () => {
       await seed!.delete(cases)
-      await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
+      await reseedDemos(seed!)
       const [demo] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
       expect(demo!.isDemo).toBe(true)
 
