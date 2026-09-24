@@ -17,7 +17,7 @@
  * wrong is a support call.
  */
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { acquireLink, releaseLink } from './caseSocket'
 import { isScope } from '@contract/scopes.lists'
@@ -165,11 +165,15 @@ export function useCaseChanges(caseId: string): CaseLive {
   const queries = useQueryClient()
   const [state, setState] = useState(CURRENT)
 
-  /** The whole case read again, and whether the screen is current once it is: only while `up`. */
-  const readAgain = useCallback((reading: Promise<unknown>, up: () => boolean = () => true) => {
+  /** Whether the socket is down, and how many times it has dropped. */
+  const socket = useRef({ down: false, drops: 0 })
+
+  /** The whole case read again: current once it lands, unless the socket dropped after it was asked for or is down. */
+  const readAgain = useCallback((reading: Promise<unknown>) => {
+    const asked = socket.current.drops
     reading.then(
       () => {
-        if (up()) setState(CURRENT)
+        if (!socket.current.down && socket.current.drops === asked) setState(CURRENT)
       },
       () => {
         setState({ behind: true, failed: true })
@@ -200,7 +204,7 @@ export function useCaseChanges(caseId: string): CaseLive {
       )
       if (catchingUp) {
         catchingUp = false
-        readAgain(reading, () => !wasDown)
+        readAgain(reading)
       } else {
         reading.catch(() => undefined)
       }
@@ -248,8 +252,10 @@ export function useCaseChanges(caseId: string): CaseLive {
     let dropped = false
     let registering = true
     const stopWatching = link.onConnected((up) => {
+      socket.current.down = !up
       if (!up) {
         wasDown = true
+        socket.current.drops += 1
         if (!registering) {
           dropped = true
           setState((was) => (was.behind ? was : { behind: true, failed: false }))

@@ -211,6 +211,59 @@ describe('a screen says when it is not live', () => {
     )
   })
 
+  it('stays behind when a read asked for while the socket is down comes back', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    vi.spyOn(client, 'invalidateQueries').mockRejectedValueOnce(new Error('503')).mockResolvedValue(undefined)
+    const result = live(client)
+
+    act(() => {
+      drop()
+      restore()
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+      await Promise.resolve()
+    })
+    expect(result.current.failed).toBe(true)
+    act(() => {
+      drop()
+    })
+    await act(async () => {
+      result.current.reread()
+      await Promise.resolve()
+    })
+
+    expect(result.current.behind, 'a read asked for while the socket was down cleared the line').toBe(true)
+  })
+
+  it('waits for the read after the latest return, not one from before it', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    const reads: (() => void)[] = []
+    vi.spyOn(client, 'invalidateQueries').mockImplementation(
+      () =>
+        new Promise<void>((done) => {
+          reads.push(done)
+        }),
+    )
+    const result = live(client)
+
+    act(() => {
+      drop()
+      restore()
+      vi.advanceTimersByTime(500)
+      drop()
+      restore()
+    })
+    await act(async () => {
+      for (const done of reads.splice(0)) done()
+      await Promise.resolve()
+    })
+
+    expect(result.current.behind, 'a read issued before the latest drop cleared the line').toBe(true)
+  })
+
   it('says the read failed, and reads again when asked', async () => {
     vi.useFakeTimers()
     const client = new QueryClient()
