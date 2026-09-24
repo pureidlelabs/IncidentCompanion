@@ -159,6 +159,16 @@ describe.skipIf(!(await bootable()))('a socket and the authority that admitted i
       },
     ],
     [
+      'an administrator disables the account, which bans before its line is written',
+      async (analyst) => {
+        const disabled = await fetch(`${harness.base}/api/accounts/${encodeURIComponent(analyst.email)}/disable`, {
+          method: 'POST',
+          headers: { cookie: admin.cookie, origin: harness.origin },
+        })
+        expect(disabled.ok, `disable: ${String(disabled.status)}`).toBe(true)
+      },
+    ],
+    [
       'its account is deleted beneath the library',
       async (analyst) => {
         await drizzle({ client: pool }).delete(user).where(eq(user.id, analyst.id))
