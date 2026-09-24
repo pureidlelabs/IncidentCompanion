@@ -37,6 +37,7 @@ afterAll(async () => {
  */
 function asking(caseId: string | undefined) {
   return {
+    getHandler: () => () => undefined,
     switchToHttp: () => ({
       getRequest: () => ({
         params: caseId ? { caseId } : {},
@@ -142,6 +143,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
 
   function deleting(caseId: string, who: string) {
     return {
+      getHandler: () => () => undefined,
       switchToHttp: () => ({
         getRequest: () => ({
           params: { caseId },

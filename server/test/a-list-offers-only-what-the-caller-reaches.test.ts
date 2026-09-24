@@ -129,8 +129,8 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
     const groupId = String(group.json()['id'])
     for (const [path, body] of [
       [`/api/groups/${groupId}/customers`, { customerId }],
-      // `write`, because recording a visit is a PUT and the case guard reads the method.
-      [`/api/groups/${groupId}/members`, { userId: analyst.id, level: 'write' }],
+      // `read`: keeping a case in one's own list is not a write to the case.
+      [`/api/groups/${groupId}/members`, { userId: analyst.id, level: 'read' }],
     ] as const) {
       const granted = await call(admin, 'POST', path, body)
       expect(granted.status, granted.text).toBeLessThan(300)

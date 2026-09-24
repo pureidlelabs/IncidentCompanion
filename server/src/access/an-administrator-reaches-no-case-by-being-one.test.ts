@@ -46,6 +46,7 @@ const ADMIN = 'plane-separation-admin'
 
 const asking = (caseId: string) =>
   ({
+    getHandler: () => () => undefined,
     switchToHttp: () => ({
       getRequest: () => ({
         params: { caseId },

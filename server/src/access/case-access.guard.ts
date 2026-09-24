@@ -20,6 +20,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  SetMetadata,
 } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
 
@@ -37,6 +38,14 @@ const enough = (held: Level | null, needed: Level): boolean =>
   held !== null && RANK.indexOf(held) >= RANK.indexOf(needed)
 
 const READING = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+const CASE_LEVEL = 'caseLevel'
+
+/**
+ * The level a guarded handler needs, stated where the method would say more:
+ * a handler that writes only the caller's own records about a case needs read.
+ */
+export const CaseLevel = (level: Level) => SetMetadata(CASE_LEVEL, level)
 
 /**
  * The level this request needs, from its method and its path.
@@ -238,7 +247,9 @@ export class CaseAccessGuard implements CanActivate {
         'This route is guarded as a case route and carries no parsed path.',
       )
     }
-    const needed = levelNeeded(request.method, request.path)
+    const needed =
+      (Reflect.getMetadata(CASE_LEVEL, context.getHandler()) as Level | undefined) ??
+      levelNeeded(request.method, request.path)
 
     /**
      * **404 where they reach nothing, 403 where they reach it too weakly.**

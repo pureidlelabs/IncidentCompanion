@@ -45,6 +45,7 @@ const TITLE = 'What the analyst wrote before the reduction'
 
 const asking = (caseId: string, method: string) =>
   ({
+    getHandler: () => () => undefined,
     switchToHttp: () => ({
       getRequest: () => ({
         params: { caseId },
