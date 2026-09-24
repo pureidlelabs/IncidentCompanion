@@ -15,13 +15,14 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ComplianceService } from '../compliance/compliance.service.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
 import { cases, customers, user } from '../db/schema/index.js'
 import { ORGANISATION_FACTS } from './organisation-facts.js'
 import { openTestPool } from '../../test/database.js'
-import { clearCustomers } from '../../test/customers.js'
+import { clearCustomers, reaches } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -74,11 +75,12 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
       .returning()
     customerId = customer!.id
 
-    compliance = new ComplianceService(db!, new InstallPreferencesService(db!))
+    compliance = as(ANALYST, new ComplianceService(db!, new InstallPreferencesService(db!)))
   })
 
   const aCase = async (title: string, against: string | null) => {
     const [row] = await seed!.insert(cases).values({ title, customerId: against }).returning()
+    if (against) await reaches(seed!, ANALYST, against)
     return row!.id
   }
 
@@ -145,6 +147,7 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
       })
       .returning()
     await seed!.update(cases).set({ customerId: onboarded!.id }).where(eq(cases.id, caseId))
+    await reaches(seed!, ANALYST, onboarded!.id)
 
     const record = (await compliance.read(caseId)) as unknown as Record<string, unknown>
 

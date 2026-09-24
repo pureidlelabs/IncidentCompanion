@@ -10,6 +10,7 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { UnprocessableEntityException } from '@nestjs/common'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ExportsController } from './exports.controller.js'
 import { CSV_IMPORT, ImportService } from './import.service.js'
@@ -66,9 +67,9 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
     const [blank] = await seed!.insert(cases).values({ title: 'Blank' }).returning()
     emptyCaseId = blank!.id
 
-    const collections = new CollectionService(db!, suiteStore())
-    service = new ImportService(collections)
-    exports_ = new ExportsController(collections, service)
+    const collections = as(ME, new CollectionService(db!, suiteStore()))
+    service = as(ME, new ImportService(collections))
+    exports_ = as(ME, new ExportsController(collections, service))
   })
 
   afterAll(async () => {
@@ -307,7 +308,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
         throw new Error('the connection to the store was lost')
       }
     }
-    const failing = new ImportService(new StoreGoesAway(db!, suiteStore()))
+    const failing = as(ME, new ImportService(new StoreGoesAway(db!, suiteStore())))
 
     await failing.fromCsv('systems', emptyCaseId, 'hostname\nWKS-UNWRITTEN\n', ME)
 
@@ -323,7 +324,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('importing a CSV', () => {
         throw new UnprocessableEntityException({ message: 'this row breaks a rule' })
       }
     }
-    const refusing = new ImportService(new RefusesOneRow(db!, suiteStore()))
+    const refusing = as(ME, new ImportService(new RefusesOneRow(db!, suiteStore())))
     await refusing.fromCsv('systems', emptyCaseId, 'hostname\nWKS-REFUSED\n', ME)
 
     const result = await refusing.fromCsv(

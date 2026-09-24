@@ -10,11 +10,12 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CaseCustomerController } from './customer.controller.js'
 import { CasesService } from './cases.service.js'
 import { CustomersService } from '../customers/customers.service.js'
-import { cases, customers } from '../db/schema/index.js'
+import { cases, customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
@@ -30,10 +31,15 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 type Line = { kind: string; subject: string; detail: Record<string, string> }
 
+/** Works every customer onboarded here, so each move is one they may make. */
+const MOVER = 'customer-controller-mover'
+
 afterAll(async () => {
   if (seed) {
     await seed.delete(cases)
+    await seed.delete(groups).where(eq(groups.name, MOVER))
     await clearCustomers(seed)
+    await seed.delete(user).where(eq(user.id, MOVER))
   }
   await pool?.end()
   if (seedPool !== pool) await seedPool?.end()
@@ -45,22 +51,34 @@ describe.skipIf(!db)('giving a case its customer', () => {
   let northwind: string
   let unattributed: string
 
-  const caller = { session: { user: { id: 'somebody' } }, headers: {}, request: {} } as never
+  const caller = { session: { user: { id: MOVER } }, headers: {}, request: {} } as never
+  let team = ''
 
   async function onboard(name: string): Promise<string> {
     const [made] = await seed!.insert(customers).values({ name }).returning({ id: customers.id })
+    await seed!.insert(groupCustomers).values({ groupId: team, customerId: made!.id })
     return made!.id
   }
 
   beforeEach(async () => {
     await seed!.delete(cases)
+    await seed!.delete(groups).where(eq(groups.name, MOVER))
     await clearCustomers(seed!)
+
+    const now = new Date()
+    await seed!
+      .insert(user)
+      .values({ id: MOVER, name: MOVER, email: `${MOVER}@example.test`, emailVerified: true, createdAt: now, updatedAt: now })
+      .onConflictDoNothing()
+    const [made] = await seed!.insert(groups).values({ name: MOVER }).returning({ id: groups.id })
+    team = made!.id
+    await seed!.insert(groupMembers).values({ groupId: team, userId: MOVER, level: 'write' })
 
     await new CustomersService(db!).ensureDefault()
     northwind = await onboard('Northwind BV')
 
-    const [made] = await seed!.insert(cases).values({ title: 'Nobody has said whose' }).returning()
-    unattributed = made!.id
+    const [opened] = await seed!.insert(cases).values({ title: 'Nobody has said whose' }).returning()
+    unattributed = opened!.id
 
     written = []
     const audit = {
@@ -75,7 +93,7 @@ describe.skipIf(!db)('giving a case its customer', () => {
       },
     }
 
-    controller = new CaseCustomerController(new CasesService(db!, suiteStore()), audit as never)
+    controller = as(MOVER, new CaseCustomerController(new CasesService(db!, suiteStore()), audit as never))
   })
 
   it('gives a case that named nobody its customer', async () => {

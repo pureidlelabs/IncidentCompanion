@@ -12,9 +12,10 @@
  * the same argument about the one-default rule: a check spelled out at every
  * caller is one forgotten caller away from being false.
  */
-import { ne } from 'drizzle-orm'
+import { eq, ne } from 'drizzle-orm'
 
 import { customers } from '../src/db/schema/customer.js'
+import { groupCustomers, groupMembers, groups } from '../src/db/schema/groups.js'
 import type { Database } from '../src/db/client.js'
 
 /**
@@ -26,4 +27,28 @@ import type { Database } from '../src/db/client.js'
  */
 export async function clearCustomers(on: Database): Promise<void> {
   await on.delete(customers).where(ne(customers.isDefault, true))
+}
+
+/**
+ * Give `who` reach over `customerId`, through a group of their own.
+ *
+ * **A grant, because the store serves a case only to somebody reaching its
+ * customer.** A fixture opening a case under a customer and then acting on it
+ * as an analyst has to say that analyst works that customer.
+ */
+export async function reaches(
+  on: Database,
+  who: string,
+  customerId: string,
+  level: 'read' | 'write' | 'delete' = 'write',
+): Promise<void> {
+  const name = `works for ${who}`
+  const [held] = await on.select({ id: groups.id }).from(groups).where(eq(groups.name, name))
+  const groupId =
+    held?.id ?? (await on.insert(groups).values({ name }).returning({ id: groups.id }))[0]!.id
+  await on.insert(groupCustomers).values({ groupId, customerId }).onConflictDoNothing()
+  await on
+    .insert(groupMembers)
+    .values({ groupId, userId: who, level })
+    .onConflictDoUpdate({ target: [groupMembers.groupId, groupMembers.userId], set: { level } })
 }

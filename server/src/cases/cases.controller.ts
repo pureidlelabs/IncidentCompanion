@@ -162,8 +162,8 @@ export class CasesController {
     type: CasesDto,
     description: 'The cases this analyst reaches, newest first.',
   })
-  async list(@Session() session: UserSession): Promise<CaseIn[]> {
-    return (await this.cases.list(session.user.id)).map(asWire)
+  async list(): Promise<CaseIn[]> {
+    return (await this.cases.list()).map(asWire)
   }
 
   /**

@@ -10,7 +10,7 @@ import { sql, type SQL } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { withCase } from '../db/scope.js'
+import { actingAs, withCase } from '../db/scope.js'
 import { SENT_REPORT_REFUSED } from '../db/schema/store-guards.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
@@ -31,9 +31,12 @@ function refusal(error: unknown): { code?: string; detail?: string } {
   return {}
 }
 
+/** The case's author, and who each attack is written as, so only the store guard refuses it. */
+const account = `store-freeze-${String(process.pid)}`
+
 async function refusedAsApp(caseId: string, statement: SQL): Promise<{ code?: string; detail?: string }> {
   try {
-    await withCase(app!, caseId, (tx) => tx.execute(statement))
+    await actingAs(account, () => withCase(app!, caseId, (tx) => tx.execute(statement)))
   } catch (error) {
     return refusal(error)
   }
@@ -43,7 +46,6 @@ async function refusedAsApp(caseId: string, statement: SQL): Promise<{ code?: st
 const rows = async (query: SQL) => (await seed!.execute(query)).rows
 
 describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, written to past the application', () => {
-  const account = `store-freeze-${String(process.pid)}`
   let caseId = ''
   let sentId = ''
   let sentBlock = ''
