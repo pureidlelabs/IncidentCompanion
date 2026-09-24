@@ -96,6 +96,10 @@ A write MUST record who made it, MUST be refused where the row moved since the w
 
 A write that lands without attribution is a change nobody can defend. One that lands without the version check overwrites somebody. One that lands without the announcement leaves every other open screen believing something untrue. A write path that does two of the three is worse than one that does none, because it looks correct.
 
+Where a write is composed into a larger act, the announcement MUST be made when that act commits, and MUST NOT be made before it or at all where the act does not commit. An announcement made before the act lands sends a reader to something that may be taken back; one never made leaves every open screen holding what the act replaced.
+
+Composing a write into a larger act MUST be refused where nothing has declared that act, so that a write cannot quietly take either of those two wrong answers.
+
 A refusal MUST say what the row is on now, so the writer can work out what changed.
 
 #### Scenario: Two analysts write to one row
@@ -111,6 +115,25 @@ A refusal MUST say what the row is on now, so the writer can work out what chang
 - WHEN the write lands
 - THEN it carries who made it
 - AND every screen open on that case learns the row changed
+
+#### Scenario: A write composed into an act that commits
+
+- GIVEN a write composed into a larger act
+- WHEN the act commits
+- THEN the open screens are told the row changed
+- AND they were not told before the act committed
+
+#### Scenario: A write composed into an act that does not commit
+
+- GIVEN a write composed into a larger act
+- WHEN the act fails and is taken back
+- THEN the open screens are told nothing
+
+#### Scenario: A write composed into nothing that declared an act
+
+- GIVEN a write composed into a transaction nothing declared as an act
+- WHEN the write is attempted
+- THEN it is refused
 
 ### Requirement: A reference points inside its own case, and the store alone cannot enforce it
 
@@ -209,6 +232,10 @@ Order MUST NOT be inferred from when a row was created or last changed, because 
 
 Reordering MUST be an attributed change like any other.
 
+**Reordering is a bulk write, and carries the version check.** A reorder MUST state what each row it arranges was read at, and MUST be refused whole, naming the rows that moved, where any has moved since. The order stored MUST always be one somebody sent: never a mix of two, and never two rows on one position.
+
+**An analyst's own reorder never refuses their next.** A reorder MUST answer with the version each row it arranged now holds, so a second made at once, before or after the first is answered, is checked against the first rather than refused by it.
+
 #### Scenario: An analyst reorders rows
 
 - GIVEN rows an analyst has arranged
@@ -220,6 +247,21 @@ Reordering MUST be an attributed change like any other.
 - GIVEN rows an analyst has arranged
 - WHEN an import adds more
 - THEN the arrangement of the existing rows is unchanged
+
+#### Scenario: Two analysts reorder at once
+
+- GIVEN two analysts who read the same rows
+- WHEN both reorder them at the same moment
+- THEN one order is stored whole
+- AND the other analyst is refused, told which rows moved
+- AND no two rows share a position
+
+#### Scenario: An analyst moves a row twice in a row
+
+- GIVEN an analyst who has just moved a row
+- WHEN they move it again at once, before the first move is answered
+- THEN both moves are stored
+- AND neither is refused because of the other
 
 ### Requirement: What comes in and goes out is the same description
 
@@ -248,3 +290,24 @@ An import MUST NOT partially apply without saying so. An analyst who cannot tell
 - WHEN they are imported into another
 - THEN they are accepted
 - AND nothing had to be edited to make them acceptable
+
+### Requirement: A field derived from a row's prose has one writer
+
+Where a field of a row is derived from prose written into that row, the prose MUST be its only writer once the row exists. The field MAY be given when the row is created, as the prose's first words. A later write naming it MUST be refused, saying which field and why.
+
+A value answered as written MUST NOT be replaced afterwards by another writer. Two writers of one field, each unaware of the other, is the lost update the version check exists to prevent, arriving by a route the check cannot see.
+
+A row's first words MUST be held once, however often the prose is opened and by whom.
+
+#### Scenario: A derived field is written
+
+- GIVEN a row whose field is derived from its prose
+- WHEN a write names that field, alone or in bulk
+- THEN it is refused, naming the field
+- AND nothing an analyst typed into the prose is replaced
+
+#### Scenario: A row's first words are opened again
+
+- GIVEN a row created with its first words and opened by an analyst who wrote nothing
+- WHEN the analyst's screen reconnects holding what it was sent
+- THEN the row holds its first words once

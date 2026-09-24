@@ -4,7 +4,8 @@
  * Every row is created fresh: new ids throughout with the references between
  * rows remapped, versions restarting at 1, and attribution naming whoever
  * imported it. Evidence rows keep their digests, so a handover archive
- * imports rows whose files are absent.
+ * imports rows whose files are absent; the artefacts it carries are stored in
+ * the new case and nowhere else.
  */
 import {
   ConflictException,
@@ -20,7 +21,7 @@ import { defaultCustomer } from '../customers/customers.service.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { EvidenceStore } from '../evidence/store.js'
-import { artefactsNamed } from '../db/artefacts-named.js'
+import { release } from '../report/artefacts-named.js'
 import { BadArchive, CASE_NAME, EVIDENCE_PREFIX, PROSE_PREFIX, readArchive } from '../archive/format.js'
 import { MalformedEnvelope, WrongPassphrase, isSealed, open } from '../archive/envelope.js'
 import { PolicyService } from '../policy/policy.service.js'
@@ -31,6 +32,7 @@ import { archiveRowSchema } from './rows.js'
 import { coerceTimes } from '../db/column-access.js'
 import { z } from 'zod'
 import * as Y from 'yjs'
+import { randomUUID } from 'node:crypto'
 import {
   accounts,
   actions,
@@ -268,9 +270,17 @@ export class ArchiveImportService {
       throw new BadArchive('this archive names no case')
     }
 
-    // **The artefacts land before the rows that point at them.** A row written
-    // first would, for the moment between, describe a file this install does
-    // not hold - and a failure in between would leave exactly that.
+    // **Minted here rather than by the insert**, so the artefacts land in the
+    // case before the rows that point at them: a row written first would, for
+    // the moment between, describe a file this case does not hold.
+    const caseId = randomUUID()
+    // Nothing else names the case the archive would have been, so all of it goes.
+    const refused = async (error: unknown): Promise<never> => {
+      await this.store.discardCase(caseId).catch((why: unknown) => {
+        this.log.warn(`artefacts of a refused import left in the store: ${String(why)}`)
+      })
+      throw error
+    }
     let missingFiles = 0
     /**
      * Ids the archive's rows name that no row in it became.
@@ -281,10 +291,10 @@ export class ArchiveImportService {
      */
     const unresolved = new Set<string>()
     const held = new Set<string>()
-    const introduced: string[] = []
     for (const [name, bytes] of Object.entries(members)) {
       if (!name.startsWith(EVIDENCE_PREFIX)) continue
       const stored = await this.store.put(
+        caseId,
         // `async` with nothing to await is the signature's doing: `put` reads
         // an async iterable, and a plain generator is not one.
         // eslint-disable-next-line @typescript-eslint/require-await
@@ -295,12 +305,11 @@ export class ArchiveImportService {
         // The ceiling this import already read, rather than one read per
         // member: an archive may hold 10,000 of them.
         stored_['evidence.attachmentMegabytes'] * 1024 * 1024,
-      )
+      ).catch(refused)
       held.add(stored.hash)
-      if (stored.created) introduced.push(stored.hash)
     }
 
-    return this.db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx) => {
       // **Trimmed, as the three HTTP doors trim.** `createCaseSchema` and the
       // patch schema both `.trim()`, so an archive carrying ` INC-9 ` would
       // otherwise store a padded reference that collides with nothing and is
@@ -339,6 +348,7 @@ export class ArchiveImportService {
       const [made] = await tx
         .insert(cases)
         .values({
+          id: caseId,
           title: String(record.title),
           reference,
           customerId,
@@ -348,7 +358,6 @@ export class ArchiveImportService {
           updatedBy: actorId,
         })
         .returning()
-      const caseId = made!.id
 
       // Between the insert and every row after it, for the same reason
       // `CasesService.create` does it - the scope is learned from the insert.
@@ -371,6 +380,8 @@ export class ArchiveImportService {
        * remapping one never needs to know which table it came from.
        */
       const remap = new Map<string, string>()
+      /** A sent report's stamp, by its new id: the store refuses its parts once it is stamped. */
+      const stamps = new Map<string, Date>()
       let rows = 0
 
       for (const [name, table] of TABLES) {
@@ -415,7 +426,12 @@ export class ArchiveImportService {
               values.storedAt = null
             }
           }
-          if (name === 'reports') values.document = null
+          let stamp: Date | null = null
+          if (name === 'reports') {
+            values.document = null
+            if (values.sentAt instanceof Date) stamp = values.sentAt
+            values.sentAt = null
+          }
 
           // **What only the database knows.** A column's range and length are
           // stated on the column; restating them in a schema makes a second
@@ -440,6 +456,7 @@ export class ArchiveImportService {
             )
           }
           if (typeof one.id === 'string' && written?.id) remap.set(one.id, written.id)
+          if (stamp && written?.id) stamps.set(written.id, stamp)
           rows += 1
         }
       }
@@ -476,6 +493,10 @@ export class ArchiveImportService {
           .where(sql`${reports.id} = ${fresh}`)
       }
 
+      for (const [id, sentAt] of stamps) {
+        await tx.update(reports).set({ sentAt }).where(sql`${reports.id} = ${id}`)
+      }
+
       this.log.log(`imported ${String(rows)} rows as case ${caseId}`)
       return {
         id: caseId,
@@ -486,24 +507,10 @@ export class ArchiveImportService {
         lostAtExport: missing.length,
         unresolvedReferences: unresolved.size,
       }
-    }).catch(async (error: unknown) => {
-      await this.discard(introduced)
-      throw error
-    })
-  }
-
-  /**
-   * Remove the artefacts a rolled-back import wrote, keeping any a row names.
-   * A failure is logged, not thrown.
-   */
-  private async discard(introduced: readonly string[]): Promise<void> {
-    if (introduced.length === 0) return
-    try {
-      const named = await artefactsNamed(this.db)
-      for (const hash of introduced) if (!named.has(hash)) await this.store.discard(hash)
-    } catch (error) {
-      this.log.warn(`artefacts of a refused import left in the store: ${String(error)}`)
-    }
+    }).catch(refused)
+    // What the archive carried and nothing in the new case names.
+    await this.store.exclusive(caseId, () => release(this.db, this.store, caseId, held))
+    return result
   }
 
   private async unsealed(archive: Buffer, passphrase: string): Promise<Buffer> {

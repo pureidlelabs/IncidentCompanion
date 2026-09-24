@@ -9,9 +9,9 @@ does not ask for.
 `PING` throughout, so the compose healthcheck reports the stack healthy while
 every write is refused. -> #620
 
-**What this does not cover:** postgres, whose entrypoint prepares its directory
-as root before dropping and is a different shape; and whether the healthcheck
-can see a Redis that is refusing writes, which it cannot. -> #623
+**What this does not cover:** postgres, whose starts on its own volume the
+lifecycle tier drives; and whether the healthcheck can see a Redis that is
+refusing writes, which it cannot. -> #623
 """
 
 from __future__ import annotations

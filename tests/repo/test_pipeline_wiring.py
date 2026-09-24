@@ -23,6 +23,7 @@ import ast
 import os
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -408,6 +409,7 @@ EXPENSIVE_TIER = (
     "devcontainer",
     "containers",
     "gallery",
+    "lifecycle",
 )
 
 #: Gated on `inputs.all` alone, so neither event this workflow triggers on
@@ -583,8 +585,8 @@ def test_no_tier_runs_on_neither_event() -> None:
 
     The queue splits the work: a pull request proves the branch, a merge group
     proves the tree that ships. A tier gated on neither does not error, it
-    skips -- and `gate` passes on `skipped`, so the suites would report success
-    having run nothing.
+    skips -- and a pull request's `gate` passes on `skipped`, so the suites
+    would report success having run nothing.
 
     It fails in both directions: a trigger for an event that cannot arrive,
     and a condition naming an event this workflow is not triggered on. Neither
@@ -722,8 +724,7 @@ def test_a_called_run_reaches_every_tier_the_gate_waits_for() -> None:
     """`nightly-build.yml` calls `ci.yml`, where `github.event_name` is `schedule`.
 
     So every condition reading `merge_group` is false in a called run: the
-    expensive tiers skip, `gate` passes on `skipped`, and the nightly reports
-    green having run none of the suites.
+    expensive tiers skip, and the nightly answers about none of the suites.
     """
     nightly = yaml.safe_load(
         (REPO_ROOT / ".github" / "workflows" / "nightly-build.yml").read_text(encoding="utf-8")
@@ -827,24 +828,82 @@ def test_the_expensive_mode_starts_what_its_question_needs() -> None:
     assert "STARTED_SERVICES" in text, "nothing reports the stack it left behind"
 
 
-def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
-    """A flag change turns the gate into a no-op that still looks like a run.
+#: The one command every document prescribes for the spec tree.
+OPENSPEC_GATE = "npx --no-install openspec validate --all --strict"
 
-    `validate --strict` alone prints usage and exits 1, and its item count is
-    zero — the same shape a clean run has if nothing reads the total.
+
+def openspec_prescriptions() -> list[tuple[str, str]]:
+    """Every tracked line that runs the CLI's `validate`, as `(where, command)`.
+
+    Bare or behind a runner; a mention carrying no flag prescribes no form.
     """
-    rules = (REPO_ROOT / ".claude" / "rules" / "git-workflow.md").read_text(encoding="utf-8")
-    commands = re.findall(r"^(npx --no-install openspec validate .+)$", rules,
-                          flags=re.MULTILINE)
-    assert commands, "the rules prescribe no openspec validate command"
+    found = subprocess.run(  # noqa: S603
+        ["git", "grep", "-n", "-e", "openspec validate", "--", ".",
+         ":!openspec/changes/archive", ":!.claude/review"],
+        cwd=REPO_ROOT, capture_output=True, text=True, check=False,
+    ).stdout
+    prescribed = []
+    for row in found.splitlines():
+        where, _, rest = row.partition(":")
+        line = rest.partition(":")[2]
+        match = re.search(
+            r"(?:\b(?:npx|npm exec|dlx|bunx)\b[^`'\"]*)?\bopenspec validate\b[^`'\"]*", line)
+        if match and "--" in match.group(0):
+            prescribed.append((where, match.group(0)))
+    return prescribed
 
-    # **Every line naming the CLI is held to the one form, and the absence is
-    # the half a positive check cannot hold.** The rules prescribe two
-    # commands, so a check that only asks whether *some* line is right passes
-    # while its sibling reaches the registry. Matching every runner spelling
-    # rather than one: `-y`, `npm exec`, `dlx`, `bunx` and a bare
-    # `openspec@latest` all fetch, and `openspec` unscoped on npm belongs to
-    # somebody else.
+
+def run_openspec(command: str, cwd: Path) -> tuple[int, int, int]:
+    """`command` run in `cwd`, as its exit code and the passed and failed totals it printed."""
+    done = subprocess.run(command, shell=True, cwd=cwd,  # noqa: S602
+                          capture_output=True, text=True, timeout=120, check=False)
+    totals = re.search(r"Totals: (\d+) passed, (\d+) failed", done.stdout + done.stderr)
+    assert totals, f"`{command}` printed no totals:\n{done.stdout}{done.stderr}"
+    return done.returncode, int(totals[1]), int(totals[2])
+
+
+def test_every_prescribed_openspec_command_is_the_one_that_validates() -> None:
+    """A prescription that validates nothing reads, in every document, like a gate.
+
+    `validate --strict` alone prints usage and exits 1; `--specs` alone leaves
+    every change in flight unread. Anything but the `--no-install` spelling can
+    fetch `openspec` unscoped from npm, which is somebody else's package.
+    """
+    prescribed = openspec_prescriptions()
+    assert len(prescribed) >= 4, f"the prescriptions are no longer found: {prescribed}"
+    stray = [f"{where}: {command.strip()}" for where, command in prescribed
+             if command.strip() != OPENSPEC_GATE]
+    assert not stray, f"these prescribe something other than `{OPENSPEC_GATE}`:\n  " + "\n  ".join(stray)
+
+
+def test_the_openspec_gate_passes_this_tree_and_refuses_a_broken_one(tmp_path: Path) -> None:
+    """The verdict is the exit code, and the exit code is obeyed.
+
+    The broken tree is a copy with one requirement that carries no scenario,
+    which strict validation refuses. The CLI reads `openspec/` from where it
+    stands, and the copy borrows this checkout's install so `--no-install`
+    finds the pinned binary there too.
+    """
+    code, passed, failed = run_openspec(OPENSPEC_GATE, REPO_ROOT)
+    assert (code, failed) == (0, 0) and passed > 0, (code, passed, failed)
+
+    shutil.copytree(REPO_ROOT / "openspec", tmp_path / "openspec")
+    (tmp_path / "node_modules").symlink_to(REPO_ROOT / "node_modules")
+    (tmp_path / "package.json").write_text("{}")
+    assert run_openspec(OPENSPEC_GATE, tmp_path)[0::2] == (0, 0), "the copy is not the tree"
+
+    spec = tmp_path / "openspec" / "specs" / "accounts-and-access" / "spec.md"
+    spec.write_text(spec.read_text(encoding="utf-8") + (
+        "\n### Requirement: A requirement nothing could show false\n\n"
+        "The application MUST do a thing.\n"), encoding="utf-8")
+    code, _, failed = run_openspec(OPENSPEC_GATE, tmp_path)
+    assert code != 0 and failed >= 1, (
+        f"a requirement with no scenario passed the gate: exit {code}, {failed} failed")
+
+
+def test_no_line_runs_the_cli_in_a_form_that_can_fetch() -> None:
+    """`-y`, `npm exec`, `dlx`, `bunx` and a bare `openspec@latest` all reach the registry."""
+    rules = (REPO_ROOT / ".claude" / "rules" / "git-workflow.md").read_text(encoding="utf-8")
     runners = re.compile(r"\bnpx\b|\bnpm exec\b|\bdlx\b|\bbunx\b")
     stray = [
         line.strip()
@@ -856,15 +915,6 @@ def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
         f"a line runs the CLI in a form that can reach the registry, rather "
         f"than `npx --no-install openspec`: {stray}"
     )
-    # The binary is local, so each command takes about a second. The timeout
-    # is a guard against a hang rather than a budget for a download.
-    for command in commands:
-        done = subprocess.run(command, shell=True, cwd=REPO_ROOT,
-                              capture_output=True, text=True, timeout=120)
-        total = re.search(r"Totals: (\d+) passed", done.stdout)
-        assert total and int(total.group(1)) > 0, (
-            f"`{command}` validated nothing:\n{done.stdout}{done.stderr}")
-
 
 
 def test_the_renovate_validator_is_the_pinned_one() -> None:
@@ -1002,59 +1052,317 @@ def test_a_run_that_asks_for_every_tier_writes_every_scope_output(tmp_path: Path
     )
 
 
-def test_the_lint_matrix_a_full_run_asks_for_is_one_fromjson_can_read(tmp_path: Path) -> None:
-    """`fromJSON('')` fails the job with no legs and no annotation.
-
-    The `if` above it tests for `'[]'`, which an unset output does not match,
-    so the job is dispatched with nothing to build a matrix from.
-    """
-    linters = run_scope(tmp_path, ALL="true").get("linters", "")
-    shards = json.loads(linters or '""')
-    assert isinstance(shards, list) and shards, (
-        f"a full run asks for lint shards {linters!r}, which builds no matrix"
-    )
-
-
-def run_gate(results: str, want_all: str) -> subprocess.CompletedProcess[str]:
-    """The `gate` step, executed against one set of tier results."""
+def run_gate(
+    results: dict[str, str], event: str, want_all: str = ""
+) -> subprocess.CompletedProcess[str]:
+    """The `gate` step, executed against each tier's result as `toJSON(needs)` gives it."""
     return subprocess.run(  # noqa: S603
         ["bash", "-e", "-c", step_script("gate")],
         capture_output=True,
         text=True,
         timeout=30,
-        env={"PATH": os.environ["PATH"], "RESULTS": results, "ALL": want_all},
+        env={
+            "PATH": os.environ["PATH"],
+            "NEEDS": json.dumps({name: {"result": r} for name, r in results.items()}),
+            "ALL": want_all,
+            "GITHUB_EVENT_NAME": event,
+            **{k: v for k, v in gate_env().items() if k.startswith("NIGHTLY_")},
+        },
         check=False,
     )
 
 
+def gate_env() -> dict[str, str]:
+    return {k: str(v) for k, v in (ci_jobs()["gate"]["steps"][0].get("env") or {}).items()}
+
+
 @pytest.mark.parametrize(
-    ("results", "want_all", "passes"),
+    ("results", "event", "want_all", "passes"),
     [
-        ("success success", "", True),
-        ("success skipped", "", True),
-        ("success failure", "", False),
-        ("success cancelled", "", False),
-        ("success success", "true", True),
-        ("success skipped", "true", False),
-        ("success failure", "true", False),
+        ({"lint": "success", "client-suite": "success"}, "pull_request", "", True),
+        ({"lint": "success", "client-suite": "skipped"}, "pull_request", "", True),
+        ({"lint": "success", "client-suite": "failure"}, "pull_request", "", False),
+        ({"lint": "success", "client-suite": "cancelled"}, "pull_request", "", False),
+        ({"lint": "success", "client-suite": "success"}, "merge_group", "", True),
+        ({"lint": "success", "client-suite": "skipped"}, "merge_group", "", False),
+        ({"lint": "success", "client-suite": "failure"}, "merge_group", "", False),
+        ({"lint": "success", "browser": "skipped"}, "merge_group", "", True),
+        ({"lint": "success", "client-suite": "success"}, "schedule", "true", True),
+        ({"lint": "success", "client-suite": "skipped"}, "schedule", "true", False),
+        ({"lint": "success", "browser": "skipped"}, "schedule", "true", False),
+        ({"lint": "success", "client-suite": "failure"}, "schedule", "true", False),
     ],
 )
-def test_the_gate_reads_a_skip_by_what_the_run_asked_for(
-    results: str, want_all: str, passes: bool
+def test_the_gate_reads_a_skip_by_the_run_it_is_in(
+    results: dict[str, str], event: str, want_all: str, passes: bool
 ) -> None:
     """A tier that did not run is the defect this pipeline keeps shipping.
 
-    `skipped` has to pass on a pull request: it is how a tier says its paths
-    did not move. On a run that asked for every tier it says the opposite --
-    nothing scoped this out, so the tier was dispatched and never arrived --
-    and passing it there lets a tier skip in every nightly with nothing saying
-    so.
+    A skip passes only where the run is advisory, which is a pull request. The
+    merge group decides the merge, and a run that asked for every tier asked:
+    a skip in either is a tier dispatched that never arrived.
     """
-    done = run_gate(results, want_all)
+    done = run_gate(results, event, want_all)
     assert (done.returncode == 0) is passes, (
-        f"results {results!r} with all={want_all!r} exited {done.returncode}:\n"
-        f"{done.stdout}{done.stderr}"
+        f"{results!r} in a {event} run with all={want_all!r} exited "
+        f"{done.returncode}:\n{done.stdout}{done.stderr}"
     )
+
+
+def test_a_pull_requests_gate_says_its_verdict_is_advisory() -> None:
+    """A green scoped run reads as certified unless it says what it left out."""
+    done = run_gate({"lint": "success", "client-suite": "skipped"}, "pull_request")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "advisory" in done.stdout and "client-suite" in done.stdout, done.stdout
+    assert "merge group" in done.stdout, done.stdout
+
+
+def test_the_gate_refuses_a_run_it_could_not_read() -> None:
+    """An empty `needs` is a gate that checked nothing, and `for` over nothing passes."""
+    done = subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", step_script("gate")],
+        capture_output=True, text=True, timeout=30, check=False,
+        env={"PATH": os.environ["PATH"], "NEEDS": "{}", "ALL": "",
+             "GITHUB_EVENT_NAME": "merge_group", "NIGHTLY_ONLY": ""},
+    )
+    assert done.returncode != 0, done.stdout + done.stderr
+
+
+def test_the_gate_exempts_exactly_the_nightly_tier() -> None:
+    """The one skip a merge group forgives is a tier no merge group schedules.
+
+    Widen it and a skipped suite passes the queue; leave a nightly tier out and
+    every merge group goes red on a job it never meant to run.
+    """
+    exempt = set(gate_env().get("NIGHTLY_ONLY", "").split())
+    assert exempt == set(NIGHTLY_TIER), (
+        f"the gate forgives {sorted(exempt)} in a merge group; the nightly-only "
+        f"tiers are {sorted(NIGHTLY_TIER)}"
+    )
+    said = run_gate({"lint": "success", **dict.fromkeys(exempt, "skipped")}, "merge_group")
+    assert all(name in said.stdout for name in exempt), (
+        f"a green merge group does not say which tier it did not run:\n{said.stdout}"
+    )
+
+
+def test_a_green_merge_group_names_every_ground_the_gallery_left_to_the_nightly() -> None:
+    """The gallery walks some grounds only when every tier is asked for, which no merge group does."""
+    step = next(s for s in ci_jobs()["gallery"]["steps"] if "VISUAL_GROUNDS" in (s.get("env") or {}))
+    every, merged = re.fullmatch(
+        r"\$\{\{ inputs\.all && '([^']*)' \|\| '([^']*)' \}\}", step["env"]["VISUAL_GROUNDS"]
+    ).groups()
+    left = set(every.split(",")) - set(merged.split(","))
+    assert set(gate_env().get("NIGHTLY_GROUNDS", "").split()) == left, (
+        f"the gallery leaves {sorted(left)} to the nightly; the gate says "
+        f"{gate_env().get('NIGHTLY_GROUNDS')!r}"
+    )
+    exempt = dict.fromkeys(gate_env()["NIGHTLY_ONLY"].split(), "skipped")
+    said = run_gate({"lint": "success", "gallery": "success", **exempt}, "merge_group")
+    assert said.returncode == 0 and all(ground in said.stdout for ground in left), (
+        f"a green merge group does not say the gallery left {sorted(left)} out:\n{said.stdout}"
+    )
+
+
+def _truthy(node: ast.AST, names: dict[str, object]) -> object:
+    """One node of a job's `if`, translated to Python, evaluated. Unknown syntax raises."""
+    if isinstance(node, ast.BoolOp):
+        values = [_truthy(v, names) for v in node.values]
+        return all(values) if isinstance(node.op, ast.And) else any(values)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        return not _truthy(node.operand, names)
+    if isinstance(node, ast.Compare) and len(node.ops) == 1:
+        left, right = _truthy(node.left, names), _truthy(node.comparators[0], names)
+        if isinstance(node.ops[0], ast.Eq):
+            return left == right
+        if isinstance(node.ops[0], ast.NotEq):
+            return left != right
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.Name) and node.id in names:
+        return names[node.id]
+    raise AssertionError(f"a job condition this reader cannot evaluate: {ast.dump(node)}")
+
+
+def scheduled(job: dict, event: str, outputs: dict[str, str], want_all: bool = False) -> bool:
+    """Whether a runner starts `job` for one event, given what `scope` wrote."""
+    expr = " ".join(str(job.get("if", "true")).split())
+    expr = re.sub(r"needs\.scope\.outputs\.(\w+)",
+                  lambda m: repr(outputs.get(m[1], "")), expr)
+    for spelled, value in (("failure()", "False"), ("cancelled()", "False"),
+                           ("always()", "True"), ("github.event_name", repr(event)),
+                           ("github.event.pull_request.draft", "False"),
+                           ("inputs.all", repr(want_all)),
+                           ("&&", " and "), ("||", " or "), ("!=", " <> ")):
+        expr = expr.replace(spelled, value)
+    expr = expr.replace("!", " not ").replace(" <> ", " != ")
+    return bool(_truthy(ast.parse(expr.strip(), mode="eval").body, {"true": True, "false": False}))
+
+
+@pytest.fixture(scope="module")
+def tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A repository indexing every path this one tracks, as a merge group's checkout holds them.
+
+    The files are empty and never written out: the scope step reads names, from
+    `git ls-files` and `git diff`, and nothing else.
+    """
+    root = tmp_path_factory.mktemp("tree")
+    tracked = subprocess.run(["git", "ls-files", "-z"], cwd=REPO_ROOT, capture_output=True,  # noqa: S603
+                             text=True, check=True).stdout.split("\0")
+    _git(root, "init", "-q")
+    empty = _git(root, "hash-object", "-w", "--stdin", stdin="")
+    _git(root, "update-index", "--add", "--index-info",
+         stdin="".join(f"100644 {empty}\t{p}\n" for p in tracked if p))
+    _git(root, "commit", "-q", "-m", "the tree")
+    return root
+
+
+def _git(root: Path, *args: str, stdin: str | None = None) -> str:
+    return subprocess.run(  # noqa: S603
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", str(root), *args],
+        input=stdin, capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+
+def scope_over(tree: Path, path: str, event: str, tmp_path: Path) -> dict[str, str]:
+    """The `scope` step for a change touching `path` alone, in `event`."""
+    base = _git(tree, "rev-parse", "HEAD")
+    blob = _git(tree, "hash-object", "-w", "--stdin", stdin=f"{tmp_path}\n")
+    _git(tree, "update-index", "--add", "--cacheinfo", f"100644,{blob},{path}")
+    _git(tree, "commit", "-q", "-m", f"touch {path}")
+    out = tmp_path / "github-output"
+    out.touch()
+    done = subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", step_script("scope", 1)],
+        cwd=tree, capture_output=True, text=True, timeout=60, check=False,
+        env={"PATH": os.environ["PATH"], "GITHUB_OUTPUT": str(out), "HEAD_REF": "",
+             "BASE_SHA": base, "HEAD_SHA": _git(tree, "rev-parse", "HEAD"), "ALL": "",
+             "GITHUB_EVENT_NAME": event},
+    )
+    assert done.returncode == 0, f"the scope step failed:\n{done.stdout}{done.stderr}"
+    return dict(line.partition("=")[::2] for line in out.read_text().splitlines())
+
+
+#: Files one tier's checks read from another tier's tree, with the tier that reads it.
+CROSS_TREE_INPUTS = [
+    "server/src/domain/field-spec.ts",  # the client compiles and bundles it as `@contract`
+    "ui/src/api/accounts.ts",  # the server suite holds every path a screen calls
+    "ui/src/fixtures/specs.json",  # the server suite compares the served specs to it
+    "ui/eslint.config.js",  # the server suite reads which rules the client runs
+    "docker/db/roles.sql",  # the server suite provisions and asserts the roles
+    "docker/nginx/default.conf",  # the container files read the proxy
+    "dev-node.sh",  # the server suite and the browser tier run it
+    "tests/data/prose_fixtures.json",  # both suites load it
+    "tools/eslint-rules/ascii-only.mjs",  # both eslint configs load it
+    "ui/src/components/ui/button.tsx",  # the image is built from it
+]
+
+
+@pytest.mark.parametrize("path", CROSS_TREE_INPUTS)
+def test_a_merge_group_runs_every_tier_whatever_the_diff(
+    tree: Path, tmp_path: Path, path: str
+) -> None:
+    """The run that decides the merge cannot be scoped by paths, because the tiers read across trees.
+
+    Replayed end to end: the real scope step over a change to `path` alone, each
+    job's `if` over what it wrote, and the real gate over the results. Every tier
+    either runs or, skipped, fails the gate.
+    """
+    jobs = ci_jobs()
+    outputs = scope_over(tree, path, "merge_group", tmp_path)
+    results = {
+        name: "success" if scheduled(jobs[name], "merge_group", outputs) else "skipped"
+        for name in jobs["gate"]["needs"]
+    }
+    unscheduled = sorted(n for n, r in results.items() if r == "skipped")
+    assert unscheduled == sorted(NIGHTLY_TIER), (
+        f"a merge group touching {path} does not start {unscheduled}"
+    )
+    assert run_gate(results, "merge_group").returncode == 0
+
+    for name in results:
+        if name in NIGHTLY_TIER:
+            continue
+        done = run_gate({**results, name: "skipped"}, "merge_group")
+        assert done.returncode != 0, (
+            f"a merge group touching {path} passes with {name} skipped:\n{done.stdout}"
+        )
+
+
+@pytest.mark.parametrize("event", ["pull_request", "merge_group"])
+def test_the_cheap_tiers_run_whole_whatever_the_diff(
+    tree: Path, tmp_path: Path, event: str
+) -> None:
+    """A lint, a typecheck and a build cost seconds, and each reads more than its own tree.
+
+    Scoped, an eslint rule module linted nothing and a client change built no
+    server. So every shard and every step runs on every event.
+    """
+    jobs = ci_jobs()
+    outputs = scope_over(tree, "tools/eslint-rules/ascii-only.mjs", event, tmp_path)
+    for name in CHEAP_TIER:
+        assert scheduled(jobs[name], event, outputs), f"{name} does not run in a {event}"
+        gated = [s.get("name", s.get("uses")) for s in jobs[name]["steps"]
+                 if "scope" in str(s.get("if", ""))]
+        assert not gated, f"{name} skips {gated} by path"
+    assert jobs["lint"]["strategy"]["matrix"]["linter"] == ["server", "client", "tools"]
+    tools = str(jobs["lint"]["steps"][-1]["run"])
+    assert "WANT_" not in tools and "WANT_" not in str(jobs["lint"]["steps"][-1].get("env")), (
+        "the tool shard still runs a linter only when its paths moved"
+    )
+
+
+NIGHTLY = REPO_ROOT / ".github" / "workflows" / "nightly-build.yml"
+
+
+def run_nightly_report(tmp_path: Path, open_issue: str) -> str:
+    """The nightly's failure reporter, run against a `gh` that records every call.
+
+    The stub answers the jobs query with one failed shard and the open-issue
+    query with `open_issue`, and appends each body it is handed to the record.
+    """
+    jobs = yaml.safe_load(NIGHTLY.read_text(encoding="utf-8"))["jobs"]
+    reporters = [job for job in jobs.values() if "failure()" in str(job.get("if", ""))]
+    assert len(reporters) == 1, "no job in nightly-build.yml runs when the nightly fails"
+    caller = next(name for name, job in jobs.items() if str(job.get("uses", "")).endswith("ci.yml"))
+    assert caller in reporters[0].get("needs", []), "the reporter does not wait for the tiers"
+    assert (reporters[0].get("permissions") or {}).get("issues") == "write", (
+        "the reporter cannot write an issue")
+
+    record = tmp_path / "gh.log"
+    stub = tmp_path / "bin" / "gh"
+    stub.parent.mkdir()
+    stub.write_text(f"""#!/bin/bash
+echo "gh $*" >> "{record}"
+case "$1 $2" in
+  "api "*) echo '- `nightly / server-suite (2)`' ;;
+  "issue list") printf '%s' "{open_issue}" ;;
+  "issue create"|"issue comment")
+    while [ $# -gt 0 ]; do [ "$1" = --body-file ] && cat "$2" >> "{record}"; shift; done ;;
+esac
+""")
+    stub.chmod(0o755)
+    done = subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", str(reporters[0]["steps"][-1]["run"])],
+        cwd=tmp_path, capture_output=True, text=True, timeout=30, check=False,
+        env={"PATH": f"{stub.parent}:{os.environ['PATH']}", "GH_TOKEN": "t", "REPO": "o/r",
+             "RUN_ID": "7", "RUN_URL": "https://example.invalid/runs/7", "HEAD_SHA": "abc123"},
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    return record.read_text(encoding="utf-8")
+
+
+def test_a_failed_nightly_files_its_failure(tmp_path: Path) -> None:
+    """A scheduled run nobody watches, red in 13 of 15 nights, reached nobody. -> #89"""
+    said = run_nightly_report(tmp_path, open_issue="")
+    assert "gh issue create" in said and "--label nightly-red" in said, said
+    assert "nightly / server-suite (2)" in said and "https://example.invalid/runs/7" in said, said
+
+
+def test_a_second_red_night_adds_to_the_open_issue(tmp_path: Path) -> None:
+    """One issue per red streak, or the tracker fills with copies nobody closes."""
+    said = run_nightly_report(tmp_path, open_issue="42")
+    assert "gh issue comment 42" in said and "gh issue create" not in said, said
+    assert "nightly / server-suite (2)" in said, said
 
 
 def node_modules_cache_key() -> str:
@@ -1130,7 +1438,7 @@ def test_every_client_vitest_step_arms_the_must_run_reporter() -> None:
                 bare.append(f"{name}: {step.get('name', run.strip()[:40])}")
 
     assert not bare, (
-        "these steps run the client tier without arming its must-run floor, so a "
+        "these steps run the client tier without arming its must-run check, so a "
         f"run that reached no test file exits 0:\n  " + "\n  ".join(bare)
     )
 

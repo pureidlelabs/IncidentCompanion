@@ -10,6 +10,12 @@
 
 **The not-live line says the screen may be behind. It does not say what is behind.** A dropped connection's announcements are gone; the re-read after it returns is the whole answer.
 
+**Prose is attributed per saved change and per writer, never per word.** Two analysts writing into one passage before a save are both named for it, and nothing says which words each wrote. That is the attribution every other write carries: who changed a record, never which characters.
+
+**Only a writer on this process is named for a save it made.** Prose arriving from another process is named by the process it was written on.
+
+**Order is kept per connection, and nowhere wider.** Two connections, including two tabs of one analyst, are two writers whose frames interleave however they arrive; prose merges them and a version check judges everything else.
+
 # Design
 
 ## Admission is re-derived, not assumed
@@ -46,6 +52,18 @@ Prose an analyst writes into a report is edited by two people at once without ei
 
 A version check is the wrong instrument here. Two people typing in one paragraph are not making conflicting claims about a fact; they are writing different parts of one sentence, and refusing the second is refusing the work. This is the only place in the application where that holds.
 
+## A connection hears from its first moment, one frame at a time
+
+A connection listens from the moment it is accepted, before anything about it is prepared. Every frame it receives joins one sequence, and each is acted on to completion before the next one starts, so what a frame does can never overtake what the frame before it did.
+
+Preparing the connection heads that sequence. What arrives while it is still being prepared waits behind it, and a preparation that fails ends the connection with nothing in the sequence acted on.
+
+The connection's own end is the last thing in the sequence. A frame sent just before a tab closes is acted on before the connection lets go of what it had open, which is what keeps prose typed during a drop from being lost when the tab closes straight after the return.
+
+The number of frames waiting is bounded, and a connection past the bound is ended rather than allowed to hold an unbounded backlog.
+
+The sequence holds up when a frame fails. A frame that parses but is not an object is set aside without a word, the same as one that does not parse, because it is the client's mistake and not the install's. A frame whose action fails is reported to the operator and set aside. Either way the frames behind it and the connection's end still run in their turn.
+
 ## A reconnection either catches up or says it cannot
 
 A connection that drops and returns leaves the analyst where they were, without a reload.
@@ -61,3 +79,11 @@ The case frame says the screen is not live from the moment its connection drops,
 Reach withdrawn while an analyst is connected ends the connection. A connection admitted once does not outlive its admission.
 
 That covers every way reach ends: the session ended, the group revoked, the customer moved, the account disabled at the provider, the case deleted. Reach is therefore re-checked on the connection's own terms rather than trusted from the moment it opened.
+
+## A save names whoever wrote into it
+
+Each connection's change to prose is remembered against the analyst it came from, where it changed the document; a frame that changed nothing names nobody. A save stores the words, names the latest writer on the record, and writes a record of the change per writer, all in one act. A save that fails keeps its writers for the next one. Saves of one record run one at a time and in order, so a later save never lands before an earlier one.
+
+A send holds a report's prose still only after saving what was typed and not yet saved, this same way, and after waiting out a save already under way, so the words a send stores are already named. A save that fails there leaves the report unsent.
+
+Once stored, the save is announced to the case and recorded in the install's audit, one line per writer, as the collection routes record a write.

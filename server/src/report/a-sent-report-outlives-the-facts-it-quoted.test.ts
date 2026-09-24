@@ -29,12 +29,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { CasesService } from '../cases/cases.service.js'
 import { cases, impact, reportBlocks, reports, timeline, user } from '../db/schema/index.js'
 import { ProseService } from '../prose/prose.service.js'
+import { sentReportRefusal } from './freeze.js'
 import { ReportLifecycleService } from './lifecycle.service.js'
 import { ReportRenderService } from './render.service.js'
 import { english } from './document/packs.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -124,7 +126,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a sent report, when the cas
       })
       .onConflictDoNothing()
 
-    const cases_ = new CasesService(db!, {
+    const cases_ = new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)
@@ -215,21 +217,21 @@ describe.skipIf(!db || !hasConcurrentConnections())('a sent report, when the cas
     expect(filedAfter.document_).toEqual(filedBefore)
   })
 
-  it('paints the filed report with its own blocks deleted', async () => {
-    // Frozen is the premise: the case above sends it, and this one is about a
-    // sent report whose blocks are gone.
+  it('keeps its own blocks, which even the seeding role cannot delete, and paints the frozen tree', async () => {
+    // Frozen is the premise: the case above sends it.
     await lifecycle.send(caseId, sentId, actorId, 'en').catch(() => undefined)
+    const held = () =>
+      seed!
+        .select()
+        .from(reportBlocks)
+        .where(and(eq(reportBlocks.caseId, caseId), eq(reportBlocks.reportId, sentId)))
+        .orderBy(asc(reportBlocks.position))
+    const before = await held()
 
-    await seed!
-      .delete(reportBlocks)
-      .where(and(eq(reportBlocks.caseId, caseId), eq(reportBlocks.reportId, sentId)))
-
-    const remaining = await seed!
-      .select()
-      .from(reportBlocks)
-      .where(and(eq(reportBlocks.caseId, caseId), eq(reportBlocks.reportId, sentId)))
-      .orderBy(asc(reportBlocks.position))
-    expect(remaining).toHaveLength(0)
+    await expect(
+      seed!.delete(reportBlocks).where(and(eq(reportBlocks.caseId, caseId), eq(reportBlocks.reportId, sentId))),
+    ).rejects.toSatisfy((error) => sentReportRefusal(error) !== undefined)
+    expect(await held()).toEqual(before)
 
     const painted = await render.render(caseId, sentId, 'en')
     expect(painted.frozen).toBe(true)

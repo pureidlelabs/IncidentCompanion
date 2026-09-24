@@ -5,30 +5,31 @@
  * lowering any of the three is a security decision, not a performance tune.
  * The auth tables come from the Drizzle schema in `db/schema/`.
  */
-import { betterAuth, type BetterAuthOptions } from 'better-auth'
-import { APIError, createAuthMiddleware } from 'better-auth/api'
-import { eq, sql } from 'drizzle-orm'
+import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
+import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
 import { recordInstallActivity } from '../install-activity/record.js'
-import { trustedAddressHeaders } from '../wire/caller-address.js'
-import { admin } from 'better-auth/plugins'
+import { ADDRESS_RULE } from '../wire/caller-address.js'
+import { admin, openAPI } from 'better-auth/plugins'
 import { createAccessControl } from 'better-auth/plugins/access'
 import { defaultStatements } from 'better-auth/plugins/admin/access'
 import type { SecondaryStorage } from 'better-auth'
 import { trustedOrigins } from './trusted-origins.js'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { randomUUID } from 'node:crypto'
+import { tryGetCurrentAuthEndpointContext } from '@better-auth/core/context'
 
 import { Algorithm, hash as argonHash, verify as argonVerify } from '@node-rs/argon2'
 import type { Database } from '../db/client.js'
 import * as schema from '../db/schema/index.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_REFUSED, refusePassword } from './password-policy.js'
 import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
-import { sameAddress } from './same-address.js'
 import { readPolicy } from '../policy/read.js'
 import { SESSION_LIFETIME_CEILING_MINUTES } from '../policy/keys.js'
 import { sessionEnded } from './session-ended.js'
+import { HELD } from './must-change-password.interceptor.js'
+import { sameAddress } from './same-address.js'
 
 /**
  * What a failed sign-in is recorded against.
@@ -41,9 +42,10 @@ export const SIGN_IN = 'sign-in'
 /**
  * The endpoints that write a password, and the body field each carries it in.
  *
- * Two are the library's own and reach no controller of ours; three are reached
- * in process by `setup.controller.ts` and `accounts.controller.ts`, which
- * `disabledPaths` does not intercept. -> #374
+ * None is served over HTTP; each is reached in process, by
+ * `setup.controller.ts`, `change-password.controller.ts` and
+ * `accounts.controller.ts`, where `minPasswordLength` is the boot-time number.
+ * -> #374
  *
  * **A path is what this can match, so a server-only endpoint is not here.**
  * `setPassword` is `createAuthEndpoint.serverOnly` and has no URL at all, so
@@ -55,7 +57,6 @@ const PASSWORD_WRITES: Readonly<Record<string, string>> = {
   '/sign-up/email': 'password',
   '/admin/create-user': 'password',
   '/change-password': 'newPassword',
-  '/reset-password': 'newPassword',
   '/admin/set-user-password': 'newPassword',
 }
 
@@ -117,45 +118,76 @@ const adminRole = ac.newRole({
   session: ['list', 'revoke'],
 })
 
+/** Not an argon2 hash, so no credential row holds it. */
+const NOBODY_HOLDS = '-'
+
 /**
- * One failed sign-in against a named address: count it, and shut the account
- * if that was the last one it had.
+ * The check behind every door that verifies a password, and the lockout's
+ * whole implementation.
  *
- * **A missing address is not an error and writes nothing.** Guessing at
- * addresses that have no account must leave no row to find, or the table
- * becomes a list of every address an attacker tried - which is a write path
- * anyone unauthenticated can drive.
- *
- * **Read-modify-write under a single statement's `where`.** Two failures
- * arriving together would otherwise both read the same count and both write
- * `n + 1`, so the tenth failure could be recorded as the ninth twice; the
- * increment happens in SQL and the threshold is compared against what the
- * statement returns.
+ * Runs the argon2 verify whatever the account's state, so a locked account
+ * costs what a wrong password does. Answers `false` for a locked account's
+ * right password and counts it, as it counts a wrong one; a right one on an
+ * open account clears the count.
  */
-async function countTheFailure(
-  db: Database,
-  attempted: string,
-  headers: Record<string, string>,
-): Promise<void> {
-  /**
-   * **Read now, not at boot.** A threshold cached when the process started is
-   * one that ignores the change an administrator just made - the screen says
-   * five and the control still allows ten until something restarts.
-   */
+async function checkPassword(db: Database, hash: string, password: string): Promise<boolean> {
+  if (await argonVerify(hash, password, ARGON2ID)) {
+    const [holder] = await db
+      .select({
+        id: schema.user.id,
+        failedSignIns: schema.user.failedSignIns,
+        lockedUntil: schema.user.lockedUntil,
+      })
+      .from(schema.account)
+      .innerJoin(schema.user, eq(schema.user.id, schema.account.userId))
+      .where(heldBy(hash))
+      .limit(1)
+    if (holder && !isLocked(holder, new Date())) {
+      if (holder.failedSignIns !== 0 || holder.lockedUntil !== null) {
+        await db.update(schema.user).set(CLEARED).where(eq(schema.user.id, holder.id))
+      }
+      return true
+    }
+  }
+  await countAgainst(db, hash)
+  return false
+}
+
+/** The credential row holding `hash`. */
+const heldBy = (hash: string) =>
+  and(eq(schema.account.providerId, 'credential'), eq(schema.account.password, hash))
+
+/**
+ * One more failure against the account holding `hash`, and the lock when it
+ * is the last one the account had. Writes `account_locked` then, with the
+ * address of the call being answered.
+ *
+ * **One statement increments and returns the count**, so two failures
+ * arriving together cannot both read `n` and both write `n + 1`.
+ *
+ * A hash nobody holds writes nothing, at the cost of the same two statements.
+ */
+async function countAgainst(db: Database, hash: string): Promise<void> {
+  const now = new Date()
+  // Read now: a threshold cached at boot ignores the change an administrator
+  // just made.
   const stored = await readPolicy(db)
   const policy = policyFrom({
     afterFailures: stored['auth.lockoutAfterFailures'],
     minutes: stored['auth.lockoutMinutes'],
   })
-  const before = new Date()
-
   const [row] = await db
     .update(schema.user)
     .set({ failedSignIns: sql`${schema.user.failedSignIns} + 1` })
-    .where(sameAddress(attempted))
+    .where(
+      inArray(
+        schema.user.id,
+        db.select({ id: schema.account.userId }).from(schema.account).where(heldBy(hash)),
+      ),
+    )
     .returning({
       id: schema.user.id,
-      name: schema.user.name,
+      email: schema.user.email,
       failedSignIns: schema.user.failedSignIns,
       lockedUntil: schema.user.lockedUntil,
     })
@@ -166,23 +198,19 @@ async function countTheFailure(
   const next = afterFailure(
     { failedSignIns: row.failedSignIns - 1, lockedUntil: row.lockedUntil },
     policy,
-    before,
+    now,
   )
   if (next.lockedUntil === null || !next.justLocked) return
 
-  await db
-    .update(schema.user)
-    .set({ lockedUntil: next.lockedUntil })
-    .where(eq(schema.user.id, row.id))
-
+  await db.update(schema.user).set({ lockedUntil: next.lockedUntil }).where(eq(schema.user.id, row.id))
   await recordInstallActivity(db, {
     event: 'account_locked',
-    target: attempted,
-    detail: {
-      failures: String(next.failedSignIns),
-      minutes: String(policy.minutes),
-    },
-    headers,
+    target: row.email,
+    detail: { failures: String(next.failedSignIns), minutes: String(policy.minutes) },
+    headers: Object.fromEntries(
+      (tryGetCurrentAuthEndpointContext() as { headers?: Headers } | undefined)?.headers?.entries() ??
+        [],
+    ),
   })
 }
 
@@ -245,11 +273,100 @@ const CREDENTIAL_ATTEMPTS = 5
 
 export const CREDENTIAL_RULES = {
   '/sign-in/email': { window: CREDENTIAL_WINDOW_SECONDS, max: CREDENTIAL_ATTEMPTS },
-  '/sign-up/email': { window: CREDENTIAL_WINDOW_SECONDS, max: CREDENTIAL_ATTEMPTS },
-  '/forget-password': { window: CREDENTIAL_WINDOW_SECONDS, max: CREDENTIAL_ATTEMPTS },
-  '/reset-password': { window: CREDENTIAL_WINDOW_SECONDS, max: CREDENTIAL_ATTEMPTS },
-  '/change-password': { window: CREDENTIAL_WINDOW_SECONDS, max: CREDENTIAL_ATTEMPTS },
 }
+
+/**
+ * The library's operations the install offers over HTTP, as `METHOD /path`
+ * below the mount. -> `offersOnly`
+ */
+export const OFFERED: ReadonlySet<string> = new Set([
+  'POST /sign-in/email',
+  'GET /get-session',
+  'POST /sign-out',
+  'GET /list-sessions',
+  'POST /revoke-session',
+  'POST /revoke-other-sessions',
+])
+
+/**
+ * The operations a held session may still reach. `/change-password` is not
+ * offered over HTTP; it is here for `change-password.controller.ts`, which
+ * calls it in process with the held session.
+ */
+const HELD_MAY: ReadonlySet<string> = new Set([
+  '/get-session',
+  '/sign-in/email',
+  '/sign-out',
+  '/change-password',
+])
+
+/** The endings of a caller's own sessions, and the event each is recorded as. */
+const OWN_ENDINGS: Readonly<Record<string, 'signed_out' | 'account_sessions_ended'>> = {
+  '/sign-out': 'signed_out',
+  '/revoke-session': 'account_sessions_ended',
+  '/revoke-other-sessions': 'account_sessions_ended',
+}
+
+/**
+ * The offered operations that act on the caller's own sessions. Refused to a
+ * caller with none before the body is read, so the answer is the missing
+ * session rather than the body.
+ */
+const ACTS_ON_ITS_SESSIONS: ReadonlySet<string> = new Set([
+  '/list-sessions',
+  '/revoke-session',
+  '/revoke-other-sessions',
+])
+
+/**
+ * What the install serves of the library, and to whom.
+ *
+ * `onRequest` answers every HTTP request outside `OFFERED` exactly as the
+ * router answers a path that was never defined. It runs for HTTP only, so the
+ * app's own `auth.api.X()` calls are unaffected. The `before` hook refuses a
+ * held session everything outside `HELD_MAY`, in process included, with the
+ * body `MustChangePasswordInterceptor` answers the app's own routes with.
+ * `onResponse`, HTTP only like `onRequest`, answers a body read and refused
+ * with 422, as every route of the app does, where the library answers 400.
+ */
+const offersOnly = {
+  id: 'offers-only',
+  onRequest: (request: Request, context: { baseURL: string }) => {
+    const mount = new URL(context.baseURL).pathname
+    const { pathname } = new URL(request.url)
+    const offered =
+      pathname.startsWith(`${mount}/`) &&
+      OFFERED.has(`${request.method} ${pathname.slice(mount.length)}`)
+    return Promise.resolve(
+      offered ? undefined : { response: new Response(null, { status: 404, statusText: 'Not Found' }) },
+    )
+  },
+  hooks: {
+    before: [
+      {
+        matcher: (context: { path?: string }) => !HELD_MAY.has(context.path ?? ''),
+        handler: createAuthMiddleware(async (ctx) => {
+          const session = await getSessionFromCtx(ctx)
+          if (!session && ACTS_ON_ITS_SESSIONS.has(ctx.path)) {
+            throw new APIError('UNAUTHORIZED', { message: 'Unauthorized', code: 'UNAUTHORIZED' })
+          }
+          if ((session?.user as { mustChangePassword?: boolean } | undefined)?.mustChangePassword) {
+            throw new APIError('FORBIDDEN', { ...HELD })
+          }
+        }),
+      },
+    ],
+  },
+  onResponse: async (response: Response) => {
+    if (response.status !== 400) return
+    const said = (await response
+      .clone()
+      .json()
+      .catch(() => null)) as { code?: unknown } | null
+    if (said?.code !== 'VALIDATION_ERROR') return
+    return { response: new Response(response.body, { status: 422, headers: response.headers }) }
+  },
+} satisfies BetterAuthPlugin
 
 /**
  * The options `betterAuth` is built from.
@@ -344,51 +461,16 @@ export function authOptions(
      * it with `npm run db:push`; `auth.schema.test.ts` fails on a mismatch.
      */
     plugins: [
+      offersOnly,
       admin({
         ac,
         roles: { analyst: analystRole, admin: adminRole },
         defaultRole: DEFAULT_ROLE,
         adminRoles: [ADMIN_ROLE],
       }),
-    ],
-    /**
-     * **Routes the browser is served and nothing calls.** The admin plugin
-     * mounts fifteen; `grep -rn "auth/admin" ui/src` finds none, because every
-     * account operation goes through `/api/accounts/*`, which calls the same
-     * endpoints in process. `disabledPaths` is enforced in `onRequest`, and
-     * `auth.api.X()` invokes the endpoint directly, so closing a path leaves
-     * the app's own calls working.
-     *
-     * **A rule cannot be enforced from outside the endpoint that acts.** The
-     * last-administrator check was a `before` hook reading `userId` off the raw
-     * body: `z.coerce.string()` turns `["<id>"]` into an id *after* the hook
-     * has decided the body names nobody, and `/admin/update-user` changes a
-     * role through `data.role`, which the hook did not match. Both demoted the
-     * only administrator and answered 200.
-     * -> `accounts.controller.ts`, `POST /api/accounts/:username/role`
-     */
-    disabledPaths: [
-      // Nothing signs itself up: the setup token claims the install and an
-      // administrator provisions every account after it. Left open while
-      // unclaimed it is a second, tokenless door to the *first* administrator,
-      // which is what the token exists to prevent.
-      // `setup.controller.ts` calls `signUpEmail` in process, which
-      // `disabledPaths` does not intercept.
-      '/sign-up/email',
-      '/admin/set-role',
-      '/admin/update-user',
-      '/admin/create-user',
-      '/admin/remove-user',
-      '/admin/list-users',
-      '/admin/set-user-password',
-      '/admin/ban-user',
-      '/admin/unban-user',
-      '/admin/list-user-sessions',
-      '/admin/revoke-user-session',
-      '/admin/revoke-user-sessions',
-      '/admin/impersonate-user',
-      '/admin/stop-impersonating',
-      '/admin/has-permission',
+      // The library's description of its own operations, read in process by
+      // `openapi.ts`; its routes are not offered over HTTP.
+      openAPI({ disableDefaultReference: true }),
     ],
     /**
      * **Declared here or the column is invisible to Better Auth.** The adapter
@@ -441,23 +523,21 @@ export function authOptions(
      * somebody too, and it fires once the row is already being written, which
      * would answer an error and leave the account behind.
      *
-     * **The one refusal on the in-process path.** `disabledPaths` refuses
-     * `/sign-up/email` over HTTP before any hook runs, so this fires only for
-     * `setup.controller.ts`'s in-process `signUpEmail`, which that list cannot
-     * intercept. Held by *refuses an in-process sign-up once the install has an
-     * account* in `test/closed-sign-up.test.ts`, which goes red when this
-     * refusal is removed. The file's other cases are held by the path list and
-     * survive that deletion, so naming the file alone says too little.
+     * **The one refusal on the in-process path.** `/sign-up/email` is not
+     * offered over HTTP, so this fires only for `setup.controller.ts`'s
+     * in-process `signUpEmail`. Held by *refuses an in-process sign-up once
+     * the install has an account* in `test/closed-sign-up.test.ts`, which goes
+     * red when this refusal is removed. The file's other cases are held by
+     * `offersOnly` and survive that deletion, so naming the file alone says
+     * too little.
      */
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         /**
          * **Every door that writes a password, in one place.** The install's
          * minimum is a stored number and `minPasswordLength` is fixed when
-         * these options are built, so the library's own `/change-password` and
-         * `/reset-password` -- neither of which is in `disabledPaths` -- would
-         * go on taking whatever was set at boot. A check in a controller
-         * reaches neither of them.
+         * these options are built, so an endpoint reached in process would go
+         * on taking whatever was set at boot.
          *
          * **Read now, like every other bound here.** A minimum cached at boot
          * is one an administrator cannot raise without a restart, which for a
@@ -475,10 +555,9 @@ export function authOptions(
             const stored = await readPolicy(db)
             /**
              * **The refusal says no and not how short.** This runs ahead of
-             * the endpoint's own session and token checks -- that is what
-             * makes it cover the library's routes -- so its message reaches an
-             * anonymous caller, and the minimum is otherwise readable only
-             * through an `@AdminOnly` route. `change-password.controller.ts`
+             * the endpoint's own session checks, so it does not know whom it
+             * answers, and the minimum is otherwise readable only through an
+             * `@AdminOnly` route. `change-password.controller.ts`
              * is behind a session and composes the number for the analyst it
              * belongs to.
              *
@@ -492,70 +571,6 @@ export function authOptions(
           }
         }
 
-        /**
-         * **A shut account is refused before the password is checked**, so a
-         * lockout costs an attacker the guess rather than merely the answer -
-         * and so a correct password found during the window still does not
-         * open it.
-         *
-         * **The refusal is a wrong password, in every channel it has.** Naming
-         * the lock told an unauthenticated caller that the address is an
-         * account, that their guessing was landing, and when the window
-         * reopened -- ten guesses at any address answered the first question.
-         * The specification asks for the opposite and this now meets it:
-         * *the response does not distinguish a locked account from a wrong
-         * password*. -> #82, #212
-         *
-         * **The hash runs even though nothing needs it**, which is the other
-         * half and the one a status code does not show. Throwing here used to
-         * skip the argon2 verify an ordinary attempt pays, so a locked account
-         * answered in 2.8ms against 19.4ms with no overlap at all -- a cleaner
-         * oracle than the status was. Hashing the supplied password and
-         * discarding it costs a locked attempt exactly what a wrong one costs.
-         *
-         * What this loses is real: an analyst locked out mid-incident is told
-         * only that the password was wrong. The lock is temporary, and
-         * `account_locked` is in the audit for an administrator to see.
-         */
-        if (ctx.path.startsWith('/sign-in')) {
-          const attempted = (ctx.body as { email?: unknown } | undefined)?.email
-          if (typeof attempted === 'string' && attempted !== '') {
-            const [account] = await db
-              .select({
-                failedSignIns: schema.user.failedSignIns,
-                lockedUntil: schema.user.lockedUntil,
-              })
-              .from(schema.user)
-              .where(sameAddress(attempted))
-              .limit(1)
-            /**
-             * **Only a body that already carries a password.** A `before` hook
-             * runs on the raw body, before validation, so writing one into a
-             * body that has none *repairs* it: the request stops being the 400
-             * an unlocked account answers and becomes the 401 a locked one
-             * does. That is the same enumeration oracle by a shorter route --
-             * ten guesses to lock an address, then one request with no
-             * password at all, and no credential needed.
-             */
-            const supplied = (ctx.body as { password?: unknown } | undefined)?.password
-            if (typeof supplied === 'string' && account && isLocked(account, new Date())) {
-              /**
-               * **The password is replaced, and Better Auth refuses it.**
-               *
-               * Handing the normal path a password that cannot match gives
-               * the same response by construction rather than by copying, the
-               * same verify, and the same `after` hook -- which is what records
-               * the failed sign-in and counts it, and which a locked attempt
-               * used to reach none of.
-               *
-               * `countTheFailure` returns early once an account is already
-               * locked, so this does not extend the window: an attacker
-               * cannot hold somebody out by keeping at it.
-               */
-              ;(ctx.body as { password?: unknown }).password = randomUUID()
-            }
-          }
-        }
         if (ctx.path !== '/sign-up/email') return
         const [already] = await db.select({ id: schema.user.id }).from(schema.user).limit(1)
         if (already) {
@@ -567,15 +582,12 @@ export function authOptions(
 
       }),
       /**
-       * The two audit events the session table cannot see.
+       * The audit events the session table cannot see.
        *
        * **A failed sign-in writes no row anywhere**, so without this an
        * attempt run against every account leaves the install with nothing to
        * show for it - which is the first thing both NIST SP 800-92 and
        * ISO 27002 8.15 ask an application log for.
-       *
-       * **A sign-out deletes the session**, so the end of an access period is
-       * recoverable only from here. ISO names log-on *and* log-off.
        *
        * The attempted address is recorded and the password never is. It is
        * recorded in `detail` rather than as the target, the target being a
@@ -584,32 +596,33 @@ export function authOptions(
        */
       after: createAuthMiddleware(async (ctx) => {
         const headers = Object.fromEntries(ctx.headers?.entries() ?? [])
-        if (ctx.path === '/sign-out') {
-          const who = ctx.context.session?.user
-          await recordInstallActivity(db, {
-            event: 'signed_out',
-            actor: { id: who?.id ?? null, label: who?.name ?? who?.email ?? null },
-            headers,
-          })
-          return
-        }
-        if (!ctx.path.startsWith('/sign-in')) return
         /**
-         * **A success clears the count, not only the lock.** Leaving the
-         * counter where it stood would shut the account again on the analyst's
-         * very next typo, which reads as the lockout being broken.
+         * **Every refused sign-in, and a wrong password at any other door.**
+         * `returned` is the response *or* an `APIError`, and it is the only
+         * place the outcome is visible: a refusal writes no row. The count is
+         * `checkPassword`'s; this is the record.
          */
-        if (!(ctx.context.returned instanceof APIError)) {
-          const who = ctx.context.newSession?.user ?? ctx.context.session?.user
-          if (who?.id) {
-            await db.update(schema.user).set(CLEARED).where(eq(schema.user.id, who.id))
-          }
-          return
+        const refused = ctx.context.returned
+        if (!(refused instanceof APIError)) return
+        const signingIn = ctx.path === '/sign-in/email'
+        if (!signingIn && refused.body?.code !== 'INVALID_PASSWORD') return
+        const attempted = signingIn
+          ? (ctx.body as { email?: unknown } | undefined)?.email
+          : ctx.context.session?.user.email
+        /**
+         * **An address with no account costs what an account does.** The
+         * library hashes instead of verifying for one, so `checkPassword`
+         * never runs and would leave the account-holding answer slower by its
+         * two statements. Counting against a hash nobody holds spends them.
+         */
+        if (signingIn && typeof attempted === 'string' && attempted !== '') {
+          const [holds] = await db
+            .select({ id: schema.user.id })
+            .from(schema.user)
+            .where(sameAddress(attempted))
+            .limit(1)
+          if (!holds) await countAgainst(db, NOBODY_HOLDS)
         }
-        // **`returned` is the response *or* an `APIError`**, and it is the only
-        // place a sign-in's outcome is visible: a refusal writes no row, so
-        // there is nothing else to read afterwards.
-        const attempted = (ctx.body as { email?: unknown } | undefined)?.email
         /**
          * **The target is ours, and the identifier they typed is not.**
          * `target_label` partitions the run window, so a caller who chooses it
@@ -634,9 +647,6 @@ export function authOptions(
           },
           headers,
         })
-        if (typeof attempted === 'string' && attempted !== '') {
-          await countTheFailure(db, attempted, headers)
-        }
       }),
     },
     /**
@@ -731,34 +741,46 @@ export function authOptions(
             data: { ...data, expiresAt: await windowFor(db, sessionBegan(context)) },
           }),
         },
-        /** The one point a sign-out, a revoke and an admin's ban all pass through. */
+        /**
+         * The one point a sign-out, a revoke and an admin's ban all pass
+         * through, and it runs only for a session that existed. Writes the
+         * audit line for a caller's own ending, one per session.
+         */
         delete: {
-          after: (deleted: Record<string, unknown>) => {
+          after: async (deleted: Record<string, unknown>, context?: unknown) => {
             const userId = typeof deleted['userId'] === 'string' ? deleted['userId'] : null
-            if (userId) sessionEnded(userId)
-            return Promise.resolve()
+            if (!userId) return
+            sessionEnded(userId)
+            const ending = context as { path?: string; headers?: Headers } | undefined
+            const path = ending?.path ?? ''
+            const event = OWN_ENDINGS[path]
+            if (!event) return
+            const [who] = await db
+              .select({ name: schema.user.name, email: schema.user.email })
+              .from(schema.user)
+              .where(eq(schema.user.id, userId))
+              .limit(1)
+            await recordInstallActivity(db, {
+              event,
+              actor: { id: userId, label: who?.name || who?.email || null },
+              target: who?.email ?? null,
+              detail: { path },
+              headers: Object.fromEntries(ending?.headers?.entries() ?? []),
+            })
           },
         },
       },
     },
     /**
-     * Which headers may name the caller the rate limiter counts against.
-     *
-     * **Decided by `trustedAddressHeaders`, which the audit and the throttler
-     * also read**, so the three cannot disagree about when the header is
-     * believable. -> `wire/caller-address.ts`
-     *
-     * **It resolves the process mode rather than taking this function's
-     * `mode`, and that is the point.** The two disagree about what an absent
-     * mode means: `env.ts` refuses to start without one, while this decision
-     * keeps a fallback of its own and closes on it. An install that names no
-     * mode would otherwise believe a header no proxy set.
+     * Who a request is from, for the limiter and the session row: the one
+     * rule `callerAddress` also applies, so no reader re-decides it.
+     * -> `wire/caller-address.ts`
      *
      * Never set `disableIpTracking`: the limiter returns early on it and
      * applies no rule at all.
      */
     advanced: {
-      ipAddress: { ipAddressHeaders: trustedAddressHeaders() },
+      ipAddress: ADDRESS_RULE,
     },
     /**
      * Half of *core makes no outbound request*, and the half a config can hold.
@@ -777,16 +799,18 @@ export function authOptions(
     verification: { storeInDatabase: true },
     emailAndPassword: {
       enabled: true,
+      // A sign-up makes an account and no session: the claim signs its winner
+      // in once it has won. -> `setup.controller.ts`
+      autoSignIn: false,
       /**
-       * **Unset means 8, and the library serves its own change-password
-       * and sign-up routes.** Left unset, the effective minimum on the install
-       * is the library's default while every controller and screen says 12.
-       * -> `auth/password-policy.ts`
+       * **Unset means 8.** The library applies this floor at every door that
+       * writes a password, beneath the stored minimum the `before` hook holds
+       * them to. -> `PASSWORD_WRITES`
        */
       minPasswordLength: MINIMUM_PASSWORD_LENGTH,
       password: {
         hash: (password) => argonHash(password, ARGON2ID),
-        verify: ({ hash, password }) => argonVerify(hash, password, ARGON2ID),
+        verify: ({ hash, password }) => checkPassword(db, hash, password),
       },
     },
   } satisfies BetterAuthOptions

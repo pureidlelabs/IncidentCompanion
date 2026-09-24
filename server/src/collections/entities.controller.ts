@@ -12,7 +12,7 @@
  * discriminated union, and per-kind patch validation.
  */
 import { CreatedIdsDto, DeletedDto } from './acknowledged.js'
-import { BULK_LIMIT, bulkBodySchema, parsed, versionRead } from './write-door.js'
+import { BULK_LIMIT, bulkBodySchema, parsed, selectionSchema, versionRead } from './write-door.js'
 import {
   Inject,
   UnprocessableEntityException,
@@ -41,6 +41,7 @@ import { withProseFlags } from './prose-flags.js'
 import { CollectionService, type CollectionDefinition } from './collection.service.js'
 import { ConflictsService } from './conflicts.service.js'
 import { DEFINITIONS } from './definitions.js'
+import { rowVersion } from '../domain/column-bounds.js'
 import { accountSchema } from '../domain/entities/account.js'
 import { cloudAppSchema } from '../domain/entities/cloud-app.js'
 import { evidenceSchema } from '../domain/entities/evidence.js'
@@ -53,7 +54,6 @@ import { actionSchema } from '../domain/entities/action.js'
 import { caseNoteSchema } from '../domain/entities/case-note.js'
 import { reportBlockSchema, reportSchema } from '../domain/entities/report.js'
 import { caseOwnedRowSchema, patchSchema } from '../domain/field-spec.js'
-import { rowVersion } from '../domain/column-bounds.js'
 
 /**
  * What an entity route answers with: the envelope guaranteed and verified, the
@@ -72,7 +72,8 @@ class EntityRowDto extends createZodDto(entityRowSchema) {}
 class EntityRowsDto extends createZodDto(z.array(entityRowSchema)) {}
 
 /**
- * What a reorder takes: every id in the scope, once each, in the order wanted.
+ * What a reorder takes: every row in the scope, once each, in the order wanted,
+ * with the version it was read at.
  *
  * **Declared as a DTO rather than parsed out of `unknown`**, so the published
  * document carries the shape. `documented-bodies.test.ts` generates a body from
@@ -80,8 +81,11 @@ class EntityRowsDto extends createZodDto(z.array(entityRowSchema)) {}
  * is one the document cannot describe, and the generated `{}` then reads as the
  * door refusing what the reference called valid.
  */
-const reorderBodySchema = z.object({ ids: z.array(z.uuid()).max(BULK_LIMIT) }).strict()
+const reorderBodySchema = z
+  .object({ rows: z.array(z.object({ id: z.uuid(), version: rowVersion() }).strict()).max(BULK_LIMIT) })
+  .strict()
 class ReorderBodyDto extends createZodDto(reorderBodySchema) {}
+class ReorderedDto extends createZodDto(reorderBodySchema) {}
 class UpdatedManyDto extends createZodDto(
   z.object({
     updated: z.array(z.uuid()),
@@ -151,14 +155,18 @@ abstract class EntityReads {
    * names the wrong thing entirely.
    */
   @Post('order')
-  @ZodResponse({ status: 200, type: CreatedIdsDto, description: 'The ids, in the order written.' })
+  @ZodResponse({
+    status: 200,
+    type: ReorderedDto,
+    description: 'Every row, in the order written, at the version it now holds.',
+  })
   async reorder(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Body() body: ReorderBodyDto,
     @Session() session: UserSession,
   ) {
-    const { ids } = parsed(reorderBodySchema, body) as { ids: string[] }
-    return this.collections.reorder(this.definition, caseId, ids, session.user.id)
+    const { rows } = parsed(reorderBodySchema, body) as { rows: { id: string; version: number }[] }
+    return this.collections.reorder(this.definition, caseId, rows, session.user.id)
   }
 
   @Post('bulk')
@@ -199,9 +207,7 @@ abstract class EntityReads {
     const selection = parsed(
       z
         .object({
-          ids: z
-            .array(z.object({ id: z.uuid(), version: rowVersion() }).strict())
-            .max(BULK_LIMIT),
+          ids: selectionSchema,
           fields: z.record(z.string(), z.unknown()),
         })
         .strict(),

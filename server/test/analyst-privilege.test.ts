@@ -27,84 +27,9 @@ import {
   type Harness,
   type Persona,
 } from './app-harness.js'
+import { MANAGEMENT_PLANE } from './management-plane.js'
 
 const runnable = await bootable()
-
-/**
- * Every route an analyst is refused, as measured.
- *
- * **A list rather than a metadata read.** Reflecting `@Roles` off the handler
- * would make this test agree with whatever the code says, which is not a test -
- * it would pass just as happily on the day a route lost its marking. Changing
- * what an analyst may do should cost a line here and show up in a diff.
- */
-const REFUSED_TO_AN_ANALYST: readonly string[] = [
-  'GET /api/accounts',
-  // **Which organisations the install holds is the management plane**, and
-  // an analyst who could merge two customers would move every case from one
-  // to the other. The list is refused with them: it names every organisation
-  // the install works for, including those an analyst reaches no case of.
-  'DELETE /api/customers/{id}',
-  'GET /api/customers',
-  'PATCH /api/customers/{id}',
-  'POST /api/customers',
-  'POST /api/customers/{id}/merge',
-  // Making a group is the same decision one step earlier: an analyst who
-  // could make one could then put themselves in it.
-  'GET /api/groups',
-  // Reading the reach model: who reaches what, and why. An analyst may not ask
-  // it -- the answer is the shape of everybody's access. -> #208
-  'GET /api/groups/{groupId}',
-  'GET /api/reach/account/{userId}',
-  'GET /api/reach/customer/{customerId}',
-  'POST /api/groups',
-  // **Granting reach is managing the install, and this line is the decision.**
-  // An analyst who could put themselves in a group would reach every
-  // customer, which is the whole of the access model handed away in one call.
-  'DELETE /api/groups/{groupId}/customers/{customerId}',
-  'DELETE /api/groups/{groupId}/members/{userId}',
-  'POST /api/groups/{groupId}/customers',
-  'POST /api/groups/{groupId}/members',
-  // Reading the audit is an administrator's, and this line is what says
-  // so - the route being `@AdminOnly()` is the code, and this is the
-  // decision showing up in a diff.
-  'GET /api/install/activity',
-  // **What the install is made of, rather than what a case holds.** These two
-  // report the host and the database: memory, CPU, load, free disk, and every
-  // table's live row count and size. The row count is the part that decides
-  // it - `GET /api/accounts` is refused two lines above, and `pg_stat` hands
-  // back how many accounts exist to anybody who can reach this.
-  'GET /api/health/activity',
-  'GET /api/health/resources',
-  // Reading the retention window is an administrator's, and changing it is
-  // the one setting whose change destroys evidence.
-  'GET /api/install/audit/retention',
-  'PUT /api/install/audit/retention',
-  'GET /api/install/policy',
-  'PUT /api/install/policy',
-  'POST /api/accounts',
-  'POST /api/accounts/{username}/reset',
-  // The only door a role changes through: Better Auth's own admin routes
-  // are in `disabledPaths`, because a guard outside the endpoint has to
-  // guess the body shape and every path that acts.
-  'POST /api/accounts/{username}/role',
-  'POST /api/accounts/{username}/sessions/end',
-  'POST /api/accounts/sessions/end',
-  'POST /api/accounts/{username}/disable',
-  'POST /api/accounts/{username}/enable',
-  'POST /api/regimes/{name}',
-  // A pack changes what every analyst's reports print, in a language most
-  // reviewers cannot proofread -- so it is the install's decision. Reading the
-  // list is deliberately *not* here: every report form needs it.
-  'PUT /api/report/languages',
-  'DELETE /api/report/languages/{code}',
-  // Replacing a whole library kind can **disable a shipped built-in**, which
-  // no per-entry route offers -- `canDelete` refuses a built-in outright. So
-  // this is the one library door that grants authority a loop of the others
-  // does not, and it changes what every analyst is offered install-wide.
-  // The per-entry writes stay open to an analyst.
-  'PUT /api/library/{slug}',
-]
 
 describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
   let harness: Harness
@@ -141,7 +66,7 @@ describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
   })
 
   it('is refused exactly the routes that are privileged, and no others', () => {
-    expect([...measured].sort()).toEqual([...REFUSED_TO_AN_ANALYST].sort())
+    expect([...measured].sort()).toEqual([...MANAGEMENT_PLANE].sort())
   })
 
   /**
@@ -153,7 +78,7 @@ describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
    * comparison and this is a direction check -- and these two are the ones
    * whose gate is newest.
    */
-  it.each(['/api/health/activity', '/api/health/resources'])(
+  it.each(['/api/health/activity', '/api/health/resources', '/api/settings'])(
     'answers an administrator at %s',
     async (path) => {
       const response = await fetch(`${harness.base}${path}`, {

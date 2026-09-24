@@ -141,7 +141,7 @@ A line MUST carry who acted in a form that survives the account being renamed or
 
 A line MUST NOT carry what was sent. Case content, passwords, passphrases and the bodies of requests MUST stay out of the audit, which is read by people who do not reach the case data the install holds.
 
-Where a line records the address a request came from, it MUST be taken from something the caller cannot set. A caller who can write their own address into the audit can write somebody else's.
+Where a line records the address a request came from, it MUST be taken from something the caller cannot set. A caller who can write their own address into the audit can write somebody else's. The address MUST be the one the install's one way in saw the request come from, and a caller that reached the application without passing it MUST be recorded at its own.
 
 #### Scenario: An account is removed after acting
 
@@ -167,6 +167,18 @@ Where a line records the address a request came from, it MUST be taken from some
 - WHEN the refusal is recorded
 - THEN what is recorded is what the install matched
 - AND it is not the text the caller sent
+
+#### Scenario: A caller reaches the application without passing the one way in
+
+- GIVEN a caller that reached the application directly, presenting an address of its choosing
+- WHEN the request is recorded
+- THEN the recorded address is the caller's own
+
+#### Scenario: An install whose one way in started last
+
+- GIVEN an install whose one way in started after the application
+- WHEN analysts on two machines each fail to sign in through it
+- THEN each failure is recorded at that analyst's own address
 
 ### Requirement: Refusals are recorded, and a run of them is louder than one
 

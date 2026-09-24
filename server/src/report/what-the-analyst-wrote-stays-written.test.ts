@@ -27,6 +27,7 @@ import { english } from './document/packs.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { defaultPolicy } from '../policy/read.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -82,7 +83,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('prose an analyst wrote into
       })
       .onConflictDoNothing()
 
-    const cases_ = new CasesService(db!, {
+    const cases_ = new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)

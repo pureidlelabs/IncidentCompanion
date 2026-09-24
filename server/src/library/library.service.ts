@@ -11,7 +11,7 @@ import {
   Logger,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 
 import { BUILTIN_CASE_TEMPLATES } from './builtins/case-templates.js'
 import { BUILTIN_REPORT_LAYOUTS } from './builtins/report-layouts.js'
@@ -66,103 +66,59 @@ export class LibraryService {
   ) {}
 
   /**
-   * Write what ships, once, on boot. Upserts on `(kind, name)` and names only
-   * built-in rows, so a restart neither duplicates them nor touches an
-   * analyst's own. Needs the seed role.
+   * Write what ships. Upserts on `(kind, name)` and names only built-in rows,
+   * so a second run neither duplicates them nor touches an analyst's own, and
+   * writes none that is unchanged. Needs the seed role.
    */
   async seedBuiltIns(): Promise<void> {
     if (!this.seed) throw new Error(seedRoleMissing('the library built-ins'))
     for (const entry of BUILTIN_CASE_TEMPLATES) {
-      await this.seed
-        .insert(library)
-        .values({
-          kind: 'templates',
-          name: entry.name,
-          label: entry.label,
-          description: entry.description,
-          position: entry.position,
-          builtin: true,
-          payload: entry.payload as Record<string, unknown>,
-        })
-        .onConflictDoUpdate({
-          target: [library.kind, library.name],
-          set: {
-            label: entry.label,
-            description: entry.description,
-            position: entry.position,
-            payload: entry.payload as Record<string, unknown>,
-            updatedAt: new Date(),
-          },
-        })
+      await this.writeBuiltIn(this.seed, {
+        kind: 'templates',
+        name: entry.name,
+        label: entry.label,
+        description: entry.description,
+        position: entry.position,
+        payload: entry.payload,
+      })
     }
     /**
-     * **The report layouts, by the same upsert.** Without them the layout list
-     * holds only Blank, so every report starts empty and the restore, the
-     * required-section derivation and the New report form are all built and
-     * inert.
+     * **The report layouts.** Without them the layout list holds only Blank,
+     * so every report starts empty and the restore, the required-section
+     * derivation and the New report form are all built and inert.
      */
     for (const layout of BUILTIN_REPORT_LAYOUTS) {
-      // Built once and used by both branches: an upsert that writes the
-      // payload twice can gain a field on one side, and the update branch is
-      // the one every restart after the first takes. -> #954
-      const payload = {
-        blocks: layout.blocks,
-        ...(layout.requiresFeature ? { requiresFeature: layout.requiresFeature } : {}),
-        ...(layout.stage ? { stage: layout.stage } : {}),
-      }
-      await this.seed
-        .insert(library)
-        .values({
-          kind: 'report-layouts',
-          name: layout.name,
-          label: layout.label,
-          // The row's own column rather than a payload field: it is already
-          // here, and an analyst's drop-in sets it the same way.
-          description: layout.summary,
-          position: layout.position,
-          builtin: true,
-          payload,
-        })
-        .onConflictDoUpdate({
-          target: [library.kind, library.name],
-          set: {
-            label: layout.label,
-            description: layout.summary,
-            position: layout.position,
-            payload,
-            updatedAt: new Date(),
-          },
-        })
+      await this.writeBuiltIn(this.seed, {
+        kind: 'report-layouts',
+        name: layout.name,
+        label: layout.label,
+        // The row's own column rather than a payload field: it is already
+        // here, and an analyst's drop-in sets it the same way.
+        description: layout.summary,
+        position: layout.position,
+        payload: {
+          blocks: layout.blocks,
+          ...(layout.requiresFeature ? { requiresFeature: layout.requiresFeature } : {}),
+          ...(layout.stage ? { stage: layout.stage } : {}),
+        },
+      })
     }
 
     /**
-     * **The snippets, by the same upsert.** The `/` menu in a written block is
-     * wired from this table to the caret -- search, slots, keyboard, insert --
-     * so without rows the whole feature reads as unbuilt. An install's own
-     * entries are ordinary rows beside these.
+     * **The snippets.** The `/` menu in a written block is wired from this
+     * table to the caret -- search, slots, keyboard, insert -- so without rows
+     * the whole feature reads as unbuilt. An install's own entries are
+     * ordinary rows beside these.
      */
     for (const snippet of BUILTIN_REPORT_SNIPPETS) {
-      await this.seed
-        .insert(library)
-        .values({
-          kind: 'report-snippets',
-          name: snippet.name,
-          label: snippet.label,
-          description: snippet.payload.hint,
-          position: snippet.position,
-          builtin: true,
-          payload: snippet.payload,
-        })
-        .onConflictDoUpdate({
-          target: [library.kind, library.name],
-          set: {
-            label: snippet.label,
-            description: snippet.payload.hint,
-            position: snippet.position,
-            payload: snippet.payload,
-            updatedAt: new Date(),
-          },
-        })
+      await this.writeBuiltIn(this.seed, {
+        kind: 'report-snippets',
+        name: snippet.name,
+        label: snippet.label,
+        description: snippet.payload.hint,
+        position: snippet.position,
+        payload: snippet.payload,
+      })
     }
 
     this.log.log(
@@ -170,6 +126,32 @@ export class LibraryService {
         `${String(BUILTIN_REPORT_LAYOUTS.length)} report layouts, ` +
         `${String(BUILTIN_REPORT_SNIPPETS.length)} snippets`,
     )
+  }
+
+  /**
+   * Writes one shipped entry on `(kind, name)`, and only when what is stored
+   * differs from what ships: an upgrade's content arrives, a second seed with
+   * nothing new writes nothing.
+   */
+  private async writeBuiltIn(
+    seed: Database,
+    entry: Pick<typeof library.$inferInsert, 'kind' | 'name' | 'label' | 'description' | 'position' | 'payload'>,
+  ): Promise<void> {
+    await seed
+      .insert(library)
+      .values({ ...entry, builtin: true })
+      .onConflictDoUpdate({
+        target: [library.kind, library.name],
+        set: {
+          label: entry.label,
+          description: entry.description,
+          position: entry.position,
+          payload: entry.payload,
+          updatedAt: new Date(),
+        },
+        setWhere: sql`(${library.label}, ${library.description}, ${library.position}, ${library.payload})
+          is distinct from (excluded.label, excluded.description, excluded.position, excluded.payload)`,
+      })
   }
 
   /**

@@ -217,7 +217,7 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
     const id = opened!.id
 
     const socket = new WebSocket(`${harness!.base.replace('http://', 'ws://')}/api/cases/${id}/live`, {
-      headers: { cookie: analyst.cookie, origin: harness!.base },
+      headers: { cookie: analyst.cookie, origin: harness!.origin },
     })
     try {
       await new Promise<void>((resolve, reject) => {

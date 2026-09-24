@@ -35,7 +35,8 @@
  * so a document is never left newer in memory than on disk.
  */
 import { Inject, Injectable, Logger, Optional, type OnApplicationShutdown } from '@nestjs/common'
-import { and, eq } from 'drizzle-orm'
+import type { IncomingHttpHeaders } from 'node:http'
+import { and, eq, isNull } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import {
@@ -48,7 +49,9 @@ import * as Y from 'yjs'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import { changeFeed } from '../db/schema/change-feed.js'
 import { reports } from '../db/schema/report.js'
+import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
 import { withCase } from '../db/scope.js'
 
@@ -120,31 +123,6 @@ export interface ProseRecord {
 }
 
 /**
- * A record, plus the state a caller decides per frame from.
- *
- * `ProseRecord` alone is what opening, releasing and flushing need; only the
- * socket's per-frame refusal wants the stamp, and it is carried on the lookup
- * `resolve` already does because a second query for it would run per keystroke.
- */
-export interface ProseAddress extends ProseRecord {
-  /**
-   * When the record was frozen, or null.
-   *
-   * **Always null for a note**, which has nothing to be filed into: a note is
-   * the analyst's own scratchpad and never becomes a deliverable, so no state
-   * of it refuses a write. -> `domain/entities/case-note.ts`
-   *
-   * **Carried from the lookup `resolve` already does**, because the caller has
-   * to decide per frame whether an update may be applied and a second query
-   * for that would run per keystroke. It is the timestamp rather than a boolean
-   * so the refusal can say *when*, which is the only thing that makes the
-   * sentence actionable. -> `report/freeze.ts`
-   */
-  sentAt: Date | null
-}
-
-
-/**
  * How a document reaches the other instances.
  *
  * **Declared here rather than imported**, so the record does not depend on the
@@ -178,6 +156,34 @@ interface LiveDocument {
   timer: NodeJS.Timeout | null
   dirty: boolean
   unsubscribe: (() => void) | null
+  /** When the report was sent; a note is never sent. */
+  sealed: Date | null
+  /** Content waiting on a send that is deciding, or null when none is. */
+  deciding: (() => void)[] | null
+  /** Whoever wrote into it since it was last stored, the latest last. */
+  writers: Map<string, Writer>
+  /** The last flush queued; each waits for the one before it. */
+  saving: Promise<void>
+}
+
+/** An analyst writing through a connection, and the headers that connection arrived with. */
+export interface Writer {
+  readonly id: string
+  readonly label: string
+  readonly headers: IncomingHttpHeaders
+}
+
+/** Told once a flush has stored what `writers` wrote. */
+export type Saved = (caseId: string, record: ProseRecord, writers: readonly Writer[]) => void
+
+/** What a connection's frame is answered with. */
+export type Applied = { refused: Date } | { reply: Uint8Array | null }
+
+/** A report's document held still for a send, at `bytes`. */
+export interface Seal {
+  readonly bytes: Uint8Array
+  /** The send's stamp, or null where it did not stamp. Gives back the reader `seal` took. */
+  settle(stamp: Date | null): Promise<void>
 }
 
 /**
@@ -218,6 +224,7 @@ function seedNote(doc: Y.Doc, text: string): void {
 export class ProseService implements OnApplicationShutdown {
   private readonly log = new Logger(ProseService.name)
   private readonly live = new Map<string, Promise<LiveDocument>>()
+  private saved: Saved | undefined
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -239,7 +246,7 @@ export class ProseService implements OnApplicationShutdown {
    * The case is checked too - the block has to belong to the case whose socket
    * asked.
    */
-  async resolve(caseId: string, field: string): Promise<ProseAddress | null> {
+  async resolve(caseId: string, field: string): Promise<ProseRecord | null> {
     const parts = field.split(':')
     if (parts.length !== 3) return null
     const [table, rowId, column] = parts as [string, string, string]
@@ -261,20 +268,17 @@ export class ProseService implements OnApplicationShutdown {
           .where(and(eq(caseNotes.id, rowId), eq(caseNotes.caseId, caseId))),
       )
       if (!note) return null
-      // A note never freezes, so there is no state in which a frame for one is
-      // refused. Written as a literal rather than read from a column, because
-      // there is no column and inventing one would be the thing to maintain.
-      return { table, id: note.id, sentAt: null }
+      return { table, id: note.id }
     }
 
     const [report] = await withCase(this.db, caseId, (tx) =>
       tx
-        .select({ id: reports.id, sentAt: reports.sentAt })
+        .select({ id: reports.id })
         .from(reports)
         .where(and(eq(reports.id, rowId), eq(reports.caseId, caseId))),
     )
     if (!report) return null
-    return { table, id: report.id, sentAt: report.sentAt }
+    return { table, id: report.id }
   }
 
   /**
@@ -312,6 +316,7 @@ export class ProseService implements OnApplicationShutdown {
 
   private async build(caseId: string, address: ProseRecord): Promise<LiveDocument> {
     const doc = new Y.Doc({ gc: false })
+    let sealed: Date | null = null
     if (address.table === 'casenotes') {
       const [row] = await withCase(this.db, caseId, (tx) =>
         tx
@@ -324,23 +329,44 @@ export class ProseService implements OnApplicationShutdown {
       // block has no column to seed from, so nothing is seeded there; a note
       // reaches the app from a demo, a CSV import or a `.iccase` archive with
       // its body already written, and opening one to an empty editor would
-      // read as the note having been lost. Guarded on there being no document
-      // yet, so it can never overwrite what anybody typed.
-      else if (row?.note) seedNote(doc, row.note)
+      // read as the note having been lost. Stored at once: a document built
+      // again from the words would hold them a second time for any client
+      // still holding the first.
+      else if (row?.note) {
+        seedNote(doc, row.note)
+        const document = Buffer.from(Y.encodeStateAsUpdate(doc))
+        await withCase(this.db, caseId, (tx) =>
+          tx
+            .update(caseNotes)
+            .set({ document })
+            .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId), isNull(caseNotes.document))),
+        )
+      }
     } else {
       const [row] = await withCase(this.db, caseId, (tx) =>
         tx
-          .select({ document: reports.document })
+          .select({ document: reports.document, sentAt: reports.sentAt })
           .from(reports)
           .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId))),
       )
       if (row?.document) Y.applyUpdate(doc, new Uint8Array(row.document))
+      sealed = row?.sentAt ?? null
     }
 
     // **Registered before the first update can land.** `doc.on('update')` is
     // attached here rather than by the caller, so there is no window in which
     // an update is applied to a document nothing is watching.
-    const entry: LiveDocument = { doc, readers: 1, timer: null, dirty: false, unsubscribe: null }
+    const entry: LiveDocument = {
+      doc,
+      readers: 1,
+      timer: null,
+      dirty: false,
+      unsubscribe: null,
+      sealed,
+      deciding: null,
+      writers: new Map(),
+      saving: Promise.resolve(),
+    }
     doc.on('update', (update: Uint8Array, origin: unknown) => {
       entry.dirty = true
       if (entry.timer) clearTimeout(entry.timer)
@@ -357,7 +383,7 @@ export class ProseService implements OnApplicationShutdown {
     // is a window in which another instance's edits are dropped silently.
     if (this.relay) {
       entry.unsubscribe = await this.relay.subscribe(caseId, (payload) => {
-        this.relayIn(address, doc, payload)
+        this.relayIn(address, entry, payload)
       })
     }
     return entry
@@ -391,7 +417,7 @@ export class ProseService implements OnApplicationShutdown {
    * without comment - a channel shared with other traffic is the price of not
    * standing up a second one.
    */
-  private relayIn(address: ProseRecord, doc: Y.Doc, payload: string): void {
+  private relayIn(address: ProseRecord, entry: LiveDocument, payload: string): void {
     let frame: Partial<ProseFrame>
     try {
       frame = JSON.parse(payload) as Partial<ProseFrame>
@@ -401,9 +427,16 @@ export class ProseService implements OnApplicationShutdown {
     if (frame.type !== 'prose.document') return
     if (frame.record !== recordOf(address)) return
     if (typeof frame.update !== 'string') return
+    if (entry.sealed) return
+    if (entry.deciding) {
+      entry.deciding.push(() => {
+        this.relayIn(address, entry, payload)
+      })
+      return
+    }
 
     try {
-      Y.applyUpdate(doc, new Uint8Array(Buffer.from(frame.update, 'base64')), REMOTE)
+      Y.applyUpdate(entry.doc, new Uint8Array(Buffer.from(frame.update, 'base64')), REMOTE)
     } catch (error) {
       this.log.warn(`dropping a relayed prose update for ${recordOf(address)}: ${String(error)}`)
     }
@@ -435,6 +468,93 @@ export class ProseService implements OnApplicationShutdown {
     held.unsubscribe?.()
     this.live.delete(key)
     held.doc.destroy()
+  }
+
+  /** Sets who is told once a flush has stored what somebody wrote. */
+  onSaved(listener: Saved): void {
+    this.saved = listener
+  }
+
+  /**
+   * Apply one connection's sync frame, and what to answer it with.
+   *
+   * Content for a sent report is refused with its stamp. Content arriving while
+   * a send decides waits for it: refused if the send stamps, applied if not.
+   * Content that changes the document names `writer` in the next flush. The
+   * document has to be open.
+   */
+  async apply(
+    caseId: string,
+    address: ProseRecord,
+    frame: Uint8Array,
+    origin: unknown,
+    writer: Writer,
+  ): Promise<Applied> {
+    const holding = this.live.get(keyOf(caseId, address))
+    if (!holding) throw new Error(`${recordOf(address)} is not open`)
+    const held = await holding
+    const deciding = held.deciding
+    if ((held.sealed || deciding) && !this.addsNothing(held.doc, frame)) {
+      if (held.sealed) return { refused: held.sealed }
+      if (deciding) {
+        return new Promise((answer) => {
+          deciding.push(() => {
+            answer(this.apply(caseId, address, frame, origin, writer))
+          })
+        })
+      }
+    }
+    let changed = false
+    const mark = () => {
+      changed = true
+    }
+    held.doc.on('update', mark)
+    const reply = this.applySync(held.doc, frame, origin)
+    held.doc.off('update', mark)
+    if (changed) {
+      held.writers.delete(writer.id)
+      held.writers.set(writer.id, writer)
+    }
+    return { reply }
+  }
+
+  /**
+   * Hold a report's document still while a send decides, once what was typed
+   * into it is stored and attributed by `flush`.
+   *
+   * Takes a reader, which `settle` gives back. A second seal waits for the
+   * first to settle. Throws, holding nothing, where that flush fails.
+   */
+  async seal(caseId: string, reportId: string): Promise<Seal> {
+    const address = reportDocument(reportId)
+    await this.open(caseId, address)
+    const held = await this.live.get(keyOf(caseId, address))!
+    while (held.deciding) {
+      const waiting = held.deciding
+      await new Promise<void>((next) => waiting.push(next))
+    }
+    held.deciding = []
+    await (held.dirty ? this.flush(caseId, address) : held.saving)
+    const seal: Seal = {
+      bytes: Y.encodeStateAsUpdate(held.doc),
+      settle: async (stamp) => {
+        if (stamp) {
+          // The stamp stored these bytes, and nothing has been applied since.
+          held.sealed = stamp
+          held.dirty = false
+          if (held.timer) clearTimeout(held.timer)
+        }
+        const waiting = held.deciding ?? []
+        held.deciding = null
+        for (const go of waiting) go()
+        await this.release(caseId, address)
+      },
+    }
+    if (held.dirty) {
+      await seal.settle(null)
+      throw new Error(`the prose of report ${reportId} could not be stored, so it is not sent`)
+    }
+    return seal
   }
 
   /**
@@ -514,7 +634,10 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   /**
-   * Write the document to its row. Public so a test can force it.
+   * Write the document to its row, naming whoever wrote into it since the last
+   * write: `updated_by` is the latest of them, and each gets a feed row in the
+   * same transaction. Then tells the `onSaved` listener. Resolves once every
+   * flush queued before it has run too. Public so a test can force it.
    *
    * **The row's version is deliberately not bumped.** `reports.version` guards
    * the analyst-facing fields against a concurrent edit; the document is a
@@ -525,32 +648,66 @@ export class ProseService implements OnApplicationShutdown {
     const holding = this.live.get(keyOf(caseId, address))
     if (!holding) return
     const held = await holding
+    // One at a time: two in flight could store the older document last.
+    held.saving = held.saving.then(() => this.store(caseId, address, held))
+    await held.saving
+  }
+
+  private async store(caseId: string, address: ProseRecord, held: LiveDocument): Promise<void> {
     const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
+    const writers = [...held.writers.values()]
+    held.writers.clear()
     held.dirty = false
+    const by = writers.at(-1)
+    const attributed = by ? { updatedBy: by.id, updatedAt: new Date() } : {}
     try {
-      await withCase(this.db, caseId, (tx) =>
-        address.table === 'casenotes'
+      await withCase(this.db, caseId, async (tx) => {
+        const [row] = await (address.table === 'casenotes'
           ? tx
               .update(caseNotes)
               // **`note` is re-derived from the document on every flush.**
               // The document is the record; the column is the projection the
               // index row, the search and the CSV export read, and a note has
-              // no heading to find it by instead. The column is also written
-              // straight by the paths a note arrives on -- case seeding, the
-              // archive import, the generic collection write -- and this
-              // replaces whatever they left once a document exists.
-              .set({ document: bytes, note: noteText(held.doc) })
+              // no heading to find it by instead. A note's creation writes the
+              // column once, as the document's first words; this is its only
+              // writer after that.
+              .set({ document: bytes, note: noteText(held.doc), ...attributed })
               .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
+              .returning({ version: caseNotes.version })
           : tx
               .update(reports)
-              .set({ document: bytes })
-              .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId))),
-      )
+              .set({ document: bytes, ...attributed })
+              .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
+              .returning({ version: reports.version }))
+        if (!row || writers.length === 0) return
+        await tx.insert(changeFeed).values(
+          writers.map((writer) => ({
+            caseId,
+            entity: address.table,
+            entityId: address.id,
+            op: 'update' as const,
+            version: row.version,
+            actorId: writer.id,
+            fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
+          })),
+        )
+      })
+      if (writers.length > 0) this.saved?.(caseId, address, writers)
     } catch (error) {
+      // Sent by a path this document did not see: nothing more is taken.
+      const sent = sentReportIn(error)
+      if (sent) {
+        held.sealed ??= sent.sentAt
+        return
+      }
       // **Marked dirty again**, so the next quiet moment or the last reader
       // leaving tries once more. Swallowing it silently is how a report loses
       // an afternoon to a transient database error nobody saw.
       held.dirty = true
+      held.writers = new Map([
+        ...writers.filter((writer) => !held.writers.has(writer.id)).map((writer) => [writer.id, writer] as const),
+        ...held.writers,
+      ])
       this.log.error(`could not save the prose for ${recordOf(address)}: ${String(error)}`)
     }
   }

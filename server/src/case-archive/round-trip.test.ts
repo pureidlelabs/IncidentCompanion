@@ -109,6 +109,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
       .returning()
     const artefact = Buffer.from('the artefact bytes')
     const stored = await store.put(
+      row.id,
       (async function* () {
         yield artefact
       })(),
@@ -192,6 +193,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
     store = new EvidenceStore({ get: () => root } as never, policy)
     cases_ = new CasesService(
       db!,
+      store,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
     exporter = new ArchiveExportService(cases_, store, policy)
@@ -438,7 +440,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
     const [row] = await seed!.select().from(evidence).where(eq(evidence.caseId, result.id))
     expect(row!.hash).toBe(made.hash)
     expect(row!.storedAt).not.toBeNull()
-    expect(Buffer.from((await store.read(row!.hash))!).toString()).toBe('the artefact bytes')
+    expect(Buffer.from((await store.read(result.id, row!.hash))!).toString()).toBe('the artefact bytes')
     expect(result.missingFiles).toBe(0)
   })
 
@@ -663,7 +665,7 @@ describe('a handover, exported without its files', () => {
      */
     it('says the install that wrote it had already lost it', async () => {
       const made = await furnished()
-      await rm(join(root, made.hash))
+      await rm(join(root, made.caseId, made.hash))
 
       const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
       expect(built.attachments, 'the artefacts were not asked for').toBe('included')
@@ -694,7 +696,7 @@ describe('a handover, exported without its files', () => {
         storedAt: new Date(),
         createdBy: actorId,
       })
-      await rm(join(root, made.hash))
+      await rm(join(root, made.caseId, made.hash))
 
       const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
       await freeTheReference(made.caseId)

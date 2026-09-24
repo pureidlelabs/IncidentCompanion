@@ -15,8 +15,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { BulkDeleteController, bulkDeleteBodySchema } from './bulk-delete.controller.js'
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import {
   actions,
   cases,
@@ -32,6 +31,7 @@ import {
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { camelKeys } from '../wire/naming.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -118,7 +118,7 @@ function controllerFor(name: string): Bulk {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!, suiteStore()))
 }
 
 describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () => {
@@ -132,7 +132,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () =
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     const [two] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
     caseId = one!.id
@@ -490,11 +490,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () =
 describe.skipIf(!db || !hasConcurrentConnections())('deleting a selection that spans collections', () => {
   let caseId: string
   let session: Session
-  const controller = () => new BulkDeleteController(new CollectionService(db!))
+  const controller = () => new BulkDeleteController(new CollectionService(db!, suiteStore()))
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = one!.id
     session = { user: { id: ACTOR } }
@@ -755,13 +755,12 @@ describe.skipIf(!db || !hasConcurrentConnections())('deleting a selection that s
       .insert(evidence)
       .values({ caseId, type: 'file', name: 'SENT-FIGURE-SOURCE', location: 'nowhere' })
       .returning()
-    const [paper] = await seed!
-      .insert(reports)
-      .values({ caseId, label: 'Sent', sentAt: new Date() })
-      .returning()
+    const [paper] = await seed!.insert(reports).values({ caseId, label: 'Sent' }).returning()
     await seed!
       .insert(reportBlocks)
       .values({ caseId, reportId: paper!.id, kind: 'figure', evidenceId: artefact!.id })
+    // Stamped last: the store refuses a part added to a sent report.
+    await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, paper!.id))
 
     const result = await controller().remove(
       caseId,

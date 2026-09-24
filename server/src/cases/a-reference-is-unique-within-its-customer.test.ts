@@ -25,6 +25,7 @@ import { attributeUnattributedCases, defaultCustomer } from '../customers/custom
 import { openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
 import { cases, customers, user } from '../db/schema/index.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -56,7 +57,7 @@ describe.skipIf(!db)('a reference within its customer', () => {
         updatedAt: now,
       })
       .onConflictDoNothing()
-    service = new CasesService(db!, {
+    service = new CasesService(db!, suiteStore(), {
       announce: () => undefined,
       othersOn: () => Promise.resolve([]),
     } as never)

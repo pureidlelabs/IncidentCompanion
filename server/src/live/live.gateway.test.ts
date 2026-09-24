@@ -17,9 +17,10 @@ import type { AddressInfo } from 'node:net'
 
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { Logger } from '@nestjs/common'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket as Client, type WebSocket } from 'ws'
-import { readSyncMessage, writeSyncStep2 } from 'y-protocols/sync'
+import { readSyncMessage } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
 import { LiveGateway } from './live.gateway.js'
@@ -64,6 +65,11 @@ beforeEach(() => {
   recorded.length = 0
 })
 
+/** The origins the auth library enforces for this stand-in install. */
+const INSTALL = {
+  options: { trustedOrigins: ['http://localhost:5174', 'https://localhost:8443'] },
+}
+
 
 function gatewayWith(
   options: { signedIn?: boolean; caseExists?: boolean; held?: boolean } = {},
@@ -71,6 +77,7 @@ function gatewayWith(
   const { signedIn = true, caseExists = true, held = false } = options
 
   const auth = {
+    instance: INSTALL,
     api: {
       getSession: () =>
         Promise.resolve(
@@ -111,7 +118,7 @@ function gatewayWith(
 const request = (
   url: string,
   headers: Record<string, string> = { origin: 'http://localhost:5174', host: 'localhost:5174' },
-) => ({ url, headers }) as unknown as IncomingMessage
+) => ({ url, headers, socket: { remoteAddress: '127.0.0.1' } }) as unknown as IncomingMessage
 
 /**
  * A reach stand-in that admits whatever the stub database says exists.
@@ -134,20 +141,13 @@ describe('what the handshake lets through', () => {
   })
 })
 
-describe('behind the proxy', () => {
+describe("the install's own origins", () => {
   /**
-   * **The headers a browser and nginx actually produce together**, which is
-   * the shape no other tier sees: `server/e2e/` drives the plaintext dev
-   * server with no proxy in front of it.
-   *
-   * `sameOrigin` compares the forwarded `Host` against the browser's `Origin`,
-   * and `Origin` always carries a non-default port. So the edge has to forward
-   * `$http_host` and not `$host` -- the latter strips it, and every upgrade on
-   * a stack published anywhere but 443 was refused `403 cross-origin` while
-   * every HTTP route answered perfectly. Presence, claims, the change fan-out
-   * and the report CRDT are all on this handshake.
+   * **The set sign-in admits, whatever `Host` says.** The edge forwards the
+   * browser's `Host`, so a comparison against it admits the unprotected
+   * spelling of the install; membership of the trusted set does not.
    */
-  it('admits an upgrade whose forwarded Host carries the published port', async () => {
+  it('admits the install at its published port', async () => {
     const verdict = await gatewayWith().check(
       request(`/api/cases/${CASE}/live`, {
         origin: 'https://localhost:8443',
@@ -157,18 +157,14 @@ describe('behind the proxy', () => {
     expect(verdict).toMatchObject({ refused: null })
   })
 
-  it('refuses one whose Host lost the port on the way through', async () => {
+  it('refuses the unprotected spelling of the install, although Host matches it', async () => {
     const verdict = await gatewayWith().check(
       request(`/api/cases/${CASE}/live`, {
-        origin: 'https://localhost:8443',
-        host: 'localhost',
+        origin: 'http://localhost:8443',
+        host: 'localhost:8443',
       }),
     )
-    expect(
-      verdict.refused,
-      'a proxy forwarding `$host` strips the port, and this is what the ' +
-        'analyst then sees: sockets dead, every page load fine',
-    ).toBe('cross-origin')
+    expect(verdict.refused).toBe('cross-origin')
   })
 })
 
@@ -203,11 +199,9 @@ async function driveUpgrade(gateway: LiveGateway, url: string, headers?: Record<
     socket,
     Buffer.alloc(0),
   )
-  // The handler is sync and the work inside it is not; a few microtask turns
-  // settle `check`, because every lookup under it is already resolved.
-  await Promise.resolve()
-  await Promise.resolve()
-  await Promise.resolve()
+  // The handler is sync and the work inside it is not; one macrotask turn
+  // settles it, because every lookup under it is already resolved.
+  await new Promise((resolve) => setImmediate(resolve))
   return { written, destroyed }
 }
 
@@ -369,13 +363,6 @@ function typed(text: string): { update: string; doc: Y.Doc } {
   return { update: wire(codec.frameUpdate(Y.encodeStateAsUpdate(doc))), doc }
 }
 
-/** A client answering a hello with everything it has - a write, not a read. */
-function answered(doc: Y.Doc): string {
-  const encoder = encoding.createEncoder()
-  writeSyncStep2(encoder, doc)
-  return wire(encoding.toUint8Array(encoder))
-}
-
 function filed(text: string): Y.Doc {
   const doc = new Y.Doc({ gc: false })
   doc.getXmlFragment('block-1').insert(0, [new Y.XmlText(text)])
@@ -412,7 +399,7 @@ class FakeSocket {
       .filter((frame) => frame['type'] === type)
   }
 
-  receive(frame: Record<string, unknown>): void {
+  receive(frame: unknown): void {
     for (const handler of this.handlers.get('message') ?? []) {
       handler(Buffer.from(JSON.stringify(frame)))
     }
@@ -454,14 +441,16 @@ const holding = (level: 'read' | 'write' | 'delete') =>
   }) as never
 
 /**
- * One admitted connection, with the report in whatever state the case needs.
+ * One admitted connection, whose prose applies each frame to `document`, or
+ * refuses it with `refusing` when that is set.
  *
- * The prose double stubs only the two methods that read the database; the codec
- * is the real one, so "the document did not move" is measured with the encoder
- * production uses rather than against a mock's call count.
+ * The prose double stubs what reads the database; the codec is the real one,
+ * so "the document did not move" is measured with the encoder production uses
+ * rather than against a mock's call count. Which frames a sent report refuses
+ * is `ProseService`'s, asserted in its own test.
  */
 async function connected(
-  sentAt: Date | null,
+  refusing: Date | null,
   document: Y.Doc,
   level: 'read' | 'write' | 'delete' = 'write',
 ): Promise<{ live: FakeSocket; relayed: Record<string, unknown>[] }> {
@@ -474,10 +463,11 @@ async function connected(
     },
   }
   const prose = {
-    resolve: () => Promise.resolve({ reportId: REPORT, sentAt }),
+    resolve: () => Promise.resolve({ table: 'reports', id: REPORT }),
     open: () => Promise.resolve(document),
     release: () => Promise.resolve(),
-    applySync: codec.applySync.bind(codec),
+    apply: (_caseId: string, _address: unknown, frame: Uint8Array, origin: unknown) =>
+      Promise.resolve(refusing ? { refused: refusing } : { reply: codec.applySync(document, frame, origin) }),
     frameUpdate: codec.frameUpdate.bind(codec),
     isStateRequest: codec.isStateRequest.bind(codec),
     addsNothing: codec.addsNothing.bind(codec),
@@ -497,87 +487,7 @@ async function connected(
   return { live, relayed }
 }
 
-/**
- * As `connected`, with the stamp read afresh on every `resolve` and the member
- * handed back - so a test can file the report mid-session and deliver the
- * `case.changed` the gateway would have received.
- */
-async function watched(
-  sentAt: () => Date | null,
-  document: Y.Doc,
-): Promise<{ live: FakeSocket; member: { send: (payload: string) => void } }> {
-  let member: { send: (payload: string) => void } | null = null
-  const channel = {
-    join: (joined: { send: (payload: string) => void }) => {
-      member = joined
-      return Promise.resolve()
-    },
-    leave: () => Promise.resolve(),
-    prose: () => undefined,
-  }
-  const prose = {
-    resolve: () => Promise.resolve({ reportId: REPORT, sentAt: sentAt() }),
-    open: () => Promise.resolve(document),
-    release: () => Promise.resolve(),
-    applySync: codec.applySync.bind(codec),
-    frameUpdate: codec.frameUpdate.bind(codec),
-    isStateRequest: codec.isStateRequest.bind(codec),
-    addsNothing: codec.addsNothing.bind(codec),
-    hello: codec.hello.bind(codec),
-  }
-  const gateway = new LiveGateway(
-    channel as unknown as CaseChannel,
-    {} as never,
-    caseWithNoCustomer,
-    prose as never,
-    audit as never,
-    holding('write'),
-  )
-  const live = new FakeSocket()
-  await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
-  if (!member) throw new Error('the gateway did not join the channel')
-  return { live, member }
-}
-
 describe('prose on a report that has been sent', () => {
-  /**
-   * **Readable, or the refusal is worse than the hole.** Refusing the field in
-   * `resolve` or `open` would leave an analyst unable to read what their own
-   * organisation filed; the gate is per frame for exactly this case.
-   */
-  it('answers a state request, so the filed text still loads', async () => {
-    const { live } = await connected(SENT, filed('the initial finding was a false positive'))
-
-    const mine = new Y.Doc({ gc: false })
-    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(mine)) })
-    await settle()
-
-    const [reply] = live.frames('prose.sync')
-    expect(reply, 'a filed report must still load').toBeDefined()
-    readSyncMessage(
-      decoderFor(reply!['update'] as string),
-      encoding.createEncoder(),
-      mine,
-      'the server',
-    )
-    expect(mine.getXmlFragment('block-1').toJSON()).toContain('false positive')
-  })
-
-  it.each([
-    ['an update', () => typed('quietly rewritten after filing').update],
-    ['a step 2', () => answered(typed('rewritten by answering a hello').doc)],
-  ])('refuses %s and leaves the document byte-identical', async (_name, build) => {
-    const document = filed('the initial finding was a false positive')
-    const before = Buffer.from(Y.encodeStateAsUpdate(document))
-    const { live } = await connected(SENT, document)
-
-    live.receive({ type: 'prose.sync', field: FIELD, update: build() })
-    await settle()
-
-    expect(Buffer.from(Y.encodeStateAsUpdate(document)).equals(before)).toBe(true)
-    expect(document.getXmlFragment('block-1').toJSON()).not.toContain('rewritten')
-  })
-
   it('tells the client why, and when the report was filed', async () => {
     const { live } = await connected(SENT, filed('as filed'))
 
@@ -605,73 +515,8 @@ describe('prose on a report that has been sent', () => {
   })
 })
 
-describe('a report filed while somebody is typing into it', () => {
-  /**
-   * **The window this closes, and why it was not theoretical.** `sentAt` is
-   * read once, when the connection opens the field. An analyst who had the
-   * section open when somebody else pressed Send therefore kept writing into a
-   * document the server was still accepting - the freeze that Send performs was
-   * not the freeze the socket enforced, and the two disagreed for as long as
-   * that connection held the field.
-   *
-   * **Closed off the fan-out the connection already receives**, not by a query
-   * per keystroke: `case.changed` names the scopes that moved, so a `reports`
-   * change drops the cached stamp and the next frame re-reads it. That is one
-   * extra read per filing rather than one per keystroke.
-   */
-  it('refuses the next update after the case says reports moved', async () => {
-    const document = new Y.Doc({ gc: false })
-    let sentAt: Date | null = null
-    const { live, member } = await watched(() => sentAt, document)
-
-    live.receive({ type: 'prose.sync', field: FIELD, update: typed('still a draft').update })
-    await settle()
-    expect(document.getXmlFragment('block-1').toJSON()).toContain('still a draft')
-
-    sentAt = SENT
-    member.send(JSON.stringify({ type: 'case.changed', scopes: ['reports'], by: 'Bob' }))
-    await settle()
-
-    live.receive({ type: 'prose.sync', field: FIELD, update: typed('written after the send').update })
-    await settle()
-
-    expect(document.getXmlFragment('block-1').toJSON()).not.toContain('written after the send')
-    expect(live.frames('prose.refused')).toEqual([
-      { type: 'prose.refused', field: FIELD, reason: 'report-sent', sentAt: SENT.toISOString() },
-    ])
-  })
-
-  /**
-   * **A change to something else must not cost a read.** Every write in the
-   * case fans out, so re-reading on any of them would be the per-keystroke
-   * query this avoids - a timeline entry saved while somebody writes is the
-   * ordinary case, not the exception.
-   */
-  it('does not re-read when the change was in another scope', async () => {
-    const document = new Y.Doc({ gc: false })
-    let reads = 0
-    const { live, member } = await watched(() => { reads += 1; return null }, document)
-
-    live.receive({ type: 'prose.sync', field: FIELD, update: typed('one').update })
-    await settle()
-    const afterOpen = reads
-
-    member.send(JSON.stringify({ type: 'case.changed', scopes: ['timeline'], by: 'Bob' }))
-    await settle()
-    live.receive({ type: 'prose.sync', field: FIELD, update: typed('two').update })
-    await settle()
-
-    expect(reads).toBe(afterOpen)
-  })
-})
-
 describe('prose on a draft report', () => {
-  /**
-   * **The other half of the gate.** A refusal keyed on nothing - refusing every
-   * update - passes every case above while making the product unusable, and
-   * only this one goes red.
-   */
-  it('applies the same update a sent report refuses', async () => {
+  it('applies an update', async () => {
     const document = new Y.Doc({ gc: false })
     const { live } = await connected(null, document)
 
@@ -732,11 +577,8 @@ describe('opening a field asks the client what it has', () => {
     expect(kinds(live)).toEqual([1, 0])
   })
 
-  it.each([
-    ['a filed report', SENT, 'write'],
-    ['a read-only analyst', null, 'read'],
-  ] as const)('does not refuse %s answering it with nothing new', async (_name, sentAt, level) => {
-    const { live } = await connected(sentAt, filed('as filed'), level)
+  it('does not refuse a read-only analyst answering it with nothing new', async () => {
+    const { live } = await connected(null, filed('as filed'), 'read')
     const mine = new Y.Doc({ gc: false })
 
     live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(mine)) })
@@ -1094,7 +936,10 @@ describe('how much of a frame the socket will read', () => {
       leave: () => Promise.resolve(),
       prose: () => undefined,
     }
+    // Filled once the port is known: the client's origin is the install's own.
+    const trustedOrigins: string[] = []
     const auth = {
+      instance: { options: { trustedOrigins } },
       api: {
         getSession: () =>
           Promise.resolve({ user: { id: 'u-1', name: 'Ada', email: 'a@b.test' } }),
@@ -1114,6 +959,7 @@ describe('how much of a frame the socket will read', () => {
       server.listen(0, '127.0.0.1', listening)
     })
     const { port } = server.address() as AddressInfo
+    trustedOrigins.push(`http://127.0.0.1:${String(port)}`)
 
     const client = new Client(`ws://127.0.0.1:${String(port)}/api/cases/${CASE}/live`, {
       origin: `http://127.0.0.1:${String(port)}`,
@@ -1150,7 +996,7 @@ describe('two prose frames for one field arriving together', () => {
       prose: () => undefined,
     }
     const prose = {
-      resolve: () => Promise.resolve({ reportId: REPORT, sentAt: null }),
+      resolve: () => Promise.resolve({ table: 'reports', id: REPORT }),
       open: () => {
         readers += 1
         return Promise.resolve(document)
@@ -1159,7 +1005,8 @@ describe('two prose frames for one field arriving together', () => {
         readers -= 1
         return Promise.resolve()
       },
-      applySync: codec.applySync.bind(codec),
+      apply: (_caseId: string, _address: unknown, frame: Uint8Array, origin: unknown) =>
+        Promise.resolve({ reply: codec.applySync(document, frame, origin) }),
       frameUpdate: codec.frameUpdate.bind(codec),
       isStateRequest: codec.isStateRequest.bind(codec),
       addsNothing: codec.addsNothing.bind(codec),
@@ -1185,5 +1032,229 @@ describe('two prose frames for one field arriving together', () => {
     await settle()
 
     expect(readers, 'a reader was never given back, so the document is never destroyed').toBe(0)
+  })
+})
+
+/**
+ * **The browser speaks first, and the gateway has not finished joining.**
+ * `handleUpgrade` writes the 101 before `open` runs, so the socket is live in
+ * the browser while the roster join is still in flight over Redis. The harness
+ * tier drives this over a real socket in
+ * `test/a-connection-acts-on-every-frame-in-order.test.ts`; these are the fast
+ * guards on the same door.
+ */
+describe('frames that arrive while the socket is still joining', () => {
+  /**
+   * The channel with the join held open until the test finishes it. A `slow`
+   * level lookup lets a frame behind it overtake it; an `immediate` one lets a
+   * frame acted on too early land before the join does.
+   */
+  function midJoin(document: Y.Doc, lookup: 'slow' | 'immediate' = 'slow') {
+    const order: string[] = []
+    const left: string[] = []
+    let finish: () => void = () => undefined
+    const channel = {
+      join: () =>
+        new Promise<void>((resolve) => {
+          finish = () => {
+            order.push('join')
+            resolve()
+          }
+        }),
+      leave: () => {
+        order.push('leave')
+        left.push('leave')
+        return Promise.resolve()
+      },
+      prose: () => undefined,
+      claim: (_member: unknown, table: string, id: string) => {
+        order.push(`claim ${table}/${id}`)
+        return Promise.resolve()
+      },
+      release: (_member: unknown, table: string, id: string) => {
+        order.push(`release ${table}/${id}`)
+        return Promise.resolve()
+      },
+    }
+    /** What the document held each time a reader was given back, and how many are still out. */
+    const releasedHolding: string[] = []
+    let readers = 0
+    const prose = {
+      resolve: () => Promise.resolve({ table: 'reports', id: REPORT }),
+      open: () => {
+        readers += 1
+        return Promise.resolve(document)
+      },
+      release: () => {
+        readers -= 1
+        releasedHolding.push(document.getXmlFragment('block-1').toJSON())
+        order.push('reader released')
+        return Promise.resolve()
+      },
+      apply: (_caseId: string, _address: unknown, frame: Uint8Array, origin: unknown) =>
+        Promise.resolve({ reply: codec.applySync(document, frame, origin) }),
+      frameUpdate: codec.frameUpdate.bind(codec),
+      isStateRequest: codec.isStateRequest.bind(codec),
+      addsNothing: codec.addsNothing.bind(codec),
+      hello: codec.hello.bind(codec),
+    }
+    const levels = {
+      defaultCustomerId: () => Promise.resolve('a-default-customer'),
+      levelFor: () =>
+        lookup === 'immediate'
+          ? Promise.resolve('write')
+          : new Promise((resolve) => setTimeout(() => { resolve('write') }, 20)),
+    } as never
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      {} as never,
+      caseWithNoCustomer,
+      prose as never,
+      audit as never,
+      levels,
+    )
+    return { gateway, channel, order, left, releasedHolding, readers: () => readers, finish: () => { finish() } }
+  }
+
+  const ROW = '44444444-4444-4444-8444-444444444444'
+  const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
+
+  it('answers a state request that beat the roster, so the editor is built', async () => {
+    const document = new Y.Doc({ gc: false })
+    document.getXmlFragment('block-1').insert(0, [new Y.XmlText('what was already written')])
+    const { gateway, finish } = midJoin(document)
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
+    await settle()
+    finish()
+    await opening
+    await wait(50)
+
+    expect(
+      live.frames('prose.sync'),
+      'the state request was dropped, so the editor never leaves its loading state',
+    ).not.toEqual([])
+  })
+
+  /**
+   * **After the join, not merely eventually.** `CaseChannel.claim` announces the
+   * roster, and until the join returns this member is in neither the local room
+   * nor the subscription.
+   */
+  it('takes a claim that beat the roster, and not before the roster has it', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.receive({ type: 'claim', table: 'casenotes', id: ROW })
+    await settle()
+    finish()
+    await opening
+    await wait(50)
+
+    expect(order, 'the claim was dropped, or taken before the roster held its author').toEqual([
+      'join',
+      `claim casenotes/${ROW}`,
+    ])
+  })
+
+  it('acts on a release after the claim sent before it, however long the claim takes', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }))
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    finish()
+    await opening
+
+    live.receive({ type: 'claim', table: 'systems', id: ROW })
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    await wait(50)
+
+    expect(order, 'the release overtook its own claim').toEqual([
+      'join',
+      `claim systems/${ROW}`,
+      `release systems/${ROW}`,
+    ])
+  })
+
+  /** A tab that sends and closes at once: its words land before its reader goes. */
+  it('acts on what arrived before the socket went, then gives its reader back and leaves', async () => {
+    const document = new Y.Doc({ gc: false })
+    const { gateway, order, releasedHolding, readers, finish } = midJoin(document)
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
+    live.receive({ type: 'prose.sync', field: FIELD, update: typed('sent as the tab closed').update })
+    live.drop()
+    finish()
+    await opening
+    await wait(100)
+
+    expect(releasedHolding, 'the reader went before the words that needed it').toEqual([
+      expect.stringContaining('sent as the tab closed'),
+    ])
+    expect(readers(), 'a frame behind the end opened a reader nothing gives back').toBe(0)
+    expect(order.at(-1), 'the connection left before it had finished').toBe('leave')
+  })
+
+  it('carries on past a frame whose action fails, and still leaves', async () => {
+    const { gateway, channel, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    channel.claim = () => Promise.reject(new Error('the store went away'))
+    const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    finish()
+    await opening
+
+    live.receive({ type: 'claim', table: 'systems', id: ROW })
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    live.drop()
+    await wait(50)
+    warned.mockRestore()
+
+    expect(order, 'a failed frame stopped what came behind it').toEqual(['join', `release systems/${ROW}`, 'leave'])
+  })
+
+  /** Silent, as for a frame that is not JSON: a warning per frame is a log any admitted client can fill. */
+  it('ignores a frame that is JSON and not an object, as it ignores one that is not JSON', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    finish()
+    await opening
+
+    for (const odd of [null, 7, 'claim', [], true]) live.receive(odd)
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    live.drop()
+    await wait(50)
+    // Read before the restore, which empties the record of calls.
+    const logged = warned.mock.calls.map((call) => String(call[0]))
+    warned.mockRestore()
+
+    expect(order, 'a frame behind the odd one, or the end, was dropped').toEqual([
+      'join',
+      `release systems/${ROW}`,
+      'leave',
+    ])
+    expect(logged, 'a frame the client got wrong was logged as a failure to apply it').toEqual([])
+  })
+
+  it('ends a connection with more frames waiting than the bound, and acts on those within it', async () => {
+    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const live = new FakeSocket()
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    for (let n = 0; n < 256; n += 1) live.receive({ type: 'release', table: 'systems', id: ROW })
+    expect(live.terminated, 'ended while the backlog was within the bound').toBe(false)
+    live.receive({ type: 'release', table: 'systems', id: ROW })
+    expect(live.terminated, 'a backlog past the bound was held').toBe(true)
+
+    finish()
+    await opening
+    await wait(50)
+    expect(order.filter((step) => step.startsWith('release')), 'a frame within the bound was dropped').toHaveLength(256)
   })
 })

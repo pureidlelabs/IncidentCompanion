@@ -44,7 +44,7 @@ async function bootstrap(): Promise<void> {
    *
    * Two hops to `server/`, because swc compiles this to `dist/src/main.js`.
    */
-  applyPlatform(app, {
+  await applyPlatform(app, {
     bundle: bundlePath(app.get(ConfigService)),
     vendor: join(__dirname, '..', '..', 'vendor', 'redoc'),
   })
@@ -57,7 +57,7 @@ async function bootstrap(): Promise<void> {
    */
   const reference = app.get(OpenApiStore)
   try {
-    reference.set(openApiDocument(app))
+    reference.set(await openApiDocument(app))
   } catch (error) {
     // An unpublishable schema is a 404 on the reference, not an outage.
     new Logger('OpenApi').warn(`the OpenAPI document could not be built: ${String(error)}`)

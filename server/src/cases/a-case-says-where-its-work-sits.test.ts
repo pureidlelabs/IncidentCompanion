@@ -14,6 +14,7 @@ import { CasesService } from './cases.service.js'
 import { LIVE_STATES, caseStatusSchema } from '../domain/case.js'
 import { cases, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -52,6 +53,7 @@ describe.skipIf(!db)('a case moving between states', () => {
       .onConflictDoNothing()
     service = new CasesService(
       db!,
+      suiteStore(),
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
   })

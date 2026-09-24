@@ -29,10 +29,10 @@ export interface StoredClaim {
   readonly table: string
   readonly entryId: string
   /**
-   * **Who holds it, by id.** The write path refuses a patch to a row another
-   * analyst has open, and identity there cannot be the display name: Better
-   * Auth's `name` is not unique, so two analysts called "Sam" would each be
-   * treated as holding the other's claim. `username` stays because the claim
+   * **Who holds it, by id**, which is how a screen tells its own claim from
+   * another analyst's. It cannot be the display name: Better Auth's `name` is
+   * not unique, so two analysts called "Sam" would each read the other's claim
+   * as their own. `username` stays because the claim
    * is also put on screen, and an account id shown to an analyst is an
    * internal identifier leaking into the interface.
    */
@@ -225,8 +225,8 @@ export class PresenceStore implements PresenceCoordinator, ProseRelay, OnApplica
   /**
    * Take a row: **first writer wins, and only if nobody live holds it.** A
    * dead holder's claim is takeable, decided by whether their member key still
-   * exists, so a `kill -9` does not lock the row until somebody reads the
-   * case.
+   * exists, so a `kill -9` does not leave the row shown as held until somebody
+   * reads the case.
    *
    * One `EVAL`, never `HSETNX` plus a read: the takeover branch is itself a
    * check-then-write. The script decides and calls `HEXPIRE` in one step.
@@ -297,8 +297,8 @@ export class PresenceStore implements PresenceCoordinator, ProseRelay, OnApplica
    * The claims held on this case, swept of the ones whose session is gone.
    *
    * Sweeps against the live roster rather than an expiry, per claim rather
-   * than per case - recovering from one crash must not unlock the row a
-   * surviving analyst is editing - and **deletes** the stranded field rather
+   * than per case - recovering from one crash must not drop the claim of a
+   * surviving analyst still editing - and **deletes** the stranded field rather
    * than filtering it, or the hash grows for the life of the case.
    */
   async claims(caseId: string): Promise<StoredClaim[]> {

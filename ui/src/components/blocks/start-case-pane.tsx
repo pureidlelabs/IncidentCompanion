@@ -17,7 +17,8 @@ export interface StartCasePaneProps {
   /** Open the same form landing in the importer. Absent when none is enabled. */
   onImport?: (() => void) | undefined
   /**
-   * Open the wizard that makes the case out of an incident.
+   * Open the wizard that makes the case out of an incident. Without it the
+   * door is not drawn: the install does not import from Sentinel.
    *
    * **Not the same as `onImport`**, which makes an empty case first and lands
    * in the file importer.
@@ -55,12 +56,17 @@ export function StartCasePane({ onBlank, onImport, onLiveSource }: StartCasePane
             icon: SECTIONS.import?.icon ?? FilePlus2,
             ...(onImport ? { onSelect: onImport } : {}),
           },
-          {
-            title: DOOR_LABELS['import-sentinel'],
-            detail: 'Pull an incident from Sentinel. The case is made at the end, not the start.',
-            icon: SECTIONS['import-sentinel']?.icon ?? FilePlus2,
-            ...(onLiveSource ? { onSelect: onLiveSource } : {}),
-          },
+          ...(onLiveSource
+            ? [
+                {
+                  title: DOOR_LABELS['import-sentinel'],
+                  detail:
+                    'Pull an incident from Sentinel. The case is made at the end, not the start.',
+                  icon: SECTIONS['import-sentinel']?.icon ?? FilePlus2,
+                  onSelect: onLiveSource,
+                },
+              ]
+            : []),
         ]}
       />
     </Section>
