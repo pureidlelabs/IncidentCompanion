@@ -223,7 +223,6 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
       select distinct p.proname::text as name from pg_proc p
         join pg_namespace n on n.oid = p.pronamespace
        where n.nspname = 'public' and (p.proname like 'ic\\_%' or p.prosecdef)
-         and p.prorettype <> 'trigger'::regtype
          and has_function_privilege('ic_app', p.oid, 'execute')
        order by 1`)
     expect(
@@ -231,6 +230,18 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
       'an act the app role may call is in no class here, so nobody decided who it answers',
     ).toEqual([...PER_PRINCIPAL, ...Object.keys(ADMINISTRATOR_ONLY), ...FOR_NOBODY].sort())
   })
+
+  it.each(['refuse_a_change_to_a_sent_report', 'refuse_a_part_of_a_sent_report'])(
+    "%s cannot be hung on a table of the caller's own",
+    async (guard) => {
+      expect(
+        await asking(
+          admin,
+          `create temp table probe (id uuid); create trigger probe before update on probe for each row execute function public.${guard}()`,
+        ),
+      ).toBe('42501')
+    },
+  )
 
   it.each(Object.keys(ADMINISTRATOR_ONLY))('%s refuses an account that is not an administrator', async (name) => {
     expect(await asking(randomUUID(), ADMINISTRATOR_ONLY[name]!)).toBe('42501')
