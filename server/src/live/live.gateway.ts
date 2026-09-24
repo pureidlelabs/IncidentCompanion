@@ -28,10 +28,10 @@
  *
  * `live.gateway.test.ts` asserts all four, because a missing one is invisible.
  */
-import { Inject, Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common'
+import { Inject, Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common'
 import { AuthService } from '@thallesp/nestjs-better-auth'
 import { eq } from 'drizzle-orm'
-import type { IncomingMessage, Server } from 'node:http'
+import type { IncomingHttpHeaders, IncomingMessage, Server } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type * as Y from 'yjs'
@@ -40,7 +40,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { cases } from '../db/schema/index.js'
 import { CaseChannel, type Member } from './case-channel.service.js'
-import { ProseService, type ProseAddress } from '../prose/prose.service.js'
+import { ProseService, type ProseRecord, type Writer } from '../prose/prose.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
 import { ReachService, type Level } from '../access/reach.service.js'
@@ -77,15 +77,6 @@ export const STATUS: Record<Refusal, string> = {
   // oracle for which case ids are real.
   'no-such-case': '404 Not Found',
 }
-
-/**
- * The scope a filing moves, as `case-channel.service.ts` announces it.
- *
- * Spelled once: the fan-out names scopes as strings, so a typo here is a
- * watcher that never fires and a window that never closes, with nothing red.
- * `live.gateway.test.ts` drives the real string through a real frame.
- */
-const REPORTS_SCOPE = 'reports'
 
 /** The largest frame this socket will read, in bytes, sized for a prose sync update. */
 const MAX_FRAME_BYTES = 64 * 1024
@@ -139,20 +130,13 @@ export async function reachesCase(
 
 interface OpenDocument {
   /** Which record this document is - a report, or one case note. */
-  address: ProseAddress
+  address: ProseRecord
   doc: Y.Doc
-  /**
-   * When the record was frozen, or null. Refreshed on open and whenever
-   * `stale` is set, never per frame. **Always null for a note**, which has no
-   * state that refuses a write.
-   */
-  sentAt: Date | null
-  stale: boolean
   stop: () => void
 }
 
 @Injectable()
-export class LiveGateway implements OnApplicationShutdown {
+export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
   private readonly log = new Logger(LiveGateway.name)
   private readonly sockets = new WebSocketServer({ noServer: true, maxPayload: MAX_FRAME_BYTES })
   private connections = 0
@@ -169,8 +153,7 @@ export class LiveGateway implements OnApplicationShutdown {
     /**
      * **The socket audits itself, because nothing else can.** No guard, pipe,
      * middleware or interceptor runs on an upgrade - so the boundary that
-     * records every HTTP write is blind here, and this is the one path that
-     * persists a report.
+     * records every HTTP write is blind here.
      */
     private readonly activity: InstallActivityService,
     /**
@@ -190,6 +173,26 @@ export class LiveGateway implements OnApplicationShutdown {
      * by hand, and the client reconnects to what it is still entitled to.
      */
     this.stopListeningForReachChanges = onReachChanged((userId) => { this.dropUser(userId) })
+  }
+
+  /**
+   * **A saved change to prose is recorded as any write is**: announced to the
+   * case, and a line per writer in the install's audit.
+   */
+  onModuleInit(): void {
+    this.prose.onSaved((caseId, record, writers) => {
+      this.channel.announce(caseId, [record.table], writers.at(-1)!.id)
+      for (const writer of writers) {
+        void this.activity.record({
+          event: 'api_called',
+          outcome: 'success',
+          actor: { id: writer.id, label: writer.label },
+          target: `live prose.sync ${record.table}`,
+          detail: { case: caseId, record: record.id },
+          headers: writer.headers,
+        })
+      }
+    })
   }
 
   dropUser(userId: string): void {
@@ -254,12 +257,7 @@ export class LiveGateway implements OnApplicationShutdown {
       return
     }
 
-    /**
-     * **One line per opening, not per write.** The document is a CRDT flushed
-     * on a timer, so a line per flush would be a line every few seconds per
-     * reader; the question an audit is read for is *who could have edited
-     * this*, and that is answered when the socket opens.
-     */
+    // Who could have edited; who did is the line each saved change writes.
     void this.activity.record({
       event: 'case_opened_live',
       actor: { id: verdict.session.id, label: verdict.session.name },
@@ -268,7 +266,7 @@ export class LiveGateway implements OnApplicationShutdown {
     })
 
     this.sockets.handleUpgrade(request, socket, head, (live) => {
-      this.open(live, verdict.caseId, verdict.session).catch((error: unknown) => {
+      this.open(live, verdict.caseId, verdict.session, request.headers).catch((error: unknown) => {
         this.log.warn(`could not open a socket: ${String(error)}`)
         live.terminate()
       })
@@ -351,7 +349,9 @@ export class LiveGateway implements OnApplicationShutdown {
     live: WebSocket,
     caseId: string,
     session: { id: string; name: string },
+    headers: IncomingHttpHeaders = {},
   ): Promise<void> {
+    const writer: Writer = { id: session.id, label: session.name, headers }
     this.connections += 1
     this.admitted.set(live, { caseId, userId: session.id })
     const member: Member = {
@@ -362,31 +362,7 @@ export class LiveGateway implements OnApplicationShutdown {
       // with the process, so two instances cannot mint the same id.
       sessionId: `${String(process.pid)}-${String(this.connections)}`,
       joinedAt: Date.now(),
-      /**
-       * **Watched on the way past, not intercepted.** Every frame the case
-       * fans out already reaches this connection; a `reports` change is the
-       * one that can have filed a document somebody here has open, so it
-       * drops the cached stamp rather than costing a query per keystroke.
-       * Anything unparseable is forwarded untouched - this is a listener on
-       * the way to the socket, and must never be able to swallow a frame.
-       */
       send: (payload) => {
-        try {
-          const frame = JSON.parse(payload) as { type?: unknown; scopes?: unknown }
-          if (
-            frame.type === 'case.changed' &&
-            Array.isArray(frame.scopes) &&
-            frame.scopes.includes(REPORTS_SCOPE)
-          ) {
-            for (const [, held] of opened) {
-              void held.then((one) => {
-                if (one) one.stale = true
-              })
-            }
-          }
-        } catch {
-          // Not JSON, or not a shape this knows. Forwarded regardless.
-        }
         live.send(payload)
       },
     }
@@ -465,7 +441,7 @@ export class LiveGateway implements OnApplicationShutdown {
       }
       order = order
         .then(async () => {
-          if (await ready) await this.onFrame(member, live, opened, claims, raw)
+          if (await ready) await this.onFrame(member, writer, live, opened, claims, raw)
         })
         // One failed frame must not stop the ones behind it, nor the leave.
         .catch((error: unknown) => {
@@ -482,6 +458,7 @@ export class LiveGateway implements OnApplicationShutdown {
   /** One frame from the client, acted on to completion. */
   private async onFrame(
     member: Member,
+    writer: Writer,
     live: WebSocket,
     opened: Map<string, Promise<OpenDocument | null>>,
     claims: Set<string>,
@@ -506,7 +483,7 @@ export class LiveGateway implements OnApplicationShutdown {
       const field = typeof message.field === 'string' ? message.field : null
       const update = typeof message.update === 'string' ? message.update : null
       if (!field || !update) return
-      await this.onProse(member, live, opened, message.type, field, update)
+      await this.onProse(member, writer, live, opened, message.type, field, update)
       return
     }
 
@@ -555,20 +532,13 @@ export class LiveGateway implements OnApplicationShutdown {
    * document is the record; the answer goes to the sender and the update to
    * everyone else.
    *
-   * **A sent report's field is readable and not writable**, the same refusal
-   * `freeze.ts` makes at every collection door. The gate is per *frame*, not
-   * on `resolve` or `open`, so the text still loads and only a frame carrying
-   * content is refused. **A note never reaches it**: `resolve` answers a note
-   * with `sentAt: null` because there is no state a note can be in that
-   * refuses a write, so the branch below is dead for one of the two tables
-   * rather than being skipped for it.
-   *
-   * The sent state is re-read when `case.changed` says reports moved, never
-   * per frame - reading it once leaves a connection holding the field taking
-   * updates into a report that has since been filed.
+   * **A sent report's field is readable and not writable**: `ProseService`
+   * answers a frame carrying content with the report's stamp, and the text
+   * still loads.
    */
   private async onProse(
     member: Member,
+    writer: Writer,
     live: WebSocket,
     opened: Map<string, Promise<OpenDocument | null>>,
     type: 'prose.sync' | 'prose.awareness',
@@ -602,17 +572,6 @@ export class LiveGateway implements OnApplicationShutdown {
       return
     }
 
-    /**
-     * **Re-read once, then decided.** The fan-out only says *reports moved*,
-     * so the stamp is fetched again rather than assumed to be a filing: a
-     * label edited on another report would otherwise freeze this one.
-     */
-    if (held.stale) {
-      const fresh = await this.prose.resolve(member.caseId, field)
-      held.sentAt = fresh?.sentAt ?? held.sentAt
-      held.stale = false
-    }
-
     const frame = Buffer.from(update, 'base64')
 
     // Admission asked only for read, so an edit asks for write. A state request
@@ -632,26 +591,26 @@ export class LiveGateway implements OnApplicationShutdown {
       }
     }
 
+    const applied = await this.prose.apply(member.caseId, held.address, frame, live, writer)
     /**
      * **Told, not dropped.** A silently discarded update is the worst outcome
      * on this path: the analyst types, sees their own text, and it reaches
-     * nobody and nothing. This is the socket's form of the 409 `freeze.ts`
-     * raises at the HTTP door, and it names the same two things - the field
-     * and when the report was filed.
+     * nobody and nothing. It names what the 409 at the HTTP door names: the
+     * field and when the report was filed.
      */
-    if (held.sentAt && !this.prose.addsNothing(held.doc, frame)) {
+    if ('refused' in applied) {
       live.send(
         JSON.stringify({
           type: 'prose.refused',
           field,
           reason: 'report-sent',
-          sentAt: held.sentAt.toISOString(),
+          sentAt: applied.refused.toISOString(),
         }),
       )
       return
     }
 
-    const reply = this.prose.applySync(held.doc, frame, live)
+    const { reply } = applied
     // The server's own step 1 goes after the answer, so the client is ready first.
     for (const bytes of [reply, opens ? this.prose.hello(held.doc) : null]) {
       if (!bytes) continue
@@ -679,7 +638,6 @@ export class LiveGateway implements OnApplicationShutdown {
     if (!address) return null
 
     const doc = await this.prose.open(member.caseId, address)
-    const { sentAt } = address
 
     const onUpdate = (bytes: Uint8Array, origin: unknown) => {
       if (origin === live) return
@@ -696,8 +654,6 @@ export class LiveGateway implements OnApplicationShutdown {
     return {
       address,
       doc,
-      sentAt,
-      stale: false,
       stop: () => {
         doc.off('update', onUpdate)
         // As in `attach`: a release racing a closing Redis rejects, which `void` would leak.

@@ -380,6 +380,8 @@ export class ArchiveImportService {
        * remapping one never needs to know which table it came from.
        */
       const remap = new Map<string, string>()
+      /** A sent report's stamp, by its new id: the store refuses its parts once it is stamped. */
+      const stamps = new Map<string, Date>()
       let rows = 0
 
       for (const [name, table] of TABLES) {
@@ -424,7 +426,12 @@ export class ArchiveImportService {
               values.storedAt = null
             }
           }
-          if (name === 'reports') values.document = null
+          let stamp: Date | null = null
+          if (name === 'reports') {
+            values.document = null
+            if (values.sentAt instanceof Date) stamp = values.sentAt
+            values.sentAt = null
+          }
 
           // **What only the database knows.** A column's range and length are
           // stated on the column; restating them in a schema makes a second
@@ -449,6 +456,7 @@ export class ArchiveImportService {
             )
           }
           if (typeof one.id === 'string' && written?.id) remap.set(one.id, written.id)
+          if (stamp && written?.id) stamps.set(written.id, stamp)
           rows += 1
         }
       }
@@ -483,6 +491,10 @@ export class ArchiveImportService {
           .update(reports)
           .set({ document: Buffer.from(document) })
           .where(sql`${reports.id} = ${fresh}`)
+      }
+
+      for (const [id, sentAt] of stamps) {
+        await tx.update(reports).set({ sentAt }).where(sql`${reports.id} = ${id}`)
       }
 
       this.log.log(`imported ${String(rows)} rows as case ${caseId}`)

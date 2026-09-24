@@ -44,7 +44,7 @@ vi.mock('@/api/useEntryReorder', () => ({
     return {
       mutateAsync: (order: { ids: readonly string[] }) => {
         reordered.push({ ids: [...order.ids] })
-        return Promise.resolve({ ids: [...order.ids] })
+        return Promise.resolve({ rows: order.ids.map((id) => ({ id, version: 1 })) })
       },
     }
   },

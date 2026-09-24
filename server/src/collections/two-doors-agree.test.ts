@@ -1,3 +1,4 @@
+import { derivedFields } from '../domain/field-spec.js'
 /**
  * **The same act through two doors reaches the same answer.**
  *
@@ -74,8 +75,9 @@ function controllerFor(name: string): Doors {
  * A field this collection will accept a string into, found by asking the
  * schema rather than by naming one.
  *
- * The application's own patch validator is the oracle: a key it accepts is
- * patchable by definition, so this cannot drift from what the doors allow.
+ * The application's own patch validator is the oracle, less the fields the
+ * collection derives and refuses on a write, so this cannot drift from what
+ * the doors allow.
  * `null` for a collection with no such field, which is recorded rather than
  * silently skipped.
  */
@@ -83,7 +85,9 @@ function aPatchableTextField(collection: string): string | null {
   const schema = COLLECTION_SCHEMAS[collection]
   if (!schema) return null
   const patch = patchSchema(schema)
+  const derived = COLLECTION_SCHEMAS[collection] ? derivedFields(COLLECTION_SCHEMAS[collection]) : []
   for (const key of Object.keys(schema.shape)) {
+    if (derived.includes(key)) continue
     if (patch.safeParse({ [key]: 'two doors' }).success) return key
   }
   return null

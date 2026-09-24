@@ -212,7 +212,7 @@
 | The description is retrievable, so what a case may hold is answerable from the application | A field is added | demonstrated | server/src/specs/specs.controller.test.ts |
 | The description is retrievable, so what a case may hold is answerable from the application | An install has been extended | demonstrated | server/src/library/what-this-install-holds-is-what-is-described.test.ts |
 | Every write is attributed, checked and announced as one act | Two analysts write to one row | demonstrated | server/src/db/mutate.test.ts |
-| Every write is attributed, checked and announced as one act | A write succeeds | demonstrated | server/src/db/mutate.test.ts |
+| Every write is attributed, checked and announced as one act | A write succeeds | undemonstrated |  |
 | Every write is attributed, checked and announced as one act | A write composed into an act that commits | undemonstrated | |
 | Every write is attributed, checked and announced as one act | A write composed into an act that does not commit | undemonstrated | |
 | Every write is attributed, checked and announced as one act | A write composed into nothing that declared an act | undemonstrated | |
@@ -224,11 +224,15 @@
 | Only some collections have an identity, and the rest are events | A second way of creating rows is added | demonstrated | server/src/domain/identity.test.ts |
 | Doing something to many rows obeys every rule that governs one | Some rows in a bulk write have moved | demonstrated | server/src/collections/bulk.test.ts |
 | Doing something to many rows obeys every rule that governs one | A bulk write crosses the case boundary | demonstrated | server/src/collections/bulk.test.ts |
-| Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | demonstrated | server/src/collections/order-survives.test.ts |
-| Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | demonstrated | server/src/collections/order-survives.test.ts |
+| Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | undemonstrated |  |
+| Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | undemonstrated |  |
+| Order an analyst chose is theirs, and is not a property of the data | Two analysts reorder at once | demonstrated | server/test/two-reorders-never-mix.test.ts |
+| Order an analyst chose is theirs, and is not a property of the data | An analyst moves a row twice in a row | demonstrated | server/e2e/reorder-keyboard.spec.ts |
 | What comes in and goes out is the same description | An analyst previews an import | demonstrated | server/test/incident-import.test.ts |
 | What comes in and goes out is the same description | A row in an import is malformed | demonstrated | server/src/exports/import.service.test.ts |
 | What comes in and goes out is the same description | An export is imported back | demonstrated | server/src/exports/csv-import.test.ts |
+| A field derived from a row's prose has one writer | A derived field is written | demonstrated | server/test/a-note-has-one-writer.test.ts |
+| A field derived from a row's prose has one writer | A row's first words are opened again | demonstrated | server/test/a-note-has-one-writer.test.ts |
 
 ## compliance
 
@@ -520,6 +524,9 @@
 | A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
+| Written prose is attributed like any other write | One of two analysts present writes | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
+| Written prose is attributed like any other write | Two analysts write before one save | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
+| Written prose is attributed like any other write | Words typed just before the report is sent | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
 | An open connection is listening | A screen writes before the connection is ready | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts |
 | An open connection is listening | Preparing the connection does not complete | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
 | An open connection is listening | Frames are acted on in the order sent | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
@@ -573,18 +580,26 @@
 | --- | --- | --- | --- |
 | A report is assembled from the case, not transcribed from it | The case changes under a draft report | demonstrated | server/src/report/a-draft-follows-the-case.test.ts |
 | A report is assembled from the case, not transcribed from it | An analyst writes an assessment | demonstrated | server/src/report/what-the-analyst-wrote-stays-written.test.ts |
-| A sent report is frozen, and the freeze is one rule | A sent report is edited | demonstrated | server/src/report/freeze.test.ts |
-| A sent report is frozen, and the freeze is one rule | A part is moved into a sent report | demonstrated | server/src/report/freeze.test.ts |
-| A sent report is frozen, and the freeze is one rule | A new way to write a part is added | demonstrated | server/src/report/freeze.test.ts |
-| Sending stamps and preserves in one act | A report is sent | demonstrated | server/src/report/lifecycle.service.test.ts |
-| Sending stamps and preserves in one act | The document cannot be produced | demonstrated | server/src/report/a-report-that-cannot-be-produced-is-not-sent.test.ts |
-| Sending stamps and preserves in one act | The case changes after sending | demonstrated | server/src/report/lifecycle.service.test.ts |
-| A correction is a new report, not an edit | A sent report is wrong | demonstrated | server/src/report/lifecycle.service.test.ts |
-| A correction is a new report, not an edit | Two corrections race | demonstrated | server/src/report/lifecycle.service.test.ts |
+| A sent report is frozen, and the freeze is one rule | A sent report is edited | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
+| A sent report is frozen, and the freeze is one rule | A part is moved into a sent report | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
+| A sent report is frozen, and the freeze is one rule | A new way to write a part is added | demonstrated | server/src/report/the-store-refuses-a-sent-report.test.ts |
+| A sent report is frozen, and the freeze is one rule | Prose reaches a sent report | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
+| A sent report is frozen, and the freeze is one rule | The report a sent report corrects is removed | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
+| Sending stamps and preserves in one act | A report is sent | undemonstrated |  |
+| Sending stamps and preserves in one act | The document cannot be produced | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
+| Sending stamps and preserves in one act | The case changes after sending | undemonstrated |  |
+| Sending stamps and preserves in one act | A part changes while the report is being sent | demonstrated | server/test/send-and-part-writes-are-serialised.test.ts |
+| Sending stamps and preserves in one act | Prose is typed while the report is being sent | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
+| Sending stamps and preserves in one act | A send that fails while prose is typed | undemonstrated |  |
+| Sending stamps and preserves in one act | A send is recorded | demonstrated | server/test/every-report-act-is-in-the-feed.test.ts |
+| A correction is a new report, not an edit | A sent report is wrong | undemonstrated |  |
+| A correction is a new report, not an edit | Two corrections race | undemonstrated |  |
+| A correction is a new report, not an edit | A correction is recorded | demonstrated | server/test/every-report-act-is-in-the-feed.test.ts |
 | The destination decides what a part may be | A report is exported | demonstrated | server/src/report/document/every-kind-survives-every-format.test.ts |
 | The destination decides what a part may be | A part cannot be drawn by a format | demonstrated | server/src/report/document/figure.test.ts |
-| A report says what is missing before it is sent | A report is checked before sending | demonstrated | server/src/report/lifecycle.service.test.ts |
-| A report says what is missing before it is sent | A section was removed and is wanted back | demonstrated | server/src/report/lifecycle.service.test.ts |
+| A report says what is missing before it is sent | A report is checked before sending | undemonstrated |  |
+| A report says what is missing before it is sent | A section was removed and is wanted back | undemonstrated |  |
+| A report says what is missing before it is sent | Two analysts restore the missing sections at once | demonstrated | server/test/two-restores-restore-once.test.ts |
 | The application's own words are in the report's language; the analyst's are the analyst's | A report is produced in a second language | demonstrated | server/src/report/document/resolve.test.ts |
 | The application's own words are in the report's language; the analyst's are the analyst's | A report is composed in a second language | demonstrated | ui/src/components/blocks/a-report-says-its-headings-in-its-own-language.test.ts |
 | The application's own words are in the report's language; the analyst's are the analyst's | The language a report is produced in is changed | demonstrated | ui/src/app/case/the-heading-pack-is-fetched-for-the-open-report.test.tsx |
