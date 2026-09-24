@@ -750,6 +750,41 @@ def test_a_called_run_reaches_every_tier_the_gate_waits_for() -> None:
     )
 
 
+_LEVEL = {"none": 0, "read": 1, "write": 2}
+
+
+def test_a_caller_grants_every_permission_ci_asks_for() -> None:
+    """A called workflow can only narrow its caller's token.
+
+    A job in `ci.yml` asking for more than the calling job holds fails the whole
+    called run at validation, before any job starts.
+    """
+    ci = yaml.safe_load(CI.read_text(encoding="utf-8"))
+    asked: dict[str, tuple[int, str]] = {}
+    for where, grant in [("ci.yml", ci.get("permissions") or {})] + [
+        (name, job.get("permissions") or {}) for name, job in ci["jobs"].items()
+    ]:
+        for scope, level in grant.items():
+            if _LEVEL[level] > asked.get(scope, (0, ""))[0]:
+                asked[scope] = (_LEVEL[level], where)
+
+    callers = 0
+    for path in WORKFLOWS:
+        workflow = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for name, job in workflow.get("jobs", {}).items():
+            if not str(job.get("uses", "")).endswith("workflows/ci.yml"):
+                continue
+            callers += 1
+            held = job.get("permissions", workflow.get("permissions") or {})
+            short = [
+                f"{scope}: {where} asks for more than {path.name}'s {name} holds"
+                for scope, (level, where) in asked.items()
+                if _LEVEL[held.get(scope, "none")] < level
+            ]
+            assert not short, "\n".join(short)
+    assert callers, "no workflow calls ci.yml, so this is vacuous"
+
+
 def test_the_server_tier_probes_both_services_before_judging_it() -> None:
     """The verdict needs Postgres probed as well as Redis.
 
