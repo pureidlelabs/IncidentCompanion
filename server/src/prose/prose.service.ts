@@ -35,7 +35,7 @@
  */
 import { Inject, Injectable, Logger, Optional, type OnApplicationShutdown } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import {
@@ -48,6 +48,7 @@ import * as Y from 'yjs'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import { user } from '../db/schema/auth.js'
 import { changeFeed } from '../db/schema/change-feed.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
@@ -698,14 +699,18 @@ export class ProseService implements OnApplicationShutdown {
   private async store(caseId: string, address: ProseRecord, held: LiveDocument): Promise<void> {
     const writers = [...held.writers.values()]
     const asking = principalNow()
-    const candidates = writers.map((writer) => writer.id).reverse()
-    if (asking && !candidates.includes(asking)) candidates.push(asking)
-    if (candidates.length === 0) return
+    if (writers.length === 0 && !asking) return
     held.writers.clear()
     held.dirty = false
-    const by = writers.at(-1)
-    const attributed = by ? { updatedBy: by.id, updatedAt: new Date() } : {}
     try {
+      // A writer whose account is gone can be named by nothing the store keeps.
+      const ids = writers.map((writer) => writer.id)
+      const remaining = ids.length === 0 ? [] : await this.db.select({ id: user.id }).from(user).where(inArray(user.id, ids))
+      const named = writers.filter((writer) => remaining.some((row) => row.id === writer.id))
+      const candidates = named.map((writer) => writer.id).reverse()
+      if (asking && !candidates.includes(asking)) candidates.push(asking)
+      const by = named.at(-1)
+      const attributed = by ? { updatedBy: by.id, updatedAt: new Date() } : {}
       for (const who of candidates) {
         let pruned: Y.Doc | null = null
         const stored = await actingAs(who, () =>
@@ -733,9 +738,9 @@ export class ProseService implements OnApplicationShutdown {
                   .returning({ version: reports.version }))
             // No row is the store refusing this writer, which raises nothing.
             if (!row) return false
-            if (writers.length > 0) {
+            if (named.length > 0) {
               await tx.insert(changeFeed).values(
-                writers.map((writer) => ({
+                named.map((writer) => ({
                   caseId,
                   entity: address.table,
                   entityId: address.id,
@@ -755,7 +760,7 @@ export class ProseService implements OnApplicationShutdown {
           copy.destroy()
         }
         if (!stored) continue
-        if (writers.length > 0) this.saved?.(caseId, address, writers)
+        if (named.length > 0) this.saved?.(caseId, address, named)
         return
       }
       throw new Error('the store took it from nobody who wrote it, or its row is gone')
