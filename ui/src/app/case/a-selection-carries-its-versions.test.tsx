@@ -33,7 +33,7 @@ const urlOf = (input: RequestInfo | URL) =>
 const bodyOf = (init?: RequestInit) => (typeof init?.body === 'string' ? init.body : '')
 
 const ID = campaignCase.id
-const LATENCY = 40
+let LATENCY = 40
 
 type Row = Record<string, unknown> & { id: string; version: number }
 let doc: Record<string, unknown>
@@ -219,6 +219,7 @@ beforeEach(() => {
   doc = JSON.parse(JSON.stringify(campaignCase)) as Record<string, unknown>
   doc.version = 7
   writes = []
+  LATENCY = 40
   socket = null
   setTransport(server)
   setSocketFactory(() => {
@@ -323,3 +324,55 @@ describe.each(SURFACES)('a selection on $name', (surface) => {
     )
   })
 })
+
+describe.each(SURFACES.slice(0, 1))(
+  'one analyst alone, two bulk edits on $name inside one round trip',
+  (surface) => {
+    it('stores the second edit and blames nobody', async () => {
+      LATENCY = 250
+      const user = userEvent.setup()
+      mount(surface.address, surface.Screen)
+      const [first, second] = rows(surface.collection)
+      await user.click(
+        await screen.findByRole(
+          'checkbox',
+          { name: `Select ${surface.label(first!)}` },
+          { timeout: 5000 },
+        ),
+      )
+      await user.click(
+        await screen.findByRole('checkbox', { name: `Select ${surface.label(second!)}` }),
+      )
+      for (const option of [surface.option, 'altered']) {
+        await user.click(await screen.findByRole('button', { name: 'Edit 2' }))
+        const dialog = await screen.findByRole('dialog')
+        await user.click(within(dialog).getByRole('button', { name: surface.control }))
+        await user.click(await screen.findByRole('option', { name: option }))
+        await user.click(within(dialog).getByRole('button', { name: 'Apply' }))
+        await waitFor(() => {
+          expect(screen.queryByRole('dialog')).toBeNull()
+        })
+      }
+      await new Promise((done) => setTimeout(done, 3000))
+      const bulks = writes.filter((one) => one.path.endsWith('/bulk'))
+      expect({
+        named: bulks.map((one) =>
+          (one.body as { ids: { version: number }[] }).ids.map((i) => i.version),
+        ),
+        stored: [first!.id, second!.id].map(
+          (id) => rows(surface.collection).find((r) => r.id === id)?.[surface.field],
+        ),
+        blamed:
+          document.body.textContent.includes('changed') &&
+          /another analyst|since you read|moved/i.test(document.body.textContent),
+      }).toEqual({
+        named: [
+          [first!.version, second!.version],
+          [first!.version + 1, second!.version + 1],
+        ],
+        stored: ['altered', 'altered'],
+        blamed: false,
+      })
+    }, 20_000)
+  },
+)

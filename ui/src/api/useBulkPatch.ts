@@ -66,6 +66,12 @@ export function useBulkPatch<N extends CollectionName>(
               body: { ids: ids.map((row, at) => ({ id: row.id, version: versions[at] })), fields },
             },
           ),
+        // A row the patch took moved one version past the one it stated.
+        (answer, stated) =>
+          ids.map((row, at) => {
+            const from = stated[at]
+            return from !== undefined && answer.updated.includes(row.id) ? from + 1 : undefined
+          }),
       ),
 
     onSettled: () => {

@@ -107,18 +107,28 @@ export function writeRow<A>(
 /**
  * Send one request naming several records, after this tab's earlier writes to each.
  *
- * The answer says which records took it and not what they became, so it moves
- * nothing a later write reads.
+ * @param reached - the version each record is on after the answer, by position,
+ *   given the versions stated; undefined for a record it did not move. Omitted
+ *   for an act that leaves no record.
  */
 export function writeRows<A>(
   client: QueryClient,
   rows: readonly { key: string; read: Read }[],
   send: (versions: number[]) => Promise<A>,
+  reached?: (answer: A, stated: readonly number[]) => readonly (number | undefined)[],
 ): Promise<A> {
   const named = rows.map((row) => ({ read: row.read, lane: laneOf(client, row.key) }))
-  const run = Promise.all(named.map(({ lane }) => lane.tail)).then(() =>
-    send(named.map(({ lane, read }) => advance(lane, read))),
-  )
+  const run = Promise.all(named.map(({ lane }) => lane.tail)).then(async () => {
+    const versions = named.map(({ lane, read }) => advance(lane, read))
+    const answer = await send(versions)
+    const moves = reached?.(answer, versions) ?? []
+    named.forEach(({ lane }, at) => {
+      const from = versions[at]
+      const to = moves[at]
+      if (from !== undefined && to !== undefined) lane.moved.set(from, to)
+    })
+    return answer
+  })
   const settled = run.catch(() => undefined)
   for (const { lane } of named) lane.tail = settled
   return run
