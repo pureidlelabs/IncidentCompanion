@@ -1,6 +1,6 @@
 /**
  * A list names only the cases its caller reaches, whichever list it is but
- * the one `UNDECIDED` holds out.
+ * the audit `NOT_A_LIST` holds out.
  *
  * The lists are the document's: every GET it publishes that takes no path
  * parameter, asked over HTTP by an account that does not reach one case. That
@@ -20,14 +20,11 @@ import {
 } from './app-harness.js'
 
 /**
- * The install audit, which names a case by its title to an administrator who
- * reaches no case. Three requirements disagree about that line and the choice
- * is the maintainer's: the deletion record names the case's identity
- * (`openspec/specs/cases/spec.md`), the audit carries no case content
- * (`openspec/specs/install-audit/spec.md`), and a list that names cases names
- * only the ones its caller reaches. -> #1190
+ * The install audit, a record of acts rather than a list of cases, which may
+ * name a case by its title to an administrator who reaches no case.
+ * -> `openspec/specs/install-audit/spec.md`
  */
-const UNDECIDED = new Set(['/api/install/activity'])
+const NOT_A_LIST = new Set(['/api/install/activity'])
 
 const ISSUED = 'list-reach-issued-1234'
 const CHOSEN = 'list-reach-chosen-1234'
@@ -39,6 +36,7 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
   const unreached = { id: '', title: `unreached ${stamp}` }
   const nobodys = { id: '', title: `attributed to nobody ${stamp}` }
   let customerId = ''
+  const written = `written in the case ${stamp}`
 
   async function call(who: Persona, method: string, path: string, body?: unknown) {
     const response = await fetch(`${harness.base}${path}`, {
@@ -55,8 +53,8 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
   }
 
   /** An account made the way an install makes one, holding the password it chose. */
-  async function account(role: 'admin' | 'analyst'): Promise<Persona> {
-    const username = `list-reach-${role}-${stamp}@harness.test`
+  async function account(role: 'admin' | 'analyst', tag = ''): Promise<Persona> {
+    const username = `list-reach-${role}${tag}-${stamp}@harness.test`
     const made = await call(admin, 'POST', '/api/accounts', {
       username,
       displayName: `List reach ${role}`,
@@ -77,7 +75,7 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
   /** Every published list the caller can ask for, and which of them name `record`. */
   async function namedBy(who: Persona, record: { id: string; title: string }) {
     const lists = operations(harness.document).filter(
-      (one) => one.method === 'GET' && !one.template.includes('{') && !UNDECIDED.has(one.template),
+      (one) => one.method === 'GET' && !one.template.includes('{') && !NOT_A_LIST.has(one.template),
     )
     expect(lists.length, 'the document publishes no list, so this sweeps nothing').toBeGreaterThan(
       5,
@@ -104,6 +102,8 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
       expect(opened.status, opened.text).toBe(201)
       record.id = String(opened.json()['id'])
     }
+    const noted = await call(admin, 'POST', `/api/cases/${unreached.id}/casenotes`, { note: written })
+    expect(noted.status, noted.text).toBe(201)
     const moved = await call(admin, 'PUT', `/api/cases/${unreached.id}/customer`, { customerId })
     expect(moved.status, moved.text).toBe(200)
   }, 120_000)
@@ -120,6 +120,19 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
       await namedBy(outsider, nobodys),
       'every account reaches a case attributed to nobody',
     ).toContain('/api/cases (200)')
+  }, 120_000)
+
+  it('names a case in the audit by its title, and nothing written in it, to an administrator who does not reach it', async () => {
+    const outsider = await account('admin', '-audit')
+    expect((await call(outsider, 'GET', `/api/cases/${unreached.id}`)).status).toBe(404)
+
+    const { status, text } = await call(outsider, 'GET', '/api/install/activity')
+
+    expect({ status, title: text.includes(unreached.title), written: text.includes(written) }).toEqual({
+      status: 200,
+      title: true,
+      written: false,
+    })
   }, 120_000)
 
   it('stops naming a case kept in a list once the group that reached it is revoked', async () => {

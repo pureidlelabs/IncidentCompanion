@@ -141,6 +141,8 @@ A line MUST carry who acted in a form that survives the account being renamed or
 
 A line MUST NOT carry what was sent. Case content, passwords, passphrases and the bodies of requests MUST stay out of the audit, which is read by people who do not reach the case data the install holds.
 
+A line MAY name the case it is about by the case's title. The title is how an administrator tells one incident from another, and it names the case rather than recording what was written in it. The audit is a record of acts, not a list of cases, so naming a case there is not offering it to the reader.
+
 Where a line records the address a request came from, it MUST be taken from something the caller cannot set. A caller who can write their own address into the audit can write somebody else's. The address MUST be the one the install's one way in saw the request come from, and a caller that reached the application without passing it MUST be recorded at its own.
 
 #### Scenario: An account is removed after acting
@@ -179,6 +181,13 @@ Where a line records the address a request came from, it MUST be taken from some
 - GIVEN an install whose one way in started after the application
 - WHEN analysts on two machines each fail to sign in through it
 - THEN each failure is recorded at that analyst's own address
+
+#### Scenario: An administrator reads a line about a case they do not reach
+
+- GIVEN a case of a customer an administrator does not reach
+- WHEN a case is opened, and the administrator reads the audit
+- THEN the line names the case by its title
+- AND it carries nothing written in the case
 
 ### Requirement: Refusals are recorded, and a run of them is louder than one
 
