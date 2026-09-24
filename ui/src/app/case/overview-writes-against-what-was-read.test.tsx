@@ -33,12 +33,14 @@ const bodyOf = (init?: RequestInit) => (typeof init?.body === 'string' ? init.bo
 
 const ID = campaignCase.id
 let latency = 30
+/** How long a PATCH takes to be answered, when it is not `latency`. */
+let patchLatency: number | undefined
 
 let row: Record<string, unknown>
 let patches: { version: unknown; status: number }[]
 let socket: SocketLike | null
 
-const json = (status: number, body: unknown) =>
+const json = (status: number, body: unknown, wait = latency) =>
   new Promise<Response>((done) =>
     setTimeout(() => {
       done(
@@ -47,7 +49,7 @@ const json = (status: number, body: unknown) =>
           headers: { 'content-type': 'application/json' },
         }),
       )
-    }, latency),
+    }, wait),
   )
 
 function server(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -60,11 +62,15 @@ function server(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
     const { version, ...rest } = JSON.parse(bodyOf(init)) as Record<string, unknown>
     if (version !== row.version) {
       patches.push({ version, status: 409 })
-      return json(409, { message: 'Someone else wrote this first.', currentVersion: row.version })
+      return json(
+        409,
+        { message: 'Someone else wrote this first.', currentVersion: row.version },
+        patchLatency,
+      )
     }
     row = { ...row, ...rest, version: (row.version as number) + 1 }
     patches.push({ version, status: 200 })
-    return json(200, row)
+    return json(200, row, patchLatency)
   }
   return json(404, { message: `unmodelled ${method} ${url}` })
 }
@@ -115,6 +121,15 @@ const servedAt = async (client: QueryClient, version: number) => {
 
 const settle = () => new Promise((done) => setTimeout(done, latency * 10))
 
+/** The frame the server publishes for a write already committed. */
+const announce = () =>
+  socket?.onmessage?.({
+    data: JSON.stringify({ type: 'case.changed', scopes: ['cases'], by: 'u-b' }),
+  } as MessageEvent)
+
+/** Whether any field says it is waiting to learn why it was refused. */
+const waiting = () => document.body.textContent.includes('Not saved yet')
+
 /** The band a collision on `label` draws beside the field. */
 const band = (label: string) =>
   screen.queryByRole('group', { name: new RegExp(`changed ${label}`) })
@@ -123,6 +138,7 @@ beforeEach(() => {
   row = JSON.parse(JSON.stringify(campaignCase)) as Record<string, unknown>
   row.version = 7
   latency = 30
+  patchLatency = undefined
   patches = []
   socket = null
   setTransport(server)
@@ -220,6 +236,38 @@ describe('a case field another analyst saves while this analyst is changing it',
           stored: 'Theirs',
           shown: 'Mine',
           theirs: true,
+        })
+      },
+      { timeout: 10_000 },
+    )
+  })
+
+  it('shows both values when theirs is announced while the refused write is still out', async () => {
+    patchLatency = 600
+    const user = userEvent.setup()
+    const client = mount()
+    const title = await field(user, 'Title', campaignCase.title)
+    await user.clear(title)
+    await user.type(title, 'Mine')
+
+    otherAnalystWrites({ title: 'Theirs' }, false)
+    await user.tab()
+    announce()
+    await servedAt(client, 8)
+    await waitFor(
+      () => {
+        expect({
+          sent: patches,
+          stored: row.title,
+          shown: title.value,
+          theirs: band('Title')?.textContent.includes('Theirs') ?? false,
+          waiting: waiting(),
+        }).toEqual({
+          sent: [{ version: 7, status: 409 }],
+          stored: 'Theirs',
+          shown: 'Mine',
+          theirs: true,
+          waiting: false,
         })
       },
       { timeout: 10_000 },
@@ -338,6 +386,37 @@ describe('a case field another analyst did not touch', () => {
           title: 'Mine',
           summary: 'Their summary',
           band: null,
+        })
+      },
+      { timeout: 10_000 },
+    )
+  })
+  it('is stored when theirs is announced while the refused write is still out', async () => {
+    patchLatency = 600
+    const user = userEvent.setup()
+    const client = mount()
+    const title = await field(user, 'Title', campaignCase.title)
+    await user.clear(title)
+    await user.type(title, 'Mine')
+    otherAnalystWrites({ summary: 'Their summary' }, false)
+    await user.tab()
+    announce()
+    await servedAt(client, 8)
+    await waitFor(
+      () => {
+        expect({
+          sent: patches,
+          title: row.title,
+          summary: row.summary,
+          waiting: waiting(),
+        }).toEqual({
+          sent: [
+            { version: 7, status: 409 },
+            { version: 8, status: 200 },
+          ],
+          title: 'Mine',
+          summary: 'Their summary',
+          waiting: false,
         })
       },
       { timeout: 10_000 },

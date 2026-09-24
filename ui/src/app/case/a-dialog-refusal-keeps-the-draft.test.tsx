@@ -31,13 +31,15 @@ const bodyOf = (init?: RequestInit) => (typeof init?.body === 'string' ? init.bo
 
 const ID = campaignCase.id
 const LATENCY = 30
+/** How long a PATCH takes to be answered, when it is not `LATENCY`. */
+let patchLatency: number | undefined
 
 type Row = Record<string, unknown> & { id: string; version: number }
 let doc: Record<string, unknown>
 let patches: { body: Record<string, unknown>; status: number }[]
 let socket: SocketLike | null
 
-const json = (status: number, body: unknown) =>
+const json = (status: number, body: unknown, wait = LATENCY) =>
   new Promise<Response>((done) =>
     setTimeout(() => {
       done(
@@ -46,7 +48,7 @@ const json = (status: number, body: unknown) =>
           headers: { 'content-type': 'application/json' },
         }),
       )
-    }, LATENCY),
+    }, wait),
   )
 
 function server(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -63,12 +65,16 @@ function server(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
     const row = rows.find((r) => r.id === id)!
     if (version !== row.version) {
       patches.push({ body, status: 409 })
-      return json(409, { message: 'Someone else wrote this first.', currentVersion: row.version })
+      return json(
+        409,
+        { message: 'Someone else wrote this first.', currentVersion: row.version },
+        patchLatency,
+      )
     }
     const stored = { ...row, ...fields, version: row.version + 1 }
     doc = { ...doc, [collection]: rows.map((r) => (r.id === id ? stored : r)) }
     patches.push({ body, status: 200 })
-    return json(200, stored)
+    return json(200, stored, patchLatency)
   }
   if (method === 'GET' && url.startsWith(`/api/cases/${ID}/`) && !url.endsWith('/attribution')) {
     return json(200, doc[url.split('/').pop() ?? ''] ?? [])
@@ -113,6 +119,12 @@ function mount(address: string, Screen: () => ReactNode) {
   )
 }
 
+/** The frame the server publishes for a change to `collection` already committed. */
+const announce = (collection: string) =>
+  socket?.onmessage?.({
+    data: JSON.stringify({ type: 'case.changed', scopes: [collection], by: 'u-b' }),
+  } as MessageEvent)
+
 const settle = () => new Promise((done) => setTimeout(done, LATENCY * 12))
 
 interface Surface {
@@ -154,6 +166,7 @@ const SURFACES: Surface[] = [
 
 beforeEach(() => {
   doc = JSON.parse(JSON.stringify(campaignCase)) as Record<string, unknown>
+  patchLatency = undefined
   doc.version = 7
   patches = []
   socket = null
@@ -267,6 +280,49 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
     otherAnalystChanges(surface.collection, row.id, { [surface.other]: 'Their change' }, false)
     await user.click(within(dialog).getByRole('button', { name: 'Save' }))
     await settle()
+    await waitFor(
+      () => {
+        expect({
+          open: dialog.isConnected,
+          stored: [surface.row()[surface.field], surface.row()[surface.other]],
+          sent: patches.map((one) => one.status),
+        }).toEqual({ open: false, stored: ['Mine', 'Their change'], sent: [409, 200] })
+      },
+      { timeout: 10_000 },
+    )
+  })
+
+  it('shows the choice when theirs is announced while the refused save is still out', async () => {
+    patchLatency = 600
+    const user = userEvent.setup()
+    const { row, dialog, input } = await openEditor(surface, user)
+
+    otherAnalystChanges(surface.collection, row.id, { [surface.field]: 'Theirs' }, false)
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    announce(surface.collection)
+    await waitFor(
+      () => {
+        const band = within(dialog).queryByRole('group', { name: /changed/ })
+        expect({
+          open: dialog.isConnected,
+          shown: input.value,
+          theirs: band?.textContent.includes('Theirs') ?? false,
+          checking: dialog.textContent.includes('Checking what they changed'),
+          sent: patches.map((one) => one.status),
+        }).toEqual({ open: true, shown: 'Mine', theirs: true, checking: false, sent: [409] })
+      },
+      { timeout: 10_000 },
+    )
+  })
+
+  it('saves a field the other analyst did not touch when theirs is announced while the save is out', async () => {
+    patchLatency = 600
+    const user = userEvent.setup()
+    const { row, dialog } = await openEditor(surface, user)
+
+    otherAnalystChanges(surface.collection, row.id, { [surface.other]: 'Their change' }, false)
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    announce(surface.collection)
     await waitFor(
       () => {
         expect({
