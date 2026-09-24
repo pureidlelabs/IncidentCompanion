@@ -123,12 +123,6 @@ describe.skipIf(!runnable)('what level every published route needs', () => {
   })
 
   /**
-   * **The derivation for a personal list's routes, which state their own
-   * level.** `recent-cases/{caseId}` would derive `write` only because
-   * `'recent-cases'` is not the segment `'cases'`, and renaming the controller
-   * to `cases/recent` would derive a case deletion. -> #127
-   */
-  /**
    * **A route that states its own level answers that level instead**, so the
    * derivation above says nothing about it. Every handler stating one is
    * named here, found by walking the registered controllers, and each writes
@@ -138,13 +132,20 @@ describe.skipIf(!runnable)('what level every published route needs', () => {
     const declared: string[] = []
     for (const module of harness.app.get(ModulesContainer).values()) {
       for (const wrapper of module.controllers.values()) {
-        const proto = (wrapper.metatype as { prototype?: Record<string, unknown> } | undefined)?.prototype
-        if (!proto) continue
-        for (const name of Object.getOwnPropertyNames(proto)) {
-          const handler = proto[name]
-          if (typeof handler !== 'function' || name === 'constructor') continue
-          const level = Reflect.getMetadata(CASE_LEVEL, handler) as string | undefined
-          if (level) declared.push(`${wrapper.name}.${name} ${level}`)
+        const seen = new Set<string>()
+        // Up the chain: a handler a base controller declares is routed on every subclass.
+        for (
+          let proto = (wrapper.metatype as { prototype?: object } | undefined)?.prototype;
+          proto && proto !== Object.prototype;
+          proto = Object.getPrototypeOf(proto) as object
+        ) {
+          for (const name of Object.getOwnPropertyNames(proto)) {
+            const handler = (proto as Record<string, unknown>)[name]
+            if (seen.has(name) || typeof handler !== 'function' || name === 'constructor') continue
+            seen.add(name)
+            const level = Reflect.getMetadata(CASE_LEVEL, handler) as string | undefined
+            if (level) declared.push(`${wrapper.name}.${name} ${level}`)
+          }
         }
       }
     }
@@ -155,6 +156,12 @@ describe.skipIf(!runnable)('what level every published route needs', () => {
     ])
   })
 
+  /**
+   * **The derivation for a personal list's routes, which state their own
+   * level.** `recent-cases/{caseId}` would derive `write` only because
+   * `'recent-cases'` is not the segment `'cases'`, and renaming the controller
+   * to `cases/recent` would derive a case deletion. -> #127
+   */
   it('does not read a personal recent-list entry as the case itself', () => {
     const recents = published.filter((one) => one.template.includes('recent-cases'))
     expect(recents.length, 'the recent-cases routes have moved or gone').toBeGreaterThan(0)
