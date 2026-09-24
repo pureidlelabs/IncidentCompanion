@@ -147,7 +147,7 @@ describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, wr
       insert into "user" (id, name, email, email_verified, created_at, updated_at)
       values (${other}, 'Leaver', ${`${other}@example.test`}, true, now(), now())`)
     await seed!.execute(sql`update reports set updated_by = ${other} where id = ${draftId}`)
-    await seed!.execute(sql`update reports set sent_at = now(), frozen = '{}'::jsonb where id = ${draftId}`)
+    await seed!.execute(sql`update reports set sent_at = now(), frozen = '{}'::jsonb, frozen_at = now() where id = ${draftId}`)
 
     await seed!.execute(sql`delete from "user" where id = ${other}`)
 
@@ -187,7 +187,7 @@ describe.skipIf(!app || !seed || !hasConcurrentConnections())('a sent report, wr
       (await rows(sql`insert into evidence (case_id, name) values (${doomed}, 'screenshot') returning id`))[0]!['id'],
     )
     await seed!.execute(sql`insert into report_blocks (case_id, report_id, kind, evidence_id) values (${doomed}, ${filed}, 'figure', ${shown})`)
-    await seed!.execute(sql`update reports set sent_at = now() where id = ${filed}`)
+    await seed!.execute(sql`update reports set sent_at = now(), frozen = '{}'::jsonb, frozen_at = now() where id = ${filed}`)
 
     await seed!.execute(sql`delete from cases where id = ${doomed}`)
 

@@ -270,7 +270,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
     const { document_ } = await render.render(caseId, reportId)
     await seed!
       .update(reports)
-      .set({ frozen: document_, frozenAt: new Date() })
+      .set({ sentAt: new Date(), frozen: document_, frozenAt: new Date() })
       .where(eq(reports.id, reportId))
 
     const again = await render.render(caseId, reportId)
@@ -297,7 +297,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
     // document keeps the size it was sent at.
     await seed!
       .update(reports)
-      .set({ frozen: document_, frozenAt: new Date() })
+      .set({ sentAt: new Date(), frozen: document_, frozenAt: new Date() })
       .where(eq(reports.id, reportId))
 
     const again = await render.render(caseId, reportId)

@@ -18,6 +18,7 @@ import { z } from 'zod'
 
 import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS } from '../domain/collections.js'
 import { reportBlockSchema, reportSchema } from '../domain/entities/report.js'
+import { documentSchema } from '../report/document/model.js'
 
 /**
  * The collection behind each key of the case document, where the two differ.
@@ -62,7 +63,8 @@ const CARRIED: Readonly<Record<string, z.ZodRawShape>> = {
   },
   reports: {
     sentAt: when,
-    frozen: z.unknown(),
+    // The one declaration `send` writes through and every painter reads.
+    frozen: documentSchema.nullable(),
     frozenAt: when,
   },
   timeline: {

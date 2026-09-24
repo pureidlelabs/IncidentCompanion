@@ -7,7 +7,9 @@
  * A frozen report keeps its rendered tree: it is the compliance artefact, so
  * re-rendering must not be able to produce something else.
  */
+import { sql } from 'drizzle-orm'
 import {
+  check,
   index,
   integer,
   jsonb,
@@ -86,6 +88,11 @@ export const reports = pgTable(
     index('reports_case_idx').on(t.caseId),
     // Nullable, so every report that replaces nothing is unaffected.
     uniqueIndex('reports_supersedes_idx').on(t.supersedes),
+    // Sent and preserved, or neither, whichever writer: send, an archive, a seeder.
+    check(
+      'reports_sent_is_preserved',
+      sql`(${t.sentAt} is null) = (${t.frozen} is null) and (${t.frozen} is null) = (${t.frozenAt} is null)`,
+    ),
     ...caseScoped(t.caseId),
   ],
 )

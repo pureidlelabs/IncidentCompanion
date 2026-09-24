@@ -36,6 +36,8 @@ import { PolicyService } from '../policy/policy.service.js'
 import { REFERENCE_FIELD_NAMES } from '../domain/collections.js'
 import { importStamp } from '../db/import-stamp.js'
 import { rekeyed } from '../domain/prose-fields.js'
+import { defangDocument } from '../report/document/defang.js'
+import type { Document } from '../report/document/model.js'
 import { archiveRowSchema } from './rows.js'
 import { coerceTimes } from '../db/column-access.js'
 import { z } from 'zod'
@@ -90,6 +92,13 @@ export const TABLES = [
   ['reports', reports],
   ['reportBlocks', reportBlocks],
 ] as const
+
+/** A report's sent stamp and preserved document, which are written together or not at all. */
+interface Lifecycle {
+  sentAt: Date | null
+  frozen: Document | null
+  frozenAt: Date | null
+}
 
 /** How many rows a case record describes, across every table an import writes. */
 export function rowsIn(record: Record<string, unknown>): number {
@@ -402,7 +411,7 @@ export class ArchiveImportService {
        */
       const remap = new Map<string, string>()
       /** A sent report's stamp, by its new id: the store refuses its parts once it is stamped. */
-      const stamps = new Map<string, Date>()
+      const stamps = new Map<string, Lifecycle>()
       let rows = 0
 
       for (const [name, table] of TABLES) {
@@ -447,10 +456,17 @@ export class ArchiveImportService {
               values.storedAt = null
             }
           }
-          let stamp: Date | null = null
+          // A report's lifecycle is written last, in one statement, once its parts are in.
+          let stamp: Lifecycle | null = null
           if (name === 'reports') {
-            if (values.sentAt instanceof Date) stamp = values.sentAt
+            stamp = {
+              sentAt: values.sentAt instanceof Date ? values.sentAt : null,
+              frozen: values.frozen ? defangDocument(values.frozen as Document) : null,
+              frozenAt: values.frozenAt instanceof Date ? values.frozenAt : null,
+            }
             values.sentAt = null
+            values.frozen = null
+            values.frozenAt = null
           }
 
           // **What only the database knows.** A column's range and length are
@@ -525,8 +541,13 @@ export class ArchiveImportService {
           .where(sql`${reports.id} = ${fresh}`)
       }
 
-      for (const [id, sentAt] of stamps) {
-        await tx.update(reports).set({ sentAt }).where(sql`${reports.id} = ${id}`)
+      for (const [id, lifecycle] of stamps) {
+        if (!lifecycle.sentAt && !lifecycle.frozen && !lifecycle.frozenAt) continue
+        try {
+          await tx.update(reports).set(lifecycle).where(sql`${reports.id} = ${id}`)
+        } catch {
+          throw new BadArchive('this archive states a report in reports that is sent and not preserved, or the reverse')
+        }
       }
 
       this.log.log(`imported ${String(rows)} rows as case ${caseId}`)
