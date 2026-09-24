@@ -260,6 +260,12 @@ It is not an inherited grant to somebody's data. The default customer holds only
 - WHEN they delete a case nobody has attributed
 - THEN it is deleted
 
+#### Scenario: An identity the install does not hold
+
+- GIVEN a session whose account no longer exists
+- WHEN it asks for a case, one of the default customer's included
+- THEN it is refused
+
 #### Scenario: A list is asked for by an analyst in no group
 
 - GIVEN an administrator belonging to no group
@@ -896,6 +902,12 @@ Changing what the logging itself does is an administrative event.
 - GIVEN an administrator
 - WHEN they change the log's destination or how long it is kept
 - THEN the change is itself logged, at both the old destination and the new
+
+#### Scenario: A session is refused after its account is gone
+
+- GIVEN a session whose account no longer exists
+- WHEN it is refused a case
+- THEN the refusal is logged with who the session was issued to and what it asked for
 
 #### Scenario: An analyst ends their own session
 

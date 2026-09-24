@@ -6,12 +6,12 @@
  * control is absent - so its first assertion is about the *role*, not about a
  * row: a superuser ignores every policy and is not bound by `FORCE`.
  */
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { withCase } from './scope.js'
-import { cases, systems } from './schema/index.js'
+import { actingAs, withCase } from './scope.js'
+import { cases, systems, user } from './schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -23,11 +23,30 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/** Who is asking: an account every case under the default customer is open to. */
+const READER = `scope-reader-${String(process.pid)}`
+
+/** `withCase` as the reader, which is all a scope here needs to be asked. */
+const scoped: typeof withCase = (on, caseId, work) =>
+  actingAs(READER, () => withCase(on, caseId, work))
+
 describe.skipIf(!db || !hasConcurrentConnections())('what one case can see of another', () => {
   let mine = ''
   let theirs = ''
 
   beforeAll(async () => {
+    const now = new Date()
+    await seed!
+      .insert(user)
+      .values({
+        id: READER,
+        name: READER,
+        email: `${READER}@example.test`,
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoNothing()
     const [a] = await seed!.insert(cases).values({ title: 'Mine' }).returning()
     const [b] = await seed!.insert(cases).values({ title: 'Theirs' }).returning()
     mine = a!.id
@@ -40,6 +59,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('what one case can see of an
 
   afterAll(async () => {
     await seed!.delete(cases)
+    await seed!.delete(user).where(eq(user.id, READER))
     await pool!.end()
     if (seedPool && seedPool !== pool) await seedPool.end()
   })
@@ -67,7 +87,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('what one case can see of an
   })
 
   it('sees only the case it is scoped to', async () => {
-    const rows = await withCase(db!, mine, (tx) => tx.select().from(systems))
+    const rows = await scoped(db!, mine, (tx) => tx.select().from(systems))
 
     expect(rows.map((row) => row.hostname)).toEqual(['MY-HOST'])
   })
@@ -84,25 +104,36 @@ describe.skipIf(!db || !hasConcurrentConnections())('what one case can see of an
   })
 
   /**
+   * *Nobody is named as asking*: refused before the store is asked, where the
+   * store would answer the same scope with nothing.
+   */
+  it('refuses a scope that names nobody as asking', async () => {
+    await expect(withCase(db!, mine, (tx) => tx.select().from(systems))).rejects.toThrow(
+      /nobody named as asking/,
+    )
+  })
+
+  /**
    * **Writing where you cannot read is the half a read-only test misses.**
    * `USING` governs what comes back; only `WITH CHECK` stops a row going in
    * under another case's id.
    */
   it('cannot write a row into another case', async () => {
-    const refused = await withCase(db!, mine, (tx) =>
+    const refused = await scoped(db!, mine, (tx) =>
       tx.insert(systems).values({ caseId: theirs, hostname: 'SMUGGLED' }),
     ).catch((error: unknown) => error)
 
-    // **Asserted on the cause, not on the message.** Drizzle wraps the driver
-    // error as "Failed query: ...", so matching what is thrown would pass for
-    // any failed insert - including one refused for the wrong reason.
-    expect(String((refused as { cause?: unknown }).cause ?? refused)).toContain(
-      'row-level security',
-    )
+    // **Asserted on the causes, not on the message.** The refusal is answered
+    // as the case not being there, so what is thrown would read the same for
+    // an insert refused for the wrong reason.
+    const causes: string[] = []
+    for (let at = refused as Error | undefined; at; at = at.cause as Error | undefined) causes.push(String(at))
+    expect(causes[0]).toContain('NotFoundException')
+    expect(causes.join('\n')).toContain('row-level security')
   })
 
   it('does not leave the scope behind for the next query on that connection', async () => {
-    await withCase(db!, mine, (tx) => tx.select().from(systems))
+    await scoped(db!, mine, (tx) => tx.select().from(systems))
 
     expect(await db!.select().from(systems)).toEqual([])
   })
@@ -118,8 +149,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('what one case can see of an
    * two cases in it would be the shape that bites.
    */
   it('puts the outer case back after a nested scope for a different one', async () => {
-    const seen = await withCase(db!, mine, async (outer) => {
-      await withCase(outer, theirs, (inner) => inner.select().from(systems))
+    const seen = await scoped(db!, mine, async (outer) => {
+      await scoped(outer, theirs, (inner) => inner.select().from(systems))
       return outer.select().from(systems)
     })
 
@@ -151,7 +182,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('what one case can see of an
     try {
       const fresh = drizzle({ client: virgin })
       const seen = await fresh.transaction(async (outer) => {
-        await withCase(outer, theirs, (inner) => inner.select().from(systems))
+        await scoped(outer, theirs, (inner) => inner.select().from(systems))
         return outer.select().from(systems)
       })
 

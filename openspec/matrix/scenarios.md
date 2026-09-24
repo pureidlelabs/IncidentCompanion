@@ -47,6 +47,7 @@
 | Case data is reached through groups, at a level | An administrator disposes of a case nobody has attributed | demonstrated | server/src/access/case-access.guard.test.ts |
 | Case data is reached through groups, at a level | An analyst is refused the same deletion | demonstrated | server/src/access/case-access.guard.test.ts |
 | Case data is reached through groups, at a level | A group raises an account above the floor | demonstrated | server/src/access/case-access.guard.test.ts |
+| Case data is reached through groups, at a level | An identity the install does not hold | demonstrated | server/test/an-identity-the-install-does-not-hold-reaches-nothing.test.ts |
 | Case data is reached through groups, at a level | A list is asked for by an analyst in no group | undemonstrated | |
 | Case data is reached through groups, at a level | Reach is withdrawn after the case was opened | undemonstrated | |
 | An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts |
@@ -119,6 +120,7 @@
 | Administrative events are logged | An entry is edited | demonstrated | server/src/install-activity/record.test.ts |
 | Administrative events are logged | The record is read | demonstrated | server/src/install-audit/read.test.ts |
 | Administrative events are logged | Where the record goes is changed | unbuilt | Not built: there is no destination to change. -> #13 |
+| Administrative events are logged | A session is refused after its account is gone | demonstrated | server/test/an-identity-the-install-does-not-hold-reaches-nothing.test.ts |
 | Administrative events are logged | An analyst ends their own session | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
 | Administrative events are logged | An ending that ends nothing | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
 | An install serves only the account operations it offers | A caller asks for an account operation the install does not offer | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
@@ -184,7 +186,9 @@
 | --- | --- | --- | --- |
 | A case is identified by what an analyst recognises it by | A reference is reused within a customer | undemonstrated | |
 | A case is identified by what an analyst recognises it by | The same reference is used for two customers | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
-| A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | demonstrated | server/src/cases/customer.controller.test.ts |
+| A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | demonstrated | server/test/a-move-says-nothing-about-a-customer-the-mover-does-not-reach.test.ts |
+| A case is identified by what an analyst recognises it by | The mover reaches the customer that already uses the reference | demonstrated | server/test/a-move-says-nothing-about-a-customer-the-mover-does-not-reach.test.ts |
+| A case is identified by what an analyst recognises it by | A case carrying a reference is moved to a customer the mover does not reach | demonstrated | server/test/a-move-says-nothing-about-a-customer-the-mover-does-not-reach.test.ts |
 | A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case is identified by what an analyst recognises it by | A case gains its reference later | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case says where its work sits | An analyst scans the case list | demonstrated | ui/src/components/blocks/case-list.test.tsx |
@@ -200,6 +204,7 @@
 | Reaching a case is decided in one place, by customer | An unknown customer becomes known | demonstrated | server/test/a-case-moves-to-its-customer.test.ts |
 | Reaching a case is decided in one place, by customer | A case's customer changes under an analyst | demonstrated | server/test/a-case-moves-to-its-customer.test.ts |
 | Reaching a case is decided in one place, by customer | A case is opened before the customer is known | demonstrated | server/test/a-case-with-no-customer-is-everybodys.test.ts |
+| Reaching a case is decided in one place, by customer | A case is reached over a live connection | demonstrated | server/test/both-doors-answer-reach-alike.test.ts |
 | Demonstration content is distinguishable from real work | An install carries both | demonstrated | ui/src/components/blocks/case-list.test.tsx |
 | Demonstration content is distinguishable from real work | A count is taken across cases | demonstrated | server/src/health/activity.controller.test.ts |
 | An analyst can return to recent work | An analyst returns after closing the application | demonstrated | server/src/recent/recent.service.test.ts |
@@ -287,7 +292,7 @@
 | A customer cannot be removed out from under its cases | The merged records disagree | demonstrated | server/src/customers/two-customers-are-one.test.ts |
 | A customer cannot be removed out from under its cases | Reach after a merge | demonstrated | server/src/customers/a-merge-moves-the-reach.test.ts |
 | A customer cannot be removed out from under its cases | An analyst reaches both sides of a merge at different levels | demonstrated | server/src/customers/a-merge-moves-the-reach.test.ts |
-| A customer cannot be removed out from under its cases | A reference collides across the merge | demonstrated | server/src/customers/two-customers-are-one.test.ts |
+| A customer cannot be removed out from under its cases | A reference collides across the merge | demonstrated | server/test/a-merge-refusal-names-no-case-by-what-it-says.test.ts |
 | A customer cannot be removed out from under its cases | The default customer is merged | demonstrated | server/src/customers/two-customers-are-one.test.ts |
 
 ## data-exchange
@@ -531,6 +536,7 @@
 | A change reaches every open screen, and says only what changed | A screen re-reads after an announcement | demonstrated | ui/src/api/every-consumer-re-announces.test.ts |
 | Written prose is edited together, not saved over | Two analysts write in one section | demonstrated | ui/src/api/proseSync.test.ts |
 | Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts |
+| Written prose is edited together, not saved over | One of the writers loses write before the words are stored | demonstrated | server/test/words-typed-together-outlive-one-writer-losing-reach.test.ts |
 | A reconnection catches up rather than starts over | A connection drops briefly | undemonstrated | |
 | A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
@@ -655,7 +661,9 @@
 | What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | The application cannot reach a row it should not, even by mistake | A query forgets its boundary | demonstrated | server/src/db/scope.test.ts |
 | The application cannot reach a row it should not, even by mistake | The application attempts to widen its own reach | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
-| The application cannot reach a row it should not, even by mistake | A new table holding case data is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
+| The application cannot reach a row it should not, even by mistake | A new table holding case data is added | demonstrated | server/src/db/the-store-refuses-what-its-caller-does-not-reach.test.ts |
+| The application cannot reach a row it should not, even by mistake | An operation names a case its caller does not reach | demonstrated | server/src/db/the-store-refuses-what-its-caller-does-not-reach.test.ts |
+| The application cannot reach a row it should not, even by mistake | Nobody is named as asking | demonstrated | server/src/db/scope.test.ts |
 | Changing the shape of the store is a separate power | The application attempts to change the schema | demonstrated | server/src/db/scope.test.ts |
 | Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write and its record are one act | demonstrated | server/src/db/mutate.test.ts |
@@ -693,8 +701,10 @@
 | A caller asks for what it needs and receives no more | A screen needs a handful of fields | unbuilt | Not built: no route takes a field selection. -> #59 |
 | A caller asks for what it needs and receives no more | A record grows a field | unbuilt | Not built: no route takes a field selection. -> #59 |
 | A caller asks for what it needs and receives no more | A caller wants everything | demonstrated | server/test/openapi-contract.test.ts |
-| Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
-| Reach is enforced where the data is, not where the request arrives | A new way to read a record is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
+| Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | demonstrated | server/test/a-route-that-forgets-its-guard-serves-nothing.test.ts |
+| Reach is enforced where the data is, not where the request arrives | A new way to read a record is added | demonstrated | server/test/a-route-that-forgets-its-guard-serves-nothing.test.ts |
+| Reach is enforced where the data is, not where the request arrives | A route forgets to ask | demonstrated | server/test/a-route-that-forgets-its-guard-serves-nothing.test.ts |
+| Reach is enforced where the data is, not where the request arrives | A route forgets to ask before it writes | demonstrated | server/test/a-route-that-forgets-its-guard-serves-nothing.test.ts |
 | A read tells a caller what it is looking at | A caller reads and later writes | undemonstrated | |
 | A read tells a caller what it is looking at | Somebody wrote first | demonstrated | server/src/collections/a-refused-write-says-what-the-row-became.test.ts |
 | The interface describes itself, and the description is generated | A route is added | demonstrated | server/test/openapi-contract.test.ts |
@@ -702,6 +712,8 @@
 | The interface describes itself, and the description is generated | A route served by a library the application mounts | demonstrated | server/test/the-auth-library-serves-only-what-the-install-offers.test.ts |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts |
 | A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/every-write-door-refuses-a-version-past-its-column.test.ts |
+| A refusal says which of the caller's problems it is | A caller times the refusal | undemonstrable | A duration is measured, and a refusal's reveals nothing only as a distribution. What makes the two take the same time is shown by server/test/a-refusal-does-the-same-work-whether-or-not-the-case-exists.test.ts, which asserts the same statements before either answer; that is evidence of the mechanism, not a demonstration of the clock. |
+| A refusal says which of the caller's problems it is | A write depends on another customer's data | demonstrated | server/test/a-move-says-nothing-about-a-customer-the-mover-does-not-reach.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts |
 | What a request costs is bounded before it runs | Another caller asks too often | demonstrated | tests/docker/test_ingress.py |
