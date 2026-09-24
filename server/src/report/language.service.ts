@@ -16,8 +16,8 @@ import { eq, inArray, sql } from 'drizzle-orm'
 
 import { DATABASE, SEED_DATABASE, seedRoleMissing } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import type { Executor } from '../db/scope.js'
 import { reportLanguage } from '../db/schema/language.js'
-import type { ClosedRowGuard } from './freeze.js'
 import {
   EN_KEYS,
   type LanguageEntry,
@@ -50,10 +50,10 @@ const ENGLISH = { code: 'en', label: 'English' }
  * for a document that already exists. What this refuses is choosing one that
  * never existed. -> `translatorFor`
  */
-export function refuseUnservedLanguage(): ClosedRowGuard {
-  return async (db, _caseId, target) => {
+export function refuseUnservedLanguage() {
+  return async (db: Executor, rows: readonly Record<string, unknown>[]): Promise<void> => {
     const asked = new Set<string>()
-    for (const row of target.rows ?? []) {
+    for (const row of rows) {
       const code = row['language']
       if (typeof code === 'string' && code !== '' && code !== ENGLISH.code) asked.add(code)
     }

@@ -6,6 +6,7 @@
  * the reason an analyst's own file appears without a code change.
  */
 import { Module } from '@nestjs/common'
+import { APP_FILTER } from '@nestjs/core'
 
 import { LiveModule } from '../live/live.module.js'
 
@@ -20,6 +21,7 @@ import { CasesModule } from '../cases/cases.module.js'
 import { ProseModule } from '../prose/prose.module.js'
 import { PreferencesModule } from '../preferences/preferences.module.js'
 import { EvidenceStore } from '../evidence/store.js'
+import { SentReportRefusalFilter } from './freeze.js'
 
 @Module({
   // **`LiveModule`, because `CaseChannel` is injected `@Optional()`.**
@@ -31,7 +33,13 @@ import { EvidenceStore } from '../evidence/store.js'
   // **`EvidenceStore` is provided here rather than imported.** It is stateless
   // - a root path off the config - so a second instance costs nothing, and
   // `CollectionsModule` does not export it. The archive module does the same.
-  providers: [ReportLifecycleService, ReportRenderService, LanguageService, EvidenceStore],
+  providers: [
+    ReportLifecycleService,
+    ReportRenderService,
+    LanguageService,
+    EvidenceStore,
+    { provide: APP_FILTER, useClass: SentReportRefusalFilter },
+  ],
   exports: [LanguageService, ReportLifecycleService],
 })
 export class ReportModule {}

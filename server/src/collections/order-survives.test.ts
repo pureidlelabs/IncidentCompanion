@@ -42,7 +42,11 @@ interface Session {
 
 interface Arrangeable {
   list(caseId: string): Promise<Record<string, unknown>[]>
-  reorder(caseId: string, body: unknown, session: Session): Promise<{ ids: string[] }>
+  reorder(
+    caseId: string,
+    body: unknown,
+    session: Session,
+  ): Promise<{ rows: { id: string; version: number }[] }>
   update(caseId: string, id: string, body: unknown, session: Session): Promise<unknown>
   createMany(caseId: string, body: unknown, session: Session): Promise<{ ids: string[] }>
 }
@@ -107,13 +111,14 @@ describe.skipIf(!db || !hasConcurrentConnections())('an arrangement an analyst m
   }
 
   async function arrange(): Promise<string[]> {
-    const before = (await served()).map((row) => row['id'] as string)
+    const before = (await served()).map((row) => ({ id: row['id'] as string, version: row['version'] as number }))
     expect(before.length, 'the demo report needs blocks to arrange').toBeGreaterThan(2)
 
     const moved = [before[1]!, before[0]!, ...before.slice(2)]
-    await controllerFor('report_blocks').reorder(caseId, { ids: moved }, session)
-    expect((await served()).map((row) => row['id'] as string)).toEqual(moved)
-    return moved
+    await controllerFor('report_blocks').reorder(caseId, { rows: moved }, session)
+    const ids = moved.map((row) => row.id)
+    expect((await served()).map((row) => row['id'] as string)).toEqual(ids)
+    return ids
   }
 
   it('is not disturbed by editing one of the rows in it', async () => {

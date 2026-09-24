@@ -41,6 +41,8 @@ export interface Rendered {
    * file does not have.
    */
   images: Images
+  /** What a draft's document was drawn from: the report's version, and each part's. */
+  basis?: { version: number; parts: { id: string; version: number }[] }
 }
 
 /**
@@ -209,7 +211,13 @@ export class ReportRenderService {
         })),
       })
       const painted = defangDocument(document_)
-      return { document_: painted, title, frozen: false, images: await this.figures(caseId, painted, t) }
+      return {
+        document_: painted,
+        title,
+        frozen: false,
+        images: await this.figures(caseId, painted, t),
+        basis: { version: report.version, parts: blocks.map(({ id, version }) => ({ id, version })) },
+      }
     } catch (error) {
       if (error instanceof UnresolvableSections) {
         // **400, not 500.** The report holds a section this build cannot draw;
