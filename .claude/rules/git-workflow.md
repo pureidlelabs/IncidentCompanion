@@ -174,6 +174,8 @@ Every issue meant to close is in that list, or the body is wrong.
 
 **Merging adds the pull request to a queue rather than merging it.** The queue builds the branch onto the `main` it would land on, runs every tier against *that* tree whatever the diff, and merges only if none failed or skipped. A green pull request is not a green landing — its run is scoped by path and advisory, and a tier it left out runs here.
 
+**Its `certify` job reads what the tiers reported, and refuses a landing they do not bear out:** a test file no tier ran, a skip nothing excuses by name, a `demonstrated` ledger row whose cited case did not pass at the product's entry point, and a landing that closes an issue an `unbuilt` row still cites. → `tests/certify.py`
+
 **It squashes.** Every commit on the branch becomes one commit on `main`, parented on the previous tip, so the branch tip is never an ancestor of what lands. Every ancestry test answers about ancestry rather than about content: `git branch -d`, `git merge-base --is-ancestor`, `git log <base>..<branch>`.
 
 **A failing run ejects the pull request.** It returns to open and nothing re-adds it; push the fix and queue it again.

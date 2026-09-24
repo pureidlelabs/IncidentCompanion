@@ -96,6 +96,11 @@ jobs:
   nightly:
     needs: changed
     if: needs.changed.outputs.run == 'true'
+    # A called job can only narrow this grant, so it covers what `certify` reads.
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     uses: ./.github/workflows/ci.yml
     with:
       all: true

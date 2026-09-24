@@ -50,8 +50,12 @@ export async function quiesce(page: Page, timeoutMs = QUIESCE_TIMEOUT_MS): Promi
   } catch {
     throw new VisualError(`the page never went network-idle within ${String(timeoutMs)}ms`)
   }
-  await settle(page, Math.max(1000, deadline - Date.now()))
-  const busy = await page.locator('[aria-busy="true"]').count()
+  let busy: number
+  do {
+    // Still is not settled: a starved render can commit a skeleton after two readings agreed.
+    await settle(page, Math.max(1000, deadline - Date.now()))
+    busy = await page.locator('[aria-busy="true"]').count()
+  } while (busy > 0 && Date.now() < deadline)
   if (busy > 0) {
     throw new VisualError(
       `${String(busy)} element(s) still aria-busy after ${String(timeoutMs)}ms - ` +

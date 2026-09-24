@@ -30,9 +30,25 @@ import { DATABASE, SEED_DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
 import { installPreferences } from '../src/db/schema/index.js'
 import { putSettingsBack } from './install-settings.js'
+import type { Server } from 'node:http'
 import { Socket } from 'node:net'
+import { TestRunner } from 'vitest'
 import { declined } from './must-run.js'
 import type { OpenAPIObject } from '@nestjs/swagger'
+
+declare module 'vitest' {
+  /** What the booted app served while a case ran, as its report carries it. */
+  interface TaskMeta {
+    served?: true
+    socket?: true
+  }
+}
+
+/** Marks the running case, if any, as having reached the app through its entry point. */
+function tag(what: 'served' | 'socket'): void {
+  const running = TestRunner.getCurrentTest()
+  if (running) running.meta[what] = true
+}
 
 /**
  * This worktree's stack, from the one script that derives it.
@@ -157,6 +173,9 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
   await app.init()
   // Port 0: the OS picks a free one, so concurrent runs never collide.
   await app.listen(0, '127.0.0.1')
+  const server: Server = app.getHttpServer()
+  server.on('request', () => tag('served'))
+  server.on('upgrade', () => tag('socket'))
 
   const base = (await app.getUrl()).replace('[::1]', '127.0.0.1')
   const document = await openApiDocument(app)

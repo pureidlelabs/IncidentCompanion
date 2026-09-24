@@ -1,8 +1,8 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url'
 
-import { existsSync, globSync, realpathSync } from 'node:fs'
-import { relative, resolve } from 'node:path'
+import { existsSync, realpathSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import tailwindcss from '@tailwindcss/vite'
@@ -10,7 +10,6 @@ import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
 import { chromium } from 'playwright'
 import { defineConfig, searchForWorkspaceRoot, type Plugin, type ProxyOptions } from 'vite'
-import type { Reporter, TestModule, TestSpecification, Vitest } from 'vitest/node'
 
 /**
  * Whether the story tier can run here, decided once and announced when it
@@ -84,88 +83,6 @@ function ignoreReactAriaWindowFocusThrow(error: {
     message.includes("Failed to execute 'contains' on 'Node'") &&
     stack.includes('isFocusMovingToTarget')
   return isTheThrow ? false : undefined
-}
-
-/**
- * The test files each project owns, by name. Read beside `include` rather than
- * from it, because `include` is what a config change narrows.
- */
-const OWNED = new Map([
-  ['unit', ['src/**/*.test.{ts,tsx}']],
-  ['storybook', ['src/**/*.stories.tsx']],
-])
-
-/**
- * Refuses a certifying run that did not run a test in every file the tier owns.
- *
- * A file owed and absent from the run, and a file whose every test skipped,
- * are named; a shard owes the files vitest's own sequencer hands it.
- *
- * Armed by `IC_SUITE_MUST_RUN` alone, where `server/test/must-run.ts` also
- * reads `CI`.
- */
-class MustRunReporter implements Reporter {
-  private vitest: Vitest | undefined
-  private unplanned: string[] = []
-  private owed: TestSpecification[] = []
-
-  onInit(vitest: Vitest): void {
-    this.vitest = vitest
-  }
-
-  /** Given every file the run planned, before any shard takes its part. */
-  async onTestRunStart(specifications: readonly TestSpecification[]): Promise<void> {
-    const vitest = this.vitest
-    if (!process.env.IC_SUITE_MUST_RUN || !vitest) return
-    const planned = new Set(specifications.map((spec) => spec.moduleId))
-    // `projects` is what survived `--project`, so a filtered run owes only the ones it kept.
-    for (const project of vitest.projects) {
-      // A browser project's name carries its instance: `storybook (chromium)`.
-      const patterns = OWNED.get(project.name.split(' ')[0])
-      if (!patterns) {
-        throw new Error(
-          `the project '${project.name}' has no entry in OWNED, ` +
-            'so a certifying run cannot say what it owes',
-        )
-      }
-      const root = project.config.root
-      for (const file of globSync(patterns, { cwd: root })) {
-        if (!planned.has(resolve(root, file))) this.unplanned.push(file)
-      }
-    }
-    const shard = vitest.config.shard
-    this.owed = shard
-      ? await new vitest.config.sequence.sequencer(vitest).shard([...specifications])
-      : [...specifications]
-  }
-
-  onTestRunEnd(testModules: readonly TestModule[]): void {
-    if (!process.env.IC_SUITE_MUST_RUN) return
-    // `queued` and `pending` are a pool that never reached the file, and
-    // `skipped` is a file that reached no test.
-    const ran = new Set(
-      testModules
-        .filter((module) => ['passed', 'failed'].includes(module.state()))
-        .map((module) => module.moduleId),
-    )
-    const root = this.vitest?.config.root ?? process.cwd()
-    const unrun = this.owed
-      .filter((spec) => !ran.has(spec.moduleId))
-      .map((spec) => relative(root, spec.moduleId))
-    if (this.unplanned.length === 0 && unrun.length === 0) return
-
-    const listed = (files: string[]): string =>
-      files.slice(0, 10).join('\n    ') +
-      (files.length > 10 ? `\n    ... and ${String(files.length - 10)} more` : '')
-    console.error(
-      'The client tier did not run every test file it owes. This run is ' +
-        'certifying (IC_SUITE_MUST_RUN), where a file that ran no test is a failure ' +
-        'rather than a pass. Run without IC_SUITE_MUST_RUN to run part of the tier deliberately.' +
-        (this.unplanned.length ? `\n  never planned:\n    ${listed(this.unplanned)}` : '') +
-        (unrun.length ? `\n  ran no test:\n    ${listed(unrun)}` : ''),
-    )
-    process.exitCode = 1
-  }
 }
 
 /**
@@ -405,7 +322,18 @@ export default defineConfig({
       ? ['--no-webstorage']
       : [],
     setupFiles: ['./src/test/setup.ts'],
-    reporters: ['default', new MustRunReporter()],
+    // `IC_REPORT` names where `tests/certify.py` reads this run. The story
+    // tier's accessibility results ride on each case's `meta` as `reports`,
+    // and nothing reading the report wants them.
+    reporters: process.env.IC_REPORT
+      ? [
+          'default',
+          [
+            'json',
+            { outputFile: process.env.IC_REPORT, filterMeta: (key: string) => key !== 'reports' },
+          ],
+        ]
+      : ['default'],
     onUnhandledError: ignoreReactAriaWindowFocusThrow,
     css: false,
     // `include` lives on the `unit` project below, not here. Once `projects`

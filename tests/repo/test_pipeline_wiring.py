@@ -413,6 +413,9 @@ EXPENSIVE_TIER = (
     "lifecycle",
 )
 
+#: Reads what the tiers reported, so it runs only where every tier ran.
+CERTIFYING = ("certify",)
+
 
 def ci_jobs() -> dict:
     return yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]
@@ -536,7 +539,7 @@ def test_every_job_is_classified() -> None:
     behind a linter, and every test here passes while it does.
     """
     jobs = set(ci_jobs())
-    known = set(CHEAP_TIER) | set(EXPENSIVE_TIER) | {"scope", "gate"}
+    known = set(CHEAP_TIER) | set(EXPENSIVE_TIER) | set(CERTIFYING) | {"scope", "gate"}
     assert jobs <= known, (
         f"these jobs are in no tier, so no rule in this file reaches them: "
         f"{sorted(jobs - known)}"
@@ -745,6 +748,41 @@ def test_a_called_run_reaches_every_tier_the_gate_waits_for() -> None:
     )
 
 
+_LEVEL = {"none": 0, "read": 1, "write": 2}
+
+
+def test_a_caller_grants_every_permission_ci_asks_for() -> None:
+    """A called workflow can only narrow its caller's token.
+
+    A job in `ci.yml` asking for more than the calling job holds fails the whole
+    called run at validation, before any job starts.
+    """
+    ci = yaml.safe_load(CI.read_text(encoding="utf-8"))
+    asked: dict[str, tuple[int, str]] = {}
+    for where, grant in [("ci.yml", ci.get("permissions") or {})] + [
+        (name, job.get("permissions") or {}) for name, job in ci["jobs"].items()
+    ]:
+        for scope, level in grant.items():
+            if _LEVEL[level] > asked.get(scope, (0, ""))[0]:
+                asked[scope] = (_LEVEL[level], where)
+
+    callers = 0
+    for path in WORKFLOWS:
+        workflow = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for name, job in workflow.get("jobs", {}).items():
+            if not str(job.get("uses", "")).endswith("workflows/ci.yml"):
+                continue
+            callers += 1
+            held = job.get("permissions", workflow.get("permissions") or {})
+            short = [
+                f"{scope}: {where} asks for more than {path.name}'s {name} holds"
+                for scope, (level, where) in asked.items()
+                if _LEVEL[held.get(scope, "none")] < level
+            ]
+            assert not short, "\n".join(short)
+    assert callers, "no workflow calls ci.yml, so this is vacuous"
+
+
 def test_the_server_tier_probes_both_services_before_judging_it() -> None:
     """The verdict needs Postgres probed as well as Redis.
 
@@ -810,7 +848,9 @@ def test_the_container_files_are_only_in_the_expensive_mode() -> None:
     `pytest tests` unqualified, so the exclusion has to happen at the caller.
     """
     text = VERIFY.read_text(encoding="utf-8")
-    assert "--ignore=tests/docker" in text, "the default sweep still builds containers"
+    assert '*) REPOSITORY_ONLY+=("--ignore=$file") ;;' in text, "the default sweep still builds containers"
+    assert 'step "repository: suite" env INCIDENTCOMPANION_SKIP_UI=1 ./test.sh -q "${REPOSITORY_ONLY[@]}"' in text, (
+        "the default sweep does not use the selection that leaves the containers out")
     assert "./verify.sh --detailed runs it" in text, "nothing says where the tier went"
 
 
@@ -1381,25 +1421,86 @@ def test_the_installed_tree_key_hashes_no_glob_reaching_into_node_modules() -> N
     assert recursive == [], f"these reach into node_modules: {recursive}"
 
 
-def test_every_client_vitest_step_arms_the_must_run_reporter() -> None:
-    """`MustRunReporter` reads `IC_SUITE_MUST_RUN` and never `CI`.
+def test_the_ledger_is_certified_only_by_a_run_of_every_tier() -> None:
+    """A pull request's run is scoped, so a report missing from it is a tier it left out."""
+    job = ci_jobs()["certify"]
+    every = dict.fromkeys(("server", "client", "screen", "devcontainer", "containers"), "true")
 
-    Server steps are not checked: the server side reads both variables. -> #1080
+    assert not scheduled(job, "pull_request", every), "certify reads a pull request's scoped run"
+    assert scheduled(job, "merge_group", {}), "the run that decides the merge certifies nothing"
+    assert scheduled(job, "workflow_call", {}, want_all=True), "a run of every tier certifies nothing"
+
+
+def test_every_tier_certify_reads_writes_the_report_it_reads() -> None:
+    """A tier whose report never reaches `certify` is one whose every file it refuses as unrun.
+
+    Or, worse, one it never reads: each tier `tests/certify.py` owns files for
+    has a job `certify` waits on, writing `reports/<tier>` and uploading it
+    under the name `certify` downloads.
     """
-    bare = []
-    for name, job in sorted(ci_jobs().items()):
-        for step in job.get("steps", []):
-            run = str(step.get("run", ""))
-            if "vitest" not in run or "cd ui" not in run:
-                continue
-            armed = {**job.get("env", {}), **step.get("env", {})}
-            if not armed.get("IC_SUITE_MUST_RUN"):
-                bare.append(f"{name}: {step.get('name', run.strip()[:40])}")
+    from tests import certify
 
-    assert not bare, (
-        "these steps run the client tier without arming its must-run check, so a "
-        f"run that reached no test file exits 0:\n  " + "\n  ".join(bare)
+    jobs = ci_jobs()
+    needs = jobs["certify"]["needs"]
+    written = {}
+    for name in needs:
+        steps = jobs[name]["steps"]
+        runs = " ".join(f"{step.get('run', '')} {step.get('env', '')}" for step in steps)
+        uploads = [step for step in steps if "upload-artifact" in str(step.get("uses", ""))]
+        assert any(str(step["with"]["name"]).startswith("report-") and step["with"]["path"] == "reports/"
+                   for step in uploads), f"{name} writes a report certify never downloads"
+        for tier in re.findall(r"reports/(\w+)[-.]", runs):
+            written[tier] = name
+    assert set(written) == set(certify.OWNED), (
+        f"reports are written for {sorted(written)}; certify owns files for {sorted(certify.OWNED)}"
     )
+
+    steps = jobs["certify"]["steps"]
+    download = next(step for step in steps if "download-artifact" in str(step.get("uses", "")))
+    assert download["with"] == {"pattern": "report-*", "path": "reports", "merge-multiple": True}
+    assert "python3 -m tests.certify reports --closes" in " ".join(str(step.get("run", "")) for step in steps)
+
+
+def run_certify_step(tmp_path: Path, event: str, queued: str) -> tuple[subprocess.CompletedProcess, str, str]:
+    """The `certify` job's last step, run with stand-ins for `gh` and `python3` that record their arguments."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    for name, answer in (("gh", "203,220"), ("python3", "")):
+        tool = bin_dir / name
+        tool.write_text(f'#!/bin/sh\necho "$@" > "{tmp_path}/{name}.args"\necho "{answer}"\n', encoding="utf-8")
+        tool.chmod(0o755)
+    done = subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", step_script("certify", 2)],
+        cwd=tmp_path, capture_output=True, text=True, timeout=30, check=False,
+        env={"PATH": f"{bin_dir}:{os.environ['PATH']}", "GITHUB_EVENT_NAME": event,
+             "QUEUED": queued, "GITHUB_REPOSITORY": "pureidlelabs/IncidentCompanion"},
+    )
+    read = lambda name: (tmp_path / f"{name}.args").read_text().strip() if (tmp_path / f"{name}.args").exists() else ""  # noqa: E731
+    return done, read("gh"), read("python3")
+
+
+def test_a_landing_is_certified_against_the_issues_its_pull_request_closes(tmp_path: Path) -> None:
+    """The refusal of an `unbuilt` row's issue closing needs the landing's closing issues, read from the queue."""
+    done, gh, python = run_certify_step(
+        tmp_path, "merge_group", "refs/heads/gh-readonly-queue/main/pr-1192-0123456789abcdef")
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert gh.startswith("pr view 1192 --repo pureidlelabs/IncidentCompanion --json closingIssuesReferences"), gh
+    assert python == "-m tests.certify reports --closes 203,220", python
+
+
+def test_a_queued_ref_naming_no_pull_request_is_refused(tmp_path: Path) -> None:
+    done, _, python = run_certify_step(tmp_path, "merge_group", "refs/heads/main")
+
+    assert done.returncode != 0 and not python, "a landing whose closing issues nobody read was certified"
+
+
+def test_a_local_run_certifies_what_its_tiers_reported() -> None:
+    """`verify.sh` reads its reports the way the merge group does, or its green is a floor."""
+    verify = VERIFY.read_text(encoding="utf-8")
+    assert "-m tests.certify reports --partial" in verify, "verify.sh never reads what its tiers reported"
+    written = set(re.findall(r"reports/(\w+)[-.]", verify))
+    assert {"server", "client", "repository"} <= written, f"verify.sh writes reports for {sorted(written)}"
 
 
 def test_the_server_lint_script_caps_warnings_at_zero() -> None:

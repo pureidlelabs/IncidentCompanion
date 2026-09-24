@@ -35,7 +35,6 @@ describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
   let harness: Harness
   let analyst: Persona
   let administrator: Persona
-  let measured: string[]
 
   beforeAll(async () => {
     harness = await boot()
@@ -45,16 +44,6 @@ describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
     administrator = await sharedAdmin(harness)
     analyst = await sharedAnalyst(harness)
     expect(administrator.role).toBe('admin')
-
-    measured = []
-    for (const one of operations(harness.document)) {
-      const response = await fetch(`${harness.base}${one.path}`, {
-        method: one.method,
-        headers: { cookie: analyst.cookie, 'content-type': 'application/json' },
-        body: ['GET', 'DELETE'].includes(one.method) ? undefined : '{}',
-      })
-      if (response.status === 403) measured.push(`${one.method} ${one.template}`)
-    }
   }, 120_000)
 
   afterAll(async () => {
@@ -65,9 +54,18 @@ describe.skipIf(!runnable)('an analyst who is not an administrator', () => {
     expect(analyst.role).toBe('analyst')
   })
 
-  it('is refused exactly the routes that are privileged, and no others', () => {
-    expect([...measured].sort()).toEqual([...MANAGEMENT_PLANE].sort())
-  })
+  it('is refused exactly the routes that are privileged, and no others', async () => {
+    const measured: string[] = []
+    for (const one of operations(harness.document)) {
+      const response = await fetch(`${harness.base}${one.path}`, {
+        method: one.method,
+        headers: { cookie: analyst.cookie, 'content-type': 'application/json' },
+        body: ['GET', 'DELETE'].includes(one.method) ? undefined : '{}',
+      })
+      if (response.status === 403) measured.push(`${one.method} ${one.template}`)
+    }
+    expect(measured.sort()).toEqual([...MANAGEMENT_PLANE].sort())
+  }, 120_000)
 
   /**
    * **The control for the list above.** A guard that refused everybody would

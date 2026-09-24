@@ -35,6 +35,15 @@
 
      "Nothing to file" is an answer. -->
 
+## Scenarios this makes demonstrated
+
+<!-- Every ledger row the diff marks demonstrated or cites afresh: the scenario,
+     the cases it cites, and the change to the product that would make the
+     scenario false. The reviewer makes that change, runs the cases, records the
+     red here, and puts the product back. -> skills/land/SKILL.md 6a
+
+     "None" is an answer. -->
+
 ## For whoever reviews it
 
 <!-- What you would want pointed out if you were reading this cold. The decision
@@ -47,4 +56,5 @@
 - [ ] `npx --no-install openspec validate --all --strict` is clean, if anything under `openspec/` moved. → §7a
 - [ ] Reviewed adversarially by a context that did not write it, if the diff touches `.claude/hooks/`, `.claude/scripts/`, `server/src/`, `ui/src/`, `docker/` or `compose.yaml`. A diff of only prose, skills, rules, tests or stories does not owe one. → §3
 - [ ] Every fix and new behaviour owes a test written before it, and the mutation that proves the test connected was shown to apply.
+- [ ] Every row made demonstrated has its falsifier above, applied by a reviewer who did not write it, and the red recorded.
 - [ ] Nothing person-bound reaches the tree: employment, nationality, budget, direct quotes, or a reading of how somebody behaves.
