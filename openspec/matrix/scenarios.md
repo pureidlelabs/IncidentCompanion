@@ -535,6 +535,10 @@
 | A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
+| The connection dies with the reach that admitted it | A session ends while its connection is silent | demonstrated | server/test/a-socket-lives-only-as-long-as-its-authority.test.ts |
+| The connection dies with the reach that admitted it | An account is held while connected | demonstrated | server/test/a-socket-lives-only-as-long-as-its-authority.test.ts |
+| The connection dies with the reach that admitted it | An analyst signs out in one of two places | demonstrated | server/test/a-socket-lives-only-as-long-as-its-authority.test.ts |
+| The connection dies with the reach that admitted it | A connection is refused an edit | demonstrated | server/test/a-refused-socket-frame-is-recorded.test.ts |
 | Written prose is attributed like any other write | One of two analysts present writes | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
 | Written prose is attributed like any other write | Two analysts write before one save | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
 | Written prose is attributed like any other write | Words typed just before the report is sent | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
