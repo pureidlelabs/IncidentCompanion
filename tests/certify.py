@@ -358,8 +358,9 @@ def certified(run: Run, capability: str, evidence: str) -> str | None:
         case = run.cases.get(ident)
         if case is None:
             return f"cites {ident}, which no report holds"
-        if (case.tier, ident) in run.twice:
-            return f"cites {ident}, which the {case.tier} tier reports more than once"
+        twice = sorted(tier for tier, one in run.twice if one == ident)
+        if twice:
+            return f"cites {ident}, which the {twice[0]} tier reports more than once"
         if case.status != "passed":
             return f"cites {ident}, which {case.status}"
         if not entry_level(ident, case, capability):

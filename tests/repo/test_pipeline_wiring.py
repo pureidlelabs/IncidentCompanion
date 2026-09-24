@@ -851,7 +851,7 @@ def test_the_container_files_are_only_in_the_expensive_mode() -> None:
     """
     text = VERIFY.read_text(encoding="utf-8")
     assert '*) REPOSITORY_ONLY+=("--ignore=$file") ;;' in text, "the default sweep still builds containers"
-    assert 'step "repository: suite" ./test.sh -q "${REPOSITORY_ONLY[@]}"' in text, (
+    assert 'step "repository: suite" env INCIDENTCOMPANION_SKIP_UI=1 ./test.sh -q "${REPOSITORY_ONLY[@]}"' in text, (
         "the default sweep does not use the selection that leaves the containers out")
     assert "./verify.sh --detailed runs it" in text, "nothing says where the tier went"
 

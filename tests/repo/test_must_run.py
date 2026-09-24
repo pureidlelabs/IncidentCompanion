@@ -101,7 +101,8 @@ def test_verify_sh_turns_the_mode_on_where_it_certifies():
     tiers = [
         "browser tier (the app)",
         "browser tier (the kit)",
-        "containers and lifecycle: suite",
+        "containers: suite",
+        "lifecycle: suite",
         "repository: suite (armed)",
         "server: suite",
     ]

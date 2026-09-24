@@ -165,14 +165,23 @@ if expensive; then
   # **`INCIDENTCOMPANION_CONTAINER_TESTS` too, or the container cases skip
   # while this step's own name says it ran them.** The lifecycle tier opts in
   # the same way. A report per tier, as CI writes them, so `tests/certify.py`
-  # counts each shared file for both tiers that owe it.
+  # counts each shared file for both tiers that owe it. **The lifecycle runs
+  # after the containers, never beside them**: both build the same local image
+  # tags, and the lifecycle refuses a tag that moved under it.
   step "repository: suite (armed)" \
-    env IC_SUITE_MUST_RUN=1 ./test.sh -q "${REPOSITORY_ONLY[@]}" --junitxml=reports/repository.xml
-  step "containers and lifecycle: suite" \
-    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 INCIDENTCOMPANION_LIFECYCLE_TESTS=1 ./test.sh -q \
-    --ignore=tests/docs --ignore=tests/repo --ignore=tests/contract --junitxml=reports/containers.xml
+    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_SKIP_UI=1 ./test.sh -q "${REPOSITORY_ONLY[@]}" \
+    --junitxml=reports/repository.xml
+  step "containers: suite" \
+    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_SKIP_UI=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 ./test.sh -q \
+    --ignore=tests/docs --ignore=tests/repo --ignore=tests/contract --ignore=tests/lifecycle \
+    --junitxml=reports/containers.xml
+  step "lifecycle: suite" \
+    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_SKIP_UI=1 INCIDENTCOMPANION_LIFECYCLE_TESTS=1 ./test.sh -q \
+    --ignore=tests/docs --ignore=tests/repo --ignore=tests/contract --ignore=tests/docker \
+    --junitxml=reports/lifecycle.xml
 elif behaviour; then
-  step "repository: suite" ./test.sh -q "${REPOSITORY_ONLY[@]}" --junitxml=reports/repository.xml
+  step "repository: suite" env INCIDENTCOMPANION_SKIP_UI=1 ./test.sh -q "${REPOSITORY_ONLY[@]}" \
+    --junitxml=reports/repository.xml
   SKIPPED+=("tests/docker -- builds containers; ./verify.sh --detailed runs it")
   SKIPPED+=("tests/lifecycle -- builds and runs the shipped stack; ./verify.sh --detailed runs it")
 fi

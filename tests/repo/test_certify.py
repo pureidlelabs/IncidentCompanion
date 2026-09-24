@@ -335,3 +335,13 @@ def test_a_merge_closing_an_issue_an_unbuilt_row_cites_is_refused() -> None:
         assert refused and all(f"#{number}" in line for line in refused), number
 
     assert certify.unbuilt_closed(ledger, {max(cited) + 100000}) == []
+
+
+def test_a_case_another_tier_reported_twice_certifies_no_row() -> None:
+    ident = "tests/docker/test_container_config.py :: test_twice"
+    run = certify.Run()
+    run.cases[ident] = certify.Case("repository", "tests/docker/test_container_config.py", "passed")
+    run.twice.add(("containers", ident))
+
+    assert certify.certified(run, "deployment", ident) == (
+        f"cites {ident}, which the containers tier reports more than once")
