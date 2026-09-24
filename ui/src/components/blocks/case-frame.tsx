@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 
-import { LayoutGrid, Plus } from 'lucide-react'
+import { LayoutGrid, Plus, Unplug } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
 import {
@@ -27,6 +27,7 @@ import { RailFold, RailGroup, NavRow } from '@/components/blocks/rail-nav'
 import { NavRail, type RailSignedIn } from '@/components/blocks/rail'
 import { PresenceStack, type Person } from '@/components/blocks/presence'
 import { isFrozen } from '@/components/blocks/report-shape'
+import { Button } from '@/components/ui/button'
 import { Mark } from '@/components/ui/mark'
 import { RailList, RailItem, RailSubList, RailSubItem } from '@/components/ui/rail'
 import { usePersistedFlag } from '@/lib/persistedFlag'
@@ -83,6 +84,11 @@ export interface CaseFrameProps {
    * it from the roster the socket serves.
    */
   people?: readonly Person[] | undefined
+  /**
+   * Whether the screen can know it is current. `behind` draws the line that
+   * says it is not; `failed` adds the way to read the case again.
+   */
+  live?: { behind: boolean; failed: boolean; reread: () => void } | undefined
   /** What has been written to the case, for the header's activity door. */
   activity?:
     | {
@@ -153,6 +159,7 @@ export function CaseFrame({
   headerStart,
   user,
   people,
+  live,
   activity,
   counts,
   reports,
@@ -238,6 +245,7 @@ export function CaseFrame({
         {...(headerStart === undefined ? {} : { headerStart })}
         headerEnd={
           <>
+            {live?.behind === true && <NotLive failed={live.failed} onReread={live.reread} />}
             {people !== undefined && <PresenceStack people={people} />}
             {activity !== undefined && (
               <ActivityDoor
@@ -583,5 +591,37 @@ export function switcherRows(
         </MenuItem>
       </MenuSectionGroup>
     </>
+  )
+}
+
+/**
+ * The screen saying it may be behind: its connection is down, or back and the
+ * case not yet read again.
+ *
+ * In the header beside who else is here, because it is a fact about the case
+ * as a whole and every section inherits it.
+ */
+function NotLive({ failed, onReread }: { failed: boolean; onReread: () => void }) {
+  return (
+    <div
+      data-part="not-live"
+      role="status"
+      className="flex items-center gap-2 text-xs text-severity-medium"
+    >
+      <Unplug aria-hidden className="size-4 shrink-0" />
+      <span>
+        Not live
+        <span className="hidden md:inline">
+          {failed
+            ? ': the case could not be read again'
+            : ': changes by others will appear once reconnected'}
+        </span>
+      </span>
+      {failed && (
+        <Button size="xs" variant="outline" onPress={onReread}>
+          Read the case again
+        </Button>
+      )}
+    </div>
   )
 }

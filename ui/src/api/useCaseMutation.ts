@@ -1,5 +1,5 @@
 /**
- * Change the case's own details: optimistic merge, PATCH, rollback on failure.
+ * Change the case's own details.
  *
  * The fifth verb, and the only one that writes something other than a row.
  * `PATCH /api/cases/{id}` takes the case's own fields only - a table sent here
@@ -15,72 +15,47 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import { request, type ApiError } from './client'
 import type { Case, CollectionName, COLLECTION_TO_CASE_KEY } from './model'
 import { keys } from './queryKeys'
+import { rowKey, writeRow, type Read } from './rowWrite'
 
 type CaseTableKey = (typeof COLLECTION_TO_CASE_KEY)[CollectionName]
 
 /** The fields `PATCH /api/cases/{id}` will accept. */
 export type CaseFields = Partial<Omit<Case, CaseTableKey | 'caseId' | 'schemaVersion' | 'version'>>
 
-/**
- * One write: the fields, and the version they were read at.
- *
- * **The version is the write, not a refinement of it.** A patch that does not
- * name the version it read is refused outright - *"A patch has to name the
- * version it read."* - so a helper that omits one makes every field on the
- * screen unsaveable.
- *
- * **The caller supplies it, and that is the same rule `useEntryMutation`
- * states.** A read may refresh; a write may not. Taking whatever version sits
- * in the cache when the request leaves adopts another analyst's row as your
- * base, and the check then passes on a save that should have been a question.
- */
+/** One write: the fields, and the version of the case they were read at. */
 export interface CaseWrite {
-  /** The version of the case the analyst was looking at. */
-  version: number
+  version: Read
   fields: CaseFields
 }
 
-interface CaseRollback {
-  previous: Case | undefined
-}
-
-/** What the route answers with. */
-export interface WrittenCase {
-  caseId: string
-}
+/** What the route answers with: the case as stored. */
+export type WrittenCase = CaseFields & { id: string; version: number }
 
 export function useCaseMutation(
   caseId: string,
-): UseMutationResult<WrittenCase, ApiError, CaseWrite, CaseRollback> {
+): UseMutationResult<WrittenCase, ApiError, CaseWrite> {
   const client = useQueryClient()
-  const caseKey = keys.case(caseId)
 
-  return useMutation<WrittenCase, ApiError, CaseWrite, CaseRollback>({
-    mutationKey: [...caseKey, 'patch'],
+  return useMutation<WrittenCase, ApiError, CaseWrite>({
+    mutationKey: [...keys.case(caseId), 'patch'],
 
     // `version` rides *beside* the fields rather than inside them, so a caller
     // cannot express a write that changes the version it is checking against.
     mutationFn: ({ version, fields }) =>
-      request<WrittenCase>(`/cases/${encodeURIComponent(caseId)}`, {
-        method: 'PATCH',
-        body: { version, ...fields },
-      }),
-
-    onMutate: async ({ fields }) => {
-      await client.cancelQueries({ queryKey: caseKey })
-      const previous = client.getQueryData<Case>(caseKey)
-      client.setQueryData<Case>(caseKey, (current) =>
-        current ? { ...current, ...fields } : current,
-      )
-      return { previous }
-    },
-
-    onError: (_error, _fields, context) => {
-      if (context) client.setQueryData(caseKey, context.previous)
-    },
+      writeRow(
+        client,
+        rowKey(caseId, 'cases', caseId),
+        version,
+        (at) =>
+          request<WrittenCase>(`/cases/${encodeURIComponent(caseId)}`, {
+            method: 'PATCH',
+            body: { version: at, ...fields },
+          }),
+        (stored) => stored.version,
+      ),
 
     onSettled: () => {
-      void client.invalidateQueries({ queryKey: caseKey })
+      void client.invalidateQueries({ queryKey: keys.case(caseId) })
       // The picker's summary row is derived from these fields, so a changed
       // description or status is stale in the case list until this fires.
       void client.invalidateQueries({ queryKey: keys.cases() })

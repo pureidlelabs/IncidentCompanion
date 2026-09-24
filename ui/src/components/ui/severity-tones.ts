@@ -63,13 +63,10 @@ const TONE_OF: ReadonlyMap<string, SeverityTone> = new Map([['informational', 'i
 /**
  * The tone a severity word resolves to.
  *
- * **Takes the value defensively, though the type says `string`.** An
- * optimistic row is the fields the dialog sent and nothing else, so a timeline
- * entry can reach here mid-flight with no `severity` at all - and
- * `undefined.trim()` takes the whole SPA to React Router's error boundary
- * ("Unexpected Application Error!"), not just the row. The server refuses the
- * write correctly either way; the crash is the client rendering its own
- * optimistic guess.
+ * **Takes the value defensively, though the type says `string`.** An activity
+ * reaches here with no `severity` at all -- the key is absent on the wire --
+ * and `undefined.trim()` takes the whole SPA to React Router's error boundary
+ * ("Unexpected Application Error!"), not just the row.
  *
  * `none` is the documented answer for a value that is not a known tone, and a
  * missing value is one of those.

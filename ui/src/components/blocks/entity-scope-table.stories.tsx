@@ -404,20 +404,6 @@ export const LongestValue: Story = {
 }
 
 /**
- * A write another analyst got in first with.
- *
- * The refusal sits above the table rather than in a toast: it names a field and
- * a row, which is what the analyst has to reopen.
- */
-export const Refused: Story = {
-  name: 'A refused write',
-  args: {
-    scope: 'assets',
-    refusal: { field: 'Verdict', row: 'FIN-WS-014', by: 'A. Okonkwo' },
-  },
-}
-
-/**
  * The identity field's label on the served asset form.
  *
  * **The dialog asks a different question from the one the column heads.** The
@@ -452,9 +438,13 @@ function asset(hostname: string): SystemEntry {
   return found
 }
 
-/** The write seam, spied on. A pair per story, since `fn` remembers its calls. */
+/** The write seam, spied on. One set per story, since `fn` remembers its calls. */
 function spying(): EntityWrites {
-  return { save: fn(() => Promise.resolve({})), remove: fn(() => Promise.resolve()) }
+  return {
+    save: fn(() => Promise.resolve({})),
+    patch: fn(() => Promise.resolve()),
+    remove: fn(() => Promise.resolve()),
+  }
 }
 
 /**
@@ -545,9 +535,9 @@ export const SendsADelete: Story = {
 }
 
 /**
- * The bulk bar, which is `save` again and once per row.
+ * The bulk bar, which is one patch across the selection.
  *
- * **Not one call carrying a list.** The version check is per row, so each row
+ * **Each row carries its own version.** The check is per row, so each row
  * leaves at the version it was read at -- and the two rows here sit at
  * different versions, which a seam sending one number for the whole selection
  * cannot reproduce.
@@ -566,15 +556,13 @@ export const SendsABulkApply: Story = {
     await userEvent.click(await screen.findByRole('option', { name: 'clean' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
 
-    await expect(args.writes!.save).toHaveBeenCalledTimes(2)
-    await expect(args.writes!.save).toHaveBeenCalledWith(
+    await expect(args.writes!.patch).toHaveBeenCalledTimes(1)
+    await expect(args.writes!.patch).toHaveBeenCalledWith(
       'systems',
-      { id: asset('DC-01').id, version: VERSIONS['DC-01'] },
-      { verdict: 'clean' },
-    )
-    await expect(args.writes!.save).toHaveBeenCalledWith(
-      'systems',
-      { id: asset('FS-01').id, version: VERSIONS['FS-01'] },
+      expect.arrayContaining([
+        { id: asset('DC-01').id, version: VERSIONS['DC-01'] },
+        { id: asset('FS-01').id, version: VERSIONS['FS-01'] },
+      ]),
       { verdict: 'clean' },
     )
   },

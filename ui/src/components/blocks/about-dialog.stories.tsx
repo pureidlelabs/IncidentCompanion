@@ -13,6 +13,7 @@ const FACTS = {
   makerUrl: 'https://pureidle.dev',
   repoUrl: 'https://github.com/pureidlelabs/IncidentCompanion',
   issuesUrl: 'https://github.com/pureidlelabs/IncidentCompanion/issues',
+  presenceBoundSeconds: 30,
 }
 
 /**

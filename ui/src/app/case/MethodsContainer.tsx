@@ -3,7 +3,6 @@ import { useSpecs } from '@/api/specs'
 import { useBulkPatch } from '@/api/useBulkPatch'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useBulkDelete } from '@/api/useBulkDelete'
-import { useEntryDelete } from '@/api/useEntryDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useCaseId } from '@/app/useCaseId'
 import { MethodsScreen, type MethodWrites } from '@/screens/methods'
@@ -21,12 +20,11 @@ export function MethodsContainer() {
       create: useEntryCreate(caseId, 'methods'),
       patch: useEntryMutation(caseId, 'methods'),
       bulk: useBulkPatch(caseId, 'methods'),
-      remove: useEntryDelete(caseId, 'methods'),
       bulkDelete: useBulkDelete(caseId),
     },
     { one: 'the method', many: 'the selected methods' },
-    () => kase.data?.methods ?? [],
     async () => (await kase.refetch()).data?.methods ?? [],
+    (row) => row.name || 'a method',
     'methods',
   ) as MethodWrites
 

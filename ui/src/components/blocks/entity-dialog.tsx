@@ -1,6 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react'
 
 import { ApiError } from '@/api/client'
+import { useRowDraft } from '@/api/rowDraft'
+import type { Read } from '@/api/rowWrite'
 
 import { adviceFor, type Advice } from '@/api/advice'
 import {
@@ -10,22 +12,26 @@ import {
   sectionTitles,
   type DetailRow,
 } from '@/api/dialogLayout'
-import { changedFields, same } from '@/api/entryFields'
+import { changedFields } from '@/api/entryFields'
 import type { CollectionName } from '@/api/model'
 import { fieldsOf, sealed, type FieldSpec, type FormSpec } from '@/api/specs'
-import { isEmpty, problemsAgainst, problemsIn, type EntitySchema, type Problems } from '@/api/validateDraft'
+import {
+  isEmpty,
+  problemsAgainst,
+  problemsIn,
+  type EntitySchema,
+  type Problems,
+} from '@/api/validateDraft'
 import { FieldControl, type Suggestions } from '@/components/blocks/field-control'
 import { FieldRow, summarise } from '@/components/blocks/field-row'
-import {
-  FoldedGroups,
-  FormCell,
-  FormSection,
-  spansRow,
-} from '@/components/blocks/form-section'
+import { FoldedGroups, FormCell, FormSection, spansRow } from '@/components/blocks/form-section'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogFooter, DialogHeader } from '@/components/ui/dialog'
-import { useHoldRow } from '@/components/blocks/presence'
+import { useWriterOf } from '@/components/blocks/detail-grid'
+import { FieldConflict } from '@/components/blocks/merge-review'
+import { useHoldRow, useRowHolder } from '@/components/blocks/presence'
 import { ReadOnlyNotice } from '@/components/blocks/prose-refusal'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { isThenable } from '@/lib/isThenable'
 
 /** A reference field's options, by the collection it points at. */
@@ -72,17 +78,22 @@ export interface EntityDialogProps<TData extends object> {
   form: FormSpec<TData>
   references?: ReferenceOptions | undefined
   suggestions?: Suggestions | undefined
-  /** The row being corrected. Present switches the dialog to edit. */
+  /** The row being corrected, as it was when the dialog opened. Present switches the dialog to edit. */
   entry?: Partial<TData> | undefined
   /**
-   * The filled (create) or changed (edit) fields, once. A cancel never calls
-   * this.
+   * The same row as the screen holds it now, so another analyst's change
+   * reaches the open dialog. Absent, the dialog stays on `entry`.
+   */
+  served?: Partial<TData> | undefined
+  /**
+   * The filled (create) or changed (edit) fields, once, and in edit the
+   * version of the row they were read at. A cancel never calls this.
    *
    * **May answer a promise**, and where it does the dialog waits: it closes
    * when the write lands and stays open with the reason when it is refused,
    * rather than throwing the draft away either way.
    */
-  onCreate: (fields: Partial<TData>) => unknown
+  onCreate: (fields: Partial<TData>, read?: Read) => unknown
   /** Which table the row belongs to, so the other analysts see it held. */
   collection?: CollectionName | undefined
   /**
@@ -107,7 +118,9 @@ export interface EntityDialogProps<TData extends object> {
  * - One walk over the served descriptors builds the fields, their order, the
  *   tier each opens and a blank draft's values. Nothing here is per-table.
  * - `entry` switches it to edit: the draft opens on that row, the footer reads
- *   Save, and the callback receives only the changed fields.
+ *   Save, and the callback receives only the changed fields and the version
+ *   they were read at. A field another analyst changes while it is open is
+ *   shown with both values, and Save waits until the analyst chooses.
  * - The whole form is one POST, where the table's own writes are per field.
  * - The draft lives one level down, so closing the dialog unmounts it and
  *   reopening starts blank.
@@ -122,6 +135,7 @@ export function EntityDialog<TData extends object>({
   references,
   suggestions,
   entry,
+  served,
   onCreate,
   collection,
   schema,
@@ -131,13 +145,34 @@ export function EntityDialog<TData extends object>({
   // is exactly when there is no row to hold.
   const rowId = (entry as { id?: string } | undefined)?.id
   const readOnly = useHoldRow(collection ?? '', collection ? rowId : undefined, open)
+  // Another analyst in the same row is told here, and the controls stay live:
+  // the version check decides the write, not the hold.
+  const holder = useRowHolder(collection ?? '', rowId ?? '')
+  const notices = (
+    <>
+      {readOnly && <ReadOnlyNotice />}
+      {holder && !holder.you && (
+        <Alert variant="warning" role="status" className="mb-3">
+          <AlertTitle>{`${holder.name} is editing this entry`}</AlertTitle>
+          <AlertDescription>
+            You can still save. A field you both change is shown with both values for you to choose.
+          </AlertDescription>
+        </Alert>
+      )}
+    </>
+  )
 
   return (
     // One width for every entity form: the three tiers stack, so the frame has
     // to fit the widest identity value, a 64-character digest. `form.columns`
     // is not consulted - its readers are the timeline dialog and the
     // Start-case pane.
-    <Dialog isOpen={open} size="form" onOpenChange={onOpenChange} dialogProps={{ 'aria-label': title }}>
+    <Dialog
+      isOpen={open}
+      size="form"
+      onOpenChange={onOpenChange}
+      dialogProps={{ 'aria-label': title }}
+    >
       <DialogHeader
         title={title}
         onClose={() => {
@@ -146,10 +181,17 @@ export function EntityDialog<TData extends object>({
       />
       <CreateBody
         form={form}
-        lead={readOnly ? <><ReadOnlyNotice />{lead}</> : lead}
+        lead={
+          <>
+            {notices}
+            {lead}
+          </>
+        }
         references={references}
         suggestions={suggestions}
         entry={entry}
+        served={served}
+        collection={collection}
         schema={schema}
         onCreate={onCreate}
         onClose={() => {
@@ -197,6 +239,8 @@ function CreateBody<TData extends object>({
   references,
   suggestions,
   entry,
+  served,
+  collection,
   schema,
   onCreate,
   onClose,
@@ -207,15 +251,32 @@ function CreateBody<TData extends object>({
   references: ReferenceOptions | undefined
   suggestions: Suggestions | undefined
   entry: Partial<TData> | undefined
+  served: Partial<TData> | undefined
+  collection: CollectionName | undefined
   schema: EntitySchema | undefined
-  onCreate: (fields: Partial<TData>) => unknown
+  onCreate: (fields: Partial<TData>, read?: Read) => unknown
   onClose: () => void
 }) {
-  // Edit opens holding the row's own values: the row already carries real
-  // values for everything the form shows.
-  const [draft, setDraft] = useState<Draft>(() =>
-    entry ? { ...(entry as Draft) } : initialDraft(form),
+  // Create starts from the form's defaults and holds its own draft. Edit holds
+  // each changed field against the row as it was read, so a change another
+  // analyst makes while the dialog is open is judged field by field.
+  const [fresh, setFresh] = useState<Draft>(() => initialDraft(form))
+  const row = (served ?? entry) as ({ version: number } & Draft) | undefined
+  const held = useRowDraft(
+    entry ? row : undefined,
+    // Whichever send lands -- the analyst's own press or the draft sending a
+    // refused change again -- the entry is saved and the dialog is done.
+    (values, read) =>
+      Promise.resolve(onCreate(values as Partial<TData>, read)).then((answer) => {
+        onClose()
+        return answer
+      }),
+    false,
   )
+  const draft: Draft = entry ? held.view : fresh
+  const writerOf = useWriterOf(collection ?? '', (entry as { id?: string } | undefined)?.id)
+  /** A save refused against its version, waiting for the row to be read again to decide it. */
+  const [waiting, setWaiting] = useState(false)
   /**
    * What the last submit was refused for, by field.
    *
@@ -248,7 +309,8 @@ function CreateBody<TData extends object>({
     // Nothing a gate shuts is cleared here - `sealed` empties it once, at
     // submit, so a misclicked kind does not wipe a stored value silently.
     const next = { ...draft, [name]: value }
-    setDraft(next)
+    if (entry) held.set(name, value)
+    else setFresh(next)
     // Re-checked only while something is already refused, so the first
     // keystroke into an untouched form marks nothing.
     if (Object.keys(refused).length > 0) setRefused(problemsFor(next))
@@ -259,9 +321,15 @@ function CreateBody<TData extends object>({
       ? problemsAgainst(schema, candidate, entry !== undefined)
       : problemsIn(form.collection, candidate, entry !== undefined)
 
-  /** Whether this field differs from the row as it was opened. Edit only. */
-  const changed = (name: string) =>
-    entry !== undefined && !same((entry as Draft)[name], draft[name])
+  /** Whether the analyst changed this field. Edit only. */
+  const changed = (name: string) => entry !== undefined && held.changed(name)
+
+  // A save refused over a field nobody else moved is sent again by the draft,
+  // which closes the dialog when it lands. One over a field that did move
+  // stops waiting and shows the choice.
+  const disputed = Object.entries(held.holds).filter(([, hold]) => hold.theirs !== undefined)
+  if (waiting && disputed.length > 0) setWaiting(false)
+  const checking = waiting && disputed.length === 0
 
   /**
    * The sealed draft the controls are drawn against, so what a control does
@@ -305,11 +373,36 @@ function CreateBody<TData extends object>({
       return
     }
     setSendingFailed(null)
-    const answer = onCreate(
-      entry
-        ? changedFields<TData>(entry, sending as Partial<TData>)
-        : filledFields<TData>(sending),
-    )
+    setWaiting(false)
+    if (entry) {
+      if (disputed.length > 0) {
+        setSendingFailed(
+          'Select Keep mine or Take theirs for each field another analyst changed, then save.',
+        )
+        return
+      }
+      const fields = changedFields<TData>(
+        (row ?? entry) as Partial<TData>,
+        sending as Partial<TData>,
+      )
+      if (Object.keys(fields).length === 0) {
+        onClose()
+        return
+      }
+      setSending(true)
+      held.send(fields as Record<string, unknown>).then(
+        () => {
+          setSending(false)
+        },
+        (thrown: unknown) => {
+          setSending(false)
+          if (thrown instanceof ApiError && thrown.writeConflict) setWaiting(true)
+          else setSendingFailed(refusalLine(thrown))
+        },
+      )
+      return
+    }
+    const answer = onCreate(filledFields<TData>(sending))
     // A caller that answers nothing has already done whatever it does, so the
     // dialog closes as it always did. One that answers a promise is asked how
     // it went before anything is thrown away.
@@ -352,6 +445,20 @@ function CreateBody<TData extends object>({
             {sendingFailed}
           </p>
         )}
+        {checking && (
+          <p data-part="create-waiting" role="status" className="text-sm text-ink-muted">
+            Another analyst changed this entry while it was open. Checking what they changed.
+          </p>
+        )}
+        {disputed.map(([name]) => (
+          <FieldConflict
+            key={name}
+            draft={held}
+            field={name}
+            label={fieldsOf(form).find((one) => one.name === name)?.label ?? name}
+            by={writerOf}
+          />
+        ))}
 
         {lead}
 
@@ -443,7 +550,7 @@ function CreateBody<TData extends object>({
         <Button variant="outline" onPress={onClose}>
           Cancel
         </Button>
-        <Button type="submit" variant="default" isPending={sending}>
+        <Button type="submit" variant="default" isPending={sending || checking}>
           {entry ? 'Save' : 'Create'}
         </Button>
       </DialogFooter>

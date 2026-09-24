@@ -71,26 +71,8 @@ export const Raising: Story = {
         </Button>
       </div>
 
-      {/*
-        The two 409s, which need different sentences. `refuseIfHeldByAnother`
-        answers one for a row somebody has *open* - nothing was saved and
-        waiting is the move. The version check answers one for a row somebody
-        has *written*, where the screen is behind. Telling the analyst their
-        colleague saved first when nobody saved anything sends them looking for
-        a change that is not there.
-      */}
+      {/* A version refusal: another analyst wrote first, and the screen is behind. */}
       <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          onPress={() =>
-            reportWriteFailure(
-              new ApiError(409, 'It is open in another session.', { heldBy: 'Nadia Okonjo' }),
-              'this system',
-            )
-          }
-        >
-          Held open by somebody
-        </Button>
         <Button
           variant="outline"
           onPress={() =>
@@ -151,8 +133,7 @@ export const Raising: Story = {
 
       {/*
         A bulk PATCH's stale ids. **Silent when nothing is missing**, like every
-        write - the optimistic rows are the confirmation, and a toast on every
-        bulk edit is noise.
+        write: a toast on every bulk edit is noise.
       */}
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" onPress={() => reportBulkMissing([], 'systems')}>
@@ -165,7 +146,6 @@ export const Raising: Story = {
           Three missing
         </Button>
       </div>
-
     </div>
   ),
   // The region portals into React Aria's top layer, which is outside the
@@ -202,14 +182,7 @@ export const Raising: Story = {
       ).toHaveLength(1)
     })
 
-    await step('the two 409s are told apart by who is named', async () => {
-      // A row somebody has *open* and a row somebody has *written* are both
-      // 409, and only one of them means a colleague saved first. Saying that
-      // when nobody saved anything sends
-      // the analyst looking for a change that is not there.
-      await userEvent.click(canvas.getByRole('button', { name: /Held open by somebody/ }))
-      await shows(/Nadia Okonjo has this system open\./)
-
+    await step('a version refusal says another analyst saved first', async () => {
       await userEvent.click(canvas.getByRole('button', { name: /Written first by somebody/ }))
       await shows(/Another analyst saved this system first\./)
     })

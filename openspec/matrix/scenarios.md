@@ -246,6 +246,7 @@
 | Only some collections have an identity, and the rest are events | A second way of creating rows is added | demonstrated | server/src/domain/identity.test.ts |
 | Doing something to many rows obeys every rule that governs one | Some rows in a bulk write have moved | demonstrated | server/src/collections/bulk.test.ts |
 | Doing something to many rows obeys every rule that governs one | A bulk write crosses the case boundary | demonstrated | server/src/collections/bulk.test.ts |
+| Doing something to many rows obeys every rule that governs one | A row in a selection changes while the act is being confirmed | demonstrated | server/e2e/a-selection-is-acted-on-as-it-was-read.spec.ts |
 | Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | undemonstrated |  |
 | Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | undemonstrated |  |
 | Order an analyst chose is theirs, and is not a property of the data | Two analysts reorder at once | demonstrated | server/test/two-reorders-never-mix.test.ts |
@@ -537,12 +538,13 @@
 | A connection is admitted by its own checks, and their absence is silent | A held account connects | demonstrated | server/src/live/live.gateway.test.ts |
 | A connection is admitted by its own checks, and their absence is silent | A check is removed | demonstrated | server/src/live/the-socket-refuses-observably.test.ts |
 | Presence says who is here now, and stops saying it by itself | An analyst joins | demonstrated | server/test/live-socket.test.ts |
-| Presence says who is here now, and stops saying it by itself | A connection is lost without warning | unbuilt | Not built: the bound is served nowhere, so no install states it. -> #134 |
+| Presence says who is here now, and stops saying it by itself | A connection is lost without warning | demonstrated | server/src/live/a-name-leaves-the-roster-by-itself.test.ts |
 | Presence says who is here now, and stops saying it by itself | An analyst is in two places | demonstrated | server/src/live/presence.store.test.ts |
 | A claim warns; it does not lock | An analyst claims an entry | demonstrated | server/src/live/case-channel.service.test.ts |
 | A claim warns; it does not lock | Two analysts claim the same entry | demonstrated | server/src/live/presence.store.test.ts |
 | A claim warns; it does not lock | A holder disappears | demonstrated | server/src/live/presence.store.test.ts |
 | A claim warns; it does not lock | Somebody writes to a claimed entry | demonstrated | server/test/a-claimed-row-is-written-through-every-door.test.ts |
+| A claim warns; it does not lock | An analyst opens an entry another holds | demonstrated | server/e2e/two-analysts-one-record.spec.ts |
 | A change reaches every open screen, and says only what changed | Another analyst writes | demonstrated | server/test/change-feed-wiring.test.ts |
 | A change reaches every open screen, and says only what changed | What travels over the connection | demonstrated | server/src/live/case-channel.service.test.ts |
 | A change reaches every open screen, and says only what changed | A screen re-reads after an announcement | demonstrated | ui/src/api/every-consumer-re-announces.test.ts |
@@ -550,7 +552,8 @@
 | Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts |
 | Written prose is edited together, not saved over | One of the writers loses write before the words are stored | demonstrated | server/test/words-typed-together-outlive-one-writer-losing-reach.test.ts |
 | A reconnection catches up rather than starts over | A connection drops briefly | undemonstrated | |
-| A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
+| A reconnection catches up rather than starts over | The gap is too large to fill | demonstrated | server/e2e/a-screen-says-when-it-is-not-live.spec.ts |
+| A reconnection catches up rather than starts over | A connection is lost | demonstrated | server/e2e/a-screen-says-when-it-is-not-live.spec.ts |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
 | The connection dies with the reach that admitted it | A session ends while its connection is silent | demonstrated | server/test/a-socket-lives-only-as-long-as-its-authority.test.ts |
@@ -689,6 +692,15 @@
 | Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write and its record are one act | demonstrated | server/src/db/mutate.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write arrives against a version that has moved | demonstrated | server/src/db/mutate.test.ts |
+| A version is what a write is checked against, and it lives with the row | A record is served again while an analyst is changing a field | demonstrated | server/e2e/two-analysts-one-record.spec.ts |
+| A version is what a write is checked against, and it lives with the row | A record is served again with a change to another field | demonstrated | server/e2e/two-analysts-one-record.spec.ts |
+| A version is what a write is checked against, and it lives with the row | A field the analyst only visited follows the server | demonstrated | server/e2e/two-analysts-one-record.spec.ts |
+| A version is what a write is checked against, and it lives with the row | Leaving a field in collision stores nothing | demonstrated | server/e2e/two-analysts-one-record.spec.ts |
+| A version is what a write is checked against, and it lives with the row | An analyst keeps their own value | demonstrated | server/e2e/two-analysts-one-record.spec.ts |
+| A version is what a write is checked against, and it lives with the row | An analyst takes the other value | demonstrated | server/e2e/two-analysts-one-record.spec.ts |
+| A version is what a write is checked against, and it lives with the row | One analyst changes a record faster than it is answered | demonstrated | server/e2e/typing-alone-over-a-slow-link.spec.ts |
+| A version is what a write is checked against, and it lives with the row | A refused change is not shown as made | demonstrated | ui/src/app/case/overview-writes-against-what-was-read.test.tsx |
+| A version is what a write is checked against, and it lives with the row | A change made in a dialog is refused | demonstrated | server/e2e/a-selection-is-acted-on-as-it-was-read.spec.ts |
 | The store is not migrated while the shape is still moving | Data from an older shape is presented | demonstrated | server/src/archive/format.test.ts |
 | What is kept forever is decided, not defaulted | A record reaches the end of its life | demonstrated | server/src/install-activity/prune.test.ts |
 | What is kept forever is decided, not defaulted | A retention period is shortened below an obligation | unbuilt | Not built: no retention period names an obligation. -> #240 |

@@ -8,6 +8,8 @@
 
 **Presence and claims are disposable.** Losing all of it costs a repaint. Nothing durable is inferred from either.
 
+**The not-live line says the screen may be behind. It does not say what is behind.** A dropped connection's announcements are gone; the re-read after it returns is the whole answer.
+
 **Prose is attributed per saved change and per writer, never per word.** Two analysts writing into one passage before a save are both named for it, and nothing says which words each wrote. That is the attribution every other write carries: who changed a record, never which characters.
 
 **Only a writer on this process is named for a save it made.** Prose arriving from another process is named by the process it was written on.
@@ -33,6 +35,14 @@ An analyst in a case is visible to the others in it. Presence is kept alive by t
 Expiry does not depend on a departure being announced: a crashed browser, a sleeping laptop and a dropped network all look the same from here, and none of them sends a goodbye.
 
 A claim on an entry dies with the connection that made it, on the same principle. Closing a laptop leaves nothing held.
+
+## The presence bound is served
+
+The time after which a lost connection's name leaves the roster is the value the store enforces, served by the install's own description, so what is stated and what is enforced cannot differ.
+
+## A held row warns and stays editable
+
+A row another analyst holds names them on the row and in the dialog that opens it. Its controls stay live. The version check decides the write.
 
 ## A change announces its location, not its content
 
@@ -63,6 +73,10 @@ The sequence holds up when a frame fails. A frame that parses but is not an obje
 A connection that drops and returns leaves the analyst where they were, without a reload.
 
 Where the gap cannot be filled, the analyst is told to re-read. A screen is never presented as current when the application cannot know that it is.
+
+## A screen that cannot know it is current says so
+
+The case frame says the screen is not live from the moment its connection drops, and goes on saying so until the connection is back and the whole case has been read again. A re-read that fails leaves the line up and offers to read again. A connection still opening for the first time is not a drop; one that never opens is.
 
 ## The connection dies with the reach that admitted it
 

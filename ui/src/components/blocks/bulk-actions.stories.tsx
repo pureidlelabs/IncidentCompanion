@@ -5,10 +5,12 @@ import { expect, userEvent, waitFor, within } from 'storybook/test'
 
 import type { SystemEntry } from '@/api/model'
 import { formSpec } from '@/api/specs'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 import {
   BulkActionBar,
   BulkEditDialog,
   bulkFieldsFor,
+  selected as asSelected,
   type BulkField,
 } from '@/components/blocks/bulk-actions'
 import {
@@ -31,8 +33,8 @@ const SYSTEMS_BULK_FIELDS: readonly BulkField<SystemEntry>[] = bulkFieldsFor(
  * the served spec produces.
  *
  * The harness stands in for the section: it ticks rows through the table's own
- * selection and applies the patch to its own rows, which is what N optimistic
- * writes do to the query cache.
+ * selection and applies the patch to its own rows, which is what the section's
+ * re-read does once the write is answered.
  *
  * **What this composition owes is the relation between the table and the bar.**
  * The bar holds no selection of its own -- it reads the table's -- so ticking a
@@ -110,13 +112,15 @@ function Harness({
         <BulkActionBar
           table={table}
           fields={fields}
-          onApply={(ids, patch) => {
+          onApply={(chosen, patch) => {
+            const ids = new Set(chosen.map((row) => row.id))
             setRows((current) =>
-              current.map((row) => (ids.includes(row.id) ? { ...row, ...patch } : row)),
+              current.map((row) => (ids.has(row.id) ? { ...row, ...patch } : row)),
             )
           }}
-          onRequestDelete={(ids) => {
-            setRows((current) => current.filter((row) => !ids.includes(row.id)))
+          onRequestDelete={(chosen) => {
+            const ids = new Set(chosen.map((row) => row.id))
+            setRows((current) => current.filter((row) => !ids.has(row.id)))
             table.resetRowSelection()
           }}
         />
@@ -214,22 +218,23 @@ export const TheDialog: Story = {
   name: 'The edit dialog',
   parameters: { docs: { story: { inline: false, height: '620px' } } },
   render: function TheDialog() {
-    const [ids, setIds] = useState<string[] | null>(['a', 'b', 'c'])
+    const three = ['a', 'b', 'c'].map((id) => asSelected({ id, version: 1 }))
+    const [rows, setRows] = useState<BulkPatchRow[] | null>(three)
     return (
       <>
         <Button
           variant="outline"
           onPress={() => {
-            setIds(['a', 'b', 'c'])
+            setRows(three)
           }}
         >
           Edit three rows
         </Button>
         <BulkEditDialog
-          ids={ids}
+          rows={rows}
           fields={SYSTEMS_BULK_FIELDS}
           onOpenChange={(open) => {
-            if (!open) setIds(null)
+            if (!open) setRows(null)
           }}
           onApply={() => undefined}
         />

@@ -53,6 +53,8 @@ const OWNED: Readonly<Record<string, string>> = {
   // These parts are held by a block and reached by no screen. Recorded rather
   // than decided: a line leaves this list when a screen legitimately holds the
   // part directly.
+  // The choice between two values sits in the band that quotes them.
+  AlertAction: 'blocks/merge-review.tsx',
   AlertDialog: 'blocks/confirm-delete-dialog.tsx',
   Autocomplete: 'blocks/case-search-box.tsx',
   Avatar: 'blocks/presence.tsx',
