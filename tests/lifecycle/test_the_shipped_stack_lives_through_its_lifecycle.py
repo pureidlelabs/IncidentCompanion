@@ -308,7 +308,7 @@ def test_the_shipped_stack_lives_through_its_lifecycle(stack, subtests):
                 "GET", f"/api/cases/{held['case']}/casenotes").json()]
             held["other"] = other
             census = other.edge.request("GET", "/api/settings").json()["storage"]["artefacts"]
-            assert census == {"expected": 1, "missing": 0}, census
+            assert census == {"expected": 1, "missing": 0, "unnamed": 0}, census
 
             # The install the copy came from, signed in afresh: its earlier session is held by
             # Postgres alone since the stores restarted, and this one by the session cache too.
