@@ -14,6 +14,7 @@ import { ZodResponse, createZodDto } from 'nestjs-zod'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import { withReach } from '../db/scope.js'
 import type { Env } from '../config/env.js'
 import { whereIs } from './where.js'
 import { AdminOnly } from '../auth/admin-only.js'
@@ -122,9 +123,12 @@ export class ActivityController {
              current_setting('max_connections') as max
     `)
 
-    const cases = await this.db.execute<{ status: string; is_demo: boolean; count: string }>(sql`
-      select status, is_demo, count(*) as count from cases group by 1, 2
-    `)
+    // Counted by the store, which answers an administrator counts across cases they need not reach.
+    const cases = await withReach(this.db, (tx) =>
+      tx.execute<{ status: string; is_demo: boolean; count: string }>(
+        sql`select status, is_demo, count from ic_cases_tallied()`,
+      ),
+    )
 
     const accounts = await this.db.execute<{ role: string; count: string }>(sql`
       select role, count(*) as count from "user" group by 1

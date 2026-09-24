@@ -15,6 +15,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 import * as Y from 'yjs'
 
 import { CasesService } from '../cases/cases.service.js'
@@ -191,13 +192,12 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
 
     root = await mkdtemp(join(tmpdir(), 'ic-archive-'))
     store = new EvidenceStore({ get: () => root } as never, policy)
-    cases_ = new CasesService(
-      db!,
-      store,
-      { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
+    cases_ = as(
+      actorId,
+      new CasesService(db!, store, { announce: () => {}, othersOn: () => Promise.resolve([]) } as never),
     )
-    exporter = new ArchiveExportService(cases_, store, policy)
-    importer = new ArchiveImportService(db!, store, policy)
+    exporter = as(actorId, new ArchiveExportService(cases_, store, policy))
+    importer = as(actorId, new ArchiveImportService(db!, store, policy))
   })
 
   afterAll(async () => {
@@ -224,14 +224,14 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
     // **Below the floor a route would accept, deliberately.** What this asks
     // is whether the stored value is read and used, and the archive a case
     // fixture builds is smaller than the smallest an operator may set.
-    const mean = new ArchiveImportService(db!, store, {
+    const mean = as(actorId, new ArchiveImportService(db!, store, {
       read: () =>
         Promise.resolve({
           ...POLICY_DEFAULTS,
           'evidence.archiveMegabytes': 0,
           'evidence.attachmentMegabytes': 0,
         }),
-    } as never)
+    } as never))
 
     await expect(
       mean.load(built.bytes, '', other),
@@ -245,7 +245,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
     // its customer, so an archive of a case the install still holds is refused
     // on that ground -- which would answer this control with a rejection that
     // says nothing about the ceiling. -> #220
-    await db!.update(cases).set({ reference: '' }).where(eq(cases.id, made.caseId))
+    await seed!.update(cases).set({ reference: '' }).where(eq(cases.id, made.caseId))
     const result = await importer.load(built.bytes, '', other)
     expect(result.id).toBeDefined()
   })
@@ -562,11 +562,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
   it('opens the case it reads under the install default', async () => {
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
-    await db!.update(cases).set({ reference: '' }).where(eq(cases.id, made.caseId))
+    await seed!.update(cases).set({ reference: '' }).where(eq(cases.id, made.caseId))
 
     const result = await importer.load(built.bytes, '', other)
 
-    const [row] = await db!.select().from(cases).where(eq(cases.id, result.id))
+    const [row] = await seed!.select().from(cases).where(eq(cases.id, result.id))
     const [fallback] = await db!
       .select({ id: customers.id })
       .from(customers)
@@ -586,11 +586,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
     // **The archive carries the padded spelling**, which is reachable: a
     // hand-built `.iccase` states whatever it likes, and no door trims what an
     // archive already holds.
-    await db!.update(cases).set({ reference: '  INC-PAD  ' }).where(eq(cases.id, made.caseId))
+    await seed!.update(cases).set({ reference: '  INC-PAD  ' }).where(eq(cases.id, made.caseId))
     const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
 
     // The install holds the trimmed one, which is what every other door writes.
-    await db!.update(cases).set({ reference: 'INC-PAD' }).where(eq(cases.id, made.caseId))
+    await seed!.update(cases).set({ reference: 'INC-PAD' }).where(eq(cases.id, made.caseId))
     await expect(
       importer.load(built.bytes, '', other),
       'an archive took a reference the install already holds',

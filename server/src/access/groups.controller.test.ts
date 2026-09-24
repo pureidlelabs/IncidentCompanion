@@ -20,10 +20,9 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { GroupsController } from './groups.controller.js'
 import { GroupsService } from './groups.service.js'
-import { ReachService } from './reach.service.js'
 import { CustomersService } from '../customers/customers.service.js'
 import { customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { levelIn, openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -62,7 +61,6 @@ afterAll(async () => {
 
 describe.skipIf(!db)('granting reach through a group', () => {
   let controller: GroupsController
-  let reach: ReachService
   let written: Line[]
   let sector: string
   let theirs: string
@@ -110,7 +108,6 @@ describe.skipIf(!db)('granting reach through a group', () => {
       },
     }
 
-    reach = new ReachService(db!)
     controller = new GroupsController(new GroupsService(db!), audit as never)
     await new CustomersService(db!).ensureDefault()
 
@@ -264,7 +261,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
     await controller.hold(made.id, { customerId: theirs }, caller)
     await controller.grant(made.id, { userId: ADMIN, level: 'delete' }, caller)
 
-    expect(await reach.levelFor(ADMIN, theirs)).toBe('delete')
+    expect(await levelIn(db!, ADMIN, theirs)).toBe('delete')
   })
 
   it('grants a membership and reaches the customer the group holds', async () => {
@@ -272,7 +269,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
 
     await controller.grant(sector, { userId: ANALYST, level: 'write' }, caller)
 
-    expect(await reach.levelFor(ANALYST, theirs)).toBe('write')
+    expect(await levelIn(db!, ANALYST, theirs)).toBe('write')
   })
 
   it('revokes it again', async () => {
@@ -281,7 +278,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
 
     await controller.revoke(sector, ANALYST, caller)
 
-    expect(await reach.levelFor(ANALYST, theirs)).toBeNull()
+    expect(await levelIn(db!, ANALYST, theirs)).toBeNull()
   })
 
   it('releases a customer the group held', async () => {
@@ -290,7 +287,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
 
     await controller.release(sector, theirs, caller)
 
-    expect(await reach.levelFor(ANALYST, theirs)).toBeNull()
+    expect(await levelIn(db!, ANALYST, theirs)).toBeNull()
   })
 
   it('writes an audit line naming the analyst for a grant and a revocation', async () => {
@@ -329,7 +326,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
     await controller.hold(sector, { customerId: theirs }, caller)
     await controller.grant(sector, { userId: ADMIN, level: 'delete' }, caller)
 
-    expect(await reach.levelFor(ADMIN, theirs), 'the self-grant did not take').toBe('delete')
+    expect(await levelIn(db!, ADMIN, theirs), 'the self-grant did not take').toBe('delete')
 
     const granted = written.filter((one) => one.kind === 'reach_granted')
     expect(granted).toHaveLength(1)

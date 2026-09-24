@@ -1,11 +1,10 @@
 /** Which artefacts each case names, and releasing what one case stopped naming. */
 import { Logger } from '@nestjs/common'
-import { and, eq, isNotNull } from 'drizzle-orm'
+import { and, eq, isNotNull, sql } from 'drizzle-orm'
 
 import type { Database } from '../db/client.js'
 import { inSeries } from '../db/in-series.js'
 import { withCase } from '../db/scope.js'
-import { cases } from '../db/schema/case.js'
 import { evidence } from '../db/schema/entities.js'
 import { reports } from '../db/schema/report.js'
 import { EvidenceStore, isDigest } from '../evidence/store.js'
@@ -40,11 +39,18 @@ export async function namedIn(db: Database, caseId: string): Promise<Named> {
   return { stored, kept }
 }
 
-/** Every case the install holds, each with what its rows name, asked one case at a time. */
+/** Every case whose rows name an artefact, with what they name. Asked for nobody. */
 export async function artefactsNamed(db: Database): Promise<Map<string, Named>> {
+  const { rows } = await db.execute<{ case_id: string; hash: string; stored: boolean }>(
+    sql`select case_id, hash, stored from ic_artefacts_named()`,
+  )
   const named = new Map<string, Named>()
-  for (const { id } of await db.select({ id: cases.id }).from(cases))
-    named.set(id, await namedIn(db, id))
+  for (const row of rows) {
+    const one = named.get(row.case_id) ?? { stored: new Set<string>(), kept: new Set<string>() }
+    if (row.stored) one.stored.add(row.hash)
+    one.kept.add(row.hash)
+    named.set(row.case_id, one)
+  }
   return named
 }
 

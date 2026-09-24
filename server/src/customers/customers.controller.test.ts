@@ -11,6 +11,7 @@ import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ADMIN_ROLE } from '../domain/analyst-account.js'
 import { CustomersController } from './customers.controller.js'
@@ -60,6 +61,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
       .insert(user)
       .values({
         id: ADMIN,
+        role: ADMIN_ROLE,
         name: 'Directory Admin',
         email: 'directory@example.test',
         emailVerified: true,
@@ -88,8 +90,8 @@ describe.skipIf(!db)('keeping the customer directory', () => {
       },
     }
 
-    service = new CustomersService(db!)
-    controller = new CustomersController(service, audit as never)
+    service = as(ADMIN, new CustomersService(db!))
+    controller = as(ADMIN, new CustomersController(service, audit as never))
     theDefault = (await service.ensureDefault()).id
   })
 
