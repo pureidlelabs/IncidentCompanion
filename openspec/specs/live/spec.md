@@ -205,3 +205,70 @@ A connection MUST be carried over the same protected transport every other reque
 - WHEN it is deleted
 - THEN their connections end
 - AND nothing further about it reaches them
+
+### Requirement: Written prose is attributed like any other write
+
+A saved change to prose MUST name each analyst who wrote into it: on the record the prose belongs to, in the case's record of changes stored in the same act as the words, and in the install's audit. Every screen open on the case MUST learn the record changed.
+
+Somebody who only had the prose open MUST NOT be named.
+
+Prose is exempt from the version check and from nothing else a write owes. What is recorded is who wrote into a saved change, not which of its words each of them wrote.
+
+**Words stored by any act are named, a send included.** Prose typed a moment before its report is sent MUST NOT reach the record under the sender's name alone.
+
+#### Scenario: One of two analysts present writes
+
+- GIVEN two analysts with the same prose open
+- WHEN only one of them writes and the prose is saved
+- THEN the record, the case's record of changes and the install's audit name the one who wrote
+- AND none of them names the one who only read
+
+#### Scenario: Two analysts write before one save
+
+- GIVEN two analysts writing into the same prose
+- WHEN both write before it is saved
+- THEN the case's record of changes and the install's audit name both of them
+
+#### Scenario: Words typed just before the report is sent
+
+- GIVEN an analyst writing into a report
+- WHEN the report is sent before their words are saved
+- THEN the sent report holds their words
+- AND the case's record of changes and the install's audit name them
+
+### Requirement: An open connection is listening
+
+A connection the browser can write to MUST act on everything written over it, in the order it was written. Where the install has accepted a connection and is still preparing it, what arrives in the meantime MUST be held and acted on once it is ready, never discarded.
+
+A screen's first frame is the one it waits on, so a connection that drops it silently leaves that screen waiting for an answer nothing will send. There is no error to show, nothing to retry, and no way for the analyst to tell that state from a slow one -- so this MUST NOT be left to a screen to notice or to a reload to clear.
+
+This holds for every kind of frame and every connection, not only the first frame of the first one. A frame the install cannot read, or fails to act on, is set aside, and it MUST NOT stop what was written after it or the connection's end.
+
+Where preparing the connection does not complete, the connection MUST end, and nothing written over it MUST be acted on -- an install that took a frame it can announce to nobody is worse than one that took none.
+
+#### Scenario: A screen writes before the connection is ready
+
+- GIVEN a connection the install has accepted and is still preparing
+- WHEN a screen writes over it
+- THEN the install acts on what it wrote once the connection is ready
+- AND the screen is answered without being reloaded
+
+#### Scenario: Preparing the connection does not complete
+
+- GIVEN a screen that has written over a connection the install accepted
+- WHEN preparing that connection fails
+- THEN the connection ends
+- AND nothing written over it is acted on
+
+#### Scenario: Frames are acted on in the order sent
+
+- GIVEN an analyst who claims an entry and releases it at once
+- WHEN both reach the install
+- THEN nothing is left held
+
+#### Scenario: A frame the install cannot read
+
+- GIVEN a connection over which a screen has written something the install cannot read
+- WHEN the screen then claims an entry, and the connection ends
+- THEN the claim is acted on
+- AND the analyst leaves the roster

@@ -4,7 +4,14 @@
 
 **IncidentCompanion is in early development. Nothing here is ready for real casework, and no version of it is intended to face the internet.**
 
-The Compose stack is a local deployment. It has no hardened configuration, no upgrade path, and no release. If you are running it, you are running it to look at it.
+The Compose stack runs on one machine and is reached over a network you trust: the machine itself, or a LAN whose other machines are your analysts'. It has no hardened configuration, no upgrade path, and no release. If you are running it, you are running it to look at it.
+
+## Where it may run
+
+- **A network you trust, never the internet.** Analysts reach one install from their own machines; nothing about it is built to face strangers.
+- **A Linux host running Docker Engine 28 or later.** Per-analyst limits and the address recorded against each request depend on the host passing every caller's own address through, and on the engine refusing access to ports that were never published. A desktop VM presents the whole network as one caller.
+- **One configuration step.** The operator names the install and the address it listens on in `.env`; the [README](README.md#reaching-it-from-other-machines) says how.
+- **A certificate the analysts have checked.** Either one from an authority their machines already trust, or the one the install makes, whose fingerprint the operator gives each analyst out of band to compare before trusting it. Until they have, the browser's instruction to keep the name protected does not take effect.
 
 ## Supported versions
 

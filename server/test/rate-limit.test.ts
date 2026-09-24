@@ -87,15 +87,10 @@ describe.skipIf(!runnable)('the rate limit inside the app', () => {
    */
   it('states a credential rule for every route where a wrong answer is a guess', () => {
     // Named here, not read off `CREDENTIAL_RULES`: a loop over the object
-    // under test shrinks when a rule is deleted and stays green, which is how
-    // `/forget-password` and `/change-password` came to be asserted by nothing.
-    const GUESSABLE = [
-      '/sign-in/email',
-      '/sign-up/email',
-      '/forget-password',
-      '/reset-password',
-      '/change-password',
-    ]
+    // under test shrinks when a rule is deleted and stays green. Sign-in is
+    // the one guessable route the library serves over HTTP; the app's own
+    // `/api/change-password` is the throttler's, and the lock bounds it.
+    const GUESSABLE = ['/sign-in/email']
     expect(
       Object.keys(CREDENTIAL_RULES).sort(),
       'a credential rule was added or removed without this list',

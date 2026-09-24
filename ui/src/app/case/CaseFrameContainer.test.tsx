@@ -91,6 +91,8 @@ vi.mock('@/lib/useGround', () => ({
 }))
 // The providers open a socket and read the claims roster; neither says
 // anything about which value reaches which slot.
+const sentinel = vi.fn<() => boolean | undefined>()
+vi.mock('@/api/importPlatforms', () => ({ useSentinelOffered: () => sentinel() }))
 vi.mock('@/app/case/CaseProviders', () => ({
   CaseProvidersLive: ({ children }: { children: React.ReactNode }) => children,
 }))
@@ -115,6 +117,7 @@ beforeEach(() => {
   activityAgain.mockReset()
   activity.mockReturnValue({ data: [], isPending: false, error: null, refetch: activityAgain })
   noteVisit.mockReset()
+  sentinel.mockReturnValue(true)
 })
 
 function mount(at = '/cases/c-1/timeline') {
@@ -128,6 +131,35 @@ function mount(at = '/cases/c-1/timeline') {
     </MemoryRouter>,
   )
 }
+
+describe('the importer the install offers', () => {
+  it.each([
+    [true, 1],
+    [false, 0],
+    [undefined, 0],
+  ])('draws the Sentinel row where the install says %s', (offered, rows) => {
+    sentinel.mockReturnValue(offered)
+    mount()
+    expect(within(screen.getByTestId('rail')).queryAllByText('Import from Sentinel')).toHaveLength(
+      rows,
+    )
+  })
+
+  it.each([
+    [true, 1],
+    [false, 0],
+  ])(
+    'offers the Sentinel section in the search where the install says %s',
+    async (offered, rows) => {
+      sentinel.mockReturnValue(offered)
+      mount()
+      await userEvent
+        .setup()
+        .type(screen.getByLabelText('Search this case, or run a command'), 'Sentinel')
+      expect(screen.queryAllByRole('option', { name: /Import from Sentinel/ })).toHaveLength(rows)
+    },
+  )
+})
 
 describe('the case the frame is drawn for', () => {
   /**

@@ -47,6 +47,12 @@ node_modules
 # Evidence artefacts a dev run attaches. Content-addressed bytes from a real
 # incident are the last thing that should reach a repository going public.
 .evidence/
+.evidence-suite/
+
+# A copy of an install, where `docker/backup.sh` writes one given no directory:
+# every case, every artefact and every password hash. No trailing slash, so a link to
+# another disk is ignored too.
+/backups
 
 # Left behind when Storybook cannot bind its port.
 ui/debug-storybook.log

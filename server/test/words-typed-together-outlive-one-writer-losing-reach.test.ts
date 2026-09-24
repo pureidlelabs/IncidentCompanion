@@ -71,7 +71,7 @@ async function anAnalyst(name: string): Promise<Persona> {
 /** A live connection to the case, with every frame it has heard. */
 async function connect(who: Persona) {
   const socket = new WebSocket(`${harness.base.replace('http://', 'ws://')}/api/cases/${caseId}/live`, {
-    headers: { cookie: who.cookie, origin: harness.base },
+    headers: { cookie: who.cookie, origin: harness.origin },
   })
   sockets.push(socket)
   const heard: { type?: string }[] = []

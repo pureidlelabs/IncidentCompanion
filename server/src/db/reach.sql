@@ -193,14 +193,21 @@ begin
 end
 $$;
 
--- Every digest a stored evidence row names, once each, and never which case
--- names it: the census and a refused import ask it for nobody.
+-- Every digest a case names, by case: what its stored evidence names, and every
+-- figure a sent report of it froze (the figures `figuresOf` finds). Asked for
+-- nobody, so it answers identifiers and digests and never what a case holds.
 create or replace function public.ic_artefacts_named()
-returns table (hash text)
+returns table (case_id uuid, hash text, stored boolean)
 language sql stable security definer
 set search_path = pg_catalog, pg_temp
 as $$
-  select distinct e.hash from public.evidence e where e.stored_at is not null and e.hash <> ''
+  select e.case_id, e.hash, true from public.evidence e
+   where e.stored_at is not null and e.hash <> ''
+  union
+  select r.case_id, figure #>> '{}', false
+    from public.reports r,
+         jsonb_path_query(r.frozen, 'lax $.sections[*].nodes[*] ? (@.type == "figure").hash ? (@.type() == "string")') figure
+   where r.frozen is not null
 $$;
 
 revoke all on function

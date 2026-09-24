@@ -47,7 +47,7 @@ export interface CaseSummary {
   /** `null` while the case is open - distinct from a closed case with no time. */
   closedAt: string | null
 
-  /** A seeded demo case. The demo reseed deletes and rebuilds it, so writes to it are not kept. */
+  /** A seeded demo case, written once on an install nobody had claimed. */
   isDemo: boolean
 
   /**

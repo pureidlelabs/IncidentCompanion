@@ -8,15 +8,10 @@
  * report, where an unguarded freeze leaves the editor and the exported artefact
  * disagreeing for ever with neither saying so.
  *
- * **The five write methods are enumerated rather than sampled**, because the
- * guard is per method: a rule that holds on `update` and not on `updateMany`
- * passes any test that drives one of them. The last case derives the method
- * list from the class, so a sixth door is red before anybody has to remember
- * this file exists.
+ * The refusal is the store's, so a door nobody enumerates here is refused all
+ * the same: `the-store-refuses-a-sent-report.test.ts`. What these cases hold is
+ * that each door's refusal reads as the one 409 a client can act on.
  */
-import { readFileSync } from 'node:fs'
-
-import { ConflictException } from '@nestjs/common'
 import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -26,19 +21,20 @@ import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { REPORT_BLOCKS_COLLECTION, REPORTS_COLLECTION } from '../collections/definitions.js'
 import { ReportsController } from '../collections/entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DEMO_REPORTS } from '../demos/reports.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, reportBlocks, reports, user } from '../db/schema/index.js'
 import { patchSchema } from '../domain/field-spec.js'
 import { reportSchema } from '../domain/entities/report.js'
 import { ProseService } from '../prose/prose.service.js'
+import { sentReportRefusal } from './freeze.js'
 import { ReportLifecycleService } from './lifecycle.service.js'
 import { ReportRenderService } from './render.service.js'
 import { english } from './document/packs.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -127,7 +123,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
       .onConflictDoNothing()
     session = { user: { id: actorId } }
 
-    const cases_ = as(actorId, new CasesService(db!, {
+    const cases_ = as(actorId, new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never))
@@ -137,7 +133,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
     const prose = as(actorId, new ProseService(db!))
     const render = as(actorId, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
     lifecycle = as(actorId, new ReportLifecycleService(db!, { entry: () => Promise.resolve(undefined) } as never, render, prose))
-    collections = as(actorId, new CollectionService(db!))
+    collections = as(actorId, new CollectionService(db!, suiteStore()))
     controller = new ReportsController(collections)
   })
 
@@ -180,9 +176,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
    * **Case 2: a sent report refuses every block write.**
    *
    * Driven at `CollectionService` rather than through the controllers, because
-   * the guard is what is on trial and the controllers differ only in how they
-   * parse a body. All five are enumerated: the mutation this case is built
-   * against is deleting the guard from one of them.
+   * the controllers differ only in how they parse a body.
    */
   describe('its sections', () => {
     let sentId: string
@@ -255,20 +249,14 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
       ],
     ]
 
-    it.each(doors)('refuses %s', async (_name, write) => {
-      await expect(write(before)).rejects.toBeInstanceOf(ConflictException)
-    })
-
     /**
-     * **The body, not only the class.** Every door here shares one refusal so
+     * **The body, not only the refusal.** Every door here shares one refusal so
      * a client can render "sent at X, open the successor" wherever it lands.
-     * Asserting the class alone lets three refusal shapes coexist under a green
-     * suite.
      */
-    it.each(doors)('names the report and the stamp on %s', async (_name, write) => {
-      await expect(write(before)).rejects.toMatchObject({
-        response: { reportId: sentId, sentAt: expect.any(String) },
-      })
+    it.each(doors)('refuses %s, naming the report and the stamp', async (_name, write) => {
+      const refused = await write(before).then(() => undefined, sentReportRefusal)
+      expect(refused?.getStatus()).toBe(409)
+      expect(refused?.getResponse()).toMatchObject({ reportId: sentId, sentAt: expect.any(String) })
     })
 
     /**
@@ -289,16 +277,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
 
     it('refuses a patch to the report row itself', async () => {
       const [row] = await seed!.select().from(reports).where(eq(reports.id, sentId))
-      await expect(
-        collections.update(
-          REPORTS_COLLECTION,
-          caseId,
-          sentId,
-          row!.version,
-          { label: 'Renamed after filing' },
-          actorId,
-        ),
-      ).rejects.toBeInstanceOf(ConflictException)
+      const refused = await collections
+        .update(REPORTS_COLLECTION, caseId, sentId, row!.version, { label: 'Renamed after filing' }, actorId)
+        .then(() => undefined, sentReportRefusal)
+      expect(refused?.getStatus()).toBe(409)
     })
 
     /**
@@ -310,75 +292,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
       const draft = await draftReport('Elsewhere')
       const [block] = await blocksOf(draft.id)
 
-      await expect(
-        collections.update(
-          REPORT_BLOCKS_COLLECTION,
-          caseId,
-          block!.id,
-          block!.version,
-          { reportId: sentId },
-          actorId,
-        ),
-      ).rejects.toBeInstanceOf(ConflictException)
+      const refused = await collections
+        .update(REPORT_BLOCKS_COLLECTION, caseId, block!.id, block!.version, { reportId: sentId }, actorId)
+        .then(() => undefined, sentReportRefusal)
+      expect(refused?.getStatus()).toBe(409)
     })
-  })
-
-  /**
-   * **The guards that moved out of the class must not grow a write.** The
-   * enumeration below sees methods only, so a statement added to
-   * `write-guards.ts` would be a write door nothing classifies.
-   */
-  it('keeps every write statement inside the class it enumerates', () => {
-    const guards = readFileSync(new URL('../collections/write-guards.ts', import.meta.url), 'utf8')
-    expect(guards.match(/\btx\.(insert|update|delete)\(/g) ?? []).toEqual([])
-  })
-
-  /**
-   * **Case 3: every write door is enumerated.**
-   *
-   * The list case 2 drives is asserted against the class rather than trusted.
-   * A method added to `CollectionService` fails here, which is where the
-   * question "does this one write?" has to be answered.
-   */
-  it('has exactly the methods the guard was placed on', () => {
-    const prototype = CollectionService.prototype as unknown as Record<string, unknown>
-    const methods = Object.getOwnPropertyNames(prototype)
-      .filter((name) => name !== 'constructor')
-      // Getters are excluded by reading the descriptor rather than the value:
-      // touching `database` on the prototype would invoke it.
-      .filter((name) => typeof Object.getOwnPropertyDescriptor(prototype, name)?.value === 'function')
-      .sort()
-
-    const writes = [
-      'create',
-      'createMany',
-      // Writes several collections on one handle, for an import. It asks
-      // `refuseIfClosed` per group before the transaction opens, exactly as
-      // `createMany` does -- a frozen report refuses the whole import rather
-      // than the group that named it.
-      'createAcross',
-      'remove',
-      'reorder',
-      'update',
-      'updateMany',
-    ]
-    /**
-     * **`removeMany` is a write and carries no guard**, because reports are not
-     * reachable through it: `TABLES` is the bulk half of the registry and has
-     * never held `reports` or `report_blocks`. -> `collections/registry.ts`
-     */
-    const otherwise = [
-      'announce',
-      'get',
-      'list',
-      'refuseIfHeldByAnother',
-      'removeMany',
-      // The shared body of `createMany` and `createAcross`, on a transaction
-      // its caller opened. Both callers ask `refuseIfClosed` first, which is
-      // the only place that question can be asked before a handle exists.
-      'insertWithin',
-    ]
-    expect(methods).toEqual([...writes, ...otherwise].sort())
   })
 })
 
@@ -391,7 +309,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
  */
 describe.skipIf(!db)('the demo cases', () => {
   beforeAll(async () => {
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
   }, 90_000)
 
   it('declares reports that were filed, so this is not vacuous', () => {

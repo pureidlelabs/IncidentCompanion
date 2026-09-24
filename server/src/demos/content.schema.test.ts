@@ -1,3 +1,4 @@
+import type { z } from 'zod'
 /**
  * That every demo row is a row the API would accept.
  *
@@ -15,7 +16,7 @@ import { DEMO_CONTENT } from './content.js'
 import { DEMO_CASES } from './catalogue.js'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { actionWriteSchema, eventWriteSchema } from '../domain/entities/timeline.js'
-import { patchSchema } from '../domain/field-spec.js'
+import { derivedFields, patchSchema } from '../domain/field-spec.js'
 
 /**
  * Content key -> the schema a row of it is written under.
@@ -55,6 +56,12 @@ function seedable(row: Record<string, unknown>): Record<string, unknown> {
   return out
 }
 
+/** A seeded row is a create: the patch body plus the fields a patch leaves to the store. */
+const seedSchema = (schema: z.ZodObject): z.ZodObject =>
+  patchSchema(schema).extend(
+    Object.fromEntries(derivedFields(schema).map((name) => [name, (schema.shape[name] as z.ZodType).optional()])),
+  )
+
 describe('every demo row is one the write path would accept', () => {
   const rows: [string, string, Record<string, unknown>][] = []
   for (const content of DEMO_CONTENT) {
@@ -77,7 +84,7 @@ describe('every demo row is one the write path would accept', () => {
 
   it.each(rows)('%s parses', (_where, collection, row) => {
     const schema = COLLECTION_SCHEMAS[collection]!
-    const parsed = patchSchema(schema).safeParse(seedable(row))
+    const parsed = seedSchema(schema).safeParse(seedable(row))
     expect(
       parsed.success ? [] : parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`),
     ).toEqual([])

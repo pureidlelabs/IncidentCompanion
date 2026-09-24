@@ -156,3 +156,8 @@ export type Candidate = z.infer<typeof candidateSchema>
 export type TimelineCandidate = z.infer<typeof timelineCandidateSchema>
 export type PreviewResult = z.infer<typeof previewResultSchema>
 export type Imported = z.infer<typeof importedSchema>
+
+/** Which detection platforms the operator pointed this install at. */
+export const platformsSchema = z.object({ sentinel: z.boolean() })
+
+export type ImportPlatforms = z.infer<typeof platformsSchema>

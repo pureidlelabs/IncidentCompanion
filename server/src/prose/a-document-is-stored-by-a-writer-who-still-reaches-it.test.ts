@@ -114,11 +114,15 @@ describe.skipIf(!appPool || !hasConcurrentConnections())(
       await levelOf(last, 'write')
       const prose = new ProseService(drizzle({ client: appPool! }))
       const { caseId, note } = await aNote()
-      const doc = await actingAs(first, () => prose.open(caseId, note))
+      await actingAs(first, () => prose.open(caseId, note))
       await actingAs(last, () => prose.open(caseId, note))
 
-      actingAs(first, () => prose.applySync(doc, typed('typed by the first'), 'first-socket'))
-      actingAs(last, () => prose.applySync(doc, typed('typed by the last'), 'last-socket'))
+      await actingAs(first, () =>
+        prose.apply(caseId, note, typed('typed by the first'), 'first-socket', { id: first, label: first, headers: {} }),
+      )
+      await actingAs(last, () =>
+        prose.apply(caseId, note, typed('typed by the last'), 'last-socket', { id: last, label: last, headers: {} }),
+      )
       await levelOf(last, 'read')
 
       await prose.release(caseId, note)
@@ -133,9 +137,11 @@ describe.skipIf(!appPool || !hasConcurrentConnections())(
       await levelOf(first, 'write')
       const prose = new ProseService(drizzle({ client: appPool! }))
       const { caseId, note } = await aNote()
-      const doc = await actingAs(first, () => prose.open(caseId, note))
+      await actingAs(first, () => prose.open(caseId, note))
 
-      actingAs(first, () => prose.applySync(doc, typed('typed before the revocation'), 'a-socket'))
+      await actingAs(first, () =>
+        prose.apply(caseId, note, typed('typed before the revocation'), 'a-socket', { id: first, label: first, headers: {} }),
+      )
       await levelOf(first, 'read')
       await prose.flush(caseId, note)
       expect(await stored(note.id), 'a writer without write stored the document').toBe('seed')

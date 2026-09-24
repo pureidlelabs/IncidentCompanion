@@ -145,9 +145,9 @@ describe.skipIf(!runnable)('changing a role', () => {
   })
 
   /**
-   * **The library's own admin routes are closed**, which is what makes the one
-   * door above the only door. Each of these demotes the last administrator if
-   * `disabledPaths` stops naming it.
+   * **The library's own admin routes are not served**, which is what makes the
+   * one door above the only door. Each of these demotes the last administrator
+   * if `offersOnly` in `auth.config.ts` starts serving it.
    */
   describe('through Better Auth\u2019s admin routes, which are shut', () => {
     it.each([

@@ -32,6 +32,7 @@ import { ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { cases, evidence, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -85,7 +86,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a row that left a value bla
       type: 'system logs',
     })
 
-    const collections = as(ME, new CollectionService(db!))
+    const collections = as(ME, new CollectionService(db!, suiteStore()))
     service = as(ME, new ImportService(collections))
     exports_ = as(ME, new ExportsController(collections, service))
     // The route types its own response, so a direct call is handed somewhere

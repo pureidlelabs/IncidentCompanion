@@ -30,6 +30,8 @@ That is: creating, changing or removing an account; making somebody an administr
 
 Changing what the logging itself does is an administrative event.
 
+**An entry records what happened, not what was asked for.** A request that changed nothing MUST NOT be logged as the change it named: ending a session the caller does not hold, one that does not exist, or signing out with no session is answered and ends nothing, and the record says nothing ended.
+
 #### Scenario: Somebody is given reach
 
 - GIVEN an administrator adding an analyst to a group
@@ -99,3 +101,16 @@ Changing what the logging itself does is an administrative event.
 - GIVEN a session whose account no longer exists
 - WHEN it is refused a case
 - THEN the refusal is logged with who the session was issued to and what it asked for
+
+#### Scenario: An analyst ends their own session
+
+- GIVEN an analyst signed in from more than one place
+- WHEN they sign out, end one of their own sessions, or end every other one
+- THEN each session ended is logged with who ended it, whose it was, and the moment
+
+#### Scenario: An ending that ends nothing
+
+- GIVEN a request to end a session that belongs to another account, one that does not exist, or a sign-out carrying no session
+- WHEN it is answered
+- THEN no session is ended
+- AND nothing is logged as ended

@@ -71,7 +71,7 @@ async function socketWork(caseId: string): Promise<{ verdict: unknown; statement
   heard = []
   const verdict = await gateway.check({
     url: `/api/cases/${caseId}/live`,
-    headers: { cookie: analyst.cookie, origin: harness.base, host: new URL(harness.base).host },
+    headers: { cookie: analyst.cookie, origin: harness.origin, host: new URL(harness.origin).host },
   } as unknown as http.IncomingMessage)
   const marks = heard
   heard = null

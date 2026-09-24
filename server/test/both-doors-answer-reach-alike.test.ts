@@ -52,7 +52,7 @@ async function theSocket(caseId: string): Promise<{ sees: boolean; writes: boole
   const socket = new WebSocket(
     `${harness.base.replace('http://', 'ws://')}/api/cases/${caseId}/live`,
     {
-      headers: { cookie: analyst.cookie, origin: harness.base },
+      headers: { cookie: analyst.cookie, origin: harness.origin },
     },
   )
   socket.on('error', () => undefined)

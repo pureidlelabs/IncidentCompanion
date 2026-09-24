@@ -18,6 +18,7 @@ import { CustomersService } from '../customers/customers.service.js'
 import { cases, customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -92,7 +93,7 @@ describe.skipIf(!db)('giving a case its customer', () => {
       },
     }
 
-    controller = as(MOVER, new CaseCustomerController(new CasesService(db!), audit as never))
+    controller = as(MOVER, new CaseCustomerController(new CasesService(db!, suiteStore()), audit as never))
   })
 
   it('gives a case that named nobody its customer', async () => {

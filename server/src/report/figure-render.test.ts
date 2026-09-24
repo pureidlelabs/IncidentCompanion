@@ -33,6 +33,7 @@ import { english } from './document/packs.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import type { FigureNode } from './document/model.js'
 import { defaultPolicy } from '../policy/read.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -93,10 +94,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
       .returning()
     caseId = row!.id
 
-    collections = as(actorId, new CollectionService(db!))
+    collections = as(actorId, new CollectionService(db!, suiteStore()))
     render = as(actorId, new ReportRenderService(
       db!,
-      new CasesService(db!),
+      new CasesService(db!, suiteStore()),
       new ProseService(db!),
       englishOnly,
       store,
@@ -115,7 +116,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
       // eslint-disable-next-line no-unexpected-multiline
       [format]()
       .toBuffer()
-    const stored = await store.put(Readable.from([bytes]) as never, `shot.${format}`)
+    const stored = await store.put(caseId, Readable.from([bytes]) as never, `shot.${format}`)
 
     const [row] = await seed!
       .insert(evidence)
@@ -155,7 +156,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
     })
       .png()
       .toBuffer()
-    const stored = await store.put(Readable.from([bytes]) as never, 'picked.png')
+    const stored = await store.put(caseId, Readable.from([bytes]) as never, 'picked.png')
     const [row] = await seed!
       .insert(evidence)
       .values({ caseId, name: 'picked.png', hash: stored.hash, createdBy: actorId })
@@ -323,7 +324,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
     })
       .png()
       .toBuffer()
-    const stored = await store.put(Readable.from([damage(whole)]) as never, 'broken.png')
+    const stored = await store.put(caseId, Readable.from([damage(whole)]) as never, 'broken.png')
 
     const [row] = await seed!
       .insert(evidence)

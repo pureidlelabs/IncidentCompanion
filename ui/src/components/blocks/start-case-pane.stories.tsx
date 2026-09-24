@@ -46,27 +46,28 @@ export const Default: Story = {
 }
 
 /**
- * An install with no provider configured.
+ * An install with no provider configured, and not importing from Sentinel.
  *
- * **Drawn and refused, rather than removed.** An operator who cannot see the
- * tile cannot tell an install that has no importer from one where the control
- * moved, and nothing else on this pane would say so. Refused, it leaves the tab
- * order and announces itself as unavailable.
+ * **The file door is drawn and refused, rather than removed.** An operator who
+ * cannot see the tile cannot tell an install that has no importer from one
+ * where the control moved, and nothing else on this pane would say so. Refused,
+ * it leaves the tab order and announces itself as unavailable. The Sentinel
+ * door is not drawn: the operator decides whether the install offers it.
  */
 export const NoImporter: Story = {
   name: 'Nothing to import from',
   args: { onBlank: fn() },
   play: async ({ args, canvas, step }) => {
-    await step('every tile is drawn, so the feature is still visible', async () => {
+    await step('the file door is drawn, so the feature is still visible', async () => {
       await expect(canvas.getByText('Import from a file')).toBeVisible()
-      await expect(canvas.getByText('Start from a live source')).toBeVisible()
       await expect(canvas.getByText('Blank case')).toBeVisible()
+      await expect(canvas.queryByText('Start from a live source')).toBeNull()
     })
-    await step('the ones with nothing behind them are refused', async () => {
+    await step('and refused, with nothing behind it', async () => {
       const tiles = canvas.getAllByRole('button')
-      for (const label of ['Import from a file', 'Start from a live source']) {
-        await expect(tiles.find((one) => one.textContent.includes(label))).toBeDisabled()
-      }
+      await expect(
+        tiles.find((one) => one.textContent.includes('Import from a file')),
+      ).toBeDisabled()
     })
     await step('and the wired one still acts', async () => {
       await userEvent.click(canvas.getByText('Blank case'))
@@ -90,7 +91,7 @@ export const Inert: Story = {
     })
     await step('and every tile is refused rather than silently dead', async () => {
       const tiles = canvas.getAllByRole('button')
-      await expect(tiles).toHaveLength(3)
+      await expect(tiles).toHaveLength(2)
       for (const tile of tiles) await expect(tile).toBeDisabled()
     })
   },

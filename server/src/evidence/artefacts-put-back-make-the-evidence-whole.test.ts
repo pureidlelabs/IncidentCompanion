@@ -87,14 +87,14 @@ describe.skipIf(!db)('an install restored without its artefacts', () => {
     aside = await mkdtemp(join(tmpdir(), 'evidence-elsewhere-'))
     store = new EvidenceStore(configFor(root), policy)
 
-    const stored = await store.put(bytesOf(ARTEFACT), 'proxy.log')
-    hash = stored.hash
-
     const [made] = await db!
       .insert(cases)
       .values({ title: 'A case whose evidence went missing and came back' })
       .returning({ id: cases.id })
     caseId = made!.id
+
+    const stored = await store.put(caseId, bytesOf(ARTEFACT), 'proxy.log')
+    hash = stored.hash
 
     await db!.insert(evidence).values({ caseId, name: 'proxy.log', hash, type: 'log' })
   }, 90_000)
@@ -107,23 +107,23 @@ describe.skipIf(!db)('an install restored without its artefacts', () => {
   })
 
   /** Puts the artefact where a case needs it, wherever the one before left it. */
+  const held = () => join(root, caseId, hash)
   const artefactIn = async (where: string): Promise<void> => {
-    const other = where === root ? aside : root
-    const from = join(other, hash)
+    const [from, to] = where === root ? [join(aside, hash), held()] : [held(), join(aside, hash)]
     try {
       await access(from)
     } catch {
       return
     }
-    await rename(from, join(where, hash))
+    await rename(from, to)
   }
 
   it('holds the artefact and the row that names it to begin with', async () => {
     await artefactIn(root)
 
-    expect(await store.read(hash), 'the artefact was never stored').not.toBeNull()
+    expect(await store.read(caseId, hash), 'the artefact was never stored').not.toBeNull()
     expect(
-      Buffer.from((await store.read(hash))!).toString(),
+      Buffer.from((await store.read(caseId, hash))!).toString(),
       'the store handed back something other than what it was given',
     ).toBe(ARTEFACT)
     expect((await recorded())?.hash, 'the row does not name the artefact').toBe(hash)
@@ -132,13 +132,13 @@ describe.skipIf(!db)('an install restored without its artefacts', () => {
   it('loses the bytes and keeps the record when the artefacts are not there', async () => {
     await artefactIn(root)
     const before = await recorded()
-    await rename(join(root, hash), join(aside, hash))
+    await rename(held(), join(aside, hash))
 
     expect(
-      await store.read(hash),
+      await store.read(caseId, hash),
       'the artefact is still readable, so what follows is not a restore without it',
     ).toBeNull()
-    expect(await store.verify(hash), 'the store vouches for an artefact it does not hold').toBe(
+    expect(await store.verify(caseId, hash), 'the store vouches for an artefact it does not hold').toBe(
       false,
     )
     expect(
@@ -151,14 +151,14 @@ describe.skipIf(!db)('an install restored without its artefacts', () => {
   it('is whole again when the artefacts are put back, with nothing re-recorded', async () => {
     await artefactIn(aside)
     const during = await recorded()
-    await rename(join(aside, hash), join(root, hash))
+    await rename(join(aside, hash), held())
 
     expect(
-      Buffer.from((await store.read(hash))!).toString(),
+      Buffer.from((await store.read(caseId, hash))!).toString(),
       'the artefact came back as something other than what was stored',
     ).toBe(ARTEFACT)
     expect(
-      await store.verify(hash),
+      await store.verify(caseId, hash),
       'the artefact no longer hashes to its own name, so it is not the file the row vouches for',
     ).toBe(true)
     expect(

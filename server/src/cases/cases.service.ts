@@ -12,6 +12,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   Optional,
   UnprocessableEntityException,
@@ -24,6 +25,7 @@ import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { CaseChannel } from '../live/case-channel.service.js'
 import { LiveGateway } from '../live/live.gateway.js'
+import { EvidenceStore } from '../evidence/store.js'
 import { timelineToWire } from '../domain/entities/timeline.js'
 import { isGapped } from '../domain/tiering.js'
 import { SEVERITY } from '../domain/vocabularies.js'
@@ -144,6 +146,7 @@ export class CasesService {
    */
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    private readonly evidence: EvidenceStore,
     @Optional() private readonly channel?: CaseChannel,
     @Optional() private readonly gateway?: LiveGateway,
   ) {}
@@ -522,6 +525,10 @@ export class CasesService {
    * `change_feed` cascades with the case, so a delete row would be removed by
    * the statement that wrote it. Drops the socket too, or a connection stays
    * open on a case that is gone.
+   *
+   * Removes the case's artefacts once the row is gone, with no attach in the
+   * case between the two. A failure there is logged, not thrown: the case is
+   * already deleted, and the census counts what is left.
    */
   async remove(id: string, actorId: string): Promise<void> {
     const others = (await this.channel?.othersOn(id, actorId)) ?? []
@@ -532,9 +539,19 @@ export class CasesService {
       })
     }
 
-    const deleted = await withReach(this.db, (tx) =>
-      tx.delete(cases).where(eq(cases.id, id)).returning({ id: cases.id }),
-    )
+    const deleted = await this.evidence.exclusive(id, async () => {
+      const gone = await withReach(this.db, (tx) =>
+        tx.delete(cases).where(eq(cases.id, id)).returning({ id: cases.id }),
+      )
+      if (gone.length > 0) {
+        await this.evidence.discardCase(id).catch((why: unknown) => {
+          new Logger(CasesService.name).warn(
+            `artefacts of deleted case ${id} left in the store: ${String(why)}`,
+          )
+        })
+      }
+      return gone
+    })
     if (deleted.length === 0) throw new NotFoundException(`No case ${id}.`)
     this.channel?.announce(id, ['cases'], actorId)
     this.gateway?.dropCase(id)

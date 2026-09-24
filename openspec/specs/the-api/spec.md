@@ -105,7 +105,7 @@ Anything a caller may later change MUST arrive carrying what a write will be che
 
 ### Requirement: The interface describes itself, and the description is generated
 
-A caller MUST be able to learn what the interface offers from the interface, and that description MUST be derived from what is actually served rather than maintained beside it.
+A caller MUST be able to learn what the interface offers from the interface, and that description MUST be derived from what is actually served rather than maintained beside it. That includes every route a library the application mounts serves on its behalf: a route served and not described is one no client can be generated for and no check over the description reaches.
 
 The description MUST be organised the way somebody thinks about the product, not the way the routes happen to be arranged.
 
@@ -121,6 +121,13 @@ The description MUST be organised the way somebody thinks about the product, not
 - WHEN the description is fetched
 - THEN it describes the new shape
 - AND a caller built against the old one can tell what moved
+
+#### Scenario: A route served by a library the application mounts
+
+- GIVEN a route the application serves through a library it mounts
+- WHEN the description is fetched
+- THEN the route is there, described as the library describes it
+- AND a route the library defines and the application does not serve is not
 
 ### Requirement: A refusal says which of the caller's problems it is
 
@@ -160,6 +167,8 @@ The work a single request can demand MUST be bounded, and the bound MUST be enfo
 
 A caller that can shape its own request can shape an expensive one, whether or not it means to.
 
+A limit on how often a caller may ask MUST be that caller's own. Another caller spending theirs MUST NOT refuse it, and neither MUST a page on another site sending requests through the analyst's browser.
+
 #### Scenario: A caller asks for too much at once
 
 - GIVEN a request whose cost exceeds what the install permits
@@ -173,6 +182,27 @@ A caller that can shape its own request can shape an expensive one, whether or n
 - WHEN it makes a further request
 - THEN it is refused
 - AND told when it may try again
+
+#### Scenario: Another caller asks too often
+
+- GIVEN a caller refused for asking too often
+- WHEN a caller on another machine asks
+- THEN it is served
+
+#### Scenario: A page on another site asks on the analyst's behalf
+
+- GIVEN a page on another site open in the analyst's browser
+- WHEN it sends sign-in requests to the install
+- THEN each is refused
+- AND the analyst's own next attempt is not refused for asking too often
+
+#### Scenario: A page on another site calls the install on the analyst's behalf
+
+- GIVEN a page on another site open in the analyst's browser
+- WHEN it fetches from the install, and draws from it, more often than the install permits one caller
+- THEN each is refused
+- AND the analyst's own next request is served
+- AND a link from that page still opens the install
 
 ### Requirement: A fact can be asked for across cases
 

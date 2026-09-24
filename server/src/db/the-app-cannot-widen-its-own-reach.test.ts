@@ -179,7 +179,7 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
     ic_move_cases: 'select ic_move_cases(gen_random_uuid(), gen_random_uuid())',
     ic_references_shared: 'select * from ic_references_shared(gen_random_uuid(), gen_random_uuid())',
   }
-  /** Asked for nobody, so they answer digests and never which case holds one. */
+  /** Asked for nobody, so they answer identifiers and digests and never what a case holds. */
   const FOR_NOBODY = ['ic_artefacts_named']
 
   const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
@@ -238,8 +238,8 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
     )
   })
 
-  it.each(FOR_NOBODY)('%s names no case', async (name) => {
+  it.each(FOR_NOBODY)('%s answers no case content', async (name) => {
     const { fields } = await pool!.query(`select * from ${name}() limit 0`)
-    expect(fields.map((one) => one.name)).toEqual(['hash'])
+    expect(fields.map((one) => one.name)).toEqual(['case_id', 'hash', 'stored'])
   })
 })

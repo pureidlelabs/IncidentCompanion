@@ -19,6 +19,7 @@ import { ComplianceController } from './compliance.controller.js'
 import { ComplianceService } from './compliance.service.js'
 import { caseCompliance, cases, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -61,7 +62,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the case compliance record'
       announce: (caseId: string, scopes: string[]) => announced.push({ caseId, scopes }),
       othersOn: () => Promise.resolve([]),
     } as never
-    cases_ = as(actorId, new CasesService(db!, channel))
+    cases_ = as(actorId, new CasesService(db!, suiteStore(), channel))
     // The install settings are read for the verdict route only; the record's
     // own read and write never consult them.
     const settings = { all: () => Promise.resolve({}) } as never

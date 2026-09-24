@@ -22,8 +22,8 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { createHash } from 'node:crypto'
+import { basename, join } from 'node:path'
+import { createHash, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { as } from '../../test/acting.js'
 
@@ -81,6 +81,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row t
     store = new EvidenceStore({ get: () => root } as never, policy)
     const cases_ = new CasesService(
       db!,
+      store,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
     exporter = as(actorId, new ArchiveExportService(cases_, store, policy))
@@ -311,7 +312,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row t
     const fresh = new TextEncoder().encode(`only this import carries me ${String(Date.now())}`)
     const shared = new TextEncoder().encode(`already held ${String(Date.now())}`)
     const digest = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
-    await store.put((async function* () { yield Buffer.from(shared) })())
+    const holder = randomUUID()
+    await store.put(holder, (async function* () { yield Buffer.from(shared) })())
     const { [MANIFEST_NAME]: _old, ...rest } = members
     const carrying = await pack(
       {
@@ -324,9 +326,9 @@ describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row t
 
     await expect(importer.load(carrying, '', actorId)).rejects.toThrow(/this install cannot/)
 
-    const held = await readdir(root)
+    const held = (await readdir(root, { recursive: true })).map((path) => basename(path))
     expect(held, 'a refused import left its artefact in the store for ever').not.toContain(digest(fresh))
-    expect(held, 'the rollback removed a file the store held before it').toContain(digest(shared))
+    expect(await store.held(holder), 'the rollback removed a file another case held').toContain(digest(shared))
   })
 
   /**

@@ -12,6 +12,8 @@
 
 **Delete is the case as a whole and nothing smaller.** Removing an entry, an entity or a section is ordinary work at the write level.
 
+**The authentication library serves only what a requirement here offers.** Its surface is an allowlist named operation by operation: whatever else it defines, in this version or a later one, is refused as a route that never existed, and the application's own in-process calls to it are not requests anybody outside can make.
+
 # Design
 
 ## Two grants that do not imply each other
@@ -40,6 +42,8 @@ A recovery credential is issued when the install is claimed. It restores adminis
 
 A local account locks after a number of consecutive failures the install sets, for a duration the install sets, and an administrator can release it.
 
+The lock lives where a password is verified rather than at any door, so every door that checks one counts into the same run and refuses a locked account's right password as a wrong one, including a door added later. The verification costs a locked account what it costs a wrong password, and an address with no account costs what an account does.
+
 The threshold an install may set is bounded above, so no stored setting turns the control off while a screen still shows a number. The bound is NIST SP 800-63B's limit of no more than 100 consecutive failed attempts against one account.
 
 A second factor can be enrolled on any account whether or not the install requires one. Whether it is required is a single install-level policy evaluated at sign-in, and an install that has not turned it on is told plainly what that falls short of.
@@ -63,3 +67,5 @@ For every account the install knows: whether it is local or the provider's, whet
 Every sign-in is recorded with its outcome and how it was attempted. Every refusal of a customer or a case is recorded with who was refused and what they asked for; a line names its actor's account only where the install holds it, and keeps the name the session carried either way, so a session that outlived its account is recorded under the name it was issued to. Every change to who reaches what is recorded with the actor, the subject and the time — including an administrator granting themselves, where the actor and the subject are the same account.
 
 The record cannot be suppressed by whoever it would record, and where an event cannot be recorded the act it describes does not happen.
+
+A caller's own ending of a session, signing out included, is recorded where the session is deleted: once per session, and only for a session that existed. The operation answers the same whether it ended anything or not, so its answer is not evidence of an ending.

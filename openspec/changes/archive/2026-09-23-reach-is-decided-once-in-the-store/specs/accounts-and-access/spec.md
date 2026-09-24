@@ -18,6 +18,8 @@ A customer MAY belong to more than one group and an analyst MAY belong to more t
 
 Membership and its level MUST be grantable and revocable one at a time, and a revocation MUST take effect for sessions already open rather than at their next sign-in.
 
+**A list names only what its analyst reaches.** Where the application answers with a list that names cases rather than the contents of one case, it MUST name only the cases the asking analyst reaches, decided by the same rule that decides whether they reach one case by name. A list built from what an analyst has already opened MUST be decided when it is read rather than when it was written, so that reach withdrawn after the visit withdraws the case from the list, and a case kept in such a list deliberately MUST be withdrawn on the same terms as one that was not.
+
 **The default customer is the one exception in this specification, and it is stated here so that every other rule can be read without one.** Every account reaches it regardless of groups, federation or mapping, and that MUST NOT be revocable. The level is the account's role: an analyst reaches it at read and write, and an administrator reaches it at read, write and delete, so that an install can dispose of a case nobody has attributed without first building the access model.
 
 This is a floor rather than a ceiling: a group holding the default customer MAY raise an account above it, and no membership lowers an account below it.
@@ -99,3 +101,17 @@ It is not an inherited grant to somebody's data. The default customer holds only
 - GIVEN a session whose account no longer exists
 - WHEN it asks for a case, one of the default customer's included
 - THEN it is refused
+
+#### Scenario: A list is asked for by an analyst in no group
+
+- GIVEN an administrator belonging to no group
+- WHEN they ask for a list that names cases
+- THEN no case of a customer somebody has been onboarded as is named by it
+- AND a case the install has attributed to nobody is named by it
+- AND they may grant themselves the access and ask again
+
+#### Scenario: Reach is withdrawn after the case was opened
+
+- GIVEN an analyst who has opened a case, and kept it in their list
+- WHEN the group that reached it is revoked
+- THEN the list stops naming that case

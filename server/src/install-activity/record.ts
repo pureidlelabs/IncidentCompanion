@@ -99,10 +99,8 @@ function forOneLine(value: string): string {
  * The request's origin, as far as this install can honestly know it.
  *
  * **The address is decided by `callerAddress` rather than read here**, so the
- * audit believes the header on exactly the same terms the two rate limiters
- * do. No socket is passed: this writes from a request it was handed rather
- * than one it is holding, and inventing an address for the line would be the
- * forgery the column exists to prevent. -> `wire/caller-address.ts`
+ * audit attributes a request exactly as the two rate limiters and the session
+ * record do. -> `wire/caller-address.ts`
  *
  * The agent is caller text in every mode and is not a partition column of the
  * reader's run window, so it is recorded rather than dropped; `forOneLine` is
@@ -112,7 +110,7 @@ function originOf(headers: IncomingHttpHeaders | undefined) {
   const one = (value: string | string[] | undefined) =>
     (Array.isArray(value) ? value[0] : value) ?? null
   return {
-    ipAddress: callerAddress(headers ?? {}, undefined),
+    ipAddress: callerAddress(headers ?? {}),
     userAgent: one(headers?.['user-agent']),
   }
 }

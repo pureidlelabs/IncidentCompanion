@@ -296,8 +296,7 @@ export class CasesController {
     /**
      * **Demonstration content leaves nothing, including this line.** It
      * records no investigation, so an audit of its removal is an account of
-     * something that never happened -- and the demo is reseeded on every
-     * restart, so the lines accrue on an install nobody has yet used.
+     * something that never happened.
      */
     if (!going?.isDemo) {
       await this.activity.caseDeleted(caller, id, going?.title ?? '')

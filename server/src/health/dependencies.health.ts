@@ -6,7 +6,7 @@
  * text, and gives each probe a timeout - a dependency that accepts and never
  * answers is the one that hangs the endpoint.
  */
-import { Inject, Injectable, type OnApplicationShutdown } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { HealthIndicatorService, type HealthIndicatorResult } from '@nestjs/terminus'
 import type { Pool } from 'pg'
 
@@ -140,7 +140,7 @@ export class PostgresHealth {
 }
 
 @Injectable()
-export class RedisHealth implements OnApplicationShutdown {
+export class RedisHealth {
   constructor(
     @Inject(HEALTH_REDIS) private readonly redis: RedisProbe,
     private readonly indicators: HealthIndicatorService,
@@ -164,10 +164,5 @@ export class RedisHealth implements OnApplicationShutdown {
       // `reason`, and `RedisProbe.lastFailureCode`.
       return session.down(reason(error, { code: this.redis.lastFailureCode() }))
     }
-  }
-
-  /** The probe's connection is its own, so it is this class that closes it. */
-  onApplicationShutdown(): void {
-    this.redis.disconnect()
   }
 }

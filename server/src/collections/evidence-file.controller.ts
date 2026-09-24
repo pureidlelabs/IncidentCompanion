@@ -38,6 +38,7 @@ import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { EvidenceStore } from '../evidence/store.js'
+import { release } from '../report/artefacts-named.js'
 import { evidence } from '../db/schema/entities.js'
 import { updateVersioned } from '../db/mutate.js'
 import { withCase } from '../db/scope.js'
@@ -92,9 +93,8 @@ export class EvidenceFileController {
    * caller's word makes the verification that checks the file against it
    * circular. The column's own docstring says the same.
    *
-   * **Re-attaching replaces.** The row points at one artefact; the store is
-   * content-addressed, so the previous bytes stay on disk under their own
-   * digest and are simply no longer referenced here.
+   * **Re-attaching replaces.** The row points at one artefact; the previous
+   * bytes leave the case unless something else in it still names them.
    */
   @Post()
   @HttpCode(200)
@@ -107,15 +107,13 @@ export class EvidenceFileController {
     const row = await this.rowOr404(caseId, id)
 
     // **The name goes in with the bytes**, so the entry inside the stored zip
-    // is `invoice.eml` rather than a digest an analyst cannot act on. Content
-    // addressing means the first writer's name wins for identical content -
-    // the alternative is naming the entry by the digest, which is worse for
-    // every download to save one edge case nobody meets.
+    // is `invoice.eml` rather than a digest an analyst cannot act on. Within a
+    // case the first writer's name wins for identical content.
     const sentName =
       typeof request.headers['x-original-filename'] === 'string'
         ? dispositionName(request.headers['x-original-filename'])
         : undefined
-    const stored = await this.store.put(request, sentName)
+    const stored = await this.store.seal(request, sentName)
     if (stored.sizeBytes === 0) {
       // **An empty attachment is a mistake, not an artefact.** It hashes and
       // stores perfectly, and the row would then claim a file nobody can read
@@ -125,42 +123,50 @@ export class EvidenceFileController {
       })
     }
 
-    const result = await updateVersioned(this.db, {
-      table: evidence,
-      entity: 'evidence',
-      caseId,
-      id,
-      expectedVersion: row.version,
-      actorId: session.user.id,
-      patch: {
-        hash: stored.hash,
-        hashAlgorithm: stored.hashAlgorithm,
-        sizeBytes: stored.sizeBytes,
-        storedAt: new Date(),
-        contentType: request.headers['content-type'] ?? 'application/octet-stream',
-        originalFilename: dispositionName(
-          typeof request.headers['x-original-filename'] === 'string'
-            ? request.headers['x-original-filename']
-            : row.originalFilename,
-        ),
-      },
-    })
-
-    if (!result.ok) {
-      // The row moved while the bytes arrived, which is somebody having
-      // written first rather than a body this route would not take - so 409
-      // with the version, like every other versioned write.
-      if (result.currentVersion === null) {
-        throw new NotFoundException(`No evidence ${id} in this case.`)
-      }
-      throw new ConflictException({
-        message: 'Someone else wrote this first.',
-        currentVersion: result.currentVersion,
+    // Held from the bytes landing to the row naming them, so a removal in this
+    // case never finds them named by nothing.
+    return this.store.exclusive(caseId, async () => {
+      await this.store.keep(caseId, stored)
+      const result = await updateVersioned(this.db, {
+        table: evidence,
+        entity: 'evidence',
+        caseId,
+        id,
+        expectedVersion: row.version,
+        actorId: session.user.id,
+        patch: {
+          hash: stored.hash,
+          hashAlgorithm: stored.hashAlgorithm,
+          sizeBytes: stored.sizeBytes,
+          storedAt: new Date(),
+          contentType: request.headers['content-type'] ?? 'application/octet-stream',
+          originalFilename: dispositionName(
+            typeof request.headers['x-original-filename'] === 'string'
+              ? request.headers['x-original-filename']
+              : row.originalFilename,
+          ),
+        },
       })
-    }
 
-    this.channel?.announce(caseId, ['evidence'], session.user.id)
-    return { hash: stored.hash, sizeBytes: stored.sizeBytes }
+      // What the row stopped naming, or what it never came to name.
+      await release(this.db, this.store, caseId, [result.ok ? row.hash : stored.hash])
+
+      if (!result.ok) {
+        // The row moved while the bytes arrived, which is somebody having
+        // written first rather than a body this route would not take - so 409
+        // with the version, like every other versioned write.
+        if (result.currentVersion === null) {
+          throw new NotFoundException(`No evidence ${id} in this case.`)
+        }
+        throw new ConflictException({
+          message: 'Someone else wrote this first.',
+          currentVersion: result.currentVersion,
+        })
+      }
+
+      this.channel?.announce(caseId, ['evidence'], session.user.id)
+      return { hash: stored.hash, sizeBytes: stored.sizeBytes }
+    })
   }
 
   /**
@@ -182,7 +188,7 @@ export class EvidenceFileController {
       throw new NotFoundException('This evidence record has no file attached.')
     }
 
-    const stream = await this.store.open(row.hash)
+    const stream = await this.store.open(caseId, row.hash)
     if (!stream) {
       // The row says the bytes are here and they are not: an app root moved,
       // or a file removed underneath. Saying so beats a stream that ends at

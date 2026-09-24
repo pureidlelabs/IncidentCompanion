@@ -41,3 +41,19 @@ Colour, spacing, type and motion come from one named set. A name referred to and
 Where two parts of the interface need the same answer about a value, it is derived in one place, and that place does not know who is asking.
 
 Two screens computing it separately will disagree, and the argument will be about which is right rather than which is stale.
+
+## A part is documented where it is defined
+
+The gallery builds a part's page from the block above its metadata, the block above each of its stories, and a table generated from its types. All three are read from the source, so a property documented where it is declared is documented once, and what is written for a person is what a tool reading the gallery receives.
+
+A sibling documentation file is refused. It carries the same claims where the types do not reach it and no linter walks it, and it is the second description that drifts.
+
+## A tier demonstrates its own layer and inherits the one beneath
+
+A composition does not re-demonstrate the controls it is assembled from. What it owes is the part no control can know: the relations between them, and what the whole produces. A screen likewise owes what the arrangement of its compositions produces, at the volumes it will meet. A demonstration that would pass unchanged one tier down belongs one tier down.
+
+## Volume is exercised at both tiers, with content from outside
+
+A part that presents data owes a volume demonstration at its own tier, filled through its arguments the way its caller fills it, and the screen above it owes one of its own: a block under load answers whether its own design survives, and a screen under load whether what it holds is still readable as a whole.
+
+The content comes from outside the screen. Content held inside one makes it exercisable at a single volume, and eventually reaches an analyst as though it were their case.

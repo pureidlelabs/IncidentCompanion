@@ -61,6 +61,8 @@ function gatewayWith(
   const { signedIn = true, caseExists = true, held = false, reach = anyoneReaches(caseExists) } = options
 
   const auth = {
+    // The origins the auth library enforces for this stand-in install.
+    instance: { options: { trustedOrigins: [HERE.origin] } },
     api: {
       getSession: () =>
         Promise.resolve(

@@ -19,6 +19,7 @@ import { as } from '../../test/acting.js'
 import { CASE_COLLECTIONS, CasesService } from './cases.service.js'
 import { CasesController } from './cases.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { LibraryService } from '../library/library.service.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
@@ -39,6 +40,7 @@ import {
   timeline,
   user,
 } from '../db/schema/index.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -98,7 +100,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
     present = []
     service = as(
       actorId,
-      new CasesService(db!, {
+      new CasesService(db!, suiteStore(), {
         announce: (caseId: string, scopes: string[]) => announced.push({ caseId, scopes }),
         othersOn: () => Promise.resolve(present),
       } as never),
@@ -657,7 +659,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
      */
     it('deletes a demo case rather than protecting it', async () => {
       await seed!.delete(cases)
-      await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+      await reseedDemos(seed!)
       const [demo] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
       expect(demo!.isDemo).toBe(true)
 

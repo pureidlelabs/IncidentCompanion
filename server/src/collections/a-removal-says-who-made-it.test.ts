@@ -33,6 +33,7 @@ import { changeFeed } from '../db/schema/change-feed.js'
 import { systems } from '../db/schema/entities.js'
 import { user } from '../db/schema/auth.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -67,7 +68,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an analyst removing somethi
   let caseId: string
 
   beforeAll(async () => {
-    service = as(ANALYST, new CollectionService(db!))
+    service = as(ANALYST, new CollectionService(db!, suiteStore()))
 
     const now = new Date()
     await seed!

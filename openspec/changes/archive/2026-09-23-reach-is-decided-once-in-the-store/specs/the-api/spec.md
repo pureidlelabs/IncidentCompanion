@@ -29,6 +29,13 @@ An entry-point check is necessary and MUST NOT be the only one. Where a caller c
 - THEN none of that case is served
 - AND nothing is written into it
 
+#### Scenario: A route forgets to ask before it writes
+
+- GIVEN a route that asks nothing about reach before it writes into a case
+- WHEN a caller writes into a case whose customer they do not reach
+- THEN nothing is written
+- AND they are answered as though the case were not there
+
 ### Requirement: A refusal says which of the caller's problems it is
 
 A refusal MUST distinguish: the caller is not who it says, the caller may not do this, the request is malformed, the thing is not there, somebody wrote first, and the caller is asking too often.

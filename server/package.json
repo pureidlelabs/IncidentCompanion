@@ -22,7 +22,7 @@
     "seed": "node dist/src/seed.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:push": "node scripts/reset-policies.mjs && node scripts/reach-functions.mjs && drizzle-kit push",
+    "db:push": "tsx scripts/apply-schema.mts",
     "db:up": "node scripts/stack.mjs --compose up -d --wait && node scripts/stack.mjs --roles",
     "db:down": "node scripts/stack.mjs --compose down",
     "e2e": "playwright test --config=e2e/playwright.config.ts",
@@ -42,6 +42,7 @@
     "prune": "bash scripts/prune.sh"
   },
   "dependencies": {
+    "@better-auth/core": "1.7.5",
     "@incidentcompanion/prose-schema": "*",
     "@nest-lab/throttler-storage-redis": "^1.2.0",
     "@nestjs/common": "^12.0.1",
