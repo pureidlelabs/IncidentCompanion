@@ -442,9 +442,8 @@ jobs:
       - name: Client suite
         env:
           SHARD: ${{ matrix.shard }}
-        run: |
-          cd ui && npx vitest run --shard="$SHARD/3" --reporter=default \
-            --reporter=json --outputFile.json="../reports/client-$SHARD.json"
+          IC_REPORT: ${{ github.workspace }}/reports/client-${{ matrix.shard }}.json
+        run: cd ui && npx vitest run --shard="$SHARD/3"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: report-client-${{ matrix.shard }}
@@ -497,9 +496,8 @@ jobs:
       - name: Story tier
         env:
           SHARD: ${{ matrix.shard }}
-        run: |
-          cd ui && npx vitest run --project=storybook --shard="$SHARD/2" --reporter=default \
-            --reporter=json --outputFile.json="../reports/screen-$SHARD.json"
+          IC_REPORT: ${{ github.workspace }}/reports/screen-${{ matrix.shard }}.json
+        run: cd ui && npx vitest run --project=storybook --shard="$SHARD/2"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: report-screen-${{ matrix.shard }}

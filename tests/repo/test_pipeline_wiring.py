@@ -1448,7 +1448,7 @@ def test_every_tier_certify_reads_writes_the_report_it_reads() -> None:
     written = {}
     for name in needs:
         steps = jobs[name]["steps"]
-        runs = " ".join(str(step.get("run", "")) for step in steps)
+        runs = " ".join(f"{step.get('run', '')} {step.get('env', '')}" for step in steps)
         uploads = [step for step in steps if "upload-artifact" in str(step.get("uses", ""))]
         assert any(str(step["with"]["name"]).startswith("report-") and step["with"]["path"] == "reports/"
                    for step in uploads), f"{name} writes a report certify never downloads"

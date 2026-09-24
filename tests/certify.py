@@ -240,8 +240,8 @@ def read(reports: Path, known: set[str]) -> Run:
     run = Run()
     for report in sorted(reports.iterdir()):
         tier = re.split(r"[-.]", report.name, maxsplit=1)[0]
-        if tier not in OWNED:
-            raise SystemExit(f"{report.name} names no tier this reads: {sorted(OWNED)}")
+        if tier not in OWNED or report.suffix not in {".json", ".xml"}:
+            raise SystemExit(f"{report.name} is not a report of a tier this reads: {sorted(OWNED)}")
         (read_vitest if report.suffix == ".json" else read_junit)(tier, report, known, run)
         run.ran.setdefault(tier, set())
     return run

@@ -143,8 +143,8 @@ step "client: typecheck" bash -c 'cd ui && npx tsc -b --noEmit --force'
 # client never did, so `ui` was linted by nothing here - an error sat on the
 # release branch unseen.
 step "client: lint" bash -c 'cd ui && npm run --silent lint'
-behaviour && step "client: suite" bash -c 'cd ui && npx vitest run \
-  --reporter=default --reporter=json --outputFile.json=../reports/client.json'
+behaviour && step "client: suite" env IC_REPORT="$PWD/reports/client.json" \
+  bash -c 'cd ui && npx vitest run'
 
 # ------------------------------------------------------- repository checks
 # **`tests/docker` builds containers**, which is the whole reason a full sweep

@@ -322,6 +322,18 @@ export default defineConfig({
       ? ['--no-webstorage']
       : [],
     setupFiles: ['./src/test/setup.ts'],
+    // `IC_REPORT` names where `tests/certify.py` reads this run. The story
+    // tier's accessibility results ride on each case's `meta` as `reports`,
+    // and nothing reading the report wants them.
+    reporters: process.env.IC_REPORT
+      ? [
+          'default',
+          [
+            'json',
+            { outputFile: process.env.IC_REPORT, filterMeta: (key: string) => key !== 'reports' },
+          ],
+        ]
+      : ['default'],
     onUnhandledError: ignoreReactAriaWindowFocusThrow,
     css: false,
     // `include` lives on the `unit` project below, not here. Once `projects`
