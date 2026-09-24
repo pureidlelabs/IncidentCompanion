@@ -254,8 +254,32 @@ describe.skipIf(!runnable)('the case socket', () => {
       })
       expect(disabled.ok).toBe(true)
 
-      const closed = await waitFor(() => socket.readyState === socket.CLOSED, 8000)
+      // Well inside the sweep, so it is the ending that closes it rather than the next pass.
+      const closed = await waitFor(() => socket.readyState === socket.CLOSED, 3000)
       expect(closed, 'the socket outlived the session that opened it').toBe(true)
+    }, 40_000)
+
+    it("closes when an administrator ends every session the analyst holds", async () => {
+      const email = `live-ended-${process.pid}@harness.test`
+      const analyst = await freshAnalyst(email)
+
+      const socket = new WebSocket(liveUrl(), { headers: { cookie: analyst.cookie, origin } })
+      open.push(socket)
+      await new Promise<void>((resolve, reject) => {
+        socket.on('open', () => {
+          resolve()
+        })
+        socket.on('error', reject)
+      })
+
+      const ended = await fetch(`${harness.base}/api/accounts/${email}/sessions/end`, {
+        method: 'POST',
+        headers: { cookie: admin.cookie, origin },
+      })
+      expect(ended.ok, String(ended.status)).toBe(true)
+
+      const closed = await waitFor(() => socket.readyState === socket.CLOSED, 3000)
+      expect(closed, 'the socket outlived the sessions an administrator ended').toBe(true)
     }, 40_000)
 
     it('closes when the case underneath it is deleted', async () => {

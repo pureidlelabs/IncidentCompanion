@@ -67,7 +67,7 @@ function gatewayWith(
       getSession: () =>
         Promise.resolve(
           signedIn
-            ? { user: { id: 'u-1', name: 'Ada', email: 'a@b.test', ...(held ? { mustChangePassword: true } : {}) } }
+            ? { user: { id: 'u-1', name: 'Ada', email: 'a@b.test', ...(held ? { mustChangePassword: true } : {}) }, session: { id: 's-1' } }
             : null,
         ),
     },
