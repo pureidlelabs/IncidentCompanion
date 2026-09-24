@@ -28,6 +28,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { identitiesOf } from '../domain/identity.js'
 import { CollectionService } from './collection.service.js'
@@ -88,7 +89,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a collection whose rows are
   let caseId = ''
 
   beforeAll(async () => {
-    service = new CollectionService(db!, suiteStore())
+    service = as(ACTOR, new CollectionService(db!, suiteStore()))
     const now = new Date()
     await seed!
       .insert(user)

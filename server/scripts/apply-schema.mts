@@ -10,6 +10,7 @@
  * but 0 leaves the store as it was.
  */
 import { realpathSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 import { generateDrizzleJson, pushSchema } from 'drizzle-kit/api-postgres'
@@ -77,16 +78,18 @@ const LOSSY = [
 ]
 
 /**
- * What the policies, the store's own functions and triggers, and each table's
- * grants and row security are. Drizzle plans the rest, so a run whose plan is
- * only the policies it was made to recreate changed nothing when this is equal.
+ * What the policies, the store's own functions and who may call them, triggers,
+ * and each table's grants and row security are. Drizzle plans the rest, so a
+ * run whose plan is only the policies it was made to recreate changed nothing
+ * when this is equal.
  */
 const SHAPE = `
   select json_build_object(
     'policies', (select coalesce(json_agg(p order by p.tablename, p.policyname), '[]')
                    from (select tablename, policyname, cmd, roles::text, permissive, qual, with_check
                            from pg_policies where schemaname = 'public') p),
-    'functions', (select coalesce(json_agg(pg_get_functiondef(f.oid) order by f.oid::regprocedure::text), '[]')
+    'functions', (select coalesce(json_agg(json_build_object('def', pg_get_functiondef(f.oid), 'acl', f.proacl::text)
+                                      order by f.oid::regprocedure::text), '[]')
                     from pg_proc f join pg_namespace n on n.oid = f.pronamespace
                    where n.nspname = 'public' and f.prokind in ('f', 'p')),
     'triggers', (select coalesce(json_agg(pg_get_triggerdef(t.oid) order by c.relname, t.tgname), '[]')
@@ -174,6 +177,8 @@ export async function applySchema(url: string): Promise<Outcome> {
         `drop policy ${client.escapeIdentifier(policyname)} on public.${client.escapeIdentifier(tablename)}`,
       )
     }
+    // The policies the plan creates call these, so they exist before it runs.
+    await client.query(await readFile(new URL('../src/db/reach.sql', import.meta.url), 'utf8'))
 
     let planned: Awaited<ReturnType<typeof pushSchema>>
     try {

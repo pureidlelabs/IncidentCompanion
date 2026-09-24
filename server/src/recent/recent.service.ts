@@ -1,18 +1,17 @@
 /**
  * Reading and writing which cases an analyst has been in.
  *
- * **Install-level and keyed on the analyst, so nothing here opens a case.**
- * The row-level policies scope by `app.case_id`; these rows span cases by
- * definition, and what keeps one analyst out of another's is the `userId`
- * predicate on every statement - stated because it is a different mechanism
- * from the one the rest of the server uses.
+ * **Keyed on the analyst, so nothing here opens a case.** The store serves a
+ * visit only to the analyst it belongs to, and only while they reach its case;
+ * the `userId` predicate on every statement says the same in SQL.
+ * -> `db/schema/scoped.ts`
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, desc, eq, isNull, notInArray, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import { reachedCases } from '../access/reached-cases.js'
+import { withReach, type Executor } from '../db/scope.js'
 import { caseVisits } from '../db/schema/case-visits.js'
 import { caseStatus, cases } from '../db/schema/case.js'
 import { z } from 'zod'
@@ -64,24 +63,25 @@ export class RecentService {
    * neither.
    */
   async list(userId: string): Promise<RecentCases> {
-    const rows = await this.db
-      .select({
-        caseId: caseVisits.caseId,
-        section: caseVisits.section,
-        visitedAt: caseVisits.visitedAt,
-        pinnedAt: caseVisits.pinnedAt,
-        title: cases.title,
-        reference: cases.reference,
-        customer: cases.customer,
-        status: cases.status,
-      })
-      .from(caseVisits)
-      .innerJoin(cases, eq(cases.id, caseVisits.caseId))
-      // Filtered on the read: a visit outlives the reach, and a pin never ages out.
-      .where(
-        and(eq(caseVisits.userId, userId), await reachedCases(this.db, userId, cases.customerId)),
-      )
-      .orderBy(desc(caseVisits.pinnedAt), desc(caseVisits.visitedAt), desc(caseVisits.caseId))
+    const rows = await withReach(this.db, (tx) =>
+      tx
+        .select({
+          caseId: caseVisits.caseId,
+          section: caseVisits.section,
+          visitedAt: caseVisits.visitedAt,
+          pinnedAt: caseVisits.pinnedAt,
+          title: cases.title,
+          reference: cases.reference,
+          customer: cases.customer,
+          status: cases.status,
+        })
+        .from(caseVisits)
+        .innerJoin(cases, eq(cases.id, caseVisits.caseId))
+        // A visit outlives the reach and a pin never ages out, so the store is
+        // what leaves out a case the analyst no longer reaches.
+        .where(eq(caseVisits.userId, userId))
+        .orderBy(desc(caseVisits.pinnedAt), desc(caseVisits.visitedAt), desc(caseVisits.caseId)),
+    )
 
     const view = (row: (typeof rows)[number]): RecentCase => ({
       caseId: row.caseId,
@@ -119,14 +119,16 @@ export class RecentService {
     // - and the prune below reads the same order, so a tie drops the wrong
     // row. `now()` is constant inside a transaction and ties by construction.
     const visitedAt = sql`clock_timestamp()`
-    await this.db
-      .insert(caseVisits)
-      .values({ userId, caseId, section, visitedAt })
-      .onConflictDoUpdate({
-        target: [caseVisits.userId, caseVisits.caseId],
-        set: { section, visitedAt },
-      })
-    await this.prune(userId)
+    await withReach(this.db, async (tx) => {
+      await tx
+        .insert(caseVisits)
+        .values({ userId, caseId, section, visitedAt })
+        .onConflictDoUpdate({
+          target: [caseVisits.userId, caseVisits.caseId],
+          set: { section, visitedAt },
+        })
+      await this.prune(tx, userId)
+    })
   }
 
   /**
@@ -136,21 +138,25 @@ export class RecentService {
    */
   async pin(userId: string, caseId: string, pinned: boolean): Promise<void> {
     const pinnedAt = pinned ? new Date() : null
-    await this.db
-      .insert(caseVisits)
-      .values({ userId, caseId, section: null, pinnedAt })
-      .onConflictDoUpdate({
-        target: [caseVisits.userId, caseVisits.caseId],
-        set: { pinnedAt },
-      })
-    // Unpinning puts a row back under the ceiling, and it may be the oldest.
-    if (!pinned) await this.prune(userId)
+    await withReach(this.db, async (tx) => {
+      await tx
+        .insert(caseVisits)
+        .values({ userId, caseId, section: null, pinnedAt })
+        .onConflictDoUpdate({
+          target: [caseVisits.userId, caseVisits.caseId],
+          set: { pinnedAt },
+        })
+      // Unpinning puts a row back under the ceiling, and it may be the oldest.
+      if (!pinned) await this.prune(tx, userId)
+    })
   }
 
   async forget(userId: string, caseId: string): Promise<void> {
-    await this.db
-      .delete(caseVisits)
-      .where(and(eq(caseVisits.userId, userId), eq(caseVisits.caseId, caseId)))
+    await withReach(this.db, (tx) =>
+      tx
+        .delete(caseVisits)
+        .where(and(eq(caseVisits.userId, userId), eq(caseVisits.caseId, caseId))),
+    )
   }
 
   /**
@@ -161,8 +167,8 @@ export class RecentService {
    * been away longest rather than whoever has the longest list, and both
    * mistakes are invisible in a single-analyst test.
    */
-  private async prune(userId: string): Promise<void> {
-    const keep = await this.db
+  private async prune(tx: Executor, userId: string): Promise<void> {
+    const keep = await tx
       .select({ caseId: caseVisits.caseId })
       .from(caseVisits)
       .where(and(eq(caseVisits.userId, userId), isNull(caseVisits.pinnedAt)))
@@ -175,7 +181,7 @@ export class RecentService {
       .orderBy(desc(caseVisits.visitedAt), desc(caseVisits.caseId))
       .limit(RECENT_LIMIT)
 
-    await this.db.delete(caseVisits).where(
+    await tx.delete(caseVisits).where(
       and(
         eq(caseVisits.userId, userId),
         isNull(caseVisits.pinnedAt),
