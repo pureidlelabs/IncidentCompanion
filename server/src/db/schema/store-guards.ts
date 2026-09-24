@@ -27,8 +27,10 @@ export const storeGuards: readonly string[] = [
          or coalesce(new - 'created_by' - 'updated_by' - 'evidence_id'
                      = old - 'created_by' - 'updated_by' - 'evidence_id', false)
    $$`,
+  `revoke all on function the_freeze_passes(uuid, jsonb, jsonb) from public`,
+  // Definer, because the_freeze_passes answers its owner and nobody else.
   `create or replace function refuse_a_change_to_a_sent_report() returns trigger
-     language plpgsql as $$
+     language plpgsql security definer set search_path = pg_catalog as $$
    begin
      if old.sent_at is not null
         and (pg_trigger_depth() < 2 or not public.the_freeze_passes(old.case_id, to_jsonb(old), to_jsonb(new))) then
@@ -38,6 +40,8 @@ export const storeGuards: readonly string[] = [
      end if;
      return coalesce(new, old);
    end $$`,
+  // Checked when a trigger is made, never when it fires.
+  `revoke all on function refuse_a_change_to_a_sent_report() from public`,
   `create or replace trigger a_sent_report_is_frozen
      before update or delete on reports
      for each row execute function refuse_a_change_to_a_sent_report()`,
@@ -66,6 +70,7 @@ export const storeGuards: readonly string[] = [
      end if;
      return coalesce(new, old);
    end $$`,
+  `revoke all on function refuse_a_part_of_a_sent_report() from public`,
   `create or replace trigger a_sent_reports_parts_are_frozen
      before insert or update or delete on report_blocks
      for each row execute function refuse_a_part_of_a_sent_report()`,
