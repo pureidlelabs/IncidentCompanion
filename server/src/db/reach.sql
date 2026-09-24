@@ -195,7 +195,7 @@ $$;
 
 -- Every digest a case names, by case: what its stored evidence names, and every
 -- figure a sent report of it froze (the figures `figuresOf` finds). Asked for
--- nobody, so it answers identifiers and digests and never what a case holds.
+-- nobody, so it answers case ids and digests and never what a case holds.
 create or replace function public.ic_artefacts_named()
 returns table (case_id uuid, hash text, stored boolean)
 language sql stable security definer
@@ -237,3 +237,5 @@ grant execute on function
   public.ic_cases_tallied(),
   public.ic_artefacts_named()
 to ic_app, ic_seed;
+
+reset check_function_bodies;

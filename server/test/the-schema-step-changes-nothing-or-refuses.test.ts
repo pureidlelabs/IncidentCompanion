@@ -187,6 +187,17 @@ describe.skipIf(!ADMIN_URL || !APP_URL || isEmbedded(APP_URL))('the schema step'
     expect(await query<{ qual: string }>(admin(), qual)).toEqual([original])
   }, 60_000)
 
+  it('puts back what the application may call when the database holds it differently', async () => {
+    const callable = `select has_function_privilege('ic_app', 'public.ic_reach(text, uuid)', 'execute') as ok`
+    expect(await query(admin(), callable)).toEqual([{ ok: true }])
+    await query(scratchUrl('ic_migrate'), `revoke execute on function public.ic_reach(text, uuid) from ic_app`)
+    const ran = await step()
+    expect(ran.code, ran.out).toBe(0)
+    expect(await query(admin(), callable), 'the step left the application unable to ask reach').toEqual([
+      { ok: true },
+    ])
+  }, 60_000)
+
   it('leaves the application identity holding exactly what it held', async () => {
     const privileges = `select table_name || ':' || privilege_type as line
       from information_schema.role_table_grants

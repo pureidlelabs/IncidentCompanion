@@ -636,8 +636,8 @@ export class ProseService implements OnApplicationShutdown {
   /**
    * Write the document to its row, as the latest analyst who wrote into it
    * since it was last stored and whom the store still lets write it, or else as
-   * whoever is asking. `updated_by` names that writer, and everyone who wrote
-   * gets a feed row in the same transaction. Then tells the `onSaved` listener.
+   * whoever is asking. `updated_by` names the latest who wrote, and everyone
+   * who wrote gets a feed row in the same transaction. Then tells the `onSaved` listener.
    * Resolves once every flush queued before it has run too. Public so a test
    * can force it.
    *
@@ -668,10 +668,10 @@ export class ProseService implements OnApplicationShutdown {
     const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
     held.writers.clear()
     held.dirty = false
+    const by = writers.at(-1)
+    const attributed = by ? { updatedBy: by.id, updatedAt: new Date() } : {}
     try {
       for (const who of candidates) {
-        const wrote = writers.some((writer) => writer.id === who)
-        const attributed = wrote ? { updatedBy: who, updatedAt: new Date() } : {}
         const stored = await actingAs(who, () =>
           withCase(this.db, caseId, async (tx) => {
             const [row] = await (address.table === 'casenotes'

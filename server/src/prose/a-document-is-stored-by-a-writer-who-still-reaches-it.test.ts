@@ -131,6 +131,8 @@ describe.skipIf(!appPool || !hasConcurrentConnections())(
       expect(await stored(note.id), 'the words were dropped with the last writer').toContain(
         'typed by the first',
       )
+      const [row] = await seed!.select({ by: caseNotes.updatedBy }).from(caseNotes).where(eq(caseNotes.id, note.id))
+      expect(row!.by, 'the row names whoever stored it rather than who wrote last').toBe(last)
     })
 
     it('keeps words the store refused, so a later flush stores them', async () => {

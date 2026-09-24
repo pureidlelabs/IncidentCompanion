@@ -141,6 +141,13 @@ describe.skipIf(!(await bootable()))('moving a case to a customer', () => {
   }, 120_000)
 
   afterAll(async () => {
+    // The moved cases hold the customer by a restricting key, so a later sweep of customers fails on them.
+    if (victim) {
+      const seed = openTestPool(process.env.SEED_DATABASE_URL!, 'ic_seed')
+      await seed.query('delete from cases where customer_id = $1', [victim])
+      await seed.query('delete from customers where id = $1', [victim])
+      await seed.end()
+    }
     await pool?.end()
     await harness?.close()
   })

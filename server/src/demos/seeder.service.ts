@@ -63,11 +63,8 @@ export class DemoSeederService {
   /**
    * **Two handles, because reading demo cases and writing them are not the
    * same privilege.** `seedOnce` writes across every case, which is the seed
-   * role's job. `cards` only reads, and `cases` carries no
-   * row-level security -- `CasesService.list` reads the same table through
-   * `DATABASE` for `GET /api/cases`. Read it through the seed role and
-   * `/api/demos` answers `[]` on any install whose seeding ran somewhere the
-   * serving process cannot see, which a Job is.
+   * role's job. `cards` only reads, as whoever is asking, so it names the
+   * demo cases they reach and no others.
    */
   constructor(
     @Inject(DATABASE) private readonly reads: Database,
