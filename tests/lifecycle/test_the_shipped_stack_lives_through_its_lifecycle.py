@@ -142,7 +142,8 @@ def test_the_shipped_stack_lives_through_its_lifecycle(stack, subtests):
             while again.poll() is None:
                 answer = install.edge.request("GET", f"/api/cases/{held['case']}/casenotes")
                 reads.append((answer.status, len(answer.json() or [])))
-                time.sleep(0.05)
+                # Under a caller's limit in server/src/throttle/tiers.ts however long `up -d` takes.
+                time.sleep(0.25)
         assert again.returncode == 0, again.stdout.read().decode()[-3000:]
         for one_shot in ONE_SHOTS:
             assert install.container(one_shot)["State"]["ExitCode"] == 0, one_shot
