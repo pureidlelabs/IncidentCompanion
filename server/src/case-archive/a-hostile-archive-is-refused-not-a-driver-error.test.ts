@@ -25,6 +25,7 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
@@ -83,8 +84,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row t
       store,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
-    exporter = new ArchiveExportService(cases_, store, policy)
-    importer = new ArchiveImportService(db!, store, policy)
+    exporter = as(actorId, new ArchiveExportService(cases_, store, policy))
+    importer = as(actorId, new ArchiveImportService(db!, store, policy))
   })
 
   afterAll(async () => {
@@ -101,7 +102,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row t
    */
   async function exported() {
     minted += 1
-    const made = await db!
+    const made = await seed!
       .insert(cases)
       .values({
         title: 'Hostile archive',

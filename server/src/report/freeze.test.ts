@@ -15,6 +15,7 @@
 import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
@@ -122,17 +123,17 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
       .onConflictDoNothing()
     session = { user: { id: actorId } }
 
-    const cases_ = new CasesService(db!, suiteStore(), {
+    const cases_ = as(actorId, new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
+    } as never))
     const row = await cases_.create({ title: 'A filed report' }, actorId)
     caseId = row.id
 
-    const prose = new ProseService(db!)
-    const render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
-    lifecycle = new ReportLifecycleService(db!, { entry: () => Promise.resolve(undefined) } as never, render, prose)
-    collections = new CollectionService(db!, suiteStore())
+    const prose = as(actorId, new ProseService(db!))
+    const render = as(actorId, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
+    lifecycle = as(actorId, new ReportLifecycleService(db!, { entry: () => Promise.resolve(undefined) } as never, render, prose))
+    collections = as(actorId, new CollectionService(db!, suiteStore()))
     controller = new ReportsController(collections)
   })
 

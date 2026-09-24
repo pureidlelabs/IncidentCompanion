@@ -136,6 +136,12 @@ Changing what the logging itself does is an administrative event.
 - WHEN they change the log's destination or how long it is kept
 - THEN the change is itself logged, at both the old destination and the new
 
+#### Scenario: A session is refused after its account is gone
+
+- GIVEN a session whose account no longer exists
+- WHEN it is refused a case
+- THEN the refusal is logged with who the session was issued to and what it asked for
+
 #### Scenario: An analyst ends their own session
 
 - GIVEN an analyst signed in from more than one place

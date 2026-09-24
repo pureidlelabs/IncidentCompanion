@@ -23,6 +23,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from './acting.js'
 
 import { CollectionService } from '../src/collections/collection.service.js'
 import { REPORT_BLOCKS_COLLECTION } from '../src/collections/definitions.js'
@@ -53,7 +54,7 @@ let ourReport = ''
 
 describe.skipIf(!db || !hasConcurrentConnections())('a report section naming evidence', () => {
   beforeAll(async () => {
-    service = new CollectionService(db!, suiteStore())
+    service = as(ANALYST, new CollectionService(db!, suiteStore()))
 
     const now = new Date()
     await seed!

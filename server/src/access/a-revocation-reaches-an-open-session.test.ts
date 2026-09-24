@@ -18,11 +18,10 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { GroupsService } from './groups.service.js'
-import { ReachService } from './reach.service.js'
 import { onReachChanged } from './reach-changed.js'
 import { CustomersService } from '../customers/customers.service.js'
 import { customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { levelIn, openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -49,7 +48,6 @@ afterAll(async () => {
 
 describe.skipIf(!db)('a revocation reaches a session already open', () => {
   let service: GroupsService
-  let reach: ReachService
   let sector: string
   let theirs: string
   let told: string[]
@@ -72,7 +70,6 @@ describe.skipIf(!db)('a revocation reaches a session already open', () => {
         .onConflictDoNothing()
     }
 
-    reach = new ReachService(db!)
     service = new GroupsService(db!)
     await new CustomersService(db!).ensureDefault()
 
@@ -93,15 +90,15 @@ describe.skipIf(!db)('a revocation reaches a session already open', () => {
   it('grants a membership at a level, one at a time', async () => {
     await service.grant(sector, ANALYST, 'read')
 
-    expect(await reach.levelFor(ANALYST, theirs)).toBe('read')
-    expect(await reach.levelFor(OTHER, theirs)).toBeNull()
+    expect(await levelIn(db!, ANALYST, theirs)).toBe('read')
+    expect(await levelIn(db!, OTHER, theirs)).toBeNull()
   })
 
   it('changes a level in place rather than adding a second membership', async () => {
     await service.grant(sector, ANALYST, 'read')
     await service.grant(sector, ANALYST, 'delete')
 
-    expect(await reach.levelFor(ANALYST, theirs)).toBe('delete')
+    expect(await levelIn(db!, ANALYST, theirs)).toBe('delete')
     const held = await seed!.select().from(groupMembers)
     expect(held).toHaveLength(1)
   })
@@ -112,8 +109,8 @@ describe.skipIf(!db)('a revocation reaches a session already open', () => {
 
     await service.revoke(sector, ANALYST)
 
-    expect(await reach.levelFor(ANALYST, theirs)).toBeNull()
-    expect(await reach.levelFor(OTHER, theirs)).toBe('write')
+    expect(await levelIn(db!, ANALYST, theirs)).toBeNull()
+    expect(await levelIn(db!, OTHER, theirs)).toBe('write')
   })
 
   it.each([
@@ -142,7 +139,7 @@ describe.skipIf(!db)('a revocation reaches a session already open', () => {
     await service.release(sector, theirs)
 
     expect([...told].sort()).toEqual([ANALYST, OTHER].sort())
-    expect(await reach.levelFor(ANALYST, theirs)).toBeNull()
+    expect(await levelIn(db!, ANALYST, theirs)).toBeNull()
   })
 
   /**

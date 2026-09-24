@@ -9,6 +9,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { RECENT_LIMIT, RecentService } from './recent.service.js'
 import { GroupsService } from '../access/groups.service.js'
@@ -58,7 +59,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('the cases an analyst has be
     }
     await seed!.delete(caseVisits)
     await seed!.delete(cases)
-    service = new RecentService(db!)
+    // Each call made as the analyst it is for, whose visits are theirs alone.
+    service = as(([userId]) => userId as string, new RecentService(db!))
   })
 
   afterAll(async () => {
@@ -212,15 +214,16 @@ describe.skipIf(!db || !hasConcurrentConnections())('the cases an analyst has be
       )
 
       // Read from Postgres rather than through the API, which renders a stamp
-      // with `toISOString()` and hides the microseconds this is about.
-      const stamps = await db!
+      // with `toISOString()` and hides the microseconds this is about -- by the
+      // seeding role, which reads every analyst's visits.
+      const stamps = await seed!
         .select({ at: caseVisits.visitedAt, caseId: caseVisits.caseId })
         .from(caseVisits)
         .where(eq(caseVisits.userId, SAM))
       const mine = made.map((id) => stamps.find((row) => row.caseId === id)?.at?.getTime())
       expect(mine.every((at) => at !== undefined), 'a visit is missing its row').toBe(true)
 
-      const microseconds = await db!.execute<{ ordered: boolean }>(
+      const microseconds = await seed!.execute<{ ordered: boolean }>(
         // `getTime()` above is milliseconds and would tie exactly as the API
         // does, so the strict-increase check has to happen in the database.
         // Column references come from the schema: the database spells these
@@ -247,7 +250,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the cases an analyst has be
        * which is correct - `visit()` runs once per transaction and cannot tie
        * in the shape that ships.
        */
-      const resolution = await db!.execute<{ sub: number }>(
+      const resolution = await seed!.execute<{ sub: number }>(
         sql`select count(*)::int as sub from ${caseVisits}
             where ${eq(caseVisits.userId, SAM)}
               and (extract(microseconds from ${caseVisits.visitedAt})::bigint % 1000) <> 0`,

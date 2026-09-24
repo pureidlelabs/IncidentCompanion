@@ -19,8 +19,8 @@
  *   roster shows names nobody proved.
  * - **Access to *that case*.** Authenticating and then trusting the id in the
  *   path is the classic IDOR: any signed-in analyst could open a socket on any
- *   case uuid and receive its presence and every change announcement. The HTTP
- *   routes have `CaseAccessGuard`; this is that check, run by hand.
+ *   case uuid and receive its presence and every change announcement. This
+ *   asks `ReachService.levelOnCase`, the question `CaseAccessGuard` asks.
  *
  * - **A password the account chose itself.** `MustChangePasswordInterceptor`
  *   returns `next.handle()` for any non-HTTP context, so a held account is
@@ -29,22 +29,19 @@
  *
  * `live.gateway.test.ts` asserts all four, because a missing one is invisible.
  */
-import { Inject, Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common'
+import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common'
 import { AuthService } from '@thallesp/nestjs-better-auth'
-import { eq } from 'drizzle-orm'
 import type { IncomingHttpHeaders, IncomingMessage, Server } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type * as Y from 'yjs'
 
-import { DATABASE } from '../db/db.module.js'
-import type { Database } from '../db/client.js'
-import { cases } from '../db/schema/index.js'
+import { actingAs } from '../db/scope.js'
 import { CaseChannel, type Member } from './case-channel.service.js'
 import { ProseService, type ProseRecord, type Writer } from '../prose/prose.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
-import { ReachService, type Level } from '../access/reach.service.js'
+import { ReachService } from '../access/reach.service.js'
 import { onReachChanged } from '../access/reach-changed.js'
 import { attribute } from '../wire/caller-address.js'
 
@@ -93,43 +90,6 @@ const CLAIMS_PER_CONNECTION = 64
 /** How many frames one connection may have waiting to be acted on before it is ended. */
 const FRAMES_WAITING = 256
 
-/**
- * Whether this analyst may be admitted to a socket on this case.
- *
- * **Read is enough and no more is asked.** A socket only ever shows what a
- * case holds, so requiring write here would lock a read-only analyst out of a
- * screen they are entitled to.
- *
- * **A case nobody has attributed is the default customer's**, matching
- * `CaseAccessGuard` - the two doors have to answer the same question the same
- * way, or the socket becomes the weaker one.
- */
-export async function levelOnCase(
-  db: Database,
-  reach: ReachService,
-  caseId: string,
-  userId: string,
-): Promise<Level | null> {
-  const [row] = await db
-    .select({ customerId: cases.customerId })
-    .from(cases)
-    .where(eq(cases.id, caseId))
-  if (!row) return null
-
-  const customerId = row.customerId ?? (await reach.defaultCustomerId())
-  if (!customerId) return null
-  return reach.levelFor(userId, customerId)
-}
-
-export async function reachesCase(
-  db: Database,
-  reach: ReachService,
-  caseId: string,
-  userId: string,
-): Promise<boolean> {
-  return (await levelOnCase(db, reach, caseId, userId)) !== null
-}
-
 interface OpenDocument {
   /** Which record this document is - a report, or one case note. */
   address: ProseRecord
@@ -150,7 +110,6 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
   constructor(
     private readonly channel: CaseChannel,
     private readonly auth: AuthService,
-    @Inject(DATABASE) private readonly db: Database,
     private readonly prose: ProseService,
     /**
      * **The socket audits itself, because nothing else can.** No guard, pipe,
@@ -159,8 +118,8 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
      */
     private readonly activity: InstallActivityService,
     /**
-     * **The socket's own copy of the reach question**, because no guard runs
-     * on an upgrade. -> `reachesCase`
+     * **The question the guard asks, asked by hand**, because no guard runs on
+     * an upgrade. Read is enough to be admitted; an edit asks again for write.
      */
     private readonly reach: ReachService,
   ) {
@@ -298,7 +257,7 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
     // Before the case lookup, so a held account learns nothing about which
     // case ids exist -- the same ordering reason the origin check comes first.
     if (session.held) return { refused: 'must-change-password' }
-    if (!(await reachesCase(this.db, this.reach, caseId, session.id))) {
+    if (!(await this.reach.levelOnCase(session.id, caseId))?.level) {
       return { refused: 'no-such-case' }
     }
 
@@ -438,7 +397,11 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
       }
       order = order
         .then(async () => {
-          if (await ready) await this.onFrame(member, writer, live, opened, claims, raw)
+          // Handled as the analyst the connection admitted, so each read and
+          // write a frame makes is scoped to what they reach.
+          if (await ready) {
+            await actingAs(member.userId, () => this.onFrame(member, writer, live, opened, claims, raw))
+          }
         })
         // One failed frame must not stop the ones behind it, nor the leave.
         .catch((error: unknown) => {
@@ -512,7 +475,7 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
     const field = `${table}:${id}`
     if (!claims.has(field) && claims.size >= CLAIMS_PER_CONNECTION) return
 
-    const level = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
+    const level = (await this.reach.levelOnCase(member.userId, member.caseId))?.level
     if (level !== 'write' && level !== 'delete') {
       live.send(JSON.stringify({ type: 'claim.refused', table, id, reason: 'read-only' }))
       return
@@ -575,7 +538,7 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
     // and a frame adding nothing are not edits: a read-only analyst sends both
     // to catch up.
     if (!this.prose.isStateRequest(frame)) {
-      const level = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
+      const level = (await this.reach.levelOnCase(member.userId, member.caseId))?.level
       if (level !== 'write' && level !== 'delete' && !this.prose.addsNothing(held.doc, frame)) {
         live.send(
           JSON.stringify({
