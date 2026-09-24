@@ -1,5 +1,5 @@
 <!--
-Version 1.0.0, unratified. The maintainer signs off once specifications exist, because this document is deliberately abstract and is expected to grow concrete from them.
+Version 1.1.0, unratified. The maintainer signs off once specifications exist, because this document is deliberately abstract and is expected to grow concrete from them.
 
 Each article states a property the system must have -- never the mechanism that achieves it, and never what the code does today. Four earlier drafts were discarded for carrying one or the other.
 
@@ -128,6 +128,10 @@ That ordering is the whole point, and it is what the old discipline could not pr
 
 **A test written against an implementation is not evidence that a specification is met.** It was written from what the code does, so it passes while the specification it was never shown remains unmet. Such a test is evidence where it happens to demonstrate a scenario, and evidence of nothing on its own — however much of the implementation it covers.
 
+**A scenario is demonstrated only by evidence that fails when the scenario is false.** That evidence MUST reach the product through the surface the scenario's actor uses, and MUST pass, unskipped, in the run that decides whether a change lands. A path existing, a test named after the property, and a test of a part the actor never reaches are not evidence. Whoever marks a scenario demonstrated MUST say what change to the product would turn its evidence red, and somebody else makes that change and sees it.
+
+**A green verdict on a change means every check able to see that change ran.** A check that was skipped, not scheduled, or reported nothing is a verdict of nothing, and MUST be reported as one rather than counted as a pass.
+
 ## Governance
 
 This constitution supersedes other practice. Where a document, a note or a habit disagrees with it, this file wins.
@@ -142,4 +146,4 @@ Promotion is an amendment and takes a MINOR bump. Nothing is promoted because it
 
 **Compliance.** Code that violates an article is the highest-severity finding available. An article that has come to name a mechanism, or to describe what the code does today, has drifted into specification and is rewritten as a property.
 
-**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE): awaiting maintainer sign-off | **Last Amended**: 2026-08-29
+**Version**: 1.1.0 | **Ratified**: TODO(RATIFICATION_DATE): awaiting maintainer sign-off | **Last Amended**: 2026-09-24

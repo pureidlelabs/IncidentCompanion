@@ -477,8 +477,11 @@ def bind_mount_root(built_image, tmp_path):
 
 
 @pytest.fixture
-def running_container(built_image):
+def running_container(built_image, record_property):
     """The whole stack, brought up the way an analyst brings it up.
+
+    Records `entry=compose` on the case, which is what `tests/certify.py` reads
+    as one that reached the install through its entry point.
 
     **One `up`, and the fixture may not sequence anything itself.** A fixture
     that starts the services in order, polls for a connection and applies the
@@ -498,6 +501,7 @@ def running_container(built_image):
         assert up.returncode == 0, (
             f"the stack did not come up from a single `up`, which is the whole "
             f"procedure an analyst follows:\n{up.stderr[-3000:]}")
+        record_property("entry", "compose")
         yield env
     finally:
         _compose("down", "-v", env=env)
@@ -542,10 +546,12 @@ def test_the_app_answers_on_the_published_port(running_container):
     assert _wait_for_app(HEALTH) == 200
 
 
-def test_an_install_at_loopback_is_never_told_to_stay_protected(running_container):
+@pytest.mark.parametrize("host", ["127.0.0.1", "localhost"])
+def test_an_install_at_loopback_is_never_told_to_stay_protected(running_container, host):
     """A loopback address is every application on the machine, so no response pins it."""
     _wait_for_app(HEALTH)
-    with urllib.request.urlopen(HEALTH, timeout=10, context=_UNVERIFIED) as answer:
+    asked = urllib.request.Request(HEALTH, headers={"Host": f"{host}:{PORT}"})
+    with urllib.request.urlopen(asked, timeout=10, context=_UNVERIFIED) as answer:
         assert answer.headers.get_all("Strict-Transport-Security") is None
 
 

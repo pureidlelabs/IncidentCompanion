@@ -137,6 +137,20 @@ IC_LANDING=1 $(bash scripts/venv_python.sh) -m pytest tests/docs/test_openspec_c
 - **`validate --all --strict` is owed whenever the branch touched `openspec/`**, at the same moment as the lint. It is a fact rather than a judgement, so depth does not apply. → `rules/git-workflow.md` §7a
 - **The CLI is a pinned dev dependency**, so `npx --no-install openspec` runs the local binary and refuses rather than reaching npm, where `openspec` unscoped is somebody else's package. `openspec` itself is not on `PATH`.
 
+## 6a — A row made demonstrated carries its falsifier
+
+**Every ledger row the branch makes `demonstrated`, or cites afresh, owes its falsifier in the pull request body**: the scenario, the cases it cites, and the change to the product that would make the scenario false, read from the scenario rather than from the test. The rows are the diff's own:
+
+```bash
+git diff origin/main -- openspec/matrix/scenarios.md | grep '^+.*| demonstrated |'
+```
+
+**A reviewer who is not the author makes that change, runs the cited cases, and records the red in the pull request**, then puts the product back. The merge group answers the rest by itself: `python3 -m tests.certify` refuses a row whose cited case is absent, skipped, failed or never reached the product.
+
+- **The falsifier breaks the product, never the test.** A mutation chosen by whoever wrote the assertion proves the test is connected and nothing more; one read off the scenario is what shows the evidence can fail when the scenario does.
+- **A branch that fixes an issue owes the same at the call site.** Put the issue's own defect back where the analyst meets it and show the cited cases red; a fix pinned at a helper leaves the door beside it unguarded.
+- **An `unbuilt` row citing an issue the branch closes is refused in the merge group.** Move the row, on the branch, to what the fix made true.
+
 ## 7 — The lint, and it does not scale with the review
 
 ```bash
