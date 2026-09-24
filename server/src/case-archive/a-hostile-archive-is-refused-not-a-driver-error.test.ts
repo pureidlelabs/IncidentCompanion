@@ -30,6 +30,7 @@ import { as } from '../../test/acting.js'
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
+import { ProseService } from '../prose/prose.service.js'
 import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
 import {
   CASE_NAME,
@@ -84,7 +85,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row t
       store,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
-    exporter = as(actorId, new ArchiveExportService(cases_, store, policy))
+    exporter = as(actorId, new ArchiveExportService(cases_, store, policy, new ProseService(db!)))
     importer = as(actorId, new ArchiveImportService(db!, store, policy))
   })
 

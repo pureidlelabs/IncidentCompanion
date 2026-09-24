@@ -16,6 +16,8 @@
 
 **One application process per install.** Every open connection lives in the process that judges it, so an ending reaches it when it is announced, or within the sweep where nothing announced it.
 
+**A document leaves the server as the live sync, as a rendered report, or copied into an archive**, and no read of a row returns it. What it holds is what it reads: deleted content is collected, and a removed section takes its prose with it.
+
 # Design
 
 ## Admission is re-derived, not assumed

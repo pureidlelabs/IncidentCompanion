@@ -91,20 +91,7 @@ export interface ProseChannelOptions {
  * is testable against a fake link, which a hook is not.
  */
 export class ProseChannel {
-  /**
-   * **`gc: false`, and it cannot be decided later.** A default document
-   * collects deleted content on the transaction that deletes it, so the past
-   * is gone before anything asks for it - `createDocFromSnapshot` throws on a
-   * collected origin, and a *snapshot exported* from one restores the wrong
-   * text with no error at all: `"finding was a false positive"` for
-   * `"the initial finding was a false positive"`.
-   *
-   * So this is a property of the stored record rather than of a session:
-   * every document that ever holds this field has to agree, because one
-   * collecting peer exports a record with the history already missing and
-   * every later reader inherits the loss. It costs blob size to keep.
-   */
-  readonly doc = new Y.Doc({ gc: false })
+  readonly doc = new Y.Doc()
   readonly awareness: Awareness
   status: SyncStatus = 'opening'
 
@@ -414,8 +401,7 @@ function releaseDocument(
  *
  * `docKey` addresses the record - `reports:<id>:document` - and the fragment
  * inside it is named by the caller when it configures the editor. One document
- * per report is what makes the awareness roster report-wide and gives the
- * report a single restore point.
+ * per report is what makes the awareness roster report-wide.
  */
 export function useProseSync(
   caseId: string,

@@ -23,7 +23,7 @@ import {
   reportDocument,
   type ProseRelay,
 } from './prose.service.js'
-import { caseNotes, cases, changeFeed, reports, user } from '../db/schema/index.js'
+import { caseNotes, cases, changeFeed, reportBlocks, reports, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
 
@@ -36,13 +36,16 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/** The fragments a test writes into: the sections of the report it last made, once it has made one. */
+let sections: [string, string] = ['block-1', 'block-2']
+
 /**
  * One client's edit as a raw Yjs update, with the document that made it.
  *
  * Raw, not framed: every caller wraps it in `framed` before the service sees
  * it, and the two are what this file's gate assertions turn on.
  */
-function typed(text: string, fragment = 'block-1'): { update: Uint8Array; doc: Y.Doc } {
+function typed(text: string, fragment = sections[0]): { update: Uint8Array; doc: Y.Doc } {
   const doc = new Y.Doc({ gc: false })
   doc.getXmlFragment(fragment).insert(0, [new Y.XmlText(text)])
   return { update: Y.encodeStateAsUpdate(doc), doc }
@@ -166,6 +169,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       .insert(reports)
       .values({ caseId: row.id, label: 'Under test', createdBy: actorId })
       .returning()
+    const made = await seed!
+      .insert(reportBlocks)
+      .values([0, 1].map((position) => ({ caseId: row.id, reportId: report!.id, position, createdBy: actorId })))
+      .returning({ id: reportBlocks.id })
+    sections = [made[0]!.id, made[1]!.id]
     return { caseId: row.id, reportId: report!.id }
   }
 
@@ -210,8 +218,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       ])
       expect(here).toBe(there)
 
-      here.getXmlFragment('block-1').insert(0, [new Y.XmlText('typed by the first analyst')])
-      expect(there.getXmlFragment('block-1').toJSON()).toContain('first analyst')
+      here.getXmlFragment(sections[0]).insert(0, [new Y.XmlText('typed by the first analyst')])
+      expect(there.getXmlFragment(sections[0]).toJSON()).toContain('first analyst')
 
       await prose.release(caseId, reportDocument(reportId))
       expect(there.isDestroyed).toBe(false)
@@ -222,7 +230,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       const { caseId, reportId } = await freshReport()
 
       const first = await prose.open(caseId, reportDocument(reportId))
-      first.getXmlFragment('block-1').insert(0, [new Y.XmlText('something to flush')])
+      first.getXmlFragment(sections[0]).insert(0, [new Y.XmlText('something to flush')])
 
       const leaving = prose.release(caseId, reportDocument(reportId))
       const second = await prose.open(caseId, reportDocument(reportId))
@@ -279,10 +287,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
     async function filed(): Promise<{ caseId: string; address: ReturnType<typeof reportDocument>; doc: Y.Doc }> {
       const { caseId, reportId } = await freshReport()
       const written = new Y.Doc({ gc: false })
-      written.getXmlFragment('block-1').insert(0, [new Y.XmlText('as filed')])
+      written.getXmlFragment(sections[0]).insert(0, [new Y.XmlText('as filed')])
       await seed!
         .update(reports)
-        .set({ document: Buffer.from(Y.encodeStateAsUpdate(written)), sentAt: SENT })
+        .set({ document: Buffer.from(Y.encodeStateAsUpdate(written)), sentAt: SENT, frozen: {}, frozenAt: SENT })
         .where(eq(reports.id, reportId))
       const address = reportDocument(reportId)
       return { caseId, address, doc: await prose.open(caseId, address) }
@@ -295,7 +303,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       const applied = await prose.apply(caseId, address, helloFrom(mine), 'a-socket', WRITER)
       Y.applyUpdate(mine, stepTwoPayload('reply' in applied ? applied.reply : null))
 
-      expect(mine.getXmlFragment('block-1').toJSON()).toContain('as filed')
+      expect(mine.getXmlFragment(sections[0]).toJSON()).toContain('as filed')
       await prose.release(caseId, address)
     })
 
@@ -336,11 +344,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
 
       const waiting = prose.apply(caseId, address, framed(typed('typed while it was sent').update), 'a-socket', WRITER)
       await new Promise((wake) => setTimeout(wake, 50))
-      expect(doc.getXmlFragment('block-1').toJSON()).not.toContain('typed while')
+      expect(doc.getXmlFragment(sections[0]).toJSON()).not.toContain('typed while')
 
       await seal.settle(stamp)
       expect(await waiting).toEqual({ refused: stamp })
-      expect(doc.getXmlFragment('block-1').toJSON()).not.toContain('typed while')
+      expect(doc.getXmlFragment(sections[0]).toJSON()).not.toContain('typed while')
       await prose.release(caseId, address)
     })
 
@@ -351,7 +359,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       await seal.settle(null)
 
       expect(await waiting).toEqual({ reply: null })
-      expect(doc.getXmlFragment('block-1').toJSON()).toContain('typed while a send failed')
+      expect(doc.getXmlFragment(sections[0]).toJSON()).toContain('typed while a send failed')
       await prose.release(caseId, address)
     })
 
@@ -437,7 +445,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       expect(row!.document).not.toBeNull()
 
       const reopened = await prose.open(caseId, reportDocument(reportId))
-      expect(reopened.getXmlFragment('block-1').toJSON()).toContain('false positive')
+      expect(reopened.getXmlFragment(sections[0]).toJSON()).toContain('false positive')
       await prose.release(caseId, reportDocument(reportId))
     })
 
@@ -449,35 +457,25 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       prose.applySync(first, framed(typed('half a sentence').update), 'a-socket')
       await prose.release(caseId, reportDocument(reportId))
 
-      prose.applySync(first, framed(typed(' and the rest', 'block-2').update), 'a-socket')
+      prose.applySync(first, framed(typed(' and the rest', sections[1]).update), 'a-socket')
       await prose.release(caseId, reportDocument(reportId))
 
       const reopened = await prose.open(caseId, reportDocument(reportId))
-      expect(reopened.getXmlFragment('block-2').toJSON()).toContain('and the rest')
-      await prose.release(caseId, reportDocument(reportId))
-    })
-
-    it('keeps deleted text, because the document does not collect', async () => {
-      // `gc: false` is a property of the record rather than of a session: one
-      // collecting peer exports a document with its history already gone, and
-      // every later reader inherits the loss.
-      const { caseId, reportId } = await freshReport()
-      const doc = await prose.open(caseId, reportDocument(reportId))
-      expect(doc.gc).toBe(false)
+      expect(reopened.getXmlFragment(sections[1]).toJSON()).toContain('and the rest')
       await prose.release(caseId, reportDocument(reportId))
     })
 
     it('holds two sections of one report in one document', async () => {
       const { caseId, reportId } = await freshReport()
       const doc = await prose.open(caseId, reportDocument(reportId))
-      prose.applySync(doc, framed(typed('summary text', 'block-a').update), 'a')
-      prose.applySync(doc, framed(typed('root cause text', 'block-b').update), 'b')
+      prose.applySync(doc, framed(typed('summary text', sections[0]).update), 'a')
+      prose.applySync(doc, framed(typed('root cause text', sections[1]).update), 'b')
       await prose.flush(caseId, reportDocument(reportId))
       await prose.release(caseId, reportDocument(reportId))
 
       const reopened = await prose.open(caseId, reportDocument(reportId))
-      expect(reopened.getXmlFragment('block-a').toJSON()).toContain('summary')
-      expect(reopened.getXmlFragment('block-b').toJSON()).toContain('root cause')
+      expect(reopened.getXmlFragment(sections[0]).toJSON()).toContain('summary')
+      expect(reopened.getXmlFragment(sections[1]).toJSON()).toContain('root cause')
       await prose.release(caseId, reportDocument(reportId))
     })
   })
@@ -812,6 +810,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
       .insert(reports)
       .values({ caseId: row.id, label: 'Under test', createdBy: actorId })
       .returning()
+    const made = await seed!
+      .insert(reportBlocks)
+      .values([0, 1].map((position) => ({ caseId: row.id, reportId: report!.id, position, createdBy: actorId })))
+      .returning({ id: reportBlocks.id })
+    sections = [made[0]!.id, made[1]!.id]
     return { caseId: row.id, reportId: report!.id }
   }
 
@@ -838,7 +841,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
 
     one.applySync(here, framed(typed('written on instance one').update), 'a-socket')
 
-    expect(there.getXmlFragment('block-1').toJSON()).toContain('written on instance one')
+    expect(there.getXmlFragment(sections[0]).toJSON()).toContain('written on instance one')
     await one.release(caseId, reportDocument(reportId))
     await two.release(caseId, reportDocument(reportId))
   })
@@ -878,7 +881,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
     await two.release(caseId, reportDocument(reportId))
 
     one.applySync(here, framed(typed('after the other left').update), 'a-socket')
-    expect(there.getXmlFragment('block-1').toJSON()).not.toContain('after the other left')
+    expect(there.getXmlFragment(sections[0]).toJSON()).not.toContain('after the other left')
     await one.release(caseId, reportDocument(reportId))
   })
 
@@ -888,7 +891,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
     const doc = await alone.open(caseId, reportDocument(reportId))
 
     alone.applySync(doc, framed(typed('no relay needed').update), 'a-socket')
-    expect(doc.getXmlFragment('block-1').toJSON()).toContain('no relay needed')
+    expect(doc.getXmlFragment(sections[0]).toJSON()).toContain('no relay needed')
     await alone.release(caseId, reportDocument(reportId))
   })
 })

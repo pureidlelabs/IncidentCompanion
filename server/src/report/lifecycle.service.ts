@@ -330,7 +330,12 @@ export class ReportLifecycleService {
 
         // Old block id -> the successor's block that took its place. The insert
         // above preserves order, so the two lists line up index for index.
-        const rekey = new Map(blocks.flatMap((block, at) => (copied[at] ? [[block.id, copied[at].id] as const] : [])))
+        // Written sections only: a correction starts from the report as it reads.
+        const rekey = new Map(
+          blocks.flatMap((block, at) =>
+            copied[at] && block.kind === WRITTEN_BLOCK ? [[block.id, copied[at].id] as const] : [],
+          ),
+        )
         const encoded = rekey.size > 0 ? rekeyed(source, rekey) : null
         if (encoded) {
           await tx.update(reports).set({ document: Buffer.from(encoded) }).where(eq(reports.id, fresh!.id))
