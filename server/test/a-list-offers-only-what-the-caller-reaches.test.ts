@@ -142,8 +142,8 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
     const groupId = String(group.json()['id'])
     for (const [path, body] of [
       [`/api/groups/${groupId}/customers`, { customerId }],
-      // `write`, because recording a visit is a PUT and the case guard reads the method.
-      [`/api/groups/${groupId}/members`, { userId: analyst.id, level: 'write' }],
+      // `read`: keeping a case in one's own list is not a write to the case.
+      [`/api/groups/${groupId}/members`, { userId: analyst.id, level: 'read' }],
     ] as const) {
       const granted = await call(admin, 'POST', path, body)
       expect(granted.status, granted.text).toBeLessThan(300)
@@ -166,5 +166,28 @@ describe.skipIf(!(await bootable()))('a list offers only what the caller reaches
     expect(revoked.status, revoked.text).toBeLessThan(300)
 
     expect(await namedBy(analyst, unreached)).toEqual([])
+  }, 120_000)
+
+  it('lets an analyst who only reads a case keep it in their own list, pin it and take it out again', async () => {
+    const reader = await account('analyst', '-reader')
+    const group = await call(admin, 'POST', '/api/groups', { name: `list-reader ${stamp}` })
+    expect(group.status, group.text).toBe(201)
+    const groupId = String(group.json()['id'])
+    for (const [path, body] of [
+      [`/api/groups/${groupId}/customers`, { customerId }],
+      [`/api/groups/${groupId}/members`, { userId: reader.id, level: 'read' }],
+    ] as const) {
+      const granted = await call(admin, 'POST', path, body)
+      expect(granted.status, granted.text).toBeLessThan(300)
+    }
+
+    const answers = [
+      (await call(reader, 'PUT', `/api/recent-cases/${unreached.id}`, { section: null })).status,
+      (await call(reader, 'PUT', `/api/recent-cases/${unreached.id}/pinned`, { pinned: true })).status,
+      (await call(reader, 'DELETE', `/api/recent-cases/${unreached.id}`)).status,
+    ]
+
+    expect(answers.every((status) => status < 300), `visit, pin, forget: ${answers.join(', ')}`).toBe(true)
+    expect(await namedBy(reader, unreached), 'the recent list kept the case it was asked to forget').not.toContain('/api/recent-cases (200)')
   }, 120_000)
 })

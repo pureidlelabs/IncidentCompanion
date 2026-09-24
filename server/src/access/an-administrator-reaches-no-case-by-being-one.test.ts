@@ -47,6 +47,7 @@ const ADMIN = 'plane-separation-admin'
 
 const asking = (caseId: string) =>
   ({
+    getHandler: () => () => undefined,
     switchToHttp: () => ({
       // The refusal is recorded once the answer closes, which these never do.
       getResponse: () => ({ once: () => undefined }),

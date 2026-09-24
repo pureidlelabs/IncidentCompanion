@@ -41,6 +41,7 @@ afterAll(async () => {
  */
 function asking(caseId: string | undefined) {
   return {
+    getHandler: () => () => undefined,
     switchToHttp: () => ({
       // The refusal is recorded once the answer closes, which these never do.
       getResponse: () => ({ once: () => undefined }),
@@ -152,6 +153,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
 
   function deleting(caseId: string, who: string) {
     return {
+      getHandler: () => () => undefined,
       switchToHttp: () => ({
         // The refusal is recorded once the answer closes, which these never do.
         getResponse: () => ({ once: () => undefined }),
