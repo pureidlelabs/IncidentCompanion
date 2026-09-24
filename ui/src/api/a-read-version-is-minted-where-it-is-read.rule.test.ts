@@ -53,23 +53,35 @@ describe('a read version is minted where the row is read', () => {
   })
 })
 
-describe('every versioned write leaves through the door', () => {
-  const writes = source.filter(
-    ({ path, text }) =>
-      path.startsWith('api/') &&
-      text.includes('/cases/') &&
-      /method: '(PATCH|DELETE)'|\/bulk-delete/.test(text),
-  )
+/** The index just past the parenthesis that closes the one opening at `open`. */
+function closing(text: string, open: number): number {
+  let depth = 0
+  for (let at = open; at < text.length; at += 1) {
+    if (text[at] === '(') depth += 1
+    else if (text[at] === ')' && (depth -= 1) === 0) return at + 1
+  }
+  return text.length
+}
 
+/** Every call of `request` that writes a versioned case row, with whether a door call encloses it. */
+const writes = source.flatMap(({ path, text }) =>
+  [...text.matchAll(/\brequest(?:<[^()]*?>)?\s*\(/g)].flatMap((call) => {
+    const at = call.index
+    const args = text.slice(at, closing(text, text.indexOf('(', at)))
+    if (!args.includes('/cases/') || !/method: '(PATCH|DELETE)'|\/bulk-delete/.test(args)) return []
+    const inside = [...text.matchAll(/\bwriteRows?\s*\(/g)].some(
+      (door) => door.index < at && closing(text, text.indexOf('(', door.index)) > at,
+    )
+    return [{ where: `${path}:${String(text.slice(0, at).split('\n').length)}`, inside }]
+  }),
+)
+
+describe('every versioned write leaves through the door', () => {
   it('finds the versioned writes at all', () => {
     expect(writes.length).toBeGreaterThanOrEqual(6)
   })
 
   it('sends none of them around it', () => {
-    const around = writes
-      .filter(({ text }) => !/\bwriteRows?\s*\(/.test(text))
-      .map(({ path }) => path)
-
-    expect(around).toEqual([])
+    expect(writes.filter(({ inside }) => !inside).map(({ where }) => where)).toEqual([])
   })
 })
