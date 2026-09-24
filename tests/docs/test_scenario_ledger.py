@@ -89,6 +89,34 @@ def test_a_row_carries_a_status_the_ledger_defines(row: tuple[str, str, str, str
     )
 
 
+#: A string literal in a test file, in any of the three quotes.
+LITERAL = re.compile(r"'((?:[^'\\\n]|\\.)*)'|\"((?:[^\"\\\n]|\\.)*)\"|`((?:[^`\\]|\\.)*)`")
+
+#: Where a title is filled in at run time: `it.each`'s `%s`, a `${}` or a `$name`.
+HOLE = re.compile(r"%[sdifjo#]|\$\{[^}]*\}|\$[\w.]+")
+
+#: A hook that runs while a case is current, and so tags it as the case's body would.
+PER_TEST_HOOK = re.compile(r"\b(beforeEach|afterEach|onTestFinished|onTestFailed)\(")
+
+
+def names_the_case(path: str, title: str) -> bool:
+    """Whether the file at `path` declares the case `title` ends in."""
+    text = (ROOT / path).read_text(encoding="utf-8")
+    last = re.sub(r"\[[^\]]*\]$", "", title.split(" > ")[-1])
+    if path.endswith(".py"):
+        return re.search(rf"def {re.escape(last)}\(", text) is not None
+    for match in LITERAL.finditer(text):
+        literal = next(g for g in match.groups() if g is not None)
+        literal = re.sub(r"\\u([0-9a-fA-F]{4})", lambda code: chr(int(code.group(1), 16)), literal)
+        literal = re.sub(r"\\(.)", r"\1", literal)
+        # A literal that is all hole, such as a bare `${path}`, would match any title.
+        if len(HOLE.sub("", literal).strip()) < 3:
+            continue
+        if re.fullmatch(".+".join(re.escape(part) for part in HOLE.split(literal)), last, re.S):
+            return True
+    return False
+
+
 @pytest.mark.parametrize("row", rows(), ids=lambda row: f"{row[0]}/{row[2]}"[:80])
 def test_what_a_status_owes_is_present(row: tuple[str, str, str, str, str]) -> None:
     """Each status owes something different, and an empty cell is how a claim goes unbacked."""
@@ -107,6 +135,16 @@ def test_what_a_status_owes_is_present(row: tuple[str, str, str, str, str]) -> N
             assert (ROOT / path).is_file(), (
                 f"{capability}: {scenario!r} cites {path!r}, which does not exist. A citation "
                 "that has moved is a scenario counted as demonstrated by nothing."
+            )
+            assert names_the_case(path, title), (
+                f"{capability}: {scenario!r} cites {title!r}, which {path} does not declare. "
+                "A mistyped title is caught here rather than when the merge group ejects the entry."
+            )
+            source = (ROOT / path).read_text(encoding="utf-8")
+            assert not ("app-harness" in source and PER_TEST_HOOK.search(source)), (
+                f"{capability}: {scenario!r} cites {path!r}, which declares a per-test hook. "
+                "The booted app tags whichever case is current, so a request made in a hook "
+                "tags a case whose own body reached nothing."
             )
             reaching = {"server", "screen", "containers"} | (
                 {"client"} if certify.renders_a_screen(path) else set()

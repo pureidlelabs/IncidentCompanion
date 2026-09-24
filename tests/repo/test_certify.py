@@ -101,7 +101,7 @@ def test_a_file_whose_every_case_skipped_is_not_counted_as_run(tmp_path: Path) -
     run = certify.read(vitest_report(tmp_path, files), set(files))
 
     assert certify.skips(run, partial=False) == [
-        "server/test/idle.test.ts :: waits: skipped, and ALLOWED_SKIPS gives no reason it may be"
+        "server/test/idle.test.ts :: waits: skipped by the server tier, and ALLOWED_SKIPS gives no reason it may be"
     ]
 
 
@@ -124,17 +124,22 @@ def test_a_skip_in_a_certifying_report_is_refused_unless_allowed(
 
     assert {line.rsplit(": skipped", 1)[0] for line in certify.skips(run, partial=False)} == {waits, later}
 
-    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {waits: "needs a compose project", runs: "runs elsewhere"})
+    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {
+        ("server", waits): "needs a compose project", ("server", runs): "runs elsewhere"})
     assert [line.rsplit(": skipped", 1)[0] for line in certify.skips(run, partial=False)] == [later]
 
     gone = "server/test/s.test.ts :: a door > was renamed"
-    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {waits: "needs a compose project", gone: "was flaky"})
-    assert f"{gone}: no report holds it, so ALLOWED_SKIPS excuses nothing (was flaky)" in certify.skips(
+    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {
+        ("server", waits): "needs a compose project", ("server", gone): "was flaky"})
+    assert f"{gone}: no server report holds it, so ALLOWED_SKIPS excuses nothing (was flaky)" in certify.skips(
         run, partial=False)
-    assert certify.skips(run, partial=True) == [f"{later}: skipped, and ALLOWED_SKIPS gives no reason it may be"]
+    assert certify.skips(run, partial=True) == [
+        f"{later}: skipped by the server tier, and ALLOWED_SKIPS gives no reason it may be"]
 
 
-def test_a_case_one_tier_skipped_and_another_ran_counts_as_run(tmp_path: Path) -> None:
+def test_a_case_one_tier_skipped_and_another_ran_counts_as_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     files = {"tests/docker/test_container_config.py": "import os, pytest\n"
              "def test_opt_in():\n    if not os.environ.get('OPT_IN'):\n        pytest.skip('opt-in')\n"}
     reports = junit_report(tmp_path, files, tier="repository")
@@ -151,7 +156,41 @@ def test_a_case_one_tier_skipped_and_another_ran_counts_as_run(tmp_path: Path) -
 
     assert run.cases["tests/docker/test_container_config.py :: test_opt_in"].status == "passed"
     assert run.ran == {"repository": set(files), "containers": set(files)}
+    opt_in = "tests/docker/test_container_config.py :: test_opt_in"
+    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {("repository", opt_in): "opt-in"})
     assert certify.skips(run, partial=True) == []
+
+
+def test_an_allowed_skip_is_allowed_only_in_the_tier_it_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    files = {"tests/docker/test_container_config.py": "import pytest\n"
+             "def test_opt_in():\n    pytest.skip('opt-in')\n"}
+    opt_in = "tests/docker/test_container_config.py :: test_opt_in"
+    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {("repository", opt_in): "opt-in"})
+    junit_report(tmp_path, files, tier="repository")
+    reports = junit_report(tmp_path, files, tier="containers")
+
+    refused = certify.skips(certify.read(reports, set(files)), partial=False)
+
+    assert refused == [f"{opt_in}: skipped by the containers tier, and ALLOWED_SKIPS gives no reason it may be"]
+
+
+def test_a_file_that_declares_no_test_is_refused(tmp_path: Path) -> None:
+    files = {"server/test/hollow.test.ts": "describe('a door', () => {})\n"}
+    run = certify.read(vitest_report(tmp_path, files), set(files))
+
+    assert "server/test/hollow.test.ts: ran no test" in certify.completeness(run, list(files), partial=False)
+
+
+def test_two_cases_of_one_title_in_one_tier_are_refused(tmp_path: Path) -> None:
+    files = {"server/test/twice.test.ts": "it('holds', () => {})\nit.skip('holds', () => {})\n"}
+    run = certify.read(vitest_report(tmp_path, files), set(files))
+
+    assert (
+        "server/test/twice.test.ts :: holds: reported twice by the server tier, so a citation of it "
+        "names neither" in certify.completeness(run, list(files), partial=False)
+    )
 
 
 def test_a_skip_in_a_junit_report_is_read_as_one(tmp_path: Path) -> None:

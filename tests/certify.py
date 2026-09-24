@@ -26,6 +26,7 @@ not run rather than refused, and a row citing it is counted uncertified.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import subprocess
@@ -87,31 +88,35 @@ UNREAD = {
 #: count only for a `state` row.
 STORE_SURFACE: dict[str, str] = {}
 
-#: Test ids a run may report skipped, each with the reason it cannot run there.
-#: One no report holds is refused, so an entry cannot outlive its test.
-ALLOWED_SKIPS: dict[str, str] = {
-    "server/test/stack.test.ts :: the per-worktree stack derivation > creates the three roles "
-    "the app connects as": "needs a compose project, and CI raises Postgres as a service container",
-    "tests/docs/test_openspec_consistency.py :: "
-    "test_every_change_the_landing_archives_is_folded_into_specs": "armed in the merge group alone",
-    "tests/docs/test_openspec_consistency.py :: "
-    "test_the_tree_being_landed_carries_nothing_in_flight": "armed in the merge group alone",
+EDGE_IMAGE_FILE = "tests/docker/test_container_config.py"
+
+
+def _needs_edge_image() -> list[str]:
+    """The cases `EDGE_IMAGE_FILE` gates behind the edge image, read from its decorators."""
+    tree = ast.parse((REPO_ROOT / EDGE_IMAGE_FILE).read_text(encoding="utf-8"))
+    return [
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and any(isinstance(mark, ast.Name) and mark.id == "needs_edge_image" for mark in node.decorator_list)
+    ]
+
+
+#: Tests a tier may report skipped, by tier and id, each with the reason it cannot
+#: run there. One no report holds is refused, so an entry cannot outlive its test.
+ALLOWED_SKIPS: dict[tuple[str, str], str] = {
+    ("server", "server/test/stack.test.ts :: the per-worktree stack derivation > creates the three roles "
+     "the app connects as"): "needs a compose project, and CI raises Postgres as a service container",
+    ("repository", "tests/docs/test_openspec_consistency.py :: "
+     "test_every_change_the_landing_archives_is_folded_into_specs"): "armed in the merge group alone",
+    ("repository", "tests/docs/test_openspec_consistency.py :: "
+     "test_the_tree_being_landed_carries_nothing_in_flight"): "armed in the merge group alone",
     **{
-        f"tests/docker/test_container_config.py :: {name}": "opt-in: the containers tier runs it"
-        for name in (
-            "test_the_first_start_with_nothing_supplied_still_mints",
-            "test_a_sound_supplied_pair_is_left_byte_identical",
-            "test_a_malformed_supplied_certificate_is_named_and_not_minted_over",
-            "test_an_expired_supplied_certificate_is_named_and_not_minted_over",
-            "test_a_certificate_and_key_that_do_not_match_is_named_and_not_minted_over",
-            "test_a_certificate_not_covering_the_reached_name_is_named_and_not_minted_over",
-            "test_the_operator_supplied_name_is_honoured",
-            "test_half_a_pair_is_refused_rather_than_completed",
-            "test_the_tls_cases_run_inside_the_image_rather_than_on_the_host",
-        )
+        ("repository", f"{EDGE_IMAGE_FILE} :: {name}"): "opt-in: the containers tier runs it"
+        for name in _needs_edge_image()
     },
     **{
-        f".claude/tests/test_hooks_import_on_the_oldest_python.py :: {name}[NOTSET]": "no hook guard exists"
+        ("repository", f".claude/tests/test_hooks_import_on_the_oldest_python.py :: {name}[NOTSET]"): "no hook guard exists"
         for name in (
             "test_every_guard_names_a_python_floor",
             "test_the_gate_blocks_rather_than_permits",
@@ -133,9 +138,11 @@ class Case:
 
 @dataclass
 class Run:
-    """What a run's reports hold: its cases by id, and the files each tier ran."""
+    """What a run's reports hold: its cases by id and by tier, and the files each tier ran."""
 
     cases: dict[str, Case] = field(default_factory=dict)
+    by_tier: dict[tuple[str, str], str] = field(default_factory=dict)
+    twice: set[tuple[str, str]] = field(default_factory=set)
     ran: dict[str, set[str]] = field(default_factory=dict)
     empty: set[str] = field(default_factory=set)
 
@@ -186,6 +193,10 @@ _RANK = {"skipped": 0, "passed": 1, "failed": 2}
 
 def _record(run: Run, ident: str, case: Case) -> None:
     """Keeps `case` unless another report of the same test outranks it."""
+    key = (case.tier, ident)
+    if key in run.by_tier:
+        run.twice.add(key)
+    run.by_tier[key] = case.status
     kept = run.cases.get(ident)
     if kept is None or _RANK[case.status] > _RANK[kept.status]:
         run.cases[ident] = case
@@ -296,21 +307,36 @@ def completeness(run: Run, files: list[str], partial: bool) -> list[str]:
             elif path not in run.ran[tier]:
                 refused.append(f"{path}: the {tier} tier's reports do not hold it")
     refused += [f"{path}: ran no test" for path in sorted(run.empty)]
+    refused += [
+        f"{ident}: reported twice by the {tier} tier, so a citation of it names neither"
+        for tier, ident in sorted(run.twice)
+    ]
     return refused
+
+
+def _function(ident: str) -> str:
+    """A parametrised case's id without its parameters."""
+    return re.sub(r"\[.*\]$", "", ident)
+
+
+def _allowed(tier: str, ident: str) -> bool:
+    """Whether ALLOWED_SKIPS excuses `ident` in `tier`, by its id or by its function's."""
+    return (tier, ident) in ALLOWED_SKIPS or (tier, _function(ident)) in ALLOWED_SKIPS
 
 
 def skips(run: Run, partial: bool) -> list[str]:
     """Every skip not allowed, and, where every tier reported, every allowance naming no test."""
     refused = [
-        f"{ident}: skipped, and ALLOWED_SKIPS gives no reason it may be"
-        for ident, case in run.cases.items()
-        if case.status == "skipped" and ident not in ALLOWED_SKIPS
+        f"{ident}: skipped by the {tier} tier, and ALLOWED_SKIPS gives no reason it may be"
+        for (tier, ident), status in run.by_tier.items()
+        if status == "skipped" and not _allowed(tier, ident)
     ]
     if not partial:
+        held = {(tier, _function(ident)) for tier, ident in run.by_tier} | set(run.by_tier)
         refused += [
-            f"{ident}: no report holds it, so ALLOWED_SKIPS excuses nothing ({reason})"
-            for ident, reason in ALLOWED_SKIPS.items()
-            if ident not in run.cases
+            f"{ident}: no {tier} report holds it, so ALLOWED_SKIPS excuses nothing ({reason})"
+            for (tier, ident), reason in ALLOWED_SKIPS.items()
+            if (tier, ident) not in held
         ]
     return refused
 
