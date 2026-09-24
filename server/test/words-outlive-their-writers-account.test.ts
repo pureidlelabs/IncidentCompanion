@@ -1,5 +1,5 @@
 /**
- * Prose whose latest writer's account is deleted before the save is stored, attributed to the writers who remain.
+ * Prose whose latest writer's account is deleted before the save is stored, with that writer named as nobody.
  */
 import { randomUUID } from 'node:crypto'
 
@@ -61,7 +61,7 @@ describe.skipIf(!(await bootable()))('prose whose writer is gone', () => {
     await harness?.close()
   })
 
-  it('stores what was typed and names only the writers whose accounts remain', async () => {
+  it('stores what was typed, and names a writer whose account is gone as nobody', async () => {
     const note = await post<{ id: string }>(`/api/cases/${caseId}/casenotes`, { note: 'first words' })
     const address: ProseRecord = { table: 'casenotes', id: note.id }
     const gone = { id: randomUUID() }
@@ -87,13 +87,13 @@ describe.skipIf(!(await bootable()))('prose whose writer is gone', () => {
       .where(eq(caseNotes.id, note.id))
     const stored = Buffer.from(row!.document ?? []).toString('utf8')
     expect(stored).toContain(`words from an account about to go ${STAMP}`)
-    expect(row!.updatedBy).toBe(analyst.id)
+    expect(row!.updatedBy).toBeNull()
     const feed = await seed
       .select({ actorId: changeFeed.actorId })
       .from(changeFeed)
       .where(and(eq(changeFeed.entity, 'casenotes'), eq(changeFeed.entityId, note.id)))
-    expect(feed.map((one) => one.actorId)).not.toContain(gone.id)
-    expect(feed.map((one) => one.actorId)).toContain(analyst.id)
+      .orderBy(changeFeed.seq)
+    expect(feed.map((one) => one.actorId).slice(-2)).toEqual([analyst.id, null])
     await prose.release(caseId, address)
   })
 })
