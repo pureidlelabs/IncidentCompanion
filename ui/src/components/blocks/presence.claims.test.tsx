@@ -173,47 +173,32 @@ describe('the provider is stable enough to hold a table', () => {
 })
 
 
-describe('the claim holds the row, not just marks it', () => {
+describe('a claim warns, and leaves the row editable', () => {
   /**
-   * Two analysts in one edit dialog is a guaranteed conflict, and being told
-   * before starting beats a merge review afterwards.
-   *
-   * It cannot wedge a row - the claim is released on close, on unmount, on a
-   * dropped socket and by a TTL - and it is not the only protection, because
-   * the API door and a dropped socket both bypass it. The row version and the
-   * review are still underneath.
+   * Two analysts in one row is worth knowing before starting, and a hold is a
+   * courtesy rather than a lock: the version check decides the write, and a
+   * pencil that refuses because a colleague has the dialog open is a lock by
+   * another name.
    */
-  it('refuses edit and delete while somebody else is in the row', () => {
+  it('leaves edit and delete live while somebody else is in the row', () => {
     render(<RowActions label="host-a" heldBy="r.okonkwo"
       onEdit={offered} onDelete={offered} />)
 
-    // **`aria-disabled`, not `toBeDisabled()`.** Base UI's toolbar button
-    // keeps a disabled item focusable and in the roving tab order - which is
-    // right, since a control an analyst cannot reach is a control they cannot
-    // discover the reason for - so there is no native `disabled` attribute
-    // and jest-dom's matcher reports it as enabled.
     expect(screen.getByLabelText('Edit host-a in full')
-      .getAttribute('aria-disabled')).toBe('true')
+      .getAttribute('aria-disabled')).not.toBe('true')
     expect(screen.getByLabelText('Delete host-a')
-      .getAttribute('aria-disabled')).toBe('true')
+      .getAttribute('aria-disabled')).not.toBe('true')
   })
 
-  it('says who, on the control that is refusing', async () => {
-    // A disabled pencil with no reason reads as a permission the analyst does
-    // not have. Naming the colleague makes it a thing to resolve by asking.
-    //
+  it('says who, on the control', async () => {
     // **A tooltip, where this was a `title` attribute.** React Aria drops
     // `title` - `filterDOMProps` passes `id`, the aria-labelling props and five
-    // globals, and nothing else - so the attribute never reached the DOM. The
-    // property is the same and the mechanism is better: a `title` is invisible
-    // to the keyboard and to touch, and this control stays focusable while
-    // refusing precisely so the reason can be reached.
+    // globals, and nothing else - so the attribute never reached the DOM. A
+    // `title` is invisible to the keyboard and to touch; focus shows this one.
     render(<RowActions label="host-a" heldBy="r.okonkwo" onEdit={offered} />)
 
     // Focus rather than hover: React Aria warms a hover tooltip for 1500ms
-    // and shows a focused one at once. Focus is the path that matters here --
-    // the control keeps its tab stop so the refusal is reachable without a
-    // pointer.
+    // and shows a focused one at once.
     await userEvent.tab()
 
     expect(screen.getByLabelText('Edit host-a in full')).toHaveFocus()
@@ -230,9 +215,6 @@ describe('the claim holds the row, not just marks it', () => {
   })
 
   it('still lets the row be expanded and read', () => {
-    // Held is not hidden. An analyst who cannot edit a row can still look at
-    // it, and taking that away would let a colleague's open dialog blank a
-    // section of the case.
     render(<RowActions label="host-a" heldBy="r.okonkwo" expanded={false}
       onToggleExpanded={offered} onEdit={offered} />)
 

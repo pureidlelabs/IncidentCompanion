@@ -89,12 +89,16 @@ vi.mock('@/api/useSession', () => ({ useSession: () => session() }))
 vi.mock('@/lib/useGround', () => ({
   useGround: () => ({ theme: 'system', setTheme: vi.fn() }),
 }))
-// The providers open a socket and read the claims roster; neither says
-// anything about which value reaches which slot.
+// The providers open a socket and read the claims roster, and the change feed
+// listens on the same socket; none of them says anything about which value
+// reaches which slot.
 const sentinel = vi.fn<() => boolean | undefined>()
 vi.mock('@/api/importPlatforms', () => ({ useSentinelOffered: () => sentinel() }))
 vi.mock('@/app/case/CaseProviders', () => ({
   CaseProvidersLive: ({ children }: { children: React.ReactNode }) => children,
+}))
+vi.mock('@/api/useCaseChanges', () => ({
+  useCaseChanges: () => ({ behind: false, failed: false, reread: vi.fn() }),
 }))
 
 /** A case the server has answered for, with one section carrying a tally. */

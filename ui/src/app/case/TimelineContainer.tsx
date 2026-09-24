@@ -63,14 +63,7 @@ export function TimelineContainer() {
             }),
       ),
 
-    remove: (ids) =>
-      removeSelection(
-        bulkDelete,
-        'timeline',
-        ids,
-        () => kase.data?.timeline ?? [],
-        'the selected entries',
-      ),
+    remove: (rows) => removeSelection(bulkDelete, 'timeline', rows, 'the selected entries'),
   }
 
   return (

@@ -87,27 +87,10 @@ export function caseGroupsFor(fields: readonly FieldSpec[], key: CaseGroupKey): 
 }
 
 /**
- * Which pane holds the field a refusal names, by the label the analyst read.
+ * Which pane holds a field, by the name the schema carries.
  *
- * A refusal carries the label rather than the wire name, so the lookup is by
- * label. An unrecognised label answers `details`: the band has to be shown
- * somewhere, and a refusal drawn on no pane at all is a lost write that the
- * screen reports as a clean save.
- */
-export function paneHoldingLabel(fields: readonly FieldSpec[], label: string): CaseGroupKey {
-  const wanted = label.trim().toLowerCase()
-  const found = groupedCaseFields(fields).find((group) =>
-    group.fields.some((field) => field.label.trim().toLowerCase() === wanted),
-  )
-  return found?.key ?? 'details'
-}
-
-/**
- * Which pane holds the field a door names, by the name the schema carries.
- *
- * `undefined` for a name no pane holds, which is the difference from
- * `paneHoldingLabel`: a refusal has to be drawn somewhere, and a door naming
- * nothing is a door to nowhere rather than one to `details`.
+ * `undefined` for a name no pane holds: a door naming nothing is a door to
+ * nowhere rather than one to `details`.
  */
 export function paneHoldingName(
   fields: readonly FieldSpec[],

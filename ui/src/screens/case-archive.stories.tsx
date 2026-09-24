@@ -165,7 +165,7 @@ export const ExportedUnencrypted: Story = {
   args: { onExport: fn() },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('The archive leaves unencrypted.')).toBeVisible()
+    await expect(canvas.getByText('The archive leaves unencrypted, and anyone holding it can change it without that showing. Seal it to make a change evident.')).toBeVisible()
     await userEvent.click(await canvas.findByRole('button', { name: /export archive/i }))
     await expect(args.onExport).toHaveBeenCalledWith({ passphrase: '', files: true })
   },

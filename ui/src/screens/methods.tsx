@@ -2,10 +2,12 @@ import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import type { Case, MethodEntry } from '@/api/model'
+import { editedAt, type Drawn, type Read } from '@/api/rowWrite'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 import { formSpec, type Specs } from '@/api/specs'
 import { suggestionsFor } from '@/api/suggestions'
 import { Absent } from '@/components/ui/absent'
-import { BulkActionBar, bulkFieldsFor } from '@/components/blocks/bulk-actions'
+import { BulkActionBar, bulkFieldsFor, selected } from '@/components/blocks/bulk-actions'
 import { Collection } from '@/components/blocks/collection'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { SelectCell, TextCell } from '@/components/blocks/data-cell'
@@ -60,10 +62,10 @@ import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
  */
 export interface MethodWrites {
   /** `entry` null creates. Resolves with the stored row. */
-  save: (entry: MethodEntry | null, fields: Partial<MethodEntry>) => Promise<MethodEntry>
+  save: (entry: Drawn<MethodEntry> | null, fields: Partial<MethodEntry>) => Promise<MethodEntry>
   /** One patch across a named selection. Resolves with the stored rows. */
-  patch: (ids: readonly string[], fields: Partial<MethodEntry>) => Promise<readonly MethodEntry[]>
-  remove: (ids: readonly string[]) => Promise<void>
+  patch: (rows: readonly BulkPatchRow[], fields: Partial<MethodEntry>) => Promise<readonly MethodEntry[]>
+  remove: (rows: readonly BulkPatchRow[]) => Promise<void>
 }
 
 export interface MethodsScreenProps {
@@ -125,9 +127,9 @@ function galleryWrites(): MethodWrites {
   return {
     save: (entry, fields) =>
       Promise.resolve(
-        entry ? { ...entry, ...fields } : { ...BLANK_METHOD, ...fields, id: localId('method') },
+        entry ? { ...entry, ...fields, version: entry.version + 1 } : { ...BLANK_METHOD, ...fields, id: localId('method') },
       ),
-    patch: (ids, fields) => Promise.resolve(ids.map((id) => ({ ...BLANK_METHOD, ...fields, id }))),
+    patch: (chosen, fields) => Promise.resolve(chosen.map(({ id }) => ({ ...BLANK_METHOD, ...fields, id }))),
     remove: () => Promise.resolve(),
   }
 }
@@ -158,7 +160,7 @@ export function MethodsScreen({
 
   const [query, setQuery] = useState(search)
 
-  const [deleting, setDeleting] = useState<string[] | null>(null)
+  const [deleting, setDeleting] = useState<BulkPatchRow[] | null>(null)
   const editor = useRowEditor<MethodEntry>()
 
   const form = useMemo(
@@ -244,7 +246,8 @@ export function MethodsScreen({
       // Delete asks before it acts either way -- the confirmation is the
       // screen's, and only the answer leaves.
       remove: (id) => {
-        setDeleting([id])
+        const found = rows.find((row) => row.id === id)
+        if (found) setDeleting([selected(found)])
       },
       edit: (id) => {
         const found = rows.find((row) => row.id === id)
@@ -261,7 +264,7 @@ export function MethodsScreen({
    * resolves and stays open with the reason when it does not, so closing here
    * would throw the draft away before the server had answered for it.
    */
-  const save = (entry: MethodEntry | null, fields: Partial<MethodEntry>) =>
+  const save = (entry: Drawn<MethodEntry> | null, fields: Partial<MethodEntry>) =>
     inFlight(entry ? [entry.id] : [], async () => {
       const stored = await write.save(entry, fields)
       setRows((was) =>
@@ -292,9 +295,9 @@ export function MethodsScreen({
         <BulkActionBar
           table={table}
           fields={bulkFields}
-          onApply={(ids, fields) => {
-            void inFlight(ids, async () => {
-              for (const stored of await write.patch(ids, fields)) {
+          onApply={(chosen, fields) => {
+            void inFlight(chosen.map((row) => row.id), async () => {
+              for (const stored of await write.patch(chosen, fields)) {
                 setRows((was) => was.map((row) => (row.id === stored.id ? stored : row)))
               }
             })
@@ -317,16 +320,19 @@ export function MethodsScreen({
       }}
     >
       <ConfirmDeleteDialog
-        ids={deleting}
+        rows={deleting}
         onOpenChange={(isOpen) => {
           if (!isOpen) setDeleting(null)
         }}
+        named={(id) => rows.find((row) => row.id === id)?.name}
+        // **Returned**, so a refusal keeps the dialog open and names the rows that moved.
         onConfirm={() => {
           const doomed = deleting ?? []
-          table.resetRowSelection()
-          void inFlight(doomed, async () => {
+          const gone = new Set(doomed.map((row) => row.id))
+          return inFlight([...gone], async () => {
             await write.remove(doomed)
-            setRows((was) => was.filter((row) => !doomed.includes(row.id)))
+            table.resetRowSelection()
+            setRows((was) => was.filter((row) => !gone.has(row.id)))
           })
         }}
         title={(count) =>
@@ -346,8 +352,12 @@ export function MethodsScreen({
           suggestions={suggestions}
           // No `references`: a method points at nothing. The reference runs the
           // other way, from the collections that cite one.
-          {...(editor.editing ? { entry: editor.editing } : {})}
-          onCreate={(fields) => save(editor.editing, fields)}
+          {...(editor.editing
+            ? { entry: editor.editing, served: rows.find((row) => row.id === editor.editing?.id) }
+            : {})}
+          onCreate={(fields, read?: Read) =>
+            save(editedAt(editor.editing, read), fields)
+          }
         />
       )}
     </Collection>

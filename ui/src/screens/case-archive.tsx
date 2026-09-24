@@ -117,7 +117,7 @@ export function CaseArchiveScreen({
           </Button>
           <span className="text-xs text-ink-muted">
             {secret === ''
-              ? 'The archive leaves unencrypted.'
+              ? 'The archive leaves unencrypted, and anyone holding it can change it without that showing. Seal it to make a change evident.'
               : 'The archive is encrypted with this passphrase.'}
           </span>
         </div>

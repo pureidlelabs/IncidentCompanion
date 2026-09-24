@@ -60,3 +60,13 @@ export function coerceTimes(
   }
   return out
 }
+
+/**
+ * `table`'s columns without its binary ones, for any row a caller is answered
+ * with. A binary column holds a document or a picture, read by its own door.
+ */
+export function wired<T extends PgTable>(table: T): ReturnType<typeof getTableColumns<T>> {
+  return Object.fromEntries(
+    Object.entries(getTableColumns(table)).filter(([, column]) => column.getSQLType() !== 'bytea'),
+  )
+}

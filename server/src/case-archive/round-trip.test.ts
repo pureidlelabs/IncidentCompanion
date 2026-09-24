@@ -21,6 +21,7 @@ import * as Y from 'yjs'
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
+import { ProseService } from '../prose/prose.service.js'
 import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
 import { isSealed } from '../archive/envelope.js'
 import { readArchive } from '../archive/format.js'
@@ -196,7 +197,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () =
       actorId,
       new CasesService(db!, store, { announce: () => {}, othersOn: () => Promise.resolve([]) } as never),
     )
-    exporter = as(actorId, new ArchiveExportService(cases_, store, policy))
+    exporter = as(actorId, new ArchiveExportService(cases_, store, policy, new ProseService(db!)))
     importer = as(actorId, new ArchiveImportService(db!, store, policy))
   })
 

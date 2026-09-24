@@ -2,8 +2,7 @@
  * `POST /api/cases/{id}/{collection}/bulk` - many rows, one undo frame,
  * all-or-nothing.
  *
- * **No optimistic update**, unlike `useEntryCreate`: a caller sending a batch
- * has nothing to draw as placeholders, so a plain invalidate on success is
+ * **Nothing is drawn before the answer**: a plain invalidate on success is
  * what brings the server-assigned rows back.
  *
  * **The error is not unwrapped here.** The server reports `"row N: ..."` for

@@ -57,6 +57,9 @@ describe('a compliance stamp', () => {
     await userEvent.clear(screen.getByLabelText('Became aware date'))
     await userEvent.clear(screen.getByLabelText('Became aware time'))
 
-    expect(mutateAsync).toHaveBeenCalledExactlyOnceWith({ gdprAwareAt: null })
+    expect(mutateAsync).toHaveBeenCalledExactlyOnceWith({
+      version: record.version,
+      fields: { gdprAwareAt: null },
+    })
   })
 })

@@ -318,7 +318,7 @@ export function CaseList({
           renders the refusal rather than closing on a delete that did not
           happen. */}
       <ConfirmDeleteDialog
-        ids={deleting}
+        rows={deleting}
         onOpenChange={(open) => {
           if (!open) setDeleting(null)
         }}

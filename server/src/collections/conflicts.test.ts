@@ -438,7 +438,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
         mine: { label: 'AFTER IT WAS SENT' },
       })
 
-      await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
+      await seed!.update(reports).set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() }).where(eq(reports.id, reportId))
 
       await expect(service.resolve(caseId, ME, 'mine')).rejects.toSatisfy((error) => sentReportRefusal(error) !== undefined)
 
@@ -475,7 +475,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
       // and the assertion below passes for the wrong reason.
       await seed!
         .update(reports)
-        .set({ label: 'Theirs', sentAt: new Date() })
+        .set({ label: 'Theirs', sentAt: new Date(), frozen: {}, frozenAt: new Date() })
         .where(eq(reports.id, reportId))
 
       await expect(service.resolve(caseId, ME, 'mine')).rejects.toThrow()
@@ -521,7 +521,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
         base: { heading: 'Before it was sent' },
         mine: { heading: 'AFTER IT WAS SENT' },
       })
-      await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
+      await seed!.update(reports).set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() }).where(eq(reports.id, reportId))
 
       await expect(service.resolve(caseId, ME, 'mine')).rejects.toSatisfy((error) => sentReportRefusal(error) !== undefined)
 

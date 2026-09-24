@@ -470,7 +470,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () =
       .spyOn(render, 'render')
       .mockImplementation(async (...args: Parameters<typeof real>) => {
         const drawn = await real(...args)
-        await seed!.update(reports).set({ sentAt: winnerStamp }).where(eq(reports.id, reportId))
+        await seed!.update(reports).set({ sentAt: winnerStamp, frozen: drawn.document_, frozenAt: winnerStamp }).where(eq(reports.id, reportId))
         return drawn
       })
 

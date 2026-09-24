@@ -13,7 +13,7 @@ import { eq } from 'drizzle-orm'
 import { columnOf } from '../db/column-access.js'
 import type { Transaction } from '../db/client.js'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
-import { hasCrossFieldRule } from '../domain/field-spec.js'
+import { crossFieldIssue, hasCrossFieldRule } from '../domain/field-spec.js'
 import type { CollectionDefinition } from './collection.service.js'
 import { danglingReferences, refusalFor } from './reference-check.js'
 
@@ -149,27 +149,6 @@ export async function refuseIfCrossFieldRuleBroken(
   if (!stored) return
   if (expectedVersion !== undefined && stored['version'] !== expectedVersion) return
 
-  // **The stored half comes out of Drizzle, the patch half off the wire, and
-  // they spell a time differently.** A `timestamp` column reads back as a
-  // `Date`; the schemas declare `z.iso.datetime()`, a string. Parsing the
-  // merge without this refuses a patch that never touched the time, and only
-  // on rows where the timestamp is set -- which is why it survived the first
-  // two tests here.
-  //
-  // **On the value, not the column type**, so a `date()` column in date mode
-  // is caught as well -- a `columnType.startsWith('PgTimestamp')` predicate,
-  // which is what `coerceTimes` uses, would let one through.
-  //
-  // The open half: a field declared `z.iso.date()` would be handed a full
-  // datetime and reject it. No schema has one today; add the date-only
-  // spelling here when the first does.
-  const wire = Object.fromEntries(
-    Object.entries(stored).map(([key, value]) =>
-      [key, value instanceof Date ? value.toISOString() : value]),
-  )
-
-  const merged = schema.safeParse({ ...wire, ...patch })
-  if (!merged.success) {
-    throw new BadRequestException({ message: merged.error.issues[0]?.message ?? 'Invalid' })
-  }
+  const issue = crossFieldIssue(schema, { ...stored, ...patch })
+  if (issue) throw new BadRequestException({ message: issue })
 }

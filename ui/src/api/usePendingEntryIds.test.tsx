@@ -6,8 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setSession } from './session'
 import { useBulkPatch } from './useBulkPatch'
 import { useEntryMutation } from './useEntryMutation'
+import { drawn } from './rowWrite'
 import { usePendingEntryIds } from './usePendingEntryIds'
 
+const at = (version: number) => drawn({ version }).version
 const CASE = 'DEMO-CAMPAIGN'
 
 const fetchMock = vi.fn<typeof fetch>()
@@ -45,7 +47,7 @@ describe('usePendingEntryIds', () => {
     const pending = renderHook(() => usePendingEntryIds(CASE, 'systems'), { wrapper })
 
     act(() => {
-      patch.result.current.mutate({ entryId: 's1', version: 1, fields: { verdict: 'clean' } })
+      patch.result.current.mutate({ entryId: 's1', version: at(1), fields: { verdict: 'clean' } })
     })
 
     await waitFor(() => {
@@ -65,9 +67,9 @@ describe('usePendingEntryIds', () => {
       // The rows carry versions; the set must hold bare ids.
       bulk.result.current.mutate({
         ids: [
-          { id: 's1', version: 1 },
-          { id: 's2', version: 1 },
-          { id: 's3', version: 1 },
+          { id: 's1', version: at(1) },
+          { id: 's2', version: at(1) },
+          { id: 's3', version: at(1) },
         ],
         fields: { verdict: 'clean' },
       })

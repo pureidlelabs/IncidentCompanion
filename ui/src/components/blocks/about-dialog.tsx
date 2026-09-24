@@ -8,12 +8,12 @@ import { Dialog, DialogBody } from '@/components/ui/dialog'
 /**
  * What this build is, and where to go about it.
  *
- * A dialog rather than a rail row: six unchanging facts, opened once.
+ * A dialog rather than a rail row: a handful of unchanging facts, opened once.
  */
 export interface AboutDialogProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  /** The six facts, from `GET /api/about`. `AboutContainer` reads them. */
+  /** The facts, from `GET /api/about`. `AboutContainer` reads them. */
   about: AboutInfo | undefined
   /** The read is still in flight. */
   busy?: boolean | undefined
@@ -92,6 +92,9 @@ function AboutBody({
               <Out href={`${about.repoUrl}/blob/main/LICENSE`}>{about.license}</Out>
             </Row>
             <Row label="Copyright">{about.copyright}</Row>
+            {/* How long a colleague whose connection died stays on a case's
+                roster, so a lingering name can be judged against it. */}
+            <Row label="Presence">{`A lost connection leaves the roster within ${String(about.presenceBoundSeconds)}s`}</Row>
           </dl>
 
           <p className="mt-5 text-2xs leading-relaxed text-ink-muted">
@@ -107,7 +110,7 @@ function AboutBody({
 /**
  * One fact, label left and value right, separated from the next by a rule.
  *
- * Label-beside-value rather than label-over-value: six facts in a compact
+ * Label-beside-value rather than label-over-value: a handful of facts in a compact
  * dialog have the width for it, and stacking them would make the popup twice
  * as tall as the thing it describes.
  */

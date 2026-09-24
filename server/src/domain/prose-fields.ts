@@ -52,7 +52,7 @@ function textIn(node: Y.XmlFragment | Y.XmlElement | Y.XmlText | Y.XmlHook): str
  * `rekey`'s blocks holds anything. A fragment `rekey` does not name is left behind.
  */
 export function rekeyed(source: Y.Doc, rekey: ReadonlyMap<string, string>): Uint8Array | null {
-  const target = new Y.Doc({ gc: false })
+  const target = new Y.Doc()
   let wrote = false
   for (const [oldId, newId] of rekey) {
     const fragment = fragmentFor(source, oldId)

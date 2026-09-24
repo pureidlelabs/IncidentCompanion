@@ -87,6 +87,11 @@ export const ATTACHMENT_MEGABYTES = 256
 export const ARCHIVE_MEGABYTES = 512
 export const EVIDENCE_FLOOR_MEGABYTES = 1
 
+/** How many rows one archive may describe, read and written alike. */
+export const ARCHIVE_ROWS = 100_000
+export const ARCHIVE_ROWS_FLOOR = 1_000
+export const ARCHIVE_ROWS_CEILING = 1_000_000
+
 /**
  * **What the shipped edge will carry, and therefore the most an operator may
  * ask for.** `compose.yaml` gives the app no `ports:` -- nginx is the only door
@@ -149,6 +154,7 @@ export const POLICY_SETTINGS = {
     EVIDENCE_CEILING_MEGABYTES,
     ARCHIVE_MEGABYTES,
   ),
+  'evidence.archiveRows': bounded(ARCHIVE_ROWS_FLOOR, ARCHIVE_ROWS_CEILING, ARCHIVE_ROWS),
   'evidence.passphraseChars': bounded(PASSPHRASE_FLOOR, PASSPHRASE_CEILING, PASSPHRASE_CHARS),
 } as const
 

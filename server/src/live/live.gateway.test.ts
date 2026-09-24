@@ -366,13 +366,13 @@ const decoderFor = (update: string) =>
   decoding.createDecoder(new Uint8Array(Buffer.from(update, 'base64')))
 
 function typed(text: string): { update: string; doc: Y.Doc } {
-  const doc = new Y.Doc({ gc: false })
+  const doc = new Y.Doc()
   doc.getXmlFragment('block-1').insert(0, [new Y.XmlText(text)])
   return { update: wire(codec.frameUpdate(Y.encodeStateAsUpdate(doc))), doc }
 }
 
 function filed(text: string): Y.Doc {
-  const doc = new Y.Doc({ gc: false })
+  const doc = new Y.Doc()
   doc.getXmlFragment('block-1').insert(0, [new Y.XmlText(text)])
   return doc
 }
@@ -519,7 +519,7 @@ describe('prose on a report that has been sent', () => {
 
 describe('prose on a draft report', () => {
   it('applies an update', async () => {
-    const document = new Y.Doc({ gc: false })
+    const document = new Y.Doc()
     const { live } = await connected(null, document)
 
     live.receive({ type: 'prose.sync', field: FIELD, update: typed('still being written').update })
@@ -532,7 +532,7 @@ describe('prose on a draft report', () => {
 
 describe('a read-only analyst watching a draft', () => {
   it('is refused a prose update, and the document is untouched', async () => {
-    const document = new Y.Doc({ gc: false })
+    const document = new Y.Doc()
     const { live } = await connected(null, document, 'read')
 
     live.receive({ type: 'prose.sync', field: FIELD, update: typed('not mine to write').update })
@@ -551,7 +551,7 @@ describe('a read-only analyst watching a draft', () => {
    * the case above.
    */
   it('is still sent what it missed', async () => {
-    const document = new Y.Doc({ gc: false })
+    const document = new Y.Doc()
     document.getXmlFragment('block-1')
     const { live } = await connected(null, document, 'read')
     live.sent.length = 0
@@ -581,7 +581,7 @@ describe('opening a field asks the client what it has', () => {
 
   it('does not refuse a read-only analyst answering it with nothing new', async () => {
     const { live } = await connected(null, filed('as filed'), 'read')
-    const mine = new Y.Doc({ gc: false })
+    const mine = new Y.Doc()
 
     live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(mine)) })
     await settle()
@@ -1217,7 +1217,7 @@ describe('how much of a frame the socket will read', () => {
 describe('two prose frames for one field arriving together', () => {
   it('takes one reader, so closing the socket gives the last one back', async () => {
     let readers = 0
-    const document = new Y.Doc({ gc: false })
+    const document = new Y.Doc()
     const channel = {
       join: () => Promise.resolve(),
       leave: () => Promise.resolve(),
@@ -1346,7 +1346,7 @@ describe('frames that arrive while the socket is still joining', () => {
   const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
   it('answers a state request that beat the roster, so the editor is built', async () => {
-    const document = new Y.Doc({ gc: false })
+    const document = new Y.Doc()
     document.getXmlFragment('block-1').insert(0, [new Y.XmlText('what was already written')])
     const { gateway, finish } = midJoin(document)
     const live = new FakeSocket()
@@ -1370,7 +1370,7 @@ describe('frames that arrive while the socket is still joining', () => {
    * nor the subscription.
    */
   it('takes a claim that beat the roster, and not before the roster has it', async () => {
-    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const { gateway, order, finish } = midJoin(new Y.Doc(), 'immediate')
     const live = new FakeSocket()
 
     const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
@@ -1387,7 +1387,7 @@ describe('frames that arrive while the socket is still joining', () => {
   })
 
   it('acts on a release after the claim sent before it, however long the claim takes', async () => {
-    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }))
+    const { gateway, order, finish } = midJoin(new Y.Doc())
     const live = new FakeSocket()
     const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     finish()
@@ -1406,7 +1406,7 @@ describe('frames that arrive while the socket is still joining', () => {
 
   /** A tab that sends and closes at once: its words land before its reader goes. */
   it('acts on what arrived before the socket went, then gives its reader back and leaves', async () => {
-    const document = new Y.Doc({ gc: false })
+    const document = new Y.Doc()
     const { gateway, order, releasedHolding, readers, finish } = midJoin(document)
     const live = new FakeSocket()
     const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
@@ -1426,7 +1426,7 @@ describe('frames that arrive while the socket is still joining', () => {
   })
 
   it('carries on past a frame whose action fails, and still leaves', async () => {
-    const { gateway, channel, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const { gateway, channel, order, finish } = midJoin(new Y.Doc(), 'immediate')
     channel.claim = () => Promise.reject(new Error('the store went away'))
     const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
     const live = new FakeSocket()
@@ -1445,7 +1445,7 @@ describe('frames that arrive while the socket is still joining', () => {
 
   /** Silent, as for a frame that is not JSON: a warning per frame is a log any admitted client can fill. */
   it('ignores a frame that is JSON and not an object, as it ignores one that is not JSON', async () => {
-    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const { gateway, order, finish } = midJoin(new Y.Doc(), 'immediate')
     const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
     const live = new FakeSocket()
     const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
@@ -1469,7 +1469,7 @@ describe('frames that arrive while the socket is still joining', () => {
   })
 
   it('ends a connection with more frames waiting than the bound, and acts on those within it', async () => {
-    const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
+    const { gateway, order, finish } = midJoin(new Y.Doc(), 'immediate')
     const live = new FakeSocket()
     const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
 

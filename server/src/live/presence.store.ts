@@ -11,10 +11,11 @@ import { ConfigService } from '@nestjs/config'
 import { Redis } from 'ioredis'
 
 import type { Env } from '../config/env.js'
+import { PRESENCE_BOUND_SECONDS } from '../config/presence.js'
 import type { ProseRelay } from '../prose/prose.service.js'
 
 /** Long enough to survive a slow tick, short enough that a crash clears fast. */
-const MEMBER_TTL_SECONDS = 30
+const MEMBER_TTL_SECONDS = PRESENCE_BOUND_SECONDS
 const HEARTBEAT_MS = 10_000
 
 export interface StoredMember {
