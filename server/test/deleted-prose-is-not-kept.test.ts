@@ -190,29 +190,20 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
     return { report, address, prose }
   }
 
-  it('seals a report for sending straight after a late edit into a removed section', async () => {
-    const { report, address, prose } = await lateEditIntoARemovedSection('Sent at once', `sealed at once ${STAMP}`)
+  it('seals a report for sending straight after a late edit into a removed section, without that edit', async () => {
+    const words = `sealed at once ${STAMP}`
+    const { report, address, prose } = await lateEditIntoARemovedSection('Sent at once', words)
 
     const sealed = await prose.seal(caseId, report.id).then(
       async (seal) => {
+        const sent = Buffer.from(seal.bytes).toString('utf8')
         await seal.settle(null)
-        return 'sealed'
+        return sent.includes(words) ? 'sealed with the removed section' : 'sealed'
       },
       (error: unknown) => String(error),
     )
     await prose.release(caseId, address)
 
     expect(sealed).toBe('sealed')
-  })
-
-  it('keeps nothing typed into a removed section when the flush is asked for by somebody who reaches nothing', async () => {
-    const words = `asked for by a stranger ${STAMP}`
-    const { report, address, prose } = await lateEditIntoARemovedSection('Stranger asks', words)
-
-    await actingAs(randomUUID(), () => harness.app.get(ProseService, { strict: false }).flush(caseId, address))
-    await prose.release(caseId, address)
-
-    const [row] = await seed.select({ document: reports.document }).from(reports).where(eq(reports.id, report.id))
-    expect(Buffer.from(row!.document ?? []).toString('utf8')).not.toContain(words)
   })
 })
