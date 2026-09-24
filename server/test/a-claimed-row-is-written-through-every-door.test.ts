@@ -46,7 +46,7 @@ describe.skipIf(!runnable)('a row another analyst holds', () => {
   async function held(ids: string[]): Promise<void> {
     const frames: string[] = []
     live = new WebSocket(`${harness.base.replace('http://', 'ws://')}/api/cases/${caseId}/live`, {
-      headers: { cookie: holder.cookie, origin: harness.base },
+      headers: { cookie: holder.cookie, origin: harness.origin },
     })
     live.on('message', (raw: Buffer) => {
       frames.push(raw.toString())

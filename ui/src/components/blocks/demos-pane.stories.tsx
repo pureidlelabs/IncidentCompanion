@@ -5,7 +5,7 @@ import { DemosPane } from '@/components/blocks/demos-pane'
 import { PICKER_DEMOS } from '@/components/blocks/picker-rows'
 
 /**
- * The worked cases an install ships with, rebuilt on every restart.
+ * The worked cases an install ships with, written once before it is claimed.
  *
  * Tiles rather than rows, and the summary is the reason: an analyst picks a
  * demo by what it walks through, and a table row truncates that sentence to

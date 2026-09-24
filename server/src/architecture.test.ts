@@ -177,7 +177,8 @@ const MAY_IMPORT: Record<string, string[]> = {
    * `domain` schemas, writes through `collections`, and opens a new case
    * through `cases` for the door that starts one from an incident.
    */
-  'incident-import': ['db', 'domain', 'collections', 'cases', 'access'],
+  // `config` for the platforms the operator pointed the install at.
+  'incident-import': ['db', 'domain', 'collections', 'cases', 'access', 'config'],
   // `auth` for `AdminOnly` and `install-activity` for the line every
   // install-level write owes: granting reach is managing the install.
   access: ['db', 'domain', 'auth', 'install-activity'],
@@ -215,7 +216,8 @@ const MAY_IMPORT: Record<string, string[]> = {
   prose: ['db', 'config'],
   // `access` because no guard runs on an upgrade: the socket asks the same
   // reach question a route's guard does, by hand. -> `live.gateway.ts`
-  live: ['auth', 'db', 'config', 'prose', 'install-activity', 'access'],
+  // `wire` for who an upgrade is from, which no middleware reaches either.
+  live: ['auth', 'db', 'config', 'prose', 'install-activity', 'access', 'wire'],
   /**
    * `db` is one connection, not a query tier: readiness runs `select 1` on the
    * pool the app serves from, so a pool with nothing free reads as unhealthy.
@@ -232,11 +234,11 @@ const MAY_IMPORT: Record<string, string[]> = {
    */
   // `auth` for `AdminOnly` on the two telemetry routes alone: what the install
   // is made of is an operator's, and the liveness probe beside them stays open.
-  //
-  // `evidence` for the census, which asks the store what each case holds
-  // rather than reading its directory itself; `report` for what each case
-  // names, sent reports' figures included.
-  health: ['config', 'db', 'domain', 'policy', 'auth', 'evidence', 'report'],
+  // `throttle` for the tier names the probe skips: the count lives in a store
+  // the probe reports on. `evidence` for the census, which asks the store what
+  // each case holds rather than reading its directory itself; `report` for
+  // what each case names, sent reports' figures included.
+  health: ['config', 'db', 'domain', 'policy', 'auth', 'throttle', 'evidence', 'report'],
   spa: ['config'],
   test: ['db', 'config'],
 }

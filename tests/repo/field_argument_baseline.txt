@@ -1,4 +1,3 @@
-server/src/auth/auth.config.ts:advanced
 server/src/auth/auth.config.ts:after
 server/src/auth/auth.config.ts:before
 server/src/auth/auth.config.ts:hooks
@@ -10,7 +9,6 @@ server/src/domain/field-spec.ts:applicableWhen
 server/src/domain/field-spec.ts:tier
 server/src/domain/field-tones.ts:disposition
 server/src/domain/identity.ts:malware
-server/src/wire/headers.ts:connectSrc
 ui/src/api/session.ts:userId
 ui/src/app/case/NotesContainer.tsx:create
 ui/src/components/ui/field.tsx:aside

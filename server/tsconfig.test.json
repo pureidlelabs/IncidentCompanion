@@ -24,17 +24,15 @@
   // browser tier's types were checked only by Playwright deciding to run a
   // spec, which is the slowest possible place to find a renamed export.
   //
-  // **`scripts/` and `drizzle.config.ts` were the same gap, found the same
-  // way**: eslint reported twelve files it could not parse because no program
-  // contained them, which is what "never typechecked, never linted" looks like
-  // from the outside. They are one-off probes and a migration config -- run by
+  // **`scripts/` was the same gap, found the same way**: eslint reported files
+  // it could not parse because no program contained them, which is what "never
+  // typechecked, never linted" looks like from the outside. They are run by
   // hand, so nothing else would ever have said they had stopped compiling.
   // **`test/**` is named, and was not.** Only the two files vitest's config
   // pulls in transitively reached the compiler, so the other 28 -- the whole
   // integration tier, `app-harness.ts` included -- were neither typechecked
   // nor parsed by eslint, which reported them as `parserOptions.project`
   // failures rather than as files nothing covers.
-  "include": ["src/**/*", "test/**/*", "e2e/**/*", "scripts/**/*",
-              "drizzle.config.ts", "vitest.config.mts"],
+  "include": ["src/**/*", "test/**/*", "e2e/**/*", "scripts/**/*", "vitest.config.mts"],
   "exclude": ["node_modules", "dist"]
 }

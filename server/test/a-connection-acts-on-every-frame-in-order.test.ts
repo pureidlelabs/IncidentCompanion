@@ -76,7 +76,7 @@ describe.skipIf(!runnable)('a connection acts on every frame, in order', () => {
   async function connect(caseId: string, onOpen: (live: WebSocket) => void = () => undefined) {
     const frames: Record<string, unknown>[] = []
     const live = new WebSocket(`${harness.base.replace('http://', 'ws://')}/api/cases/${caseId}/live`, {
-      headers: { cookie: admin.cookie, origin: harness.base },
+      headers: { cookie: admin.cookie, origin: harness.origin },
     })
     sockets.push(live)
     live.on('message', (raw: Buffer) => {

@@ -1,15 +1,15 @@
 /**
- * The readiness probe's own Redis connection, and the last thing that went
- * wrong on it.
+ * The readiness probe over the Redis connection that sessions and rate limits
+ * are served from, and the last thing that went wrong on it.
  *
- * A connection of its own, never one the app already holds: a parked client
- * cannot answer a `PING`, and borrowing one would make `health` reach into
- * `live`.
+ * **That connection, not one of the probe's own**: a separate one can be up
+ * while the serving one is still reconnecting, and health would say well
+ * while every signed-in request fails.
  */
 import { ConfigService } from '@nestjs/config'
 import { Logger, type Provider } from '@nestjs/common'
-import Redis from 'ioredis'
 
+import { AuthRedis } from '../auth/redis.js'
 import type { Env } from '../config/env.js'
 
 export const HEALTH_REDIS = Symbol('HEALTH_REDIS')
@@ -28,7 +28,6 @@ export const HEALTH_REDIS = Symbol('HEALTH_REDIS')
  */
 export interface RedisProbe {
   ping(): Promise<string>
-  disconnect(): void
   /** The code from the most recent connection error, if one is remembered. */
   lastFailureCode(): string | undefined
 }
@@ -38,30 +37,10 @@ export const healthRedisProvider: Provider = {
   inject: [ConfigService],
   useFactory: (config: ConfigService<Env, true>): RedisProbe => {
     const log = new Logger('HealthRedis')
-    const client = new Redis(config.get('REDIS_URL', { infer: true }), {
-      /**
-       * **Nothing is connected until the first probe.** A dependency check
-       * that dials on boot makes an unreachable Redis a startup failure, and
-       * the whole point of reporting it is that the server comes up and says
-       * so.
-       */
-      lazyConnect: true,
-      /**
-       * **One retry, because the budget in `dependencies.health.ts` is the
-       * real limit.** ioredis defaults to 20 per request; a command outliving
-       * the probe's budget is answered as a timeout anyway, so the retries
-       * only decide how long the socket keeps trying after nobody is waiting.
-       */
-      maxRetriesPerRequest: 1,
-    })
+    const client = AuthRedis.connect(config.get('REDIS_URL', { infer: true }))
 
     let lastCode: string | undefined
-    /**
-     * **An `error` event with no listener is thrown, not logged.** ioredis
-     * emits one per failed connection attempt, and an unhandled `error` on an
-     * EventEmitter is an uncaught exception - so the probe that exists to
-     * report an unreachable Redis would instead take the process down with it.
-     */
+    // The failed dial's code arrives here and not on the rejected command.
     client.on('error', (error: Error & { code?: string }) => {
       lastCode = error.code
       log.warn(`redis: ${error.message}`)
@@ -72,7 +51,6 @@ export const healthRedisProvider: Provider = {
 
     return {
       ping: () => client.ping(),
-      disconnect: () => { client.disconnect() },
       lastFailureCode: () => lastCode,
     }
   },

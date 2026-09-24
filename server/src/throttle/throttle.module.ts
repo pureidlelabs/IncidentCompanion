@@ -13,10 +13,9 @@
  * `@nest-lab/throttler-storage-redis` is the throttler maintainers' own, so
  * nothing here implements a storage.
  *
- * **It fails open, deliberately, and that is only safe because of nginx.** A
- * limiter that refuses everything when Redis is unreachable is a denial of
- * service triggered by a cache outage. Layer one is still standing, so the
- * failure mode is "coarser than intended" rather than "no limit at all".
+ * **It fails closed**: with Redis unreachable every throttled route errors
+ * rather than serving uncounted, which is `state`'s "being unable to reach it
+ * MUST stop the install serving". Health is exempt so it can name the store.
  */
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
 import { Module } from '@nestjs/common'

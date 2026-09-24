@@ -56,7 +56,7 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V16.3.2 | Failed authorization attempts logged | **Part unbuilt: an act the record cannot take proceeds (#75), and there is no destination to change (#13).** accounts-and-access :: Administrative events are logged |
 | V16.2.1 | Each entry carries when, where, who, what | install-audit :: A line says who, what, and to what, and never says what was written |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | install-audit :: Reading the audit is an act the audit records |
-| V3.4.3, V3.4.4 | A Content-Security-Policy response header, and a nosniff header on every response | transport :: The browser is told what the application may do, on every response |
+| V3.4.3, V3.4.4 | A Content-Security-Policy response header, and a nosniff header on every response | **Part unbuilt: there is no identity provider integration, so the policy names no sign-in origin for one (#59).** transport :: The browser is told what the application may do, on every response |
 | V3.4.6 | The frame-ancestors directive, against clickjacking | transport :: The application refuses to be framed |
 | V3.4.2, V3.5.1 | A fixed cross-origin value, and disallowed cross-origin requests where no preflight is relied on | transport :: The application answers only to itself |
 | V3.2.1 | Controls against a browser rendering a response as unintended content | transport :: A request for data is never answered with a page |

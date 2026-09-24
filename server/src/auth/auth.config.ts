@@ -11,7 +11,7 @@ import { and, eq, gte, sql } from 'drizzle-orm'
 
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
 import { recordInstallActivity } from '../install-activity/record.js'
-import { trustedAddressHeaders } from '../wire/caller-address.js'
+import { ADDRESS_RULE } from '../wire/caller-address.js'
 import { admin, openAPI } from 'better-auth/plugins'
 import { createAccessControl } from 'better-auth/plugins/access'
 import { defaultStatements } from 'better-auth/plugins/admin/access'
@@ -818,23 +818,15 @@ export function authOptions(
       },
     },
     /**
-     * Which headers may name the caller the rate limiter counts against.
-     *
-     * **Decided by `trustedAddressHeaders`, which the audit and the throttler
-     * also read**, so the three cannot disagree about when the header is
-     * believable. -> `wire/caller-address.ts`
-     *
-     * **It resolves the process mode rather than taking this function's
-     * `mode`, and that is the point.** The two disagree about what an absent
-     * mode means: `env.ts` refuses to start without one, while this decision
-     * keeps a fallback of its own and closes on it. An install that names no
-     * mode would otherwise believe a header no proxy set.
+     * Who a request is from, for the limiter and the session row: the one
+     * rule `callerAddress` also applies, so no reader re-decides it.
+     * -> `wire/caller-address.ts`
      *
      * Never set `disableIpTracking`: the limiter returns early on it and
      * applies no rule at all.
      */
     advanced: {
-      ipAddress: { ipAddressHeaders: trustedAddressHeaders() },
+      ipAddress: ADDRESS_RULE,
     },
     /**
      * Half of *core makes no outbound request*, and the half a config can hold.

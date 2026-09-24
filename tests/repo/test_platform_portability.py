@@ -138,7 +138,6 @@ def test_no_runner_groups_parallel_tests_by_file():
 
 
 @pytest.mark.parametrize("module, port", [
-    ("test_backup_restores.py", "PG_PORT"),
     ("test_container_runtime.py", "PORT"),
 ])
 def test_a_docker_module_raises_its_stack_per_xdist_worker(module, port, monkeypatch):

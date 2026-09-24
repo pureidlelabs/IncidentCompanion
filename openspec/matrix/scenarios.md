@@ -218,7 +218,7 @@
 | The description is retrievable, so what a case may hold is answerable from the application | A field is added | demonstrated | server/src/specs/specs.controller.test.ts |
 | The description is retrievable, so what a case may hold is answerable from the application | An install has been extended | demonstrated | server/src/library/what-this-install-holds-is-what-is-described.test.ts |
 | Every write is attributed, checked and announced as one act | Two analysts write to one row | demonstrated | server/src/db/mutate.test.ts |
-| Every write is attributed, checked and announced as one act | A write succeeds | demonstrated | server/src/db/mutate.test.ts |
+| Every write is attributed, checked and announced as one act | A write succeeds | undemonstrated |  |
 | Every write is attributed, checked and announced as one act | A write composed into an act that commits | undemonstrated | |
 | Every write is attributed, checked and announced as one act | A write composed into an act that does not commit | undemonstrated | |
 | Every write is attributed, checked and announced as one act | A write composed into nothing that declared an act | undemonstrated | |
@@ -230,11 +230,15 @@
 | Only some collections have an identity, and the rest are events | A second way of creating rows is added | demonstrated | server/src/domain/identity.test.ts |
 | Doing something to many rows obeys every rule that governs one | Some rows in a bulk write have moved | demonstrated | server/src/collections/bulk.test.ts |
 | Doing something to many rows obeys every rule that governs one | A bulk write crosses the case boundary | demonstrated | server/src/collections/bulk.test.ts |
-| Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | demonstrated | server/src/collections/order-survives.test.ts |
-| Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | demonstrated | server/src/collections/order-survives.test.ts |
+| Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | undemonstrated |  |
+| Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | undemonstrated |  |
+| Order an analyst chose is theirs, and is not a property of the data | Two analysts reorder at once | demonstrated | server/test/two-reorders-never-mix.test.ts |
+| Order an analyst chose is theirs, and is not a property of the data | An analyst moves a row twice in a row | demonstrated | server/e2e/reorder-keyboard.spec.ts |
 | What comes in and goes out is the same description | An analyst previews an import | demonstrated | server/test/incident-import.test.ts |
 | What comes in and goes out is the same description | A row in an import is malformed | demonstrated | server/src/exports/import.service.test.ts |
 | What comes in and goes out is the same description | An export is imported back | demonstrated | server/src/exports/csv-import.test.ts |
+| A field derived from a row's prose has one writer | A derived field is written | demonstrated | server/test/a-note-has-one-writer.test.ts |
+| A field derived from a row's prose has one writer | A row's first words are opened again | demonstrated | server/test/a-note-has-one-writer.test.ts |
 
 ## compliance
 
@@ -339,24 +343,32 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | It comes up with one command and no preparation | A first start on a clean machine | demonstrated | tests/docker/test_container_runtime.py |
-| It comes up with one command and no preparation | A second start | demonstrated | tests/docker/test_container_config.py |
+| It comes up with one command and no preparation | A second start | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | It comes up with one command and no preparation | A dependency is slow | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | What an install exposes | demonstrated | tests/docker/test_container_config.py |
-| There is one way in, and it is the only thing exposed | The application is addressed directly | demonstrated | tests/docker/test_container_config.py |
-| There is one way in, and it is the only thing exposed | An operator wants it reachable from the network | demonstrated | tests/docker/test_container_config.py |
+| There is one way in, and it is the only thing exposed | The application is addressed directly | undemonstrated |  |
+| There is one way in, and it is the only thing exposed | An operator wants it reachable from the network | demonstrated | tests/docker/test_ingress.py |
+| There is one way in, and it is the only thing exposed | The install is reached at a name it was not given | demonstrated | tests/docker/test_ingress.py |
 | The connection is protected, and there is no way to turn that off | An install has no certificate | demonstrated | tests/docker/test_container_runtime.py |
 | The connection is protected, and there is no way to turn that off | The operator supplies a certificate | demonstrated | tests/docker/test_container_config.py |
 | The connection is protected, and there is no way to turn that off | A supplied certificate cannot be used | demonstrated | tests/docker/test_container_config.py |
 | The connection is protected, and there is no way to turn that off | Somebody wants it unprotected | demonstrated | tests/docker/test_container_config.py |
+| The connection is protected, and there is no way to turn that off | The install is given a new name | demonstrated | tests/docker/test_container_config.py |
+| The connection is protected, and there is no way to turn that off | A supplied certificate does not cover a new name | demonstrated | tests/docker/test_container_config.py |
 | Setting up is separate from running, and runs once | Preparation runs before serving | demonstrated | tests/docker/test_container_runtime.py |
-| Setting up is separate from running, and runs once | An install is started again | demonstrated | tests/docker/test_container_config.py |
+| Setting up is separate from running, and runs once | An install is started again | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | Setting up is separate from running, and runs once | Preparation fails | demonstrated | tests/docker/test_container_config.py |
-| What must survive is named, and what must not is not | The install is rebuilt | demonstrated | tests/docker/test_container_config.py |
+| Setting up is separate from running, and runs once | Preparation runs again beside a serving application | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
+| Setting up is separate from running, and runs once | A new version would discard stored data | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| Setting up is separate from running, and runs once | Preparation is run by hand | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| What must survive is named, and what must not is not | The install is rebuilt | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | What must survive is named, and what must not is not | Something not named is lost | demonstrated | tests/docker/test_container_config.py |
 | An install can say whether it is well, and what is wrong | A component has started but cannot answer | demonstrated | server/src/health/dependencies.health.test.ts |
-| An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | server/src/health/dependencies.health.test.ts |
+| An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| An install can say whether it is well, and what is wrong | A component stops unexpectedly | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | The application runs with no more than it needs | The application attempts something outside its work | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
 | The application runs with no more than it needs | A part is examined for what it can do | demonstrated | tests/docker/test_container_config.py |
+| An install with nothing configured reaches nothing outside itself | An install lives its whole life with nothing configured | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 
 ## evaluation
 
@@ -432,8 +444,10 @@
 | What is kept for a long time and what is kept briefly are separated | The two windows differ | demonstrated | server/src/install-activity/prune.test.ts |
 | A line says who, what, and to what, and never says what was written | An account is removed after acting | demonstrated | server/src/install-activity/record.test.ts |
 | A line says who, what, and to what, and never says what was written | A request carrying a password | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
-| A line says who, what, and to what, and never says what was written | A caller asserts their own address | demonstrated | server/src/install-activity/record.test.ts |
+| A line says who, what, and to what, and never says what was written | A caller asserts their own address | demonstrated | server/test/a-caller-is-attributed-to-itself.test.ts |
 | A line says who, what, and to what, and never says what was written | A caller invents a route | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
+| A line says who, what, and to what, and never says what was written | A caller reaches the application without passing the one way in | demonstrated | tests/docker/test_ingress.py |
+| A line says who, what, and to what, and never says what was written | An install whose one way in started last | demonstrated | tests/docker/test_ingress.py |
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | demonstrated | server/src/install-activity/record.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One failure and a run of them | demonstrated | server/src/install-audit/read.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One caller, a different account each time | demonstrated | server/src/install-audit/read.test.ts |
@@ -521,6 +535,9 @@
 | A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
+| Written prose is attributed like any other write | One of two analysts present writes | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
+| Written prose is attributed like any other write | Two analysts write before one save | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
+| Written prose is attributed like any other write | Words typed just before the report is sent | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
 | An open connection is listening | A screen writes before the connection is ready | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts |
 | An open connection is listening | Preparing the connection does not complete | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
 | An open connection is listening | Frames are acted on in the order sent | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
@@ -574,18 +591,26 @@
 | --- | --- | --- | --- |
 | A report is assembled from the case, not transcribed from it | The case changes under a draft report | demonstrated | server/src/report/a-draft-follows-the-case.test.ts |
 | A report is assembled from the case, not transcribed from it | An analyst writes an assessment | demonstrated | server/src/report/what-the-analyst-wrote-stays-written.test.ts |
-| A sent report is frozen, and the freeze is one rule | A sent report is edited | demonstrated | server/src/report/freeze.test.ts |
-| A sent report is frozen, and the freeze is one rule | A part is moved into a sent report | demonstrated | server/src/report/freeze.test.ts |
-| A sent report is frozen, and the freeze is one rule | A new way to write a part is added | demonstrated | server/src/report/freeze.test.ts |
-| Sending stamps and preserves in one act | A report is sent | demonstrated | server/src/report/lifecycle.service.test.ts |
-| Sending stamps and preserves in one act | The document cannot be produced | demonstrated | server/src/report/a-report-that-cannot-be-produced-is-not-sent.test.ts |
-| Sending stamps and preserves in one act | The case changes after sending | demonstrated | server/src/report/lifecycle.service.test.ts |
-| A correction is a new report, not an edit | A sent report is wrong | demonstrated | server/src/report/lifecycle.service.test.ts |
-| A correction is a new report, not an edit | Two corrections race | demonstrated | server/src/report/lifecycle.service.test.ts |
+| A sent report is frozen, and the freeze is one rule | A sent report is edited | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
+| A sent report is frozen, and the freeze is one rule | A part is moved into a sent report | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
+| A sent report is frozen, and the freeze is one rule | A new way to write a part is added | demonstrated | server/src/report/the-store-refuses-a-sent-report.test.ts |
+| A sent report is frozen, and the freeze is one rule | Prose reaches a sent report | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
+| A sent report is frozen, and the freeze is one rule | The report a sent report corrects is removed | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
+| Sending stamps and preserves in one act | A report is sent | undemonstrated |  |
+| Sending stamps and preserves in one act | The document cannot be produced | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
+| Sending stamps and preserves in one act | The case changes after sending | undemonstrated |  |
+| Sending stamps and preserves in one act | A part changes while the report is being sent | demonstrated | server/test/send-and-part-writes-are-serialised.test.ts |
+| Sending stamps and preserves in one act | Prose is typed while the report is being sent | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
+| Sending stamps and preserves in one act | A send that fails while prose is typed | undemonstrated |  |
+| Sending stamps and preserves in one act | A send is recorded | demonstrated | server/test/every-report-act-is-in-the-feed.test.ts |
+| A correction is a new report, not an edit | A sent report is wrong | undemonstrated |  |
+| A correction is a new report, not an edit | Two corrections race | undemonstrated |  |
+| A correction is a new report, not an edit | A correction is recorded | demonstrated | server/test/every-report-act-is-in-the-feed.test.ts |
 | The destination decides what a part may be | A report is exported | demonstrated | server/src/report/document/every-kind-survives-every-format.test.ts |
 | The destination decides what a part may be | A part cannot be drawn by a format | demonstrated | server/src/report/document/figure.test.ts |
-| A report says what is missing before it is sent | A report is checked before sending | demonstrated | server/src/report/lifecycle.service.test.ts |
-| A report says what is missing before it is sent | A section was removed and is wanted back | demonstrated | server/src/report/lifecycle.service.test.ts |
+| A report says what is missing before it is sent | A report is checked before sending | undemonstrated |  |
+| A report says what is missing before it is sent | A section was removed and is wanted back | undemonstrated |  |
+| A report says what is missing before it is sent | Two analysts restore the missing sections at once | demonstrated | server/test/two-restores-restore-once.test.ts |
 | The application's own words are in the report's language; the analyst's are the analyst's | A report is produced in a second language | demonstrated | server/src/report/document/resolve.test.ts |
 | The application's own words are in the report's language; the analyst's are the analyst's | A report is composed in a second language | demonstrated | ui/src/components/blocks/a-report-says-its-headings-in-its-own-language.test.ts |
 | The application's own words are in the report's language; the analyst's are the analyst's | The language a report is produced in is changed | demonstrated | ui/src/app/case/the-heading-pack-is-fetched-for-the-open-report.test.tsx |
@@ -626,13 +651,13 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | What may be lost and what may not are separated by design | The ephemeral store is emptied | demonstrated | server/test/losing-the-ephemeral-store-loses-no-investigation.test.ts |
-| What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | demonstrated | tests/docker/test_container_config.py |
-| What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | undemonstrated | |
+| What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | demonstrated | server/test/health-names-a-lost-store.test.ts |
+| What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | The application cannot reach a row it should not, even by mistake | A query forgets its boundary | demonstrated | server/src/db/scope.test.ts |
 | The application cannot reach a row it should not, even by mistake | The application attempts to widen its own reach | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
 | The application cannot reach a row it should not, even by mistake | A new table holding case data is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
 | Changing the shape of the store is a separate power | The application attempts to change the schema | demonstrated | server/src/db/scope.test.ts |
-| Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/src/db/policy-push.test.ts |
+| Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write and its record are one act | demonstrated | server/src/db/mutate.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write arrives against a version that has moved | demonstrated | server/src/db/mutate.test.ts |
 | The store is not migrated while the shape is still moving | Data from an older shape is presented | demonstrated | server/src/archive/format.test.ts |
@@ -643,10 +668,12 @@
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | demonstrated | server/src/health/install.controller.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | An operator asks what protects the state at rest | demonstrated | server/src/health/install.controller.test.ts |
-| What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
+| What is stored can be recovered, and the recovery is proven | An install is restored from a copy | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | demonstrated | server/src/health/an-install-says-what-it-cannot-find.test.ts |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | demonstrated | server/src/evidence/artefacts-put-back-make-the-evidence-whole.test.ts |
+| What is stored can be recovered, and the recovery is proven | A damaged copy is checked | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| What is stored can be recovered, and the recovery is proven | A copy from another shape is restored | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | An artefact is reached only through the case that holds it | A digest is named in another case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | An artefact is reached only through the case that holds it | Reach is withdrawn from an analyst who read a digest | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | An artefact is reached only through the case that holds it | A handover is read in by somebody who does not reach the case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
@@ -677,6 +704,9 @@
 | A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/every-write-door-refuses-a-version-past-its-column.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts |
+| What a request costs is bounded before it runs | Another caller asks too often | demonstrated | tests/docker/test_ingress.py |
+| What a request costs is bounded before it runs | A page on another site asks on the analyst's behalf | demonstrated | tests/docker/test_ingress.py |
+| What a request costs is bounded before it runs | A page on another site calls the install on the analyst's behalf | demonstrated | tests/docker/test_ingress.py |
 | A fact can be asked for across cases | An indicator is asked about across cases | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
 | A fact can be asked for across cases | A question spans a boundary | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
 | The description is valid against the version it declares | A schema uses a keyword the declared version has no spelling for | demonstrated | server/test/openapi-document.test.ts |
@@ -689,17 +719,20 @@
 | --- | --- | --- | --- |
 | The browser is told what the application may do, on every response | A response is read by a browser | demonstrated | server/test/security-headers.test.ts |
 | The browser is told what the application may do, on every response | The policy is read for what it permits | demonstrated | server/test/security-headers.test.ts |
-| The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | demonstrated | server/test/security-headers.test.ts |
+| The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| The browser is told what the application may do, on every response | An install pointed at nothing outside itself | demonstrated | server/test/security-headers.test.ts |
+| The browser is told what the application may do, on every response | The analyst's browser must reach an import platform | demonstrated | server/test/a-named-install-names-only-itself.test.ts |
 | The application refuses to be framed | A page tries to embed the application | demonstrated | server/test/security-headers.test.ts |
 | Case data is not left on the analyst's disk | An analyst reads a case and signs out | demonstrated | server/test/security-headers.test.ts |
 | Case data is not left on the analyst's disk | An unchanging asset is served | demonstrated | server/test/security-headers.test.ts |
-| An install reached at its own name tells the browser to keep it protected | An install reached at its own name | unbuilt | Not built: no install is reached at a name of its own. -> #138 |
-| An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | unbuilt | Not built: nothing sends HSTS. -> #138 |
-| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | server/test/security-headers.test.ts |
+| An install reached at its own name tells the browser to keep it protected | An install reached at its own name | demonstrated | tests/docker/test_ingress.py |
+| An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | undemonstrable | What a browser does after being told is the browser's; no suite here drives one through a certificate an analyst has chosen to trust |
+| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | tests/docker/test_container_runtime.py |
 | The application answers only to itself | The install is reached at a loopback address | demonstrated | server/src/auth/trusted-origins.test.ts |
-| The application answers only to itself | The unprotected spelling of the install | demonstrated | server/src/auth/trusted-origins.test.ts |
-| The application answers only to itself | Another port on the same host | demonstrated | server/src/auth/trusted-origins.test.ts |
+| The application answers only to itself | The unprotected spelling of the install | demonstrated | tests/docker/test_ingress.py |
+| The application answers only to itself | Another port on the same host | demonstrated | tests/docker/test_ingress.py |
 | The application answers only to itself | The install cannot tell where it is | demonstrated | server/src/auth/trusted-origins.test.ts |
+| The application answers only to itself | A socket is opened from the unprotected spelling of the install | demonstrated | tests/docker/test_ingress.py |
 | A development convenience cannot exist in a running install | A running install | demonstrated | server/src/auth/trusted-origins.test.ts |
 | A development convenience cannot exist in a running install | A development install with no port named | demonstrated | server/src/auth/trusted-origins.test.ts |
 | A request for data is never answered with a page | A caller asks for a route the interface does not have | demonstrated | server/test/a-data-request-is-never-a-page.test.ts |
