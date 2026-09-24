@@ -308,10 +308,11 @@ const OWN_ENDINGS: Readonly<Record<string, 'signed_out' | 'account_sessions_ende
 }
 
 /**
- * The library's session endings only the accounts pane reaches, which records
- * each act itself. -> `accounts/accounts.controller.ts`
+ * The library's session endings only the accounts pane reaches, each recorded
+ * before it runs and refused unless the line landed.
+ * -> `accounts/accounts.controller.ts`
  */
-const RECORDED_BY_THE_ACCOUNTS_PANE: ReadonlySet<string> = new Set(['/admin/revoke-user-sessions', '/admin/ban-user'])
+const RECORDED_BY_THE_ACCOUNTS_PANE: ReadonlySet<string> = new Set(['/admin/revoke-user-sessions'])
 
 /**
  * The offered operations that act on the caller's own sessions. Refused to a
@@ -764,19 +765,23 @@ export function authOptions(
               sessionEnded(userId, sessionId, RECORDED_BY_THE_ACCOUNTS_PANE.has(path))
               return
             }
-            const [who] = await db
-              .select({ name: schema.user.name, email: schema.user.email })
-              .from(schema.user)
-              .where(eq(schema.user.id, userId))
-              .limit(1)
-            const landed = await recordInstallActivity(db, {
-              event,
-              actor: { id: userId, label: who?.name || who?.email || null },
-              target: who?.email ?? null,
-              detail: { path },
-              headers: Object.fromEntries(ending?.headers?.entries() ?? []),
-            })
-            sessionEnded(userId, sessionId, landed)
+            let landed = false
+            try {
+              const [who] = await db
+                .select({ name: schema.user.name, email: schema.user.email })
+                .from(schema.user)
+                .where(eq(schema.user.id, userId))
+                .limit(1)
+              landed = await recordInstallActivity(db, {
+                event,
+                actor: { id: userId, label: who?.name || who?.email || null },
+                target: who?.email ?? null,
+                detail: { path },
+                headers: Object.fromEntries(ending?.headers?.entries() ?? []),
+              })
+            } finally {
+              sessionEnded(userId, sessionId, landed)
+            }
           },
         },
       },
