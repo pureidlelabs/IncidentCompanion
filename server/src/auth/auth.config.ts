@@ -750,10 +750,10 @@ export function authOptions(
           after: async (deleted: Record<string, unknown>, context?: unknown) => {
             const userId = typeof deleted['userId'] === 'string' ? deleted['userId'] : null
             if (!userId) return
-            sessionEnded(userId, typeof deleted['id'] === 'string' ? deleted['id'] : '')
             const ending = context as { path?: string; headers?: Headers } | undefined
             const path = ending?.path ?? ''
             const event = OWN_ENDINGS[path]
+            sessionEnded(userId, typeof deleted['id'] === 'string' ? deleted['id'] : '', event !== undefined)
             if (!event) return
             const [who] = await db
               .select({ name: schema.user.name, email: schema.user.email })

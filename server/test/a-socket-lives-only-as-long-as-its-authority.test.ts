@@ -6,7 +6,7 @@
  * the end, then writes: the write must not land, the socket must close, and
  * the refusal must be recorded as the request's would be.
  */
-import { and, eq, gte } from 'drizzle-orm'
+import { and, eq, gte, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Redis } from 'ioredis'
 import * as encoding from 'lib0/encoding'
@@ -98,13 +98,20 @@ function typed(noteId: string, text: string): string {
 const closesWithin = (closed: Promise<number>, ms: number) =>
   Promise.race([closed, new Promise<null>((resolve) => setTimeout(() => { resolve(null) }, ms))])
 
-async function refusalsFor(userId: string, since: Date): Promise<string[]> {
+/** The refused connections recorded for the case since `since`, by what ended them, whoever the actor is now. */
+async function endingsSince(since: Date): Promise<(string | null)[]> {
   const db = drizzle({ client: pool })
   const rows = await db
-    .select({ event: installActivity.event })
+    .select({ target: installActivity.targetLabel })
     .from(installActivity)
-    .where(and(eq(installActivity.actorId, userId), gte(installActivity.at, since), eq(installActivity.statusId, 2)))
-  return rows.map((row) => row.event)
+    .where(
+      and(
+        eq(installActivity.event, 'live_refused'),
+        gte(installActivity.at, since),
+        sql`${installActivity.detail}->>'case' = ${caseId}`,
+      ),
+    )
+  return rows.map((row) => row.target)
 }
 
 describe.skipIf(!(await bootable()))('a socket and the authority that admitted it', () => {
@@ -173,7 +180,7 @@ describe.skipIf(!(await bootable()))('a socket and the authority that admitted i
     expect({
       written: (await noteText(noteId)).includes(`written after ${what}`),
       closed: code !== null,
-      recorded: what.includes('deleted') ? true : (await refusalsFor(analyst.id, since)).includes('live_refused'),
+      recorded: (await endingsSince(since)).length > 0,
     }).toEqual({ written: false, closed: true, recorded: true })
   }, 60_000)
 

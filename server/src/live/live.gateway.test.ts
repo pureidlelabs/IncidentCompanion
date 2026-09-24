@@ -687,7 +687,7 @@ describe('the connection dies with the authority that admitted it', () => {
     expect({ closed: live.closedWith, left }).toEqual({ closed: 4404, left: ['left'] })
   })
 
-  it('records a refused claim once per connection, however often it is sent', async () => {
+  it('records each refused claim, as the guard records each refused request, naming the customer', async () => {
     const { gateway } = gatewayAsking(
       () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }),
       () => Promise.resolve({ customerId: 'a-default-customer', level: 'read' }),
@@ -696,10 +696,73 @@ describe('the connection dies with the authority that admitted it', () => {
     await gateway.open(live as unknown as WebSocket, CASE, admitted)
 
     live.receive({ type: 'claim', table: 'systems', id: A_ROW })
+    live.receive({ type: 'claim', table: 'systems', id: A_ROW.replace(/a$/, 'b') })
+    await pause(20)
+
+    const lines = recorded.filter((line) => line.event === 'access_denied')
+    expect(lines.map((line) => (line.detail as { customer?: string }).customer)).toEqual([
+      'a-default-customer',
+      'a-default-customer',
+    ])
+  })
+
+  it('gives up its claims once it holds less than write, and stays open to read', async () => {
+    let level = 'write'
+    const released: string[] = []
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => Promise.resolve(),
+      claim: () => Promise.resolve(),
+      release: (_member: unknown, table: string, id: string) => {
+        released.push(`${table}:${id}`)
+        return Promise.resolve()
+      },
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      { api: { getSession: () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }) } } as never,
+      {} as never,
+      audit as never,
+      { levelOnCase: () => Promise.resolve({ customerId: 'a-default-customer', level }) } as never,
+    )
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
     live.receive({ type: 'claim', table: 'systems', id: A_ROW })
     await pause(20)
 
-    expect(recorded.filter((line) => line.event === 'access_denied')).toHaveLength(1)
+    level = 'read'
+    reachChanged('u-1')
+    await pause(20)
+
+    expect({ released, closed: live.closedWith }).toEqual({ released: [`systems:${A_ROW}`], closed: null })
+  })
+
+  it('records nothing of its own when the session ending was recorded where it happened', async () => {
+    const gateway = gatewayFor(() => false, () => true)
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    sessionEnded('u-1', 's-1', true)
+    await settle()
+
+    expect({ closed: live.closedWith, recorded: recorded.map((line) => line.event) }).toEqual({
+      closed: 4401,
+      recorded: [],
+    })
+  })
+
+  it('records the ending itself when nothing else recorded it', async () => {
+    const gateway = gatewayFor(() => false, () => true)
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    sessionEnded('u-1', 's-1')
+    await settle()
+
+    expect({ closed: live.closedWith, recorded: recorded.map((line) => line.event) }).toEqual({
+      closed: 4401,
+      recorded: ['live_refused'],
+    })
   })
 
   it('closes a socket when the session that opened it ends', async () => {
