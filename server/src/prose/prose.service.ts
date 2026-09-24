@@ -141,6 +141,8 @@ export interface ProseRelay {
  * not published back. The client end uses the same idea for the same reason.
  */
 const REMOTE = Symbol('remote')
+/** A section pruned on a stored copy, applied to the live document: relayed, and not a new edit. */
+const PRUNED = Symbol('pruned')
 
 /** What one instance sends the others when a document moves. */
 interface ProseFrame {
@@ -368,6 +370,10 @@ export class ProseService implements OnApplicationShutdown {
       saving: Promise.resolve(),
     }
     doc.on('update', (update: Uint8Array, origin: unknown) => {
+      if (origin === PRUNED) {
+        void this.relayOut(caseId, address, update)
+        return
+      }
       entry.dirty = true
       if (entry.timer) clearTimeout(entry.timer)
       entry.timer = setTimeout(() => {
@@ -442,20 +448,20 @@ export class ProseService implements OnApplicationShutdown {
     }
   }
 
-  /** Empty every fragment of `doc` whose section no longer exists, so a late edit to one is not kept. */
-  private async pruneRemovedSections(tx: Executor, caseId: string, reportId: string, doc: Y.Doc): Promise<boolean> {
-    const [report] = await tx
-      .select({ id: reports.id })
-      .from(reports)
-      .where(and(eq(reports.id, reportId), eq(reports.caseId, caseId)))
-    if (!report) return false
+  /**
+   * A copy of `doc` holding no fragment whose section `tx` cannot find, so a
+   * late edit to a removed one is not kept. `doc` itself is left as it is.
+   */
+  private async prunedCopy(tx: Executor, reportId: string, doc: Y.Doc): Promise<Y.Doc> {
     const live = await tx.select({ id: reportBlocks.id }).from(reportBlocks).where(eq(reportBlocks.reportId, reportId))
     const kept = new Set(live.map((block) => block.id))
-    for (const name of [...doc.share.keys()]) {
-      const fragment = fragmentFor(doc, name)
+    const copy = new Y.Doc()
+    Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc))
+    for (const name of [...copy.share.keys()]) {
+      const fragment = fragmentFor(copy, name)
       if (!kept.has(name) && fragment.length > 0) fragment.delete(0, fragment.length)
     }
-    return true
+    return copy
   }
 
   /** Empty a removed section's fragment, and store the report without it. Call after its block row is deleted. */
@@ -701,14 +707,13 @@ export class ProseService implements OnApplicationShutdown {
     const attributed = by ? { updatedBy: by.id, updatedAt: new Date() } : {}
     try {
       for (const who of candidates) {
+        let pruned: Y.Doc | null = null
         const stored = await actingAs(who, () =>
           withCase(this.db, caseId, async (tx) => {
-            // Pruned only once this writer is shown to reach the report: a read
-            // it cannot see returns no sections, which would empty them all.
-            if (address.table === 'reports') {
-              if (!(await this.pruneRemovedSections(tx, caseId, address.id, held.doc))) return false
-            }
-            const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
+            // A copy: a writer who cannot see the sections prunes them all, and
+            // only a store that took it reaches the live document.
+            if (address.table === 'reports') pruned = await this.prunedCopy(tx, address.id, held.doc)
+            const bytes = Buffer.from(Y.encodeStateAsUpdate(pruned ?? held.doc))
             const [row] = await (address.table === 'casenotes'
               ? tx
                   .update(caseNotes)
@@ -744,6 +749,11 @@ export class ProseService implements OnApplicationShutdown {
             return true
           }),
         )
+        if (pruned) {
+          const copy: Y.Doc = pruned
+          if (stored) Y.applyUpdate(held.doc, Y.encodeStateAsUpdate(copy, Y.encodeStateVector(held.doc)), PRUNED)
+          copy.destroy()
+        }
         if (!stored) continue
         if (writers.length > 0) this.saved?.(caseId, address, writers)
         return

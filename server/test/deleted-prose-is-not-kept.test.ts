@@ -165,4 +165,54 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
     const [row] = await seed.select({ document: reports.document }).from(reports).where(eq(reports.id, report.id))
     expect(Buffer.from(row!.document ?? []).toString('utf8')).not.toContain(LATE)
   })
+
+  /** A report, one section removed while a client typed into it offline, and that late edit applied. */
+  async function lateEditIntoARemovedSection(label: string, words: string) {
+    const report = await json<{ id: string }>('POST', `/api/cases/${caseId}/reports`, { label })
+    const block = await json<{ id: string; version: number }>('POST', `/api/cases/${caseId}/report_blocks`, {
+      reportId: report.id,
+      kind: 'written',
+      position: 0,
+    })
+    const address = reportDocument(report.id)
+    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
+    const server = await prose.open(caseId, address)
+    const client = new Y.Doc()
+    Y.applyUpdate(client, Y.encodeStateAsUpdate(server))
+    await json('DELETE', `/api/cases/${caseId}/report_blocks/${block.id}?version=${String(block.version)}`)
+    const before = Y.encodeStateVector(client)
+    const paragraph = new Y.XmlElement('paragraph')
+    paragraph.insert(0, [new Y.XmlText(words)])
+    fragmentFor(client, block.id).insert(0, [paragraph])
+    const encoder = encoding.createEncoder()
+    writeUpdate(encoder, Y.encodeStateAsUpdate(client, before))
+    await prose.apply(caseId, address, encoding.toUint8Array(encoder), 'a-socket', { id: analyst.id, label: 'A', headers: {} })
+    return { report, address, prose }
+  }
+
+  it('seals a report for sending straight after a late edit into a removed section', async () => {
+    const { report, address, prose } = await lateEditIntoARemovedSection('Sent at once', `sealed at once ${STAMP}`)
+
+    const sealed = await prose.seal(caseId, report.id).then(
+      async (seal) => {
+        await seal.settle(null)
+        return 'sealed'
+      },
+      (error: unknown) => String(error),
+    )
+    await prose.release(caseId, address)
+
+    expect(sealed).toBe('sealed')
+  })
+
+  it('keeps nothing typed into a removed section when the flush is asked for by somebody who reaches nothing', async () => {
+    const words = `asked for by a stranger ${STAMP}`
+    const { report, address, prose } = await lateEditIntoARemovedSection('Stranger asks', words)
+
+    await actingAs(randomUUID(), () => harness.app.get(ProseService, { strict: false }).flush(caseId, address))
+    await prose.release(caseId, address)
+
+    const [row] = await seed.select({ document: reports.document }).from(reports).where(eq(reports.id, report.id))
+    expect(Buffer.from(row!.document ?? []).toString('utf8')).not.toContain(words)
+  })
 })
