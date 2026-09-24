@@ -456,16 +456,6 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       await prose.release(caseId, reportDocument(reportId))
     })
 
-    it('keeps deleted text, because the document does not collect', async () => {
-      // `gc: false` is a property of the record rather than of a session: one
-      // collecting peer exports a document with its history already gone, and
-      // every later reader inherits the loss.
-      const { caseId, reportId } = await freshReport()
-      const doc = await prose.open(caseId, reportDocument(reportId))
-      expect(doc.gc).toBe(false)
-      await prose.release(caseId, reportDocument(reportId))
-    })
-
     it('holds two sections of one report in one document', async () => {
       const { caseId, reportId } = await freshReport()
       const doc = await prose.open(caseId, reportDocument(reportId))

@@ -3,10 +3,9 @@
  *
  * **Two kinds of record, and the granularity differs on purpose.** A report is
  * one document with a fragment per block - one awareness roster, so an outline
- * can say *"Bob is in section 4"*, and one restore point per report rather
- * than one per section. A **note** is one document on its own, because a note
- * is created, read and deleted on its own and a case-wide document would keep
- * a fragment for every note that ever went.
+ * can say *"Bob is in section 4"*. A **note** is one document on its own,
+ * because a note is created, read and deleted on its own and a case-wide
+ * document would keep a fragment for every note that ever went.
  *
  * **The codec, not a second server.** `y-protocols` is the state-vector
  * exchange every Yjs transport speaks, and it rides the case socket that
@@ -54,6 +53,7 @@ import { reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
 import { withCase } from '../db/scope.js'
+import { fragmentFor } from '../domain/prose-fields.js'
 
 /**
  * The one fragment a note's document holds.
@@ -315,7 +315,7 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   private async build(caseId: string, address: ProseRecord): Promise<LiveDocument> {
-    const doc = new Y.Doc({ gc: false })
+    const doc = new Y.Doc()
     let sealed: Date | null = null
     if (address.table === 'casenotes') {
       const [row] = await withCase(this.db, caseId, (tx) =>
@@ -439,6 +439,19 @@ export class ProseService implements OnApplicationShutdown {
       Y.applyUpdate(entry.doc, new Uint8Array(Buffer.from(frame.update, 'base64')), REMOTE)
     } catch (error) {
       this.log.warn(`dropping a relayed prose update for ${recordOf(address)}: ${String(error)}`)
+    }
+  }
+
+  /** Empty a removed section's fragment, and store the report without it. Call after its block row is deleted. */
+  async clearSection(caseId: string, reportId: string, blockId: string): Promise<void> {
+    const address = reportDocument(reportId)
+    const doc = await this.open(caseId, address)
+    try {
+      const fragment = fragmentFor(doc, blockId)
+      if (fragment.length > 0) fragment.delete(0, fragment.length)
+      await this.flush(caseId, address)
+    } finally {
+      await this.release(caseId, address)
     }
   }
 

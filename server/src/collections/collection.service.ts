@@ -29,6 +29,7 @@ import { isScope } from '../domain/scopes.lists.js'
 import type { CollectionName, Scope } from '../domain/wire.js'
 
 import { coerceTimes, columnOf, wired } from '../db/column-access.js'
+import { ProseService } from '../prose/prose.service.js'
 import { whenCommitted } from '../db/act.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -46,6 +47,10 @@ import { CaseChannel } from '../live/case-channel.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { evidence } from '../db/schema/entities.js'
 import { release } from '../report/artefacts-named.js'
+
+/** The report a removed section belonged to, for the one collection whose rows are sections. */
+const sectionOf = (def: CollectionDefinition): Record<string, PgColumn> =>
+  def.name === 'report_blocks' ? { reportId: columnOf(def.table, 'reportId') } : {}
 
 /** The digest a deleted evidence row named, so the bytes can leave the case with it. */
 const digestOf = (collection: string): Record<string, PgColumn> =>
@@ -135,6 +140,7 @@ export class CollectionService {
     @Inject(DATABASE) private readonly db: Database,
     private readonly store: EvidenceStore,
     @Optional() private readonly channel?: CaseChannel,
+    @Optional() private readonly prose?: ProseService,
   ) {}
 
   /**
@@ -812,9 +818,10 @@ export class CollectionService {
             eq(cols.version, expectedVersion),
           ),
         )
-        .returning({ id: cols.id, ...digestOf(def.name) })) as {
+        .returning({ id: cols.id, ...digestOf(def.name), ...sectionOf(def) })) as {
         id: string
         hash?: string | null
+        reportId?: string
       }[]
 
       if (deleted.length === 0) return deleted
@@ -833,11 +840,13 @@ export class CollectionService {
     const removed = await this.store.exclusive(caseId, async () => {
       const gone = await deleting()
       await release(this.db, this.store, caseId, gone.map((row) => row.hash))
-      return gone.length > 0
+      return gone
     })
+    // A removed section's prose goes with it, or the report's document keeps text no view shows.
+    for (const row of removed) if (row.reportId) await this.prose?.clearSection(caseId, row.reportId, row.id)
 
-    if (removed) this.announce(caseId, [def.name], actorId)
-    return removed
+    if (removed.length > 0) this.announce(caseId, [def.name], actorId)
+    return removed.length > 0
   }
 
   async get(def: CollectionDefinition, caseId: string, id: string): Promise<unknown> {

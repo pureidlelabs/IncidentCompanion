@@ -98,7 +98,7 @@ const MAY_IMPORT: Record<string, string[]> = {
     'customers',
     'evidence',
   ],
-  collections: ['db', 'domain', 'config', 'live', 'access', 'evidence', 'report'],
+  collections: ['db', 'domain', 'config', 'live', 'access', 'evidence', 'report', 'prose'],
   /** No `cases`: one row per case, scoped by the `caseId` in the URL alone. */
   // `customers` for the organisation facts alone: a case copies them when
   // its compliance row is raised, and reports which have since moved.
@@ -214,7 +214,7 @@ const MAY_IMPORT: Record<string, string[]> = {
   evidence: ['config', 'policy'],
   preferences: ['db', 'config', 'auth', 'domain', 'install-activity', 'policy'],
   /** No `live`: the socket knows about documents, never the reverse. */
-  prose: ['db', 'config'],
+  prose: ['db', 'config', 'domain'],
   // `access` because no guard runs on an upgrade: the socket asks the same
   // reach question a route's guard does, by hand. -> `live.gateway.ts`
   // `wire` for who an upgrade is from, which no middleware reaches either.
