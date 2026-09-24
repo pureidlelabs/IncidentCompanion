@@ -1,9 +1,14 @@
 # The gate a pull request into `main` has to pass.
 #
-# **It decides whether the change broke what it touched**, not whether `main`
-# is green -- that is `nightly-build.yml`'s question. So a tier whose inputs did not
-# move is not run, and a tier that did not run does not fail the gate: `gate`
-# passes on `skipped`.
+# **The merge group runs every tier, whatever the diff, and a tier that skipped
+# there fails `gate`.** The tiers read across trees -- the client compiles
+# `server/src/domain`, the server suite reads `ui/src` and `docker/db`, the image
+# is built from both -- so no path rule can say which of them a change reached.
+#
+# **A pull request's run is scoped by path, and advisory.** A tier whose paths
+# did not move is not run there, `gate` passes it as skipped, and says it did:
+# a green pull request means the tiers it ran passed, and the merge group is
+# the verdict that lands. The cheap tiers are not scoped on any event.
 #
 # **Everything starts at once, and the draft is what pays for that.** No tier
 # waits on another, so the run lasts as long as its slowest job rather than a
@@ -12,14 +17,14 @@
 # reach a suite red.
 #
 # **The three states divide the work.** A draft proves the branch lints, builds
-# and passes the repository checks; a branch marked ready adds the suites, so a
-# failure lands on its own head commit; the merge group proves the tree that
-# ships, which is the only tree whose verdict decides the merge.
+# and passes the repository checks; a branch marked ready adds the suites its
+# paths touch, so a failure lands on its own head commit; the merge group proves
+# the tree that ships, which is the only tree whose verdict decides the merge.
 #
 # **Every `github.event.pull_request.*` field is null in a merge group**, and
 # null compares false rather than erroring -- so a condition reading one skips
-# its job in silence and `gate` passes it. Every condition reads the event
-# first for that reason, and `test_no_tier_runs_on_neither_event` keeps it true.
+# its job in silence. Every condition reads the event first for that reason,
+# and `test_no_tier_runs_on_neither_event` keeps it true.
 #
 # **`gate` is the check to require, and the only one.** A shard's name carries
 # its index; `gate`'s does not move.
@@ -80,13 +85,8 @@ jobs:
       server: ${{ steps.scope.outputs.server }}
       client: ${{ steps.scope.outputs.client }}
       screen: ${{ steps.scope.outputs.screen }}
-      linters: ${{ steps.scope.outputs.linters }}
-      shell: ${{ steps.scope.outputs.shell }}
-      actions: ${{ steps.scope.outputs.actions }}
-      renovate: ${{ steps.scope.outputs.renovate }}
       devcontainer: ${{ steps.scope.outputs.devcontainer }}
       containers: ${{ steps.scope.outputs.containers }}
-      prose: ${{ steps.scope.outputs.prose }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -104,16 +104,13 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
           ALL: ${{ inputs.all }}
         run: |
-          # **The two callers differ in what changed, and in nothing else.** A
-          # called run has no base to diff against and wants every tier, which
-          # is the whole tree having moved -- so it says that, and one
-          # derivation below answers for both. Stating the tiers here instead
-          # made a second copy of the mapping, and it drifted twice: `screen`
-          # arrived in #327 and `linters` in #328, each reaching only the
-          # derivation. An unset output is the empty string, so `client-screen`
-          # skipped in silence and `lint` died in `fromJSON`.
-          if [ "$ALL" = "true" ]; then
-            echo 'every tier, asked for by the caller'
+          # **The events differ in what changed, and in nothing else.** A run
+          # that certifies -- the merge group, or a caller asking for every
+          # tier -- takes the whole tree as having moved, so one derivation
+          # below answers for every event. Stating the tiers here instead made
+          # a second copy of the mapping, and it drifted twice. -> #327, #328
+          if [ "$ALL" = "true" ] || [ "$GITHUB_EVENT_NAME" = "merge_group" ]; then
+            echo "every tier: a $GITHUB_EVENT_NAME run certifies"
             changed="$(git ls-files)"
           else
             # **Three dots, so the base is the merge base.** Two dots compares
@@ -148,42 +145,10 @@ jobs:
             && screen=true
           [ "$deps" = true ] && server=true && client=true && screen=true
 
-          shell="$(match '\.sh$')"
-          actions="$(match '^\.github/(workflows|actions)/')"
-          renovate="$(match '^\.github/renovate\.json5$')"
-          prose="$(match '^(openspec/|\.claude/|\.devcontainer/|tests/|server/src/|server/test/|ui/src/|README\.md)')"
-
-          # **A shard per unit of work, not per linter.** `actionlint`,
-          # `renovate`, `shellcheck`, `vale` and the byte lint are seconds each;
-          # a shard of their own pays a checkout, a node install and a mise
-          # install to spend them, and the tier is bounded by `client` either
-          # way. So the four tool linters share one shard and the two eslint
-          # runs keep theirs.
-          #
-          # `jq -R` quotes each name, `-sc` folds them into the one-line array
-          # `fromJSON` wants.
-          selected=""
-          [ "$server" = true ] && selected="${selected}server\n"
-          [ "$client" = true ] && selected="${selected}client\n"
-          # The byte lint is unscoped -- every file in the tree is its subject --
-          # so the tool shard exists whenever any linter does, and it rides
-          # along rather than running on a diff that selected nothing.
-          if [ -n "$selected" ] || [ "$actions" = true ] || \
-             [ "$renovate" = true ] || [ "$shell" = true ] || \
-             [ "$prose" = true ]; then
-            selected="${selected}tools\n"
-          fi
-          linters="$(printf '%b' "$selected" | jq -R . | jq -sc .)"
-
           {
             echo "server=$server"
             echo "client=$client"
             echo "screen=$screen"
-            echo "shell=$shell"
-            echo "actions=$actions"
-            echo "renovate=$renovate"
-            echo "prose=$prose"
-            echo "linters=$linters"
             echo "devcontainer=$(match '^\.devcontainer/')"
             echo "containers=$(match '^(\.devcontainer/|docker/|compose.*\.yaml|tests/docker/)')"
             # **Not `deps`**, which is forced false on `renovate/linters` so the
@@ -212,15 +177,14 @@ jobs:
   # rather than found: every `run:` stands at the root, where a shim finds none.
   lint:
     needs: scope
-    # **Three shards at most, and `scope` decides which exist.** A shard that
-    # discovers it has nothing to do is a checkout and an install spent on
-    # nothing.
-    if: needs.scope.outputs.linters != '[]'
     runs-on: ubuntu-24.04
+    # **A shard per unit of work, not per linter.** `actionlint`, `renovate`,
+    # `shellcheck`, `vale` and the byte lint are seconds each, so the four tool
+    # linters share one shard and the two eslint runs keep theirs.
     strategy:
       fail-fast: false
       matrix:
-        linter: ${{ fromJSON(needs.scope.outputs.linters) }}
+        linter: [server, client, tools]
     env:
       MISE_GLOBAL_CONFIG_FILE: ${{ github.workspace }}/.devcontainer/mise.toml
     steps:
@@ -250,10 +214,6 @@ jobs:
       - name: ${{ matrix.linter }}
         env:
           LINTER: ${{ matrix.linter }}
-          WANT_ACTIONS: ${{ needs.scope.outputs.actions }}
-          WANT_RENOVATE: ${{ needs.scope.outputs.renovate }}
-          WANT_SHELL: ${{ needs.scope.outputs.shell }}
-          WANT_PROSE: ${{ needs.scope.outputs.prose }}
         run: |
           case "$LINTER" in
             server) cd server && npm run --silent lint ;;
@@ -269,21 +229,13 @@ jobs:
               # Renovate reports a clean run for having skipped it.
               # `bytes` over the whole tree rather than the diff: a stray byte
               # sits under paths no tier reaches.
-              if [ "$WANT_ACTIONS" = true ]; then
-                actionlint --version
-                npm run --silent lint:actions
-              fi
-              if [ "$WANT_RENOVATE" = true ]; then
-                npm run --silent lint:renovate
-              fi
-              if [ "$WANT_SHELL" = true ]; then
-                shellcheck --version
-                npm run --silent lint:shell
-              fi
-              if [ "$WANT_PROSE" = true ]; then
-                vale --version
-                npm run --silent lint:prose
-              fi
+              actionlint --version
+              npm run --silent lint:actions
+              npm run --silent lint:renovate
+              shellcheck --version
+              npm run --silent lint:shell
+              vale --version
+              npm run --silent lint:prose
               # The local rules' own tests, before the lint that runs them:
               # a rule whose matcher stopped matching reports a clean tree.
               node --test tools/eslint-rules/comment-hygiene.test.mjs
@@ -297,24 +249,17 @@ jobs:
   # for the other.
   build:
     needs: scope
-    if: >-
-      needs.scope.outputs.server == 'true' ||
-      needs.scope.outputs.client == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
       - name: Server typecheck
-        if: needs.scope.outputs.server == 'true'
         run: cd server && npm run --silent typecheck
       - name: Client typecheck
-        if: needs.scope.outputs.client == 'true'
         run: cd ui && npx tsc -b --noEmit --force
       - name: Server build
-        if: needs.scope.outputs.server == 'true'
         run: cd server && npm run --silent build
       - name: Client build
-        if: needs.scope.outputs.client == 'true'
         run: cd ui && npm run --silent build
 
   # ------------------------------------------------------------------ the tree
@@ -386,7 +331,7 @@ jobs:
     # assumes them.
     services:
       postgres:
-        image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
         env:
           POSTGRES_USER: incidentcompanion
           POSTGRES_PASSWORD: incidentcompanion
@@ -709,49 +654,87 @@ jobs:
           sh docker/secrets.sh
           .venv/bin/python -m pytest tests/docker -q -n auto
 
+  # --------------------------------------------------------------- lifecycle
+  # **The shipped `compose.yaml`, through its whole life**: first start, a
+  # write, preparation again, stop and start, down and up, each store
+  # restarted under the server, a crash, an unordered start, a copy returned
+  # to and a shape that would lose data, with the stack's network captured
+  # throughout. Anything the images are built from can break it, so the
+  # server, the client and the container files all scope it in.
+  lifecycle:
+    needs: scope
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
+      (needs.scope.outputs.server == 'true' || needs.scope.outputs.client == 'true' ||
+       needs.scope.outputs.containers == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The shipped stack's lifecycle
+        env:
+          INCIDENTCOMPANION_LIFECYCLE_TESTS: '1'
+          IC_SUITE_MUST_RUN: '1'
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q -r requirements-dev.txt
+          .venv/bin/python -m pytest tests/lifecycle -q -rA
+
   # ---------------------------------------------------------------- the gate
   # **The one check to require on `main`.** `always()` is what makes it report
   # on a run where a tier failed; without it a failed dependency skips this
   # job, and a skipped required check reads as success.
   #
-  # A draft runs the cheap tiers, so this reports there too and the branch has
-  # a verdict before it is offered.
-  #
-  # `skipped` passes -- that is how a tier says its paths did not move.
-  # `cancelled` does not: that run's verdict is not the head commit's.
+  # **A job joins it by being listed in `needs`.** A skip passes only on a pull
+  # request, whose run is advisory.
   gate:
     if: always()
     needs:
       [scope, lint, build, repository, server-suite, client-suite, client-screen, browser,
-       gallery, devcontainer, containers]
+       gallery, devcontainer, containers, lifecycle]
     runs-on: ubuntu-24.04
     steps:
       - name: Every tier
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-          # Empty in every event but a called run, and a comparison against the
-          # empty string is what makes that the pull request's reading.
+          NEEDS: ${{ toJSON(needs) }}
+          # Empty in every event but a called run.
           ALL: ${{ inputs.all }}
         run: |
-          echo "$RESULTS"
+          # Assigned rather than piped into the loop, so a `jq` that fails
+          # fails the step instead of feeding it nothing to refuse.
+          results="$(printf '%s' "$NEEDS" | jq -r 'to_entries[] | "\(.key) \(.value.result)"')"
+          if [ -z "$results" ]; then
+            echo 'the gate read no tier'
+            exit 1
+          fi
           failed=false
-          for result in $RESULTS; do
+          left_out=""
+          while read -r name result; do
+            echo "$name: $result"
             case "$result" in
               success) ;;
               skipped)
-                # **A skip means two different things, and only the event
-                # separates them.** On a pull request it is a tier saying its
-                # paths did not move. On a run that asked for every tier
-                # nothing scoped anything out, so it is a tier that was
-                # dispatched and never arrived -- which is the defect this
-                # pipeline keeps shipping, and it was green each time.
                 if [ "$ALL" = true ]; then
-                  echo 'a tier skipped a run that asked for every tier'
+                  echo "  $name skipped a run that asked for every tier"
                   failed=true
+                elif [ "$GITHUB_EVENT_NAME" = merge_group ]; then
+                  echo "  $name skipped the run that decides the merge"
+                  failed=true
+                else
+                  left_out="$left_out $name"
                 fi
                 ;;
-              *) echo "a tier reported $result"; failed=true ;;
+              *) echo "  $name reported $result"; failed=true ;;
             esac
-          done
+          done <<< "$results"
           if [ "$failed" = true ]; then exit 1; fi
-          echo 'every tier reported success or was out of scope'
+          if [ -n "$left_out" ]; then
+            {
+              echo "advisory: this run left out${left_out}."
+              echo 'The merge group runs every tier, and its gate is the verdict that lands.'
+            } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          else
+            echo 'every tier reported success'
+          fi

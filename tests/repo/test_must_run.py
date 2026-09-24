@@ -103,7 +103,7 @@ def test_verify_sh_turns_the_mode_on_where_it_certifies():
         "browser tier (the app)",
         "browser tier (the kit)",
         "client: suite",
-        "repository: suite (with the container files)",
+        "repository: suite (with the container files and the lifecycle)",
         "server: suite",
     ]
     assert sorted(armed) == tiers, (
@@ -151,10 +151,46 @@ def test_the_client_tier_refuses_a_certifying_run_that_ran_nothing():
     )
 
 
+def armed_client_run(*args: str) -> str:
+    """The client tier's unit project on its real config, armed, refused or it fails."""
+    if not (REPO_ROOT / "node_modules" / "vitest").exists():
+        declined("The client must-run arm", "no node_modules -- run npm ci at the root")
+    done = subprocess.run(  # noqa: S603
+        ["npx", "vitest", "run", "--project=unit", *args],
+        cwd=REPO_ROOT / "ui",
+        env={**os.environ, "IC_SUITE_MUST_RUN": "1"},
+        capture_output=True, text=True, timeout=600, check=False,
+    )
+    output = done.stdout + done.stderr
+    assert done.returncode != 0, f"a certifying client run passed:\n{output}"
+    return output
+
+
+def test_a_certifying_run_refuses_a_file_that_ran_no_test():
+    """A module whose every test skipped is not a module that ran.
+
+    `-t` matching nothing skips every test in the shard's files, the state a
+    wholesale `skipIf` leaves. A shard of 1/300 owes about one file, which is
+    what a count of finished modules could not tell from one that ran.
+    """
+    output = armed_client_run("--shard=1/300", "-t", "^a name no test carries$")
+    assert re.search(r"ran no test:\s+src/\S+\.test\.tsx?", output), output
+
+
+def test_a_certifying_run_refuses_a_file_every_shard_left_out():
+    """A file no shard was handed is missing from the tier, and no shard's count can see it.
+
+    Excluding `src/lib` stands for an `include` narrowed by the config. The
+    shard still finishes what it was given, which is all a floor could read.
+    """
+    output = armed_client_run("--shard=1/300", "--exclude", "src/lib/**")
+    assert re.search(r"never planned:\s+src/lib/\S+\.test\.tsx?", output), output
+
+
 #: A module that loses its whole tier to its environment, and the phrase naming the gap. -> #1080
 A_MISSING_ENVIRONMENT_IS_A_DECLINE = {
     "tests/docker/test_container_runtime.py": "no Docker daemon is reachable",
-    "tests/docker/test_backup_restores.py": "no Postgres container could be raised",
+    "tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py": "no Docker daemon is reachable",
     "tests/docker/test_services_can_write_where_they_must.py": "docker is not on PATH",
     "tests/repo/test_a_linked_dependency_is_servable.py": "vite is installed in neither",
     "tests/contract/test_workspaces.py": "nothing is installed in this checkout",
@@ -176,3 +212,17 @@ def test_a_tier_lost_to_its_environment_declines_rather_than_skips(module, gap) 
         f"{module} declines its tier with {opener.strip()!r} rather than through "
         "`declined`, so a certifying run reports success having run none of it"
     )
+
+
+def test_the_certifying_sweep_opts_in_to_every_opt_in_tier() -> None:
+    """An opt-in the certifying sweep does not set is a tier it skips while its step says it ran."""
+    read = {name for path in (REPO_ROOT / "tests").rglob("*.py")
+            for name in re.findall(r'os\.environ\.get\(\s*"(INCIDENTCOMPANION_[A-Z_]+_TESTS)"',
+                                   path.read_text(encoding="utf-8"))}
+    assert read, "no test module reads an opt-in variable, so this checks nothing"
+    joined = (REPO_ROOT / "verify.sh").read_text(encoding="utf-8").replace("\\\n", " ")
+    certifying = [line for line in joined.splitlines() if "IC_SUITE_MUST_RUN=1" in line and "./test.sh" in line]
+    assert certifying, "verify.sh runs ./test.sh in no certifying step"
+    for name in sorted(read):
+        assert all(f"{name}=1" in line for line in certifying), (
+            f"verify.sh's certifying ./test.sh step does not set {name}=1, so that tier skips there")

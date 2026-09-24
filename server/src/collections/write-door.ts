@@ -20,6 +20,20 @@ export const BULK_LIMIT = 1000
 
 export const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
 
+/** The rows a write names, each at the version it was read at. */
+export const selectionSchema = z
+  .array(
+    z
+      .object({
+        id: z.uuid(),
+        version: rowVersion().describe(
+          'The version the row was read at. A stale one is refused with 409.',
+        ),
+      })
+      .strict(),
+  )
+  .max(BULK_LIMIT)
+
 /**
  * Parse a body by hand, or throw the 422 the global pipe would have thrown.
  *
@@ -40,7 +54,7 @@ export function parsed(schema: z.ZodType, body: unknown): Record<string, unknown
  *
  * **Digits before `Number`**, which on its own accepts empty, signed, spaced,
  * exponent and hexadecimal spellings and hands back an integer `rowVersion()`
- * is then satisfied by. -> `every-door-answers-a-version-alike.test.ts`
+ * is then satisfied by. -> `server/test/every-write-door-refuses-a-version-past-its-column.test.ts`
  */
 function fromQuery(value: unknown): number {
   return /^\d+$/.test(String(value)) ? Number(value) : Number.NaN

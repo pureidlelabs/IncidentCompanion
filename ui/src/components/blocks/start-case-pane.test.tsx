@@ -71,4 +71,9 @@ describe('the pane a case starts from', () => {
   it('offers two doors that are told apart by their glyphs', () => {
     expect(glyphOfSection('import')).not.toEqual(glyphOfSection('import-sentinel'))
   })
+
+  it('draws no Sentinel door on an install that does not import from it', () => {
+    render(<StartCasePane onBlank={() => undefined} onImport={() => undefined} />)
+    expect(screen.queryByText(DOOR_LABELS['import-sentinel'])).not.toBeInTheDocument()
+  })
 })

@@ -66,7 +66,7 @@ const waitFor = async (ready: () => boolean, ms: number): Promise<boolean> => {
 
 const socketOn = async (cookie: string) => {
   const socket = new WebSocket(`${wsBase}/api/cases/${caseId}/live`, {
-    headers: { cookie, origin: harness!.base },
+    headers: { cookie, origin: harness!.origin },
   })
   opened.push(socket)
   const up = await new Promise<boolean>((resolve) => {

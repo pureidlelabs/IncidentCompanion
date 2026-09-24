@@ -1,3 +1,4 @@
+import { derivedFields } from '../domain/field-spec.js'
 /**
  * **The same act through two doors reaches the same answer.**
  *
@@ -26,12 +27,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, user } from '../db/schema/index.js'
 import { BULK_TARGETS, COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { patchSchema } from '../domain/field-spec.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -65,15 +66,18 @@ function controllerFor(name: string): Doors {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Doors)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Doors)(
+    new CollectionService(db!, suiteStore()),
+  )
 }
 
 /**
  * A field this collection will accept a string into, found by asking the
  * schema rather than by naming one.
  *
- * The application's own patch validator is the oracle: a key it accepts is
- * patchable by definition, so this cannot drift from what the doors allow.
+ * The application's own patch validator is the oracle, less the fields the
+ * collection derives and refuses on a write, so this cannot drift from what
+ * the doors allow.
  * `null` for a collection with no such field, which is recorded rather than
  * silently skipped.
  */
@@ -81,7 +85,9 @@ function aPatchableTextField(collection: string): string | null {
   const schema = COLLECTION_SCHEMAS[collection]
   if (!schema) return null
   const patch = patchSchema(schema)
+  const derived = COLLECTION_SCHEMAS[collection] ? derivedFields(COLLECTION_SCHEMAS[collection]) : []
   for (const key of Object.keys(schema.shape)) {
+    if (derived.includes(key)) continue
     if (patch.safeParse({ [key]: 'two doors' }).success) return key
   }
   return null
@@ -145,7 +151,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the two write doors agree',
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = one!.id
   })

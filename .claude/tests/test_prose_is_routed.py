@@ -1,9 +1,7 @@
 """A prose change has to be told to run the prose linter.
 
 **Vale is not in `./test.sh`**, which runs in a shell with no Go binary. CI's
-`lint` job does run it, behind a path gate: `WANT_PROSE` decides whether
-`npm run --silent lint:prose` executes at all, so a branch the gate reads as
-prose-free is a branch nothing lints. Before the pull request, the only thing
+`lint` job runs it on every event, so before the pull request the only thing
 that runs it is a person following `test_scope.py` or the `land` skill.
 
 `tests/docs/test_vale_config.py` asserts the rules are awake. This asserts somebody

@@ -23,6 +23,7 @@ import { cases, reportBlocks, reports, user } from '../db/schema/index.js'
 import { ProseService } from '../prose/prose.service.js'
 import { ReportRenderService } from './render.service.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -66,8 +67,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('a draft report against a ca
       .returning()
     caseId = row!.id
 
-    collections = new CollectionService(db!)
-    render = new ReportRenderService(db!, new CasesService(db!), new ProseService(db!), englishOnly, {
+    collections = new CollectionService(db!, suiteStore())
+    render = new ReportRenderService(db!, new CasesService(db!, suiteStore()), new ProseService(db!), englishOnly, {
       read: () => Promise.resolve(null),
     } as never)
 

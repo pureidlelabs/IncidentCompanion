@@ -20,6 +20,8 @@ import { RouteParamtypes } from '@nestjs/common/enums/route-paramtypes.enum.js'
 import { ModulesContainer } from '@nestjs/core'
 
 import { CaseAccessGuard } from './access/case-access.guard.js'
+import { AuthService } from '@thallesp/nestjs-better-auth'
+import { OFFERED, type Auth } from './auth/auth.config.js'
 
 import {
   asDownload,
@@ -36,7 +38,7 @@ import {
   type Operation,
 } from './openapi.prose.js'
 
-export function openApiDocument(app: INestApplication): OpenAPIObject {
+export async function openApiDocument(app: INestApplication): Promise<OpenAPIObject> {
   const spec = new DocumentBuilder()
     // Zod 4 emits JSON Schema 2020-12, which is 3.1's dialect and not 3.0's.
     .setOpenAPIVersion('3.1.0')
@@ -47,9 +49,10 @@ export function openApiDocument(app: INestApplication): OpenAPIObject {
         'reports written from them, and the compliance record kept alongside.',
         '',
         'To use it, sign in with `POST /api/auth/sign-in/email` and send the session',
-        'cookie with every request after that. Four operations work without one:',
-        '`GET /api/health`, this document, and the two `/api/setup` routes that',
-        'claim an install with no accounts yet.',
+        'cookie with every request after that. A few operations work without one:',
+        'signing in and out, reading the session, `GET /api/health`, `GET /api/about`,',
+        'this document, and the two `/api/setup` routes that claim an install with no',
+        'accounts yet.',
         '',
         'Rows carry a `version` field. When you write, send the version you last read.',
         'If somebody else got there first the write is refused with a **409**, which',
@@ -70,7 +73,114 @@ export function openApiDocument(app: INestApplication): OpenAPIObject {
     .addSecurityRequirements('cookie')
     .build()
 
-  return publishedDocument(SwaggerModule.createDocument(app, spec), uuidParsedRoutes(app))
+  const document = SwaggerModule.createDocument(app, spec)
+  await withTheLibrarysOperations(document, app.get<AuthService<Auth>>(AuthService).instance)
+  return publishedDocument(document, uuidParsedRoutes(app))
+}
+
+/**
+ * Refusals of the library's operations that the document's own set does not
+ * describe, because the lockout that decides them is this install's.
+ */
+const LIBRARY_REFUSALS: Readonly<Record<string, Record<string, unknown>>> = {
+  'POST /sign-in/email': {
+    '401': {
+      description:
+        'The address and password sign nobody in. No such account, a wrong password and a ' +
+        'locked account are answered alike.',
+    },
+  },
+}
+
+/** Names the library's schemas are published under, so none collides with ours. */
+const LIBRARY_SCHEMA = (name: string) => `Auth${name}`
+
+/**
+ * Add every operation `OFFERED` names, as the library describes it, to
+ * `document` in place: its summary, its body and its success answer. The
+ * refusals are the document's own, attached with everyone else's by `tidy`.
+ *
+ * Throws where an offered operation is one the library does not describe.
+ */
+export async function withTheLibrarysOperations(
+  document: OpenAPIObject,
+  auth: Auth,
+): Promise<void> {
+  // The library's description omits its mount; its router strips this one.
+  const mount = new URL((await auth.$context).baseURL).pathname
+  const described = (await auth.api.generateOpenAPISchema()) as unknown as {
+    paths: Record<string, Record<string, Record<string, unknown>>>
+    components: { schemas: Record<string, unknown> }
+  }
+  const renamed = (value: unknown): unknown =>
+    JSON.parse(
+      JSON.stringify(value).replace(
+        /#\/components\/schemas\/(\w+)/g,
+        (_, name: string) => `#/components/schemas/${LIBRARY_SCHEMA(name)}`,
+      ),
+    ) as unknown
+
+  const referenced = new Set<string>()
+  for (const offered of OFFERED) {
+    const [method, path] = offered.split(' ') as [string, string]
+    const operation = described.paths[path]?.[method.toLowerCase()]
+    if (!operation) throw new Error(`${offered} is offered and the library does not describe it`)
+    const responses = operation['responses'] as Record<string, unknown>
+    const body = operation['requestBody'] as
+      | { content?: Record<string, { schema?: { properties?: object } }> }
+      | undefined
+    // The library describes a body-less POST as an empty object; it reads none.
+    const takesABody = Object.keys(body?.content?.['application/json']?.schema?.properties ?? {})
+      .length > 0
+    const kept = renamed({
+      summary: operation['description'],
+      operationId:
+        operation['operationId'] ?? path.replace(/[/-](\w)/g, (_, one: string) => one.toUpperCase()),
+      ...(takesABody ? { requestBody: body } : {}),
+      responses: {
+        ...Object.fromEntries(Object.entries(responses).filter(([code]) => /^2/.test(code))),
+        ...LIBRARY_REFUSALS[offered],
+      },
+    })
+    for (const [, name] of JSON.stringify(kept).matchAll(/#\/components\/schemas\/Auth(\w+)/g)) {
+      referenced.add(name!)
+    }
+    const at = (document.paths[`${mount}${path}`] ??= {}) as Record<string, unknown>
+    at[method.toLowerCase()] = kept
+  }
+
+  document.components ??= {}
+  document.components.schemas ??= {}
+  for (const name of referenced) {
+    document.components.schemas[LIBRARY_SCHEMA(name)] = nullableWhereOptional(
+      described.components.schemas[name] as LibrarySchema,
+    ) as never
+  }
+}
+
+interface LibrarySchema {
+  required?: string[]
+  properties?: Record<string, { type?: unknown }>
+}
+
+/**
+ * A library schema with every property it does not require allowed to be
+ * null, which is how the library serves an optional column it has no value
+ * for. Its own description types each one as its value alone.
+ */
+function nullableWhereOptional(schema: LibrarySchema): LibrarySchema {
+  const required = new Set(schema.required ?? [])
+  return {
+    ...schema,
+    properties: Object.fromEntries(
+      Object.entries(schema.properties ?? {}).map(([name, property]) => [
+        name,
+        required.has(name) || typeof property.type !== 'string'
+          ? property
+          : { ...property, type: [property.type, 'null'] },
+      ]),
+    ),
+  }
 }
 
 /** `@Controller` and the method decorators each take a string or an array. */

@@ -147,6 +147,8 @@ Where a row came from MUST be recorded as the archive, rather than as whatever t
 
 The analyst reading the archive in MUST be recorded as having brought it in, so a case that arrived from elsewhere is attributable to the person who put it there.
 
+The new case MUST hold the artefacts the archive carries and nothing else. A digest the archive names and does not carry names something held elsewhere, and MUST NOT reach an artefact this install holds for another case.
+
 #### Scenario: An archive is read in
 
 - GIVEN an archive of a case
@@ -161,6 +163,14 @@ The analyst reading the archive in MUST be recorded as having brought it in, so 
 - THEN the new case's rows are identified by this install's own names
 - AND nothing already in the install was reached
 
+#### Scenario: An archive names an artefact it does not carry
+
+- GIVEN an archive whose rows name the digest of an artefact another case holds
+- AND the archive does not carry that artefact
+- WHEN it is read in
+- THEN the new case holds nothing under that digest
+- AND nothing the new case produces carries the artefact
+
 #### Scenario: An archive is attributed
 
 - GIVEN an analyst reading an archive in
@@ -173,6 +183,34 @@ The analyst reading the archive in MUST be recorded as having brought it in, so 
 - WHEN it is read in
 - THEN the new case's rows say they came from an archive
 - AND its timeline entries are marked unreviewed
+
+### Requirement: An archive is refused where its reference is already held
+
+Reading an archive MUST be refused where the case reference it carries is already held by another case within the same customer, and the refusal MUST name the case holding it.
+
+A reference identifies the customer's own record of the incident, so two cases carrying one reference leave no answer to which of them that record refers to. The refusal MUST leave the install unchanged, and MUST NOT depend on which door the archive arrived through.
+
+An archive read into an install that does not hold the reference is unaffected, which is the handover between installs the format exists for.
+
+#### Scenario: The install still holds the case the archive was made from
+
+- GIVEN a case carrying a reference
+- WHEN an archive of it is read into the same install
+- THEN it is refused
+- AND the analyst is told which case already holds that reference
+- AND no case is created
+
+#### Scenario: The reference is free
+
+- GIVEN an install holding no case with the archive's reference
+- WHEN the archive is read
+- THEN the case is created carrying that reference
+
+#### Scenario: The archive carries no reference
+
+- GIVEN an archive of a case with no reference
+- WHEN it is read into an install already holding cases with no reference
+- THEN it is created, because the absence of a reference is not a value
 
 ### Requirement: An archive's rows are checked against what this install can hold
 

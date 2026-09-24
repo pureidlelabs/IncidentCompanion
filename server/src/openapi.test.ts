@@ -785,11 +785,11 @@ describe('making the generated document readable', () => {
         .toEqual(['deleted'])
     })
 
-    it('documents a PATCH body with nothing required', () => {
+    it('documents a PATCH body that requires the version it was read at and no field', () => {
       const body = collection('/api/cases/{caseId}/systems/{id}', 'patch') as {
         requestBody: { content: Record<string, { schema: { required?: string[] } }> }
       }
-      expect(body.requestBody.content['application/json']!.schema.required ?? []).toEqual([])
+      expect(body.requestBody.content['application/json']!.schema.required ?? []).toEqual(['version'])
     })
 
     it('documents the list response as an array and the row response as one', () => {

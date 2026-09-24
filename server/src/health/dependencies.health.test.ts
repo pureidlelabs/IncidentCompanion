@@ -170,7 +170,7 @@ describe('what the Postgres probe asks', () => {
 
 /** A Redis probe whose `ping` does whatever the test says. */
 function redisThat(ping: () => Promise<string>, lastCode?: string) {
-  return { ping: vi.fn(ping), disconnect: vi.fn(), lastFailureCode: () => lastCode } as never
+  return { ping: vi.fn(ping), lastFailureCode: () => lastCode } as never
 }
 
 describe('what the Redis probe asks', () => {
@@ -257,17 +257,5 @@ describe('what the Redis probe asks', () => {
   it('answers within the budget when the ping never returns', async () => {
     const health = new RedisHealth(redisThat(() => new Promise(() => {})), indicators)
     expect(await health.check()).toEqual({ redis: { status: 'down', message: 'timed out' } })
-  })
-
-  /**
-   * **The probe holds a connection of its own and has to give it back.**
-   * Without this the socket outlives `SIGTERM` and the process does not exit,
-   * which is the same reason `DbModule` ends the pool in a shutdown hook.
-   */
-  it('closes its own connection on shutdown', () => {
-    const client = redisThat(async () => 'PONG')
-    new RedisHealth(client, indicators).onApplicationShutdown()
-    expect((client as unknown as { disconnect: { mock: { calls: unknown[] } } }).disconnect.mock.calls)
-      .toHaveLength(1)
   })
 })

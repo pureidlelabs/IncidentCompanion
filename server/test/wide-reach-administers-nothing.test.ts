@@ -33,6 +33,7 @@ import {
   type Harness,
   type Persona,
 } from './app-harness.js'
+import { MANAGEMENT_PLANE } from './management-plane.js'
 
 const runnable = await bootable()
 
@@ -116,15 +117,19 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
     })
     if (!joined.ok) throw new Error(`could not join the group: ${String(joined.status)}`)
 
+    // A session of its own, because the sweep ends the analyst's other
+    // sessions and then its own; the cases below sign in again after it.
+    const sweeping = await signIn(harness, email, password)
     refused = []
     for (const one of operations(harness.document)) {
       const answer = await fetch(`${harness.base}${one.path}`, {
         method: one.method,
-        headers: { cookie: analyst.cookie, 'content-type': 'application/json' },
+        headers: { cookie: sweeping.cookie, 'content-type': 'application/json' },
         body: ['GET', 'DELETE'].includes(one.method) ? undefined : '{}',
       })
       if (answer.status === 403) refused.push(`${one.method} ${one.template}`)
     }
+    analyst = await signIn(harness, email, password)
   }, 180_000)
 
   afterAll(async () => {
@@ -157,9 +162,9 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
     )
   }, 30_000)
 
-  /** And the refusals it did collect are real rather than an empty sweep. */
-  it('was refused something', () => {
-    expect(refused.length, 'nothing was refused, so the sweep found no management plane').toBeGreaterThan(0)
+  /** Exactly the management plane: reach buys none of it, and costs none of the data plane. */
+  it('is refused exactly the management plane', () => {
+    expect([...refused].sort()).toEqual([...MANAGEMENT_PLANE].sort())
   })
 
   it('lets an administrator create the customer the analyst was refused', async () => {

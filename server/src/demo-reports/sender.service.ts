@@ -4,8 +4,8 @@
  * reach `report`.
  *
  * **The freeze is real; only the stamp is fiction.** Each document is rendered
- * and stored exactly as an analyst's send would, then `sentAt`/`frozenAt` are
- * moved back to the offset the demo declares - on the demo rows only.
+ * and stored exactly as an analyst's send would, stamped at the offset the demo
+ * declares.
  *
  * **A failure is logged and never thrown**, so a report this build cannot draw
  * leaves a draft rather than taking the boot down with it.
@@ -62,17 +62,12 @@ export class DemoReportSender {
       // **Unattributed.** A demo has no analyst, and an invented id in
       // `updated_by` violates its foreign key to `user` -- after the render
       // has already succeeded, so every report is left a draft.
-      await this.lifecycle.send(row.caseId, row.id, null, undefined)
+      const stamp = new Date(row.openedAt.getTime() + atMinute * 60_000)
+      await this.lifecycle.send(row.caseId, row.id, null, undefined, stamp)
     } catch (error) {
       this.log.warn(`${reference}/${label}: left a draft, ${String(error)}`)
       return false
     }
-
-    const stamp = new Date(row.openedAt.getTime() + atMinute * 60_000)
-    await this.db
-      .update(reports)
-      .set({ sentAt: stamp, frozenAt: stamp })
-      .where(eq(reports.id, row.id))
     return true
   }
 }

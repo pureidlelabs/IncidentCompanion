@@ -136,13 +136,7 @@ describe.skipIf(!(await bootable()))('an account just provisioned', () => {
       mustChangePassword: true,
     })
 
-    /**
-     * **`/api/change-password`, not Better Auth's `/api/auth/change-password`.**
-     * The library route changes the password and leaves the hold in place --
-     * measured: the account still answers `403 {"mustChangePassword":true}`
-     * afterwards. Releasing the hold is this application's own route, which
-     * calls `PasswordHoldService.release` after the change.
-     */
+    // The one door that changes a password, and it releases the hold.
     await release(held.cookie)
 
     const after = await signIn(harness!, email, CHOSEN)

@@ -72,8 +72,9 @@ const MAY_IMPORT: Record<string, string[]> = {
   db: ['config'],
   config: [],
   // `customers` for the same reason `cases` has it: a demo raises cases, and a
-  // case is opened under a customer.
-  demos: ['db', 'domain', 'config', 'customers'],
+  // case is opened under a customer. `evidence` because a rebuild removes the
+  // artefacts of the demonstrations it deletes, which leave no other trace.
+  demos: ['db', 'domain', 'config', 'customers', 'evidence'],
   /**
    * `wire` for the one decision three folders share: whether the caller's
    * claimed address may be believed. It is a leaf, so the edge cannot become
@@ -84,6 +85,7 @@ const MAY_IMPORT: Record<string, string[]> = {
   // `customers` because a case is opened *under* one: the door that raises a
   // case has to know which, and a reference is unique within it. The reverse
   // edge stays absent -- a customer knows nothing about cases.
+  // `evidence` because a deleted case takes its artefacts with it.
   cases: [
     'db',
     'domain',
@@ -94,6 +96,7 @@ const MAY_IMPORT: Record<string, string[]> = {
     'live',
     'install-activity',
     'customers',
+    'evidence',
   ],
   collections: ['db', 'domain', 'config', 'live', 'access', 'evidence', 'report'],
   /** No `cases`: one row per case, scoped by the `caseId` in the URL alone. */
@@ -174,7 +177,8 @@ const MAY_IMPORT: Record<string, string[]> = {
    * `domain` schemas, writes through `collections`, and opens a new case
    * through `cases` for the door that starts one from an incident.
    */
-  'incident-import': ['db', 'domain', 'collections', 'cases', 'access'],
+  // `config` for the platforms the operator pointed the install at.
+  'incident-import': ['db', 'domain', 'collections', 'cases', 'access', 'config'],
   // `auth` for `AdminOnly` and `install-activity` for the line every
   // install-level write owes: granting reach is managing the install.
   access: ['db', 'domain', 'auth', 'install-activity'],
@@ -191,7 +195,8 @@ const MAY_IMPORT: Record<string, string[]> = {
    * offered and read by nothing.
    */
   // `customers` for the same reason `cases` has it: reading an archive opens a
-  // case, and a case is opened under a customer.
+  // case, and a case is opened under a customer. `report` for which figures a
+  // sent report places, which travel with it.
   'case-archive': [
     'db',
     'archive',
@@ -201,16 +206,18 @@ const MAY_IMPORT: Record<string, string[]> = {
     'domain',
     'policy',
     'customers',
+    'report',
   ],
   brand: [],
-  /** Bytes on disk. It knows where they go and nothing about a case. */
+  /** Bytes on disk, a directory per case id, and nothing else about a case. */
   evidence: ['config', 'policy'],
   preferences: ['db', 'config', 'auth', 'domain', 'install-activity', 'policy'],
   /** No `live`: the socket knows about documents, never the reverse. */
   prose: ['db', 'config'],
   // `access` because no guard runs on an upgrade: the socket asks the same
   // reach question a route's guard does, by hand. -> `live.gateway.ts`
-  live: ['auth', 'db', 'config', 'prose', 'install-activity', 'access'],
+  // `wire` for who an upgrade is from, which no middleware reaches either.
+  live: ['auth', 'db', 'config', 'prose', 'install-activity', 'access', 'wire'],
   /**
    * `db` is one connection, not a query tier: readiness runs `select 1` on the
    * pool the app serves from, so a pool with nothing free reads as unhealthy.
@@ -227,7 +234,11 @@ const MAY_IMPORT: Record<string, string[]> = {
    */
   // `auth` for `AdminOnly` on the two telemetry routes alone: what the install
   // is made of is an operator's, and the liveness probe beside them stays open.
-  health: ['config', 'db', 'domain', 'policy', 'auth'],
+  // `throttle` for the tier names the probe skips: the count lives in a store
+  // the probe reports on. `evidence` for the census, which asks the store what
+  // each case holds rather than reading its directory itself; `report` for
+  // what each case names, sent reports' figures included.
+  health: ['config', 'db', 'domain', 'policy', 'auth', 'throttle', 'evidence', 'report'],
   spa: ['config'],
   test: ['db', 'config'],
 }
