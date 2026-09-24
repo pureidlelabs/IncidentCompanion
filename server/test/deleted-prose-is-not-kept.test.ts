@@ -5,6 +5,8 @@
  * Read through the seeding role, beneath every door, so a projection at one of
  * them cannot hide a record that still holds the text.
  */
+import { randomUUID } from 'node:crypto'
+
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq, inArray } from 'drizzle-orm'
 import * as encoding from 'lib0/encoding'
@@ -13,17 +15,20 @@ import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
+import { as } from './acting.js'
 import { openTestPool } from './database.js'
 import { cases } from '../src/db/schema/case.js'
 import { reports } from '../src/db/schema/report.js'
 import { caseNotes } from '../src/db/schema/tracker.js'
 import { NOTE_FRAGMENT, ProseService, reportDocument, type ProseRecord } from '../src/prose/prose.service.js'
 import { fragmentFor } from '../src/domain/prose-fields.js'
+import { actingAs } from '../src/db/scope.js'
 
 const STAMP = String(Date.now())
 const DELETED = `a customer's secret pasted by mistake ${STAMP}`
 const REMOVED = `a section the analyst removed ${STAMP}`
 const LATE = `typed offline into a section since removed ${STAMP}`
+const KEPT = `a finding nobody removed ${STAMP}`
 
 describe.skipIf(!(await bootable()))('what the stored record keeps of prose', () => {
   let harness: Harness
@@ -45,7 +50,7 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
 
   /** Acts on one fragment's text as the editor does, then stores and lets the document go. */
   async function write(address: ProseRecord, fragment: string, acts: (text: Y.XmlText) => void) {
-    const prose = harness.app.get(ProseService, { strict: false })
+    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
     const doc = await prose.open(caseId, address)
     const paragraph = new Y.XmlElement('paragraph')
     const text = new Y.XmlText()
@@ -111,6 +116,27 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
     expect(Buffer.from(row!.document ?? []).toString('utf8')).not.toContain(REMOVED)
   })
 
+  it('keeps every section when the flush is asked for by somebody who reaches nothing', async () => {
+    const report = await json<{ id: string }>('POST', `/api/cases/${caseId}/reports`, { label: 'Kept' })
+    const block = await json<{ id: string }>('POST', `/api/cases/${caseId}/report_blocks`, {
+      reportId: report.id,
+      kind: 'written',
+      position: 0,
+    })
+    const address = reportDocument(report.id)
+    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
+    const doc = await prose.open(caseId, address)
+    const paragraph = new Y.XmlElement('paragraph')
+    paragraph.insert(0, [new Y.XmlText(KEPT)])
+    fragmentFor(doc, block.id).insert(0, [paragraph])
+
+    await actingAs(randomUUID(), () => harness.app.get(ProseService, { strict: false }).flush(caseId, address))
+    await prose.release(caseId, address)
+
+    const [row] = await seed.select({ document: reports.document }).from(reports).where(eq(reports.id, report.id))
+    expect(Buffer.from(row!.document ?? []).toString('utf8')).toContain(KEPT)
+  })
+
   it('keeps nothing typed into a section after it was removed', async () => {
     const report = await json<{ id: string }>('POST', `/api/cases/${caseId}/reports`, { label: 'Late words' })
     const block = await json<{ id: string; version: number }>('POST', `/api/cases/${caseId}/report_blocks`, {
@@ -119,7 +145,7 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
       position: 0,
     })
     const address = reportDocument(report.id)
-    const prose = harness.app.get(ProseService, { strict: false })
+    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
     // A client synced with the section, then offline while it is removed.
     const server = await prose.open(caseId, address)
     const client = new Y.Doc()

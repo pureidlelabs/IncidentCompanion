@@ -10,6 +10,7 @@ import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
+import { as } from './acting.js'
 import { openTestPool } from './database.js'
 import { cases } from '../src/db/schema/case.js'
 import { NOTE_FRAGMENT, ProseService, reportDocument, type ProseRecord } from '../src/prose/prose.service.js'
@@ -45,7 +46,7 @@ describe.skipIf(!(await bootable()))('what a read of prose-bearing rows answers'
   }
 
   async function write(address: ProseRecord, fragment: string, words: string) {
-    const prose = harness.app.get(ProseService, { strict: false })
+    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
     const doc = await prose.open(caseId, address)
     const paragraph = new Y.XmlElement('paragraph')
     paragraph.insert(0, [new Y.XmlText(words)])

@@ -12,6 +12,7 @@ import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
+import { as } from './acting.js'
 import { openTestPool } from './database.js'
 import { cases } from '../src/db/schema/case.js'
 import { NOTE_FRAGMENT, ProseService, reportDocument, type ProseRecord } from '../src/prose/prose.service.js'
@@ -51,7 +52,7 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
 
   /** Type into one fragment as the editor does, one transaction per act. */
   async function write(caseId: string, address: ProseRecord, fragmentName: string, acts: (text: Y.XmlText) => void) {
-    const prose = harness.app.get(ProseService, { strict: false })
+    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
     const doc = await prose.open(caseId, address)
     const fragment = fragmentFor(doc, fragmentName)
     let text = fragment.length > 0 ? (fragment.get(0) as Y.XmlElement).get(0) as Y.XmlText | undefined : undefined
@@ -162,7 +163,7 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
     const read = await json<{ id: string }>('POST', '/api/cases/import', new Uint8Array(bytes), 'application/octet-stream')
     made.push(read.id)
     const [note] = await json<{ id: string }[]>('GET', `/api/cases/${read.id}/casenotes`)
-    const prose = harness.app.get(ProseService, { strict: false })
+    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
     const address: ProseRecord = { table: 'casenotes', id: note!.id }
     const doc = await prose.open(read.id, address)
     const shown = doc.getXmlFragment(NOTE_FRAGMENT).toJSON()
@@ -193,7 +194,7 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
     const read = await json<{ id: string }>('POST', '/api/cases/import', new Uint8Array(archive), 'application/octet-stream')
     made.push(read.id)
     const [note] = await json<{ id: string }[]>('GET', `/api/cases/${read.id}/casenotes`)
-    const prose = harness.app.get(ProseService, { strict: false })
+    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
     const address: ProseRecord = { table: 'casenotes', id: note!.id }
     const doc = await prose.open(read.id, address)
     const shown = doc.getXmlFragment(NOTE_FRAGMENT).toJSON()
@@ -225,7 +226,7 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
 
   it('starts a correction from the report as it reads', async () => {
     const { id } = await json<{ id: string }>('POST', `/api/cases/${caseId}/reports/${reportId}/supersede`)
-    const prose = harness.app.get(ProseService, { strict: false })
+    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
     const doc = await prose.open(caseId, reportDocument(id))
     const carried = Buffer.from(Y.encodeStateAsUpdate(doc)).toString('utf8')
     await prose.release(caseId, reportDocument(id))

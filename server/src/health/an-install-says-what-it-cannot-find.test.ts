@@ -291,6 +291,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
       caseId,
       frozen: { sections: [{ nodes: [{ type: 'figure', hash: hashFor('f') }] }] },
       frozenAt: new Date(),
+      sentAt: new Date(),
     })
     await placed(hashFor('f'))
     await placed(hashFor('5'))

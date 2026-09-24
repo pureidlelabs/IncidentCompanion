@@ -11,6 +11,7 @@ import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
+import { as } from './acting.js'
 import { openTestPool } from './database.js'
 import { cases } from '../src/db/schema/case.js'
 import { reports } from '../src/db/schema/report.js'
@@ -76,7 +77,7 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
       kind: 'written',
       position: 0,
     })
-    const prose = harness.app.get(ProseService, { strict: false })
+    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
     const address = reportDocument(sentReport)
     const doc = await prose.open(caseId, address)
     const paragraph = new Y.XmlElement('paragraph')
