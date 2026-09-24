@@ -281,7 +281,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       written.getXmlFragment('block-1').insert(0, [new Y.XmlText('as filed')])
       await seed!
         .update(reports)
-        .set({ document: Buffer.from(Y.encodeStateAsUpdate(written)), sentAt: SENT })
+        .set({ document: Buffer.from(Y.encodeStateAsUpdate(written)), sentAt: SENT, frozen: {}, frozenAt: SENT })
         .where(eq(reports.id, reportId))
       const address = reportDocument(reportId)
       return { caseId, address, doc: await prose.open(caseId, address) }

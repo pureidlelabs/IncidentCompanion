@@ -760,7 +760,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('deleting a selection that s
       .insert(reportBlocks)
       .values({ caseId, reportId: paper!.id, kind: 'figure', evidenceId: artefact!.id })
     // Stamped last: the store refuses a part added to a sent report.
-    await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, paper!.id))
+    await seed!.update(reports).set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() }).where(eq(reports.id, paper!.id))
 
     const result = await controller().remove(
       caseId,

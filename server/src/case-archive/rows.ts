@@ -94,7 +94,7 @@ const SUPPLIED: Readonly<Record<string, z.ZodObject>> = {
  * waved through: that is the case where an action's fields could be written
  * onto an event.
  */
-function baseOf(collection: string, row: Record<string, unknown>): z.ZodObject | undefined {
+export function baseOf(collection: string, row: Record<string, unknown>): z.ZodObject | undefined {
   if (collection === 'timeline') {
     const kind = row['kind']
     return kind === 'event' || kind === 'action' ? TIMELINE_WRITE_SCHEMAS[kind] : undefined

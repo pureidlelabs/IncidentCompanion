@@ -34,11 +34,12 @@ import { NOTE_FRAGMENT, noteText } from '../prose/prose.service.js'
 import { MalformedEnvelope, WrongPassphrase, isSealed, open } from '../archive/envelope.js'
 import { PolicyService } from '../policy/policy.service.js'
 import { REFERENCE_FIELD_NAMES } from '../domain/collections.js'
+import { crossFieldIssue } from '../domain/field-spec.js'
 import { importStamp } from '../db/import-stamp.js'
 import { rekeyed } from '../domain/prose-fields.js'
 import { defangDocument } from '../report/document/defang.js'
 import type { Document } from '../report/document/model.js'
-import { archiveRowSchema } from './rows.js'
+import { archiveRowSchema, baseOf } from './rows.js'
 import { coerceTimes } from '../db/column-access.js'
 import { z } from 'zod'
 import * as Y from 'yjs'
@@ -491,6 +492,10 @@ export class ArchiveImportService {
               `this archive states a value in ${name} that this install cannot write`,
             )
           }
+          // The collection's rules spanning fields, on the row as stored, as its own door runs them.
+          const rules = baseOf(name, one)
+          const issue = rules && written ? crossFieldIssue(rules, written) : null
+          if (issue) throw new BadArchive(`this archive states a row in ${name} its rules refuse: ${issue}`)
           if (typeof one.id === 'string' && written?.id) remap.set(one.id, written.id)
           if (stamp && written?.id) stamps.set(written.id, stamp)
           rows += 1

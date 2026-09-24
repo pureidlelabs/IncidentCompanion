@@ -241,7 +241,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('reordering a collection tha
 
   it('refuses to reorder the blocks of a report that has been sent', async () => {
     const before = await blocksOf()
-    await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
+    await seed!.update(reports).set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() }).where(eq(reports.id, reportId))
 
     await expect(
       controllerFor('report_blocks').reorder(
