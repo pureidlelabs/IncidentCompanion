@@ -15,6 +15,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   Optional,
   UnprocessableEntityException,
@@ -843,7 +844,13 @@ export class CollectionService {
       return gone
     })
     // A removed section's prose goes with it, or the report's document keeps text no view shows.
-    for (const row of removed) if (row.reportId) await this.prose?.clearSection(caseId, row.reportId, row.id)
+    for (const row of removed) {
+      if (!row.reportId) continue
+      // After the delete committed, so a failure here is logged: the next save of the report prunes it.
+      await this.prose?.clearSection(caseId, row.reportId, row.id).catch((why: unknown) => {
+        new Logger(CollectionService.name).warn(`a removed section's prose stays until the report is next saved: ${String(why)}`)
+      })
+    }
 
     if (removed.length > 0) this.announce(caseId, [def.name], actorId)
     return removed.length > 0

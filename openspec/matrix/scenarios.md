@@ -153,6 +153,7 @@
 | An archive says what it should contain, and is checked against it | An archive is read | demonstrated | server/src/archive/format.test.ts |
 | An archive says what it should contain, and is checked against it | An archive has been altered | demonstrated | server/src/archive/format.test.ts |
 | An archive says what it should contain, and is checked against it | A sealed archive is altered by somebody without its secret | demonstrated | server/test/an-archive-carries-the-case-as-it-reads.test.ts |
+| An archive says what it should contain, and is checked against it | An analyst archives without sealing | demonstrated | ui/src/screens/case-archive.stories.tsx |
 | An analyst can seal an archive, and the seal is theirs to hold | An analyst seals an archive | demonstrated | server/src/archive/envelope.test.ts |
 | An analyst can seal an archive, and the seal is theirs to hold | The install is asked to open a sealed archive | demonstrated | server/test/the-install-keeps-no-key-to-a-sealed-archive.test.ts |
 | An analyst can seal an archive, and the seal is theirs to hold | A secret too weak to be worth having | demonstrated | server/src/archive/envelope.test.ts |

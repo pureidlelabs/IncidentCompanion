@@ -153,6 +153,7 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
   it.each([
     ['preserves a document on a draft', sql`update reports set frozen = '{}'::jsonb, frozen_at = now() where id = `],
     ['stamps a report sent that preserves nothing', sql`update reports set sent_at = now() where id = `],
+    ['dates a preservation that holds nothing', sql`update reports set frozen_at = now() where id = `],
   ])('refuses any writer that %s', async (_what, statement) => {
     const caseId = made[0]!
     const [draft] = await seed

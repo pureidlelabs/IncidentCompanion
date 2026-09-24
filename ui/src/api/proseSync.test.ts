@@ -26,7 +26,7 @@ class Relay {
   /** Every message the relay was given, for asserting what went on the wire. */
   readonly sent: { from: number; message: Message }[] = []
   /** The authoritative document, as `ProseService` holds one per field. */
-  readonly doc = new Y.Doc({ gc: false })
+  readonly doc = new Y.Doc()
   /** The row's markdown, which the server seeds a cold document from. */
   row: string | null = null
   private seeded = false

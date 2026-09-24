@@ -460,7 +460,8 @@ export class ProseService implements OnApplicationShutdown {
     const doc = await this.open(caseId, address)
     try {
       const fragment = fragmentFor(doc, blockId)
-      if (fragment.length > 0) fragment.delete(0, fragment.length)
+      if (fragment.length === 0) return
+      fragment.delete(0, fragment.length)
       await this.flush(caseId, address)
     } finally {
       await this.release(caseId, address)

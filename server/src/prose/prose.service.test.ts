@@ -35,15 +35,15 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/** The fragments a test writes into: the sections of the report it last made, once it has made one. */
+let sections: [string, string] = ['block-1', 'block-2']
+
 /**
  * One client's edit as a raw Yjs update, with the document that made it.
  *
  * Raw, not framed: every caller wraps it in `framed` before the service sees
  * it, and the two are what this file's gate assertions turn on.
  */
-/** The fragments a test writes into: the sections of the report it last made, once it has made one. */
-let sections: [string, string] = ['block-1', 'block-2']
-
 function typed(text: string, fragment = sections[0]): { update: Uint8Array; doc: Y.Doc } {
   const doc = new Y.Doc({ gc: false })
   doc.getXmlFragment(fragment).insert(0, [new Y.XmlText(text)])

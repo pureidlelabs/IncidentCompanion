@@ -14,7 +14,7 @@ import { boot, bootable, sharedAnalyst, type Harness, type Persona } from './app
 import { openTestPool } from './database.js'
 import { cases } from '../src/db/schema/case.js'
 import { CASE_NAME, pack } from '../src/archive/format.js'
-import { COLLECTION_SCHEMAS } from '../src/domain/collections.js'
+import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS } from '../src/domain/collections.js'
 import { fields, hasCrossFieldRule } from '../src/domain/field-spec.js'
 import { TABLES } from '../src/case-archive/import.service.js'
 import { baseOf } from '../src/case-archive/rows.js'
@@ -67,6 +67,18 @@ describe.skipIf(!(await bootable()))('a rule spanning fields, at the archive doo
 
   it('finds a rule to hold', () => {
     expect(gated.length).toBeGreaterThan(0)
+  })
+
+  // A rule this test cannot enumerate would pass unchecked, so every schema with one must gate a field.
+  it('can enumerate every rule a schema declares across fields', () => {
+    const unread = Object.entries({ ...COLLECTION_SCHEMAS, ...TIMELINE_WRITE_SCHEMAS })
+      .filter(([, schema]) => hasCrossFieldRule(schema as z.ZodObject))
+      .filter(([, schema]) =>
+        !Object.values((schema as z.ZodObject).shape).some((sub) => fields.get(sub as z.ZodType)?.applicableWhen),
+      )
+      .map(([name]) => name)
+
+    expect(unread).toEqual([])
   })
 
   // The control: each sample reads in without its gated value, so a refusal below is the rule's.

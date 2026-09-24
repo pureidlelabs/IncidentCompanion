@@ -89,6 +89,12 @@ Whoever holds a plain archive can rewrite it and its statement together, so seal
 - WHEN it is read with the secret
 - THEN it is refused
 
+#### Scenario: An analyst archives without sealing
+
+- GIVEN an analyst archiving a case without a secret
+- WHEN they choose not to seal it
+- THEN they are told that whoever holds the archive can change it without that showing
+
 ### Requirement: Reading an archive says how complete the case it made is
 
 Reading an archive MUST tell the operator how much of what the new case names is in it: the attachments its rows name that the archive did not carry, and the rows its rows name that it does not contain.
@@ -262,7 +268,7 @@ An archive matching its own statement MUST NOT be read as though its rows were s
 
 Every row MUST be checked against the shape its collection declares, before any row is written, and against the rules its collection declares across fields, as its own door checks them.
 
-A report an archive says was sent MUST also preserve its document, and one that preserves a document MUST say it was sent; the preserved document MUST be one this install can produce. What it says MUST NOT be a live indicator, whatever the archive carried.
+A report an archive says was sent MUST also preserve its document, and one that preserves a document MUST say it was sent; the preserved document MUST be one this install can produce. What the install generates in it MUST NOT be a live indicator, whatever the archive carried; what an analyst wrote in it is theirs, as it is in a report sent here.
 
 An archive's record MUST NOT carry a prose document: prose travels beside the record, and a record planting one is read as though it carried none. A value of a shape the field does not take MUST be refused rather than stored, and where a field's terms are fixed, a term outside them MUST be refused too.
 

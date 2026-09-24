@@ -222,4 +222,14 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
 
     expect(read.status, await read.text()).toBe(422)
   })
+
+  it('starts a correction from the report as it reads', async () => {
+    const { id } = await json<{ id: string }>('POST', `/api/cases/${caseId}/reports/${reportId}/supersede`)
+    const prose = harness.app.get(ProseService, { strict: false })
+    const doc = await prose.open(caseId, reportDocument(id))
+    const carried = Buffer.from(Y.encodeStateAsUpdate(doc)).toString('utf8')
+    await prose.release(caseId, reportDocument(id))
+
+    expect({ kept: carried.includes(KEPT), hidden: carried.includes(HIDDEN) }).toEqual({ kept: true, hidden: false })
+  })
 })

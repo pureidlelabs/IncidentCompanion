@@ -2,62 +2,6 @@
 
 ## MODIFIED Requirements
 
-### Requirement: An archive is one file holding the whole case
-
-An archive MUST be a single file, and MUST hold everything needed to read the case again: the record, the prose as it reads, and the material attached as evidence.
-
-What an archive carries MUST be the case as it reads when it is made. Text an analyst deleted, a section removed from a report, and prose under a section that is no longer written MUST NOT travel. A note's prose travels as a report's does.
-
-The number of rows an archive describes MUST NOT exceed what the install reads back, so a case past it is refused rather than archived, with the refusal naming the limit.
-
-An analyst MUST be able to leave the attached material out, because evidence is what makes an archive large and moving the record alone is often what is wanted.
-
-Where material is left out, or is expected and not found, the archive MUST say so. An archive that is quietly missing evidence is one somebody discovers is incomplete only when they need it.
-
-#### Scenario: A case is archived
-
-- GIVEN a case with prose and attached evidence
-- WHEN it is archived
-- THEN the archive holds the record, the prose, and the evidence
-
-#### Scenario: An analyst archives without the attachments
-
-- GIVEN a case with attached evidence
-- WHEN the analyst archives it without the attachments
-- THEN the archive says the attachments were left out
-
-#### Scenario: Expected material is not found
-
-- GIVEN a case whose stored evidence cannot all be found
-- WHEN it is archived
-- THEN the archive says how much was not found
-
-#### Scenario: Deleted text does not travel
-
-- GIVEN a report from which an analyst deleted text
-- WHEN the case is archived
-- THEN the archive does not carry the deleted text
-- AND it carries the text that remains
-
-#### Scenario: A removed section does not travel
-
-- GIVEN a report with a section the analyst removed, and one no longer written
-- WHEN the case is archived
-- THEN the archive carries neither section's prose
-
-#### Scenario: A note's prose is archived
-
-- GIVEN a note written with formatting
-- WHEN the case is archived and read back in
-- THEN the note reads as it was written
-
-#### Scenario: A case larger than an archive may carry
-
-- GIVEN a case holding more rows than the install reads from one archive
-- WHEN it is archived
-- THEN the archive is refused, naming the limit
-
-
 ### Requirement: An archive says what it should contain, and is checked against it
 
 An archive MUST carry a statement of what it holds, and reading one MUST check what is there against that statement before any of it is used.
@@ -89,33 +33,6 @@ Whoever holds a plain archive can rewrite it and its statement together, so seal
 - GIVEN an analyst archiving a case without a secret
 - WHEN they choose not to seal it
 - THEN they are told that whoever holds the archive can change it without that showing
-
-### Requirement: Reading an archive cannot be made to cost more than the install will spend
-
-An archive is a file from outside the install, and the work of opening one is described by the file itself. An archive MUST NOT be able to describe work the install will perform.
-
-Where an archive declares that opening it costs more than this install would ever produce, it MUST be refused before that work begins rather than after.
-
-The size of what an archive claims to hold MUST be bounded before it is read, so that a small file cannot describe an unbounded amount of content. The number of rows it describes MUST be bounded too, and counted before any row is written.
-
-#### Scenario: An archive declares more work than the install produces
-
-- GIVEN an archive declaring a cost to open higher than this install ever writes
-- WHEN it is read
-- THEN it is refused before the work is done
-
-#### Scenario: An archive describing more content than the install accepts
-
-- GIVEN an archive claiming to hold more than the install accepts
-- WHEN it is read
-- THEN it is refused
-
-#### Scenario: An archive describing more rows than the install writes
-
-- GIVEN an archive describing more rows than the install reads from one archive
-- WHEN it is read
-- THEN it is refused before any row is written
-- AND the refusal names the limit
 
 
 ### Requirement: An archive's rows are checked against what this install can hold
