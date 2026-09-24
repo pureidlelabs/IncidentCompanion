@@ -228,7 +228,7 @@
 | Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | undemonstrated | |
 | Order an analyst chose is theirs, and is not a property of the data | Two analysts reorder at once | undemonstrated | |
 | Order an analyst chose is theirs, and is not a property of the data | An analyst moves a row twice in a row | undemonstrated | |
-| What comes in and goes out is the same description | An analyst previews an import | demonstrated | server/test/incident-import.test.ts :: importing an incident > the door inside a case > previews without writing anything |
+| What comes in and goes out is the same description | An analyst previews an import | undemonstrated | |
 | What comes in and goes out is the same description | A row in an import is malformed | undemonstrated | |
 | What comes in and goes out is the same description | An export is imported back | undemonstrated | |
 | A field derived from a row's prose has one writer | A derived field is written | undemonstrated | |
@@ -711,12 +711,12 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| The browser is told what the application may do, on every response | A response is read by a browser | demonstrated | server/test/security-headers.test.ts :: every response > carries one content policy, on the application and on the API alike |
+| The browser is told what the application may do, on every response | A response is read by a browser | undemonstrated | |
 | The browser is told what the application may do, on every response | The policy is read for what it permits | demonstrated | server/test/security-headers.test.ts :: every response > carries one content policy, on the application and on the API alike ; server/test/security-headers.test.ts :: every response > does not permit eval, whose only reason has been deleted |
 | The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
 | The browser is told what the application may do, on every response | An install pointed at nothing outside itself | undemonstrated | |
 | The browser is told what the application may do, on every response | The analyst's browser must reach an import platform | undemonstrated | |
-| The application refuses to be framed | A page tries to embed the application | demonstrated | server/test/security-headers.test.ts :: every response > refuses to be framed, and refuses to be sniffed |
+| The application refuses to be framed | A page tries to embed the application | undemonstrated | |
 | Case data is not left on the analyst's disk | An analyst reads a case and signs out | demonstrated | server/test/security-headers.test.ts :: what a browser may keep > refuses the browser a copy of /api/cases |
 | Case data is not left on the analyst's disk | An unchanging asset is served | demonstrated | server/test/security-headers.test.ts :: what a browser may keep > leaves a route that asked to be cached alone |
 | An install reached at its own name tells the browser to keep it protected | An install reached at its own name | undemonstrated | |
