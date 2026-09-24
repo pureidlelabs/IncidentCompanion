@@ -190,6 +190,27 @@ describe('a screen says when it is not live', () => {
     expect(result.current).toMatchObject({ behind: false, failed: false })
   })
 
+  it('stays behind when the socket drops again before the read after its return', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    vi.spyOn(client, 'invalidateQueries').mockResolvedValue(undefined)
+    const result = live(client)
+
+    act(() => {
+      drop()
+      restore()
+      drop()
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+      await Promise.resolve()
+    })
+
+    expect(result.current.behind, 'a read that landed while the socket was down cleared the line').toBe(
+      true,
+    )
+  })
+
   it('says the read failed, and reads again when asked', async () => {
     vi.useFakeTimers()
     const client = new QueryClient()

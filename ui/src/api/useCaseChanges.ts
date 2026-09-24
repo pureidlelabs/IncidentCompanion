@@ -165,11 +165,11 @@ export function useCaseChanges(caseId: string): CaseLive {
   const queries = useQueryClient()
   const [state, setState] = useState(CURRENT)
 
-  /** The whole case read again, and whether the screen is current once it is. */
-  const readAgain = useCallback((reading: Promise<unknown>) => {
+  /** The whole case read again, and whether the screen is current once it is: only while `up`. */
+  const readAgain = useCallback((reading: Promise<unknown>, up: () => boolean = () => true) => {
     reading.then(
       () => {
-        setState(CURRENT)
+        if (up()) setState(CURRENT)
       },
       () => {
         setState({ behind: true, failed: true })
@@ -200,7 +200,7 @@ export function useCaseChanges(caseId: string): CaseLive {
       )
       if (catchingUp) {
         catchingUp = false
-        readAgain(reading)
+        readAgain(reading, () => !wasDown)
       } else {
         reading.catch(() => undefined)
       }
