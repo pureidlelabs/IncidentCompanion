@@ -738,6 +738,27 @@ describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () =
     expect(after).toHaveLength(before.length)
   })
 
+  /** The prose is carried last, so failing it fails after every row is written. -> #1181 */
+  it('leaves nothing of a correction that fails partway, and lets it be tried again', async () => {
+    const { caseId, reportId } = await caseWithReport([{ kind: 'written' }])
+    await lifecycle.send(caseId, reportId, actorId)
+    const source = await prose.open(caseId, reportDocument(reportId))
+    const fragment = source.getXmlFragment.bind(source)
+    source.getXmlFragment = () => {
+      throw new Error('the prose could not be carried')
+    }
+
+    await expect(lifecycle.supersede(caseId, reportId, actorId)).rejects.toThrow('the prose could not be carried')
+    source.getXmlFragment = fragment
+    await prose.release(caseId, reportDocument(reportId))
+
+    const rows = await seed!.select({ id: reports.id }).from(reports).where(eq(reports.caseId, caseId))
+    expect(rows.map((row) => row.id), 'a failed correction left a successor behind').toEqual([reportId])
+    const { id } = await lifecycle.supersede(caseId, reportId, actorId)
+    const [fresh] = await seed!.select().from(reports).where(eq(reports.id, id))
+    expect(fresh!.supersedes).toBe(reportId)
+  })
+
   it('mints the successor as a draft, whatever the original was', async () => {
     const { caseId, reportId } = await caseWithReport([{ kind: 'timeline' }])
     await addTimelineEntry(caseId, 'first')
