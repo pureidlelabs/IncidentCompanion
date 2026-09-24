@@ -10,7 +10,7 @@
  * first, which is a merge review rather than an error. Incrementing it without
  * the `where` looks identical in a diff.
  *
- * `updatedBy` is the caller.
+ * `updatedBy` is the caller, or for a prose document its latest writer, and null once that account is gone.
  */
 import { sql } from 'drizzle-orm'
 import { bigint, check, customType, integer, text, timestamp } from 'drizzle-orm/pg-core'

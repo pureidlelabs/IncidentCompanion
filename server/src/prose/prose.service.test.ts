@@ -398,8 +398,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       const { caseId, reportId } = await freshReport()
       const address = reportDocument(reportId)
       await prose.open(caseId, address)
-      const nobody = { ...WRITER, id: 'no-such-account' }
-      await prose.apply(caseId, address, framed(typed('by no account').update), 'a-socket', nobody)
+      await prose.apply(caseId, address, framed(typed('into a report about to go').update), 'a-socket', WRITER)
+      await seed!.delete(reports).where(eq(reports.id, reportId))
 
       await expect(prose.seal(caseId, reportId)).rejects.toThrow('could not be stored')
       expect(await prose.apply(caseId, address, framed(typed('after').update), 'a-socket', WRITER)).toEqual({

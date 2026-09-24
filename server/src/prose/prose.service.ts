@@ -35,7 +35,7 @@
  */
 import { Inject, Injectable, Logger, Optional, type OnApplicationShutdown } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import {
@@ -48,6 +48,7 @@ import * as Y from 'yjs'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import { user } from '../db/schema/auth.js'
 import { changeFeed } from '../db/schema/change-feed.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
@@ -703,8 +704,10 @@ export class ProseService implements OnApplicationShutdown {
     if (candidates.length === 0) return
     held.writers.clear()
     held.dirty = false
+    // Null where the account is gone, as it would be had it gone after the write.
+    const account = (id: string) => sql<string | null>`(select ${user.id} from ${user} where ${user.id} = ${id})`
     const by = writers.at(-1)
-    const attributed = by ? { updatedBy: by.id, updatedAt: new Date() } : {}
+    const attributed = by ? { updatedBy: account(by.id), updatedAt: new Date() } : {}
     try {
       for (const who of candidates) {
         let pruned: Y.Doc | null = null
@@ -741,7 +744,7 @@ export class ProseService implements OnApplicationShutdown {
                   entityId: address.id,
                   op: 'update' as const,
                   version: row.version,
-                  actorId: writer.id,
+                  actorId: account(writer.id),
                   fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
                 })),
               )
