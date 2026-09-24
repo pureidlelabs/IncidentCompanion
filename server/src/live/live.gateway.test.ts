@@ -384,6 +384,13 @@ class FakeSocket {
     this.terminated = true
   }
 
+  /** The code a close was sent with, or null while open. */
+  closedWith: number | null = null
+
+  close(code: number): void {
+    this.closedWith = code
+  }
+
   on(event: string, handler: (raw: Buffer) => void): this {
     this.handlers.set(event, [...(this.handlers.get(event) ?? []), handler])
     return this
@@ -580,46 +587,64 @@ describe('opening a field asks the client what it has', () => {
   })
 })
 
-describe('the connection dies with the reach that admitted it', () => {
-  function gatewayForDrop(): LiveGateway {
+describe('the connection dies with the authority that admitted it', () => {
+  /** A gateway whose one session is `alive`, and whose one reach is `reaches`. */
+  function gatewayFor(alive: () => boolean, reaches: () => boolean): LiveGateway {
     const channel = { join: () => Promise.resolve(), leave: () => Promise.resolve() }
-    return new LiveGateway(
-      channel as unknown as CaseChannel,
-      {} as never,
-      {} as never,
-      audit as never,
-      anyoneReaches,
-    )
+    const auth = {
+      api: {
+        getSession: () =>
+          Promise.resolve(alive() ? { user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } } : null),
+      },
+    }
+    const reach = {
+      levelOnCase: () =>
+        Promise.resolve(reaches() ? { customerId: 'a-default-customer', level: 'write' as const } : null),
+    }
+    return new LiveGateway(channel as unknown as CaseChannel, auth as never, {} as never, audit as never, reach as never)
   }
 
-  it('terminates a socket when the session that opened it ends', async () => {
-    const gateway = gatewayForDrop()
+  const admitted = { id: 'u-1', name: 'Ada', sessionId: 's-1' }
+
+  it('closes a socket when the session that opened it ends', async () => {
+    let alive = true
+    const gateway = gatewayFor(() => alive, () => true)
     const live = new FakeSocket()
-    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-ended', name: 'Ada' })
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
 
-    sessionEnded('u-ended')
+    alive = false
+    sessionEnded('u-1')
+    await settle()
 
-    expect(live.terminated).toBe(true)
+    expect(live.closedWith).toBe(4401)
   })
 
-  /**
-   * *Reach is withdrawn while the analyst is working*: **the connection ends
-   * rather than carrying on until the next sign-in.** The gateway is told who,
-   * never what -- which of their open cases survived is the reach rules' own
-   * question, and answering it here would be a second copy of them.
-   */
-  it('terminates a socket when the reach that admitted it is withdrawn', async () => {
-    const gateway = gatewayForDrop()
+  it('closes a socket when the reach that admitted it is withdrawn', async () => {
+    let reaches = true
+    const gateway = gatewayFor(() => true, () => reaches)
     const live = new FakeSocket()
-    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-revoked', name: 'Cass' })
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
 
-    reachChanged('u-revoked')
+    reaches = false
+    reachChanged('u-1')
+    await settle()
 
-    expect(live.terminated).toBe(true)
+    expect(live.closedWith).toBe(4404)
+  })
+
+  it('leaves a socket open when the change left its authority whole', async () => {
+    const gateway = gatewayFor(() => true, () => true)
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    reachChanged('u-1')
+    await settle()
+
+    expect({ closed: live.closedWith, terminated: live.terminated }).toEqual({ closed: null, terminated: false })
   })
 
   it("leaves another analyst's socket open when reach changes", async () => {
-    const gateway = gatewayForDrop()
+    const gateway = gatewayFor(() => true, () => true)
     const live = new FakeSocket()
     await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-untouched', name: 'Dee' })
 
@@ -629,7 +654,7 @@ describe('the connection dies with the reach that admitted it', () => {
   })
 
   it("leaves another analyst's socket open", async () => {
-    const gateway = gatewayForDrop()
+    const gateway = gatewayFor(() => true, () => true)
     const live = new FakeSocket()
     await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-safe', name: 'Bob' })
 
@@ -639,7 +664,7 @@ describe('the connection dies with the reach that admitted it', () => {
   })
 
   it('terminates a socket open on a case that is dropped', async () => {
-    const gateway = gatewayForDrop()
+    const gateway = gatewayFor(() => true, () => true)
     const live = new FakeSocket()
     await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
 
@@ -649,7 +674,7 @@ describe('the connection dies with the reach that admitted it', () => {
   })
 
   it('leaves a socket on another case open', async () => {
-    const gateway = gatewayForDrop()
+    const gateway = gatewayFor(() => true, () => true)
     const live = new FakeSocket()
     await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
 
