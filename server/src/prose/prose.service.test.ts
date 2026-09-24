@@ -556,6 +556,24 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live docum
     await seed!.delete(cases)
   })
 
+  // A note that arrived with its words and no document: a demo, a CSV import, an archive.
+  it('seeds a note once, so a client holding the first open adds nothing when it returns', async () => {
+    const line = 'arrived with this line'
+    const { caseId, noteId } = await freshNote(line)
+    const address = { table: 'casenotes' as const, id: noteId }
+    const first = await prose.open(caseId, address)
+    const client = new Y.Doc()
+    Y.applyUpdate(client, Y.encodeStateAsUpdate(first))
+    await prose.release(caseId, address)
+
+    const again = await prose.open(caseId, address)
+    Y.applyUpdate(again, Y.encodeStateAsUpdate(client))
+    const shown = again.getXmlFragment(NOTE_FRAGMENT).toJSON()
+    await prose.release(caseId, address)
+
+    expect(shown.split(line)).toHaveLength(2)
+  })
+
   describe('what a frame may address', () => {
     it('resolves a note in this case', async () => {
       const { caseId, noteId } = await freshNote()
