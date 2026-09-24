@@ -1209,16 +1209,29 @@ def _in_edge(cert_dir: Path, argv: list[str], *, name: str | None = None,
 
 def _run_tls_entrypoint(cert_dir: Path, *, name: str | None = None):
     """The entrypoint, at the path the image installs it to."""
-    return _in_edge(cert_dir, ["sh", "/docker-entrypoint.d/10-ic-tls.sh"], name=name)
+    result = _in_edge(cert_dir, ["sh", "/docker-entrypoint.d/10-ic-tls.sh"], name=name)
+    _hand_back(cert_dir)
+    return result
+
+
+def _hand_back(cert_dir: Path) -> None:
+    """Gives `cert_dir` back to the host user after the entrypoint ran on it.
+
+    The entrypoint takes a supplied pair for root, and a root-owned 0600 key on
+    a Linux bind mount is one the host can neither read nor mint over.
+    """
+    _in_edge(cert_dir, ["chown", "-R", f"{os.getuid()}:{os.getgid()}", "/certs"])
 
 
 def _served_after_start(cert_dir: Path, *, name: str | None = None):
     """The entrypoint, then the `server_name` it left for nginx, in one container."""
-    return _in_edge(cert_dir, [
+    result = _in_edge(cert_dir, [
         "sh", "-c",
         "sh /docker-entrypoint.d/10-ic-tls.sh; rc=$?; echo '--- served';"
         " cat /etc/nginx/ic-name.inc 2>/dev/null; exit $rc",
     ], name=name)
+    _hand_back(cert_dir)
+    return result
 
 
 def _sans(cert_dir: Path) -> str:
