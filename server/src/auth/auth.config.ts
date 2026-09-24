@@ -308,6 +308,12 @@ const OWN_ENDINGS: Readonly<Record<string, 'signed_out' | 'account_sessions_ende
 }
 
 /**
+ * The library's session endings only the accounts pane reaches, which records
+ * each act itself. -> `accounts/accounts.controller.ts`
+ */
+const RECORDED_BY_THE_ACCOUNTS_PANE: ReadonlySet<string> = new Set(['/admin/revoke-user-sessions', '/admin/ban-user'])
+
+/**
  * The offered operations that act on the caller's own sessions. Refused to a
  * caller with none before the body is read, so the answer is the missing
  * session rather than the body.
@@ -752,21 +758,25 @@ export function authOptions(
             if (!userId) return
             const ending = context as { path?: string; headers?: Headers } | undefined
             const path = ending?.path ?? ''
+            const sessionId = typeof deleted['id'] === 'string' ? deleted['id'] : ''
             const event = OWN_ENDINGS[path]
-            sessionEnded(userId, typeof deleted['id'] === 'string' ? deleted['id'] : '', event !== undefined)
-            if (!event) return
+            if (!event) {
+              sessionEnded(userId, sessionId, RECORDED_BY_THE_ACCOUNTS_PANE.has(path))
+              return
+            }
             const [who] = await db
               .select({ name: schema.user.name, email: schema.user.email })
               .from(schema.user)
               .where(eq(schema.user.id, userId))
               .limit(1)
-            await recordInstallActivity(db, {
+            const landed = await recordInstallActivity(db, {
               event,
               actor: { id: userId, label: who?.name || who?.email || null },
               target: who?.email ?? null,
               detail: { path },
               headers: Object.fromEntries(ending?.headers?.entries() ?? []),
             })
+            sessionEnded(userId, sessionId, landed)
           },
         },
       },

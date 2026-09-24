@@ -128,6 +128,8 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
 
   /** Each connection's case and analyst, the session and headers it was admitted with, and how it lets go. */
   private readonly admitted = new Map<WebSocket, Admission>()
+  /** The frame types each connection has had refused and recorded, so a repeat writes no second line. */
+  private readonly refusalsRecorded = new WeakMap<WebSocket, Set<string>>()
   private sweep: NodeJS.Timeout | undefined
   private readonly stopListeningForSessionEnds: () => void
   private readonly stopListeningForReachChanges: () => void
@@ -219,13 +221,21 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
     return level === 'write' || level === 'delete' ? null : 'below-write'
   }
 
-  /** A frame refused for its level, recorded as the guard records a refused request. */
+  /**
+   * A frame refused for its level, recorded as the guard records a refused
+   * request, once per connection and frame type: a socket has no request
+   * limiter in front of it.
+   */
   private recordRefusal(
     live: WebSocket,
     member: Member,
     frame: string,
     reached: { customerId?: string | null; level?: string | null } | null,
   ): void {
+    const seen = this.refusalsRecorded.get(live) ?? new Set<string>()
+    if (seen.has(frame)) return
+    seen.add(frame)
+    this.refusalsRecorded.set(live, seen)
     void this.activity.record({
       event: 'access_denied',
       outcome: 'failure',
@@ -492,6 +502,9 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
     admission.yieldClaims = () => {
       order = order
         .then(async () => {
+          // Asked again in order: a claim taken at write since the re-read that queued this stays.
+          const level = (await this.reach.levelOnCase(member.userId, member.caseId))?.level
+          if (level === 'write' || level === 'delete') return
           for (const field of [...claims]) {
             const at = field.indexOf(':')
             claims.delete(field)
@@ -518,7 +531,8 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
           if (!(await ready)) return
           // Every frame asks whether the session that opened this connection still covers it.
           const ended = await this.authorityOf(admission)
-          if (ended && ended !== 'below-write') {
+          if (ended === 'below-write') admission.yieldClaims?.()
+          else if (ended) {
             this.end(live, admission, ended)
             return
           }

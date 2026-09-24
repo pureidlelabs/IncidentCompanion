@@ -687,7 +687,7 @@ describe('the connection dies with the authority that admitted it', () => {
     expect({ closed: live.closedWith, left }).toEqual({ closed: 4404, left: ['left'] })
   })
 
-  it('records each refused claim, as the guard records each refused request, naming the customer', async () => {
+  it('records a refused claim once per connection, however often it is sent, naming the customer', async () => {
     const { gateway } = gatewayAsking(
       () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }),
       () => Promise.resolve({ customerId: 'a-default-customer', level: 'read' }),
@@ -700,10 +700,76 @@ describe('the connection dies with the authority that admitted it', () => {
     await pause(20)
 
     const lines = recorded.filter((line) => line.event === 'access_denied')
-    expect(lines.map((line) => (line.detail as { customer?: string }).customer)).toEqual([
-      'a-default-customer',
-      'a-default-customer',
-    ])
+    expect(lines.map((line) => (line.detail as { customer?: string }).customer)).toEqual(['a-default-customer'])
+  })
+
+  it('keeps a claim taken at write after a re-read that saw read', async () => {
+    let level = 'write'
+    const released: string[] = []
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => Promise.resolve(),
+      claim: () => Promise.resolve(),
+      release: (_member: unknown, table: string, id: string) => {
+        released.push(`${table}:${id}`)
+        return Promise.resolve()
+      },
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      { api: { getSession: () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }) } } as never,
+      {} as never,
+      audit as never,
+      {
+        levelOnCase: async () => {
+          const now = level
+          await pause(10)
+          return { customerId: 'a-default-customer', level: now }
+        },
+      } as never,
+    )
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    level = 'read'
+    reachChanged('u-1')
+    await pause(2)
+    level = 'write'
+    live.receive({ type: 'claim', table: 'systems', id: A_ROW })
+    await pause(80)
+
+    expect(released).toEqual([])
+  })
+
+  it('gives up its claims when a frame finds it below write', async () => {
+    let level = 'write'
+    const released: string[] = []
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => Promise.resolve(),
+      claim: () => Promise.resolve(),
+      release: (_member: unknown, table: string, id: string) => {
+        released.push(`${table}:${id}`)
+        return Promise.resolve()
+      },
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      { api: { getSession: () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }) } } as never,
+      {} as never,
+      audit as never,
+      { levelOnCase: () => Promise.resolve({ customerId: 'a-default-customer', level }) } as never,
+    )
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+    live.receive({ type: 'claim', table: 'systems', id: A_ROW })
+    await pause(20)
+
+    level = 'read'
+    live.receive({ type: 'claim', table: 'systems', id: A_ROW.replace(/a$/, 'b') })
+    await pause(20)
+
+    expect(released).toEqual([`systems:${A_ROW}`])
   })
 
   it('gives up its claims once it holds less than write, and stays open to read', async () => {

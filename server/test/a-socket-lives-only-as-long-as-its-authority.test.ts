@@ -184,6 +184,40 @@ describe.skipIf(!(await bootable()))('a socket and the authority that admitted i
     }).toEqual({ written: false, closed: true, recorded: true })
   }, 60_000)
 
+  it.each([
+    ['its holder signs out', async (analyst: Persona) => {
+      const out = await fetch(`${harness.base}/api/auth/sign-out`, {
+        method: 'POST',
+        headers: { cookie: analyst.cookie, origin: harness.origin },
+      })
+      expect(out.ok).toBe(true)
+    }],
+    ['an administrator ends its sessions', async (analyst: Persona) => {
+      const ended = await fetch(`${harness.base}/api/accounts/${encodeURIComponent(analyst.email)}/sessions/end`, {
+        method: 'POST',
+        headers: { cookie: admin.cookie, origin: harness.origin },
+      })
+      expect(ended.ok, `sessions/end: ${String(ended.status)}`).toBe(true)
+    }],
+    ['an administrator disables its account', async (analyst: Persona) => {
+      const disabled = await fetch(`${harness.base}/api/accounts/${encodeURIComponent(analyst.email)}/disable`, {
+        method: 'POST',
+        headers: { cookie: admin.cookie, origin: harness.origin },
+      })
+      expect(disabled.ok, `disable: ${String(disabled.status)}`).toBe(true)
+    }],
+  ] as const)('closes without writing a refusal of its own once %s, which is already recorded', async (what, end) => {
+    const analyst = await freshAnalyst(what.replace(/\W+/g, '-').slice(0, 24))
+    const { closed } = await socketFor(analyst.cookie)
+    const since = new Date(Date.now() - 1000)
+
+    await end(analyst)
+
+    expect(await closesWithin(closed, 5_000)).not.toBeNull()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    expect(await endingsSince(since)).toEqual([])
+  }, 60_000)
+
   it('closes a silent socket whose session window closed, within the sweep', async () => {
     const analyst = await freshAnalyst('silent')
     const { closed } = await socketFor(analyst.cookie)
