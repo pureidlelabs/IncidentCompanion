@@ -24,7 +24,9 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { levelNeeded } from '../src/access/case-access.guard.js'
+import { ModulesContainer } from '@nestjs/core'
+
+import { CASE_LEVEL, levelNeeded } from '../src/access/case-access.guard.js'
 import { boot, bootable, operations, type Harness } from './app-harness.js'
 
 const runnable = await bootable()
@@ -121,16 +123,44 @@ describe.skipIf(!runnable)('what level every published route needs', () => {
   })
 
   /**
-   * **The route that is right for the wrong reason, pinned.**
-   *
-   * `recent-cases/{caseId}` is guarded and answers `write`, which is correct --
-   * removing an entry from a personal list is not deleting a case. It is
-   * correct because `indexOf` compares whole segments and `'recent-cases'` is
-   * not `'cases'`, which is not a reason anybody chose.
-   *
-   * Nothing asserted it, so renaming that controller to `cases/recent` would
-   * silently turn removing a list entry into a case deletion needing `delete`.
-   * This is the assertion that fails when somebody does. -> #127
+   * **A route that states its own level answers that level instead**, so the
+   * derivation above says nothing about it. Every handler stating one is
+   * named here, found by walking the registered controllers, and each writes
+   * only the caller's own records about a case.
+   */
+  it('lets exactly the handlers writing only the caller\'s own list state their level', () => {
+    const declared: string[] = []
+    for (const module of harness.app.get(ModulesContainer).values()) {
+      for (const wrapper of module.controllers.values()) {
+        const seen = new Set<string>()
+        // Up the chain: a handler a base controller declares is routed on every subclass.
+        for (
+          let proto = (wrapper.metatype as { prototype?: object } | undefined)?.prototype;
+          proto && proto !== Object.prototype;
+          proto = Object.getPrototypeOf(proto) as object
+        ) {
+          for (const name of Object.getOwnPropertyNames(proto)) {
+            const handler = (proto as Record<string, unknown>)[name]
+            if (seen.has(name) || typeof handler !== 'function' || name === 'constructor') continue
+            seen.add(name)
+            const level = Reflect.getMetadata(CASE_LEVEL, handler) as string | undefined
+            if (level) declared.push(`${wrapper.name}.${name} ${level}`)
+          }
+        }
+      }
+    }
+    expect(declared.sort()).toEqual([
+      'RecentController.forget read',
+      'RecentController.pin read',
+      'RecentController.visit read',
+    ])
+  })
+
+  /**
+   * **The derivation for a personal list's routes, which state their own
+   * level.** `recent-cases/{caseId}` would derive `write` only because
+   * `'recent-cases'` is not the segment `'cases'`, and renaming the controller
+   * to `cases/recent` would derive a case deletion. -> #127
    */
   it('does not read a personal recent-list entry as the case itself', () => {
     const recents = published.filter((one) => one.template.includes('recent-cases'))

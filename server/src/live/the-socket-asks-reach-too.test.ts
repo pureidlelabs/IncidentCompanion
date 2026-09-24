@@ -35,6 +35,7 @@ import {
 import { levelIn, openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
 
+
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
 const db = pool ? drizzle({ client: pool }) : null
@@ -193,9 +194,10 @@ describe.skipIf(!db)('the socket asks reach too', () => {
           return Promise.resolve()
         },
       }
-      const gateway = new LiveGateway(channel as never, {} as never, {} as never, {} as never, reach)
+      const auth = { api: { getSession: () => Promise.resolve({ user: { id: userId, name: userId }, session: { id: 's-1' } }) } }
+      const gateway = new LiveGateway(channel as never, auth as never, {} as never, {} as never, reach)
       const live = new FakeSocket()
-      await gateway.open(live as never, caseId, { id: userId, name: userId })
+      await gateway.open(live as never, caseId, { id: userId, name: userId, sessionId: 's-1' })
       return { live, claimed, released }
     }
 

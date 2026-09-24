@@ -29,6 +29,11 @@ import type { CaseChannel } from './case-channel.service.js'
 import { sessionEnded } from '../auth/session-ended.js'
 import { reachChanged } from '../access/reach-changed.js'
 
+/** An auth library answering every read with one live session, `s-1`, which the fake admissions carry. */
+const SIGNED_IN = {
+  api: { getSession: () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }) },
+}
+
 const CASE = '11111111-1111-4111-8111-111111111111'
 /** A second well-formed id, for the refusals a caller varies. Distinct from
  *  `GHOST` on purpose: sharing a value makes one test's fixture the other's. */
@@ -72,9 +77,9 @@ const INSTALL = {
 
 
 function gatewayWith(
-  options: { signedIn?: boolean; caseExists?: boolean; held?: boolean } = {},
+  options: { signedIn?: boolean; caseExists?: boolean; held?: boolean; sessionless?: boolean } = {},
 ) {
-  const { signedIn = true, caseExists = true, held = false } = options
+  const { signedIn = true, caseExists = true, held = false, sessionless = false } = options
 
   const auth = {
     instance: INSTALL,
@@ -89,6 +94,7 @@ function gatewayWith(
                   email: 'a@b.test',
                   ...(held ? { mustChangePassword: true } : {}),
                 },
+                ...(sessionless ? {} : { session: { id: 's-1' } }),
               }
             : null,
         ),
@@ -202,6 +208,12 @@ async function driveUpgrade(gateway: LiveGateway, url: string, headers?: Record<
 }
 
 describe('what the socket writes to the audit', () => {
+  it('refuses an upgrade whose session carries no id, since nothing could read it again', async () => {
+    const { written } = await driveUpgrade(gatewayWith({ sessionless: true }), `/api/cases/${CASE}/live`)
+
+    expect(written.join('')).toContain('401')
+  })
+
   it('records a refused upgrade, which the HTTP boundary never sees', async () => {
     const gateway = gatewayWith({ signedIn: false })
 
@@ -384,6 +396,13 @@ class FakeSocket {
     this.terminated = true
   }
 
+  /** The code a close was sent with, or null while open. */
+  closedWith: number | null = null
+
+  close(code: number): void {
+    this.closedWith = code
+  }
+
   on(event: string, handler: (raw: Buffer) => void): this {
     this.handlers.set(event, [...(this.handlers.get(event) ?? []), handler])
     return this
@@ -459,14 +478,14 @@ async function connected(
   }
   const gateway = new LiveGateway(
     channel as unknown as CaseChannel,
-    {} as never,
+    SIGNED_IN as never,
     prose as never,
     audit as never,
     holding(level),
   )
 
   const live = new FakeSocket()
-  await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+  await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
   return { live, relayed }
 }
 
@@ -580,48 +599,279 @@ describe('opening a field asks the client what it has', () => {
   })
 })
 
-describe('the connection dies with the reach that admitted it', () => {
-  function gatewayForDrop(): LiveGateway {
+describe('the connection dies with the authority that admitted it', () => {
+  /** A gateway whose one session is `alive`, and whose one reach is `reaches`. */
+  function gatewayFor(alive: () => boolean, reaches: () => boolean): LiveGateway {
     const channel = { join: () => Promise.resolve(), leave: () => Promise.resolve() }
-    return new LiveGateway(
-      channel as unknown as CaseChannel,
-      {} as never,
-      {} as never,
-      audit as never,
-      anyoneReaches,
-    )
+    const auth = {
+      api: {
+        getSession: () =>
+          Promise.resolve(alive() ? { user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } } : null),
+      },
+    }
+    const reach = {
+      levelOnCase: () =>
+        Promise.resolve(reaches() ? { customerId: 'a-default-customer', level: 'write' as const } : null),
+    }
+    return new LiveGateway(channel as unknown as CaseChannel, auth as never, {} as never, audit as never, reach as never)
   }
 
-  it('terminates a socket when the session that opened it ends', async () => {
-    const gateway = gatewayForDrop()
+  const admitted = { id: 'u-1', name: 'Ada', sessionId: 's-1' }
+
+  const pause = (ms: number) => new Promise((done) => setTimeout(done, ms))
+  const A_ROW = '00000000-0000-4000-8000-00000000000a'
+
+  /** A gateway whose session read and reach read are the given functions, and whose roster leaves are counted. */
+  function gatewayAsking(session: () => Promise<unknown>, level: () => Promise<unknown>) {
+    const left: string[] = []
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => {
+        left.push('left')
+        return Promise.resolve()
+      },
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      { api: { getSession: session } } as never,
+      {} as never,
+      audit as never,
+      { levelOnCase: level } as never,
+    )
+    return { gateway, left }
+  }
+
+  it('keeps the process up when the store cannot answer a re-read', async () => {
+    const unhandled: unknown[] = []
+    const count = (why: unknown) => { unhandled.push(why) }
+    process.on('unhandledRejection', count)
+    const { gateway } = gatewayAsking(
+      () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }),
+      () => Promise.reject(new Error('the store did not answer')),
+    )
     const live = new FakeSocket()
-    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-ended', name: 'Ada' })
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
 
-    sessionEnded('u-ended')
+    reachChanged('u-1')
+    await pause(20)
+    process.off('unhandledRejection', count)
 
-    expect(live.terminated).toBe(true)
+    expect({ unhandled: unhandled.length, closed: live.closedWith }).toEqual({ unhandled: 0, closed: null })
   })
 
-  /**
-   * *Reach is withdrawn while the analyst is working*: **the connection ends
-   * rather than carrying on until the next sign-in.** The gateway is told who,
-   * never what -- which of their open cases survived is the reach rules' own
-   * question, and answering it here would be a second copy of them.
-   */
-  it('terminates a socket when the reach that admitted it is withdrawn', async () => {
-    const gateway = gatewayForDrop()
+  it('does not end a connection whose session could not be read', async () => {
+    const { gateway } = gatewayAsking(
+      () => Promise.reject(new Error('the session store did not answer')),
+      () => Promise.resolve({ customerId: 'a-default-customer', level: 'write' }),
+    )
     const live = new FakeSocket()
-    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-revoked', name: 'Cass' })
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
 
-    reachChanged('u-revoked')
+    reachChanged('u-1')
+    await pause(20)
 
-    expect(live.terminated).toBe(true)
+    expect({ closed: live.closedWith, recorded: recorded.map((line) => line.event) }).toEqual({ closed: null, recorded: [] })
+  })
+
+  it('lets go of the roster as it closes, without waiting for the peer to answer', async () => {
+    const { gateway, left } = gatewayAsking(
+      () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }),
+      () => Promise.resolve(null),
+    )
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    reachChanged('u-1')
+    await pause(20)
+
+    expect({ closed: live.closedWith, left }).toEqual({ closed: 4404, left: ['left'] })
+  })
+
+  it('records a refused claim once per connection, however often it is sent, naming the customer', async () => {
+    const { gateway } = gatewayAsking(
+      () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }),
+      () => Promise.resolve({ customerId: 'a-default-customer', level: 'read' }),
+    )
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    live.receive({ type: 'claim', table: 'systems', id: A_ROW })
+    live.receive({ type: 'claim', table: 'systems', id: A_ROW.replace(/a$/, 'b') })
+    await pause(20)
+
+    const lines = recorded.filter((line) => line.event === 'access_denied')
+    expect(lines.map((line) => (line.detail as { customer?: string }).customer)).toEqual(['a-default-customer'])
+  })
+
+  it('keeps a claim taken at write after a re-read that saw read', async () => {
+    let level = 'write'
+    const released: string[] = []
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => Promise.resolve(),
+      claim: () => Promise.resolve(),
+      release: (_member: unknown, table: string, id: string) => {
+        released.push(`${table}:${id}`)
+        return Promise.resolve()
+      },
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      { api: { getSession: () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }) } } as never,
+      {} as never,
+      audit as never,
+      {
+        levelOnCase: async () => {
+          const now = level
+          await pause(10)
+          return { customerId: 'a-default-customer', level: now }
+        },
+      } as never,
+    )
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    level = 'read'
+    reachChanged('u-1')
+    await pause(2)
+    level = 'write'
+    live.receive({ type: 'claim', table: 'systems', id: A_ROW })
+    await pause(80)
+
+    expect(released).toEqual([])
+  })
+
+  it('gives up its claims when a frame finds it below write', async () => {
+    let level = 'write'
+    const released: string[] = []
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => Promise.resolve(),
+      claim: () => Promise.resolve(),
+      release: (_member: unknown, table: string, id: string) => {
+        released.push(`${table}:${id}`)
+        return Promise.resolve()
+      },
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      { api: { getSession: () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }) } } as never,
+      {} as never,
+      audit as never,
+      { levelOnCase: () => Promise.resolve({ customerId: 'a-default-customer', level }) } as never,
+    )
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+    live.receive({ type: 'claim', table: 'systems', id: A_ROW })
+    await pause(20)
+
+    level = 'read'
+    live.receive({ type: 'claim', table: 'systems', id: A_ROW.replace(/a$/, 'b') })
+    await pause(20)
+
+    expect(released).toEqual([`systems:${A_ROW}`])
+  })
+
+  it('gives up its claims once it holds less than write, and stays open to read', async () => {
+    let level = 'write'
+    const released: string[] = []
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => Promise.resolve(),
+      claim: () => Promise.resolve(),
+      release: (_member: unknown, table: string, id: string) => {
+        released.push(`${table}:${id}`)
+        return Promise.resolve()
+      },
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      { api: { getSession: () => Promise.resolve({ user: { id: 'u-1', name: 'Ada' }, session: { id: 's-1' } }) } } as never,
+      {} as never,
+      audit as never,
+      { levelOnCase: () => Promise.resolve({ customerId: 'a-default-customer', level }) } as never,
+    )
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+    live.receive({ type: 'claim', table: 'systems', id: A_ROW })
+    await pause(20)
+
+    level = 'read'
+    reachChanged('u-1')
+    await pause(20)
+
+    expect({ released, closed: live.closedWith }).toEqual({ released: [`systems:${A_ROW}`], closed: null })
+  })
+
+  it('records nothing of its own when the session ending was recorded where it happened', async () => {
+    const gateway = gatewayFor(() => false, () => true)
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    sessionEnded('u-1', 's-1', true)
+    await settle()
+
+    expect({ closed: live.closedWith, recorded: recorded.map((line) => line.event) }).toEqual({
+      closed: 4401,
+      recorded: [],
+    })
+  })
+
+  it('records the ending itself when nothing else recorded it', async () => {
+    const gateway = gatewayFor(() => false, () => true)
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    sessionEnded('u-1', 's-1')
+    await settle()
+
+    expect({ closed: live.closedWith, recorded: recorded.map((line) => line.event) }).toEqual({
+      closed: 4401,
+      recorded: ['live_refused'],
+    })
+  })
+
+  it('closes a socket when the session that opened it ends', async () => {
+    let alive = true
+    const gateway = gatewayFor(() => alive, () => true)
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    alive = false
+    sessionEnded('u-1', 's-1')
+    await settle()
+
+    expect(live.closedWith).toBe(4401)
+  })
+
+  it('closes a socket when the reach that admitted it is withdrawn', async () => {
+    let reaches = true
+    const gateway = gatewayFor(() => true, () => reaches)
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    reaches = false
+    reachChanged('u-1')
+    await settle()
+
+    expect(live.closedWith).toBe(4404)
+  })
+
+  it('leaves a socket open when the change left its authority whole', async () => {
+    const gateway = gatewayFor(() => true, () => true)
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, admitted)
+
+    reachChanged('u-1')
+    await settle()
+
+    expect({ closed: live.closedWith, terminated: live.terminated }).toEqual({ closed: null, terminated: false })
   })
 
   it("leaves another analyst's socket open when reach changes", async () => {
-    const gateway = gatewayForDrop()
+    const gateway = gatewayFor(() => true, () => true)
     const live = new FakeSocket()
-    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-untouched', name: 'Dee' })
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-untouched', name: 'Dee', sessionId: 's-1' })
 
     reachChanged('u-revoked')
 
@@ -629,19 +879,19 @@ describe('the connection dies with the reach that admitted it', () => {
   })
 
   it("leaves another analyst's socket open", async () => {
-    const gateway = gatewayForDrop()
+    const gateway = gatewayFor(() => true, () => true)
     const live = new FakeSocket()
-    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-safe', name: 'Bob' })
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-safe', name: 'Bob', sessionId: 's-1' })
 
-    sessionEnded('u-ended')
+    sessionEnded('u-ended', 's-ended')
 
     expect(live.terminated).toBe(false)
   })
 
   it('terminates a socket open on a case that is dropped', async () => {
-    const gateway = gatewayForDrop()
+    const gateway = gatewayFor(() => true, () => true)
     const live = new FakeSocket()
-    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
 
     gateway.dropCase(CASE)
 
@@ -649,9 +899,9 @@ describe('the connection dies with the reach that admitted it', () => {
   })
 
   it('leaves a socket on another case open', async () => {
-    const gateway = gatewayForDrop()
+    const gateway = gatewayFor(() => true, () => true)
     const live = new FakeSocket()
-    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
 
     gateway.dropCase(GHOST)
 
@@ -704,7 +954,7 @@ describe('a socket that goes before the join has finished', () => {
     }
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
-      {} as never,
+      SIGNED_IN as never,
       {} as never,
       audit as never,
       holding('write'),
@@ -716,7 +966,7 @@ describe('a socket that goes before the join has finished', () => {
     const { gateway, left, order, finish } = joining()
     const live = new FakeSocket()
 
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     live.drop()
     /**
      * **A turn between the drop and the join, or the ordering is free.**
@@ -757,14 +1007,14 @@ describe('a socket that goes before the join has finished', () => {
     }
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
-      {} as never,
+      SIGNED_IN as never,
       {} as never,
       audit as never,
       holding('write'),
     )
     const live = new FakeSocket()
 
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     live.drop()
     refuse(new Error('redis went away announcing the roster'))
     await opening.catch(() => undefined)
@@ -784,7 +1034,7 @@ describe('a socket that goes before the join has finished', () => {
     const { gateway, left, finish } = joining()
     const live = new FakeSocket()
 
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     // Both events, because a broken connection raises both and each is wired.
     live.drop('close')
     live.drop('error')
@@ -800,7 +1050,7 @@ describe('a socket that goes before the join has finished', () => {
     const { gateway, left, finish } = joining()
     const live = new FakeSocket()
 
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     live.drop('error')
     finish()
     await opening
@@ -830,13 +1080,13 @@ describe('what a claim frame may name', () => {
     }
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
-      {} as never,
+      SIGNED_IN as never,
       {} as never,
       audit as never,
       holding('write'),
     )
     const live = new FakeSocket()
-    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     return { live, claimed }
   }
 
@@ -921,7 +1171,7 @@ describe('how much of a frame the socket will read', () => {
       instance: { options: { trustedOrigins } },
       api: {
         getSession: () =>
-          Promise.resolve({ user: { id: 'u-1', name: 'Ada', email: 'a@b.test' } }),
+          Promise.resolve({ user: { id: 'u-1', name: 'Ada', email: 'a@b.test' }, session: { id: 's-1' } }),
       },
     }
     const gateway = new LiveGateway(
@@ -992,13 +1242,13 @@ describe('two prose frames for one field arriving together', () => {
     }
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
-      {} as never,
+      SIGNED_IN as never,
       prose as never,
       audit as never,
       holding('write'),
     )
     const live = new FakeSocket()
-    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
 
     live.receive({ type: 'prose.sync', field: FIELD, update: typed('one').update })
     live.receive({ type: 'prose.sync', field: FIELD, update: typed('two').update })
@@ -1084,7 +1334,7 @@ describe('frames that arrive while the socket is still joining', () => {
     } as never
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
-      {} as never,
+      SIGNED_IN as never,
       prose as never,
       audit as never,
       levels,
@@ -1101,7 +1351,7 @@ describe('frames that arrive while the socket is still joining', () => {
     const { gateway, finish } = midJoin(document)
     const live = new FakeSocket()
 
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
     await settle()
     finish()
@@ -1123,7 +1373,7 @@ describe('frames that arrive while the socket is still joining', () => {
     const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
     const live = new FakeSocket()
 
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     live.receive({ type: 'claim', table: 'casenotes', id: ROW })
     await settle()
     finish()
@@ -1139,13 +1389,13 @@ describe('frames that arrive while the socket is still joining', () => {
   it('acts on a release after the claim sent before it, however long the claim takes', async () => {
     const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }))
     const live = new FakeSocket()
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     finish()
     await opening
 
     live.receive({ type: 'claim', table: 'systems', id: ROW })
     live.receive({ type: 'release', table: 'systems', id: ROW })
-    await wait(50)
+    await wait(200)
 
     expect(order, 'the release overtook its own claim').toEqual([
       'join',
@@ -1159,7 +1409,7 @@ describe('frames that arrive while the socket is still joining', () => {
     const document = new Y.Doc({ gc: false })
     const { gateway, order, releasedHolding, readers, finish } = midJoin(document)
     const live = new FakeSocket()
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
 
     live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
     live.receive({ type: 'prose.sync', field: FIELD, update: typed('sent as the tab closed').update })
@@ -1180,7 +1430,7 @@ describe('frames that arrive while the socket is still joining', () => {
     channel.claim = () => Promise.reject(new Error('the store went away'))
     const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
     const live = new FakeSocket()
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     finish()
     await opening
 
@@ -1198,7 +1448,7 @@ describe('frames that arrive while the socket is still joining', () => {
     const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
     const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
     const live = new FakeSocket()
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
     finish()
     await opening
 
@@ -1221,7 +1471,7 @@ describe('frames that arrive while the socket is still joining', () => {
   it('ends a connection with more frames waiting than the bound, and acts on those within it', async () => {
     const { gateway, order, finish } = midJoin(new Y.Doc({ gc: false }), 'immediate')
     const live = new FakeSocket()
-    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-1' })
 
     for (let n = 0; n < 256; n += 1) live.receive({ type: 'release', table: 'systems', id: ROW })
     expect(live.terminated, 'ended while the backlog was within the bound').toBe(false)

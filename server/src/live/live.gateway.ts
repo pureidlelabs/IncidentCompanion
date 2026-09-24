@@ -77,6 +77,29 @@ export const STATUS: Record<Refusal, string> = {
   'no-such-case': '404 Not Found',
 }
 
+/** Authority that ended on an open connection, and the close code that says which way. */
+type Ended = 'unauthenticated' | 'must-change-password' | 'no-such-case'
+const CLOSE: Record<Ended, number> = {
+  unauthenticated: 4401,
+  'must-change-password': 4403,
+  'no-such-case': 4404,
+}
+
+/** One admitted connection, as authority is read again against it. */
+interface Admission {
+  caseId: string
+  userId: string
+  sessionId?: string
+  headers: IncomingHttpHeaders
+  /** Leaves the roster and lets go of what the connection holds. */
+  release?: () => void
+  /** Lets go of every row the connection claims, in its frame order. */
+  yieldClaims?: () => void
+}
+
+/** How often an open connection's authority is read again when it sends nothing. */
+const SWEEP_MS = 15_000
+
 /** The largest frame this socket will read, in bytes, sized for a prose sync update. */
 const MAX_FRAME_BYTES = 64 * 1024
 
@@ -103,7 +126,11 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
   private readonly sockets = new WebSocketServer({ noServer: true, maxPayload: MAX_FRAME_BYTES })
   private connections = 0
 
-  private readonly admitted = new Map<WebSocket, { caseId: string; userId: string }>()
+  /** Each connection's case and analyst, the session and headers it was admitted with, and how it lets go. */
+  private readonly admitted = new Map<WebSocket, Admission>()
+  /** The frame types each connection has had refused and recorded, so a repeat writes no second line. */
+  private readonly refusalsRecorded = new WeakMap<WebSocket, Set<string>>()
+  private sweep: NodeJS.Timeout | undefined
   private readonly stopListeningForSessionEnds: () => void
   private readonly stopListeningForReachChanges: () => void
 
@@ -123,17 +150,14 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
      */
     private readonly reach: ReachService,
   ) {
-    this.stopListeningForSessionEnds = onSessionEnded((userId) => { this.dropUser(userId) })
-    /**
-     * **A revocation has to reach a session already open**, rather than
-     * waiting for the next sign-in - so every connection this analyst holds
-     * ends and the ones they still reach are re-admitted by asking again.
-     *
-     * Every connection rather than the ones that actually went: working out
-     * which survived would be a second copy of the reach rules, kept in step
-     * by hand, and the client reconnects to what it is still entitled to.
-     */
-    this.stopListeningForReachChanges = onReachChanged((userId) => { this.dropUser(userId) })
+    // The ended session's own connections end outright: the library clears its cached copy after telling us.
+    this.stopListeningForSessionEnds = onSessionEnded((_userId, sessionId, recorded) => {
+      for (const [live, admission] of this.admitted) {
+        if (sessionId && admission.sessionId === sessionId) this.end(live, admission, 'unauthenticated', recorded)
+      }
+    })
+    // A revocation reaches a session already open, and ends only the connections it ended.
+    this.stopListeningForReachChanges = onReachChanged((userId) => { void this.revalidate(userId) })
   }
 
   /**
@@ -141,6 +165,11 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
    * case, and a line per writer in the install's audit.
    */
   onModuleInit(): void {
+    // ponytail: one sweep, O(connections) per 15 s; a deadline per connection if the bound must tighten.
+    this.sweep = setInterval(() => {
+      for (const [live, admission] of this.admitted) void this.revalidateOne(live, admission)
+    }, SWEEP_MS)
+    this.sweep.unref()
     this.prose.onSaved((caseId, record, writers) => {
       this.channel.announce(caseId, [record.table], writers.at(-1)!.id)
       for (const writer of writers) {
@@ -156,10 +185,89 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
     })
   }
 
-  dropUser(userId: string): void {
+  /** Read again the authority of every connection `userId` holds, and end those it no longer covers. */
+  async revalidate(userId: string): Promise<void> {
     for (const [live, admission] of this.admitted) {
-      if (admission.userId === userId) live.terminate()
+      if (admission.userId === userId) await this.revalidateOne(live, admission)
     }
+  }
+
+  /** Never rejects: a store that cannot answer leaves the connection for the next pass. */
+  private async revalidateOne(live: WebSocket, admission: Admission): Promise<void> {
+    try {
+      const ended = await this.authorityOf(admission)
+      if (ended === 'below-write') admission.yieldClaims?.()
+      else if (ended) this.end(live, admission, ended)
+    } catch (error) {
+      this.log.warn(`could not read a connection's authority again: ${String(error)}`)
+    }
+  }
+
+  /**
+   * Why the session that opened a connection no longer covers it, or null.
+   * The same questions the upgrade asked, of the same session, asked now.
+   * `below-write` still reads, and may hold no claim. Throws where the session
+   * cannot be read, which is not an ending.
+   */
+  private async authorityOf(admission: Admission): Promise<Ended | 'below-write' | null> {
+    if (!admission.sessionId) return 'unauthenticated'
+    const session = await this.sessionFor(admission.headers, true)
+    if (!session || session.sessionId !== admission.sessionId || session.id !== admission.userId) {
+      return 'unauthenticated'
+    }
+    if (session.held) return 'must-change-password'
+    const level = (await this.reach.levelOnCase(admission.userId, admission.caseId))?.level
+    if (!level) return 'no-such-case'
+    return level === 'write' || level === 'delete' ? null : 'below-write'
+  }
+
+  /**
+   * A frame refused for its level, recorded as the guard records a refused
+   * request, once per connection and frame type: a socket has no request
+   * limiter in front of it.
+   */
+  private recordRefusal(
+    live: WebSocket,
+    member: Member,
+    frame: string,
+    reached: { customerId?: string | null; level?: string | null } | null,
+  ): void {
+    const seen = this.refusalsRecorded.get(live) ?? new Set<string>()
+    if (seen.has(frame)) return
+    seen.add(frame)
+    this.refusalsRecorded.set(live, seen)
+    void this.activity.record({
+      event: 'access_denied',
+      outcome: 'failure',
+      actor: { id: member.userId, label: member.username },
+      target: `live ${frame}`,
+      detail: {
+        case: member.caseId,
+        ...(reached?.customerId ? { customer: reached.customerId } : {}),
+        needed: 'write',
+        held: reached?.level ?? 'none',
+      },
+      headers: this.admitted.get(live)?.headers ?? {},
+    })
+  }
+
+  /**
+   * Close a connection whose authority ended, recording the refusal as the
+   * upgrade records one, unless the act that ended it already `recorded` it.
+   */
+  private end(live: WebSocket, admission: Admission, why: Ended, recorded = false): void {
+    if (!this.admitted.delete(live)) return
+    if (!recorded) void this.activity.record({
+      event: 'live_refused',
+      outcome: 'failure',
+      actor: { id: admission.userId, label: null },
+      target: `live connection: ${why}`,
+      detail: { why, case: admission.caseId },
+      headers: admission.headers,
+    })
+    // Released now: a peer that never answers the close would otherwise hold its place for the handshake's timeout.
+    admission.release?.()
+    live.close(CLOSE[why])
   }
 
   dropCase(caseId: string): void {
@@ -245,15 +353,15 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
     request: IncomingMessage,
   ): Promise<
     | { refused: Refusal }
-    | { refused: null; caseId: string; session: { id: string; name: string; held: boolean } }
+    | { refused: null; caseId: string; session: { id: string; name: string; held: boolean; sessionId?: string } }
   > {
     const match = LIVE_PATH.exec(request.url ?? '')
     if (!match) return { refused: 'no-such-path' }
     if (!this.sameOrigin(request)) return { refused: 'cross-origin' }
 
     const caseId = match[1]!
-    const session = await this.sessionFor(request)
-    if (!session) return { refused: 'unauthenticated' }
+    const session = await this.sessionFor(request.headers)
+    if (!session?.sessionId) return { refused: 'unauthenticated' }
     // Before the case lookup, so a held account learns nothing about which
     // case ids exist -- the same ordering reason the origin check comes first.
     if (session.held) return { refused: 'must-change-password' }
@@ -278,23 +386,26 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
   }
 
   private async sessionFor(
-    request: IncomingMessage,
-  ): Promise<{ id: string; name: string; held: boolean } | null> {
+    given: IncomingHttpHeaders,
+    rethrow = false,
+  ): Promise<{ id: string; name: string; held: boolean; sessionId?: string } | null> {
     try {
       const headers = new Headers()
-      for (const [name, value] of Object.entries(request.headers)) {
+      for (const [name, value] of Object.entries(given)) {
         if (typeof value === 'string') headers.set(name, value)
       }
       const found = await this.auth.api.getSession({ headers })
       if (!found?.user) return null
       return {
         id: found.user.id,
+        sessionId: (found.session as { id?: string } | undefined)?.id,
         name: found.user.name?.trim() || found.user.email,
         // `mustChangePassword` is an `additionalFields` column: present at
         // runtime, absent from Better Auth's inferred user type.
         held: (found.user as { mustChangePassword?: boolean }).mustChangePassword === true,
       }
     } catch (error) {
+      if (rethrow) throw error
       this.log.warn(`could not read the session off an upgrade: ${String(error)}`)
       return null
     }
@@ -304,12 +415,13 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
   async open(
     live: WebSocket,
     caseId: string,
-    session: { id: string; name: string },
+    session: { id: string; name: string; sessionId?: string },
     headers: IncomingHttpHeaders = {},
   ): Promise<void> {
     const writer: Writer = { id: session.id, label: session.name, headers }
     this.connections += 1
-    this.admitted.set(live, { caseId, userId: session.id })
+    const admission: Admission = { caseId, userId: session.id, sessionId: session.sessionId, headers }
+    this.admitted.set(live, admission)
     const member: Member = {
       caseId,
       userId: session.id,
@@ -386,6 +498,23 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
      * of the process -- leaving a case nobody can ever delete, refused in the
      * name of an analyst whose browser is long gone. -> #389
      */
+    admission.release = close
+    admission.yieldClaims = () => {
+      order = order
+        .then(async () => {
+          // Asked again in order: a claim taken at write since the re-read that queued this stays.
+          const level = (await this.reach.levelOnCase(member.userId, member.caseId))?.level
+          if (level === 'write' || level === 'delete') return
+          for (const field of [...claims]) {
+            const at = field.indexOf(':')
+            claims.delete(field)
+            await this.channel.release(member, field.slice(0, at), field.slice(at + 1))
+          }
+        })
+        .catch((error: unknown) => {
+          this.log.warn(`could not release the claims of ${member.sessionId}: ${String(error)}`)
+        })
+    }
     live.on('close', close)
     live.on('error', close)
     live.on('message', (raw: Buffer) => {
@@ -399,9 +528,15 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
         .then(async () => {
           // Handled as the analyst the connection admitted, so each read and
           // write a frame makes is scoped to what they reach.
-          if (await ready) {
-            await actingAs(member.userId, () => this.onFrame(member, writer, live, opened, claims, raw))
+          if (!(await ready)) return
+          // Every frame asks whether the session that opened this connection still covers it.
+          const ended = await this.authorityOf(admission)
+          if (ended === 'below-write') admission.yieldClaims?.()
+          else if (ended) {
+            this.end(live, admission, ended)
+            return
           }
+          await actingAs(member.userId, () => this.onFrame(member, writer, live, opened, claims, raw))
         })
         // One failed frame must not stop the ones behind it, nor the leave.
         .catch((error: unknown) => {
@@ -475,9 +610,10 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
     const field = `${table}:${id}`
     if (!claims.has(field) && claims.size >= CLAIMS_PER_CONNECTION) return
 
-    const level = (await this.reach.levelOnCase(member.userId, member.caseId))?.level
-    if (level !== 'write' && level !== 'delete') {
+    const reached = await this.reach.levelOnCase(member.userId, member.caseId)
+    if (reached?.level !== 'write' && reached?.level !== 'delete') {
       live.send(JSON.stringify({ type: 'claim.refused', table, id, reason: 'read-only' }))
+      this.recordRefusal(live, member, 'claim', reached)
       return
     }
     claims.add(field)
@@ -538,8 +674,8 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
     // and a frame adding nothing are not edits: a read-only analyst sends both
     // to catch up.
     if (!this.prose.isStateRequest(frame)) {
-      const level = (await this.reach.levelOnCase(member.userId, member.caseId))?.level
-      if (level !== 'write' && level !== 'delete' && !this.prose.addsNothing(held.doc, frame)) {
+      const reached = await this.reach.levelOnCase(member.userId, member.caseId)
+      if (reached?.level !== 'write' && reached?.level !== 'delete' && !this.prose.addsNothing(held.doc, frame)) {
         live.send(
           JSON.stringify({
             type: 'prose.refused',
@@ -547,6 +683,7 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
             reason: 'read-only',
           }),
         )
+        this.recordRefusal(live, member, 'prose.sync', reached)
         return
       }
     }
@@ -633,6 +770,7 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
    * a probe is enough to hold the old process.
    */
   onApplicationShutdown(): void {
+    clearInterval(this.sweep)
     this.stopListeningForSessionEnds()
     this.stopListeningForReachChanges()
     for (const live of this.sockets.clients) live.terminate()

@@ -16,6 +16,8 @@
 
 **Order is kept per connection, and nowhere wider.** Two connections, including two tabs of one analyst, are two writers whose frames interleave however they arrive; prose merges them and a version check judges everything else.
 
+**One application process per install.** Every open connection lives in the process that judges it, so an ending reaches it when it is announced, or within the sweep where nothing announced it.
+
 # Design
 
 ## Admission is re-derived, not assumed
