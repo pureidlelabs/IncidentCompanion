@@ -115,6 +115,7 @@ test.describe('a compliance answer typed alone', () => {
           bands: await page.getByRole('group', { name: /changed/ }).count(),
         }).toEqual({ statuses: [200], stored: text, shown: text, bands: 0 })
       } finally {
+        await page.unrouteAll({ behavior: 'ignoreErrors' })
         await context.close()
       }
     })
@@ -139,6 +140,7 @@ test.describe('a compliance answer typed alone', () => {
         stored: 250000,
       })
     } finally {
+      await page.unrouteAll({ behavior: 'ignoreErrors' })
       await context.close()
     }
   })
@@ -176,6 +178,7 @@ test.describe('the Overview typed alone', () => {
         bands: await page.getByRole('group', { name: /changed/ }).count(),
       }).toEqual({ statuses: [200, 200], stored: [`Analyst ${mark}`, `Source ${mark}`], bands: 0 })
     } finally {
+      await page.unrouteAll({ behavior: 'ignoreErrors' })
       await context.close()
     }
   })
