@@ -75,10 +75,10 @@ OWNED: dict[str, tuple[tuple[str, re.Pattern[str]], ...]] = {
 #: Files named like a test that no report here holds, and why that is not a
 #: gap in what this certifies. A row citing one of them certifies nothing.
 # ponytail: the Playwright tiers are read by nothing here; reading their JSON
-# reporter is the upgrade once the browser tier runs in the merge group.
+# reporter is the upgrade.
 UNREAD = {
-    "server/e2e/": "Playwright: the browser tier runs nightly only, and the gallery sweeps "
-    "every story rather than demonstrating a scenario",
+    "server/e2e/": "Playwright: no report of the browser tier is read here, and the gallery "
+    "sweeps every story rather than demonstrating a scenario",
     "tools/eslint-rules/": "node --test in the lint tier, which fails its job on a red case",
     ".claude/scripts/test_scope.py": "a script named like a test, which no runner collects",
 }

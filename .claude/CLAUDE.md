@@ -55,7 +55,7 @@ DATABASE_URL="$IC_MIGRATE_DATABASE_URL" npm run db:push
 
 `./test.sh` is the client and the repository checks only.
 
-**CI runs on a pull request into `main` and again in the merge queue, and only the second is a verdict.** Every run gets the cheap tiers whole — both typechecks, both lints, Vale, the shell and workflow lints, the repository checks and both builds. A pull request marked ready adds the suites its paths touch, and that run is advisory: the tiers read across trees, so its `gate` names what it left out. **The merge group runs every tier** but what `gate` leaves to the nightly by name — the tier in `NIGHTLY_ONLY` and the gallery grounds in `NIGHTLY_GROUNDS` — against the tree merged onto the `main` it is about to enter, and a tier that skipped there fails `gate`. So a green pull request means the branch is sound, not that it lands clean. **A push to a feature branch still fires none of it.** → `rules/git-workflow.md` §8.
+**CI runs on a pull request into `main` and again in the merge queue, and only the second is a verdict.** Every run gets the cheap tiers whole — both typechecks, both lints, Vale, the shell and workflow lints, the repository checks and both builds. A pull request marked ready adds the suites its paths touch, and that run is advisory: the tiers read across trees, so its `gate` names what it left out. **The merge group runs every tier**, the browser tier and both gallery grounds included, against the tree merged onto the `main` it is about to enter, and a tier that skipped there fails `gate`. So a green pull request means the branch is sound, not that it lands clean. **A push to a feature branch still fires none of it.** → `rules/git-workflow.md` §8.
 
 ## Testing
 

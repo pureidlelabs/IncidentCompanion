@@ -409,13 +409,9 @@ EXPENSIVE_TIER = (
     "devcontainer",
     "containers",
     "gallery",
+    "browser",
     "lifecycle",
 )
-
-#: Gated on `inputs.all` alone, so neither event this workflow triggers on
-#: starts them. The draft rule below cannot apply: there is no draft to be
-#: held back from.
-NIGHTLY_TIER = ("browser",)
 
 #: Reads what the tiers reported, so it runs only where every tier ran.
 CERTIFYING = ("certify",)
@@ -468,17 +464,6 @@ def test_a_draft_runs_the_cheap_tier_and_nothing_else() -> None:
             "whose verdict decides the merge"
         )
 
-    for name in NIGHTLY_TIER:
-        condition = job_condition(jobs[name])
-        assert "inputs.all" in condition, (
-            f"{name} is listed as nightly and is not gated on `inputs.all`, "
-            "so a pull request pays for it"
-        )
-        assert "draft" not in condition, (
-            f"{name} names the draft, which says it expects a pull request -- "
-            "a nightly tier reaches neither event"
-        )
-
 
 def shard_pairs(job: dict, shards, total: str) -> list[tuple[int, int]]:
     """Every (denominator, matrix length) this job can run with.
@@ -499,6 +484,19 @@ def shard_pairs(job: dict, shards, total: str) -> list[tuple[int, int]]:
     sizes = [int(one) for one in re.findall(r"\b(\d+)\b", env)]
     lengths = [len(one.split(",")) for one in re.findall(r"\[([^\]]*)\]", str(shards))]
     return list(zip(sizes, lengths)) if len(sizes) == len(lengths) else []
+
+
+def test_the_merge_group_walks_the_gallery_on_both_grounds() -> None:
+    """A dark-only regression in a colour kind is invisible to a light walk."""
+    steps = ci_jobs()["gallery"]["steps"]
+    grounds = " ".join(
+        str((step.get("env") or {}).get("VISUAL_GROUNDS", "")) for step in steps
+    )
+    assert "dark" in grounds, "no gallery step walks the dark ground at all"
+    chooses_dark = grounds.split("&&")[0]
+    assert "merge_group" in chooses_dark, (
+        f"the merge group walks light alone, so it certifies half the gallery: {grounds}"
+    )
 
 
 def test_a_shard_matrix_and_its_denominator_agree() -> None:
@@ -541,7 +539,7 @@ def test_every_job_is_classified() -> None:
     behind a linter, and every test here passes while it does.
     """
     jobs = set(ci_jobs())
-    known = set(CHEAP_TIER) | set(EXPENSIVE_TIER) | set(NIGHTLY_TIER) | set(CERTIFYING) | {"scope", "gate"}
+    known = set(CHEAP_TIER) | set(EXPENSIVE_TIER) | set(CERTIFYING) | {"scope", "gate"}
     assert jobs <= known, (
         f"these jobs are in no tier, so no rule in this file reaches them: "
         f"{sorted(jobs - known)}"
@@ -1126,7 +1124,7 @@ def gate_env() -> dict[str, str]:
         ({"lint": "success", "client-suite": "success"}, "merge_group", "", True),
         ({"lint": "success", "client-suite": "skipped"}, "merge_group", "", False),
         ({"lint": "success", "client-suite": "failure"}, "merge_group", "", False),
-        ({"lint": "success", "browser": "skipped"}, "merge_group", "", True),
+        ({"lint": "success", "browser": "skipped"}, "merge_group", "", False),
         ({"lint": "success", "client-suite": "success"}, "schedule", "true", True),
         ({"lint": "success", "client-suite": "skipped"}, "schedule", "true", False),
         ({"lint": "success", "browser": "skipped"}, "schedule", "true", False),
@@ -1163,44 +1161,9 @@ def test_the_gate_refuses_a_run_it_could_not_read() -> None:
         ["bash", "-e", "-c", step_script("gate")],
         capture_output=True, text=True, timeout=30, check=False,
         env={"PATH": os.environ["PATH"], "NEEDS": "{}", "ALL": "",
-             "GITHUB_EVENT_NAME": "merge_group", "NIGHTLY_ONLY": ""},
+             "GITHUB_EVENT_NAME": "merge_group"},
     )
     assert done.returncode != 0, done.stdout + done.stderr
-
-
-def test_the_gate_exempts_exactly_the_nightly_tier() -> None:
-    """The one skip a merge group forgives is a tier no merge group schedules.
-
-    Widen it and a skipped suite passes the queue; leave a nightly tier out and
-    every merge group goes red on a job it never meant to run.
-    """
-    exempt = set(gate_env().get("NIGHTLY_ONLY", "").split())
-    assert exempt == set(NIGHTLY_TIER), (
-        f"the gate forgives {sorted(exempt)} in a merge group; the nightly-only "
-        f"tiers are {sorted(NIGHTLY_TIER)}"
-    )
-    said = run_gate({"lint": "success", **dict.fromkeys(exempt, "skipped")}, "merge_group")
-    assert all(name in said.stdout for name in exempt), (
-        f"a green merge group does not say which tier it did not run:\n{said.stdout}"
-    )
-
-
-def test_a_green_merge_group_names_every_ground_the_gallery_left_to_the_nightly() -> None:
-    """The gallery walks some grounds only when every tier is asked for, which no merge group does."""
-    step = next(s for s in ci_jobs()["gallery"]["steps"] if "VISUAL_GROUNDS" in (s.get("env") or {}))
-    every, merged = re.fullmatch(
-        r"\$\{\{ inputs\.all && '([^']*)' \|\| '([^']*)' \}\}", step["env"]["VISUAL_GROUNDS"]
-    ).groups()
-    left = set(every.split(",")) - set(merged.split(","))
-    assert set(gate_env().get("NIGHTLY_GROUNDS", "").split()) == left, (
-        f"the gallery leaves {sorted(left)} to the nightly; the gate says "
-        f"{gate_env().get('NIGHTLY_GROUNDS')!r}"
-    )
-    exempt = dict.fromkeys(gate_env()["NIGHTLY_ONLY"].split(), "skipped")
-    said = run_gate({"lint": "success", "gallery": "success", **exempt}, "merge_group")
-    assert said.returncode == 0 and all(ground in said.stdout for ground in left), (
-        f"a green merge group does not say the gallery left {sorted(left)} out:\n{said.stdout}"
-    )
 
 
 def _truthy(node: ast.AST, names: dict[str, object]) -> object:
@@ -1314,14 +1277,10 @@ def test_a_merge_group_runs_every_tier_whatever_the_diff(
         for name in jobs["gate"]["needs"]
     }
     unscheduled = sorted(n for n, r in results.items() if r == "skipped")
-    assert unscheduled == sorted(NIGHTLY_TIER), (
-        f"a merge group touching {path} does not start {unscheduled}"
-    )
+    assert unscheduled == [], f"a merge group touching {path} does not start {unscheduled}"
     assert run_gate(results, "merge_group").returncode == 0
 
     for name in results:
-        if name in NIGHTLY_TIER:
-            continue
         done = run_gate({**results, name: "skipped"}, "merge_group")
         assert done.returncode != 0, (
             f"a merge group touching {path} passes with {name} skipped:\n{done.stdout}"

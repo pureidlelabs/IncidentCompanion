@@ -506,28 +506,22 @@ jobs:
 
   # ------------------------------------------------------- the app in a browser
   #
-  # **Nightly only, and it gates nothing.** `client-screen` above drives the
-  # story tier in a real browser on every pull request, so components are
-  # covered; what nothing asked for is `server/e2e/` -- real Nest, real Vite,
-  # real Postgres and real navigation, which is where a rail that mounts no
-  # section and a pane that scrolls underneath the document are visible and
-  # nowhere else.
-  #
-  # It is the slowest tier by a distance and end-to-end tiers are the ones that
-  # flake, which a merge queue that ejects on red pays for. So it runs where a
-  # red answer blocks nothing: `inputs.all` is set by `nightly-build.yml` and by
-  # nothing else, so a pull request and a merge group both skip it.
-  #
-  # **It is still in `gate`'s `needs`**, because a job that cannot fail the gate
-  # is a red tier under a green check. `gate` forgives its skip in a merge
-  # group, by name, and in no run that asked for every tier. -> #89
+  # `client-screen` drives the story tier in a real browser; this drives
+  # `server/e2e/` -- real Nest, real Vite, real Postgres and real navigation,
+  # which is where a rail that mounts no section and a pane that scrolls
+  # underneath the document are visible and nowhere else. -> #89
   browser:
-    if: '!failure() && !cancelled() && inputs.all'
+    needs: scope
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
+      (inputs.all || needs.scope.outputs.server == 'true' ||
+       needs.scope.outputs.client == 'true')
     runs-on: ubuntu-24.04
-    # **The one tier nobody watches, so the one that needs a ceiling.** Each
-    # test is capped at 60s and the launcher at 300s, but nothing bounds the
-    # run: a wedged browser would spend GitHub's 360-minute default before a
-    # nightly nobody is waiting on reported anything.
+    # Each test is capped at 60s and the launcher at 300s, but nothing bounds
+    # the run: a wedged browser would otherwise spend GitHub's 360-minute
+    # default before the queue heard anything.
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -565,8 +559,7 @@ jobs:
 
       # **The traces, not a report**: both configs declare `reporter: [['list']]`
       # and no HTML one, so `playwright-report/` is never written. `test-results/`
-      # is what `trace: 'retain-on-failure'` fills, and a nightly nobody watched
-      # is the only place this tier reports.
+      # is what `trace: 'retain-on-failure'` fills.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
@@ -579,10 +572,9 @@ jobs:
   # **A shard per chunk**, because `workers: 1` is a statement about one
   # machine and a runner is a machine each.
   #
-  # **A pull request and the merge group walk light, the nightly both.** Most
-  # kinds are geometry, but `low-contrast` and `paints-past-the-corner` read
-  # colour -- so a dark-only regression in those reaches the nightly and not
-  # the branch, and the merge group's `gate` says so.
+  # **A pull request walks light; the merge group and the nightly walk both.**
+  # Most kinds are geometry, but `low-contrast` and `paints-past-the-corner`
+  # read colour, so a dark-only regression is invisible to a light walk.
   gallery:
     if: >-
       !failure() && !cancelled() &&
@@ -599,7 +591,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(inputs.all && '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]' || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]') }}
+        shard: ${{ fromJSON((inputs.all || github.event_name == 'merge_group') && '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]' || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
@@ -619,9 +611,9 @@ jobs:
       - name: Every story in a browser
         env:
           SHARD: ${{ matrix.shard }}
-          SHARDS: ${{ inputs.all && 40 || 20 }}
+          SHARDS: ${{ (inputs.all || github.event_name == 'merge_group') && 40 || 20 }}
           STORYBOOK_CHUNKS: '10'
-          VISUAL_GROUNDS: ${{ inputs.all && 'light,dark' || 'light' }}
+          VISUAL_GROUNDS: ${{ (inputs.all || github.event_name == 'merge_group') && 'light,dark' || 'light' }}
           IC_SUITE_MUST_RUN: '1'
         run: |
           cd server && npx playwright test \
@@ -767,7 +759,7 @@ jobs:
   # job, and a skipped required check reads as success.
   #
   # **A job joins it by being listed in `needs`.** A skip passes only on a pull
-  # request, whose run is advisory; the merge group forgives `NIGHTLY_ONLY`.
+  # request, whose run is advisory.
   gate:
     if: always()
     needs:
@@ -780,12 +772,6 @@ jobs:
           NEEDS: ${{ toJSON(needs) }}
           # Empty in every event but a called run.
           ALL: ${{ inputs.all }}
-          # Started by `inputs.all` and nothing else, so no merge group has it
-          # to wait for. Its absence is a limit on what a green merge group
-          # says, and it is printed there. -> #89
-          NIGHTLY_ONLY: browser
-          # The gallery's grounds only `inputs.all` walks, printed alike.
-          NIGHTLY_GROUNDS: dark
         run: |
           # Assigned rather than piped into the loop, so a `jq` that fails
           # fails the step instead of feeding it nothing to refuse.
@@ -796,7 +782,6 @@ jobs:
           fi
           failed=false
           left_out=""
-          nightly=""
           while read -r name result; do
             echo "$name: $result"
             case "$result" in
@@ -806,10 +791,8 @@ jobs:
                   echo "  $name skipped a run that asked for every tier"
                   failed=true
                 elif [ "$GITHUB_EVENT_NAME" = merge_group ]; then
-                  case " $NIGHTLY_ONLY " in
-                    *" $name "*) nightly="$nightly $name" ;;
-                    *) echo "  $name skipped the run that decides the merge"; failed=true ;;
-                  esac
+                  echo "  $name skipped the run that decides the merge"
+                  failed=true
                 else
                   left_out="$left_out $name"
                 fi
@@ -818,17 +801,11 @@ jobs:
             esac
           done <<< "$results"
           if [ "$failed" = true ]; then exit 1; fi
-          if [ "$GITHUB_EVENT_NAME" = merge_group ]; then
-            for ground in $NIGHTLY_GROUNDS; do nightly="$nightly gallery($ground)"; done
-          fi
           if [ -n "$left_out" ]; then
             {
               echo "advisory: this run left out${left_out}."
               echo 'The merge group runs every tier, and its gate is the verdict that lands.'
             } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
-          elif [ -n "$nightly" ]; then
-            echo "every tier reported success but${nightly}, which run nightly and are not in this verdict" \
-              | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
           else
             echo 'every tier reported success'
           fi
