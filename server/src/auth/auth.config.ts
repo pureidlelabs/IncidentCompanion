@@ -146,8 +146,9 @@ async function checkPassword(
   const run = await runOf(db, hash, address)
   if (run && !isLocked(run.lockedUntil, now)) {
     if (right) {
-      await startAgain(db, run, address)
-      return true
+      if (await startAgain(db, run, address, now)) return true
+      await countAgainst(db, undefined, now)
+      return false
     }
     await countAgainst(db, { ...run, miss: missOf(secret, run.id, password) }, now)
     return false
@@ -158,13 +159,19 @@ async function checkPassword(
 
 /**
  * The address of the caller whose password is being checked, resolved as the
- * library resolves it for its own limiter and the session it writes, or
- * `null` where it resolves none.
+ * library resolves it for the session it writes but whole, or `null` where it
+ * resolves none.
  */
 function callerOfThisCheck(): string | null {
   const endpoint = tryGetCurrentAuthEndpointContext()
   const headers = endpoint?.headers ?? endpoint?.request?.headers
-  return endpoint && headers ? getIP(headers, endpoint.context.options) : null
+  if (!endpoint || !headers) return null
+  const { options } = endpoint.context
+  // The library's limiter groups IPv6 by /64; one network is one LAN, not one machine.
+  return getIP(headers, {
+    ...options,
+    advanced: { ...options.advanced, ipAddress: { ...options.advanced?.ipAddress, ipv6Subnet: 128 } },
+  })
 }
 
 /** The credential row holding `hash`. */
@@ -202,15 +209,28 @@ async function runOf(db: Database, hash: string, address: string | null): Promis
   return run
 }
 
-/** The right password on an open run: the run is forgotten, and the address is familiar. */
-async function startAgain(db: Database, run: Run, address: string | null): Promise<void> {
+/**
+ * The right password on a run found open: the run is forgotten and the address
+ * is familiar, answering `true`; or `false`, changing nothing, where failures
+ * arriving together shut the run after it was read.
+ */
+async function startAgain(db: Database, run: Run, address: string | null, now: Date): Promise<boolean> {
+  const { afterFailures } = policyFrom(await readPolicy(db))
   const lockout = schema.signInLockout
-  await db
-    .delete(lockout)
-    .where(and(eq(lockout.userId, run.id), eq(lockout.familiar, run.familiar)))
-  if (address !== null && !run.familiar) {
-    await db.insert(schema.familiarAddress).values({ userId: run.id, address }).onConflictDoNothing()
-  }
+  return db.transaction(async (tx) => {
+    const [held] = await tx
+      .select({ failures: lockout.failures, lockedUntil: lockout.lockedUntil })
+      .from(lockout)
+      .where(and(eq(lockout.userId, run.id), eq(lockout.familiar, run.familiar)))
+      .for('update')
+    // A count at the threshold is shut before its lock is written.
+    if (held && (isLocked(held.lockedUntil, now) || held.failures >= afterFailures)) return false
+    await tx.delete(lockout).where(and(eq(lockout.userId, run.id), eq(lockout.familiar, run.familiar)))
+    if (address !== null && !run.familiar) {
+      await tx.insert(schema.familiarAddress).values({ userId: run.id, address }).onConflictDoNothing()
+    }
+    return true
+  })
 }
 
 /**
