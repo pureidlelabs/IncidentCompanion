@@ -146,9 +146,8 @@ async function checkPassword(
   const run = await runOf(db, hash, address)
   if (run && !isLocked(run.lockedUntil, now)) {
     if (right) {
-      if (await startAgain(db, run, address, now)) return true
-      await countAgainst(db, undefined, now)
-      return false
+      await startAgain(db, run, address)
+      return true
     }
     await countAgainst(db, { ...run, miss: missOf(secret, run.id, password) }, now)
     return false
@@ -209,28 +208,15 @@ async function runOf(db: Database, hash: string, address: string | null): Promis
   return run
 }
 
-/**
- * The right password on a run found open: the run is forgotten and the address
- * is familiar, answering `true`; or `false`, changing nothing, where failures
- * arriving together shut the run after it was read.
- */
-async function startAgain(db: Database, run: Run, address: string | null, now: Date): Promise<boolean> {
-  const { afterFailures } = policyFrom(await readPolicy(db))
+/** The right password on an open run: the run is forgotten, and the address becomes familiar. */
+async function startAgain(db: Database, run: Run, address: string | null): Promise<void> {
   const lockout = schema.signInLockout
-  return db.transaction(async (tx) => {
-    const [held] = await tx
-      .select({ failures: lockout.failures, lockedUntil: lockout.lockedUntil })
-      .from(lockout)
-      .where(and(eq(lockout.userId, run.id), eq(lockout.familiar, run.familiar)))
-      .for('update')
-    // A count at the threshold is shut before its lock is written.
-    if (held && (isLocked(held.lockedUntil, now) || held.failures >= afterFailures)) return false
-    await tx.delete(lockout).where(and(eq(lockout.userId, run.id), eq(lockout.familiar, run.familiar)))
-    if (address !== null && !run.familiar) {
-      await tx.insert(schema.familiarAddress).values({ userId: run.id, address }).onConflictDoNothing()
-    }
-    return true
-  })
+  await db
+    .delete(lockout)
+    .where(and(eq(lockout.userId, run.id), eq(lockout.familiar, run.familiar)))
+  if (address !== null && !run.familiar) {
+    await db.insert(schema.familiarAddress).values({ userId: run.id, address }).onConflictDoNothing()
+  }
 }
 
 /**

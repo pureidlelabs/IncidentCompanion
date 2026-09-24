@@ -118,21 +118,18 @@ describe.skipIf(!(await bootable()))('guessing at an account from machines on th
     ).toBe(200)
   }, 60_000)
 
-  // The state a burst of failures leaves between its count reaching the threshold and its lock being written.
-  it('refuses the right password on a run whose failures reached the threshold before its lock was written', async () => {
+  it('lets the holder in after the threshold is lowered below their run\'s count', async () => {
     const email = await anAccount()
-    await guessFrom(machine(60), email, THRESHOLD - 1)
-    await db
-      .update(signInLockout)
-      .set({ failures: THRESHOLD })
-      .where(
-        and(
-          eq(signInLockout.familiar, false),
-          inArray(signInLockout.userId, db.select({ id: user.id }).from(user).where(eq(user.email, email))),
-        ),
-      )
+    const holder = machine(62)
+    expect(await statusFrom(holder, email, PASSWORD)).toBe(200)
+    await guessFrom(holder, email, 2)
 
-    expect(await statusFrom(machine(61), email, PASSWORD), 'the right password slipped past a run already shut').toBe(401)
+    await setPolicy('auth.lockoutAfterFailures', 2)
+    try {
+      expect(await statusFrom(holder, email, PASSWORD), 'a run over the new threshold refused its holder with no lock').toBe(200)
+    } finally {
+      await setPolicy('auth.lockoutAfterFailures', THRESHOLD)
+    }
   }, 60_000)
 
   it('tells two machines on one IPv6 network apart', async () => {
