@@ -178,13 +178,24 @@ describe.skipIf(!ADMIN_URL || !APP_URL || isEmbedded(APP_URL))('the schema step'
   }, 120_000)
 
   it('puts back a policy the database holds differently from the schema', async () => {
-    const qual = `select qual from pg_policies where tablename = 'evidence' and policyname = 'case_scope'`
+    const qual = `select qual from pg_policies where tablename = 'evidence' and policyname = 'case_reads'`
     const [original] = await query<{ qual: string }>(admin(), qual)
     expect(original?.qual).toContain('app.case_id')
-    await query(scratchUrl('ic_migrate'), `alter policy case_scope on evidence using (true)`)
+    await query(scratchUrl('ic_migrate'), `alter policy case_reads on evidence using (true)`)
     const ran = await step()
     expect(ran.code, ran.out).toBe(0)
     expect(await query<{ qual: string }>(admin(), qual)).toEqual([original])
+  }, 60_000)
+
+  it('puts back what the application may call when the database holds it differently', async () => {
+    const callable = `select has_function_privilege('ic_app', 'public.ic_reach(text, uuid)', 'execute') as ok`
+    expect(await query(admin(), callable)).toEqual([{ ok: true }])
+    await query(scratchUrl('ic_migrate'), `revoke execute on function public.ic_reach(text, uuid) from ic_app`)
+    const ran = await step()
+    expect(ran.code, ran.out).toBe(0)
+    expect(await query(admin(), callable), 'the step left the application unable to ask reach').toEqual([
+      { ok: true },
+    ])
   }, 60_000)
 
   it('leaves the application identity holding exactly what it held', async () => {
@@ -193,7 +204,7 @@ describe.skipIf(!ADMIN_URL || !APP_URL || isEmbedded(APP_URL))('the schema step'
       where grantee = 'ic_app' and table_schema = 'public' order by 1`
     const before = await query(admin(), privileges)
     expect(before.length, 'ic_app holds nothing, so this would pass however the step went').toBeGreaterThan(0)
-    await query(scratchUrl('ic_migrate'), `alter policy case_scope on evidence using (true)`)
+    await query(scratchUrl('ic_migrate'), `alter policy case_reads on evidence using (true)`)
     expect((await step()).code).toBe(0)
     expect(await query(admin(), privileges)).toEqual(before)
   }, 60_000)

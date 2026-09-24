@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CollectionService } from '../collections/collection.service.js'
 import { REPORTS_COLLECTION } from '../collections/definitions.js'
@@ -58,7 +59,7 @@ describe.skipIf(!db)('the language a report is written with', () => {
       builtin: false,
     })
 
-    collections = new CollectionService(db!, suiteStore())
+    collections = as(actorId, new CollectionService(db!, suiteStore()))
   })
 
   afterAll(async () => {

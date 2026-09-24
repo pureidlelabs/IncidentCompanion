@@ -14,10 +14,13 @@
 import { Logger } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
 
+import { sql } from 'drizzle-orm'
+
 import type { Executor } from '../db/scope.js'
 import { callerAddress } from '../wire/caller-address.js'
 import { retentionClassOf } from './retention-class.js'
 import { CHANNEL_OF, installActivity } from '../db/schema/install-activity.js'
+import { user } from '../db/schema/auth.js'
 import { OCSF_VERSION, classify } from './ocsf.js'
 import { SEVERITY_ID, outcomeOf, severityOf } from './severity.js'
 
@@ -163,7 +166,11 @@ export async function recordInstallActivity(
       schemaVersion: OCSF_VERSION,
       severityId: SEVERITY_ID[severity],
       statusId: (input.outcome ?? outcomeOf(input.event)) === 'failure' ? 2 : 1,
-      actorId: input.actor?.id ?? null,
+      // Null where the account is gone, as it would be had it gone after the
+      // line: a session can outlive its account, and the label still says who.
+      actorId: input.actor?.id
+        ? sql`(select ${user.id} from ${user} where ${user.id} = ${input.actor.id})`
+        : null,
       actorLabel: input.actor?.label ?? null,
       targetLabel: input.target ?? null,
       detail: input.detail ?? {},

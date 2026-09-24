@@ -21,6 +21,7 @@ import { parse } from 'csv-parse/sync'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ExportsController } from './exports.controller.js'
 import { ImportService, type OnDuplicate } from './import.service.js'
@@ -101,9 +102,9 @@ describe.skipIf(!db || !hasConcurrentConnections())('every row in the file is ac
     const [blank] = await seed!.insert(cases).values({ title: 'Blank' }).returning()
     emptyCaseId = blank!.id
 
-    const collections = new CollectionService(db!, suiteStore())
-    service = new ImportService(collections)
-    exports_ = new ExportsController(collections, service)
+    const collections = as(ME, new CollectionService(db!, suiteStore()))
+    service = as(ME, new ImportService(collections))
+    exports_ = as(ME, new ExportsController(collections, service))
   })
 
   afterAll(async () => {

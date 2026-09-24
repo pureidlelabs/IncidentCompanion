@@ -25,6 +25,7 @@
 import { and, asc, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { cases, impact, reportBlocks, reports, timeline, user } from '../db/schema/index.js'
@@ -126,10 +127,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('a sent report, when the cas
       })
       .onConflictDoNothing()
 
-    const cases_ = new CasesService(db!, suiteStore(), {
+    const cases_ = as(actorId, new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
+    } as never))
     const row = await cases_.create(
       { title: 'Mailbox exfiltration', severity: 'medium' },
       actorId,
@@ -149,14 +150,14 @@ describe.skipIf(!db || !hasConcurrentConnections())('a sent report, when the cas
       disposition: 'exposed',
     })
 
-    const prose = new ProseService(db!)
-    render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
-    lifecycle = new ReportLifecycleService(
+    const prose = as(actorId, new ProseService(db!))
+    render = as(actorId, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
+    lifecycle = as(actorId, new ReportLifecycleService(
       db!,
       { entry: () => Promise.resolve(undefined) } as never,
       render,
       prose,
-    )
+    ))
 
     sentId = await reportOf('Filed with the authority')
     draftId = await reportOf('Still being written')

@@ -21,6 +21,7 @@
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import type { PgColumn } from 'drizzle-orm/pg-core'
 
@@ -67,7 +68,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an analyst removing somethi
   let caseId: string
 
   beforeAll(async () => {
-    service = new CollectionService(db!, suiteStore())
+    service = as(ANALYST, new CollectionService(db!, suiteStore()))
 
     const now = new Date()
     await seed!

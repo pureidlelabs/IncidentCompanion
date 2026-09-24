@@ -9,6 +9,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { ActivityController } from './activity.controller.js'
+import { actingAs } from '../db/scope.js'
 import type { ConfigService } from '@nestjs/config'
 
 import type { Database } from '../db/client.js'
@@ -26,17 +27,29 @@ const CONFIG = {
       : 'redis://127.0.0.1:6379',
 } as unknown as ConfigService<Env, true>
 
-/** A database whose every query answers from a script, in call order. */
+/**
+ * A database whose every query answers from a script, in call order. Naming
+ * who is asking, as a transaction opened for case data does first, is not a
+ * query the script answers.
+ */
 function scripted(answers: unknown[][]): { db: Database; calls: string[] } {
   const calls: string[] = []
+  const execute = vi.fn((query: unknown) => {
+    const said = String(JSON.stringify(query))
+    if (said.includes('app.principal')) return Promise.resolve({ rows: [] })
+    calls.push(said)
+    return Promise.resolve({ rows: answers[calls.length - 1] ?? [] })
+  })
   const db = {
-    execute: vi.fn((query: unknown) => {
-      calls.push(String(JSON.stringify(query)))
-      return Promise.resolve({ rows: answers[calls.length - 1] ?? [] })
-    }),
+    execute,
+    transaction: (work: (tx: unknown) => Promise<unknown>) => work({ execute }),
   } as unknown as Database
   return { db, calls }
 }
+
+/** What the route answers an administrator. */
+const readAs = (db: Database) =>
+  actingAs('an-administrator', () => new ActivityController(db, CONFIG).read())
 
 const TABLES = [
   { name: 'timeline', rows: '183', bytes: '147456' },
@@ -56,7 +69,7 @@ const ACCOUNTS = [
 describe('what the install is holding', () => {
   it('reports the tables with rows in them, largest first', async () => {
     const { db } = scripted([TABLES, DATABASE, CASES, ACCOUNTS])
-    const read = await new ActivityController(db, CONFIG).read()
+    const read = await readAs(db)
 
     expect(read.tables[0]).toEqual({ name: 'timeline', approximateRows: 183, bytes: 147456 })
     expect(read.tables).toHaveLength(2)
@@ -70,7 +83,7 @@ describe('what the install is holding', () => {
    */
   it('separates the analyst\u2019s own cases from the demos', async () => {
     const { db } = scripted([TABLES, DATABASE, CASES, ACCOUNTS])
-    const read = await new ActivityController(db, CONFIG).read()
+    const read = await readAs(db)
 
     expect(read.cases).toEqual({ total: 12, live: 10, postIncident: 0, closed: 2, demo: 6 })
   })
@@ -102,7 +115,7 @@ describe('what the install is holding', () => {
     ],
   ])('conserves the case counts for %s', async (_name, rows) => {
     const { db } = scripted([TABLES, DATABASE, rows, ACCOUNTS])
-    const { cases } = await new ActivityController(db, CONFIG).read()
+    const { cases } = await readAs(db)
 
     expect(
       cases.live + cases.postIncident + cases.closed,
@@ -117,7 +130,7 @@ describe('what the install is holding', () => {
 
   it('reports the accounts by role, so an install with no admin is visible', async () => {
     const { db } = scripted([TABLES, DATABASE, CASES, ACCOUNTS])
-    const read = await new ActivityController(db, CONFIG).read()
+    const read = await readAs(db)
 
     expect(read.accounts).toEqual({ total: 3, admins: 1, analysts: 2 })
   })
@@ -129,7 +142,7 @@ describe('what the install is holding', () => {
    */
   it('reports connections against the ceiling they are measured from', async () => {
     const { db } = scripted([TABLES, DATABASE, CASES, ACCOUNTS])
-    const read = await new ActivityController(db, CONFIG).read()
+    const read = await readAs(db)
 
     expect(read.database).toEqual({
       sizeBytes: 10344127,
@@ -147,7 +160,7 @@ describe('what the install is holding', () => {
    */
   it('answers zero for a role no account holds', async () => {
     const { db } = scripted([TABLES, DATABASE, CASES, [{ role: 'analyst', count: '2' }]])
-    const read = await new ActivityController(db, CONFIG).read()
+    const read = await readAs(db)
 
     expect(read.accounts).toEqual({ total: 2, admins: 0, analysts: 2 })
   })
@@ -155,7 +168,7 @@ describe('what the install is holding', () => {
   /** An empty install answers zeroes, not a crash and not an absent field. */
   it('answers a fresh install without inventing anything', async () => {
     const { db } = scripted([[], [], [], []])
-    const read = await new ActivityController(db, CONFIG).read()
+    const read = await readAs(db)
 
     expect(read.tables).toEqual([])
     expect(read.cases).toEqual({ total: 0, live: 0, postIncident: 0, closed: 0, demo: 0 })

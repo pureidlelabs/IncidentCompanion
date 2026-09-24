@@ -92,6 +92,20 @@ async function deniedFor(caseId: string): Promise<number> {
   return (await deniedLines(caseId)).length
 }
 
+/**
+ * The `access_denied` lines naming this case, once there are more than
+ * `already`: a refusal is written after its answer has gone, so it is waited
+ * for rather than assumed.
+ */
+async function deniedOnceWritten(caseId: string, already = 0): Promise<Line[]> {
+  let found = await deniedLines(caseId)
+  for (let tries = 0; found.length <= already && tries < 50; tries += 1) {
+    await new Promise((wake) => setTimeout(wake, 100))
+    found = await deniedLines(caseId)
+  }
+  return found
+}
+
 describe.skipIf(!(await bootable()))('a reach that was refused', () => {
   beforeAll(async () => {
     harness = await boot()
@@ -166,7 +180,7 @@ describe.skipIf(!(await bootable()))('a reach that was refused', () => {
 
     expect(answer.status, 'the caller is owed the same refusal as before').toBe(403)
 
-    const [line] = await deniedLines(ours)
+    const [line] = await deniedOnceWritten(ours)
     expect(
       line,
       'a reach refused for weakness owes exactly one `access_denied` line naming the case',
@@ -190,7 +204,7 @@ describe.skipIf(!(await bootable()))('a reach that was refused', () => {
       404,
     )
 
-    const [line] = await deniedLines(theirs)
+    const [line] = await deniedOnceWritten(theirs)
     expect(
       line,
       'a reach refused for having none owes exactly one `access_denied` line naming the case',
@@ -211,6 +225,11 @@ describe.skipIf(!(await bootable()))('a reach that was refused', () => {
     })
 
     expect(answer.status, 'an absent case answers 404').toBe(404)
+    // A refusal asked for after it, and written, says the absent case's line
+    // would have been written by now had it been owed one.
+    const before = await deniedFor(theirs)
+    await fetch(`${harness!.base}/api/cases/${theirs}`, { headers: { cookie: analyst.cookie } })
+    expect(await deniedOnceWritten(theirs, before)).toHaveLength(before + 1)
     expect(
       await deniedFor(ABSENT),
       'a case that does not exist was logged as a refused reach, which buries the run of ' +

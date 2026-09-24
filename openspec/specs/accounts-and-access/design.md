@@ -64,7 +64,7 @@ A session ends after an idle period the install sets, and independently at an ab
 
 For every account the install knows: whether it is local or the provider's, whether it holds the management grant, when it last signed in, whether it carries a second factor, and every customer it reaches with the level and the membership that grants it.
 
-Every sign-in is recorded with its outcome and how it was attempted. Every refusal of a customer or a case is recorded with who was refused and what they asked for. Every change to who reaches what is recorded with the actor, the subject and the time — including an administrator granting themselves, where the actor and the subject are the same account.
+Every sign-in is recorded with its outcome and how it was attempted. Every refusal of a customer or a case is recorded with who was refused and what they asked for; a line names its actor's account only where the install holds it, and keeps the name the session carried either way, so a session that outlived its account is recorded under the name it was issued to. Every change to who reaches what is recorded with the actor, the subject and the time — including an administrator granting themselves, where the actor and the subject are the same account.
 
 The record cannot be suppressed by whoever it would record, and where an event cannot be recorded the act it describes does not happen.
 

@@ -13,6 +13,7 @@ import { asc, eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { LibraryService } from '../library/library.service.js'
@@ -154,14 +155,14 @@ describe.skipIf(!db || !hasConcurrentConnections())('the sections a report is sh
       ])
       .onConflictDoNothing()
 
-    cases_ = new CasesService(db!, suiteStore(), { announce: () => {}, othersOn: () => Promise.resolve([]) } as never)
+    cases_ = as(actorId, new CasesService(db!, suiteStore(), { announce: () => {}, othersOn: () => Promise.resolve([]) } as never))
     // **The real service against the real row.** A stub keyed on the slug the
     // caller passes agrees with whatever the caller spells, so a lookup for a
     // kind no row has ever carried passes against it.
     const libraryService = new LibraryService(db!, seed)
-    const prose = new ProseService(db!)
-    const render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
-    lifecycle = new ReportLifecycleService(db!, libraryService, render, prose)
+    const prose = as(actorId, new ProseService(db!))
+    const render = as(actorId, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
+    lifecycle = as(actorId, new ReportLifecycleService(db!, libraryService, render, prose))
   })
 
   afterAll(async () => {
@@ -384,15 +385,15 @@ describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () =
       })
       .onConflictDoNothing()
 
-    cases_ = new CasesService(
+    cases_ = as(actorId, new CasesService(
       db!,
       suiteStore(),
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
-    )
+    ))
     const libraryService = { entry: () => Promise.resolve(undefined) } as never
-    prose = new ProseService(db!)
-    render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
-    lifecycle = new ReportLifecycleService(db!, libraryService, render, prose)
+    prose = as(actorId, new ProseService(db!))
+    render = as(actorId, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
+    lifecycle = as(actorId, new ReportLifecycleService(db!, libraryService, render, prose))
   })
 
   afterAll(async () => {
