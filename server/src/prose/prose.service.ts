@@ -52,7 +52,7 @@ import { changeFeed } from '../db/schema/change-feed.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
-import { withCase } from '../db/scope.js'
+import { actingAs, principalNow, withCase, type Executor } from '../db/scope.js'
 import { fragmentFor } from '../domain/prose-fields.js'
 
 /**
@@ -443,15 +443,19 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   /** Empty every fragment of `doc` whose section no longer exists, so a late edit to one is not kept. */
-  private async pruneRemovedSections(caseId: string, reportId: string, doc: Y.Doc): Promise<void> {
-    const live = await withCase(this.db, caseId, (tx) =>
-      tx.select({ id: reportBlocks.id }).from(reportBlocks).where(eq(reportBlocks.reportId, reportId)),
-    )
+  private async pruneRemovedSections(tx: Executor, caseId: string, reportId: string, doc: Y.Doc): Promise<boolean> {
+    const [report] = await tx
+      .select({ id: reports.id })
+      .from(reports)
+      .where(and(eq(reports.id, reportId), eq(reports.caseId, caseId)))
+    if (!report) return false
+    const live = await tx.select({ id: reportBlocks.id }).from(reportBlocks).where(eq(reportBlocks.reportId, reportId))
     const kept = new Set(live.map((block) => block.id))
     for (const name of [...doc.share.keys()]) {
       const fragment = fragmentFor(doc, name)
       if (!kept.has(name) && fragment.length > 0) fragment.delete(0, fragment.length)
     }
+    return true
   }
 
   /** Empty a removed section's fragment, and store the report without it. Call after its block row is deleted. */
@@ -660,10 +664,16 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   /**
-   * Write the document to its row, naming whoever wrote into it since the last
-   * write: `updated_by` is the latest of them, and each gets a feed row in the
-   * same transaction. Then tells the `onSaved` listener. Resolves once every
-   * flush queued before it has run too. Public so a test can force it.
+   * Write the document to its row, as the latest analyst who wrote into it
+   * since it was last stored and whom the store still lets write it, or else as
+   * whoever is asking. `updated_by` names the latest who wrote, and everyone
+   * who wrote gets a feed row in the same transaction. Then tells the `onSaved` listener.
+   * Resolves once every flush queued before it has run too. Public so a test
+   * can force it.
+   *
+   * A document no edit on this instance has touched, flushed with nobody
+   * asking, is left to the instance that took the edit. One nobody may write
+   * stays unsaved and is logged, and the next flush tries again.
    *
    * **The row's version is deliberately not bumped.** `reports.version` guards
    * the analyst-facing fields against a concurrent edit; the document is a
@@ -680,46 +690,65 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   private async store(caseId: string, address: ProseRecord, held: LiveDocument): Promise<void> {
-    if (address.table === 'reports') await this.pruneRemovedSections(caseId, address.id, held.doc)
-    const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
     const writers = [...held.writers.values()]
+    const asking = principalNow()
+    const candidates = writers.map((writer) => writer.id).reverse()
+    if (asking && !candidates.includes(asking)) candidates.push(asking)
+    if (candidates.length === 0) return
     held.writers.clear()
     held.dirty = false
     const by = writers.at(-1)
     const attributed = by ? { updatedBy: by.id, updatedAt: new Date() } : {}
     try {
-      await withCase(this.db, caseId, async (tx) => {
-        const [row] = await (address.table === 'casenotes'
-          ? tx
-              .update(caseNotes)
-              // **`note` is re-derived from the document on every flush.**
-              // The document is the record; the column is the projection the
-              // index row, the search and the CSV export read, and a note has
-              // no heading to find it by instead. A note's creation writes the
-              // column once, as the document's first words; this is its only
-              // writer after that.
-              .set({ document: bytes, note: noteText(held.doc), ...attributed })
-              .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
-              .returning({ version: caseNotes.version })
-          : tx
-              .update(reports)
-              .set({ document: bytes, ...attributed })
-              .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
-              .returning({ version: reports.version }))
-        if (!row || writers.length === 0) return
-        await tx.insert(changeFeed).values(
-          writers.map((writer) => ({
-            caseId,
-            entity: address.table,
-            entityId: address.id,
-            op: 'update' as const,
-            version: row.version,
-            actorId: writer.id,
-            fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
-          })),
+      for (const who of candidates) {
+        const stored = await actingAs(who, () =>
+          withCase(this.db, caseId, async (tx) => {
+            // Pruned only once this writer is shown to reach the report: a read
+            // it cannot see returns no sections, which would empty them all.
+            if (address.table === 'reports') {
+              if (!(await this.pruneRemovedSections(tx, caseId, address.id, held.doc))) return false
+            }
+            const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
+            const [row] = await (address.table === 'casenotes'
+              ? tx
+                  .update(caseNotes)
+                  // **`note` is re-derived from the document on every flush.**
+                  // The document is the record; the column is the projection the
+                  // index row, the search and the CSV export read, and a note has
+                  // no heading to find it by instead. A note's creation writes the
+                  // column once, as the document's first words; this is its only
+                  // writer after that.
+                  .set({ document: bytes, note: noteText(held.doc), ...attributed })
+                  .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
+                  .returning({ version: caseNotes.version })
+              : tx
+                  .update(reports)
+                  .set({ document: bytes, ...attributed })
+                  .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
+                  .returning({ version: reports.version }))
+            // No row is the store refusing this writer, which raises nothing.
+            if (!row) return false
+            if (writers.length > 0) {
+              await tx.insert(changeFeed).values(
+                writers.map((writer) => ({
+                  caseId,
+                  entity: address.table,
+                  entityId: address.id,
+                  op: 'update' as const,
+                  version: row.version,
+                  actorId: writer.id,
+                  fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
+                })),
+              )
+            }
+            return true
+          }),
         )
-      })
-      if (writers.length > 0) this.saved?.(caseId, address, writers)
+        if (!stored) continue
+        if (writers.length > 0) this.saved?.(caseId, address, writers)
+        return
+      }
+      throw new Error('the store took it from nobody who wrote it, or its row is gone')
     } catch (error) {
       // Sent by a path this document did not see: nothing more is taken.
       const sent = sentReportIn(error)

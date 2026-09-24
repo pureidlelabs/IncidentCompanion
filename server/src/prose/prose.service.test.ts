@@ -11,6 +11,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { as } from '../../test/acting.js'
 import { writeSyncStep2 } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
@@ -179,11 +180,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
   beforeAll(async () => {
     actorId = 'prose-analyst'
 
-    cases_ = new CasesService(db!, suiteStore(), {
+    cases_ = as('prose-analyst', new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
-    prose = new ProseService(db!)
+    } as never))
+    prose = as('prose-analyst', new ProseService(db!))
   })
 
   afterAll(async () => {
@@ -543,11 +544,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live docum
 
   beforeAll(() => {
     actorId = 'prose-analyst'
-    cases_ = new CasesService(db!, suiteStore(), {
+    cases_ = as('prose-analyst', new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
-    prose = new ProseService(db!)
+    } as never))
+    prose = as('prose-analyst', new ProseService(db!))
   })
 
   afterAll(async () => {
@@ -801,10 +802,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
 
   beforeAll(() => {
     actorId = 'prose-analyst'
-    cases_ = new CasesService(db!, suiteStore(), {
+    cases_ = as('prose-analyst', new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
+    } as never))
   })
 
   it('carries an edit made on one instance to the document held by the other', async () => {
@@ -813,8 +814,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
     // state over one row - the second analyst's afternoon disappears at the
     // next reload, with nothing having failed.
     const bus = new Bus()
-    const one = new ProseService(db!, bus)
-    const two = new ProseService(db!, bus)
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
     const { caseId, reportId } = await freshReport()
 
     const here = await one.open(caseId, reportDocument(reportId))
@@ -829,8 +830,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
 
   it('turns one edit into one frame, not one per instance holding the document', async () => {
     const bus = new Bus()
-    const one = new ProseService(db!, bus)
-    const two = new ProseService(db!, bus)
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
     const { caseId, reportId } = await freshReport()
 
     const here = await one.open(caseId, reportDocument(reportId))
@@ -853,8 +854,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
     // A document nobody holds must not keep applying updates: it is not being
     // flushed any more, so the state would only ever diverge from the row.
     const bus = new Bus()
-    const one = new ProseService(db!, bus)
-    const two = new ProseService(db!, bus)
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
     const { caseId, reportId } = await freshReport()
 
     const here = await one.open(caseId, reportDocument(reportId))
@@ -867,7 +868,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
   })
 
   it('is correct for its own sockets with no relay at all', async () => {
-    const alone = new ProseService(db!)
+    const alone = as('prose-analyst', new ProseService(db!))
     const { caseId, reportId } = await freshReport()
     const doc = await alone.open(caseId, reportDocument(reportId))
 

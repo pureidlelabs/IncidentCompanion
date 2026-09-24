@@ -158,6 +158,12 @@ Where an analyst is disconnected while writing, their work MUST survive and MUST
 - THEN what they wrote is present
 - AND merged with whatever arrived while they were away
 
+#### Scenario: One of the writers loses write before the words are stored
+
+- GIVEN two analysts writing in one passage
+- WHEN one of them loses write before what both typed is stored
+- THEN both sets of words are stored
+
 ### Requirement: A reconnection catches up rather than starts over
 
 A connection that drops and returns MUST leave the analyst where they were. They MUST NOT have to reload to trust what is on their screen.

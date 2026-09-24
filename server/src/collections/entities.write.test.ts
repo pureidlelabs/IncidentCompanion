@@ -15,6 +15,7 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
@@ -61,7 +62,7 @@ function controllerFor(name: string): Writable {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Writable)(new CollectionService(db!, suiteStore()))
+  return new (found as new (s: CollectionService) => Writable)(as('test-analyst', new CollectionService(db!, suiteStore())))
 }
 
 describe.skipIf(!db || !hasConcurrentConnections())('writing an entity', () => {

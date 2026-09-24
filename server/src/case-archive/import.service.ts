@@ -22,6 +22,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { release } from '../report/artefacts-named.js'
+import { withReach } from '../db/scope.js'
 import {
   BadArchive,
   CASE_NAME,
@@ -340,7 +341,7 @@ export class ArchiveImportService {
       held.add(stored.hash)
     }
 
-    const result = await this.db.transaction(async (tx) => {
+    const result = await withReach(this.db, async (tx) => {
       // **Trimmed, as the three HTTP doors trim.** `createCaseSchema` and the
       // patch schema both `.trim()`, so an archive carrying ` INC-9 ` would
       // otherwise store a padded reference that collides with nothing and is

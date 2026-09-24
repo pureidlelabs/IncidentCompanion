@@ -13,6 +13,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ConflictsService } from './conflicts.service.js'
 import { CollectionService } from './collection.service.js'
@@ -83,8 +84,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
      */
     await seed!.update(systems).set({ analyst: 'Nobody' }).where(eq(systems.id, rowId))
 
-    collections = new CollectionService(db!, suiteStore())
-    service = new ConflictsService(db!, collections)
+    collections = as(ME, new CollectionService(db!, suiteStore()))
+    service = as(ME, new ConflictsService(db!, collections))
   })
 
   afterAll(async () => {
@@ -305,7 +306,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
    */
   describe('a refused PATCH leaves a review behind', () => {
     it('records the analyst edit that the 409 discarded', async () => {
-      const controller = new SystemsController(collections, service)
+      const controller = as(ME, new SystemsController(collections, service))
       const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
       await theyWrite({ analyst: 'Them' })
 
@@ -326,7 +327,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
 
     it('does not treat base as a column to write', async () => {
       const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const controller = new SystemsController(collections, service)
+      const controller = as(ME, new SystemsController(collections, service))
 
       const updated = (await controller.update(
         caseId,
