@@ -60,10 +60,8 @@ const CARRIED: Readonly<Record<string, z.ZodRawShape>> = {
     contentType: z.string().nullable().optional(),
     originalFilename: z.string(),
   },
-  casenotes: { document: z.unknown() },
   reports: {
     sentAt: when,
-    document: z.unknown(),
     frozen: z.unknown(),
     frozenAt: when,
   },

@@ -22,7 +22,15 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { release } from '../report/artefacts-named.js'
-import { BadArchive, CASE_NAME, EVIDENCE_PREFIX, PROSE_PREFIX, readArchive } from '../archive/format.js'
+import {
+  BadArchive,
+  CASE_NAME,
+  EVIDENCE_PREFIX,
+  NOTE_PROSE_PREFIX,
+  PROSE_PREFIX,
+  readArchive,
+} from '../archive/format.js'
+import { NOTE_FRAGMENT, noteText } from '../prose/prose.service.js'
 import { MalformedEnvelope, WrongPassphrase, isSealed, open } from '../archive/envelope.js'
 import { PolicyService } from '../policy/policy.service.js'
 import { REFERENCE_FIELD_NAMES } from '../domain/collections.js'
@@ -428,7 +436,6 @@ export class ArchiveImportService {
           }
           let stamp: Date | null = null
           if (name === 'reports') {
-            values.document = null
             if (values.sentAt instanceof Date) stamp = values.sentAt
             values.sentAt = null
           }
@@ -461,20 +468,22 @@ export class ArchiveImportService {
         }
       }
 
-      // After the reports exist: each document under its report's new id, each fragment under its block's.
+      // After the rows exist: each document under its record's new id, each fragment under its block's.
       const archivedBlocks = Array.isArray(record.reportBlocks)
         ? (record.reportBlocks as { id?: unknown; reportId?: unknown }[])
         : []
       for (const [name, bytes] of Object.entries(members)) {
         if (!name.startsWith(PROSE_PREFIX)) continue
-        const oldId = name.slice(PROSE_PREFIX.length).replace(/\.ydoc$/, '')
+        const note = name.startsWith(NOTE_PROSE_PREFIX)
+        const oldId = name.slice((note ? NOTE_PROSE_PREFIX : PROSE_PREFIX).length).replace(/\.ydoc$/, '')
         const fresh = remap.get(oldId)
         if (!fresh) {
-          this.log.warn(`archive carries prose for report ${oldId}, which it does not describe`)
+          this.log.warn(`archive carries prose for ${note ? 'note' : 'report'} ${oldId}, which it does not describe`)
           continue
         }
         const rekey = new Map<string, string>()
-        for (const block of archivedBlocks) {
+        if (note) rekey.set(NOTE_FRAGMENT, NOTE_FRAGMENT)
+        for (const block of note ? [] : archivedBlocks) {
           const now = typeof block.id === 'string' ? remap.get(block.id) : undefined
           if (block.reportId === oldId && now) rekey.set(block.id as string, now)
         }
@@ -482,11 +491,21 @@ export class ArchiveImportService {
         try {
           Y.applyUpdate(source, bytes)
         } catch {
-          throw new BadArchive(`this archive's prose for report ${oldId} is unreadable`)
+          throw new BadArchive(`this archive's prose for ${note ? 'note' : 'report'} ${oldId} is unreadable`)
         }
         const document = rekeyed(source, rekey)
         source.destroy()
         if (!document) continue
+        if (note) {
+          const read = new Y.Doc()
+          Y.applyUpdate(read, document)
+          await tx
+            .update(caseNotes)
+            .set({ document: Buffer.from(document), note: noteText(read) })
+            .where(sql`${caseNotes.id} = ${fresh}`)
+          read.destroy()
+          continue
+        }
         await tx
           .update(reports)
           .set({ document: Buffer.from(document) })

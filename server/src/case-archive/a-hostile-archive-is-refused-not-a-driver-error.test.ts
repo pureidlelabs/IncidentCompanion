@@ -29,6 +29,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
+import { ProseService } from '../prose/prose.service.js'
 import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
 import {
   CASE_NAME,
@@ -83,7 +84,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row t
       store,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
-    exporter = new ArchiveExportService(cases_, store, policy)
+    exporter = new ArchiveExportService(cases_, store, policy, new ProseService(db!))
     importer = new ArchiveImportService(db!, store, policy)
   })
 

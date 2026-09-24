@@ -207,6 +207,7 @@ const MAY_IMPORT: Record<string, string[]> = {
     'policy',
     'customers',
     'report',
+    'prose',
   ],
   brand: [],
   /** Bytes on disk, a directory per case id, and nothing else about a case. */
