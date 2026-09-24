@@ -546,10 +546,12 @@ def test_the_app_answers_on_the_published_port(running_container):
     assert _wait_for_app(HEALTH) == 200
 
 
-def test_an_install_at_loopback_is_never_told_to_stay_protected(running_container):
+@pytest.mark.parametrize("host", ["127.0.0.1", "localhost"])
+def test_an_install_at_loopback_is_never_told_to_stay_protected(running_container, host):
     """A loopback address is every application on the machine, so no response pins it."""
     _wait_for_app(HEALTH)
-    with urllib.request.urlopen(HEALTH, timeout=10, context=_UNVERIFIED) as answer:
+    asked = urllib.request.Request(HEALTH, headers={"Host": f"{host}:{PORT}"})
+    with urllib.request.urlopen(asked, timeout=10, context=_UNVERIFIED) as answer:
         assert answer.headers.get_all("Strict-Transport-Security") is None
 
 

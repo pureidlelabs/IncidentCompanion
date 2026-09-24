@@ -13,7 +13,7 @@ const opened: WebSocket[] = []
 
 async function socketFor(cookie: string): Promise<WebSocket> {
   const socket = new WebSocket(`${harness.base.replace('http://', 'ws://')}/api/cases/${caseId}/live`, {
-    headers: { cookie, origin: harness.base },
+    headers: { cookie, origin: harness.origin },
   })
   opened.push(socket)
   await new Promise<void>((resolve, reject) => {

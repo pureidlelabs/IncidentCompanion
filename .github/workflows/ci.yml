@@ -680,7 +680,7 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install -q -r requirements-dev.txt
           sh docker/secrets.sh
-          .venv/bin/python -m pytest tests/docker -q -n auto --junitxml=reports/containers.xml
+          .venv/bin/python -m pytest tests/docker -q -rs -n auto --junitxml=reports/containers.xml
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: report-containers

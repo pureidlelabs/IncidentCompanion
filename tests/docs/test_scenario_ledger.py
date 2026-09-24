@@ -100,21 +100,22 @@ PER_TEST_HOOK = re.compile(r"\b(beforeEach|afterEach|onTestFinished|onTestFailed
 
 
 def names_the_case(path: str, title: str) -> bool:
-    """Whether the file at `path` declares the case `title` ends in."""
+    """Whether the file at `path` declares every segment of the case `title` names."""
     text = (ROOT / path).read_text(encoding="utf-8")
-    last = re.sub(r"\[[^\]]*\]$", "", title.split(" > ")[-1])
+    *outer, last = title.split(" > ")
+    last = re.sub(r"\[[^\]]*\]$", "", last)
     if path.endswith(".py"):
-        return re.search(rf"def {re.escape(last)}\(", text) is not None
+        return re.search(rf"def {re.escape(last)}\(", text) is not None and all(
+            re.search(rf"class {re.escape(one)}\b", text) for one in outer)
+    literals = []
     for match in LITERAL.finditer(text):
         literal = next(g for g in match.groups() if g is not None)
         literal = re.sub(r"\\u([0-9a-fA-F]{4})", lambda code: chr(int(code.group(1), 16)), literal)
         literal = re.sub(r"\\(.)", r"\1", literal)
         # A literal that is all hole, such as a bare `${path}`, would match any title.
-        if len(HOLE.sub("", literal).strip()) < 3:
-            continue
-        if re.fullmatch(".+".join(re.escape(part) for part in HOLE.split(literal)), last, re.S):
-            return True
-    return False
+        if len(HOLE.sub("", literal).strip()) >= 3:
+            literals.append(".+".join(re.escape(part) for part in HOLE.split(literal)))
+    return all(any(re.fullmatch(one, segment, re.S) for one in literals) for segment in [*outer, last])
 
 
 @pytest.mark.parametrize("row", rows(), ids=lambda row: f"{row[0]}/{row[2]}"[:80])

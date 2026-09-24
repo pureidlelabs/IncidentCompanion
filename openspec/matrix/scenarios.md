@@ -720,8 +720,8 @@
 | Case data is not left on the analyst's disk | An analyst reads a case and signs out | demonstrated | server/test/security-headers.test.ts :: what a browser may keep > refuses the browser a copy of /api/cases |
 | Case data is not left on the analyst's disk | An unchanging asset is served | demonstrated | server/test/security-headers.test.ts :: what a browser may keep > leaves a route that asked to be cached alone |
 | An install reached at its own name tells the browser to keep it protected | An install reached at its own name | undemonstrated | |
-| An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | undemonstrated | |
-| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | tests/docker/test_container_runtime.py :: test_an_install_at_loopback_is_never_told_to_stay_protected |
+| An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | undemonstrable | What a browser does after being told is the browser's; no suite here drives one through a certificate an analyst has chosen to trust |
+| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | tests/docker/test_container_runtime.py :: test_an_install_at_loopback_is_never_told_to_stay_protected[127.0.0.1] ; tests/docker/test_container_runtime.py :: test_an_install_at_loopback_is_never_told_to_stay_protected[localhost] |
 | The application answers only to itself | The install is reached at a loopback address | undemonstrated | |
 | The application answers only to itself | The unprotected spelling of the install | undemonstrated | |
 | The application answers only to itself | Another port on the same host | undemonstrated | |

@@ -126,7 +126,9 @@ def test_a_skip_in_a_certifying_report_is_refused_unless_allowed(
 
     monkeypatch.setattr(certify, "ALLOWED_SKIPS", {
         ("server", waits): "needs a compose project", ("server", runs): "runs elsewhere"})
-    assert [line.rsplit(": skipped", 1)[0] for line in certify.skips(run, partial=False)] == [later]
+    assert [line.rsplit(": skipped", 1)[0] for line in certify.skips(run, partial=True)] == [later]
+    assert f"{runs}: the server tier ran it, so ALLOWED_SKIPS excuses nothing (runs elsewhere)" in certify.skips(
+        run, partial=False)
 
     gone = "server/test/s.test.ts :: a door > was renamed"
     monkeypatch.setattr(certify, "ALLOWED_SKIPS", {
@@ -183,14 +185,34 @@ def test_a_file_that_declares_no_test_is_refused(tmp_path: Path) -> None:
     assert "server/test/hollow.test.ts: ran no test" in certify.completeness(run, list(files), partial=False)
 
 
-def test_two_cases_of_one_title_in_one_tier_are_refused(tmp_path: Path) -> None:
+def test_a_case_reported_twice_hides_no_skip_and_certifies_no_row(tmp_path: Path) -> None:
     files = {"server/test/twice.test.ts": "it('holds', () => {})\nit.skip('holds', () => {})\n"}
     run = certify.read(vitest_report(tmp_path, files), set(files))
+    ident = "server/test/twice.test.ts :: holds"
 
-    assert (
-        "server/test/twice.test.ts :: holds: reported twice by the server tier, so a citation of it "
-        "names neither" in certify.completeness(run, list(files), partial=False)
-    )
+    assert certify.skips(run, partial=True) == [
+        f"{ident}: skipped by the server tier, and ALLOWED_SKIPS gives no reason it may be"]
+    assert certify.certified(run, "cases", ident) == (
+        f"cites {ident}, which the server tier reports more than once")
+
+
+def test_a_title_two_passing_cases_share_is_not_refused(tmp_path: Path) -> None:
+    files = {"server/test/each.test.ts": "it.each([1, 2])('takes %p', (n) => { expect(n).toBeTruthy() })\n"}
+    run = certify.read(vitest_report(tmp_path, files), set(files))
+
+    assert certify.completeness(run, list(files), partial=False) == []
+    assert certify.skips(run, partial=False) == []
+
+
+def test_an_allowance_for_a_case_that_ran_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    files = {"server/test/runs.test.ts": PASSES}
+    run = certify.read(vitest_report(tmp_path, files), set(files))
+    monkeypatch.setattr(certify, "ALLOWED_SKIPS", {("server", "server/test/runs.test.ts :: holds"): "needs a stack"})
+
+    assert certify.skips(run, partial=False) == [
+        "server/test/runs.test.ts :: holds: the server tier ran it, so ALLOWED_SKIPS excuses nothing (needs a stack)"]
 
 
 def test_a_skip_in_a_junit_report_is_read_as_one(tmp_path: Path) -> None:

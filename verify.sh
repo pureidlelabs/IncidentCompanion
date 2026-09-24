@@ -151,24 +151,28 @@ behaviour && step "client: suite" env IC_REPORT="$PWD/reports/client.json" \
 # ran past twenty minutes -- `test.sh` runs `pytest tests` unqualified and the
 # everyday selection excludes it. It is the expensive question, so it is asked
 # in the expensive mode. -> `CLAUDE.md`
+# The repository tier's selection is CI's: every docker file but the two that
+# read files rather than run containers, which the containers tier runs again.
+REPOSITORY_ONLY=(--ignore=tests/lifecycle)
+for file in tests/docker/test_*.py; do
+  case "$file" in
+    */test_container_config.py | */test_stack_images.py) ;;
+    *) REPOSITORY_ONLY+=("--ignore=$file") ;;
+  esac
+done
+
 if expensive; then
-  # The mode that just started containers is the mode where "no docker on
-  # PATH" is a broken run rather than a machine without Docker.
-  #
   # **`INCIDENTCOMPANION_CONTAINER_TESTS` too, or the container cases skip
-  # while this step's own name says it ran them.** The TLS entrypoint cases opt
-  # in behind that variable so the cheap `repository` job stays daemon-free;
-  # only `ci.yml`'s `containers` job set it, so a detailed sweep here reported
-  # the tier as run having executed none of it. That is the shape `CLAUDE.md`
-  # records for the browser tier -- a run against nothing exits 0 -- arriving
-  # through an environment variable instead of a missing server. The lifecycle
-  # tier opts in the same way.
-  step "repository: suite (with the container files and the lifecycle)" \
+  # while this step's own name says it ran them.** The lifecycle tier opts in
+  # the same way. A report per tier, as CI writes them, so `tests/certify.py`
+  # counts each shared file for both tiers that owe it.
+  step "repository: suite (armed)" \
+    env IC_SUITE_MUST_RUN=1 ./test.sh -q "${REPOSITORY_ONLY[@]}" --junitxml=reports/repository.xml
+  step "containers and lifecycle: suite" \
     env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 INCIDENTCOMPANION_LIFECYCLE_TESTS=1 ./test.sh -q \
-    --junitxml=reports/repository.xml
+    --ignore=tests/docs --ignore=tests/repo --ignore=tests/contract --junitxml=reports/containers.xml
 elif behaviour; then
-  step "repository: suite" ./test.sh -q --ignore=tests/docker --ignore=tests/lifecycle tests/docker/test_container_config.py \
-    tests/docker/test_stack_images.py --junitxml=reports/repository.xml
+  step "repository: suite" ./test.sh -q "${REPOSITORY_ONLY[@]}" --junitxml=reports/repository.xml
   SKIPPED+=("tests/docker -- builds containers; ./verify.sh --detailed runs it")
   SKIPPED+=("tests/lifecycle -- builds and runs the shipped stack; ./verify.sh --detailed runs it")
 fi

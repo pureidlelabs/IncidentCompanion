@@ -102,15 +102,23 @@ def _needs_edge_image() -> list[str]:
     ]
 
 
+#: Allowed skips that run in the merge group and skip in every other run, so
+#: neither running nor skipping them says the allowance is stale.
+ARMED_IN_THE_MERGE_GROUP = (
+    ("repository", "tests/docs/test_openspec_consistency.py :: "
+     "test_every_change_the_landing_archives_is_folded_into_specs"),
+    ("repository", "tests/docs/test_openspec_consistency.py :: "
+     "test_the_tree_being_landed_carries_nothing_in_flight"),
+)
+
 #: Tests a tier may report skipped, by tier and id, each with the reason it cannot
 #: run there. One no report holds is refused, so an entry cannot outlive its test.
 ALLOWED_SKIPS: dict[tuple[str, str], str] = {
     ("server", "server/test/stack.test.ts :: the per-worktree stack derivation > creates the three roles "
      "the app connects as"): "needs a compose project, and CI raises Postgres as a service container",
-    ("repository", "tests/docs/test_openspec_consistency.py :: "
-     "test_every_change_the_landing_archives_is_folded_into_specs"): "armed in the merge group alone",
-    ("repository", "tests/docs/test_openspec_consistency.py :: "
-     "test_the_tree_being_landed_carries_nothing_in_flight"): "armed in the merge group alone",
+    **dict.fromkeys(ARMED_IN_THE_MERGE_GROUP, "armed in the merge group alone"),
+    ("containers", "tests/docker/test_container_runtime.py :: "
+     "test_the_detected_profile_names_the_runtime_the_daemon_reports"): "asserts macOS's arm, and CI runs Linux",
     **{
         ("repository", f"{EDGE_IMAGE_FILE} :: {name}"): "opt-in: the containers tier runs it"
         for name in _needs_edge_image()
@@ -141,7 +149,7 @@ class Run:
     """What a run's reports hold: its cases by id and by tier, and the files each tier ran."""
 
     cases: dict[str, Case] = field(default_factory=dict)
-    by_tier: dict[tuple[str, str], str] = field(default_factory=dict)
+    by_tier: dict[tuple[str, str], set[str]] = field(default_factory=dict)
     twice: set[tuple[str, str]] = field(default_factory=set)
     ran: dict[str, set[str]] = field(default_factory=dict)
     empty: set[str] = field(default_factory=set)
@@ -196,7 +204,7 @@ def _record(run: Run, ident: str, case: Case) -> None:
     key = (case.tier, ident)
     if key in run.by_tier:
         run.twice.add(key)
-    run.by_tier[key] = case.status
+    run.by_tier.setdefault(key, set()).add(case.status)
     kept = run.cases.get(ident)
     if kept is None or _RANK[case.status] > _RANK[kept.status]:
         run.cases[ident] = case
@@ -307,10 +315,6 @@ def completeness(run: Run, files: list[str], partial: bool) -> list[str]:
             elif path not in run.ran[tier]:
                 refused.append(f"{path}: the {tier} tier's reports do not hold it")
     refused += [f"{path}: ran no test" for path in sorted(run.empty)]
-    refused += [
-        f"{ident}: reported twice by the {tier} tier, so a citation of it names neither"
-        for tier, ident in sorted(run.twice)
-    ]
     return refused
 
 
@@ -328,16 +332,20 @@ def skips(run: Run, partial: bool) -> list[str]:
     """Every skip not allowed, and, where every tier reported, every allowance naming no test."""
     refused = [
         f"{ident}: skipped by the {tier} tier, and ALLOWED_SKIPS gives no reason it may be"
-        for (tier, ident), status in run.by_tier.items()
-        if status == "skipped" and not _allowed(tier, ident)
+        for (tier, ident), statuses in run.by_tier.items()
+        if "skipped" in statuses and not _allowed(tier, ident)
     ]
     if not partial:
-        held = {(tier, _function(ident)) for tier, ident in run.by_tier} | set(run.by_tier)
-        refused += [
-            f"{ident}: no {tier} report holds it, so ALLOWED_SKIPS excuses nothing ({reason})"
-            for (tier, ident), reason in ALLOWED_SKIPS.items()
-            if (tier, ident) not in held
-        ]
+        for (tier, ident), reason in ALLOWED_SKIPS.items():
+            held = [
+                statuses
+                for (ran, one), statuses in run.by_tier.items()
+                if ran == tier and ident in {one, _function(one)}
+            ]
+            if not held:
+                refused.append(f"{ident}: no {tier} report holds it, so ALLOWED_SKIPS excuses nothing ({reason})")
+            elif not any("skipped" in statuses for statuses in held) and (tier, ident) not in ARMED_IN_THE_MERGE_GROUP:
+                refused.append(f"{ident}: the {tier} tier ran it, so ALLOWED_SKIPS excuses nothing ({reason})")
     return refused
 
 
@@ -350,6 +358,8 @@ def certified(run: Run, capability: str, evidence: str) -> str | None:
         case = run.cases.get(ident)
         if case is None:
             return f"cites {ident}, which no report holds"
+        if (case.tier, ident) in run.twice:
+            return f"cites {ident}, which the {case.tier} tier reports more than once"
         if case.status != "passed":
             return f"cites {ident}, which {case.status}"
         if not entry_level(ident, case, capability):

@@ -101,7 +101,8 @@ def test_verify_sh_turns_the_mode_on_where_it_certifies():
     tiers = [
         "browser tier (the app)",
         "browser tier (the kit)",
-        "repository: suite (with the container files and the lifecycle)",
+        "containers and lifecycle: suite",
+        "repository: suite (armed)",
         "server: suite",
     ]
     assert sorted(armed) == tiers, (
@@ -149,5 +150,5 @@ def test_the_certifying_sweep_opts_in_to_every_opt_in_tier() -> None:
     certifying = [line for line in joined.splitlines() if "IC_SUITE_MUST_RUN=1" in line and "./test.sh" in line]
     assert certifying, "verify.sh runs ./test.sh in no certifying step"
     for name in sorted(read):
-        assert all(f"{name}=1" in line for line in certifying), (
-            f"verify.sh's certifying ./test.sh step does not set {name}=1, so that tier skips there")
+        assert any(f"{name}=1" in line for line in certifying), (
+            f"no certifying ./test.sh step in verify.sh sets {name}=1, so that tier skips there")

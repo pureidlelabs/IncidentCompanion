@@ -850,7 +850,9 @@ def test_the_container_files_are_only_in_the_expensive_mode() -> None:
     `pytest tests` unqualified, so the exclusion has to happen at the caller.
     """
     text = VERIFY.read_text(encoding="utf-8")
-    assert "--ignore=tests/docker" in text, "the default sweep still builds containers"
+    assert '*) REPOSITORY_ONLY+=("--ignore=$file") ;;' in text, "the default sweep still builds containers"
+    assert 'step "repository: suite" ./test.sh -q "${REPOSITORY_ONLY[@]}"' in text, (
+        "the default sweep does not use the selection that leaves the containers out")
     assert "./verify.sh --detailed runs it" in text, "nothing says where the tier went"
 
 
