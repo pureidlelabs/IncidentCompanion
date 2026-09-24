@@ -408,12 +408,8 @@ EXPENSIVE_TIER = (
     "devcontainer",
     "containers",
     "gallery",
+    "browser",
 )
-
-#: Gated on `inputs.all` alone, so neither event this workflow triggers on
-#: starts them. The draft rule below cannot apply: there is no draft to be
-#: held back from.
-NIGHTLY_TIER = ("browser",)
 
 
 def ci_jobs() -> dict:
@@ -463,17 +459,6 @@ def test_a_draft_runs_the_cheap_tier_and_nothing_else() -> None:
             "whose verdict decides the merge"
         )
 
-    for name in NIGHTLY_TIER:
-        condition = job_condition(jobs[name])
-        assert "inputs.all" in condition, (
-            f"{name} is listed as nightly and is not gated on `inputs.all`, "
-            "so a pull request pays for it"
-        )
-        assert "draft" not in condition, (
-            f"{name} names the draft, which says it expects a pull request -- "
-            "a nightly tier reaches neither event"
-        )
-
 
 def shard_pairs(job: dict, shards, total: str) -> list[tuple[int, int]]:
     """Every (denominator, matrix length) this job can run with.
@@ -494,6 +479,19 @@ def shard_pairs(job: dict, shards, total: str) -> list[tuple[int, int]]:
     sizes = [int(one) for one in re.findall(r"\b(\d+)\b", env)]
     lengths = [len(one.split(",")) for one in re.findall(r"\[([^\]]*)\]", str(shards))]
     return list(zip(sizes, lengths)) if len(sizes) == len(lengths) else []
+
+
+def test_the_merge_group_walks_the_gallery_on_both_grounds() -> None:
+    """A dark-only regression in a colour kind is invisible to a light walk."""
+    steps = ci_jobs()["gallery"]["steps"]
+    grounds = " ".join(
+        str((step.get("env") or {}).get("VISUAL_GROUNDS", "")) for step in steps
+    )
+    assert "dark" in grounds, "no gallery step walks the dark ground at all"
+    chooses_dark = grounds.split("&&")[0]
+    assert "merge_group" in chooses_dark, (
+        f"the merge group walks light alone, so it certifies half the gallery: {grounds}"
+    )
 
 
 def test_a_shard_matrix_and_its_denominator_agree() -> None:
@@ -536,7 +534,7 @@ def test_every_job_is_classified() -> None:
     behind a linter, and every test here passes while it does.
     """
     jobs = set(ci_jobs())
-    known = set(CHEAP_TIER) | set(EXPENSIVE_TIER) | set(NIGHTLY_TIER) | {"scope", "gate"}
+    known = set(CHEAP_TIER) | set(EXPENSIVE_TIER) | {"scope", "gate"}
     assert jobs <= known, (
         f"these jobs are in no tier, so no rule in this file reaches them: "
         f"{sorted(jobs - known)}"
