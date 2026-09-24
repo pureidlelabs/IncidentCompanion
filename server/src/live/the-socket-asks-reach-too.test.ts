@@ -21,7 +21,7 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { LiveGateway, reachesCase } from './live.gateway.js'
+import { LiveGateway } from './live.gateway.js'
 import { ReachService } from '../access/reach.service.js'
 import { CustomersService } from '../customers/customers.service.js'
 import {
@@ -32,8 +32,9 @@ import {
   groups,
   user,
 } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { levelIn, openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
+
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -101,7 +102,8 @@ describe.skipIf(!db)('the socket asks reach too', () => {
     unattributed = nobodys!.id
   })
 
-  const mayReach = (caseId: string, userId: string) => reachesCase(db!, reach, caseId, userId)
+  const mayReach = async (caseId: string, userId: string) =>
+    Boolean((await reach.levelOnCase(userId, caseId))?.level)
 
   it('admits an analyst whose group holds the case customer', async () => {
     await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'read' })
@@ -133,7 +135,7 @@ describe.skipIf(!db)('the socket asks reach too', () => {
   it('admits at read, the weakest level there is', async () => {
     await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'read' })
 
-    expect(await reach.levelFor(MEMBER, theirCustomer)).toBe('read')
+    expect(await levelIn(db!, MEMBER, theirCustomer)).toBe('read')
     expect(await mayReach(theirCase, MEMBER)).toBe(true)
   })
 
@@ -192,9 +194,10 @@ describe.skipIf(!db)('the socket asks reach too', () => {
           return Promise.resolve()
         },
       }
-      const gateway = new LiveGateway(channel as never, {} as never, db!, {} as never, {} as never, reach)
+      const auth = { api: { getSession: () => Promise.resolve({ user: { id: userId, name: userId }, session: { id: 's-1' } }) } }
+      const gateway = new LiveGateway(channel as never, auth as never, {} as never, {} as never, reach)
       const live = new FakeSocket()
-      await gateway.open(live as never, caseId, { id: userId, name: userId })
+      await gateway.open(live as never, caseId, { id: userId, name: userId, sessionId: 's-1' })
       return { live, claimed, released }
     }
 

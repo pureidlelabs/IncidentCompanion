@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { NotFoundException } from '@nestjs/common'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { ComplianceController } from './compliance.controller.js'
@@ -61,11 +62,11 @@ describe.skipIf(!db || !hasConcurrentConnections())('the case compliance record'
       announce: (caseId: string, scopes: string[]) => announced.push({ caseId, scopes }),
       othersOn: () => Promise.resolve([]),
     } as never
-    cases_ = new CasesService(db!, suiteStore(), channel)
+    cases_ = as(actorId, new CasesService(db!, suiteStore(), channel))
     // The install settings are read for the verdict route only; the record's
     // own read and write never consult them.
     const settings = { all: () => Promise.resolve({}) } as never
-    controller = new ComplianceController(new ComplianceService(db!, settings, channel))
+    controller = as(actorId, new ComplianceController(new ComplianceService(db!, settings, channel)))
   })
 
   afterAll(async () => {

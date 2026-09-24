@@ -23,6 +23,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CaseAccessGuard } from './case-access.guard.js'
 import { CasesService } from '../cases/cases.service.js'
+import { as } from '../../test/acting.js'
 import { GroupsService } from './groups.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { ReachService } from './reach.service.js'
@@ -46,7 +47,10 @@ const ADMIN = 'plane-separation-admin'
 
 const asking = (caseId: string) =>
   ({
+    getHandler: () => () => undefined,
     switchToHttp: () => ({
+      // The refusal is recorded once the answer closes, which these never do.
+      getResponse: () => ({ once: () => undefined }),
       getRequest: () => ({
         params: { caseId },
         method: 'GET',
@@ -66,7 +70,7 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
   let sector: string
 
   beforeAll(async () => {
-    guard = new CaseAccessGuard(db!, new ReachService(db!), new InstallActivityService(db!))
+    guard = new CaseAccessGuard(new ReachService(db!), new InstallActivityService(db!))
     groupsService = new GroupsService(db!)
     casesService = new CasesService(db!, suiteStore())
 
@@ -194,7 +198,7 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
   it("is offered no such case by the list either, and the default customer's regardless", async () => {
     await groupsService.revoke(sector, ADMIN)
 
-    const offered = (await casesService.list(ADMIN)).map((row) => row.id)
+    const offered = (await as(ADMIN, casesService).list()).map((row) => row.id)
 
     expect(
       offered,
@@ -211,7 +215,7 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
     await groupsService.grant(sector, ADMIN, 'read')
 
     expect(
-      (await casesService.list(ADMIN)).map((row) => row.id),
+      (await as(ADMIN, casesService).list()).map((row) => row.id),
       'the grant did not take, so the absence above cannot be attributed to reach',
     ).toContain(caseId)
   })

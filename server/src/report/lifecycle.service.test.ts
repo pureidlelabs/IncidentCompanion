@@ -13,6 +13,7 @@ import { asc, eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { LibraryService } from '../library/library.service.js'
@@ -154,14 +155,14 @@ describe.skipIf(!db || !hasConcurrentConnections())('the sections a report is sh
       ])
       .onConflictDoNothing()
 
-    cases_ = new CasesService(db!, suiteStore(), { announce: () => {}, othersOn: () => Promise.resolve([]) } as never)
+    cases_ = as(actorId, new CasesService(db!, suiteStore(), { announce: () => {}, othersOn: () => Promise.resolve([]) } as never))
     // **The real service against the real row.** A stub keyed on the slug the
     // caller passes agrees with whatever the caller spells, so a lookup for a
     // kind no row has ever carried passes against it.
     const libraryService = new LibraryService(db!, seed)
-    const prose = new ProseService(db!)
-    const render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
-    lifecycle = new ReportLifecycleService(db!, libraryService, render, prose)
+    const prose = as(actorId, new ProseService(db!))
+    const render = as(actorId, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
+    lifecycle = as(actorId, new ReportLifecycleService(db!, libraryService, render, prose))
   })
 
   afterAll(async () => {
@@ -384,15 +385,15 @@ describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () =
       })
       .onConflictDoNothing()
 
-    cases_ = new CasesService(
+    cases_ = as(actorId, new CasesService(
       db!,
       suiteStore(),
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
-    )
+    ))
     const libraryService = { entry: () => Promise.resolve(undefined) } as never
-    prose = new ProseService(db!)
-    render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
-    lifecycle = new ReportLifecycleService(db!, libraryService, render, prose)
+    prose = as(actorId, new ProseService(db!))
+    render = as(actorId, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
+    lifecycle = as(actorId, new ReportLifecycleService(db!, libraryService, render, prose))
   })
 
   afterAll(async () => {
@@ -735,6 +736,27 @@ describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () =
 
     const after = await seed!.select().from(reports).where(eq(reports.caseId, caseId))
     expect(after).toHaveLength(before.length)
+  })
+
+  /** The prose is carried last, so failing it fails after every row is written. -> #1181 */
+  it('leaves nothing of a correction that fails partway, and lets it be tried again', async () => {
+    const { caseId, reportId } = await caseWithReport([{ kind: 'written' }])
+    await lifecycle.send(caseId, reportId, actorId)
+    const source = await prose.open(caseId, reportDocument(reportId))
+    const fragment = source.getXmlFragment.bind(source)
+    source.getXmlFragment = () => {
+      throw new Error('the prose could not be carried')
+    }
+
+    await expect(lifecycle.supersede(caseId, reportId, actorId)).rejects.toThrow('the prose could not be carried')
+    source.getXmlFragment = fragment
+    await prose.release(caseId, reportDocument(reportId))
+
+    const rows = await seed!.select({ id: reports.id }).from(reports).where(eq(reports.caseId, caseId))
+    expect(rows.map((row) => row.id), 'a failed correction left a successor behind').toEqual([reportId])
+    const { id } = await lifecycle.supersede(caseId, reportId, actorId)
+    const [fresh] = await seed!.select().from(reports).where(eq(reports.id, id))
+    expect(fresh!.supersedes).toBe(reportId)
   })
 
   it('mints the successor as a draft, whatever the original was', async () => {

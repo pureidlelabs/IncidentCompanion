@@ -15,16 +15,20 @@ import { ReachService } from './reach.service.js'
 import { ADMIN_ROLE } from '../domain/analyst-account.js'
 import { CustomersService } from '../customers/customers.service.js'
 import { cases, customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { asRole, defaultCustomerIn, levelIn, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
 const db = pool ? drizzle({ client: pool }) : null
+/** Arranges cases, which the app role reaches only for somebody. */
+const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
+const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 // **File level, not inside the first block.** Both describes share the pool,
 // and closing it in one of them leaves the other querying a dead handle.
 afterAll(async () => {
   await pool?.end()
+  await seedPool?.end()
 })
 
 /**
@@ -37,7 +41,10 @@ afterAll(async () => {
  */
 function asking(caseId: string | undefined) {
   return {
+    getHandler: () => () => undefined,
     switchToHttp: () => ({
+      // The refusal is recorded once the answer closes, which these never do.
+      getResponse: () => ({ once: () => undefined }),
       getRequest: () => ({
         params: caseId ? { caseId } : {},
         method: 'GET',
@@ -57,7 +64,7 @@ describe.skipIf(!db)('the guard in front of a case', () => {
   let guard: CaseAccessGuard
 
   beforeAll(() => {
-    guard = new CaseAccessGuard(db!, new ReachService(db!), new InstallActivityService(db!))
+    guard = new CaseAccessGuard(new ReachService(db!), new InstallActivityService(db!))
   })
 
   /**
@@ -78,9 +85,11 @@ describe.skipIf(!db)('the guard in front of a case', () => {
    * a status-only assertion.
    */
   it('refuses without querying at all', async () => {
-    const handle = { select: () => { throw new Error('the guard queried a malformed id') } }
+    const refuse = () => {
+      throw new Error('the guard queried a malformed id')
+    }
+    const handle = { select: refuse, execute: refuse }
     const strict = new CaseAccessGuard(
-      handle as never,
       new ReachService(handle as never),
       new InstallActivityService(handle as never),
     )
@@ -106,9 +115,11 @@ describe.skipIf(!db)('the guard in front of a case', () => {
   })
 
   it('refuses a missing caseId without querying at all', async () => {
-    const handle = { select: () => { throw new Error('the guard queried with no case id') } }
+    const refuse = () => {
+      throw new Error('the guard queried with no case id')
+    }
+    const handle = { select: refuse, execute: refuse }
     const strict = new CaseAccessGuard(
-      handle as never,
       new ReachService(handle as never),
       new InstallActivityService(handle as never),
     )
@@ -142,7 +153,10 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
 
   function deleting(caseId: string, who: string) {
     return {
+      getHandler: () => () => undefined,
       switchToHttp: () => ({
+        // The refusal is recorded once the answer closes, which these never do.
+        getResponse: () => ({ once: () => undefined }),
         getRequest: () => ({
           params: { caseId },
           method: 'DELETE',
@@ -154,7 +168,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
   }
 
   beforeAll(async () => {
-    guard = new CaseAccessGuard(db!, new ReachService(db!), new InstallActivityService(db!))
+    guard = new CaseAccessGuard(new ReachService(db!), new InstallActivityService(db!))
     await new CustomersService(db!).ensureDefault()
 
     const now = new Date()
@@ -176,7 +190,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
         .onConflictDoNothing()
     }
 
-    const [mine] = await db!.insert(cases).values({ title: 'Nobody has said whose' }).returning()
+    const [mine] = await seed!.insert(cases).values({ title: 'Nobody has said whose' }).returning()
     unattributed = mine!.id
 
     const [held] = await db!
@@ -184,7 +198,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
       .values({ name: `Reached by nobody ${String(Date.now())}` })
       .returning()
     reachedByNobody = held!.id
-    const [theirs] = await db!
+    const [theirs] = await seed!
       .insert(cases)
       .values({ title: 'Attributed, and not to me', customerId: held!.id })
       .returning()
@@ -194,7 +208,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
   // The cases first: the foreign key is `restrict`, so the customer cannot go
   // while one stands behind it.
   afterAll(async () => {
-    await db!.delete(cases).where(inArray(cases.id, [unattributed, somebody_else_s]))
+    await seed!.delete(cases).where(inArray(cases.id, [unattributed, somebody_else_s]))
     await db!.delete(customers).where(eq(customers.id, reachedByNobody))
     await db!.delete(user).where(inArray(user.id, [ADMIN, ANALYST]))
   })
@@ -225,12 +239,11 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
    * what a clause inside the guard would have produced.
    */
   it('answers the same level to anyone who asks the resolution', async () => {
-    const reach = new ReachService(db!)
-    const fallback = (await reach.defaultCustomerId())!
+    const fallback = await defaultCustomerIn(db!)
 
-    expect(await reach.levelFor(ADMIN, fallback)).toBe('delete')
-    expect(await reach.levelFor(ANALYST, fallback)).toBe('write')
-    expect(await reach.levelFor(ADMIN, reachedByNobody)).toBeNull()
+    expect(await levelIn(db!, ADMIN, fallback)).toBe('delete')
+    expect(await levelIn(db!, ANALYST, fallback)).toBe('write')
+    expect(await levelIn(db!, ADMIN, reachedByNobody)).toBeNull()
   })
 
   /**
@@ -239,8 +252,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
    * the specification does not support.
    */
   it('lets a group raise an analyst above the floor', async () => {
-    const reach = new ReachService(db!)
-    const fallback = (await reach.defaultCustomerId())!
+    const fallback = await defaultCustomerIn(db!)
 
     const [sector] = await db!
       .insert(groups)
@@ -252,7 +264,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
         .insert(groupMembers)
         .values({ groupId: sector!.id, userId: ANALYST, level: 'delete' })
 
-      expect(await reach.levelFor(ANALYST, fallback)).toBe('delete')
+      expect(await levelIn(db!, ANALYST, fallback)).toBe('delete')
       await expect(guard.canActivate(deleting(unattributed, ANALYST))).resolves.toBe(true)
     } finally {
       await db!.delete(groupMembers).where(eq(groupMembers.groupId, sector!.id))

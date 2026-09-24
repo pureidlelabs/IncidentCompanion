@@ -51,9 +51,9 @@ export function aRole(role: string): string {
  * Every state an account is served in.
  *
  * **Two, and a lock is not one of them even though this install locks.**
- * `auth/lockout.ts` shuts an account after repeated failures and `lockedUntil`
- * records it; what `rowFor` builds a row from is `Analyst`, which carries no
- * such field, so the fact is held and not served.
+ * `auth/lockout.ts` shuts an account's sources after repeated failures, in a
+ * table of its own; what `rowFor` builds a row from is `Analyst`, which
+ * carries no such field, so the fact is held and not served.
  *
  * A third term belongs here when a row produces it, and not before: a state
  * nothing emits is a tab an analyst can select and a chip nothing can reach.

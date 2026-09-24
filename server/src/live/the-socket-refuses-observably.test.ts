@@ -39,15 +39,15 @@ const request = (url: string, headers: Record<string, string> = HERE) =>
   ({ url, headers }) as unknown as IncomingMessage
 
 /** Reach that admits everybody, so a case only fails on existence. */
-const anyoneReaches = {
-  defaultCustomerId: () => Promise.resolve('a-default-customer'),
-  levelFor: () => Promise.resolve('write' as const),
-} as never
+const anyoneReaches = (caseExists: boolean) =>
+  ({
+    levelOnCase: () =>
+      Promise.resolve(caseExists ? { customerId: 'a-default-customer', level: 'write' as const } : null),
+  }) as never
 
 /** Reach that admits nobody, so a case that exists is still out of reach. */
 const nobodyReaches = {
-  defaultCustomerId: () => Promise.resolve('a-default-customer'),
-  levelFor: () => Promise.resolve(null),
+  levelOnCase: () => Promise.resolve({ customerId: 'a-default-customer', level: null }),
 } as never
 
 function gatewayWith(
@@ -58,7 +58,7 @@ function gatewayWith(
     reach?: unknown
   } = {},
 ) {
-  const { signedIn = true, caseExists = true, held = false, reach = anyoneReaches } = options
+  const { signedIn = true, caseExists = true, held = false, reach = anyoneReaches(caseExists) } = options
 
   const auth = {
     // The origins the auth library enforces for this stand-in install.
@@ -67,22 +67,16 @@ function gatewayWith(
       getSession: () =>
         Promise.resolve(
           signedIn
-            ? { user: { id: 'u-1', name: 'Ada', email: 'a@b.test', ...(held ? { mustChangePassword: true } : {}) } }
+            ? { user: { id: 'u-1', name: 'Ada', email: 'a@b.test', ...(held ? { mustChangePassword: true } : {}) }, session: { id: 's-1' } }
             : null,
         ),
     },
-  }
-  const db = {
-    select: () => ({
-      from: () => ({ where: () => Promise.resolve(caseExists ? [{ id: CASE }] : []) }),
-    }),
   }
   const audit = { record: () => Promise.resolve() }
 
   return new LiveGateway(
     {} as CaseChannel,
     auth as never,
-    db as never,
     {} as never,
     audit as never,
     reach as never,

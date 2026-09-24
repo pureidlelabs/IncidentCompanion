@@ -20,6 +20,7 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { and, eq, isNull } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
@@ -60,7 +61,7 @@ function controllerFor(name: string): Arrangeable {
     othersOn: () => Promise.resolve([]),
   }
   return new (found as new (s: CollectionService) => Arrangeable)(
-    new CollectionService(db!, suiteStore(), channel as never),
+    as('order-analyst', new CollectionService(db!, suiteStore(), channel as never)),
   )
 }
 

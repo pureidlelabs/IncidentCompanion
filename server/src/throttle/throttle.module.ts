@@ -9,7 +9,7 @@
  *
  * **The count lives in Redis**, so it is one count across workers and survives
  * a restart. In memory it would be per process and cleared by every deploy,
- * which is the same weakness the lockout counter avoids by using columns.
+ * which is the same weakness the lockout avoids by living in Postgres.
  * `@nest-lab/throttler-storage-redis` is the throttler maintainers' own, so
  * nothing here implements a storage.
  *
