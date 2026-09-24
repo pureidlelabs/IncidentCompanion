@@ -297,7 +297,7 @@ describe.skipIf(!db || !appDb || !hasConcurrentConnections())('what an install c
 
     const held = await new ArtefactCensus(appDb!, storeAt(root)).take()
 
-    expect(held.unnamed, 'the sent report's figure was counted as named by nothing').toBe(1)
+    expect(held.unnamed, 'the figure of the sent report was counted as named by nothing').toBe(1)
   })
 
   /**
