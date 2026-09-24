@@ -89,7 +89,7 @@ describe.skipIf(!runnable)('an editor that drops and returns', () => {
       setTimeout(() => down.onclose?.({} as CloseEvent), 0)
       return down
     }
-    const live = new WebSocket(url, { headers: { cookie: admin.cookie, origin: new URL(served).origin } })
+    const live = new WebSocket(url, { headers: { cookie: admin.cookie, origin: harness.origin } })
     live.on('error', () => undefined)
     sockets.push(live)
     editorSocket = live
@@ -246,7 +246,7 @@ describe.skipIf(!runnable)('an editor that drops and returns', () => {
   async function anotherAnalystOn(caseId: string, field: string) {
     const heard: string[] = []
     const live = new WebSocket(`${harness.base.replace('http://', 'ws://')}/api/cases/${caseId}/live`, {
-      headers: { cookie: analyst.cookie, origin: harness.base },
+      headers: { cookie: analyst.cookie, origin: harness.origin },
     })
     sockets.push(live)
     live.on('message', (raw: Buffer) => {

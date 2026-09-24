@@ -110,7 +110,7 @@ export class Live {
 
   static async open(harness: Harness, who: Persona, caseId: string): Promise<Live> {
     const socket = new WebSocket(`${harness.base.replace('http://', 'ws://')}/api/cases/${caseId}/live`, {
-      headers: { cookie: who.cookie, origin: harness.base },
+      headers: { cookie: who.cookie, origin: harness.origin },
     })
     const live = new Live(socket)
     await new Promise<void>((resolve, reject) => {
