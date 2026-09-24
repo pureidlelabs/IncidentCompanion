@@ -49,7 +49,7 @@ import * as Y from 'yjs'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { changeFeed } from '../db/schema/change-feed.js'
-import { reports } from '../db/schema/report.js'
+import { reportBlocks, reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
 import { withCase } from '../db/scope.js'
@@ -442,6 +442,18 @@ export class ProseService implements OnApplicationShutdown {
     }
   }
 
+  /** Empty every fragment of `doc` whose section no longer exists, so a late edit to one is not kept. */
+  private async pruneRemovedSections(caseId: string, reportId: string, doc: Y.Doc): Promise<void> {
+    const live = await withCase(this.db, caseId, (tx) =>
+      tx.select({ id: reportBlocks.id }).from(reportBlocks).where(eq(reportBlocks.reportId, reportId)),
+    )
+    const kept = new Set(live.map((block) => block.id))
+    for (const name of [...doc.share.keys()]) {
+      const fragment = fragmentFor(doc, name)
+      if (!kept.has(name) && fragment.length > 0) fragment.delete(0, fragment.length)
+    }
+  }
+
   /** Empty a removed section's fragment, and store the report without it. Call after its block row is deleted. */
   async clearSection(caseId: string, reportId: string, blockId: string): Promise<void> {
     const address = reportDocument(reportId)
@@ -667,6 +679,7 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   private async store(caseId: string, address: ProseRecord, held: LiveDocument): Promise<void> {
+    if (address.table === 'reports') await this.pruneRemovedSections(caseId, address.id, held.doc)
     const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
     const writers = [...held.writers.values()]
     held.writers.clear()

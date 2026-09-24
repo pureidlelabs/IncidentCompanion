@@ -7,6 +7,8 @@
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq, inArray } from 'drizzle-orm'
+import * as encoding from 'lib0/encoding'
+import { writeUpdate } from 'y-protocols/sync'
 import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -21,6 +23,7 @@ import { fragmentFor } from '../src/domain/prose-fields.js'
 const STAMP = String(Date.now())
 const DELETED = `a customer's secret pasted by mistake ${STAMP}`
 const REMOVED = `a section the analyst removed ${STAMP}`
+const LATE = `typed offline into a section since removed ${STAMP}`
 
 describe.skipIf(!(await bootable()))('what the stored record keeps of prose', () => {
   let harness: Harness
@@ -106,5 +109,34 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
 
     const [row] = await seed.select({ document: reports.document }).from(reports).where(eq(reports.id, report.id))
     expect(Buffer.from(row!.document ?? []).toString('utf8')).not.toContain(REMOVED)
+  })
+
+  it('keeps nothing typed into a section after it was removed', async () => {
+    const report = await json<{ id: string }>('POST', `/api/cases/${caseId}/reports`, { label: 'Late words' })
+    const block = await json<{ id: string; version: number }>('POST', `/api/cases/${caseId}/report_blocks`, {
+      reportId: report.id,
+      kind: 'written',
+      position: 0,
+    })
+    const address = reportDocument(report.id)
+    const prose = harness.app.get(ProseService, { strict: false })
+    // A client synced with the section, then offline while it is removed.
+    const server = await prose.open(caseId, address)
+    const client = new Y.Doc()
+    Y.applyUpdate(client, Y.encodeStateAsUpdate(server))
+    await json('DELETE', `/api/cases/${caseId}/report_blocks/${block.id}?version=${String(block.version)}`)
+    const before = Y.encodeStateVector(client)
+    const paragraph = new Y.XmlElement('paragraph')
+    paragraph.insert(0, [new Y.XmlText(LATE)])
+    fragmentFor(client, block.id).insert(0, [paragraph])
+    const encoder = encoding.createEncoder()
+    writeUpdate(encoder, Y.encodeStateAsUpdate(client, before))
+
+    await prose.apply(caseId, address, encoding.toUint8Array(encoder), 'a-socket', { id: analyst.id, label: 'A', headers: {} })
+    await prose.flush(caseId, address)
+    await prose.release(caseId, address)
+
+    const [row] = await seed.select({ document: reports.document }).from(reports).where(eq(reports.id, report.id))
+    expect(Buffer.from(row!.document ?? []).toString('utf8')).not.toContain(LATE)
   })
 })

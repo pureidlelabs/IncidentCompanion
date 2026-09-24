@@ -30,6 +30,7 @@ describe.skipIf(!(await bootable()))('what a read of prose-bearing rows answers'
   let analyst: Persona
   let caseId = ''
   const answers: Record<string, unknown> = {}
+  let csvHeader = ''
 
   async function answer(label: string, method: string, path: string, body?: unknown) {
     const response = await fetch(`${harness.base}${path}`, {
@@ -83,6 +84,9 @@ describe.skipIf(!(await bootable()))('what a read of prose-bearing rows answers'
       tags: 'handover',
     })
     await answer('read case', 'GET', `/api/cases/${caseId}`)
+    const csv = await fetch(`${harness.base}/api/cases/${caseId}/casenotes.csv`, { headers: { cookie: analyst.cookie } })
+    expect(csv.status).toBe(200)
+    csvHeader = (await csv.text()).split('\n')[0] ?? ''
   }, 120_000)
 
   afterAll(async () => {
@@ -98,5 +102,9 @@ describe.skipIf(!(await bootable()))('what a read of prose-bearing rows answers'
     )
 
     expect(carried).toEqual([])
+  })
+
+  it('exports no prose document in a note CSV', () => {
+    expect(csvHeader.split(',')).not.toContain('document')
   })
 })
