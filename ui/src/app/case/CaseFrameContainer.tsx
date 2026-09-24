@@ -4,6 +4,7 @@ import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-
 import { useActivity } from '@/api/activity'
 import { useAppearances } from '@/api/appearance'
 import { useCase, useCaseSummary, useCases } from '@/api/case'
+import { useSentinelOffered } from '@/api/importPlatforms'
 import { useSpecs } from '@/api/specs'
 import { useCaseMutation } from '@/api/useCaseMutation'
 import { CaseKeyTimesSheet } from '@/components/blocks/case-key-times-sheet'
@@ -92,6 +93,7 @@ export function CaseFrameContainer() {
   const record = useCase(caseId, keyTimes)
   const specs = useSpecs()
   const patch = useCaseMutation(caseId)
+  const sentinel = useSentinelOffered()
 
   // **Recorded on arrival, not on the picker's click.** A case reached by a
   // pasted URL, by the switcher or by browser history is just as opened as one
@@ -112,6 +114,7 @@ export function CaseFrameContainer() {
         section={section}
         {...(fragment === '' ? {} : { fragment })}
         caseName={caseName}
+        {...(sentinel === true ? {} : { absent: ['import-sentinel'] })}
         {...(kase.data?.customer == null ? {} : { caseCaption: kase.data.customer })}
         // The title captions the menu, where there is room for it. The head
         // above is the compact label and prefers the reference, so on a case

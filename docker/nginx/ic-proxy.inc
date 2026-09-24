@@ -5,20 +5,12 @@
 proxy_pass http://ic_app;
 proxy_http_version 1.1;
 
-# **Overwrite, never append, and the app depends on it.** In production
-# `wire/caller-address.ts` names `x-real-ip` the one trusted header, so this line is the
-# only reason that header cannot be forged -- a caller's value is discarded here
-# rather than extended. Outside production the app trusts no header, because the
-# dev loop has no proxy to do this.
-proxy_set_header X-Real-IP $remote_addr;
+# **Overwrite, never append.** The app believes this chain only from the edge
+# and walks it from the right, so a caller's own value is discarded here rather
+# than extended. -> `server/src/wire/caller-address.ts`
 proxy_set_header X-Forwarded-For $remote_addr;
 proxy_set_header X-Forwarded-Proto https;
 
-# **`$http_host`, not `$host` -- the difference is the port.** `$host` drops
-# it, and `LiveGateway.sameOrigin` compares `Host` against an `Origin` that
-# carries it, so on any published port but 443 every WebSocket upgrade is
-# refused `403 cross-origin` while HTTP answers perfectly.
-#
 # Passing the client's own `Host` through is safe only because the
 # `default_server` block answers an unrecognised one with 444. Re-check this
 # line if that block is ever softened.

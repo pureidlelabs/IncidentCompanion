@@ -43,7 +43,9 @@ The application itself MUST NOT be reachable directly. Neither MUST the store, t
 
 **Exposure MUST be decided by what is published, not by what a component listens on.** A component narrowing what it listens on inside its own boundary does not decide who can reach it, because the layer that publishes it sits in front of that decision — and on most systems it also sits in front of the operator's firewall.
 
-An install MUST default to being reachable only from the machine it runs on. Making it reachable from elsewhere MUST be a deliberate act by the operator.
+An install MUST default to being reachable only from the machine it runs on. Making it reachable from elsewhere MUST be a deliberate act by the operator, and it MUST be one act: naming the install and where it listens. Everything that depends on where the install is reached MUST follow from that act rather than being configured again beside it.
+
+An install given a name MUST answer at that name and MUST answer nothing at a name it was not given.
 
 #### Scenario: What an install exposes
 
@@ -60,8 +62,15 @@ An install MUST default to being reachable only from the machine it runs on. Mak
 #### Scenario: An operator wants it reachable from the network
 
 - GIVEN a default install, reachable only from its own machine
-- WHEN the operator wants it reachable from elsewhere
-- THEN that is a change they make deliberately
+- WHEN the operator gives it a name and an address to listen on
+- THEN an analyst on another machine reaches it at that name
+- AND nothing else was changed by hand
+
+#### Scenario: The install is reached at a name it was not given
+
+- GIVEN an install given a name
+- WHEN it is reached at any other name, a loopback name included
+- THEN it answers nothing
 
 ### Requirement: The connection is protected, and there is no way to turn that off
 
@@ -69,7 +78,7 @@ Everything reaching the install MUST arrive over a protected connection. There M
 
 The rule is that there is **one** way in rather than that it is protected specifically: a second way is a second thing to be correct about, and the one that is off by default is the one nobody checks.
 
-An install with no certificate MUST make one rather than serve without, so that a first start needs nothing prepared.
+An install with no certificate MUST make one rather than serve without, so that a first start needs nothing prepared. A certificate the install makes MUST cover the name it is reached at. Where that name changes, a certificate the install made MUST be made again for the new name, and the operator MUST be told its fingerprint changed.
 
 **A certificate the operator supplies MUST be used, and MUST NOT be replaced.** An install generating its own on every start would make it impossible to serve one an organisation's own authority issued, which is the only way an install exposed beyond its own machine is trusted by the browsers reaching it. A generated certificate is the fallback for an install nobody has given one to, never the only option.
 
@@ -101,6 +110,20 @@ Where a supplied certificate cannot be used — malformed, expired, not matching
 - GIVEN an operator or a test wanting a plain connection
 - WHEN they look for a way
 - THEN there is none
+
+#### Scenario: The install is given a new name
+
+- GIVEN an install serving a certificate it made
+- WHEN the operator gives it a name that certificate does not cover
+- THEN the install makes one for the new name
+- AND the operator is told the fingerprint changed
+
+#### Scenario: A supplied certificate does not cover a new name
+
+- GIVEN an install serving a certificate the operator supplied
+- WHEN the operator gives it a name that certificate does not cover
+- THEN the install says the certificate does not cover it
+- AND does not make one in its place
 
 ### Requirement: Setting up is separate from running, and runs once
 

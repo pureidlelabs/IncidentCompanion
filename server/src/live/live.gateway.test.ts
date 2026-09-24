@@ -65,6 +65,11 @@ beforeEach(() => {
   recorded.length = 0
 })
 
+/** The origins the auth library enforces for this stand-in install. */
+const INSTALL = {
+  options: { trustedOrigins: ['http://localhost:5174', 'https://localhost:8443'] },
+}
+
 
 function gatewayWith(
   options: { signedIn?: boolean; caseExists?: boolean; held?: boolean } = {},
@@ -72,6 +77,7 @@ function gatewayWith(
   const { signedIn = true, caseExists = true, held = false } = options
 
   const auth = {
+    instance: INSTALL,
     api: {
       getSession: () =>
         Promise.resolve(
@@ -112,7 +118,7 @@ function gatewayWith(
 const request = (
   url: string,
   headers: Record<string, string> = { origin: 'http://localhost:5174', host: 'localhost:5174' },
-) => ({ url, headers }) as unknown as IncomingMessage
+) => ({ url, headers, socket: { remoteAddress: '127.0.0.1' } }) as unknown as IncomingMessage
 
 /**
  * A reach stand-in that admits whatever the stub database says exists.
@@ -135,20 +141,13 @@ describe('what the handshake lets through', () => {
   })
 })
 
-describe('behind the proxy', () => {
+describe("the install's own origins", () => {
   /**
-   * **The headers a browser and nginx actually produce together**, which is
-   * the shape no other tier sees: `server/e2e/` drives the plaintext dev
-   * server with no proxy in front of it.
-   *
-   * `sameOrigin` compares the forwarded `Host` against the browser's `Origin`,
-   * and `Origin` always carries a non-default port. So the edge has to forward
-   * `$http_host` and not `$host` -- the latter strips it, and every upgrade on
-   * a stack published anywhere but 443 was refused `403 cross-origin` while
-   * every HTTP route answered perfectly. Presence, claims, the change fan-out
-   * and the report CRDT are all on this handshake.
+   * **The set sign-in admits, whatever `Host` says.** The edge forwards the
+   * browser's `Host`, so a comparison against it admits the unprotected
+   * spelling of the install; membership of the trusted set does not.
    */
-  it('admits an upgrade whose forwarded Host carries the published port', async () => {
+  it('admits the install at its published port', async () => {
     const verdict = await gatewayWith().check(
       request(`/api/cases/${CASE}/live`, {
         origin: 'https://localhost:8443',
@@ -158,18 +157,14 @@ describe('behind the proxy', () => {
     expect(verdict).toMatchObject({ refused: null })
   })
 
-  it('refuses one whose Host lost the port on the way through', async () => {
+  it('refuses the unprotected spelling of the install, although Host matches it', async () => {
     const verdict = await gatewayWith().check(
       request(`/api/cases/${CASE}/live`, {
-        origin: 'https://localhost:8443',
-        host: 'localhost',
+        origin: 'http://localhost:8443',
+        host: 'localhost:8443',
       }),
     )
-    expect(
-      verdict.refused,
-      'a proxy forwarding `$host` strips the port, and this is what the ' +
-        'analyst then sees: sockets dead, every page load fine',
-    ).toBe('cross-origin')
+    expect(verdict.refused).toBe('cross-origin')
   })
 })
 
@@ -204,11 +199,9 @@ async function driveUpgrade(gateway: LiveGateway, url: string, headers?: Record<
     socket,
     Buffer.alloc(0),
   )
-  // The handler is sync and the work inside it is not; a few microtask turns
-  // settle `check`, because every lookup under it is already resolved.
-  await Promise.resolve()
-  await Promise.resolve()
-  await Promise.resolve()
+  // The handler is sync and the work inside it is not; one macrotask turn
+  // settles it, because every lookup under it is already resolved.
+  await new Promise((resolve) => setImmediate(resolve))
   return { written, destroyed }
 }
 
@@ -943,7 +936,10 @@ describe('how much of a frame the socket will read', () => {
       leave: () => Promise.resolve(),
       prose: () => undefined,
     }
+    // Filled once the port is known: the client's origin is the install's own.
+    const trustedOrigins: string[] = []
     const auth = {
+      instance: { options: { trustedOrigins } },
       api: {
         getSession: () =>
           Promise.resolve({ user: { id: 'u-1', name: 'Ada', email: 'a@b.test' } }),
@@ -963,6 +959,7 @@ describe('how much of a frame the socket will read', () => {
       server.listen(0, '127.0.0.1', listening)
     })
     const { port } = server.address() as AddressInfo
+    trustedOrigins.push(`http://127.0.0.1:${String(port)}`)
 
     const client = new Client(`ws://127.0.0.1:${String(port)}/api/cases/${CASE}/live`, {
       origin: `http://127.0.0.1:${String(port)}`,

@@ -93,6 +93,8 @@ export async function bootable(): Promise<boolean> {
 export interface Harness {
   app: INestApplication
   base: string
+  /** Where a browser reaches the install, which its own origins derive from. */
+  origin: string
   document: OpenAPIObject
   close(): Promise<void>
 }
@@ -151,7 +153,7 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
    * rather than as being late.
    */
   const { applyPlatform } = await import('../src/platform.js')
-  applyPlatform(app)
+  await applyPlatform(app)
   await app.init()
   // Port 0: the OS picks a free one, so concurrent runs never collide.
   await app.listen(0, '127.0.0.1')
@@ -187,6 +189,7 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
   return {
     app,
     base,
+    origin: new URL(process.env.AUTH_BASE_URL).origin,
     document,
     close: async () => {
       // **The app closes whatever the restore does.** A harness left listening
@@ -299,10 +302,11 @@ export async function signIn(
   harness: Harness,
   email: string,
   password = HARNESS_PASSWORD,
+  headers: Record<string, string> = {},
 ): Promise<Persona> {
   const response = await fetch(`${harness.base}/api/auth/sign-in/email`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { ...headers, 'content-type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
   if (!response.ok) {

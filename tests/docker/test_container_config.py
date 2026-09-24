@@ -20,9 +20,11 @@ from __future__ import annotations
 import functools
 import hashlib
 import ipaddress
+import json
 import os
 import subprocess
 import re
+import uuid
 from pathlib import Path
 
 import pytest
@@ -41,22 +43,45 @@ NODE_STACK = REPO_ROOT / "compose.yaml"
 ONE_SHOTS = {"roles", "migrate", "seed"}
 
 
+#: Stand-ins for what `docker/secrets.sh` writes, so compose resolves the file.
+_CREDENTIALS = {name: "x" for name in (
+    "IC_STACK_PG_PASSWORD", "IC_PG_MIGRATE_PASSWORD", "IC_PG_SEED_PASSWORD",
+    "IC_PG_APP_PASSWORD", "IC_REDIS_PASSWORD")}
+
+
+def _resolved(**operator: str) -> dict:
+    """The stack as compose resolves it, given only what the operator set.
+
+    **`--env-file /dev/null`**, or the answer is about this machine's `.env`
+    rather than the stack's defaults. Every variable the file names is removed
+    from the environment for the same reason.
+    """
+    named = set(re.findall(r"\$\{([A-Za-z_][A-Za-z0-9_]*)", NODE_STACK.read_text(encoding="utf-8")))
+    env = {k: v for k, v in os.environ.items() if k not in named}
+    try:
+        result = subprocess.run(
+            ["docker", "compose", "--env-file", os.devnull, "-f", str(NODE_STACK),
+             "config", "--format", "json"],
+            capture_output=True, text=True, env={**env, **_CREDENTIALS, **operator})
+    except FileNotFoundError:
+        declined("Resolving the stack", "no docker on PATH")
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+def _publishing(spec: dict) -> dict[str, list[dict]]:
+    return {name: service["ports"] for name, service in spec["services"].items()
+            if service.get("ports")}
+
+
 def test_the_node_stack_publishes_one_loopback_port_and_no_more():
-    """Exactly one service publishes, and every mapping it makes is loopback.
+    """Exactly one service publishes, and with nothing set it publishes on loopback.
 
     So Postgres and Redis publish nothing: inside the compose network they are
     `postgres:5432` and `redis:6379`. `compose.dev.yaml` is out of scope, since
     the dev loop runs the suite and the server from the host.
     """
-    spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
-    services = spec.get("services", {})
-    assert services, "compose.yaml declares no services"
-
-    publishing = {
-        name: [str(entry) for entry in service.get("ports", [])]
-        for name, service in services.items()
-        if service.get("ports")
-    }
+    publishing = _publishing(_resolved())
 
     assert len(publishing) == 1, (
         f"{len(publishing)} services publish to the host ({sorted(publishing)}), "
@@ -67,18 +92,44 @@ def test_the_node_stack_publishes_one_loopback_port_and_no_more():
     assert published, f"the {edge} service publishes no port, so nothing is reachable"
 
     for entry in published:
-        parts = entry.split(":")
-        assert len(parts) >= 3, (
+        address = entry.get("host_ip")
+        assert address, (
             f"the port mapping {entry!r} names no host address, so Docker "
             "publishes it on every interface")
-        address = ipaddress.ip_address(parts[0])
-        assert address.is_loopback, (
+        assert ipaddress.ip_address(address).is_loopback, (
             f"the port mapping {entry!r} publishes on {address}, which is "
             f"not loopback -- {edge} would be reachable from the network")
 
     assert "app" not in publishing or edge == "app", (
         "the app service publishes to the host alongside the edge, so the "
         "proxy can be bypassed")
+
+
+def test_naming_the_install_is_the_one_act_that_reaches_it_from_elsewhere():
+    """`IC_NAME` and `IC_LISTEN` in `.env`, and everything that depends on them follows.
+
+    The listen address moves the publish and nothing else; the name reaches the
+    edge, which certifies and serves it, and the base URL the application
+    derives its origins from.
+    """
+    spec = _resolved(IC_NAME="ic.lan.test", IC_LISTEN="192.0.2.10", IC_STACK_PORT="8443")
+    [(edge, published)] = _publishing(spec).items()
+
+    assert edge == "nginx"
+    assert [(p["host_ip"], p["published"]) for p in published] == [("192.0.2.10", "8443")], (
+        "the edge is not published where the operator told it to listen")
+    assert spec["services"]["nginx"]["environment"]["IC_NAME"] == "ic.lan.test", (
+        "the edge is not told the install's name, so it certifies and serves loopback")
+    app = spec["services"]["app"]["environment"]
+    assert app["AUTH_BASE_URL"] == "https://ic.lan.test:8443", (
+        "the application believes it is reached somewhere other than its name")
+    assert app["IC_EDGE"] == "nginx", (
+        "the application is not told which peer is its edge, so it believes an "
+        "address from nobody")
+
+    unnamed = _resolved()
+    assert unnamed["services"]["nginx"]["environment"]["IC_NAME"] == ""
+    assert unnamed["services"]["app"]["environment"]["AUTH_BASE_URL"] == "https://localhost:443"
 
 
 def test_the_server_binds_every_interface():
@@ -240,27 +291,21 @@ NGINX_PROXY = REPO_ROOT / "docker" / "nginx" / "ic-proxy.inc"
 
 
 def test_the_edge_overwrites_the_client_ip_header_for_every_location():
-    """The header the app trusts must be set here, on every path.
+    """The chain the app believes from the edge must be set here, on every path.
 
-    `auth.config.ts` trusts `x-real-ip` in production, and the only thing
-    stopping a caller forging it is nginx overwriting it. No running suite can
-    see that, so it is asserted against the config text.
+    The app walks `X-Forwarded-For` from the right and believes what the edge
+    put there, so a caller's own value has to be discarded rather than
+    extended. `tests/docker/test_ingress.py` drives it; this holds every path.
 
-    Four vertices, because any one alone is satisfied by the wrong file: the
-    `X-Real-IP` overwrite, `Host` forwarded with its port, a `default_server`
-    that closes on an unknown hostname, and every `location` including the
-    proxy fragment.
+    Three vertices, because any one alone is satisfied by the wrong file: the
+    overwrite, a `default_server` that closes on an unknown hostname, and every
+    `location` including the proxy fragment.
     """
     proxy = NGINX_PROXY.read_text(encoding="utf-8")
-    assert re.search(r"^\s*proxy_set_header\s+X-Real-IP\s+\$remote_addr\s*;",
+    assert re.search(r"^\s*proxy_set_header\s+X-Forwarded-For\s+\$remote_addr\s*;",
                      proxy, re.MULTILINE), (
-        "the edge does not overwrite X-Real-IP from the peer address, so the "
-        "header auth.config.ts trusts is whatever the caller sent")
-
-    assert re.search(r"^\s*proxy_set_header\s+Host\s+\$http_host\s*;",
-                     proxy, re.MULTILINE), (
-        "the edge does not forward the original Host with its port, so a "
-        "stack published on any port but 443 refuses every WebSocket")
+        "the edge does not overwrite X-Forwarded-For with the peer address, so "
+        "the chain the app believes from it starts with whatever the caller sent")
 
     conf = NGINX_CONF.read_text(encoding="utf-8")
 
@@ -277,7 +322,7 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
 
     # **Every location either forwards through the fragment or answers for
     # itself.** The first is the original invariant: the fragment is the only
-    # thing that overwrites `X-Real-IP`, so a location reaching the app without
+    # thing that overwrites `X-Forwarded-For`, so a location reaching the app without
     # it forwards whatever the caller sent. The second is the exemption the
     # refusal handlers need -- `error_page 429` renders them, they return a
     # literal, and no upstream is reached for a header to survive into.
@@ -287,7 +332,7 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
     assert not stray, (
         f"location(s) {stray} neither include ic-proxy.inc nor answer for "
         f"themselves -- one that reaches the app without the fragment forwards "
-        f"the caller's own X-Real-IP")
+        f"the caller's own X-Forwarded-For")
 
 
 def test_the_only_published_port_belongs_to_the_tls_edge():
@@ -1150,7 +1195,7 @@ def _in_edge(cert_dir: Path, argv: list[str], *, name: str | None = None,
     image = _require_edge_image()
     env = ["-e", "IC_TLS_DIR=/certs"]
     if name is not None:
-        env += ["-e", f"IC_TLS_NAME={name}"]
+        env += ["-e", f"IC_NAME={name}"]
     # **`--user` on the mint, never on the entrypoint.** openssl writes a key
     # 0600, so a root container leaves it unreadable by the host on a Linux bind
     # mount -- invisible on macOS, whose VM maps writes to the caller. The
@@ -1164,7 +1209,37 @@ def _in_edge(cert_dir: Path, argv: list[str], *, name: str | None = None,
 
 def _run_tls_entrypoint(cert_dir: Path, *, name: str | None = None):
     """The entrypoint, at the path the image installs it to."""
-    return _in_edge(cert_dir, ["sh", "/docker-entrypoint.d/10-ic-tls.sh"], name=name)
+    result = _in_edge(cert_dir, ["sh", "/docker-entrypoint.d/10-ic-tls.sh"], name=name)
+    _hand_back(cert_dir)
+    return result
+
+
+def _hand_back(cert_dir: Path) -> None:
+    """Gives `cert_dir` back to the host user after the entrypoint ran on it.
+
+    The entrypoint takes a supplied pair for root, and a root-owned 0600 key on
+    a Linux bind mount is one the host can neither read nor mint over.
+    """
+    _in_edge(cert_dir, ["chown", "-R", f"{os.getuid()}:{os.getgid()}", "/certs"])
+
+
+def _served_after_start(cert_dir: Path, *, name: str | None = None):
+    """The entrypoint, then the `server_name` it left for nginx, in one container."""
+    result = _in_edge(cert_dir, [
+        "sh", "-c",
+        "sh /docker-entrypoint.d/10-ic-tls.sh; rc=$?; echo '--- served';"
+        " cat /etc/nginx/ic-name.inc 2>/dev/null; exit $rc",
+    ], name=name)
+    _hand_back(cert_dir)
+    return result
+
+
+def _sans(cert_dir: Path) -> str:
+    """The certificate's subject alternative names, as the image's openssl prints them."""
+    result = _in_edge(cert_dir, [
+        "openssl", "x509", "-in", "/certs/cert.pem", "-noout", "-ext", "subjectAltName"])
+    assert result.returncode == 0, result.stderr
+    return result.stdout.split("\n", 1)[1].strip()
 
 
 def _fault(result: subprocess.CompletedProcess, cert_dir: Path) -> str:
@@ -1330,6 +1405,130 @@ def test_the_operator_supplied_name_is_honoured(tmp_path: Path):
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "cert.pem").read_bytes() == before_cert
     assert (tmp_path / "key.pem").read_bytes() == before_key
+
+
+@needs_edge_image
+@pytest.mark.parametrize("name,san", [
+    ("soc.example.org", "DNS:soc.example.org"),
+    ("192.0.2.10", "IP Address:192.0.2.10"),
+])
+def test_a_named_install_is_minted_a_certificate_for_its_name(
+        tmp_path: Path, name: str, san: str):
+    """The certificate an install makes covers the name analysts reach it at, and nothing else."""
+    result = _run_tls_entrypoint(tmp_path, name=name)
+
+    assert result.returncode == 0, result.stderr
+    assert _sans(tmp_path) == san, (
+        "the certificate made for a named install does not name it, so every "
+        "analyst's browser refuses it whatever fingerprint they were shown")
+
+
+@needs_edge_image
+def test_a_certificate_the_install_made_is_made_again_for_a_new_name(tmp_path: Path):
+    """An install first started at loopback, then named, is not stranded on its own certificate."""
+    first = _run_tls_entrypoint(tmp_path)
+    assert first.returncode == 0, first.stderr
+    before = (tmp_path / "cert.pem").read_bytes()
+
+    renamed = _run_tls_entrypoint(tmp_path, name="soc.example.org")
+
+    assert renamed.returncode == 0, (
+        f"the install refused the certificate it made itself: {renamed.stderr}")
+    assert (tmp_path / "cert.pem").read_bytes() != before
+    assert _sans(tmp_path) == "DNS:soc.example.org"
+    assert "SHA-256" in renamed.stdout, (
+        "a new certificate was made without printing the fingerprint analysts must be shown")
+
+
+@needs_edge_image
+def test_a_supplied_certificate_is_never_made_again_for_a_new_name(tmp_path: Path):
+    """The marker of a certificate the install made cannot launder the operator's own."""
+    first = _run_tls_entrypoint(tmp_path)
+    assert first.returncode == 0, first.stderr
+    assert (tmp_path / "minted").is_file(), "a mint left no record of what it made"
+    # The operator replaces the pair and leaves the marker beside it.
+    _mint_pair(tmp_path, cn="elsewhere.example", sans="DNS:elsewhere.example")
+    before_cert = (tmp_path / "cert.pem").read_bytes()
+    before_key = (tmp_path / "key.pem").read_bytes()
+
+    result = _run_tls_entrypoint(tmp_path, name="soc.example.org")
+
+    assert result.returncode != 0, "a supplied certificate for another name was accepted"
+    assert "soc.example.org" in _fault(result, tmp_path), result.stderr
+    assert (tmp_path / "cert.pem").read_bytes() == before_cert, (
+        "the operator's certificate was minted over because a marker sat beside it")
+    assert (tmp_path / "key.pem").read_bytes() == before_key
+
+
+@needs_edge_image
+@pytest.mark.parametrize("name,served", [
+    ("soc.example.org", "server_name soc.example.org;"),
+    (None, "server_name localhost 127.0.0.1;"),
+])
+def test_the_edge_serves_exactly_the_name_it_was_given(
+        tmp_path: Path, name: str | None, served: str):
+    """A named install answers at that name and at no loopback spelling beside it."""
+    result = _served_after_start(tmp_path, name=name)
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.split("--- served", 1)[1].strip() == served
+
+
+@needs_edge_image
+@pytest.mark.parametrize("name", [
+    "x; } server { listen 1",
+    "Soc.Example.org",
+    "soc.example.org.",
+    "300.1.1.1",
+    "::1",
+    "-soc.example.org",
+])
+def test_a_name_that_is_not_a_host_is_refused_before_anything_is_written(
+        tmp_path: Path, name: str):
+    """The name is written into nginx's configuration, so it is checked before it goes anywhere."""
+    result = _served_after_start(tmp_path, name=name)
+
+    assert result.returncode != 0, f"{name!r} was accepted as the install's name"
+    assert result.stdout.split("--- served", 1)[1].strip() == "", (
+        "the edge was configured with it anyway")
+    assert "is not a host name" in _fault(result, tmp_path), result.stderr
+    assert not (tmp_path / "cert.pem").exists(), "a certificate was minted for it"
+
+
+@needs_edge_image
+def test_a_supplied_pair_is_read_whoever_copied_it_in(tmp_path: Path):
+    """The operator's pair, owned by whoever copied it into the volume, is read with the edge's own capabilities.
+
+    `docker compose cp` keeps the copier's uid, and the edge runs as a root
+    holding only what `compose.yaml` grants it, which cannot read a private
+    key it does not own.
+    """
+    _mint_pair(tmp_path, cn="soc.example.org", sans="DNS:soc.example.org")
+    before = (tmp_path / "cert.pem").read_bytes()
+    image = _require_edge_image()
+    edge = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))["services"]["nginx"]
+    caps = [flag for cap in edge["cap_add"] for flag in ("--cap-add", cap)]
+    volume = f"ic-tls-supplied-{uuid.uuid4().hex[:8]}"
+    try:
+        copied = subprocess.run(
+            ["docker", "run", "--rm", "-v", f"{volume}:/certs", "-v", f"{tmp_path}:/src:ro",
+             "--entrypoint", "sh", image, "-c",
+             "cp /src/cert.pem /src/key.pem /certs/ && chown 501:20 /certs/*.pem"
+             " && chmod 600 /certs/key.pem"],
+            capture_output=True, text=True, timeout=120)
+        assert copied.returncode == 0, copied.stderr
+        started = subprocess.run(
+            ["docker", "run", "--rm", "-v", f"{volume}:/certs", "-e", "IC_TLS_DIR=/certs",
+             "-e", "IC_NAME=soc.example.org", "--cap-drop", "ALL", *caps,
+             "--security-opt", "no-new-privileges:true", "--entrypoint", "sh", image, "-c",
+             "sh /docker-entrypoint.d/10-ic-tls.sh && cat /certs/cert.pem"],
+            capture_output=True, text=True, timeout=120)
+    finally:
+        subprocess.run(["docker", "volume", "rm", "-f", volume], capture_output=True)
+
+    assert started.returncode == 0, (
+        f"the edge refused the operator's own pair: {started.stderr}")
+    assert started.stdout.encode() == before, "the operator's certificate was replaced"
 
 
 @needs_edge_image
@@ -1748,3 +1947,10 @@ def test_the_edge_says_hsts_at_a_name_and_never_at_loopback():
     assert "preload" not in values, (
         "preload submits the install to a browser list it cannot withdraw from"
     )
+
+
+def test_the_sentinel_importer_is_off_until_the_operator_turns_it_on():
+    """The application is handed the operator's switch, and nothing when it is unset."""
+    assert _resolved()["services"]["app"]["environment"]["IC_IMPORTERS"] == ""
+    on = _resolved(IC_IMPORTERS="sentinel")
+    assert on["services"]["app"]["environment"]["IC_IMPORTERS"] == "sentinel"

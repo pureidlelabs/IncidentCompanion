@@ -58,14 +58,17 @@ export AUTH_SECRET="${AUTH_SECRET:-dev-only-secret-0123456789abcdefghij}"
 export AUTH_BASE_URL="$API_URL"
 export PORT="$API_PORT"
 # **Set here, because the app requires it and nothing else in a shell does.**
-# `env.ts` takes no default for this: what a wrong one costs is an install
-# trusting a proxy header it should not, or refusing one it should, and a
-# default is how that happens without anybody choosing it. Vitest sets `test`
+# `env.ts` takes no default for this: what a wrong one costs is the development
+# server's origin trusted on an install that is not one, and a default is how
+# that happens without anybody choosing it. Vitest sets `test`
 # for the suites, so this is the value every other way of running the app on a
 # workstation gets. `NODE_ENV=production ./dev-node.sh` drives the production
 # paths, and reaches Nest as well as the seeder because `server`'s `dev` script
 # defers to an inherited value rather than pinning one.
 export NODE_ENV="${NODE_ENV:-development}"
+# The dev loop, and the browser tier driving it, walk the importer against its
+# bundled fixture, which an install offers only where the operator turned it on.
+export IC_IMPORTERS="${IC_IMPORTERS:-sentinel}"
 
 SEED=1
 KEEP_DATA=0

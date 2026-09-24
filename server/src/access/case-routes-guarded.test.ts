@@ -137,6 +137,8 @@ const INSTALL_ROUTES: ReadonlySet<string> = new Set([
   'GET /api/appearance/roster',
   'GET /api/appearance/{userId}/avatar',
   'GET /api/cases',
+  // Which platforms the operator pointed the install at: about the install.
+  'GET /api/imports',
   'POST /api/imports/case',
   'POST /api/imports/preview',
   // The install's own audit. Admin-gated at the class, and about the

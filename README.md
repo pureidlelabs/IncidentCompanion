@@ -38,7 +38,7 @@ Written for SOC, MXDR and incident-response analysts.
 
 There are no releases and no upgrade path — the case format changes without warning, and older data is rejected rather than converted. Assume anything you put in will need re-entering.
 
-The Compose stack is a local, non-production deployment. Do not put it on a network.
+It runs on one machine and is reached from the others on a network you trust. It is not built to face the internet.
 
 ## Quick start
 
@@ -61,6 +61,39 @@ Two things to expect on that first run:
 
 - **A certificate warning.** It is self-signed. The terminal prints the fingerprint — check it matches, then accept.
 - **A setup token** in the same output. Claim the install at `/setup` to create the first account. It is printed once and stored nowhere.
+
+## Reaching it from other machines
+
+Out of the box the install answers this machine alone. To put it on your network, add two lines to `.env` — the name analysts will type (a DNS name or an IPv4 address) and the address on this host to listen on — and start it again:
+
+```bash
+IC_NAME=ir.soc.example
+IC_LISTEN=192.0.2.10
+```
+
+```bash
+docker compose up -d --build
+```
+
+Analysts then open `https://ir.soc.example`. A named install answers at that name and nowhere else, `localhost` on the server included. `.env.example` lists the other settings.
+
+**Run it on a Linux server with Docker Engine 28 or later.** Each analyst is limited and recorded as their own machine only where the host passes each caller's address through to the install, which Docker Engine on Linux does. On macOS the Docker VM's port forwarding presents every other machine as one address (measured on OrbStack), so every per-analyst limit becomes one limit for the whole network. Engine 28 is also the release that stops machines on the same network reaching ports that were never published.
+
+**The certificate has to be one the analysts can check.** Either:
+
+- **Bring your own**, from an authority your analysts' machines already trust. Copy the certificate and its unencrypted key into the edge and restart it; the install uses them and never replaces them:
+
+  ```bash
+  docker compose cp cert.pem nginx:/etc/nginx/certs/cert.pem
+  docker compose cp key.pem nginx:/etc/nginx/certs/key.pem
+  docker compose restart nginx
+  ```
+
+- **Or use the one the install makes** for its name. `docker compose logs nginx` prints its SHA-256 fingerprint; give it to every analyst by a channel other than the network the install is on, and have them compare it with what their browser shows before trusting it. Give the install a new name later and it makes a new certificate with a new fingerprint, which analysts check again.
+
+**Back up the `ic-tls` volume with `.env`.** A lost certificate is a new fingerprint under the same name, and a browser already told to keep that name protected will not let an analyst past it.
+
+To turn on importing incidents from Microsoft Sentinel, add `IC_IMPORTERS=sentinel`. Analysts' browsers then talk to Azure's sign-in and management endpoints directly; the install itself still makes no outbound request.
 
 ## Copies
 
