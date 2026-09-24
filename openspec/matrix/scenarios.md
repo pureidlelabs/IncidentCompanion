@@ -458,6 +458,7 @@
 | A line says who, what, and to what, and never says what was written | A caller invents a route | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
 | A line says who, what, and to what, and never says what was written | A caller reaches the application without passing the one way in | demonstrated | tests/docker/test_ingress.py |
 | A line says who, what, and to what, and never says what was written | An install whose one way in started last | demonstrated | tests/docker/test_ingress.py |
+| A line says who, what, and to what, and never says what was written | An administrator reads a line about a case they do not reach | demonstrated | server/test/a-list-offers-only-what-the-caller-reaches.test.ts |
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | demonstrated | server/src/install-activity/record.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One failure and a run of them | demonstrated | server/src/install-audit/read.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One caller, a different account each time | demonstrated | server/src/install-audit/read.test.ts |
@@ -546,6 +547,10 @@
 | A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
+| The connection dies with the reach that admitted it | A session ends while its connection is silent | demonstrated | server/test/a-socket-lives-only-as-long-as-its-authority.test.ts |
+| The connection dies with the reach that admitted it | An account is held while connected | demonstrated | server/test/a-socket-lives-only-as-long-as-its-authority.test.ts |
+| The connection dies with the reach that admitted it | An analyst signs out in one of two places | demonstrated | server/test/a-socket-lives-only-as-long-as-its-authority.test.ts |
+| The connection dies with the reach that admitted it | A connection is refused an edit | demonstrated | server/test/a-refused-socket-frame-is-recorded.test.ts |
 | Written prose is attributed like any other write | One of two analysts present writes | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
 | Written prose is attributed like any other write | Two analysts write before one save | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
 | Written prose is attributed like any other write | Words typed just before the report is sent | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |

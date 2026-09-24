@@ -308,6 +308,13 @@ const OWN_ENDINGS: Readonly<Record<string, 'signed_out' | 'account_sessions_ende
 }
 
 /**
+ * The library's session endings only the accounts pane reaches, each recorded
+ * before it runs and refused unless the line landed.
+ * -> `accounts/accounts.controller.ts`
+ */
+const RECORDED_BY_THE_ACCOUNTS_PANE: ReadonlySet<string> = new Set(['/admin/revoke-user-sessions'])
+
+/**
  * The offered operations that act on the caller's own sessions. Refused to a
  * caller with none before the body is read, so the answer is the missing
  * session rather than the body.
@@ -750,23 +757,31 @@ export function authOptions(
           after: async (deleted: Record<string, unknown>, context?: unknown) => {
             const userId = typeof deleted['userId'] === 'string' ? deleted['userId'] : null
             if (!userId) return
-            sessionEnded(userId)
             const ending = context as { path?: string; headers?: Headers } | undefined
             const path = ending?.path ?? ''
+            const sessionId = typeof deleted['id'] === 'string' ? deleted['id'] : ''
             const event = OWN_ENDINGS[path]
-            if (!event) return
-            const [who] = await db
-              .select({ name: schema.user.name, email: schema.user.email })
-              .from(schema.user)
-              .where(eq(schema.user.id, userId))
-              .limit(1)
-            await recordInstallActivity(db, {
-              event,
-              actor: { id: userId, label: who?.name || who?.email || null },
-              target: who?.email ?? null,
-              detail: { path },
-              headers: Object.fromEntries(ending?.headers?.entries() ?? []),
-            })
+            if (!event) {
+              sessionEnded(userId, sessionId, RECORDED_BY_THE_ACCOUNTS_PANE.has(path))
+              return
+            }
+            let landed = false
+            try {
+              const [who] = await db
+                .select({ name: schema.user.name, email: schema.user.email })
+                .from(schema.user)
+                .where(eq(schema.user.id, userId))
+                .limit(1)
+              landed = await recordInstallActivity(db, {
+                event,
+                actor: { id: userId, label: who?.name || who?.email || null },
+                target: who?.email ?? null,
+                detail: { path },
+                headers: Object.fromEntries(ending?.headers?.entries() ?? []),
+              })
+            } finally {
+              sessionEnded(userId, sessionId, landed)
+            }
           },
         },
       },

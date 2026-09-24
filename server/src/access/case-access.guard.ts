@@ -19,6 +19,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  SetMetadata,
 } from '@nestjs/common'
 import type { ServerResponse } from 'node:http'
 
@@ -33,6 +34,14 @@ const enough = (held: Level | null, needed: Level): boolean =>
   held !== null && RANK.indexOf(held) >= RANK.indexOf(needed)
 
 const READING = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+export const CASE_LEVEL = 'caseLevel'
+
+/**
+ * The level a guarded handler needs, stated where the method would say more:
+ * a handler that writes only the caller's own records about a case needs read.
+ */
+export const CaseLevel = (level: Level): MethodDecorator => SetMetadata(CASE_LEVEL, level)
 
 /**
  * The level this request needs, from its method and its path.
@@ -85,10 +94,9 @@ export function levelNeeded(method: string, path: string): Level {
  * side, where a mounted middleware sees `req.path` as `/`.
  *
  * And a guarded route's path need not contain `cases` at all:
- * `recent-cases/:caseId` is guarded and answers `write` because
- * `'recent-cases'` is not the segment `'cases'`. That is the right answer for
- * the wrong reason -- rename the controller to `cases/recent` and removing an
- * entry from a personal list silently becomes a case deletion.
+ * `recent-cases/:caseId` would derive `write`, and only because
+ * `'recent-cases'` is not the segment `'cases'`. It states its own level
+ * instead, which is what `CaseLevel` is for.
  *
  * **Both are the same weakness: a level decided from the shape of a string.**
  * Deriving it from the handler Nest is about to invoke cannot be fooled by
@@ -217,7 +225,9 @@ export class CaseAccessGuard implements CanActivate {
         'This route is guarded as a case route and carries no parsed path.',
       )
     }
-    const needed = levelNeeded(request.method, request.path)
+    const needed =
+      (Reflect.getMetadata(CASE_LEVEL, context.getHandler()) as Level | undefined) ??
+      levelNeeded(request.method, request.path)
 
     const reached = await this.reach.levelOnCase(userId, caseId)
     const held = reached?.level ?? null
