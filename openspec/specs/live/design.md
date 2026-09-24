@@ -14,6 +14,8 @@
 
 **Order is kept per connection, and nowhere wider.** Two connections, including two tabs of one analyst, are two writers whose frames interleave however they arrive; prose merges them and a version check judges everything else.
 
+**A document leaves the server as the live sync, as a rendered report, or copied into an archive**, and no read of a row returns it. What it holds is what it reads: deleted content is collected, and a removed section takes its prose with it.
+
 # Design
 
 ## Admission is re-derived, not assumed

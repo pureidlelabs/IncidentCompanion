@@ -1,12 +1,6 @@
 # Case archive
 
-## Purpose
-
-A case sometimes has to leave the install it was built in: handed to the customer it belongs to, given to a regulator's investigator, moved to the organisation that has taken the work over, or kept somewhere after the install is decommissioned.
-
-This spec covers taking one case out as a single file and reading one back in. Copying the whole install so it can be restored is the state spec, which is a different act with a different purpose: that one recovers an install, this one moves a case.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: An archive is one file holding the whole case
 
@@ -63,6 +57,7 @@ Where material is left out, or is expected and not found, the archive MUST say s
 - WHEN it is archived
 - THEN the archive is refused, naming the limit
 
+
 ### Requirement: An archive says what it should contain, and is checked against it
 
 An archive MUST carry a statement of what it holds, and reading one MUST check what is there against that statement before any of it is used.
@@ -89,70 +84,6 @@ Whoever holds a plain archive can rewrite it and its statement together, so seal
 - WHEN it is read with the secret
 - THEN it is refused
 
-### Requirement: Reading an archive says how complete the case it made is
-
-Reading an archive MUST tell the operator how much of what the new case names is in it: the attachments its rows name that the archive did not carry, and the rows its rows name that it does not contain.
-
-Where the archive states that the install which wrote it recorded material and could not find it, reading MUST tell the operator that apart from what the archive was written without. Material left out on purpose is still held by whoever exported it; material the exporting install had lost is held by nobody, and an operator told only that a file is absent asks the sender for a copy that does not exist.
-
-None of it MUST be presented as a fault in the archive, and none of it MUST refuse the read: a sound archive of a real case carries them. What the operator is told is what is true whichever cause produced it — this case names things that are not in it.
-
-This MUST reach the operator rather than only the response. A count the interface does not draw tells nobody.
-
-#### Scenario: An archive carries rows that name what it left behind
-
-- GIVEN an archive written without its attachments
-- WHEN an operator reads it in
-- THEN they are told how many attachments the rows name that the archive did not carry
-- AND the case is created
-
-#### Scenario: A case names a row that is not in it
-
-- GIVEN a case whose rows name a row that was deleted before it was archived
-- WHEN an operator reads the archive in
-- THEN they are told how many rows the case names that are not in it
-- AND the case is created
-
-#### Scenario: The exporting install had lost material the case records
-
-- GIVEN an archive written with its attachments, whose install could not find one the case records
-- WHEN an operator reads it in
-- THEN they are told the install that wrote the archive had already lost it
-
-#### Scenario: An archive written without its attachments claims no loss
-
-- GIVEN an archive written without its attachments
-- WHEN an operator reads it in
-- THEN they are told nothing was lost by the install that wrote it
-
-### Requirement: An analyst can seal an archive, and the seal is theirs to hold
-
-An analyst MUST be able to seal an archive so that only somebody holding the secret can read it. An archive leaves the install, and where it goes next is not something the install controls.
-
-The install MUST NOT hold the secret. A seal the install can open protects the archive from everybody except the party most likely to be asked for it.
-
-Sealing MUST be the analyst's choice per archive rather than an install-wide setting, because whether an archive needs a seal depends on where it is going.
-
-Where a secret is too weak to be worth having, it MUST be refused rather than accepted.
-
-#### Scenario: An analyst seals an archive
-
-- GIVEN an analyst archiving a case with a secret of their choosing
-- WHEN the archive is produced
-- THEN it can only be read by somebody holding that secret
-
-#### Scenario: The install is asked to open a sealed archive
-
-- GIVEN a sealed archive
-- WHEN it is read without the secret
-- THEN it cannot be opened
-- AND the install holds nothing that would open it
-
-#### Scenario: A secret too weak to be worth having
-
-- GIVEN an analyst supplying a secret below what the install accepts
-- WHEN they ask for the archive
-- THEN it is refused
 
 ### Requirement: Reading an archive cannot be made to cost more than the install will spend
 
@@ -181,80 +112,6 @@ The size of what an archive claims to hold MUST be bounded before it is read, so
 - THEN it is refused before any row is written
 - AND the refusal names the limit
 
-### Requirement: Reading an archive creates a case; it never overwrites one
-
-Reading an archive MUST produce a new case. It MUST NOT be a way to write into a case that already exists, and MUST NOT be a way to replace one.
-
-Nothing carried by an archive MUST be able to decide what the new case is called internally, who is recorded as having written its rows, what version they are at, or where they came from. An archive is data from outside the install, and letting it name those things would let it collide with, or impersonate, what the install already holds.
-
-Where a row came from MUST be recorded as the archive, rather than as whatever the archive says a row came through on the install that wrote it. A row an analyst typed elsewhere did not arrive here by being typed, and a timeline entry somebody read elsewhere has not been read here — so an archive read in MUST leave its entries marked unreviewed, as any other import does.
-
-The analyst reading the archive in MUST be recorded as having brought it in, so a case that arrived from elsewhere is attributable to the person who put it there.
-
-The new case MUST hold the artefacts the archive carries and nothing else. A digest the archive names and does not carry names something held elsewhere, and MUST NOT reach an artefact this install holds for another case.
-
-#### Scenario: An archive is read in
-
-- GIVEN an archive of a case
-- WHEN an analyst reads it in
-- THEN a new case exists
-- AND no existing case was changed
-
-#### Scenario: An archive names things the install already holds
-
-- GIVEN an archive whose content names rows by the identifiers it was written with
-- WHEN it is read in
-- THEN the new case's rows are identified by this install's own names
-- AND nothing already in the install was reached
-
-#### Scenario: An archive names an artefact it does not carry
-
-- GIVEN an archive whose rows name the digest of an artefact another case holds
-- AND the archive does not carry that artefact
-- WHEN it is read in
-- THEN the new case holds nothing under that digest
-- AND nothing the new case produces carries the artefact
-
-#### Scenario: An archive is attributed
-
-- GIVEN an analyst reading an archive in
-- WHEN the case is created
-- THEN they are recorded as having brought it in
-
-#### Scenario: An archive states where its rows came from
-
-- GIVEN an archive whose rows say they were found by a platform and read by an analyst
-- WHEN it is read in
-- THEN the new case's rows say they came from an archive
-- AND its timeline entries are marked unreviewed
-
-### Requirement: An archive is refused where its reference is already held
-
-Reading an archive MUST be refused where the case reference it carries is already held by another case within the same customer, and the refusal MUST name the case holding it.
-
-A reference identifies the customer's own record of the incident, so two cases carrying one reference leave no answer to which of them that record refers to. The refusal MUST leave the install unchanged, and MUST NOT depend on which door the archive arrived through.
-
-An archive read into an install that does not hold the reference is unaffected, which is the handover between installs the format exists for.
-
-#### Scenario: The install still holds the case the archive was made from
-
-- GIVEN a case carrying a reference
-- WHEN an archive of it is read into the same install
-- THEN it is refused
-- AND the analyst is told which case already holds that reference
-- AND no case is created
-
-#### Scenario: The reference is free
-
-- GIVEN an install holding no case with the archive's reference
-- WHEN the archive is read
-- THEN the case is created carrying that reference
-
-#### Scenario: The archive carries no reference
-
-- GIVEN an archive of a case with no reference
-- WHEN it is read into an install already holding cases with no reference
-- THEN it is created, because the absence of a reference is not a value
 
 ### Requirement: An archive's rows are checked against what this install can hold
 
@@ -343,3 +200,4 @@ A field this install does not know MUST be dropped rather than refused, so that 
 - GIVEN an archive whose record carries a note's prose document
 - WHEN it is read
 - THEN the note opens as its own words, not as the planted document
+

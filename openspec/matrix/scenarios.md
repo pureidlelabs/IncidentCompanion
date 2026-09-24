@@ -146,13 +146,19 @@
 | An archive is one file holding the whole case | A case is archived | demonstrated | server/src/case-archive/round-trip.test.ts |
 | An archive is one file holding the whole case | An analyst archives without the attachments | demonstrated | server/src/case-archive/round-trip.test.ts |
 | An archive is one file holding the whole case | Expected material is not found | demonstrated | server/src/archive/an-archive-says-what-it-could-not-find.test.ts |
+| An archive is one file holding the whole case | Deleted text does not travel | demonstrated | server/test/an-archive-carries-the-case-as-it-reads.test.ts |
+| An archive is one file holding the whole case | A removed section does not travel | demonstrated | server/test/an-archive-carries-the-case-as-it-reads.test.ts |
+| An archive is one file holding the whole case | A note's prose is archived | demonstrated | server/test/an-archive-carries-the-case-as-it-reads.test.ts |
+| An archive is one file holding the whole case | A case larger than an archive may carry | demonstrated | server/test/an-archive-states-more-rows-than-the-install-writes.test.ts |
 | An archive says what it should contain, and is checked against it | An archive is read | demonstrated | server/src/archive/format.test.ts |
 | An archive says what it should contain, and is checked against it | An archive has been altered | demonstrated | server/src/archive/format.test.ts |
+| An archive says what it should contain, and is checked against it | A sealed archive is altered by somebody without its secret | demonstrated | server/test/an-archive-carries-the-case-as-it-reads.test.ts |
 | An analyst can seal an archive, and the seal is theirs to hold | An analyst seals an archive | demonstrated | server/src/archive/envelope.test.ts |
 | An analyst can seal an archive, and the seal is theirs to hold | The install is asked to open a sealed archive | demonstrated | server/test/the-install-keeps-no-key-to-a-sealed-archive.test.ts |
 | An analyst can seal an archive, and the seal is theirs to hold | A secret too weak to be worth having | demonstrated | server/src/archive/envelope.test.ts |
 | Reading an archive cannot be made to cost more than the install will spend | An archive declares more work than the install produces | demonstrated | server/src/archive/envelope.test.ts |
 | Reading an archive cannot be made to cost more than the install will spend | An archive describing more content than the install accepts | demonstrated | server/src/archive/format.test.ts |
+| Reading an archive cannot be made to cost more than the install will spend | An archive describing more rows than the install writes | demonstrated | server/test/an-archive-states-more-rows-than-the-install-writes.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive is read in | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | demonstrated | server/src/case-archive/round-trip.test.ts |
 | Reading an archive creates a case; it never overwrites one | An archive names an artefact it does not carry | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
@@ -171,6 +177,10 @@
 | An archive's rows are checked against what this install can hold | An archive is refused after some of its rows were sound | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
 | An archive's rows are checked against what this install can hold | An archive carries a field this install does not know | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
 | An archive's rows are checked against what this install can hold | An archive leaves a column out | demonstrated | server/src/case-archive/a-hostile-archive-is-refused-not-a-driver-error.test.ts |
+| An archive's rows are checked against what this install can hold | An archive states a value in a field its other fields make inapplicable | demonstrated | server/test/every-cross-field-rule-holds-at-the-archive.test.ts |
+| An archive's rows are checked against what this install can hold | An archive's report is sent without its document, or the reverse | demonstrated | server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts |
+| An archive's rows are checked against what this install can hold | An archive carries a report it says was sent | demonstrated | server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts |
+| An archive's rows are checked against what this install can hold | An archive's record plants a note document | demonstrated | server/test/an-archive-carries-the-case-as-it-reads.test.ts |
 
 ## cases
 
@@ -532,6 +542,8 @@
 | Written prose is attributed like any other write | One of two analysts present writes | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
 | Written prose is attributed like any other write | Two analysts write before one save | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
 | Written prose is attributed like any other write | Words typed just before the report is sent | demonstrated | server/test/prose-names-whoever-wrote-it.test.ts |
+| Deleted prose is not kept | A reader arrives after text was deleted | demonstrated | server/test/deleted-prose-is-not-kept.test.ts |
+| Deleted prose is not kept | A section is removed | demonstrated | server/test/deleted-prose-is-not-kept.test.ts |
 | An open connection is listening | A screen writes before the connection is ready | demonstrated | server/test/a-reconnected-editor-loses-nothing.test.ts |
 | An open connection is listening | Preparing the connection does not complete | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
 | An open connection is listening | Frames are acted on in the order sent | demonstrated | server/test/a-connection-acts-on-every-frame-in-order.test.ts |
@@ -590,6 +602,9 @@
 | A sent report is frozen, and the freeze is one rule | A new way to write a part is added | demonstrated | server/src/report/the-store-refuses-a-sent-report.test.ts |
 | A sent report is frozen, and the freeze is one rule | Prose reaches a sent report | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
 | A sent report is frozen, and the freeze is one rule | The report a sent report corrects is removed | demonstrated | server/test/a-sent-report-refuses-every-door.test.ts |
+| A report is sent and preserved, or neither | Any writer states half a sent report | demonstrated | server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts |
+| What the install generates in a document leaving it carries no live indicator | A report leaves the install | demonstrated | server/test/case-rows-reach-every-output.test.ts |
+| What the install generates in a document leaving it carries no live indicator | A preserved document is read in with a live address | demonstrated | server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts |
 | Sending stamps and preserves in one act | A report is sent | undemonstrated |  |
 | Sending stamps and preserves in one act | The document cannot be produced | demonstrated | server/test/a-sent-report-takes-no-prose.test.ts |
 | Sending stamps and preserves in one act | The case changes after sending | undemonstrated |  |

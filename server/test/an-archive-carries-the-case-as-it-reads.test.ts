@@ -201,4 +201,25 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
 
     expect(shown, 'the editor opened a document the archive record planted').not.toContain(PLANTED)
   })
+
+  // What sealing promises: an archive altered by somebody without the secret is refused at the door.
+  it('refuses a sealed archive altered by somebody without its secret', async () => {
+    const secret = `a passphrase long enough ${STAMP}`
+    const out = await call('POST', `/api/cases/${caseId}/archive`, { includeFiles: false, passphrase: secret })
+    expect(out.status).toBe(200)
+    const sealed = new Uint8Array(await out.arrayBuffer())
+    sealed[sealed.length - 40] = (sealed[sealed.length - 40]! + 1) % 256
+    const read = await fetch(`${harness.base}/api/cases/import`, {
+      method: 'POST',
+      headers: {
+        cookie: analyst.cookie,
+        origin: harness.origin,
+        'content-type': 'application/octet-stream',
+        'x-archive-passphrase': secret,
+      },
+      body: sealed,
+    })
+
+    expect(read.status, await read.text()).toBe(422)
+  })
 })
