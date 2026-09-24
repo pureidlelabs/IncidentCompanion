@@ -60,6 +60,12 @@
 | An install can be recovered without another administrator | The credential is lost | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | demonstrated | server/test/account-lockout.test.ts |
 | Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | demonstrated | server/test/account-lockout.test.ts |
+| Authentication resists guessing, and says so to the auditor | Another machine guesses at an analyst's account | demonstrated | server/test/a-guess-locks-out-only-the-guesser.test.ts |
+| Authentication resists guessing, and says so to the auditor | Guesses arrive from many machines | demonstrated | server/test/a-guess-locks-out-only-the-guesser.test.ts |
+| Authentication resists guessing, and says so to the auditor | The holder's own machine guesses | demonstrated | server/test/a-guess-locks-out-only-the-guesser.test.ts |
+| Authentication resists guessing, and says so to the auditor | The same wrong password is offered again | demonstrated | server/test/a-guess-locks-out-only-the-guesser.test.ts |
+| Authentication resists guessing, and says so to the auditor | A lock follows a lock | demonstrated | server/test/a-guess-locks-out-only-the-guesser.test.ts |
+| Authentication resists guessing, and says so to the auditor | An administrator releases an account | demonstrated | server/test/a-guess-locks-out-only-the-guesser.test.ts |
 | Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/a-held-account-reaches-only-its-way-out.test.ts |
 | Authentication resists guessing, and says so to the auditor | The install raises its password minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts |
 | Authentication resists guessing, and says so to the auditor | An account holds a password shorter than a raised minimum | demonstrated | server/test/a-raised-password-minimum-is-what-every-door-asks.test.ts |
