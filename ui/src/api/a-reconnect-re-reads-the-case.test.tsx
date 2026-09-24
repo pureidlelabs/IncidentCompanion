@@ -264,6 +264,91 @@ describe('a screen says when it is not live', () => {
     expect(result.current.behind, 'a read issued before the latest drop cleared the line').toBe(true)
   })
 
+  it('stays behind when a read asked for while the socket was down lands after it returns', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    const reads: (() => void)[] = []
+    vi.spyOn(client, 'invalidateQueries').mockImplementation(
+      () =>
+        new Promise<void>((done) => {
+          reads.push(done)
+        }),
+    )
+    const result = live(client)
+
+    act(() => {
+      drop()
+    })
+    act(() => {
+      result.current.reread()
+    })
+    act(() => {
+      restore()
+    })
+    await act(async () => {
+      reads.shift()?.()
+      await Promise.resolve()
+    })
+
+    expect(result.current.behind, 'a read asked for while the socket was down cleared the line').toBe(true)
+  })
+
+  it('keeps a current screen current when an older read fails after a newer one landed', async () => {
+    vi.useFakeTimers()
+    const client = new QueryClient()
+    const reads: { done: () => void; fail: () => void }[] = []
+    vi.spyOn(client, 'invalidateQueries').mockImplementation(
+      () =>
+        new Promise<void>((done, fail) => {
+          reads.push({ done, fail: () => fail(new Error('503')) })
+        }),
+    )
+    const result = live(client)
+
+    act(() => {
+      drop()
+      restore()
+      vi.advanceTimersByTime(500)
+      drop()
+      restore()
+      vi.advanceTimersByTime(500)
+    })
+    const [older, newer] = reads
+    await act(async () => {
+      newer?.done()
+      await Promise.resolve()
+      older?.fail()
+      await Promise.resolve()
+    })
+
+    expect(result.current, 'an older read failing overwrote a current screen').toMatchObject({
+      behind: false,
+      failed: false,
+    })
+  })
+
+  it('starts another case live, whatever the last one was', () => {
+    const client = new QueryClient()
+    vi.spyOn(client, 'invalidateQueries').mockResolvedValue(undefined)
+    const { result, rerender } = renderHook(({ caseId }: { caseId: string }) => useCaseChanges(caseId), {
+      initialProps: { caseId: 'C-1' },
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    })
+
+    act(() => {
+      drop()
+    })
+    expect(result.current.behind).toBe(true)
+    act(() => {
+      restore()
+    })
+    rerender({ caseId: 'C-2' })
+
+    expect(result.current.behind, 'the last case\'s drop was carried to this one').toBe(false)
+  })
+
   it('says the read failed, and reads again when asked', async () => {
     vi.useFakeTimers()
     const client = new QueryClient()

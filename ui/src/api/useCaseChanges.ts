@@ -168,18 +168,30 @@ export function useCaseChanges(caseId: string): CaseLive {
   /** Whether the socket is down, and how many times it has dropped. */
   const socket = useRef({ down: false, drops: 0 })
 
-  /** The whole case read again: current once it lands, unless the socket dropped after it was asked for or is down. */
+  /**
+   * The whole case read again: current once it lands, unless the socket was
+   * down when it was asked for, dropped since, or is down. A read that fails
+   * says so only while it is still the latest word.
+   */
   const readAgain = useCallback((reading: Promise<unknown>) => {
-    const asked = socket.current.drops
+    const asked = socket.current.down ? -1 : socket.current.drops
+    const latest = () => !socket.current.down && socket.current.drops === asked
     reading.then(
       () => {
-        if (!socket.current.down && socket.current.drops === asked) setState(CURRENT)
+        if (latest()) setState(CURRENT)
       },
       () => {
-        setState({ behind: true, failed: true })
+        if (latest()) setState({ behind: true, failed: true })
       },
     )
   }, [])
+
+  // Another case starts live: the drop the last one saw says nothing about it.
+  const [shown, setShown] = useState(caseId)
+  if (shown !== caseId) {
+    setShown(caseId)
+    setState(CURRENT)
+  }
 
   useEffect(() => {
     if (!caseId || typeof WebSocket === 'undefined') return undefined
