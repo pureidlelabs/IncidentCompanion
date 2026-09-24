@@ -12,6 +12,7 @@ import { index, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/p
 
 import { user } from './auth.js'
 import { cases } from './case.js'
+import { visitorScoped } from './scoped.js'
 
 export const caseVisits = pgTable(
   'case_visits',
@@ -44,6 +45,7 @@ export const caseVisits = pgTable(
     // The read is always one analyst's newest first, and the prune deletes the
     // tail of that same order.
     index('case_visits_recent_idx').on(t.userId, t.visitedAt.desc()),
+    ...visitorScoped(t.userId, t.caseId),
   ],
 )
 

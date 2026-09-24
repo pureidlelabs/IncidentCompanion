@@ -15,6 +15,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { updateVersioned } from './mutate.js'
+import { actingAs } from './scope.js'
 import { cases, changeFeed, user } from './schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
@@ -39,6 +40,10 @@ const ANALYST_A = 'test-analyst-a'
 const ANALYST_B = 'test-analyst-b'
 
 let CASE_ID: string
+
+/** A write made as the analyst it is attributed to, as a request makes it. */
+const written = (write: Parameters<typeof updateVersioned>[1]) =>
+  actingAs(write.actorId, () => updateVersioned(db!, write))
 
 describe.skipIf(!db || !hasConcurrentConnections())('a version-checked write', () => {
   beforeAll(async () => {
@@ -76,7 +81,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a version-checked write', (
     // The defect this whole design exists to prevent: both analysts read
     // version 1, and without the check the second silently overwrites the
     // first with no trace that anything was lost.
-    const first = await updateVersioned(db!, {
+    const first = await written({
       table: cases,
       entity: 'cases',
       caseId: CASE_ID,
@@ -85,7 +90,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a version-checked write', (
       actorId: ANALYST_A,
       patch: { title: 'Phishing wave \u2014 confirmed' },
     })
-    const second = await updateVersioned(db!, {
+    const second = await written({
       table: cases,
       entity: 'cases',
       caseId: CASE_ID,
@@ -110,7 +115,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a version-checked write', (
   it('writes exactly one change-feed row for one accepted write', async () => {
     // A refused write that still announced itself would repaint every other
     // screen with a change that never happened.
-    await updateVersioned(db!, {
+    await written({
       table: cases,
       entity: 'cases',
       caseId: CASE_ID,
@@ -119,7 +124,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a version-checked write', (
       actorId: ANALYST_A,
       patch: { status: 'closed' },
     })
-    await updateVersioned(db!, {
+    await written({
       table: cases,
       entity: 'cases',
       caseId: CASE_ID,
@@ -145,7 +150,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a version-checked write', (
     // What it does hold: no write skips a version and none double-increments,
     // so a client's next `expectedVersion` is always the one it just received.
     for (const [i, actor] of [ANALYST_A, ANALYST_B, ANALYST_A].entries()) {
-      const result = await updateVersioned(db!, {
+      const result = await written({
         table: cases,
         entity: 'cases',
         caseId: CASE_ID,
@@ -170,7 +175,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a version-checked write', (
     // A row deleted by another analyst mid-edit is the same answer as one
     // written by them: this save cannot proceed. `null` distinguishes gone
     // from moved, which is what the merge review needs to word it.
-    const result = await updateVersioned(db!, {
+    const result = await written({
       table: cases,
       entity: 'cases',
       caseId: CASE_ID,
