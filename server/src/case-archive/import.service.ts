@@ -95,6 +95,11 @@ export const TABLES = [
  * `values` with each timestamp column's ISO string read as a `Date`.
  * Throws `BadArchive` for a string no date can be read from.
  */
+/** How many rows a case record describes, across every table an import writes. */
+export function rowsIn(record: Record<string, unknown>): number {
+  return TABLES.reduce((sum, [name]) => sum + (Array.isArray(record[name]) ? (record[name] as unknown[]).length : 0), 0)
+}
+
 export function coercedTimes(
   collection: string,
   table: PgTable,
@@ -276,6 +281,14 @@ export class ArchiveImportService {
     }
     if (typeof record.title !== 'string' || !record.title.trim()) {
       throw new BadArchive('this archive names no case')
+    }
+    // Counted before anything is stored, so a small file cannot describe work the install then does.
+    const rows = rowsIn(record)
+    const ceiling = stored_['evidence.archiveRows']
+    if (rows > ceiling) {
+      throw new BadArchive(
+        `this archive describes ${rows.toLocaleString('en-GB')} rows, and this install reads at most ${ceiling.toLocaleString('en-GB')}`,
+      )
     }
 
     // **Minted here rather than by the insert**, so the artefacts land in the

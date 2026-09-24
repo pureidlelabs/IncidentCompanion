@@ -36,6 +36,7 @@ const LOOSENS: Record<string, 'up' | 'down'> = {
   'auth.lockoutMinutes': 'down',
   'evidence.attachmentMegabytes': 'up',
   'evidence.archiveMegabytes': 'up',
+  'evidence.archiveRows': 'up',
   'evidence.passphraseChars': 'down',
   'audit.runWindowMinutes': 'up',
 }

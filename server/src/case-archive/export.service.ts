@@ -9,7 +9,7 @@
  * manifest records it** - an import cannot tell a backup from a handover
  * without being told.
  */
-import { Inject, Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common'
 
 import { textOf } from '../domain/text-of.js'
 import { CasesService } from '../cases/cases.service.js'
@@ -24,6 +24,7 @@ import {
   type Attachments,
 } from '../archive/format.js'
 import { WeakPassphrase, seal } from '../archive/envelope.js'
+import { rowsIn } from './import.service.js'
 import { PolicyService } from '../policy/policy.service.js'
 import { NOTE_FRAGMENT, ProseService, reportDocument, type ProseRecord } from '../prose/prose.service.js'
 import { rekeyed } from '../domain/prose-fields.js'
@@ -81,7 +82,8 @@ export class ArchiveExportService {
      * **Read now, like every other bound**: a minimum cached at boot is one an
      * administrator cannot raise without a restart. -> `policy/read.ts`
      */
-    const minimumChars = (await this.policy.read())['evidence.passphraseChars']
+    const policy = await this.policy.read()
+    const minimumChars = policy['evidence.passphraseChars']
     if (request.passphrase && request.passphrase.length < minimumChars) {
       throw new WeakPassphrase(`A passphrase is at least ${String(minimumChars)} characters.`)
     }
@@ -90,6 +92,13 @@ export class ArchiveExportService {
       string,
       unknown
     >
+    const ceiling = policy['evidence.archiveRows']
+    const rows = rowsIn(data)
+    if (rows > ceiling) {
+      throw new UnprocessableEntityException({
+        message: `This case holds ${rows.toLocaleString('en-GB')} rows, and an archive carries at most ${ceiling.toLocaleString('en-GB')}.`,
+      })
+    }
     const members: Record<string, Uint8Array> = {}
     const omitted: string[] = []
 
