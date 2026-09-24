@@ -345,6 +345,7 @@ test.describe('a newer record served while a refused write is out', () => {
       ])
     } finally {
       await api.dispose()
+      await a.page.unrouteAll({ behavior: 'ignoreErrors' })
       await a.context.close()
     }
   })
