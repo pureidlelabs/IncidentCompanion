@@ -5,6 +5,7 @@
  * host/port/user/password quartet is four things to get wrong per environment,
  * where a URL is one string the app never inspects.
  */
+import { Logger } from '@nestjs/common'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 
@@ -45,6 +46,12 @@ export function createPool(url: string): Pool {
      * -> `a-pool-with-none-left-says-so.test.ts`, which measures it
      */
     connectionTimeoutMillis: 10_000,
+  })
+  // An idle client whose backend ended (a Postgres restart, `57P01`) is
+  // emitted here, and an `error` with no listener ends the process. The pool
+  // has already discarded the client, so the next query opens a fresh one.
+  pool.on('error', (error: Error & { code?: string }) => {
+    new Logger('Postgres').warn(`idle connection ended (${error.code ?? error.message})`)
   })
 
   /**

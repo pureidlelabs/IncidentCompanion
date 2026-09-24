@@ -25,10 +25,8 @@ import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { REPORT_BLOCKS_COLLECTION, REPORTS_COLLECTION } from '../collections/definitions.js'
 import { ReportsController } from '../collections/entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DEMO_REPORTS } from '../demos/reports.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
 import { cases, reportBlocks, reports, user } from '../db/schema/index.js'
 import { patchSchema } from '../domain/field-spec.js'
 import { reportSchema } from '../domain/entities/report.js'
@@ -39,6 +37,7 @@ import { english } from './document/packs.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -390,7 +389,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a report that has been sent
  */
 describe.skipIf(!db)('the demo cases', () => {
   beforeAll(async () => {
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore()).reseed()
+    await reseedDemos(seed!)
   }, 90_000)
 
   it('declares reports that were filed, so this is not vacuous', () => {

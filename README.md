@@ -62,6 +62,20 @@ Two things to expect on that first run:
 - **A certificate warning.** It is self-signed. The terminal prints the fingerprint — check it matches, then accept.
 - **A setup token** in the same output. Claim the install at `/setup` to create the first account. It is printed once and stored nowhere.
 
+## Copies
+
+Take a copy of a running install, and return to one, from the repository root:
+
+```bash
+./docker/backup.sh backup            # writes backups/<time>, then checks it
+./docker/backup.sh verify <copy>     # checks a copy you already have
+./docker/backup.sh restore <copy>    # returns this install to that copy
+```
+
+A copy is a directory of four files: the database without anybody's session, the evidence archive beside it, the shape of the store it was taken under, and the digest of each of those three as it was written. Keep the four together, and off the install's own disk. Git and the image builds ignore `backups/`. `backup` says ok only once it has restored the database into a scratch database and found every artefact that database names in the archive.
+
+`restore` checks the copy first, and refuses one cut short or altered since it was taken, or one taken under a different shape of the store, before it changes anything. It then stops the server, replaces the database and the evidence, signs everybody out and starts the install again. The install you restore into can be a fresh one with its own `.env`.
+
 ## Inside a case
 
 The app opens on a case picker; a case opens on a rail of sections, one per kind of finding, and the report is built from what you put in them.

@@ -232,11 +232,11 @@ const MAY_IMPORT: Record<string, string[]> = {
    */
   // `auth` for `AdminOnly` on the two telemetry routes alone: what the install
   // is made of is an operator's, and the liveness probe beside them stays open.
-  //
-  // `evidence` for the census, which asks the store what each case holds
-  // rather than reading its directory itself; `report` for what each case
-  // names, sent reports' figures included.
-  health: ['config', 'db', 'domain', 'policy', 'auth', 'evidence', 'report'],
+  // `throttle` for the tier names the probe skips: the count lives in a store
+  // the probe reports on. `evidence` for the census, which asks the store what
+  // each case holds rather than reading its directory itself; `report` for
+  // what each case names, sent reports' figures included.
+  health: ['config', 'db', 'domain', 'policy', 'auth', 'throttle', 'evidence', 'report'],
   spa: ['config'],
   test: ['db', 'config'],
 }

@@ -11,15 +11,14 @@ import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CasesService } from '../cases/cases.service.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
 import { DEMO_REPORTS } from '../demos/reports.js'
 import { LibraryService } from '../library/library.service.js'
 import { ProseService } from '../prose/prose.service.js'
 import { cases } from '../db/schema/case.js'
 import { reports } from '../db/schema/report.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 import { DemoReportSender } from './sender.service.js'
 import { LanguageService } from '../report/language.service.js'
@@ -72,8 +71,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('filing the demo reports', (
     const library = new LibraryService(db!, seed)
     await library.seedBuiltIns()
 
-    const seeder = new DemoSeederService(seed!, seed, new DemoContentSeeder(), suiteStore())
-    await seeder.reseed()
+    await reseedDemos(seed!)
 
     const cases_ = new CasesService(db!, suiteStore(), {
       announce: () => {},

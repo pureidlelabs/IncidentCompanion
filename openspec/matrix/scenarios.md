@@ -333,7 +333,7 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | It comes up with one command and no preparation | A first start on a clean machine | demonstrated | tests/docker/test_container_runtime.py |
-| It comes up with one command and no preparation | A second start | demonstrated | tests/docker/test_container_config.py |
+| It comes up with one command and no preparation | A second start | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | It comes up with one command and no preparation | A dependency is slow | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | What an install exposes | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | The application is addressed directly | demonstrated | tests/docker/test_container_config.py |
@@ -343,14 +343,19 @@
 | The connection is protected, and there is no way to turn that off | A supplied certificate cannot be used | demonstrated | tests/docker/test_container_config.py |
 | The connection is protected, and there is no way to turn that off | Somebody wants it unprotected | demonstrated | tests/docker/test_container_config.py |
 | Setting up is separate from running, and runs once | Preparation runs before serving | demonstrated | tests/docker/test_container_runtime.py |
-| Setting up is separate from running, and runs once | An install is started again | demonstrated | tests/docker/test_container_config.py |
+| Setting up is separate from running, and runs once | An install is started again | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | Setting up is separate from running, and runs once | Preparation fails | demonstrated | tests/docker/test_container_config.py |
-| What must survive is named, and what must not is not | The install is rebuilt | demonstrated | tests/docker/test_container_config.py |
+| Setting up is separate from running, and runs once | Preparation runs again beside a serving application | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
+| Setting up is separate from running, and runs once | A new version would discard stored data | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| Setting up is separate from running, and runs once | Preparation is run by hand | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| What must survive is named, and what must not is not | The install is rebuilt | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | What must survive is named, and what must not is not | Something not named is lost | demonstrated | tests/docker/test_container_config.py |
 | An install can say whether it is well, and what is wrong | A component has started but cannot answer | demonstrated | server/src/health/dependencies.health.test.ts |
-| An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | server/src/health/dependencies.health.test.ts |
+| An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| An install can say whether it is well, and what is wrong | A component stops unexpectedly | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | The application runs with no more than it needs | The application attempts something outside its work | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
 | The application runs with no more than it needs | A part is examined for what it can do | demonstrated | tests/docker/test_container_config.py |
+| An install with nothing configured reaches nothing outside itself | An install lives its whole life with nothing configured | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 
 ## evaluation
 
@@ -620,13 +625,13 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | What may be lost and what may not are separated by design | The ephemeral store is emptied | demonstrated | server/test/losing-the-ephemeral-store-loses-no-investigation.test.ts |
-| What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | demonstrated | tests/docker/test_container_config.py |
-| What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | undemonstrated | |
+| What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | demonstrated | server/test/health-names-a-lost-store.test.ts |
+| What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | The application cannot reach a row it should not, even by mistake | A query forgets its boundary | demonstrated | server/src/db/scope.test.ts |
 | The application cannot reach a row it should not, even by mistake | The application attempts to widen its own reach | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
 | The application cannot reach a row it should not, even by mistake | A new table holding case data is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
 | Changing the shape of the store is a separate power | The application attempts to change the schema | demonstrated | server/src/db/scope.test.ts |
-| Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/src/db/policy-push.test.ts |
+| Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/test/the-schema-step-changes-nothing-or-refuses.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write and its record are one act | demonstrated | server/src/db/mutate.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write arrives against a version that has moved | demonstrated | server/src/db/mutate.test.ts |
 | The store is not migrated while the shape is still moving | Data from an older shape is presented | demonstrated | server/src/archive/format.test.ts |
@@ -637,10 +642,12 @@
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | demonstrated | server/src/health/install.controller.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | An operator asks what protects the state at rest | demonstrated | server/src/health/install.controller.test.ts |
-| What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
+| What is stored can be recovered, and the recovery is proven | An install is restored from a copy | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | demonstrated | server/src/health/an-install-says-what-it-cannot-find.test.ts |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | demonstrated | server/src/evidence/artefacts-put-back-make-the-evidence-whole.test.ts |
+| What is stored can be recovered, and the recovery is proven | A damaged copy is checked | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
+| What is stored can be recovered, and the recovery is proven | A copy from another shape is restored | demonstrated | tests/lifecycle/test_the_shipped_stack_lives_through_its_lifecycle.py |
 | An artefact is reached only through the case that holds it | A digest is named in another case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | An artefact is reached only through the case that holds it | Reach is withdrawn from an analyst who read a digest | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
 | An artefact is reached only through the case that holds it | A handover is read in by somebody who does not reach the case | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts |
