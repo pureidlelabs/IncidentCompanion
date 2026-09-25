@@ -243,6 +243,23 @@ describe.skipIf(!(await bootable()))('how long an address stays familiar', () =>
 
     expect(await heldFor(email), 'the pass deleted an address renewed while it waited').toContain(machine(170))
   }, 60_000)
+  it('keeps the first 20 by address where addresses share one time, in the check and the pruning alike', async () => {
+    const email = await anAccount()
+    const addresses = Array.from({ length: 21 }, (_, i) => machine(230 + i))
+    await signInFrom(email, ...addresses)
+    await db
+      .update(familiarAddress)
+      .set({ lastRightAt: sql`date_trunc('second', now()) - interval '1 day'` })
+      .where(ofAccount(email))
+
+    await lockTheUnfamiliarRun(email)
+    expect(await statusFrom(machine(250), email, PASSWORD), 'the last address by text was familiar').toBe(401)
+
+    await harness.app.get(FamiliarAddressPrune).prune()
+    expect(await heldFor(email), 'the pruning kept other than the first 20 by text').toEqual(addresses.slice(0, 20))
+    expect(await statusFrom(machine(249), email, PASSWORD)).toBe(200)
+  }, 60_000)
+
   it('prunes at boot, and keeps a daily schedule', async () => {
     const email = await anAccount()
     const addresses = Array.from({ length: 22 }, (_, i) => machine(200 + i))

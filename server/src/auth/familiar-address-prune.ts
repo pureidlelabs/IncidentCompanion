@@ -37,12 +37,13 @@ export class FamiliarAddressPrune implements OnApplicationBootstrap {
       const { rows } = await tx.execute<{ user_id: string }>(sql`
         delete from familiar_address held
         where held.last_right_at <= ${now.toISOString()}::timestamptz - make_interval(days => ${FAMILIAR_FOR_DAYS})
-          or (
-            select count(*) from familiar_address newer
+          or exists (
+            select 1 from familiar_address newer
             where newer.user_id = held.user_id
               and (newer.last_right_at > held.last_right_at
                 or (newer.last_right_at = held.last_right_at and newer.address < held.address))
-          ) >= ${FAMILIAR_AT_MOST}
+            offset ${FAMILIAR_AT_MOST - 1}
+          )
         returning held.user_id`)
       if (rows.length === 0) return 0
       const recorded = await recordInstallActivity(tx, {
