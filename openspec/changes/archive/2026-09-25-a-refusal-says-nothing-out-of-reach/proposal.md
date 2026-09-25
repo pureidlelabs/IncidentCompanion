@@ -10,4 +10,4 @@ The guard on a sent report's parts read the report a part named before row-level
 
 ## Impact
 
-- The store's guard on a sent report's parts reads the report a part joins only after row security has admitted the part, and refuses a report outside the part's own case as the boundary refuses.
+- The store's guard on a sent report's parts reads the report a part joins only for a part row security admits, and refuses a report outside the part's own case as a missing one.

@@ -688,7 +688,7 @@
 | The application cannot reach a row it should not, even by mistake | A new table holding case data is added | undemonstrated | |
 | The application cannot reach a row it should not, even by mistake | An operation names a case its caller does not reach | undemonstrated | |
 | The application cannot reach a row it should not, even by mistake | Nobody is named as asking | undemonstrated | |
-| The application cannot reach a row it should not, even by mistake | A write names a row of a case its caller does not reach | demonstrated | server/test/a-sent-report-says-nothing-to-a-writer-out-of-its-reach.test.ts :: a part naming a sent report out of the writer's reach > refuses it through the routes, naming nothing of it |
+| The application cannot reach a row it should not, even by mistake | A write names a row of a case its caller does not reach | demonstrated | server/test/a-sent-report-says-nothing-to-a-writer-out-of-its-reach.test.ts :: a part naming a sent report out of the writer's reach > refuses it through the routes, naming nothing of it ; server/test/a-sent-report-says-nothing-to-a-writer-out-of-its-reach.test.ts :: a part naming a sent report out of the writer's reach > refuses it at the store as it refuses a report that does not exist, naming nothing and waiting on nothing |
 | Changing the shape of the store is a separate power | The application attempts to change the schema | undemonstrated | |
 | Changing the shape of the store is a separate power | A schema change is applied | undemonstrated | |
 | A version is what a write is checked against, and it lives with the row | A write and its record are one act | undemonstrated | |

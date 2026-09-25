@@ -12,6 +12,9 @@ const TAG = `${String(process.pid)}-${String(Date.now()).slice(-6)}`
 const SECRET = `Board report ${TAG}`
 const NOWHERE = '00000000-0000-4000-8000-000000000000'
 
+/** Every field of a refusal a caller reads, down to where it was raised. */
+const FIELDS = ['code', 'message', 'detail', 'hint', 'where', 'routine', 'schema', 'table', 'column', 'constraint']
+
 describe.skipIf(!(await bootable()))("a part naming a sent report out of the writer's reach", () => {
   let harness: Harness
   let prober: Persona
@@ -55,18 +58,22 @@ describe.skipIf(!(await bootable()))("a part naming a sent report out of the wri
 
   /**
    * What the store answers the prober, scoped to their own case, when a part in
-   * `caseId` names `reportId` by `write`; and whether the named report could be
-   * locked while that transaction stood refused.
+   * `caseId` names `reportId` by `write`, while another session holds the other
+   * case's report for update. A write that waits on it answers `55P03`.
    */
   async function storeAnswer(write: 'insert' | 'update', caseId: string, reportId: string) {
+    const holder = await seed.connect()
     const client = await app.connect()
     try {
+      await holder.query('begin')
+      await holder.query('select 1 from reports where id = $1 for update', [theirReport])
       await client.query('begin')
+      await client.query(`set local lock_timeout = '300ms'`)
       await client.query(`select set_config('app.case_id', $1, true), set_config('app.principal', $2, true)`, [
         ourCase,
         prober.id,
       ])
-      const answer = await client
+      return await client
         .query(
           write === 'insert'
             ? 'insert into report_blocks (case_id, report_id) values ($1, $2)'
@@ -74,44 +81,44 @@ describe.skipIf(!(await bootable()))("a part naming a sent report out of the wri
           write === 'insert' ? [caseId, reportId] : [caseId, reportId, ourPart],
         )
         .then(
-          () => ({ code: 'answered' }),
-          (error: { code?: string; message?: string; detail?: string }) => ({
-            code: error.code,
-            message: error.message,
-            detail: error.detail,
-          }),
+          (): Record<string, unknown> => ({ code: 'answered' }),
+          (error: Record<string, unknown>) => Object.fromEntries(FIELDS.map((field) => [field, error[field]])),
         )
-      const locked = await seed
-        .query('select 1 from reports where id = $1 for update nowait', [reportId])
-        .then(
-          () => false,
-          (error: { code?: string }) => error.code === '55P03',
-        )
-      return { answer, locked }
     } finally {
       await client.query('rollback')
       client.release()
+      await holder.query('rollback')
+      holder.release()
     }
   }
 
-  it('refuses it at the store as it refuses a report that does not exist, naming nothing and locking nothing', async () => {
-    for (const [write, caseId] of [
-      ['insert', theirCase],
-      ['insert', ourCase],
-      ['update', theirCase],
-      ['update', ourCase],
+  it('refuses it at the store as it refuses a report that does not exist, naming nothing and waiting on nothing', async () => {
+    for (const [write, caseId, code] of [
+      ['insert', theirCase, '42501'],
+      ['insert', ourCase, '23503'],
+      ['update', theirCase, '42501'],
+      ['update', ourCase, '23503'],
     ] as const) {
       const theirs = await storeAnswer(write, caseId, theirReport)
       const nothing = await storeAnswer(write, caseId, NOWHERE)
 
-      expect(theirs.answer, `an ${write} into ${caseId === ourCase ? 'their own' : 'the other'} case`).toEqual(
-        nothing.answer,
-      )
-      expect(theirs.answer.code).toBe('42501')
-      expect(JSON.stringify(theirs.answer)).not.toContain(theirReport)
-      expect(JSON.stringify(theirs.answer)).not.toContain(SECRET)
-      expect(theirs.locked, "the refused write held a lock on the other case's report").toBe(false)
+      const into = `an ${write} into ${caseId === ourCase ? 'their own' : 'the other'} case`
+      expect(theirs['code'], `${into} waited on the other case's report`).not.toBe('55P03')
+      expect(theirs, into).toEqual(nothing)
+      expect(theirs['code'], into).toBe(code)
+      expect(JSON.stringify(theirs)).not.toContain(theirReport)
+      expect(JSON.stringify(theirs)).not.toContain(SECRET)
     }
+  })
+
+  it('refuses the seeding role, which no scope confines, a part naming a report of another case', async () => {
+    const refused = await seed
+      .query('insert into report_blocks (case_id, report_id) values ($1, $2)', [ourCase, theirReport])
+      .then(
+        () => 'answered',
+        (error: { code?: string }) => error.code,
+      )
+    expect(refused).toBe('23503')
   })
 
   it('refuses it through the routes, naming nothing of it', async () => {

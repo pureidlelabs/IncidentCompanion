@@ -51,6 +51,9 @@ export const storeGuards: readonly string[] = [
   // Before row security, the report a part leaves; after it, the one it joins,
   // so no case the writer does not reach is read. Only the first asks the
   // freeze: a store-issued write never moves a part between reports.
+  // A report outside the part's case is refused as a missing one, before the
+  // foreign key would lock it; for the app role only where its write policy
+  // admits the row, so any other row gets that policy's own refusal.
   `create or replace function refuse_a_part_of_a_sent_report() returns trigger
      language plpgsql security definer set search_path = pg_catalog as $$
    declare
@@ -59,9 +62,13 @@ export const storeGuards: readonly string[] = [
    begin
      if tg_when = 'BEFORE' then
        if tg_op <> 'DELETE'
+          and (session_user::text <> 'ic_app'
+               or (new.case_id = nullif(current_setting('app.case_id', true), '')::uuid
+                   and (select r.present and r.level in ('write', 'delete')
+                          from public.ic_reach(public.ic_principal(), new.case_id) r)))
           and not exists (select 1 from public.reports where id = new.report_id and case_id = new.case_id) then
-         raise exception 'new row violates row-level security policy for table "report_blocks"'
-           using errcode = '42501';
+         raise exception 'insert or update on table "report_blocks" names no report of its case'
+           using errcode = '23503';
        end if;
        if tg_op <> 'INSERT'
           and (pg_trigger_depth() < 2 or not public.the_freeze_passes(old.case_id, to_jsonb(old), to_jsonb(new))) then
