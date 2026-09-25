@@ -7,7 +7,7 @@
  */
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
 import { APIError, createAuthMiddleware, getIP, getSessionFromCtx } from 'better-auth/api'
-import { type SQL, and, eq, gt, isNull, lte, or, sql } from 'drizzle-orm'
+import { type SQL, TransactionRollbackError, and, eq, gt, isNull, lte, or, sql } from 'drizzle-orm'
 
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
 import { recordInstallActivity } from '../install-activity/record.js'
@@ -238,9 +238,10 @@ async function startAgain(
 /**
  * One more failure in `counted`'s run, unless it is a wrong password the run
  * already holds; the failure reaching the install's threshold locks the run in
- * the same statement. Writes `account_locked` then, with the address of the
- * call being answered. `undefined` counts nothing, at the cost of the same
- * statements.
+ * the same statement. Writes `account_locked` then, in the same transaction
+ * and with the address of the call being answered, and takes no lock where
+ * that line cannot be written. `undefined` counts nothing, at the cost of the
+ * same statements.
  */
 async function countAgainst(
   db: Database,
@@ -263,7 +264,12 @@ async function countAgainst(
   })
   const first = lockWhen(sql`1`, sql`0`)
   const next = lockWhen(sql`${lockout}.failures + 1`, sql`${lockout}.locks`)
-  const { rows } = await db.execute<{ failures: number; locked_until: string | Date | null }>(sql`
+  await db
+    .transaction(async (tx) => {
+      const { rows } = await tx.execute<{
+        failures: number
+        locked_until: string | Date | null
+      }>(sql`
     insert into ${lockout} (user_id, familiar, failures, locks, locked_until, misses)
     select ${counted?.id ?? null}::text, ${counted?.familiar ?? false}::boolean,
       case when ${first.reached} then 0 else 1 end,
@@ -279,22 +285,28 @@ async function countAgainst(
     where not (${miss}::text = any(${lockout}.misses))
       and (${lockout}.locked_until is null or ${lockout}.locked_until <= ${at})
     returning coalesce(old.failures, 0) + 1 as failures, locked_until`)
-  const lockedUntil = asDate(rows[0]?.locked_until)
-  if (!counted || !lockedUntil || !isLocked(lockedUntil, now)) return
+      const lockedUntil = asDate(rows[0]?.locked_until)
+      if (!counted || !lockedUntil || !isLocked(lockedUntil, now)) return
 
-  await recordInstallActivity(db, {
-    event: 'account_locked',
-    target: counted.email,
-    detail: {
-      failures: String(rows[0]?.failures),
-      minutes: String(Math.round((lockedUntil.getTime() - now.getTime()) / 60_000)),
-      sources: counted.familiar ? 'familiar' : 'unfamiliar',
-    },
-    headers: Object.fromEntries(
-      (tryGetCurrentAuthEndpointContext() as { headers?: Headers } | undefined)?.headers?.entries() ??
-        [],
-    ),
-  })
+      const recorded = await recordInstallActivity(tx, {
+        event: 'account_locked',
+        target: counted.email,
+        detail: {
+          failures: String(rows[0]?.failures),
+          minutes: String(Math.round((lockedUntil.getTime() - now.getTime()) / 60_000)),
+          sources: counted.familiar ? 'familiar' : 'unfamiliar',
+        },
+        headers: Object.fromEntries(
+          (
+            tryGetCurrentAuthEndpointContext() as { headers?: Headers } | undefined
+          )?.headers?.entries() ?? [],
+        ),
+      })
+      if (!recorded) tx.rollback()
+    })
+    .catch((why: unknown) => {
+      if (!(why instanceof TransactionRollbackError)) throw why
+    })
 }
 
 /** A date the adapter may hand over as a `Date` or as the string it stored. */

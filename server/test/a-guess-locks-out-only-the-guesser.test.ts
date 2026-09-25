@@ -9,12 +9,14 @@
 import { randomUUID } from 'node:crypto'
 
 import { and, eq, inArray, sql } from 'drizzle-orm'
+import { Client } from 'pg'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import type { Database } from '../src/db/client.js'
 import { DATABASE } from '../src/db/db.module.js'
 import { installActivity, signInLockout, user } from '../src/db/schema/index.js'
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
+import { ADMIN_URL } from './global-setup.js'
 
 const PASSWORD = 'the-holders-own-password'
 const THRESHOLD = 4
@@ -257,6 +259,50 @@ describe.skipIf(!(await bootable()))('guessing at an account from machines on th
       await statusFrom(guesser, counted, PASSWORD),
       'a repeated wrong password counted as nothing at all',
     ).toBe(401)
+
+    const afterAnother = await anAccount()
+    await guessFrom(guesser, afterAnother, 1)
+    for (let i = 0; i < THRESHOLD + 2; i += 1) {
+      expect(await statusFrom(guesser, afterAnother, 'the-same-wrong-password')).toBe(401)
+    }
+    expect(
+      await statusFrom(guesser, afterAnother, PASSWORD),
+      'a wrong password repeated after another failure locked the account',
+    ).toBe(200)
+  }, 60_000)
+
+  it('writes no lock the audit log cannot record', async () => {
+    const email = await anAccount()
+    const guesser = machine(66)
+    const onTestDatabase = new URL(process.env.DATABASE_URL ?? '')
+    const owner = new URL(ADMIN_URL)
+    onTestDatabase.username = owner.username
+    onTestDatabase.password = owner.password
+    const admin = new Client({ connectionString: onTestDatabase.toString() })
+    await admin.connect()
+    const name = `refuse_${randomUUID().slice(0, 8)}`
+    try {
+      await admin.query(`
+        create function ${name}() returns trigger language plpgsql as $$
+        begin raise exception 'audit log refused'; end $$`)
+      await admin.query(
+        `create trigger ${name} before insert on install_activity for each row
+         when (new.event = 'account_locked' and new.target_label = '${email}') execute function ${name}()`,
+      )
+      await guessFrom(guesser, email, THRESHOLD)
+    } finally {
+      await admin.query(`drop trigger if exists ${name} on install_activity`)
+      await admin.query(`drop function if exists ${name}()`)
+      await admin.end()
+    }
+
+    const [run] = await db
+      .select({ lockedUntil: signInLockout.lockedUntil })
+      .from(signInLockout)
+      .innerJoin(user, eq(user.id, signInLockout.userId))
+      .where(eq(user.email, email))
+    expect(run?.lockedUntil ?? null, 'a lock was written with no audit line').toBeNull()
+    expect(await locksOf(email)).toEqual([])
   }, 60_000)
 
   it("makes each lock that follows another longer, up to the install's maximum", async () => {
