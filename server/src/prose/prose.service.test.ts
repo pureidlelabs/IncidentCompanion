@@ -399,12 +399,23 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       const address = reportDocument(reportId)
       await prose.open(caseId, address)
       await prose.apply(caseId, address, framed(typed('into a report about to go').update), 'a-socket', WRITER)
-      await seed!.delete(reports).where(eq(reports.id, reportId))
-
-      await expect(prose.seal(caseId, reportId)).rejects.toThrow('could not be stored')
-      expect(await prose.apply(caseId, address, framed(typed('after').update), 'a-socket', WRITER)).toEqual({
-        reply: null,
-      })
+      // The audit refuses the save's line, so what was typed cannot be stored.
+      const owner = openTestPool(process.env['TEST_DATABASE_URL']!)
+      const refusal = `refuse_the_send_${String(process.pid)}`
+      await owner.query(
+        `create or replace function ${refusal}() returns trigger language plpgsql as $f$ begin if new.detail->>'record' = '${reportId}' then raise exception 'the audit refuses this line'; end if; return new; end $f$`,
+      )
+      await owner.query(`create trigger ${refusal} before insert on install_activity for each row execute function ${refusal}()`)
+      try {
+        await expect(prose.seal(caseId, reportId)).rejects.toThrow('could not be stored')
+        expect(await prose.apply(caseId, address, framed(typed('after').update), 'a-socket', WRITER)).toEqual({
+          reply: null,
+        })
+      } finally {
+        await owner.query(`drop trigger if exists ${refusal} on install_activity`)
+        await owner.query(`drop function if exists ${refusal}()`)
+        await owner.end()
+      }
       await prose.release(caseId, address)
     })
 

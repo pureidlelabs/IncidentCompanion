@@ -31,7 +31,7 @@ export const proseAcceptances = pgTable(
   },
   (t) => {
     const principal = sql`nullif(current_setting('app.principal', true), '')`
-    const expired = sql`${t.acceptedAt} <= now() - ${sql.raw(`interval '${ACCEPTANCE_LASTS}'`)}`
+    const expired = sql`${t.acceptedAt} <= now() - ${ACCEPTANCE_LASTS}`
     return [
       index('prose_acceptances_record_idx').on(t.recordId),
       check('prose_acceptances_entity', sql`${t.entity} in ('reports', 'casenotes')`),

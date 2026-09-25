@@ -118,12 +118,19 @@ function isProseTable(name: string): name is ProseTable {
   return (PROSE_TABLES as readonly string[]).includes(name)
 }
 
-const QUIET_MS = 750
+/** How the store of a held document is paced. */
+export const PROSE_PACE = {
+  /** The pause in writing a save waits for. */
+  quietMs: 750,
+  /** The longest a stream of writing defers a save. */
+  longestWaitMs: 5_000,
+  /** How long a held document waits between failed saves. */
+  retryMs: 5 * 60 * 1000,
+  /** How often a document holding acceptances keeps them current, well inside how long one lasts. */
+  keepCurrentMs: 60 * 60 * 1000,
+} as const
 
-/** How long a held document waits between failed saves; each one keeps its acceptances current. */
-const RETRY_MS = 5 * 60 * 1000
-
-/** Removes every acceptance past `ACCEPTANCE_LASTS`, in any case, as a definer act. */
+/** Removes every lapsed acceptance, in any case, as a definer act. */
 const sweepLapsed = sql`select ic_sweep_acceptances()`
 
 /**
@@ -174,6 +181,10 @@ interface LiveDocument {
   doc: Y.Doc
   readers: number
   timer: NodeJS.Timeout | null
+  /** When the first update no save has taken arrived, or null. */
+  unsavedSince: number | null
+  /** Keeps `acceptances` current while there are any. */
+  keeper: NodeJS.Timeout | null
   dirty: boolean
   unsubscribe: (() => void) | null
   /** When the report was sent; a note is never sent. */
@@ -410,6 +421,8 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       doc,
       readers: 1,
       timer: null,
+      unsavedSince: null,
+      keeper: null,
       dirty: false,
       unsubscribe: null,
       sealed,
@@ -425,10 +438,15 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
         return
       }
       entry.dirty = true
-      if (entry.timer) clearTimeout(entry.timer)
-      entry.timer = setTimeout(() => {
-        void this.flush(caseId, address)
-      }, QUIET_MS)
+      const now = Date.now()
+      entry.unsavedSince ??= now
+      // A stream of writing past the longest wait leaves the pending save alone.
+      if (!entry.timer || now - entry.unsavedSince < PROSE_PACE.longestWaitMs) {
+        if (entry.timer) clearTimeout(entry.timer)
+        entry.timer = setTimeout(() => {
+          void this.flush(caseId, address)
+        }, PROSE_PACE.quietMs)
+      }
 
       // **Not what another instance just told us.** Publishing it back is an
       // echo every instance would forward again.
@@ -554,6 +572,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
     held.unsubscribe?.()
     this.live.delete(key)
     held.doc.destroy()
+    if (held.keeper) clearInterval(held.keeper)
     if (!held.dirty && held.acceptances.length > 0) await this.forget(caseId, address, held.acceptances)
   }
 
@@ -628,6 +647,9 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
           ),
         )
         held.acceptances.push(row!.id)
+        held.keeper ??= setInterval(() => {
+          void this.keepCurrent(caseId, address, held.acceptances)
+        }, PROSE_PACE.keepCurrentMs)
       } catch (error) {
         held.accepted.delete(writer.id)
         throw error
@@ -806,6 +828,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
     held.accepted = new Set()
     held.acceptances = []
     held.dirty = false
+    held.unsavedSince = null
     // Null where the account is gone, as it would be had it gone after the write.
     const account = (id: string) => sql<string | null>`(select ${user.id} from ${user} where ${user.id} = ${id})`
     const by = writers.at(-1)
@@ -817,6 +840,9 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       // whoever asks, under their own reach.
       const scope = writers.length > 0 ? unattended : <T>(work: () => T) => work()
       const stored = await scope(() => withCase(this.db, caseId, async (tx) => {
+        // A save that cannot finish fails, and takes the failure path, rather than holding words.
+        await tx.execute(sql`set local lock_timeout = '5s'`)
+        await tx.execute(sql`set local statement_timeout = '30s'`)
         if (writers.length > 0) {
           await tx.execute(sweepLapsed)
           await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
@@ -877,7 +903,18 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       return stored
     }
     try {
-      if (!(await write())) throw new Error('its row is gone')
+      const stored = await write()
+      if (!stored && writers.length === 0) throw new Error('its row is gone')
+      if (held.acceptances.length === 0 && held.keeper) {
+        clearInterval(held.keeper)
+        held.keeper = null
+      }
+      if (!stored) {
+        // Deleted prose is not kept: nothing is held for it, and nothing retries.
+        await this.forget(caseId, address, acceptances)
+        this.log.warn(`${recordOf(address)} is gone, so what was written into it is not kept`)
+        return
+      }
       if (writers.length > 0) this.saved?.(caseId, address)
     } catch (error) {
       // Sent by a path this document did not see: nothing more is taken.
@@ -890,6 +927,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       // reader leaving or shutdown tries once more. Swallowing it silently is
       // how a report loses an afternoon to a transient database error nobody saw.
       held.dirty = true
+      held.unsavedSince = null
       held.acceptances = [...acceptances, ...held.acceptances]
       for (const writer of writers) held.accepted.add(writer.id)
       held.writers = new Map([
@@ -906,7 +944,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
         if (held.timer) clearTimeout(held.timer)
         held.timer = setTimeout(() => {
           void this.flush(caseId, address)
-        }, RETRY_MS)
+        }, PROSE_PACE.retryMs)
       }
     }
   }
@@ -917,6 +955,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
    * lapsed stays lapsed, and is logged.
    */
   private async keepCurrent(caseId: string, address: ProseRecord, acceptances: readonly string[]): Promise<void> {
+    if (acceptances.length === 0) return
     try {
       const kept = await unattended(() =>
         withCase(this.db, caseId, async (tx) => {
@@ -950,6 +989,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
     for (const [key, holding] of this.live) {
       const held = await holding
       if (held.timer) clearTimeout(held.timer)
+      if (held.keeper) clearInterval(held.keeper)
       // A save the last reader leaving started is waited for, not left to a closing pool.
       if (!held.dirty) {
         await held.saving
@@ -957,6 +997,8 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       }
       const [caseId, table, id] = key.split('/') as [string, ProseTable, string]
       await this.flush(caseId, { table, id })
+      // A failed save arms a retry, which would hold the process open.
+      if (held.timer) clearTimeout(held.timer)
     }
   }
 }

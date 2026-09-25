@@ -188,6 +188,8 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
   const FOR_NOBODY = ['ic_artefacts_named']
   /** Acts that remove only what has lapsed, whoever asks. */
   const LAPSED_ONLY = ['ic_sweep_acceptances']
+  /** Acts that answer a constant of the store's and read nothing. */
+  const CONSTANTS = ['ic_acceptance_lasts']
 
   const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
   const admin = `acts-admin-${String(process.pid)}-${String(Date.now())}`
@@ -235,7 +237,7 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
     expect(
       rows.map((one) => one.name),
       'an act the app role may call is in no class here, so nobody decided who it answers',
-    ).toEqual([...PER_PRINCIPAL, ...Object.keys(ADMINISTRATOR_ONLY), ...FOR_NOBODY, ...LAPSED_ONLY].sort())
+    ).toEqual([...PER_PRINCIPAL, ...Object.keys(ADMINISTRATOR_ONLY), ...FOR_NOBODY, ...LAPSED_ONLY, ...CONSTANTS].sort())
   })
 
   it.each(['refuse_a_change_to_a_sent_report', 'refuse_a_part_of_a_sent_report'])(
@@ -549,7 +551,7 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by
         lapsed: await refresh(sql`id = ${old}`),
         anotherRecord: await refresh(sql`id = ${elsewhere}`),
         later: await refresh(sql`record_id = ${accepted} and id <> ${old}`, sql`accepted_at = now() + interval '1 day'`),
-        anotherWriter: await refresh(sql`record_id = ${accepted} and id <> ${old}`, sql`writer_id = ${victim}`),
+        anotherWriter: await refresh(sql`record_id = ${accepted} and id <> ${old}`, sql`writer_id = ${victim}, accepted_at = now()`),
       }).toEqual({ current: 1, lapsed: 0, anotherRecord: 0, later: '42501', anotherWriter: '42501' })
     } finally {
       await seed().delete(proseAcceptances).where(inArray(proseAcceptances.id, [old, elsewhere]))

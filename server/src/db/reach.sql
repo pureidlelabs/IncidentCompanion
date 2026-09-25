@@ -26,7 +26,8 @@ drop function if exists
   public.ic_move_cases(uuid, uuid),
   public.ic_cases_tallied(),
   public.ic_artefacts_named(),
-  public.ic_sweep_acceptances();
+  public.ic_sweep_acceptances(),
+  public.ic_acceptance_lasts();
 
 -- The level `principal` holds over `owner` by role alone, or null: an account
 -- reaches the default customer, an administrator at delete and anybody else at
@@ -211,16 +212,23 @@ as $$
    where r.frozen is not null
 $$;
 
--- Removes every prose acceptance past its hour, whatever case it is in, and
--- answers nothing: the application asks for it naming nobody, so it can see
--- none of the rows it removes. The hour is `ACCEPTANCE_LASTS` in
--- `schema/scoped.ts`, which the policies read.
+-- How long a prose acceptance authorises storing what it accepted, and the
+-- one place that says so: the policies and the sweep both ask it.
+create or replace function public.ic_acceptance_lasts()
+returns interval
+language sql immutable
+set search_path = pg_catalog, pg_temp
+as $$ select interval '24 hours' $$;
+
+-- Removes every prose acceptance past its lasting, whatever case it is in,
+-- and answers nothing: the application asks for it naming nobody, so it can
+-- see none of the rows it removes.
 create or replace function public.ic_sweep_acceptances()
 returns void
 language sql volatile security definer
 set search_path = pg_catalog, pg_temp
 as $$
-  delete from public.prose_acceptances where accepted_at <= now() - interval '1 hour'
+  delete from public.prose_acceptances where accepted_at <= now() - public.ic_acceptance_lasts()
 $$;
 
 revoke all on function
@@ -235,7 +243,8 @@ revoke all on function
   public.ic_move_cases(uuid, uuid),
   public.ic_cases_tallied(),
   public.ic_artefacts_named(),
-  public.ic_sweep_acceptances()
+  public.ic_sweep_acceptances(),
+  public.ic_acceptance_lasts()
 from public;
 
 grant execute on function
@@ -250,12 +259,12 @@ grant execute on function
   public.ic_move_cases(uuid, uuid),
   public.ic_cases_tallied(),
   public.ic_artefacts_named(),
-  public.ic_sweep_acceptances()
+  public.ic_sweep_acceptances(),
+  public.ic_acceptance_lasts()
 to ic_app, ic_seed;
 
--- The policies every role meets on the tables prose is stored in call this,
--- so the prose role must be able to run it; it names nobody, so it reaches
--- nothing through them.
-grant execute on function public.ic_reach(text, uuid) to ic_prose;
+-- The policies the prose role meets call these. It names nobody, so reach
+-- answers it nothing.
+grant execute on function public.ic_reach(text, uuid), public.ic_acceptance_lasts() to ic_prose;
 
 reset check_function_bodies;
