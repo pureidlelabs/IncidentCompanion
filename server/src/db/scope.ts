@@ -74,8 +74,9 @@ export function actingAs<T>(who: string | (() => string | null | undefined), wor
 }
 
 /**
- * Run `work` naming nobody. Only a role the policies exempt reaches a case
- * this way, which is the seeding role and nothing that serves a request.
+ * Run `work` naming nobody. Only a role whose policies do not ask who is
+ * asking reaches a case this way: the seeding role, and the role accepted
+ * prose is stored as.
  */
 export function unattended<T>(work: () => T): T {
   return acting.run(() => null, work)

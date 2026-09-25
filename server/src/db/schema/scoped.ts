@@ -39,6 +39,56 @@ const inScope = (caseId: PgColumn, needed: (typeof LEVELS)[number]): SQL =>
 const seeder = (): ReturnType<typeof pgPolicy> =>
   pgPolicy('seeder_writes_across_cases', { to: 'ic_seed', using: sql`true`, withCheck: sql`true` })
 
+/** The role accepted prose is stored as. -> `openspec/specs/live/design.md` */
+export const PROSE_ROLE = 'ic_prose'
+
+/** The record whose accepted prose is being stored, as text, or null. */
+const acceptedRecord = sql`nullif(current_setting('app.prose_record', true), '')`
+
+/**
+ * Spread into a table the prose role writes: it reaches only rows of the
+ * accepted record, in the case in scope, and only for `commands`.
+ *
+ * The first policy is restrictive, so a permissive policy granted to everybody
+ * cannot widen what the role reaches.
+ */
+export function proseKept(
+  caseId: PgColumn,
+  record: PgColumn,
+  commands: readonly ('select' | 'insert' | 'update')[],
+): ReturnType<typeof pgPolicy>[] {
+  const accepted = sql`${caseId} = ${currentCase} and ${record}::text = ${acceptedRecord}`
+  return [
+    pgPolicy('prose_reaches_only_the_accepted_record', {
+      as: 'restrictive',
+      to: PROSE_ROLE,
+      using: accepted,
+      withCheck: accepted,
+    }),
+    ...commands.map((command) =>
+      pgPolicy(`prose_${command}s_the_accepted_record`, {
+        for: command,
+        to: PROSE_ROLE,
+        ...(command === 'insert' ? {} : { using: accepted }),
+        ...(command === 'select' ? {} : { withCheck: accepted }),
+      }),
+    ),
+  ]
+}
+
+/**
+ * The same, for the audit, whose rows name their case and record in `detail`
+ * rather than in a column.
+ */
+export function proseAudited(detail: PgColumn): ReturnType<typeof pgPolicy> {
+  return pgPolicy('prose_audits_only_the_accepted_record', {
+    as: 'restrictive',
+    for: 'insert',
+    to: PROSE_ROLE,
+    withCheck: sql`${detail}->>'case' = ${currentCase}::text and ${detail}->>'record' = ${acceptedRecord}`,
+  })
+}
+
 /**
  * Spread into the config of a table whose rows each belong to one case.
  *

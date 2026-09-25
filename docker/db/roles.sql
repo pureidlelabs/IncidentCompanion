@@ -53,12 +53,23 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ic_app') THEN
     CREATE ROLE ic_app LOGIN NOSUPERUSER NOBYPASSRLS;
   END IF;
+
+  -- Stores prose the app accepted, whatever its writers reach by then. No
+  -- login: the app enters it for one save at a time. Its column grants are the
+  -- schema step's, since no table exists when this runs.
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ic_prose') THEN
+    CREATE ROLE ic_prose NOLOGIN NOSUPERUSER NOBYPASSRLS;
+  END IF;
 END
 $$;
 
+-- **Entered, never inherited.** Inheriting would put the prose policies on
+-- every query the app makes, and the prose grants beside its own.
+GRANT ic_prose TO ic_app WITH INHERIT FALSE, SET TRUE;
+
 -- The schema belongs to the migration role; the other two are granted use of
 -- what it creates, per table, by the migration that creates them.
-GRANT USAGE ON SCHEMA public TO ic_app, ic_seed;
+GRANT USAGE ON SCHEMA public TO ic_app, ic_seed, ic_prose;
 
 -- **No default CREATE on the schema.** Postgres grants it to PUBLIC on
 -- `public` historically; revoking it is what stops the app role creating a

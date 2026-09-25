@@ -20,6 +20,7 @@ import { PgTable } from 'drizzle-orm/pg-core'
 import pg from 'pg'
 
 import * as declared from '../src/db/schema/index.js'
+import { proseGrants } from '../src/db/schema/prose-grants.js'
 import { storeGuards } from '../src/db/schema/store-guards.js'
 
 // Loaded as CommonJS under tsx, where the exports sit on `default`.
@@ -202,7 +203,7 @@ export async function applySchema(url: string): Promise<Outcome> {
       return { kind: 'refused', statements: refused }
     }
 
-    for (const statement of [...sqlStatements, ...storeGuards]) await client.query(statement)
+    for (const statement of [...sqlStatements, ...storeGuards, ...proseGrants]) await client.query(statement)
 
     const onlyPolicies = sqlStatements.every((statement) => /^CREATE POLICY\b/i.test(statement.trim()))
     if (onlyPolicies && (await shape(client)) === before) {
@@ -210,7 +211,7 @@ export async function applySchema(url: string): Promise<Outcome> {
       return { kind: 'unchanged' }
     }
     await client.query('commit')
-    return { kind: 'applied', statements: sqlStatements.length + storeGuards.length }
+    return { kind: 'applied', statements: sqlStatements.length + storeGuards.length + proseGrants.length }
   } catch (error) {
     await client.query('rollback').catch(() => undefined)
     throw error

@@ -238,4 +238,9 @@ grant execute on function
   public.ic_artefacts_named()
 to ic_app, ic_seed;
 
+-- The policies every role meets on the tables prose is stored in call this,
+-- so the prose role must be able to run it; it names nobody, so it reaches
+-- nothing through them.
+grant execute on function public.ic_reach(text, uuid) to ic_prose;
+
 reset check_function_bodies;

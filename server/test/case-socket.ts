@@ -24,7 +24,8 @@ export async function until(done: () => boolean, what: string, ms = 1_000): Prom
   expect(done(), what).toBe(true)
 }
 
-function asked(): string {
+/** What an editor opening a document asks first: everything, since it holds nothing. */
+export function asked(): string {
   const encoder = encoding.createEncoder()
   writeSyncStep1(encoder, new Y.Doc())
   return Buffer.from(encoding.toUint8Array(encoder)).toString('base64')

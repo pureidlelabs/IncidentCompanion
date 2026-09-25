@@ -37,7 +37,9 @@ Whether a caller may reach something MUST be decided once, never re-decided by e
 
 Access MUST be refused unless something explicitly grants it, and every grant MUST be a decision somebody made rather than a default somebody inherited.
 
-**One grant is the system's own, and it is the only one.** Work that has not yet been attributed to anybody belongs to whoever can act on it, and reach to it is a property of the system rather than a decision about a person. That grant MUST reach nothing that has been attributed: the moment work belongs to somebody identified, it leaves, and reach to it is decided like everything else. Any second exception to this article is an amendment, not an interpretation.
+**One grant is the system's own.** Work that has not yet been attributed to anybody belongs to whoever can act on it, and reach to it is a property of the system rather than a decision about a person. That grant MUST reach nothing that has been attributed: the moment work belongs to somebody identified, it leaves, and reach to it is decided like everything else.
+
+**Reach is decided when a change is accepted, and keeping it is not a second decision.** A change the system accepted from somebody it reached at that moment MUST be kept, attributed to them, even where their reach ends before it is stored. Whatever keeps it MUST be able to store that change, into the record and the case it was accepted into, and nothing else: it serves no caller and reaches nothing the system did not accept. Any further exception to this article is an amendment, not an interpretation.
 
 **Rationale:** A rule spread across its enforcement points is re-audited whenever one is added, and that audit is the step that gets skipped.
 
@@ -146,4 +148,4 @@ Promotion is an amendment and takes a MINOR bump. Nothing is promoted because it
 
 **Compliance.** Code that violates an article is the highest-severity finding available. An article that has come to name a mechanism, or to describe what the code does today, has drifted into specification and is rewritten as a property.
 
-**Version**: 1.1.0 | **Ratified**: TODO(RATIFICATION_DATE): awaiting maintainer sign-off | **Last Amended**: 2026-09-24
+**Version**: 1.2.0 | **Ratified**: TODO(RATIFICATION_DATE): awaiting maintainer sign-off | **Last Amended**: 2026-09-25

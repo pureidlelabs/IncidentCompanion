@@ -30,6 +30,7 @@ import {
 import { sql } from 'drizzle-orm'
 
 import { user } from './auth.js'
+import { proseAudited } from './scoped.js'
 
 /**
  * What happened. One value per thing this install can have done to it.
@@ -456,6 +457,7 @@ export const installActivity = pgTable(
     // cursor, ascending, within one log.
     index('install_activity_channel_seq_idx').on(table.channel, table.seq),
     ...appendOnly(),
+    proseAudited(table.detail),
   ],
 )
 
