@@ -88,13 +88,15 @@ const HALVES = [
   SENTENCE.slice(SENTENCE.indexOf(' and ', SENTENCE.length / 2) + ' and '.length),
 ]
 
+const EXTENSION: Readonly<Record<string, string>> = { markdown: 'md', word: 'docx', pdf: 'pdf' }
+
 /** Markdown escapes brackets and backslashes, so every comparison is made without them. */
 const plain = (text: string) => text.replaceAll('\\', '')
 
 describe.skipIf(!(await bootable()))('a report carries no live address in any form', () => {
   let harness: Harness
   let admin: Persona
-  const painted: Record<string, string> = {}
+  let base = ''
 
   const send = async (path: string, body: unknown) => {
     const answer = await fetch(`${harness.base}${path}`, {
@@ -142,19 +144,24 @@ describe.skipIf(!(await bootable()))('a report carries no live address in any fo
       await send(`/api/cases/${caseId}/report_blocks`, { reportId, kind })
     }
 
-    const base = `/api/cases/${caseId}/report`
-    painted['markdown'] = new TextDecoder().decode(await read(`${base}.md?report=${reportId}`))
-    painted['word'] = await wordText(await read(`${base}.docx?report=${reportId}`))
-    painted['pdf'] = pdfText(await read(`${base}.pdf?report=${reportId}`))
+    base = `/api/cases/${caseId}/report.{format}?report=${reportId}`
   }, 120_000)
+
+  /** One export as its reader sees the text, requested from within the case that reads it. */
+  const painted = async (format: string): Promise<string> => {
+    const bytes = await read(base.replace('{format}', EXTENSION[format]!))
+    if (format === 'word') return wordText(bytes)
+    if (format === 'pdf') return pdfText(bytes)
+    return new TextDecoder().decode(bytes)
+  }
 
   afterAll(async () => {
     await harness.close()
   })
 
   describe.each(['markdown', 'word', 'pdf'])('the %s export', (format) => {
-    it('writes every spelling of an address defanged and none live', () => {
-      const text = plain(painted[format]!)
+    it('writes every spelling of an address defanged and none live', async () => {
+      const text = plain(await painted(format))
       const seen = FORMS.map(({ typed, shown, host }) => ({
         typed,
         shown: text.includes(plain(shown)),
@@ -163,8 +170,8 @@ describe.skipIf(!(await bootable()))('a report carries no live address in any fo
       expect(seen).toEqual(FORMS.map(({ typed }) => ({ typed, shown: true, live: false })))
     })
 
-    it('leaves ordinary prose shaped like an address as typed', () => {
-      const text = plain(painted[format]!)
+    it('leaves ordinary prose shaped like an address as typed', async () => {
+      const text = plain(await painted(format))
       expect(PROSE.filter((words) => !text.includes(words))).toEqual([])
     })
   })
@@ -174,8 +181,8 @@ describe.skipIf(!(await bootable()))('a report carries no live address in any fo
    * `www.` name, an `http`, `https` or `ftp` scheme, and an email address. No
    * GFM renderer is a declared dependency, so the triggers are matched instead.
    */
-  it('leaves nothing in the markdown export that GitHub-flavoured Markdown autolinks', () => {
+  it('leaves nothing in the markdown export that GitHub-flavoured Markdown autolinks', async () => {
     const triggers = /(?<![\w.-])(?:www\.|(?:https?|ftp):\/\/)\S+|[\w.+-]+@[\w-]+(?:\.[\w-]+)+/gi
-    expect(painted['markdown']!.match(triggers) ?? []).toEqual([])
+    expect((await painted('markdown')).match(triggers) ?? []).toEqual([])
   })
 })
