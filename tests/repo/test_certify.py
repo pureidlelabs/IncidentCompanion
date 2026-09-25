@@ -361,3 +361,21 @@ def test_a_store_surface_case_counts_only_for_a_state_row_and_only_by_its_exact_
     assert certify.certified(run, "state", ident) is None
     assert certify.certified(run, "report", ident) == f"cites {ident}, {below}"
     assert certify.certified(run, "state", renamed) == f"cites {renamed}, {below}"
+
+
+def test_a_story_counts_only_where_drawn_surface_names_it_for_its_capability(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ident = "ui/src/screens/door.stories.tsx :: A door drawn open"
+    renamed = "ui/src/screens/door.stories.tsx :: A door drawn wide open"
+    stubbed = "ui/src/screens/door.stories.tsx :: A door whose holder is a constant"
+    monkeypatch.setattr(certify, "DRAWN_SURFACE", {(ident, "cases"): "the door being visible is the scenario"})
+    run = certify.Run()
+    for one in (ident, renamed, stubbed):
+        run.cases[one] = certify.Case("screen", "ui/src/screens/door.stories.tsx", "passed")
+    below = "which never reached the product through its entry point"
+
+    assert certify.certified(run, "cases", ident) is None
+    assert certify.certified(run, "report", ident) == f"cites {ident}, {below}"
+    assert certify.certified(run, "cases", renamed) == f"cites {renamed}, {below}"
+    assert certify.certified(run, "cases", stubbed) == f"cites {stubbed}, {below}"
