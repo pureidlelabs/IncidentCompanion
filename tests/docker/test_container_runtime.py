@@ -324,7 +324,7 @@ def _compose(*args, env=None, **kwargs):
     """
     return subprocess.run(
         ["docker", "compose", "-p", PROJECT, "-f", str(STACK), *args],
-        capture_output=True, text=True, env={**os.environ, **checkout.ENV, **(env or {})},
+        capture_output=True, text=True, env={**os.environ, **(env or {}), **checkout.ENV},
         **kwargs)
 
 

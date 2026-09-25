@@ -13,32 +13,46 @@ import subprocess
 
 from tests._repo import REPO_ROOT
 
-#: The highest slot `stack.mjs` hands out.
-MAX_SLOT = 40
 
-SLOT: int = json.loads(subprocess.run(
-    ["node", str(REPO_ROOT / "server" / "scripts" / "stack.mjs"), "--json"],
-    capture_output=True, text=True, check=True).stdout)["slot"]
+def _stack() -> dict:
+    asked = subprocess.run(
+        ["node", str(REPO_ROOT / "server" / "scripts" / "stack.mjs"), "--json"],
+        capture_output=True, text=True)
+    if asked.returncode != 0:
+        raise RuntimeError(f"stack.mjs --json exited {asked.returncode}, so this checkout "
+                           f"has no stack slot to name its containers by:\n{asked.stderr}")
+    return json.loads(asked.stdout)
 
-IMAGE_TAG = "local" if SLOT == 0 else f"slot{SLOT}"
 
-#: What every `docker compose` a tier runs must carry, or it builds `:local`.
-ENV = {"IC_IMAGE_TAG": IMAGE_TAG}
+_STACK = _stack()
+SLOT: int = _STACK["slot"]
+MAX_SLOT: int = _STACK["maxSlot"]
 
 #: A tier's first port. 100 apart, and a slot moves every tier by 300, so no
 #: tier, slot and worker below 100 lands on another's.
 PORT_BASE = {"runtime": 18443, "ingress": 18543, "lockout": 18643}
 
+
 def _worker() -> int:
     return int(os.environ.get("PYTEST_XDIST_WORKER", "gw0").removeprefix("gw"))
+
+
+def tag(slot: int) -> str:
+    return "local" if slot == 0 else f"slot{slot}"
+
+
+IMAGE_TAG = tag(SLOT)
+
+#: What every `docker compose` a tier runs must carry, last, or it builds `:local`.
+ENV = {"IC_IMAGE_TAG": IMAGE_TAG}
 
 
 def image(name: str) -> str:
     return f"incidentcompanion-{name}:{IMAGE_TAG}"
 
 
-def project(tier: str) -> str:
-    return f"incidentcompanion-{tier}-test-{SLOT}-gw{_worker()}"
+def project(tier: str, slot: int = SLOT, worker: int | None = None) -> str:
+    return f"incidentcompanion-{tier}-test-{slot}-gw{_worker() if worker is None else worker}"
 
 
 def port(tier: str, slot: int = SLOT, worker: int | None = None) -> int:
