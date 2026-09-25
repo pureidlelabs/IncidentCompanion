@@ -59,7 +59,6 @@ SingularElementArgument
 SizeInBytes
 TableMap
 ThrottlerRequest
-UPDATE
 USING
 VisuallyHidden
 ZodEffects
