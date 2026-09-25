@@ -2,7 +2,7 @@
 
 ## An identifier has one spelling after it is admitted
 
-An identifier is accepted in either letter case, as a uuid is, and carried from that moment in lower case. Admission takes the connection's case identifier as a uuid and keeps its lower-case form for every key after it: the room, the roster, the claims, the open documents and the audit. A claimed entry is keyed by its identifier in lower case too. Every path parameter spelled as a uuid reaches its handler in lower case, and the case guard, which runs before that, asks and records in lower case too. A connection naming a case by anything that is not a uuid is refused as a path the install does not serve.
+An identifier is accepted in either letter case, as a uuid is, and carried from that moment in lower case. Admission takes the connection's case identifier as a uuid and keeps its lower-case form for every key after it: the room, the roster, the claims, the open documents and the audit. A claimed entry is keyed by its identifier in lower case too. Every path parameter spelled as a uuid reaches its handler in lower case, and the case guard, which runs before that, asks and records in lower case too. A connection naming a case by anything that is not a uuid is refused as a case that is not there, and only once its session has been read: a caller without one is told to sign in whatever the path names.
 
 ## A caret belongs to the connection that announced it
 

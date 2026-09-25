@@ -317,11 +317,16 @@ describe('what it refuses', () => {
 
   it.each([
     ['a path that is not the live socket', '/api/cases/abc/other'],
-    ['a case id that is not a uuid', '/api/cases/not-a-uuid/live'],
     ['the api root', '/api'],
   ])('refuses %s', async (_name, url) => {
     const verdict = await gatewayWith().check(request(url))
     expect(verdict.refused).toBe('no-such-path')
+  })
+
+  /** Only once the session is read: anybody else is told to sign in, whatever the path names. */
+  it('refuses a signed-in caller a case id that is not a uuid as a case that is not there', async () => {
+    expect((await gatewayWith().check(request('/api/cases/not-a-uuid/live'))).refused).toBe('no-such-case')
+    expect((await gatewayWith({ signedIn: false }).check(request('/api/cases/not-a-uuid/live'))).refused).toBe('unauthenticated')
   })
 
   /**

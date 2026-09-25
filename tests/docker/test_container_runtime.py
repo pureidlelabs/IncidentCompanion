@@ -743,10 +743,9 @@ def _upgrade(origin: str, path: str, host: str | None = None) -> int:
     return int(head.split(" ", 2)[1])
 
 
-#: A well-formed uuid that names no case. **The shape matters**: the gateway's
-#: `LIVE_PATH` regex rejects anything that is not a uuid *before* it checks the
-#: origin, so `does-not-exist` answers 404 for every origin and reads as the
-#: probe never arriving.
+#: A case that does not exist. The gateway reads the session before it says
+#: anything about the case a path names, so without a cookie this answers 401
+#: from the install's own origin and 403 from another.
 NO_SUCH_CASE = "/api/cases/00000000-0000-0000-0000-000000000000/live"
 
 

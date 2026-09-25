@@ -209,4 +209,31 @@ describe.skipIf(!(await bootable()))('a case named in capitals over the live con
       .where(and(gte(installActivity.at, from), sql`lower(${installActivity.detail}->>'case') = ${caseId}`))
     expect(lines.map((one) => `${one.event} ${one.spelled}`).sort()).toEqual([`access_denied ${caseId}`, `live_refused ${caseId}`])
   })
+
+  it('asks for a session before it says anything about the case a connection names', async () => {
+    const answer = async (who: Persona | null, id: string) => {
+      const socket = new WebSocket(`${harness!.base.replace('http://', 'ws://')}/api/cases/${id}/live`, {
+        headers: { origin: harness!.origin, ...(who ? { cookie: who.cookie } : {}) },
+      })
+      socket.on('error', () => {})
+      return new Promise<number>((done) => {
+        socket.once('open', () => {
+          socket.terminate()
+          done(101)
+        })
+        socket.once('unexpected-response', (request, response) => {
+          request.on('error', () => {})
+          request.destroy()
+          done(response.statusCode ?? 0)
+        })
+      })
+    }
+    const nil = '00000000-0000-0000-0000-000000000000'
+    expect({
+      anonymousNil: await answer(null, nil),
+      anonymousNotAnId: await answer(null, 'not-a-case'),
+      signedInNil: await answer(owner, nil),
+      signedInNotAnId: await answer(owner, 'not-a-case'),
+    }).toEqual({ anonymousNil: 401, anonymousNotAnId: 401, signedInNil: 404, signedInNotAnId: 404 })
+  })
 })

@@ -437,11 +437,9 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     | { refused: null; caseId: string; session: { id: string; name: string; held: boolean; sessionId?: string } }
   > {
     const named = LIVE_PATH.exec(request.url ?? '')?.[1]
-    if (!named || !UUID.test(named)) return { refused: 'no-such-path' }
+    if (!named) return { refused: 'no-such-path' }
     if (!this.sameOrigin(request)) return { refused: 'cross-origin' }
 
-    // One spelling from here on: every key after admission is this string.
-    const caseId = named.toLowerCase()
     const session = await this.sessionFor(request.headers)
     if (!session?.sessionId) return { refused: 'unauthenticated' }
     const taken = this.upgradesByAccount.take(session.id)
@@ -450,6 +448,9 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     // Before the case lookup, so a held account learns nothing about which
     // case ids exist -- the same ordering reason the origin check comes first.
     if (session.held) return { refused: 'must-change-password' }
+    // Only a signed-in caller learns that a name is no case; one spelling from here on.
+    if (!UUID.test(named)) return { refused: 'no-such-case' }
+    const caseId = named.toLowerCase()
     if (!(await this.reach.levelOnCase(session.id, caseId))?.level) {
       return { refused: 'no-such-case' }
     }
