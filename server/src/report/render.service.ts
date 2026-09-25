@@ -20,6 +20,7 @@ import { LanguageService } from './language.service.js'
 import { UnresolvableSections, resolveReport } from './document/resolve.js'
 import { defangDocument } from './document/defang.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
+import { MANUAL } from '../db/schema/columns.js'
 import { withCase } from '../db/scope.js'
 import type { CaseData } from './document/sections.js'
 import { documentSchema, figuresOf, type Document, type Images } from './document/model.js'
@@ -153,18 +154,16 @@ export class ReportRenderService {
     // first step of the re-render this branch exists to prevent.
     if (report.frozen) {
       /**
-       * **Not defanged again here, and that is not an omission.** `send`
-       * freezes what this method returned, which had already been through the
-       * pass -- so the stored tree holds bracketed addresses and a second pass
-       * is a measured no-op: removing it left the suite green while removing
-       * the one below turned it red. What guarantees the sent document is safe
-       * is the test, which asserts it on this branch rather than trusting
-       * either call.
+       * **A report sent here is not defanged again**: `send` froze what this
+       * method returned, which had already been through the pass. **A report
+       * read in is**, with no exemption: it is stored as it arrived, and its
+       * written and verbatim marks came from whoever wrote the archive.
        */
       // **Parsed, not cast.** The frozen tree is the compliance artefact and
       // the only source a sent report is painted from; a stored tree that lost
       // or drifted a field fails here rather than painting a wrong document.
-      const document_: Document = documentSchema.parse(report.frozen)
+      const preserved: Document = documentSchema.parse(report.frozen)
+      const document_ = report.source === MANUAL ? preserved : defangDocument(preserved, { preserved: true })
       return {
         document_,
         title: document_.title || report.label,

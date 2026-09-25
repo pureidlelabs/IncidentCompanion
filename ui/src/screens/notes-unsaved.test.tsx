@@ -181,7 +181,10 @@ describe('a note whose words the install holds unsaved', () => {
     await act(() => router.navigate('/elsewhere'))
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveTextContent('Leave with the text unsaved?')
-    expect(within(dialog).getByRole('button', { name: /Copy the text/ })).toBeVisible()
+    // The dialog fades in from `opacity: 0` on animation frames, which a loaded worker holds back.
+    await waitFor(() => {
+      expect(within(dialog).getByRole('button', { name: /Copy the text/ })).toBeVisible()
+    })
     expect(router.state.location.pathname).toBe('/notes')
 
     await user.click(screen.getByRole('button', { name: 'Leave' }))

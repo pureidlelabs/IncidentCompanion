@@ -38,7 +38,6 @@ import { REFERENCE_FIELD_NAMES } from '../domain/collections.js'
 import { crossFieldIssue } from '../domain/field-spec.js'
 import { importStamp } from '../db/import-stamp.js'
 import { rekeyed } from '../domain/prose-fields.js'
-import { defangDocument } from '../report/document/defang.js'
 import type { Document } from '../report/document/model.js'
 import { archiveRowSchema, baseOf } from './rows.js'
 import { coerceTimes } from '../db/column-access.js'
@@ -463,7 +462,7 @@ export class ArchiveImportService {
           if (name === 'reports') {
             stamp = {
               sentAt: values.sentAt instanceof Date ? values.sentAt : null,
-              frozen: values.frozen ? defangDocument(values.frozen as Document) : null,
+              frozen: (values.frozen as Document | undefined) ?? null,
               frozenAt: values.frozenAt instanceof Date ? values.frozenAt : null,
             }
             values.sentAt = null

@@ -155,7 +155,7 @@ export function killchain(input: ReportInput): Node[] {
     rows.push([
       { text: stage, bold: true, fill, ink: inkOn(fill) },
       // Every name here is an entity's own value, so the defang pass may blank
-      // it; the free-text rule would not reach a bare domain. One flag covers
+      // it; the free-text rule reaches a bare domain only under a known ending. One flag covers
       // the cell, so an account name's domain is bracketed here and not in
       // `entities` - mangling a login is the cheaper mistake.
       { text: touched.join(', '), indicator: true },

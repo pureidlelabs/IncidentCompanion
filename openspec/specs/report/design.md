@@ -22,6 +22,10 @@
 
 **Where a report's freeze is refused, it is refused whole.** There is no partial write to a sent report, and no path that may write one for a reason of its own.
 
+**An indicator export is data for another tool, not a document to read.** It carries each value as the case holds it, because a neutralised indicator is one a blocklist cannot use.
+
+**A UNC path naming a single-label host stays as written.** Such a host resolves only on the reader's own network, so it names nothing of the adversary's.
+
 # Design
 
 ## An audience is a value
@@ -106,3 +110,35 @@ Prose arriving while a send decides waits. A send that stamps refuses it with th
 A correction writes the further report, its parts, their records and its prose together. For a sent report, the prose it inherits is what was sent.
 
 A restore locks the report, works out what its shape expects that it does not hold, and writes those sections with their records in the same act, so a second restore waiting behind the first finds nothing missing.
+
+## An address leaves unlinkable
+
+The criterion is what a reader's software links: a word processor, a PDF reader, a mail client and a GitHub-flavoured Markdown renderer. Every such address in generated text is rewritten in the notation threat-intelligence tooling reads back, and the case keeps the real value.
+
+| Written in the case | Leaves as |
+| --- | --- |
+| `http://`, `https://`, `ftp://`, `ftps://` | `hxxp://`, `hxxps://`, `fxp://`, `fxps://`, with every dot of the host as `[.]` |
+| `http:`, `https:`, `ftp:`, `ftps:` with no `//` | the same rewritten scheme, with the host's dots bracketed |
+| Any other scheme followed by `//` | the scheme, then `[:]//`, with the host's dots bracketed |
+| A protocol-relative `//host` | the host's dots bracketed |
+| A name beginning `www.` | every dot of the host bracketed, whatever the name ends in |
+| A UNC path, long-path `\\?\UNC\` form included | the host's dots bracketed |
+| An email address | `[@]`, and the domain's dots bracketed |
+| An IPv4 address | every dot bracketed |
+| Any other dotted name | every dot bracketed, when it ends in a top-level domain of the root zone |
+
+A path, a query and an email's local part are left as written, since none of them is what a reader's software opens.
+
+**A bare name counts as a host only under a real top-level domain**, which is what keeps a version number, an abbreviation and most filenames whole: none of `1.2.3`, `e.g.` or `report.pdf` ends in one. A label may carry an underscore. A dotted name inside a path, a Windows path or an address already defanged is never judged on its own.
+
+**A filename whose extension is also a top-level domain is bracketed like a host**: `payload[.]zip`, `setup[.]py`. Readers link those names, and a bracketed filename still reads as the file it names.
+
+**A host's labels may be separated by a full stop, its fullwidth or ideographic form, or a full stop with a zero-width character beside it**, since each hides nothing from the software that links the name. The separator is rewritten only inside a name that then counts as a host; prose keeps its zero-width characters.
+
+**The list of top-level domains is IANA's root zone, pinned to a stated version** and refreshed by regenerating it from IANA's published list.
+
+**A bare IPv6 address is left as written.** No reader's software links one; the form that links carries a scheme, and the scheme is what is rewritten.
+
+**Applying the rules twice changes nothing.** A document the install sent was rewritten before it was preserved, and is rewritten again wherever it is painted, so a bracketed dot, a bracketed `@` and a rewritten scheme are each left alone.
+
+**The rules apply where a document leaves, never where one is stored.** A preserved document read in is stored as it arrived, and the install records, on the report and never from the archive, that the report was read in. Every output of such a report applies the rules to all of it: its sections marked as the analyst's writing, its code blocks marked verbatim and the address carried beside a run's text, since each mark came from whoever wrote the archive. A report sent from this install keeps the analyst's written prose and a method's verbatim query as written.

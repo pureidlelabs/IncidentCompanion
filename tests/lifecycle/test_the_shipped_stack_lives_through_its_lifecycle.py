@@ -80,7 +80,7 @@ def test_the_shipped_stack_lives_through_its_lifecycle(stack, subtests):
                                      capture_output=True, text=True).stdout.strip() for name in names}
 
     def same_images() -> None:
-        # The tags are fixed, so another checkout's build moves them under this one.
+        # A build from this checkout elsewhere moves its tags under this run.
         assert images() == held["images"], "an image tag moved during the run; another build ran"
 
     def signed_in() -> None:

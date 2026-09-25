@@ -171,7 +171,7 @@ describe('defanging a figure', () => {
     const document_ = defangDocument({
       ...paper([
         { type: 'figure', caption: 'seen at https://evil.example/x', widthPt: 0, heightPt: 0 },
-        { type: 'figure', caption: 'payload.zip', widthPt: 0, heightPt: 0 },
+        { type: 'figure', caption: 'payload.pdf', widthPt: 0, heightPt: 0 },
       ]),
       sections: [
         {
@@ -181,7 +181,7 @@ describe('defanging a figure', () => {
           heading: 'Figure',
           nodes: [
             { type: 'figure', caption: 'seen at https://evil.example/x', widthPt: 0, heightPt: 0 },
-            { type: 'figure', caption: 'payload.zip', widthPt: 0, heightPt: 0 },
+            { type: 'figure', caption: 'payload.pdf', widthPt: 0, heightPt: 0 },
           ],
         },
       ],
@@ -191,6 +191,6 @@ describe('defanging a figure', () => {
       .map((one) => one.caption)
 
     expect(captions[0]).toContain('hxxps')
-    expect(captions[1]).toBe('payload.zip')
+    expect(captions[1]).toBe('payload.pdf')
   })
 })

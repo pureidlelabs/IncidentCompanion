@@ -91,7 +91,7 @@ services:
       context: .
       dockerfile: docker/app/Dockerfile
       target: runtime
-    image: incidentcompanion-node:local
+    image: incidentcompanion-node:${IC_IMAGE_TAG:-local}
     depends_on:
       # Depending on `seed` depends on the whole chain: roles -> migrate ->
       # seed are one-shots that must have *finished*, not merely started.
@@ -168,7 +168,7 @@ services:
     build:
       context: .
       dockerfile: docker/nginx/Dockerfile
-    image: incidentcompanion-nginx:local
+    image: incidentcompanion-nginx:${IC_IMAGE_TAG:-local}
     restart: unless-stopped
     depends_on:
       app:
@@ -204,7 +204,7 @@ services:
     build:
       context: .
       dockerfile: docker/db/Dockerfile
-    image: incidentcompanion-roles:local
+    image: incidentcompanion-roles:${IC_IMAGE_TAG:-local}
     depends_on:
       postgres:
         condition: service_healthy
@@ -244,7 +244,7 @@ services:
   seed:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    image: incidentcompanion-node:local
+    image: incidentcompanion-node:${IC_IMAGE_TAG:-local}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -280,7 +280,7 @@ services:
       context: .
       dockerfile: docker/app/Dockerfile
       target: server-build
-    image: incidentcompanion-node-migrate:local
+    image: incidentcompanion-node-migrate:${IC_IMAGE_TAG:-local}
     depends_on:
       roles:
         condition: service_completed_successfully
