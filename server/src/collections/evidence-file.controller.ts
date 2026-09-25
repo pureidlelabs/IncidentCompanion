@@ -44,25 +44,22 @@ import { updateVersioned } from '../db/mutate.js'
 import { withCase } from '../db/scope.js'
 import { CaseChannel } from '../live/case-channel.service.js'
 import { Optional } from '@nestjs/common'
+import { contentDisposition, safeFilename } from '../domain/disposition.js'
 
 /**
- * What a browser should call the file it just downloaded.
+ * The name a caller sent, as the analyst chose it.
  *
- * Percent-decoded first; a value that does not decode is taken as it arrived.
- *
- * **Quotes and control characters are stripped, not escaped.** The value goes
- * into a `content-disposition` header, and a filename carrying a quote splits
- * the header into something the browser reads as further parameters.
+ * Percent-decoded, because that is how the client sends it; a value that does
+ * not decode is taken as it arrived.
  */
-function dispositionName(name: string): string {
+function sentFilename(name: string): string {
   let decoded = name
   try {
     decoded = decodeURIComponent(name)
   } catch {
     // A malformed escape sequence: an ordinary per cent sign in a filename.
   }
-  const clean = decoded.replace(/["\\\r\n]/g, '').trim()
-  return clean || 'attachment'
+  return safeFilename(decoded) || 'attachment'
 }
 
 @UseGuards(CaseAccessGuard)
@@ -111,7 +108,7 @@ export class EvidenceFileController {
     // case the first writer's name wins for identical content.
     const sentName =
       typeof request.headers['x-original-filename'] === 'string'
-        ? dispositionName(request.headers['x-original-filename'])
+        ? sentFilename(request.headers['x-original-filename'])
         : undefined
     const stored = await this.store.seal(request, sentName)
     if (stored.sizeBytes === 0) {
@@ -140,11 +137,7 @@ export class EvidenceFileController {
           sizeBytes: stored.sizeBytes,
           storedAt: new Date(),
           contentType: request.headers['content-type'] ?? 'application/octet-stream',
-          originalFilename: dispositionName(
-            typeof request.headers['x-original-filename'] === 'string'
-              ? request.headers['x-original-filename']
-              : row.originalFilename,
-          ),
+          originalFilename: sentName ?? row.originalFilename,
         },
       })
 
@@ -215,7 +208,7 @@ export class EvidenceFileController {
       // **`attachment`, never `inline`.** Evidence is routinely an artefact
       // from an incident; rendering one in the analyst's own browser is the
       // one thing this route must not offer to do.
-      .setHeader('content-disposition', `attachment; filename="${dispositionName(name)}"`)
+      .setHeader('content-disposition', contentDisposition('attachment', name))
       .type('application/zip')
     stream.pipe(response)
   }
