@@ -144,11 +144,11 @@ const ROLLBACK = new Error('rolled back on purpose')
 const rowsOf = (tx: Tx | NonNullable<typeof seed>, subject: Subject, caseId: string) =>
   tx.select().from(subject.table).where(eq(subject.caseColumn, caseId))
 
-/** The rows of `caseId` an update touches: the case column set to what it holds. */
 /** Tables whose rows are written once and never changed, by any caller. */
 const WRITTEN_ONCE = ['prose_acceptances']
 
-const updated = (tx: Tx, subject: Subject, caseId: string) => {
+/** The rows of `caseId` an update touches: the case column set to what it holds. */
+const updated =(tx: Tx, subject: Subject, caseId: string) => {
   const [key] = Object.entries(getTableColumns(subject.table)).find(
     ([, column]) => column === subject.caseColumn,
   )!
