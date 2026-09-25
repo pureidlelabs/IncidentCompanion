@@ -9,6 +9,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { and, eq, gt, inArray, sql } from 'drizzle-orm'
+import { SchedulerRegistry } from '@nestjs/schedule'
 import { Client } from 'pg'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -89,6 +90,17 @@ async function prunesSince(seq: bigint) {
     .select({ detail: installActivity.detail })
     .from(installActivity)
     .where(and(eq(installActivity.event, 'familiar_addresses_pruned'), gt(installActivity.seq, seq)))
+}
+
+/** A connection of its own, as the database's owner. */
+async function ownerClient(): Promise<Client> {
+  const onTestDatabase = new URL(process.env.DATABASE_URL ?? '')
+  const owner = new URL(ADMIN_URL)
+  onTestDatabase.username = owner.username
+  onTestDatabase.password = owner.password
+  const client = new Client({ connectionString: onTestDatabase.toString() })
+  await client.connect()
+  return client
 }
 
 describe.skipIf(!(await bootable()))('how long an address stays familiar', () => {
@@ -183,12 +195,7 @@ describe.skipIf(!(await bootable()))('how long an address stays familiar', () =>
     await signInFrom(email, machine(160), machine(161))
     await pushBack(email, machine(160), 91)
 
-    const onTestDatabase = new URL(process.env.DATABASE_URL ?? '')
-    const owner = new URL(ADMIN_URL)
-    onTestDatabase.username = owner.username
-    onTestDatabase.password = owner.password
-    const client = new Client({ connectionString: onTestDatabase.toString() })
-    await client.connect()
+    const client = await ownerClient()
     const name = `refuse_${randomUUID().slice(0, 8)}`
     await client.query(`create function ${name}() returns trigger language plpgsql as $$
       begin raise exception 'audit log refused'; end $$`)
@@ -204,4 +211,54 @@ describe.skipIf(!(await bootable()))('how long an address stays familiar', () =>
 
     expect(await heldFor(email), 'an address was pruned with no record of it').toEqual([machine(160), machine(161)])
   }, 60_000)
+
+  it('keeps an address renewed while a pruning pass waits on it', async () => {
+    const email = await anAccount()
+    const addresses = Array.from({ length: 21 }, (_, i) => machine(170 + i))
+    await signInFrom(email, ...addresses)
+
+    const renewing = await ownerClient()
+    try {
+      await renewing.query('begin')
+      const { rows } = await renewing.query<{ pid: number }>('select pg_backend_pid() as pid')
+      await renewing.query(
+        `update familiar_address set last_right_at = now()
+         where user_id = (select id from "user" where email = $1) and address = $2`,
+        [email, machine(170)],
+      )
+      const pruning = harness.app.get(FamiliarAddressPrune).prune()
+      for (let tries = 0; ; tries += 1) {
+        const [waiting] = await db.execute<{ n: number }>(
+          sql`select count(*)::int as n from pg_stat_activity where ${rows[0]?.pid ?? 0}::int = any(pg_blocking_pids(pid))`,
+        ).then((result) => result.rows)
+        if ((waiting?.n ?? 0) > 0) break
+        if (tries > 200) throw new Error('the pruning pass never waited on the renewed address')
+        await new Promise((settle) => setTimeout(settle, 25))
+      }
+      await renewing.query('commit')
+      await pruning
+    } finally {
+      await renewing.end()
+    }
+
+    expect(await heldFor(email), 'the pass deleted an address renewed while it waited').toContain(machine(170))
+  }, 60_000)
+  it('prunes at boot, and keeps a daily schedule', async () => {
+    const email = await anAccount()
+    const addresses = Array.from({ length: 22 }, (_, i) => machine(200 + i))
+    await signInFrom(email, ...addresses)
+    await pushBack(email, machine(221), 91)
+    const before = await lastSeq()
+
+    // Last in the file: the booted instance replaces the one every other case used.
+    await harness.close()
+    harness = await boot()
+    db = harness.app.get<Database>(DATABASE)
+
+    expect(await heldFor(email), 'booting left the aged address or the 21st most recent').toEqual(
+      addresses.slice(1, 21).sort(),
+    )
+    expect((await prunesSince(before)).length, 'the boot pruning was not recorded').toBeGreaterThanOrEqual(1)
+    expect(() => harness.app.get(SchedulerRegistry).getCronJob('familiar-address-prune')).not.toThrow()
+  }, 120_000)
 })

@@ -21,28 +21,28 @@ export class FamiliarAddressPrune implements OnApplicationBootstrap {
     await this.sweep()
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: 'familiar-address-prune' })
   async daily(): Promise<void> {
     await this.sweep()
   }
 
   /**
-   * Deletes every address past its days or outside its account's most recent,
-   * and answers how many went. Throws, deleting nothing, where the pass cannot
-   * be recorded.
+   * Deletes every address `familiarTo` would not count at `now`, and answers
+   * how many went. Throws, deleting nothing, where the pass cannot be recorded.
    */
-  async prune(): Promise<number> {
+  async prune(now: Date = new Date()): Promise<number> {
     return this.db.transaction(async (tx) => {
+      // The rank is counted against `held`'s own row, so an address renewed
+      // while this waits on it is judged by its renewal.
       const { rows } = await tx.execute<{ user_id: string }>(sql`
         delete from familiar_address held
-        using (
-          select user_id, address,
-            row_number() over (partition by user_id order by last_right_at desc, address) as place
-          from familiar_address
-        ) ranked
-        where held.user_id = ranked.user_id and held.address = ranked.address
-          and (ranked.place > ${FAMILIAR_AT_MOST}
-            or held.last_right_at <= now() - make_interval(days => ${FAMILIAR_FOR_DAYS}))
+        where held.last_right_at <= ${now.toISOString()}::timestamptz - make_interval(days => ${FAMILIAR_FOR_DAYS})
+          or (
+            select count(*) from familiar_address newer
+            where newer.user_id = held.user_id
+              and (newer.last_right_at > held.last_right_at
+                or (newer.last_right_at = held.last_right_at and newer.address < held.address))
+          ) >= ${FAMILIAR_AT_MOST}
         returning held.user_id`)
       if (rows.length === 0) return 0
       const recorded = await recordInstallActivity(tx, {
