@@ -686,14 +686,20 @@ export const Rearranged: Story = {
       await canvas.findByRole('button', { name: `Drag ${headingOf(moved, DEMO_HEADINGS)}` })
     ).focus()
     await userEvent.keyboard('{Enter}')
-    // The gaps are registered a turn after the pickup, and an arrow key
-    // arriving first is swallowed: the drop then lands where the section
-    // already was, announces *Drop complete* and reports nothing.
-    await waitFor(async () => {
-      await expect(document.activeElement?.getAttribute('aria-label') ?? '').toMatch(/^Insert /)
-    })
-    await userEvent.keyboard('{ArrowDown}')
-    await userEvent.keyboard('{Enter}')
+    try {
+      // The gaps are registered a turn after the pickup, and an arrow key
+      // arriving first is swallowed: the drop then lands where the section
+      // already was, announces *Drop complete* and reports nothing.
+      await waitFor(async () => {
+        await expect(document.activeElement?.getAttribute('aria-label') ?? '').toMatch(/^Insert /)
+      })
+      await userEvent.keyboard('{ArrowDown}')
+      await userEvent.keyboard('{Enter}')
+    } catch (failure) {
+      // A drag left open outlives the story. -> `MidDrag`
+      await userEvent.keyboard('{Escape}')
+      throw failure
+    }
 
     // What left: the whole scope, once each, in the order dropped.
     await waitFor(async () => {
