@@ -178,6 +178,27 @@ describe.skipIf(!appPool || !ownerPool || !hasConcurrentConnections())(
       })
     })
 
+    it('stops keeping acceptances current once a save stores them, and once the document is released', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+      // The keeper is the service's only interval.
+      const keepers = () =>
+        Object.values(
+          (setTimeout as unknown as { clock: { timers: Record<string, { interval?: number }> } }).clock.timers,
+        ).filter((timer) => timer.interval !== undefined).length
+
+      const stored = await aFailingNote()
+      const armed = keepers()
+      await lift()
+      await stored.prose.flush(stored.caseId, stored.note)
+      const afterAStore = keepers()
+      await stored.prose.release(stored.caseId, stored.note)
+
+      const released = await aFailingNote()
+      await released.prose.release(released.caseId, released.note)
+
+      expect({ armed, afterAStore, afterARelease: keepers() }).toEqual({ armed: 1, afterAStore: 0, afterARelease: 0 })
+    })
+
     it('keeps its acceptances current on their own clock within two hours, with no save attempted', async () => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
       const { note, prose } = await aFailingNote()

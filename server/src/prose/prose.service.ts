@@ -444,6 +444,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       if (!entry.timer || now - entry.unsavedSince < PROSE_PACE.longestWaitMs) {
         if (entry.timer) clearTimeout(entry.timer)
         entry.timer = setTimeout(() => {
+          entry.timer = null
           void this.flush(caseId, address)
         }, PROSE_PACE.quietMs)
       }
@@ -822,7 +823,10 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
 
   private async store(caseId: string, address: ProseRecord, held: LiveDocument): Promise<void> {
     const writers = [...held.writers.values()]
-    if (writers.length === 0 && !principalNow()) return
+    if (writers.length === 0 && !principalNow()) {
+      held.unsavedSince = null
+      return
+    }
     const acceptances = held.acceptances
     held.writers.clear()
     held.accepted = new Set()
@@ -943,6 +947,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       if (held.readers > 0) {
         if (held.timer) clearTimeout(held.timer)
         held.timer = setTimeout(() => {
+          held.timer = null
           void this.flush(caseId, address)
         }, PROSE_PACE.retryMs)
       }

@@ -6,6 +6,8 @@
  * it, and a document key that resolves across cases hands one customer's report
  * to another. Everything else here degrades visibly.
  */
+import { AsyncResource } from 'node:async_hooks'
+
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import * as decoding from 'lib0/decoding'
@@ -18,6 +20,7 @@ import * as Y from 'yjs'
 import { CasesService } from '../cases/cases.service.js'
 import {
   NOTE_FRAGMENT,
+  PROSE_PACE,
   ProseService,
   noteText,
   reportDocument,
@@ -462,6 +465,30 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
       await prose.release(caseId, reportDocument(reportId))
     })
 
+    it('bounds every statement of a save of written words', async () => {
+      const { caseId, reportId } = await freshReport()
+      const address = reportDocument(reportId)
+      await prose.open(caseId, address)
+      await prose.apply(caseId, address, framed(typed('bounded').update), 'a-socket', WRITER)
+      const owner = openTestPool(process.env['TEST_DATABASE_URL']!)
+      const unbounded = `refuse_an_unbounded_save_${String(process.pid)}`
+      await owner.query(
+        `create or replace function ${unbounded}() returns trigger language plpgsql as $f$ begin if new.id = '${reportId}' and current_setting('statement_timeout') = '0' then raise exception 'an unbounded save'; end if; return new; end $f$`,
+      )
+      await owner.query(`create trigger ${unbounded} before update on reports for each row execute function ${unbounded}()`)
+      try {
+        await prose.flush(caseId, address)
+      } finally {
+        await owner.query(`drop trigger if exists ${unbounded} on reports`)
+        await owner.query(`drop function if exists ${unbounded}()`)
+        await owner.end()
+      }
+
+      const [row] = await seed!.select({ updatedBy: reports.updatedBy }).from(reports).where(eq(reports.id, reportId))
+      expect(row?.updatedBy).toBe(WRITER.id)
+      await prose.release(caseId, address)
+    })
+
     it('flushes when the last reader leaves, not the first', async () => {
       const { caseId, reportId } = await freshReport()
       const first = await prose.open(caseId, reportDocument(reportId))
@@ -793,15 +820,19 @@ class ProseFrames {
 
 /**
  * A pub/sub with no Redis: every subscriber on the bus hears every publish, in
- * order, which is the only property `ProseService` relies on.
+ * order, which is the only property `ProseService` relies on. It delivers in
+ * the context it was built in, as a Redis subscriber hears nobody's request.
  */
 class Bus implements ProseRelay {
   private readonly listeners = new Map<string, Set<(payload: string) => void>>()
+  private readonly deliver = AsyncResource.bind((listener: (payload: string) => void, payload: string) =>
+    listener(payload),
+  )
   readonly published: string[] = []
 
   publish(caseId: string, payload: string): Promise<void> {
     this.published.push(payload)
-    for (const listener of this.listeners.get(caseId) ?? []) listener(payload)
+    for (const listener of this.listeners.get(caseId) ?? []) this.deliver(listener, payload)
     return Promise.resolve()
   }
 
@@ -897,6 +928,28 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
     expect(there.getXmlFragment(sections[0]).toJSON()).not.toContain('after the other left')
     await one.release(caseId, reportDocument(reportId))
   })
+
+  it('stores what a writer types after a relayed frame, at a quiet moment', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    const here = await one.open(caseId, address)
+    await two.open(caseId, address)
+
+    one.applySync(here, framed(typed('relayed first').update), 'a-socket')
+    await new Promise((wake) => setTimeout(wake, PROSE_PACE.longestWaitMs + 1_000))
+    await two.apply(caseId, address, framed(typed('typed on instance two', sections[1]).update), 'a-socket', WRITER)
+    await new Promise((wake) => setTimeout(wake, PROSE_PACE.quietMs + 1_500))
+
+    const [row] = await seed!.select({ document: reports.document }).from(reports).where(eq(reports.id, reportId))
+    const stored = new Y.Doc()
+    if (row?.document) Y.applyUpdate(stored, row.document)
+    expect(stored.getXmlFragment(sections[1]).toJSON()).toContain('typed on instance two')
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+  }, 20_000)
 
   it('is correct for its own sockets with no relay at all', async () => {
     const alone = as('prose-analyst', new ProseService(db!))

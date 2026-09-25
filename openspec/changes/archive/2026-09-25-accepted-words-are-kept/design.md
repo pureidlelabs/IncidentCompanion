@@ -25,7 +25,7 @@
 
 **A document holding acceptances keeps them current on its own clock.** From its first acceptance until a save stores them, the document brings them up to the present every hour, as the prose role, whether or not any save is attempted. Every failed save does the same at once. Keeping an accepted word current is not a second decision: reach was decided when the word was accepted, and nothing asks it again. The same therefore holds whether the writer lost write or had their account disabled.
 
-**A save is always attempted, and always ends.** A stream of writing defers a save by at most a few seconds, however steadily it arrives. A save that waits on a lock for more than a few seconds, or runs for more than half a minute, gives up and takes the failure path. A document with words unsaved tries again every five minutes.
+**A save is always attempted, and always ends.** A stream of writing defers a save by at most a few seconds, however steadily it arrives. Each statement of a save that waits on a lock for more than a few seconds, or runs for more than half a minute, gives up, and the save takes the failure path. The bound is per statement, and a save is as many statements as it names writers plus a few, so it ends. A document with words unsaved tries again every five minutes.
 
 **What can still lapse.** An acceptance lapses only when nothing keeps it current for a day. That happens when the application stops or drops the document with a save still failing, or when the store refuses even the refresh for longer than a day. Words whose acceptance has lapsed cannot be stored. The failure is logged saying so, and the words go when the last reader leaves, as any unsaved words do.
 
