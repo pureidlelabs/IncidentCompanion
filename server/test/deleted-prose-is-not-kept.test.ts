@@ -125,15 +125,16 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
     text.insert(0, DELETED)
     text.delete(0, DELETED.length)
     text.insert(0, KEPT)
+    // The reader arrives while the writer still holds the document open.
+    const reader = await Live.open(harness, await sharedAdmin(harness), caseId)
+    await reader.openField(field, new Y.Doc())
+    const served = reader.frames.find((frame) => frame.type === 'prose.sync' && frame.field === field)
+    await reader.close()
     await writer.close()
 
     const stored = async () =>
       (await seed.select({ document: reports.document }).from(reports).where(eq(reports.id, report.id)))[0]?.document
     await expect.poll(async () => textOf((await stored()) ?? null, block.id), { timeout: 10_000 }).toContain(KEPT)
-    const reader = await Live.open(harness, await sharedAdmin(harness), caseId)
-    await reader.openField(field, new Y.Doc())
-    const served = reader.frames.find((frame) => frame.type === 'prose.sync' && frame.field === field)
-    await reader.close()
 
     expect({
       record: Buffer.from((await stored())!).toString('utf8').includes(DELETED),

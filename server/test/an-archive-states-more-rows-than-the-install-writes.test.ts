@@ -89,6 +89,27 @@ describe.skipIf(!(await bootable()))('how many rows an archive may describe', ()
     }).toEqual({ status: 422, named: true, written: 0 })
   })
 
+  // A first row no install could write: a refusal naming the ceiling was reached before any row was.
+  it('refuses by the ceiling before it tries to write a single row', async () => {
+    const archive = JSON.parse(new TextDecoder().decode(template[CASE_NAME])) as Record<string, unknown>
+    archive.title = 'One row past the ceiling, the first unwritable'
+    archive.casenotes = [
+      { id: randomUUID(), note: 42 },
+      ...Array.from({ length: ARCHIVE_ROWS_FLOOR }, (_, at) => ({ id: randomUUID(), note: `line ${String(at)}` })),
+    ]
+    const members: Record<string, Uint8Array> = Object.fromEntries(
+      Object.entries(template).filter(([name]) => name !== MANIFEST_NAME),
+    )
+    members[CASE_NAME] = new TextEncoder().encode(JSON.stringify(archive))
+    const answer = await importing(await pack(members, 'omitted', []))
+    const body = (await answer.json()) as { message?: string }
+
+    expect({ status: answer.status, message: body.message }).toEqual({
+      status: 422,
+      message: expect.stringContaining(`reads at most ${ARCHIVE_ROWS_FLOOR.toLocaleString('en-GB')}`),
+    })
+  })
+
   it('reads an archive stating exactly as many rows as the ceiling', async () => {
     const answer = await importing(await archiveOf('Exactly at the ceiling', ARCHIVE_ROWS_FLOOR))
 

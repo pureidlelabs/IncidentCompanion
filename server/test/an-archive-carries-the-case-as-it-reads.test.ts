@@ -201,6 +201,7 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
     await prose.release(read.id, address)
 
     expect(shown, 'the editor opened a document the archive record planted').not.toContain(PLANTED)
+    expect(shown, 'the note did not open as its own words').toContain(NOTE_KEPT)
   })
 
   // What sealing promises: an archive altered by somebody without the secret is refused at the door.
@@ -221,7 +222,10 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
       body: sealed,
     })
 
-    expect(read.status, await read.text()).toBe(422)
+    expect({ status: read.status, said: ((await read.json()) as { message?: string }).message }).toEqual({
+      status: 422,
+      said: 'This archive is not readable as one.',
+    })
   })
 
   it('starts a correction from the report as it reads', async () => {

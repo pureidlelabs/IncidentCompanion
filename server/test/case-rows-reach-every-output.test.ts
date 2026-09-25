@@ -18,7 +18,6 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { defangIndicator } from '../src/report/document/defang.js'
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 
 const runnable = await bootable()
@@ -120,17 +119,13 @@ describe.skipIf(!runnable)('what a case holds reaches what it publishes', () => 
     const answer = await read(`/api/cases/${caseId}/report.md?report=${reportId}`)
     expect(answer.status).toBe(200)
     const painted = await answer.text()
-    // **Defanged, and that is the document being correct.** An address ships
-    // as `198[.]51[.]100[.]7` and a URL as `hxxp://`, so a reader cannot click
-    // one out of a PDF -- the raw value is the wrong thing to look for, and
-    // asserting it fails on right output.
-    //
-    // **Through the app's own function, never a rule spelled again here.** A
-    // hand-written `replace(/\./g, '[.]')` passes for an address and fails for
-    // a URL, which is how this test read as a defect twice before it was one.
-    for (const row of INDICATORS) {
-      expect(painted, `${row.value} is missing from the report`)
-        .toContain(defangIndicator(row.value))
+    // Each defanged form spelled out: built with the product's own function,
+    // the expectation moves with the function it is meant to check.
+    for (const shown of ['198[.]51[.]100[.]7', 'fe80::1', 'evil[.]example', 'hxxp://evil[.]example/a/b']) {
+      expect(painted, `${shown} is missing from the report`).toContain(shown)
+    }
+    for (const live of ['198.51.100.7', 'http://evil.example']) {
+      expect(painted, `${live} is in the report as typed`).not.toContain(live)
     }
     expect(painted, 'the malware hash is missing from the report').toContain('d41d8cd9')
   }, 60_000)
