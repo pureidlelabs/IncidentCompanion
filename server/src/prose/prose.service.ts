@@ -37,11 +37,13 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
   Optional,
+  type OnApplicationBootstrap,
   type OnApplicationShutdown,
 } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, not, sql } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import {
@@ -240,7 +242,7 @@ function seedNote(doc: Y.Doc, text: string): void {
 }
 
 @Injectable()
-export class ProseService implements OnApplicationShutdown {
+export class ProseService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly log = new Logger(ProseService.name)
   private readonly live = new Map<string, Promise<LiveDocument>>()
   private saved: Saved | undefined
@@ -568,7 +570,12 @@ export class ProseService implements OnApplicationShutdown {
     }
   }
 
-  /** Removes every acceptance older than one lasts, whatever case it is in. Call before serving. */
+  /** Removes every acceptance older than one lasts, whatever case it is in, as the application starts. */
+  async onApplicationBootstrap(): Promise<void> {
+    await this.sweepExpiredAcceptances()
+  }
+
+  /** Removes every acceptance older than one lasts, whatever case it is in. */
   async sweepExpiredAcceptances(): Promise<void> {
     await unattended(() => withReach(this.db, (tx) => tx.delete(proseAcceptances).where(expired)))
   }
@@ -886,7 +893,61 @@ export class ProseService implements OnApplicationShutdown {
         ...writers.filter((writer) => !held.writers.has(writer.id)).map((writer) => [writer.id, writer] as const),
         ...held.writers,
       ])
-      this.log.error(`could not save the prose for ${recordOf(address)}: ${String(error)}`)
+      const reason =
+        error instanceof NotFoundException
+          ? 'the store holds no current acceptance for a writer it would name'
+          : String(error)
+      this.log.error(`could not save the prose for ${recordOf(address)}: ${reason}`)
+      if (writers.length > 0) await this.renewLapsed(caseId, address, held, writers)
+    }
+  }
+
+  /**
+   * Records a fresh acceptance, under each writer's reach now, for every one of
+   * `writers` whose acceptance of this record has lapsed, so the next save can
+   * name them. A writer the store refuses is logged, and dropped from those
+   * the document holds as accepted.
+   */
+  private async renewLapsed(
+    caseId: string,
+    address: ProseRecord,
+    held: LiveDocument,
+    writers: readonly Writer[],
+  ): Promise<void> {
+    let current: Set<string>
+    try {
+      const rows = await unattended(() =>
+        withCase(this.db, caseId, async (tx) => {
+          await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
+          await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
+          return tx
+            .select({ writer: proseAcceptances.writerId })
+            .from(proseAcceptances)
+            .where(and(eq(proseAcceptances.recordId, address.id), not(expired)))
+        }),
+      )
+      current = new Set(rows.map((row) => row.writer))
+    } catch (error) {
+      this.log.warn(`could not read the acceptances of ${recordOf(address)}: ${String(error)}`)
+      return
+    }
+    for (const writer of writers.filter((one) => !current.has(one.id))) {
+      try {
+        const [row] = await actingAs(writer.id, () =>
+          withCase(this.db, caseId, (tx) =>
+            tx
+              .insert(proseAcceptances)
+              .values({ caseId, entity: address.table, recordId: address.id, writerId: writer.id })
+              .returning({ id: proseAcceptances.id }),
+          ),
+        )
+        held.acceptances.push(row!.id)
+      } catch {
+        held.accepted.delete(writer.id)
+        this.log.error(
+          `the words ${writer.label} wrote into ${recordOf(address)} cannot be stored: their acceptance has lapsed, and the store refuses them one now`,
+        )
+      }
     }
   }
 

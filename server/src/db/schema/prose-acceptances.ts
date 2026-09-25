@@ -29,21 +29,34 @@ export const proseAcceptances = pgTable(
     writerId: text('writer_id').notNull(),
     acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
-    index('prose_acceptances_record_idx').on(t.recordId),
-    check('prose_acceptances_entity', sql`${t.entity} in ('reports', 'casenotes')`),
-    ...caseScoped(t.caseId),
-    pgPolicy('acceptance_names_its_writer', {
-      as: 'restrictive',
-      for: 'insert',
-      to: 'ic_app',
-      withCheck: sql`${t.writerId} = nullif(current_setting('app.principal', true), '')`,
-    }),
-    ...proseKept(t.caseId, t.recordId, ['select', 'delete']),
-    pgPolicy('an_expired_acceptance_is_swept', {
-      for: 'delete',
-      to: 'ic_app',
-      using: sql`${t.acceptedAt} <= now() - ${sql.raw(`interval '${ACCEPTANCE_LASTS}'`)}`,
-    }),
-  ],
+  (t) => {
+    const principal = sql`nullif(current_setting('app.principal', true), '')`
+    const expired = sql`${t.acceptedAt} <= now() - ${sql.raw(`interval '${ACCEPTANCE_LASTS}'`)}`
+    return [
+      index('prose_acceptances_record_idx').on(t.recordId),
+      check('prose_acceptances_entity', sql`${t.entity} in ('reports', 'casenotes')`),
+      ...caseScoped(t.caseId),
+      // Written as its writer, at the moment it is written, so nobody dates one to outlast a reach.
+      pgPolicy('acceptance_names_its_writer', {
+        as: 'restrictive',
+        for: 'insert',
+        to: 'ic_app',
+        withCheck: sql`${t.writerId} = ${principal} and ${t.acceptedAt} = now()`,
+      }),
+      pgPolicy('acceptance_is_removed_by_its_writer_or_once_expired', {
+        as: 'restrictive',
+        for: 'delete',
+        to: 'ic_app',
+        using: sql`${t.writerId} = ${principal} or ${expired}`,
+      }),
+      ...proseKept(t.caseId, t.recordId, ['select', 'delete']),
+      // A delete reads the rows it removes, so the sweep has to be able to see them.
+      pgPolicy('an_expired_acceptance_is_seen_to_be_swept', {
+        for: 'select',
+        to: 'ic_app',
+        using: expired,
+      }),
+      pgPolicy('an_expired_acceptance_is_swept', { for: 'delete', to: 'ic_app', using: expired }),
+    ]
+  },
 )

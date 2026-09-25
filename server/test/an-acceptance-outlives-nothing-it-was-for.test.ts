@@ -18,7 +18,8 @@ import * as Y from 'yjs'
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 import { caseSocket, issued, pause } from './case-socket.js'
 import { openTestPool } from './database.js'
-import { cases, customers, proseAcceptances } from '../src/db/schema/index.js'
+import { caseNotes, cases, customers, proseAcceptances } from '../src/db/schema/index.js'
+import { ACCEPTANCE_LASTS } from '../src/db/schema/scoped.js'
 
 const TAG = `${String(process.pid)}-${String(Date.now()).slice(-6)}`
 let harness: Harness
@@ -145,6 +146,59 @@ describe.skipIf(!(await bootable()))('an acceptance', () => {
     }).toEqual({ recorded: 1, left: 0 })
   })
 
+  it('lets a frame that adds nothing come first, and still stores the words after it', async () => {
+    const noteId = (await call(owner, 'POST', `/api/cases/${caseId}/casenotes`, { note: 'seed' }))[
+      'id'
+    ] as string
+    const watching = await opens(owner, noteId)
+    const live = await opens(writer, noteId)
+    live.socket.send(
+      JSON.stringify({
+        type: 'prose.sync',
+        field: `casenotes:${noteId}:document`,
+        update: answered(),
+      }),
+    )
+    await pause(300)
+    await types(live, noteId, `after an empty answer ${TAG}`, watching)
+    await pause(1_500)
+
+    const [note] = await seed()
+      .select({ note: caseNotes.note, by: caseNotes.updatedBy })
+      .from(caseNotes)
+      .where(eq(caseNotes.id, noteId))
+    expect(note).toEqual({
+      note: expect.stringContaining(`after an empty answer ${TAG}`),
+      by: writer.id,
+    })
+  })
+
+  it('is swept by a save once it is older than an acceptance lasts', async () => {
+    const other = (await call(owner, 'POST', `/api/cases/${caseId}/casenotes`, { note: 'other' }))[
+      'id'
+    ] as string
+    const [{ id: old } = { id: '' }] = await seed()
+      .insert(proseAcceptances)
+      .values({
+        caseId,
+        entity: 'casenotes',
+        recordId: other,
+        writerId: writer.id,
+        acceptedAt: sql`now() - ${ACCEPTANCE_LASTS}::interval - interval '1 minute'`,
+      })
+      .returning({ id: proseAcceptances.id })
+    const noteId = (await call(owner, 'POST', `/api/cases/${caseId}/casenotes`, { note: 'seed' }))[
+      'id'
+    ] as string
+    const watching = await opens(owner, noteId)
+    await types(await opens(writer, noteId), noteId, `a save that sweeps ${TAG}`, watching)
+    await pause(1_500)
+
+    expect(
+      await seed().select().from(proseAcceptances).where(eq(proseAcceptances.id, old)),
+    ).toEqual([])
+  })
+
   it('lets the prose role write nothing into a note whose case has since moved out of every reach', async () => {
     const { noteId } = await openedAndLeft()
     await seed().update(cases).set({ customerId: nobody }).where(eq(cases.id, caseId))
@@ -171,4 +225,27 @@ describe.skipIf(!(await bootable()))('an acceptance', () => {
 
     expect(touched).not.toBe(1)
   })
+
+  // Last: closing a second application ends what the first shares with it.
+  it('is swept when the application starts, once it is older than an acceptance lasts', async () => {
+    const other = (await call(owner, 'POST', `/api/cases/${caseId}/casenotes`, { note: 'other' }))[
+      'id'
+    ] as string
+    const [{ id: old } = { id: '' }] = await seed()
+      .insert(proseAcceptances)
+      .values({
+        caseId,
+        entity: 'casenotes',
+        recordId: other,
+        writerId: writer.id,
+        acceptedAt: sql`now() - ${ACCEPTANCE_LASTS}::interval - interval '1 minute'`,
+      })
+      .returning({ id: proseAcceptances.id })
+    const started = await boot()
+    await started.close()
+
+    expect(
+      await seed().select().from(proseAcceptances).where(eq(proseAcceptances.id, old)),
+    ).toEqual([])
+  }, 60_000)
 })

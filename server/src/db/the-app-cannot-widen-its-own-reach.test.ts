@@ -27,6 +27,7 @@ import { ACCEPTANCE_LASTS } from './schema/scoped.js'
 import { CHANNEL_OF } from './schema/install-activity.js'
 import { OCSF_VERSION, classify } from '../install-activity/ocsf.js'
 import { retentionClassOf } from '../install-activity/retention-class.js'
+import { ProseService } from '../prose/prose.service.js'
 import { asRole, hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -413,6 +414,86 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by
       ).not.toBe(1)
     } finally {
       await seed().delete(proseAcceptances).where(eq(proseAcceptances.recordId, unaccepted))
+    }
+  })
+
+  /** Runs `statement` as the application with `principal` asking in `kase`; the rows it touched, or its SQLSTATE. */
+  async function asApp(principal: string, kase: string, statement: ReturnType<typeof sql>): Promise<number | string> {
+    try {
+      return await app!.transaction(async (tx) => {
+        await tx.execute(
+          sql`select set_config('app.case_id', ${kase}, true), set_config('app.principal', ${principal}, true)`,
+        )
+        return (await tx.execute(statement)).rowCount ?? 0
+      })
+    } catch (error) {
+      for (let at: unknown = error; at instanceof Object; at = (at as { cause?: unknown }).cause) {
+        const code = (at as { code?: unknown }).code
+        if (typeof code === 'string') return code
+      }
+      throw error
+    }
+  }
+
+  it('cannot date an acceptance for later, to outlast its writer\'s reach', async () => {
+    const [open] = await seed().insert(cases).values({ title: 'Everybody writes this' }).returning()
+    const [note] = await seed().insert(caseNotes).values({ caseId: open!.id, note: 'x' }).returning()
+    try {
+      const dated = (when: ReturnType<typeof sql>) =>
+        asApp(
+          victim,
+          open!.id,
+          sql`insert into prose_acceptances (case_id, entity, record_id, writer_id, accepted_at)
+              values (${open!.id}, 'casenotes', ${note!.id}, ${victim}, ${when})`,
+        )
+      expect({ now: await dated(sql`now()`), later: await dated(sql`now() + interval '100 years'`) }).toEqual({
+        now: 1,
+        later: '42501',
+      })
+    } finally {
+      await seed().delete(cases).where(eq(cases.id, open!.id))
+    }
+  })
+
+  it('cannot remove an acceptance of somebody else\'s, in a case it writes or out of any case', async () => {
+    // The default customer's: every account writes it, the victim included.
+    const [open] = await seed().insert(cases).values({ title: 'Everybody writes this' }).returning()
+    const [note] = await seed().insert(caseNotes).values({ caseId: open!.id, note: 'x' }).returning()
+    const [{ id } = { id: '' }] = await seed()
+      .insert(proseAcceptances)
+      .values({ caseId: open!.id, entity: 'casenotes', recordId: note!.id, writerId: writer })
+      .returning({ id: proseAcceptances.id })
+    try {
+      expect({
+        another: await asApp(victim, open!.id, sql`delete from prose_acceptances where id = ${id}`),
+        nobody: await asApp('', '', sql`delete from prose_acceptances where id = ${id}`),
+      }).toEqual({ another: 0, nobody: 0 })
+    } finally {
+      await seed().delete(cases).where(eq(cases.id, open!.id))
+    }
+  })
+
+  it('sweeps an acceptance older than one lasts, and leaves a current one', async () => {
+    const [{ id: old } = { id: '' }] = await seed()
+      .insert(proseAcceptances)
+      .values({
+        caseId: caseA,
+        entity: 'casenotes',
+        recordId: unaccepted,
+        writerId: writer,
+        acceptedAt: sql`now() - ${ACCEPTANCE_LASTS}::interval - interval '1 minute'`,
+      })
+      .returning({ id: proseAcceptances.id })
+    try {
+      await new ProseService(app!).sweepExpiredAcceptances()
+      const left = await seed()
+        .select({ id: proseAcceptances.id })
+        .from(proseAcceptances)
+        .where(inArray(proseAcceptances.recordId, [accepted, unaccepted]))
+      expect(left.map((one) => one.id)).not.toContain(old)
+      expect(left, 'the current acceptance went too').not.toHaveLength(0)
+    } finally {
+      await seed().delete(proseAcceptances).where(eq(proseAcceptances.id, old))
     }
   })
 

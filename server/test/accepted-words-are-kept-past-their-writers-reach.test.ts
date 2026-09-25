@@ -24,6 +24,7 @@ import {
   changeFeed,
   customers,
   installActivity,
+  proseAcceptances,
   user,
 } from '../src/db/schema/index.js'
 
@@ -313,6 +314,56 @@ describe.skipIf(!(await bootable()))('words accepted before their writer loses w
       audit: [`Writer ${String(count)}`],
     })
   })
+
+  it('stores words whose saves failed for longer than an acceptance lasts, once the store recovers, named for their writer', async () => {
+    const owners = openTestPool(process.env['TEST_DATABASE_URL']!)
+    const asOwner = drizzle({ client: owners })
+    const noteId = await aNote()
+    const watching = await opens(owner, noteId)
+    const writer = await anAnalyst('write')
+    const live = await opens(writer, noteId)
+    const refusal = `refuse_the_audit_aged_${String(process.pid)}`
+    await asOwner.execute(
+      sql.raw(
+        `create or replace function ${refusal}() returns trigger language plpgsql as $f$ begin if new.actor_id = '${writer.id}' then raise exception 'the audit refuses this line'; end if; return new; end $f$`,
+      ),
+    )
+    await asOwner.execute(
+      sql.raw(`create trigger ${refusal} before insert on install_activity for each row execute function ${refusal}()`),
+    )
+    try {
+      await types(live, noteId, `aged words ${TAG}`, watching)
+      await pause(1_500)
+      // The hour passes while every save keeps failing.
+      await asOwner.execute(
+        sql`update prose_acceptances set accepted_at = now() - interval '2 hours' where record_id = ${noteId}`,
+      )
+      await types(live, noteId, `more words ${TAG}`, watching)
+      await pause(1_500)
+    } finally {
+      await asOwner.execute(sql.raw(`drop trigger ${refusal} on install_activity`))
+      await asOwner.execute(sql.raw(`drop function ${refusal}()`))
+      await owners.end()
+    }
+    await types(live, noteId, `after the recovery ${TAG}`, watching)
+    await pause(1_500)
+    live.socket.close()
+    watching.socket.close()
+    await pause(1_500)
+
+    const after = await stored(noteId)
+    const left = await seed()
+      .select()
+      .from(proseAcceptances)
+      .where(eq(proseAcceptances.recordId, noteId))
+    expect({
+      words: [`aged words ${TAG}`, `more words ${TAG}`, `after the recovery ${TAG}`].every((words) =>
+        after.note.includes(words),
+      ),
+      updatedBy: after.updatedBy,
+      left: left.length,
+    }).toEqual({ words: true, updatedBy: writer.id, left: 0 })
+  }, 30_000)
 
   it('names the writer who wrote last on the record', async () => {
     const noteId = await aNote()
