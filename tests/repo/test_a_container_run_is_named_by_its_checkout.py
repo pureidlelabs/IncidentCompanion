@@ -45,13 +45,16 @@ def test_no_tier_spells_an_image_tag_a_project_or_a_port_of_its_own():
 
 
 def test_the_compose_runs_carry_the_checkout_tag():
-    """A tier that runs a compose project hands it the tag, or compose builds `:local`."""
-    running = [path for path in TIERS if '"-p", PROJECT' in (source := path.read_text(encoding="utf-8"))
-               or '"IC_STACK_PROJECT"' in source]
-    assert running, "no tier runs docker compose -- this test moved"
-    untagged = [str(path.relative_to(REPO_ROOT)) for path in running
-                if "checkout.ENV" not in path.read_text(encoding="utf-8")]
-    assert not untagged, f"compose runs without IC_IMAGE_TAG: {untagged}"
+    """Every environment a tier hands a subprocess carries the tag, or compose builds and runs `:local`."""
+    handed = re.compile(r"\{\*\*os\.environ,(?!\s*\*\*checkout\.ENV\b)")
+    seen, untagged = 0, []
+    for path in TIERS:
+        source = path.read_text(encoding="utf-8")
+        seen += source.count("{**os.environ,")
+        untagged += [f"{path.relative_to(REPO_ROOT)}:{source.count(chr(10), 0, m.start()) + 1}"
+                     for m in handed.finditer(source)]
+    assert seen, "no tier hands a subprocess an environment -- this test moved"
+    assert not untagged, f"environments without IC_IMAGE_TAG: {untagged}"
 
 
 def test_no_two_checkouts_or_workers_share_a_port():
