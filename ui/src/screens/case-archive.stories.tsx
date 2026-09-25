@@ -167,8 +167,9 @@ export const ExportedUnencrypted: Story = {
     const canvas = within(canvasElement)
     const told = canvas.getByText('The archive leaves unencrypted, and anyone holding it can change it without that showing. Seal it to make a change evident.')
     await expect(told).toBeVisible()
-    // A visually hidden line is visible to the matcher; a readable one has a width.
+    // A visually hidden or clipped line is visible to the matcher; a readable one has a box.
     await expect(told.getBoundingClientRect().width).toBeGreaterThan(40)
+    await expect(told.getBoundingClientRect().height).toBeGreaterThan(8)
     await userEvent.click(await canvas.findByRole('button', { name: /export archive/i }))
     await expect(args.onExport).toHaveBeenCalledWith({ passphrase: '', files: true })
   },

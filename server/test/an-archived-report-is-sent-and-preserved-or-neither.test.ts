@@ -121,7 +121,7 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
     })
   })
 
-  it('reads a genuine sent report as sent, and produces what it preserved', async () => {
+  it('reads a genuine sent report as sent', async () => {
     const title = `Genuine ${STAMP}`
     const answer = await importing(await forged(title, () => undefined))
     expect(answer.status, await answer.clone().text()).toBe(201)

@@ -129,4 +129,25 @@ describe.skipIf(!runnable)('what a case holds reaches what it publishes', () => 
     }
     expect(painted, 'the malware hash is missing from the report').toContain('d41d8cd9')
   }, 60_000)
+
+  it('prints a web address written in a record as no live link', async () => {
+    const caseId = await seeded('The report carries free text')
+    const event = await send(`/api/cases/${caseId}/timeline`, {
+      kind: 'event',
+      time: new Date().toISOString(),
+      description: 'The lure was served from http://lure.example/login to the finance team',
+    })
+    expect(event.status, 'seeding a timeline event').toBe(201)
+    const made = await send(`/api/cases/${caseId}/reports`, { label: 'Free text' })
+    const reportId = ((await made.json()) as { id: string }).id
+    const block = await send(`/api/cases/${caseId}/report_blocks`, { reportId, kind: 'timeline' })
+    expect(block.status, 'seeding a timeline block').toBe(201)
+
+    // Markdown escapes the brackets a defanged address carries.
+    const painted = (await (await read(`/api/cases/${caseId}/report.md?report=${reportId}`)).text()).replaceAll('\\', '')
+    expect({
+      defanged: painted.includes('hxxp://lure[.]example/login'),
+      live: painted.includes('http://lure.example'),
+    }).toEqual({ defanged: true, live: false })
+  }, 60_000)
 })

@@ -228,6 +228,28 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
     })
   })
 
+  // A forger with no secret sends a plain archive where a sealed one was expected.
+  it('refuses a plain archive offered with a secret, as not the sealed one it claims to be', async () => {
+    const { bytes } = await archiveOf(caseId)
+    const read = await fetch(`${harness.base}/api/cases/import`, {
+      method: 'POST',
+      headers: {
+        cookie: analyst.cookie,
+        origin: harness.origin,
+        'content-type': 'application/octet-stream',
+        'x-archive-passphrase': `a passphrase long enough ${STAMP}`,
+      },
+      body: new Uint8Array(bytes),
+    })
+    const body = (await read.json()) as { id?: string; message?: string }
+    if (body.id) made.push(body.id)
+
+    expect({ status: read.status, said: body.message }).toEqual({
+      status: 422,
+      said: 'This archive is not encrypted, so it needs no passphrase.',
+    })
+  })
+
   it('starts a correction from the report as it reads', async () => {
     const { id } = await json<{ id: string }>('POST', `/api/cases/${caseId}/reports/${reportId}/supersede`)
     const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))

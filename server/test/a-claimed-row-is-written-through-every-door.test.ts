@@ -69,6 +69,17 @@ describe.skipIf(!runnable)('a row another analyst holds', () => {
         { timeout: 10_000, message: 'the roster never showed the claims, so nothing below tests a held row' },
       )
       .toBe(true)
+    // Another analyst is told who holds each row: the claim names the holder.
+    const session = (await (await fetch(`${harness.base}/api/auth/get-session`, { headers: { cookie: holder.cookie } })).json()) as {
+      user: { name: string }
+    }
+    const last = frames
+      .map((frame) => JSON.parse(frame) as { type?: string; claims?: { entry_id: string; user_id: string; username: string }[] })
+      .filter((frame) => frame.type === 'presence')
+      .at(-1)
+    expect(
+      ids.map((id) => last?.claims?.find((claim) => claim.entry_id === id)).map((claim) => [claim?.user_id, claim?.username]),
+    ).toEqual(ids.map(() => [holder.id, session.user.name]))
   }
 
   beforeAll(async () => {

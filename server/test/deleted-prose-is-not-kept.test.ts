@@ -139,7 +139,8 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
     expect({
       record: Buffer.from((await stored())!).toString('utf8').includes(DELETED),
       reader: Buffer.from(served!.update!, 'base64').toString('utf8').includes(DELETED),
-    }).toEqual({ record: false, reader: false })
+      readerSees: Buffer.from(served!.update!, 'base64').toString('utf8').includes(KEPT),
+    }).toEqual({ record: false, reader: false, readerSees: true })
   }, 60_000)
 
   it('keeps nothing of a section once it is removed', async () => {
