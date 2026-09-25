@@ -6,7 +6,7 @@ Two administrators demoting or disabling each other at the same moment could lea
 
 ## What Changes
 
-- **accounts-and-access**: of two administrators acting on each other at once, one succeeds and the other is refused, and somebody who can administer the install remains. An act whose change was made but whose answer failed is finished when asked again, and logged once.
+- **accounts-and-access**: of two administrators acting on each other at once, one succeeds and the other is refused, and somebody who can administer the install remains. An act whose change was made but whose answer failed is finished when asked again, and logged once; that scenario is carried by `2026-09-25-an-answer-says-what-happened`, whose delta holds the whole of *Administrative events are logged* for this landing.
 
 ## Impact
 

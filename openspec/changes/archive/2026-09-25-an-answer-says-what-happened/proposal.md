@@ -7,7 +7,7 @@ A single-row removal naming no row in the case, whether no row has that id or th
 ## What Changes
 
 - **the-api**: a removal naming nothing in the case is refused as not there, identically for a missing row and another case's, and a removal at a version the row no longer holds is refused as somebody having written first, naming the version it holds.
-- **accounts-and-access**: a removal that removes nothing, and a request for a state that already stands, log nothing as the change.
+- **accounts-and-access**: a removal that removes nothing, and a request for a state that already stands, log nothing as the change. An act whose change was made but whose answer failed is finished when asked again, and logged once.
 
 ## Impact
 

@@ -126,3 +126,10 @@ Changing what the logging itself does is an administrative event.
 - GIVEN a request for a membership at the level it has, a customer a group already holds, or an account's current state or role
 - WHEN it is answered
 - THEN nothing is logged as changed
+
+#### Scenario: An act half done is asked for again
+
+- GIVEN an administrative act whose change was made but whose answer failed
+- WHEN the administrator asks for it again
+- THEN the act is finished, the account's open sessions included
+- AND it is logged once
