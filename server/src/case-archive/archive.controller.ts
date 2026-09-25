@@ -39,6 +39,7 @@ import { BadArchive } from '../archive/format.js'
 import { PolicyService } from '../policy/policy.service.js'
 import { WeakPassphrase } from '../archive/envelope.js'
 import { refusedBody } from '../domain/refusal.js'
+import { contentDisposition } from '../domain/disposition.js'
 
 const exportSchema = z
   .object({
@@ -99,7 +100,7 @@ export class ArchiveController {
     response
       .status(200)
       .type('application/octet-stream')
-      .setHeader('content-disposition', `attachment; filename="${built.filename}"`)
+      .setHeader('content-disposition', contentDisposition('attachment', built.filename))
       // **What the archive does not carry, in a header rather than the body.**
       // The body is the file; a caller that needs to tell the analyst an
       // artefact was missing cannot parse a zip to find out.

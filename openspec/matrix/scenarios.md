@@ -8,7 +8,7 @@
 
 ## How a row is filled in
 
-**`demonstrated`** names the tests that demonstrate it, each as `path :: describe > case`, several separated by ` ; `. Each reaches the product the way the scenario's actor does: a request or a socket the booted application served, a story drawn in a browser, a stack raised with Compose, or a screen rendered. A path alone, a check that reads the repository, and a test that builds the parts by hand demonstrate nothing. The run that decides a landing refuses a row whose cited test is absent, skipped, failed, or never reached the product, and `tests/certify.py` is that refusal.
+**`demonstrated`** names the tests that demonstrate it, each as `path :: describe > case`, several separated by ` ; `. Each reaches the product the way the scenario's actor does: a request or a socket the booted application served, a story whose scenario is what it draws, a stack raised with Compose, or a screen rendered. A story is evidence rather than a demonstration unless `tests/certify.py` names it for the row's capability, because a story replaces with a constant whatever its providers would have read. A path alone, a check that reads the repository, and a test that builds the parts by hand demonstrate nothing. The run that decides a landing refuses a row whose cited test is absent, skipped, failed, or never reached the product, and `tests/certify.py` is that refusal.
 
 **`undemonstrable`** carries the reason instead. Some scenarios are honestly beyond automation -- an operator is told, an analyst can tell at a glance, a refusal reveals nothing by its timing. Those are demonstrated by somebody looking, or they are not demonstrated at all, and the constitution requires that they are recorded rather than quietly counted.
 
@@ -662,7 +662,7 @@
 | Which languages an install can write reports in is the administrator's to change | A report produced after its language was removed | undemonstrated | |
 | Which languages an install can write reports in is the administrator's to change | A file that is not a language | undemonstrated | |
 | Which languages an install can write reports in is the administrator's to change | A language carrying words the application has no place for | undemonstrated | |
-| Which languages an install can write reports in is the administrator's to change | An incomplete language is managed | demonstrated | ui/src/components/blocks/languages-pane.stories.tsx :: A pack four strings short |
+| Which languages an install can write reports in is the administrator's to change | An incomplete language is managed | undemonstrated |  |
 | A report is for an audience, and the audience decides what it owes | A report is created | unbuilt | Not built: a report records no audience. -> #228 |
 | A report is for an audience, and the audience decides what it owes | A layout omits something the audience requires | unbuilt | Not built: what a report owes is read from its layout, not its audience. -> #228 |
 | A report never carries another customer's data | A report carries a row from another customer | unbuilt | Not built: the boundary is held at the write and at the evidence store, and no export refuses. -> #227 |
@@ -678,7 +678,7 @@
 | The report an analyst is reading is in the address | A command travelled on the address and has been run | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx :: a report has an address > leaves the New report dialog shut after the command that opened it |
 | A case's reports are navigation, and are reachable from every section | An analyst is reading another part of the case | undemonstrated | |
 | A case's reports are navigation, and are reachable from every section | A report is opened from elsewhere in the case | undemonstrated | |
-| A case's reports are navigation, and are reachable from every section | A case holds no reports | demonstrated | ui/src/screens/report-section.stories.tsx :: A case with no reports |
+| A case's reports are navigation, and are reachable from every section | A case holds no reports | undemonstrated |  |
 | A case's reports are navigation, and are reachable from every section | The address names a report the case no longer holds | undemonstrated | |
 | A case's reports are navigation, and are reachable from every section | The analyst leaves the section that draws a report | undemonstrated | |
 | A report filed under a regime records which step of it the report is | A filing is created from the layout that files it | undemonstrated | |
@@ -716,7 +716,7 @@
 | What is kept forever is decided, not defaulted | A retention period is shortened below an obligation | unbuilt | Not built: no retention period names an obligation. -> #240 |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is stored | undemonstrated | |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | The same artefact arrives twice | undemonstrated | |
-| Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | undemonstrated | |
+| Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/test/every-download-answers-its-caller.test.ts :: every download answers its caller > hands evidence named outside Latin-1 back wrapped, holding the bytes as stored |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | undemonstrated | |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | An operator asks what protects the state at rest | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
@@ -754,7 +754,7 @@
 | The interface describes itself, and the description is generated | A route changes shape | undemonstrated | |
 | The interface describes itself, and the description is generated | A route served by a library the application mounts | undemonstrated | |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts :: not there and not yours look alike > answers a case out of reach exactly as it answers one that is not there ; server/test/not-there-and-not-yours-look-alike.test.ts :: not there and not yours look alike > refuses with not-found rather than forbidden |
-| A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/every-write-door-refuses-a-version-past-its-column.test.ts :: every door that takes a version refuses one no reader produced > refuses a version no reader could have read at 422, naming it, at each of them |
+| A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/every-write-door-refuses-a-version-past-its-column.test.ts :: every door that takes a version refuses one no reader produced > refuses a version no reader could have read at 422, naming it, at each of them ; server/test/every-download-answers-its-caller.test.ts :: every download answers its caller > refuses a .md export of report 'x', naming the report ; server/test/every-download-answers-its-caller.test.ts :: every download answers its caller > refuses a .docx export of report 'x', naming the report ; server/test/every-download-answers-its-caller.test.ts :: every download answers its caller > refuses a .pdf export of report 'x', naming the report |
 | A refusal says which of the caller's problems it is | A caller times the refusal | undemonstrable | A duration is measured, and a refusal's reveals nothing only as a distribution. What makes the two take the same time is shown by server/test/a-refusal-does-the-same-work-whether-or-not-the-case-exists.test.ts, which asserts the same statements before either answer; that is evidence of the mechanism, not a demonstration of the clock. |
 | A refusal says which of the caller's problems it is | A write depends on another customer's data | demonstrated | server/test/a-move-says-nothing-about-a-customer-the-mover-does-not-reach.test.ts :: moving a case to a customer > refuses a referenced case the same way whether or not the customer holds its reference ; server/test/a-reference-says-nothing-about-another-customer.test.ts :: a write naming a row of another customer > answers a reference to a row of another customer as it answers one to no row |
 | What a request costs is bounded before it runs | A caller asks for too much at once | undemonstrated | |

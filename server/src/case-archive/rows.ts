@@ -59,7 +59,7 @@ const CARRIED: Readonly<Record<string, z.ZodRawShape>> = {
     storedAt: when,
     sizeBytes: z.int().nullable().optional(),
     contentType: z.string().nullable().optional(),
-    originalFilename: z.string(),
+    originalFilename: z.string().max(255),
   },
   reports: {
     sentAt: when,
