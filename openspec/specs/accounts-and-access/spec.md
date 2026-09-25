@@ -368,6 +368,8 @@ Sign-in MUST resist repeated guessing, and guessing MUST NOT give anybody the po
 
 The first lock MUST last a duration the install sets. Each later lock of the same run, with no right password between them, MUST last longer than the one before, up to a maximum the install sets, and a lock that has lifted MUST take the install's number of failures to fall again. The same wrong password offered again MUST count once. The install MUST NOT keep a wrong password, nor anything from which one could be confirmed without the install's own secret. An administrator MUST be able to release an account, and a release MUST clear both runs.
 
+**An address stays familiar for a stated life, and no longer.** An address MUST stop counting as one the account's right password has come from once that password has not come from it for a fixed period, or once it is no longer among a fixed number of the account's most recent such addresses, and a failure or a right password from it then falls in the other run. Each right password from an address MUST start its period again. An address no longer familiar MUST be removed, and each pass that removes any MUST be logged with how many it removed and without the addresses themselves. An address that is only waiting to be removed MUST NOT count as familiar.
+
 **Every door that checks a password is a door a guess arrives through.** A wrong password MUST count toward the lock whichever door checked it — signing in, confirming the current password before changing it, or any other — and the failures from every door MUST count into the same two runs. While an address is locked out of an account, the account's password offered from it MUST be answered as wrong at every door, and nothing a door would do with the right one — signing in, replacing the password — MUST happen. Each wrong answer MUST be logged as a failed sign-in, naming the door, and each lock MUST be logged once, when it falls, with how long it lasts.
 
 Local passwords MUST meet a policy the install sets. Where a password must be changed, the holder MUST be unable to reach anything else until they change it.
@@ -431,6 +433,34 @@ These controls exist to answer OWASP ASVS 5.0 Level 2, which the constitution na
 - WHEN an administrator releases it
 - THEN its holder signs in
 - AND the next lock of an address it has never signed in from lasts the install's first duration
+
+#### Scenario: A familiar address falls out of use
+
+- GIVEN an analyst who signed in from a machine, and has not signed in from it for longer than an address stays familiar
+- WHEN a machine the account has never signed in from guesses at it until it is locked out
+- THEN the right password from the analyst's unused machine is refused
+- AND a machine they signed in from within that period still signs in
+
+#### Scenario: Signing in keeps an address familiar
+
+- GIVEN an analyst whose machine is near the end of the period an address stays familiar
+- WHEN they sign in from it, and guessing from elsewhere later locks out the machines the account has never signed in from
+- THEN they still sign in from that machine
+
+#### Scenario: An account signs in from more addresses than it keeps
+
+- GIVEN an analyst who has signed in from as many machines as an account keeps familiar
+- WHEN they sign in from one more, and guessing from elsewhere then locks out the machines the account has never signed in from
+- THEN the machine they signed in from least recently is refused
+- AND the others still sign in
+
+#### Scenario: Addresses no longer familiar are removed
+
+- GIVEN an account with addresses past their period or beyond the number it keeps
+- WHEN the install removes them
+- THEN the removal is logged with how many addresses went
+- AND the log names none of them
+- AND where the log cannot take the line, nothing is removed
 
 #### Scenario: An account must change its password
 

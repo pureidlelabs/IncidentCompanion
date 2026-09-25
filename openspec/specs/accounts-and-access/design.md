@@ -56,6 +56,10 @@ The lock lives where a password is verified rather than at any door, so every do
 
 The runs and the familiar addresses are held in the database beside the accounts. A lock that a restart or a cache flush lifts is a control the ephemeral store can switch off.
 
+An address stays familiar for **90 days** after the last right password from it, and only while it is among the account's **20** most recent; each right password from it starts its 90 days again. Both are fixed, not install settings. The check that picks the run reads the two bounds itself, so an address is unfamiliar the moment it leaves either, whether or not its row has gone.
+
+Removing the rows is a sweep, daily and at boot as the audit prune is, and it removes only what that check already ignores: a sweep that fails or falls behind holds more rows and changes no answer. The sign-in path deletes nothing, so it has nothing of its own to log, and what it writes to a familiar address is that address's own row, never the run's. Between sweeps an account holds its 20 plus whatever new addresses its right password has come from since the last one. Each sweep that removes any logs one line in the transaction that removes them, with the count, the accounts touched and the two bounds, and never an address, which the line would otherwise keep past its life; a sweep whose line cannot be written removes nothing.
+
 The threshold an install may set is bounded above, so no stored setting turns the control off while a screen still shows a number. The bound is NIST SP 800-63B's limit of no more than 100 consecutive failed attempts against one account. The longest lock an install may set is a day.
 
 A second factor can be enrolled on any account whether or not the install requires one. Whether it is required is a single install-level policy evaluated at sign-in, and an install that has not turned it on is told plainly what that falls short of.
