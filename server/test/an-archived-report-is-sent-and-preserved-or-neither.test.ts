@@ -7,6 +7,8 @@
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq, inArray, sql } from 'drizzle-orm'
+import * as encoding from 'lib0/encoding'
+import { writeUpdate } from 'y-protocols/sync'
 import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -99,10 +101,16 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
     })
     const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
     const address = reportDocument(sentReport)
-    const doc = await prose.open(caseId, address)
+    // Sent as the analyst's editor sends it, so the save names them and stores it.
+    const client = new Y.Doc()
+    Y.applyUpdate(client, Y.encodeStateAsUpdate(await prose.open(caseId, address)))
+    const before = Y.encodeStateVector(client)
     const paragraph = new Y.XmlElement('paragraph')
     paragraph.insert(0, [new Y.XmlText(`The phishing page is named in the title, and served from ${WRITTEN}.`)])
-    fragmentFor(doc, block.id).insert(0, [paragraph])
+    fragmentFor(client, block.id).insert(0, [paragraph])
+    const encoder = encoding.createEncoder()
+    writeUpdate(encoder, Y.encodeStateAsUpdate(client, before))
+    await prose.apply(caseId, address, encoding.toUint8Array(encoder), 'a-socket', { id: analyst.id, label: 'A', headers: {} })
     await prose.flush(caseId, address)
     await prose.release(caseId, address)
     await json('POST', `/api/cases/${caseId}/methods`, { name: 'Proxy search', query: QUERY })
