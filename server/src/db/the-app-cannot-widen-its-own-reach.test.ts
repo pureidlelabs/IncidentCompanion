@@ -17,6 +17,8 @@
  * is actually run and its refusal is the assertion.
  */
 import { randomUUID } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 
 import { eq, inArray, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -591,6 +593,13 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by
  */
 describe.skipIf(!app || !hasConcurrentConnections())('what a writer of a case cannot rewrite', () => {
   const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
+  /** The administrator, on the suite's own database rather than the one its URL names. */
+  const adminPool = (() => {
+    if (!URL_ || !process.env.ADMIN_DATABASE_URL) return null
+    const at = new URL(process.env.ADMIN_DATABASE_URL)
+    at.pathname = new URL(URL_).pathname
+    return openTestPool(at.toString())
+  })()
   const seed = () => drizzle({ client: seedPool! })
   const stamp = `${String(process.pid)}-${String(Date.now())}`
   const [writer, other, admin] = ['writer', 'other', 'admin'].map((who) => `record-${who}-${stamp}`) as [
@@ -618,6 +627,30 @@ describe.skipIf(!app || !hasConcurrentConnections())('what a writer of a case ca
         if (typeof code === 'string') return code
       }
       throw error
+    }
+  }
+
+  /**
+   * The same, with `grant` given to the app role for the transaction alone, so
+   * a refusal that lasts is the store's and not the missing privilege's.
+   */
+  async function asAppGranted(grant: string, principal: string, statement: string): Promise<number | string> {
+    const client = await adminPool!.connect()
+    try {
+      await client.query('begin')
+      await client.query(grant)
+      await client.query('set local role ic_app')
+      await client.query(`select set_config('app.case_id', $1, true), set_config('app.principal', $2, true)`, [
+        kase,
+        principal,
+      ])
+      return await client.query(statement).then(
+        (result) => result.rowCount ?? 0,
+        (error: { code?: string }) => String(error.code),
+      )
+    } finally {
+      await client.query('rollback')
+      client.release()
     }
   }
 
@@ -676,6 +709,7 @@ describe.skipIf(!app || !hasConcurrentConnections())('what a writer of a case ca
     await seed().delete(customers).where(inArray(customers.id, [owner, elsewhere]))
     await seed().delete(user).where(inArray(user.id, [writer, other, admin]))
     await seedPool?.end()
+    await adminPool?.end()
   })
 
   it('adds to the change feed, and cannot rename who made a change or remove one', async () => {
@@ -688,6 +722,67 @@ describe.skipIf(!app || !hasConcurrentConnections())('what a writer of a case ca
       removed: await asApp(writer, sql`delete from change_feed where case_id = ${kase}`),
     }).toEqual({ appended: 1, renamed: '42501', removed: '42501' })
     expect(await feedOf(kase)).toEqual([`cases:${writer}`, `casenotes:${writer}`, `systems:${writer}`])
+  })
+
+  it('rewrites and removes no change feed entry even holding the privilege to', async () => {
+    const granted = (statement: string) =>
+      asAppGranted('grant update, delete on change_feed to ic_app', writer, statement)
+    expect({
+      renamed: await granted(`update change_feed set actor_id = '${other}' where case_id = '${kase}'`),
+      removed: await granted(`delete from change_feed where case_id = '${kase}'`),
+    }).toEqual({ renamed: 0, removed: 0 })
+  })
+
+  it('moves no case to another customer by an ordinary write, even holding the privilege to', async () => {
+    const granted = (statement: string) => asAppGranted('grant update on cases to ic_app', writer, statement)
+    expect({
+      toTheDefault: await granted(`update cases set customer_id = '${fallback}' where id = '${kase}'`),
+      toNone: await granted(`update cases set customer_id = null where id = '${kase}'`),
+      toAnother: await granted(`update cases set customer_id = '${elsewhere}' where id = '${kase}'`),
+      unchanged: await granted(`update cases set customer_id = customer_id where id = '${kase}'`),
+    }).toEqual({ toTheDefault: '42501', toNone: '42501', toAnother: '42501', unchanged: 1 })
+  })
+
+  it('keeps these privileges when the roles are provisioned again after the schema', async () => {
+    const roles = await readFile(fileURLToPath(new URL('../../../docker/db/roles.sql', import.meta.url)), 'utf8')
+    const client = await adminPool!.connect()
+    try {
+      await client.query('begin')
+      await client.query(roles)
+      const { rows } = await client.query<Record<string, boolean>>(`select
+        has_table_privilege('ic_app', 'change_feed', 'UPDATE') as "feedUpdate",
+        has_table_privilege('ic_app', 'change_feed', 'DELETE') as "feedDelete",
+        has_table_privilege('ic_app', 'change_feed', 'INSERT') as "feedInsert",
+        has_column_privilege('ic_app', 'cases', 'customer_id', 'UPDATE') as "customer",
+        has_column_privilege('ic_app', 'cases', 'is_demo', 'UPDATE') as "isDemo",
+        has_column_privilege('ic_app', 'cases', 'title', 'UPDATE') as "title",
+        has_table_privilege('ic_seed', 'prose_acceptances', 'UPDATE') as "acceptanceBySeeder",
+        has_table_privilege('ic_seed', 'install_activity', 'TRUNCATE') as "truncateBySeeder"`)
+      expect(rows[0]).toEqual({
+        feedUpdate: false,
+        feedDelete: false,
+        feedInsert: true,
+        customer: false,
+        isDemo: false,
+        title: true,
+        acceptanceBySeeder: false,
+        truncateBySeeder: false,
+      })
+    } finally {
+      await client.query('rollback')
+      client.release()
+    }
+  })
+
+  it('sets nothing a case is made with or marked by', async () => {
+    const set = (assignment: ReturnType<typeof sql>) =>
+      asApp(writer, sql`update cases set ${assignment} where id = ${kase}`)
+    expect({
+      isDemo: await set(sql`is_demo = true`),
+      createdBy: await set(sql`created_by = ${other}`),
+      createdAt: await set(sql`created_at = now() - interval '1 year'`),
+      id: await set(sql`id = gen_random_uuid()`),
+    }).toEqual({ isDemo: '42501', createdBy: '42501', createdAt: '42501', id: '42501' })
   })
 
   it('cannot return an attributed case to the default customer, or to none', async () => {

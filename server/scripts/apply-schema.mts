@@ -20,7 +20,8 @@ import { PgTable } from 'drizzle-orm/pg-core'
 import pg from 'pg'
 
 import * as declared from '../src/db/schema/index.js'
-import { proseGrants } from '../src/db/schema/prose-grants.js'
+import { CASE_WRITABLE } from '../src/domain/case.js'
+import { grants } from '../src/db/schema/grants.js'
 import { storeGuards } from '../src/db/schema/store-guards.js'
 
 // Loaded as CommonJS under tsx, where the exports sit on `default`.
@@ -80,7 +81,7 @@ const LOSSY = [
 
 /**
  * What the policies, the store's own functions and who may call them, triggers,
- * and each table's grants and row security are. Drizzle plans the rest, so a
+ * each table's, column's and sequence's grants, and row security are. Drizzle plans the rest, so a
  * run whose plan is only the policies it was made to recreate changed nothing
  * when this is equal.
  */
@@ -100,7 +101,16 @@ const SHAPE = `
     'tables', (select coalesce(json_agg(json_build_object('name', c.relname, 'rls', c.relrowsecurity,
                                  'force', c.relforcerowsecurity, 'acl', c.relacl::text) order by c.relname), '[]')
                  from pg_class c join pg_namespace n on n.oid = c.relnamespace
-                where n.nspname = 'public' and c.relkind in ('r', 'p'))
+                where n.nspname = 'public' and c.relkind in ('r', 'p')),
+    'columns', (select coalesce(json_agg(json_build_object('name', c.relname || '.' || a.attname, 'acl', a.attacl::text)
+                                  order by c.relname, a.attname), '[]')
+                  from pg_attribute a join pg_class c on c.oid = a.attrelid
+                  join pg_namespace n on n.oid = c.relnamespace
+                 where n.nspname = 'public' and a.attacl is not null),
+    'sequences', (select coalesce(json_agg(json_build_object('name', c.relname, 'acl', c.relacl::text)
+                                    order by c.relname), '[]')
+                    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+                   where n.nspname = 'public' and c.relkind = 'S')
   )::text as shape`
 
 /** Every table, column, index, constraint and enum the store holds, by the planner's kind. */
@@ -203,7 +213,8 @@ export async function applySchema(url: string): Promise<Outcome> {
       return { kind: 'refused', statements: refused }
     }
 
-    for (const statement of [...sqlStatements, ...storeGuards, ...proseGrants]) await client.query(statement)
+    const granted = grants(CASE_WRITABLE)
+    for (const statement of [...sqlStatements, ...storeGuards, ...granted]) await client.query(statement)
 
     const onlyPolicies = sqlStatements.every((statement) => /^CREATE POLICY\b/i.test(statement.trim()))
     if (onlyPolicies && (await shape(client)) === before) {
@@ -211,7 +222,7 @@ export async function applySchema(url: string): Promise<Outcome> {
       return { kind: 'unchanged' }
     }
     await client.query('commit')
-    return { kind: 'applied', statements: sqlStatements.length + storeGuards.length + proseGrants.length }
+    return { kind: 'applied', statements: sqlStatements.length + storeGuards.length + granted.length }
   } catch (error) {
     await client.query('rollback').catch(() => undefined)
     throw error

@@ -150,14 +150,17 @@ const WRITTEN_ONCE = ['prose_acceptances']
 /** Tables whose rows are added to and never changed or removed, by any caller; they go with their case. */
 const APPENDED = ['change_feed']
 
-/** The rows of `caseId` an update touches: the case column set to what it holds. */
+/**
+ * The rows of `caseId` an update touches: the case column set to what it
+ * holds, or for `cases`, whose case column is its id, the title.
+ */
 const updated =(tx: Tx, subject: Subject, caseId: string) => {
   const [key] = Object.entries(getTableColumns(subject.table)).find(
     ([, column]) => column === subject.caseColumn,
   )!
   return tx
     .update(subject.table)
-    .set({ [key]: caseId })
+    .set(subject.name === 'cases' ? { title: sql`title` } : { [key]: caseId })
     .where(eq(subject.caseColumn, caseId))
     .returning()
 }

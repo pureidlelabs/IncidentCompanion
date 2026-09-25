@@ -150,7 +150,7 @@ export function caseRecorded(caseId: PgColumn): ReturnType<typeof pgPolicy>[] {
  *
  * Deleting a case needs `delete`. **Moving one is not an update the
  * application may make**: it holds no grant on the customer column, so only
- * the store's own acts change it. -> `prose-grants.ts`, `db/reach.sql`
+ * the store's own acts change it. -> `grants.ts`, `db/reach.sql`
  */
 export function customerScoped(customerId: PgColumn): ReturnType<typeof pgPolicy>[] {
   const holds = (needed: (typeof LEVELS)[number]): SQL =>

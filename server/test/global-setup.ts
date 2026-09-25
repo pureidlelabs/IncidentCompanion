@@ -105,30 +105,13 @@ async function embedded(): Promise<void> {
 
   // **Nothing in the tree sets `IC_TEST_DB`**, so this path is reached only on
   // a machine with no admin Postgres -- and no suite reports whether it ran.
-  const roles = await rolesSql()
-  const apply = async (): Promise<void> => {
-    const client = new Client({ connectionString: server.url })
-    await client.connect()
-    await client.query(roles)
-    await client.end()
-  }
-
   // Before the push, so the roles exist for it to grant to.
-  await apply()
+  const client = new Client({ connectionString: server.url })
+  await client.connect()
+  await client.query(await rolesSql())
+  await client.end()
 
   await applySchema(server.url)
-
-  /**
-   * **And again after it, which is not belt and braces.** The grants in
-   * `roles.sql` arrive through `ALTER DEFAULT PRIVILEGES FOR ROLE ic_migrate`,
-   * and they attach to whoever *creates* the table - here that is the single
-   * user the socket server hands out, not `ic_migrate`, so nothing is granted
-   * and the first query fails with `permission denied for table user`, a long
-   * way from the cause. The file's trailing `GRANT ... ON ALL TABLES` is the
-   * catch-up path, and it covers what exists when it runs: nothing, the first
-   * time. The file is idempotent by design, which is what makes this legal.
-   */
-  await apply()
 
   const { asRole } = await import('./database.js')
   process.env.IC_EMBEDDED_DATABASE_URL = server.url

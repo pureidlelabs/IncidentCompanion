@@ -271,7 +271,7 @@ const operationalRetention = sql`nullif(current_setting('app.operational_retenti
  * anyone holding `ic_migrate` or the superuser, who can drop the policy; an
  * audit that cannot be removed by its own owner is not something Postgres
  * offers. `TRUNCATE` is a table privilege that row-level security never sees,
- * and its absence from `docker/db/roles.sql` is load-bearing.
+ * and its absence from `grants.ts` is load-bearing.
  *
  * `ic_seed` gets no delete policy at all, which is what stops a demo rebuild
  * taking the audit with the cases it is replacing.
