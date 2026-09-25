@@ -13,6 +13,7 @@ import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
 import { caretIdentity, PersonAvatar } from '@/components/blocks/presence'
 import { ProseRefusal } from '@/components/blocks/prose-refusal'
+import { ProseUnsaved } from '@/components/blocks/prose-unsaved'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { ProseBody } from '@/components/blocks/prose-body'
 import { blockItems } from '@/components/blocks/prose-slash'
@@ -480,6 +481,7 @@ export function NotesScreen({
                   detail: settled ? (
                     <>
                       <ProseRefusal channel={channel} status={status} />
+                      <ProseUnsaved channel={channel} />
                       <ProseBody
                         // Keyed on the note, so opening another one mounts its own
                         // body rather than carrying the caret and the scroll of the

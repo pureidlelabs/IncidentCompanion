@@ -8,7 +8,7 @@
  */
 import { AsyncResource } from 'node:async_hooks'
 
-import { and, eq } from 'drizzle-orm'
+import { and, eq, like, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
@@ -26,7 +26,7 @@ import {
   reportDocument,
   type ProseRelay,
 } from './prose.service.js'
-import { caseNotes, cases, changeFeed, reportBlocks, reports, user } from '../db/schema/index.js'
+import { caseNotes, cases, changeFeed, installActivity, reportBlocks, reports, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
 
@@ -451,9 +451,9 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
   describe('what survives', () => {
     it('writes the document to its row and reads it back', async () => {
       const { caseId, reportId } = await freshReport()
-      const doc = await prose.open(caseId, reportDocument(reportId))
+      await prose.open(caseId, reportDocument(reportId))
       const { update } = typed('the initial finding was a false positive')
-      prose.applySync(doc, framed(update), 'a-socket')
+      await prose.apply(caseId, reportDocument(reportId), framed(update), 'a-socket', WRITER)
       await prose.flush(caseId, reportDocument(reportId))
       await prose.release(caseId, reportDocument(reportId))
 
@@ -491,13 +491,13 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
 
     it('flushes when the last reader leaves, not the first', async () => {
       const { caseId, reportId } = await freshReport()
-      const first = await prose.open(caseId, reportDocument(reportId))
+      await prose.open(caseId, reportDocument(reportId))
       await prose.open(caseId, reportDocument(reportId))
 
-      prose.applySync(first, framed(typed('half a sentence').update), 'a-socket')
+      await prose.apply(caseId, reportDocument(reportId), framed(typed('half a sentence').update), 'a-socket', WRITER)
       await prose.release(caseId, reportDocument(reportId))
 
-      prose.applySync(first, framed(typed(' and the rest', sections[1]).update), 'a-socket')
+      await prose.apply(caseId, reportDocument(reportId), framed(typed(' and the rest', sections[1]).update), 'a-socket', WRITER)
       await prose.release(caseId, reportDocument(reportId))
 
       const reopened = await prose.open(caseId, reportDocument(reportId))
@@ -507,9 +507,9 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
 
     it('holds two sections of one report in one document', async () => {
       const { caseId, reportId } = await freshReport()
-      const doc = await prose.open(caseId, reportDocument(reportId))
-      prose.applySync(doc, framed(typed('summary text', sections[0]).update), 'a')
-      prose.applySync(doc, framed(typed('root cause text', sections[1]).update), 'b')
+      await prose.open(caseId, reportDocument(reportId))
+      await prose.apply(caseId, reportDocument(reportId), framed(typed('summary text', sections[0]).update), 'a', WRITER)
+      await prose.apply(caseId, reportDocument(reportId), framed(typed('root cause text', sections[1]).update), 'b', WRITER)
       await prose.flush(caseId, reportDocument(reportId))
       await prose.release(caseId, reportDocument(reportId))
 
@@ -678,8 +678,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live docum
     it('writes both the document and the words it now holds', async () => {
       const { caseId, noteId } = await freshNote()
       const record = { table: 'casenotes' as const, id: noteId }
-      const doc = await prose.open(caseId, record)
-      prose.applySync(doc, framed(wrote('the mailbox was read in bulk')), 'a-socket')
+      await prose.open(caseId, record)
+      await prose.apply(caseId, record, framed(wrote('the mailbox was read in bulk')), 'a-socket', WRITER)
       await prose.flush(caseId, record)
       await prose.release(caseId, record)
 
@@ -731,8 +731,8 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live docum
       const { caseId, noteId } = await freshNote('what it arrived with')
       const record = { table: 'casenotes' as const, id: noteId }
 
-      const first = await prose.open(caseId, record)
-      prose.applySync(first, framed(wrote('what an analyst typed')), 'a-socket')
+      await prose.open(caseId, record)
+      await prose.apply(caseId, record, framed(wrote('what an analyst typed')), 'a-socket', WRITER)
       await prose.flush(caseId, record)
       await prose.release(caseId, record)
 
@@ -745,6 +745,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live docum
       expect(noteText(reopened)).toContain('what an analyst typed')
       expect(noteText(reopened)).not.toContain('straight into the column')
 
+      await prose.apply(caseId, record, framed(wrote('and a line more')), 'a-socket', WRITER)
       await prose.flush(caseId, record)
       await prose.release(caseId, record)
       const [row] = await seed!.select().from(caseNotes).where(eq(caseNotes.id, noteId))
@@ -950,6 +951,99 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
     await one.release(caseId, address)
     await two.release(caseId, address)
   }, 20_000)
+
+  /** What the store holds for a report: its words, who it names last, and the change rows and audit lines naming writers. */
+  async function storedReport(reportId: string) {
+    const [row] = await seed!
+      .select({ document: reports.document, updatedBy: reports.updatedBy })
+      .from(reports)
+      .where(eq(reports.id, reportId))
+    const words = new Y.Doc()
+    if (row?.document) Y.applyUpdate(words, row.document)
+    const feed = await seed!
+      .select({ actorId: changeFeed.actorId })
+      .from(changeFeed)
+      .where(and(eq(changeFeed.entity, 'reports'), eq(changeFeed.entityId, reportId)))
+    const audit = await seed!
+      .select({ actorId: installActivity.actorId })
+      .from(installActivity)
+      .where(
+        and(
+          sql`${installActivity.detail}->>'record' = ${reportId}`,
+          like(installActivity.targetLabel, 'live prose.sync%'),
+        ),
+      )
+    return {
+      text: words.getXmlFragment(sections[0]).toJSON(),
+      updatedBy: row?.updatedBy ?? null,
+      feed: feed.map((line) => line.actorId),
+      audit: audit.map((line) => line.actorId),
+    }
+  }
+
+  /** `work` with its quiet-moment timer held, so the instance that accepted the words does not store them first. */
+  async function withQuietHeld<T>(work: () => Promise<T>): Promise<T> {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    try {
+      return await work()
+    } finally {
+      vi.useRealTimers()
+    }
+  }
+
+  it('names the writer another instance accepted when a send stores their relayed words', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    await one.open(caseId, address)
+    const there = await two.open(caseId, address)
+
+    await withQuietHeld(() =>
+      one.apply(caseId, address, framed(typed('accepted on instance one').update), 'a-socket', WRITER),
+    )
+    expect(there.getXmlFragment(sections[0]).toJSON()).toContain('accepted on instance one')
+
+    const seal = await two.seal(caseId, reportId)
+    const stored = await storedReport(reportId)
+    expect(stored.text).toContain('accepted on instance one')
+    expect(stored.updatedBy).toBe(WRITER.id)
+    expect(stored.feed).toEqual([WRITER.id])
+    expect(stored.audit).toEqual([WRITER.id])
+
+    // The send stamps; the instance that accepted the words is then refused as sent, and so is its writer.
+    const stamp = new Date()
+    await seed!.update(reports).set({ sentAt: stamp, frozen: {}, frozenAt: stamp }).where(eq(reports.id, reportId))
+    await seal.settle(stamp)
+    await one.flush(caseId, address)
+    const after = await one.apply(caseId, address, framed(typed('after the send').update), 'a-socket', WRITER)
+    expect(after).toEqual({ refused: stamp })
+    expect((await storedReport(reportId)).feed).toEqual([WRITER.id])
+
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+  })
+
+  it('stores nothing relayed that no acceptance on record names', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    const here = await one.open(caseId, address)
+    await two.open(caseId, address)
+
+    // Applied with no writer, so nothing is accepted for it anywhere.
+    await withQuietHeld(() => Promise.resolve(one.applySync(here, framed(typed('accepted by nobody').update), 'a-socket')))
+    await two.flush(caseId, address)
+
+    const stored = await storedReport(reportId)
+    expect(stored.text).not.toContain('accepted by nobody')
+    expect(stored.feed).toEqual([])
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+  })
 
   it('is correct for its own sockets with no relay at all', async () => {
     const alone = as('prose-analyst', new ProseService(db!))

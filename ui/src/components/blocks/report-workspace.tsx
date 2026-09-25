@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
 import { ProseBody } from '@/components/blocks/prose-body'
 import { ProseRefusal } from '@/components/blocks/prose-refusal'
+import { ProseUnsaved } from '@/components/blocks/prose-unsaved'
 import { VocabSelect } from '@/components/blocks/vocab-select'
 import { blockItems } from '@/components/blocks/prose-slash'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
@@ -295,6 +296,7 @@ export function ReportWorkspace({
             <div className={cn('flex min-h-0 min-w-0 flex-col', fold.column)}>
               <div className="px-4 pt-3 empty:hidden">
                 <ProseRefusal channel={sync?.channel ?? null} status={sync?.status} />
+                <ProseUnsaved channel={sync?.channel ?? null} />
               </div>
 
               <SectionColumn

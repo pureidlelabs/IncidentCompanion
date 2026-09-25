@@ -30,6 +30,8 @@ import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate }
 import { readSyncMessage, writeSyncStep1, writeUpdate } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
+import { PROSE_STATES, type ProseState } from '@contract/prose-state'
+
 import { acquireLink, releaseLink, type CaseLink, type Message } from './caseSocket'
 
 /** Marks a transaction as arriving from the wire, so it is not sent back. */
@@ -112,6 +114,19 @@ export class ProseChannel {
    * note's writer their report was filed.
    */
   refusedBecause: 'read-only' | 'report-sent' | null = null
+
+  /**
+   * Whether the install holds this document's words unsaved (`unsaved`), or
+   * has given them up (`lost`), as it last said. Null once a save stores them.
+   */
+  unsaved: Exclude<ProseState, 'saved'> | null = null
+  private readonly unsavedListeners = new Set<() => void>()
+
+  /** Calls `listener` whenever `unsaved` changes. Returns what stops it. */
+  readonly watchUnsaved = (listener: () => void): (() => void) => {
+    this.unsavedListeners.add(listener)
+    return () => this.unsavedListeners.delete(listener)
+  }
 
   /**
    * **Public because `CollaborationCaret` has to be handed the same object.**
@@ -225,6 +240,13 @@ export class ProseChannel {
      * state request even on a filed report so the text can still be read, so a
      * `prose.sync` arrives *after* this and must not put the editor back.
      */
+    if (kind === 'prose.state') {
+      const state = PROSE_STATES.find((known) => known === message.state)
+      if (!state) return
+      this.unsaved = state === 'saved' ? null : state
+      for (const listener of [...this.unsavedListeners]) listener()
+      return
+    }
     if (kind === 'prose.refused') {
       this.refusedAt = typeof message.sentAt === 'string' ? message.sentAt : null
       this.refusedBecause = message.reason === 'report-sent' ? 'report-sent' : 'read-only'

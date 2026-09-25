@@ -49,15 +49,27 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
     return (text ? JSON.parse(text) : undefined) as T
   }
 
+  /** Sends the server what `acts` does to a client copy of its document, as the analyst's editor would. */
+  async function typed(prose: ProseService, address: ProseRecord, client: Y.Doc, acts: () => void) {
+    const before = Y.encodeStateVector(client)
+    acts()
+    const encoder = encoding.createEncoder()
+    writeUpdate(encoder, Y.encodeStateAsUpdate(client, before))
+    await prose.apply(caseId, address, encoding.toUint8Array(encoder), 'a-socket', { id: analyst.id, label: 'A', headers: {} })
+  }
+
   /** Acts on one fragment's text as the editor does, then stores and lets the document go. */
   async function write(address: ProseRecord, fragment: string, acts: (text: Y.XmlText) => void) {
     const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
-    const doc = await prose.open(caseId, address)
+    const client = new Y.Doc()
+    Y.applyUpdate(client, Y.encodeStateAsUpdate(await prose.open(caseId, address)))
     const paragraph = new Y.XmlElement('paragraph')
     const text = new Y.XmlText()
-    paragraph.insert(0, [text])
-    fragmentFor(doc, fragment).insert(0, [paragraph])
-    acts(text)
+    await typed(prose, address, client, () => {
+      paragraph.insert(0, [text])
+      fragmentFor(client, fragment).insert(0, [paragraph])
+    })
+    await typed(prose, address, client, () => { acts(text) })
     await prose.flush(caseId, address)
     await prose.release(caseId, address)
   }
@@ -167,10 +179,13 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
     })
     const address = reportDocument(report.id)
     const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
-    const doc = await prose.open(caseId, address)
-    const paragraph = new Y.XmlElement('paragraph')
-    paragraph.insert(0, [new Y.XmlText(KEPT)])
-    fragmentFor(doc, block.id).insert(0, [paragraph])
+    const client = new Y.Doc()
+    Y.applyUpdate(client, Y.encodeStateAsUpdate(await prose.open(caseId, address)))
+    await typed(prose, address, client, () => {
+      const paragraph = new Y.XmlElement('paragraph')
+      paragraph.insert(0, [new Y.XmlText(KEPT)])
+      fragmentFor(client, block.id).insert(0, [paragraph])
+    })
 
     await actingAs(randomUUID(), () => harness.app.get(ProseService, { strict: false }).flush(caseId, address))
     await prose.release(caseId, address)
