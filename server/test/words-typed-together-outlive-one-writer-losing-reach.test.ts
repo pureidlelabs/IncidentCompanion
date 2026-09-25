@@ -155,7 +155,7 @@ describe.skipIf(!(await bootable()))('two analysts writing one note, one losing 
     await harness?.close()
   })
 
-  it('stores both sets of words through the analyst who still writes', async () => {
+  it('stores both sets of words, whoever still writes', async () => {
     const field = `casenotes:${noteId}:document`
     const one = await connect(first)
     const two = await connect(last)

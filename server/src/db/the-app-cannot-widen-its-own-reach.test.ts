@@ -18,11 +18,16 @@
  */
 import { randomUUID } from 'node:crypto'
 
-import { sql } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { user } from './schema/index.js'
+import { caseNotes, cases, customers, proseAcceptances, user } from './schema/index.js'
+import { ACCEPTANCE_LASTS } from './schema/scoped.js'
+import { CHANNEL_OF } from './schema/install-activity.js'
+import { OCSF_VERSION, classify } from '../install-activity/ocsf.js'
+import { retentionClassOf } from '../install-activity/retention-class.js'
+import { ProseService } from '../prose/prose.service.js'
 import { asRole, hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -181,6 +186,10 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
   }
   /** Asked for nobody, so they answer identifiers and digests and never what a case holds. */
   const FOR_NOBODY = ['ic_artefacts_named']
+  /** Acts that remove only what has lapsed, whoever asks. */
+  const LAPSED_ONLY = ['ic_sweep_acceptances']
+  /** Acts that answer a constant of the store's and read nothing. */
+  const CONSTANTS = ['ic_acceptance_lasts']
 
   const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
   const admin = `acts-admin-${String(process.pid)}-${String(Date.now())}`
@@ -228,7 +237,7 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
     expect(
       rows.map((one) => one.name),
       'an act the app role may call is in no class here, so nobody decided who it answers',
-    ).toEqual([...PER_PRINCIPAL, ...Object.keys(ADMINISTRATOR_ONLY), ...FOR_NOBODY].sort())
+    ).toEqual([...PER_PRINCIPAL, ...Object.keys(ADMINISTRATOR_ONLY), ...FOR_NOBODY, ...LAPSED_ONLY, ...CONSTANTS].sort())
   })
 
   it.each(['refuse_a_change_to_a_sent_report', 'refuse_a_part_of_a_sent_report'])(
@@ -253,5 +262,313 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
   it.each(FOR_NOBODY)('%s answers no case content', async (name) => {
     const { fields } = await pool!.query(`select * from ${name}() limit 0`)
     expect(fields.map((one) => one.name)).toEqual(['case_id', 'hash', 'stored'])
+  })
+})
+
+/**
+ * **The role the application enters to store prose is not a way past the case
+ * boundary.** It may store a record only where the store holds an acceptance
+ * for it, made under a writer's own reach, and may name only those writers.
+ * Each attack enters it the way the save does and names what it likes.
+ */
+describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by the application', () => {
+  const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
+  const seed = () => drizzle({ client: seedPool! })
+  const stamp = `${String(process.pid)}-${String(Date.now())}`
+  const writer = `prose-writer-${stamp}`
+  const victim = `prose-victim-${stamp}`
+  let unreached = ''
+  let caseA = ''
+  let caseB = ''
+  let accepted = ''
+  let unaccepted = ''
+  let elsewhere = ''
+
+  /** Runs `statement` as the prose role with `record` in `kase`; the rows it touched, or its SQLSTATE. */
+  async function asProse(kase: string, record: string, statement: ReturnType<typeof sql>): Promise<number | string> {
+    try {
+      return await app!.transaction(async (tx) => {
+        await tx.execute(sql`set local role ic_prose`)
+        await tx.execute(
+          sql`select set_config('app.case_id', ${kase}, true), set_config('app.prose_record', ${record}, true), set_config('app.principal', '', true)`,
+        )
+        return (await tx.execute(statement)).rowCount ?? 0
+      })
+    } catch (error) {
+      for (let at: unknown = error; at instanceof Object; at = (at as { cause?: unknown }).cause) {
+        const code = (at as { code?: unknown }).code
+        if (typeof code === 'string') return code
+      }
+      throw error
+    }
+  }
+
+  beforeAll(async () => {
+    await seed()
+      .insert(user)
+      .values(
+        [writer, victim].map((id) => ({
+          id,
+          name: id,
+          email: `${id}@example.invalid`,
+          emailVerified: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          role: 'analyst',
+        })),
+      )
+    unreached = ((await seed().insert(customers).values({ name: `Nobody reaches ${stamp}` }).returning())[0]!).id
+    caseA = ((await seed().insert(cases).values({ title: 'Prose A', customerId: unreached }).returning())[0]!).id
+    caseB = ((await seed().insert(cases).values({ title: 'Prose B', customerId: unreached }).returning())[0]!).id
+    const notes = await seed()
+      .insert(caseNotes)
+      .values([
+        { caseId: caseA, note: 'accepted' },
+        { caseId: caseA, note: 'unaccepted' },
+        { caseId: caseB, note: 'elsewhere' },
+      ])
+      .returning()
+    ;[accepted, unaccepted, elsewhere] = notes.map((one) => one.id) as [string, string, string]
+    await seed()
+      .insert(proseAcceptances)
+      .values({ caseId: caseA, entity: 'casenotes', recordId: accepted, writerId: writer })
+  })
+
+  afterAll(async () => {
+    await seed().delete(cases).where(inArray(cases.id, [caseA, caseB]))
+    await seed().delete(customers).where(eq(customers.id, unreached))
+    await seed().delete(user).where(inArray(user.id, [writer, victim]))
+    await seedPool?.end()
+  })
+
+  it('stores a record its writer was accepted into, naming them', async () => {
+    expect(
+      await asProse(caseA, accepted, sql`update casenotes set note = 'kept', updated_by = ${writer} where id = ${accepted}`),
+    ).toBe(1)
+  })
+
+  it('stores no record nobody was accepted into', async () => {
+    expect(
+      await asProse(caseA, unaccepted, sql`update casenotes set note = 'INJECTED', updated_by = ${writer} where id = ${unaccepted}`),
+    ).not.toBe(1)
+  })
+
+  it('stores no record of another case, whichever case it names', async () => {
+    expect(
+      await asProse(caseA, elsewhere, sql`update casenotes set note = 'INJECTED', updated_by = ${writer} where id = ${elsewhere}`),
+    ).toBe(0)
+    expect(
+      await asProse(caseB, elsewhere, sql`update casenotes set note = 'INJECTED', updated_by = ${writer} where id = ${elsewhere}`),
+    ).not.toBe(1)
+  })
+
+  it('names nobody on the record whose words were not accepted', async () => {
+    expect(
+      await asProse(caseA, accepted, sql`update casenotes set note = 'x', updated_by = ${victim} where id = ${accepted}`),
+    ).toBe('42501')
+  })
+
+  it('writes no change or audit line naming somebody whose words were not accepted', async () => {
+    expect(
+      await asProse(
+        caseA,
+        accepted,
+        sql`insert into change_feed (case_id, entity, entity_id, op, version, actor_id) values (${caseA}, 'casenotes', ${accepted}, 'update', 1, ${victim})`,
+      ),
+    ).toBe('42501')
+    expect(
+      await asProse(
+        caseA,
+        accepted,
+        sql`insert into install_activity (event, channel, retention_class, class_uid, activity_id, type_uid, schema_version, severity_id, status_id, actor_id, detail)
+            values ('api_called', ${CHANNEL_OF.api_called}, ${retentionClassOf('api_called')}, ${classify('api_called').classUid},
+                    ${classify('api_called').activityId}, ${classify('api_called').typeUid}, ${OCSF_VERSION}, 1, 1, ${victim},
+                    ${JSON.stringify({ case: caseA, record: accepted })}::jsonb)`,
+      ),
+    ).toBe('42501')
+  })
+
+  it('cannot rename the writer an acceptance names', async () => {
+    const renamed = await app!
+      .transaction(async (tx) => {
+        await tx.execute(
+          sql`select set_config('app.case_id', ${caseA}, true), set_config('app.principal', ${writer}, true)`,
+        )
+        return (await tx.execute(sql`update prose_acceptances set writer_id = ${victim} where record_id = ${accepted}`))
+          .rowCount
+      })
+      .catch((error: unknown) => (error as { cause?: { code?: string } }).cause?.code ?? String(error))
+
+    expect(renamed).toBe('42501')
+  })
+
+  it('stores nothing on an acceptance older than an acceptance lasts', async () => {
+    await seed()
+      .insert(proseAcceptances)
+      .values({
+        caseId: caseA,
+        entity: 'casenotes',
+        recordId: unaccepted,
+        writerId: writer,
+        acceptedAt: sql`now() - ${ACCEPTANCE_LASTS}::interval - interval '1 minute'`,
+      })
+    try {
+      expect(
+        await asProse(caseA, unaccepted, sql`update casenotes set note = 'late', updated_by = ${writer} where id = ${unaccepted}`),
+      ).not.toBe(1)
+    } finally {
+      await seed().delete(proseAcceptances).where(eq(proseAcceptances.recordId, unaccepted))
+    }
+  })
+
+  /** Runs `statement` as the application with `principal` asking in `kase`; the rows it touched, or its SQLSTATE. */
+  async function asApp(principal: string, kase: string, statement: ReturnType<typeof sql>): Promise<number | string> {
+    try {
+      return await app!.transaction(async (tx) => {
+        await tx.execute(
+          sql`select set_config('app.case_id', ${kase}, true), set_config('app.principal', ${principal}, true)`,
+        )
+        return (await tx.execute(statement)).rowCount ?? 0
+      })
+    } catch (error) {
+      for (let at: unknown = error; at instanceof Object; at = (at as { cause?: unknown }).cause) {
+        const code = (at as { code?: unknown }).code
+        if (typeof code === 'string') return code
+      }
+      throw error
+    }
+  }
+
+  it('cannot date an acceptance for later, to outlast its writer\'s reach', async () => {
+    const [open] = await seed().insert(cases).values({ title: 'Everybody writes this' }).returning()
+    const [note] = await seed().insert(caseNotes).values({ caseId: open!.id, note: 'x' }).returning()
+    try {
+      const dated = (when: ReturnType<typeof sql>) =>
+        asApp(
+          victim,
+          open!.id,
+          sql`insert into prose_acceptances (case_id, entity, record_id, writer_id, accepted_at)
+              values (${open!.id}, 'casenotes', ${note!.id}, ${victim}, ${when})`,
+        )
+      expect({
+        now: await dated(sql`now()`),
+        aMinute: await dated(sql`now() + interval '1 minute'`),
+        aDay: await dated(sql`now() + interval '1 day'`),
+        aCentury: await dated(sql`now() + interval '100 years'`),
+      }).toEqual({ now: 1, aMinute: '42501', aDay: '42501', aCentury: '42501' })
+    } finally {
+      await seed().delete(cases).where(eq(cases.id, open!.id))
+    }
+  })
+
+  it('cannot remove an acceptance of somebody else\'s, in a case it writes or out of any case', async () => {
+    // The default customer's: every account writes it, the victim included.
+    const [open] = await seed().insert(cases).values({ title: 'Everybody writes this' }).returning()
+    const [note] = await seed().insert(caseNotes).values({ caseId: open!.id, note: 'x' }).returning()
+    const [{ id } = { id: '' }] = await seed()
+      .insert(proseAcceptances)
+      .values({ caseId: open!.id, entity: 'casenotes', recordId: note!.id, writerId: writer })
+      .returning({ id: proseAcceptances.id })
+    try {
+      expect({
+        another: await asApp(victim, open!.id, sql`delete from prose_acceptances where id = ${id}`),
+        nobody: await asApp('', '', sql`delete from prose_acceptances where id = ${id}`),
+      }).toEqual({ another: 0, nobody: 0 })
+    } finally {
+      await seed().delete(cases).where(eq(cases.id, open!.id))
+    }
+  })
+
+  it('sweeps an acceptance older than one lasts, and leaves one that has not yet lapsed', async () => {
+    const aged = (by: ReturnType<typeof sql>) =>
+      seed()
+        .insert(proseAcceptances)
+        .values({ caseId: caseA, entity: 'casenotes', recordId: unaccepted, writerId: writer, acceptedAt: by })
+        .returning({ id: proseAcceptances.id })
+    const [{ id: old } = { id: '' }] = await aged(sql`now() - ${ACCEPTANCE_LASTS}::interval - interval '1 minute'`)
+    const [{ id: nearly } = { id: '' }] = await aged(sql`now() - ${ACCEPTANCE_LASTS}::interval + interval '1 minute'`)
+    try {
+      await new ProseService(app!).sweepExpiredAcceptances()
+      const left = await seed()
+        .select({ id: proseAcceptances.id })
+        .from(proseAcceptances)
+        .where(inArray(proseAcceptances.id, [old, nearly]))
+      expect(left.map((one) => one.id)).toEqual([nearly])
+    } finally {
+      await seed().delete(proseAcceptances).where(inArray(proseAcceptances.id, [old, nearly]))
+    }
+  })
+
+  it('reads no lapsed acceptance, naming nobody or naming somebody who does not reach its case', async () => {
+    const [{ id: old } = { id: '' }] = await seed()
+      .insert(proseAcceptances)
+      .values({
+        caseId: caseA,
+        entity: 'casenotes',
+        recordId: unaccepted,
+        writerId: writer,
+        acceptedAt: sql`now() - ${ACCEPTANCE_LASTS}::interval - interval '1 minute'`,
+      })
+      .returning({ id: proseAcceptances.id })
+    try {
+      const read = (principal: string, kase: string) =>
+        app!.transaction(async (tx) => {
+          await tx.execute(
+            sql`select set_config('app.case_id', ${kase}, true), set_config('app.principal', ${principal}, true)`,
+          )
+          return (await tx.execute(sql`select writer_id from prose_acceptances where id = ${old}`)).rows.length
+        })
+      expect({ nobody: await read('', ''), outsider: await read(victim, caseA) }).toEqual({
+        nobody: 0,
+        outsider: 0,
+      })
+    } finally {
+      await seed().delete(proseAcceptances).where(eq(proseAcceptances.id, old))
+    }
+  })
+
+  it('keeps only a current acceptance of the accepted record current, and changes nothing else about one', async () => {
+    const [{ id: old } = { id: '' }] = await seed()
+      .insert(proseAcceptances)
+      .values({
+        caseId: caseA,
+        entity: 'casenotes',
+        recordId: accepted,
+        writerId: writer,
+        acceptedAt: sql`now() - ${ACCEPTANCE_LASTS}::interval - interval '1 minute'`,
+      })
+      .returning({ id: proseAcceptances.id })
+    const [{ id: elsewhere } = { id: '' }] = await seed()
+      .insert(proseAcceptances)
+      .values({ caseId: caseA, entity: 'casenotes', recordId: unaccepted, writerId: writer })
+      .returning({ id: proseAcceptances.id })
+    try {
+      const refresh = (where: ReturnType<typeof sql>, set = sql`accepted_at = now()`) =>
+        asProse(caseA, accepted, sql`update prose_acceptances set ${set} where ${where}`)
+      expect({
+        // The residual: an application that enters the role keeps a live acceptance of its record live.
+        current: await refresh(sql`record_id = ${accepted} and writer_id = ${writer} and id <> ${old}`),
+        lapsed: await refresh(sql`id = ${old}`),
+        anotherRecord: await refresh(sql`id = ${elsewhere}`),
+        later: await refresh(sql`record_id = ${accepted} and id <> ${old}`, sql`accepted_at = now() + interval '1 day'`),
+        anotherWriter: await refresh(sql`record_id = ${accepted} and id <> ${old}`, sql`writer_id = ${victim}, accepted_at = now()`),
+      }).toEqual({ current: 1, lapsed: 0, anotherRecord: 0, later: '42501', anotherWriter: '42501' })
+    } finally {
+      await seed().delete(proseAcceptances).where(inArray(proseAcceptances.id, [old, elsewhere]))
+    }
+  })
+
+  it('names nobody on a record only because another record has a writer without an account', async () => {
+    const gone = `prose-gone-${stamp}`
+    await seed()
+      .insert(proseAcceptances)
+      .values({ caseId: caseA, entity: 'casenotes', recordId: unaccepted, writerId: gone })
+    try {
+      expect(
+        await asProse(caseA, accepted, sql`update casenotes set note = 'x', updated_by = null where id = ${accepted}`),
+      ).toBe('42501')
+    } finally {
+      await seed().delete(proseAcceptances).where(eq(proseAcceptances.writerId, gone))
+    }
   })
 })

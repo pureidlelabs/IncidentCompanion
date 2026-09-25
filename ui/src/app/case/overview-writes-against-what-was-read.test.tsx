@@ -85,7 +85,7 @@ function otherAnalystWrites(fields: Record<string, unknown>, frame = true) {
   row = { ...row, ...fields, version: (row.version as number) + 1 }
   if (frame) {
     socket?.onmessage?.({
-      data: JSON.stringify({ type: 'case.changed', scopes: ['cases'], by: 'u-b' }),
+      data: JSON.stringify({ type: 'case.changed', scopes: ['cases'] }),
     } as MessageEvent)
   }
 }
@@ -129,7 +129,7 @@ const settle = () => new Promise((done) => setTimeout(done, latency * 10))
 /** The frame the server publishes for a write already committed. */
 const announce = () =>
   socket?.onmessage?.({
-    data: JSON.stringify({ type: 'case.changed', scopes: ['cases'], by: 'u-b' }),
+    data: JSON.stringify({ type: 'case.changed', scopes: ['cases'] }),
   } as MessageEvent)
 
 /** Whether any field says it is waiting to learn why it was refused. */

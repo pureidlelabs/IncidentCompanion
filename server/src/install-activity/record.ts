@@ -134,49 +134,8 @@ export async function recordInstallActivity(
   db: Executor,
   input: InstallActivityInput,
 ): Promise<boolean> {
-  const { ipAddress, userAgent } = input.origin
-    ? { ipAddress: input.origin.ipAddress ?? null, userAgent: input.origin.userAgent ?? null }
-    : originOf(input.headers)
   try {
-    /**
-     * **The OCSF identity is stamped here, from the event alone.** It is a
-     * property of what happened, not of who reads it - so it is decided once,
-     * on the way in, and every consumer agrees without re-deriving.
-     *
-     * `severityId` is the one part that reads more than the event: a run of
-     * failures is louder than one. `runLength` is unknown at write time and
-     * defaults to 1, so the stored level is the *floor* and the reader raises
-     * it when it can see the neighbours. Both are the framework's numbers.
-     */
-    const ocsf = classify(input.event)
-    const severity = severityOf({ event: input.event, attributes: input.detail })
-
-    await db.insert(installActivity).values({
-      event: input.event,
-      // **Never from the caller.** A channel a call site chooses is a channel
-      // two call sites eventually disagree about, and the disagreement is
-      // invisible: both rows land, in different logs.
-      channel: CHANNEL_OF[input.event],
-      retentionClass: retentionClassOf(input.event),
-      classUid: ocsf.classUid,
-      activityId: ocsf.activityId,
-      typeUid: ocsf.typeUid,
-      // Stamped beside the ids it describes: they were decided under this
-      // version, and a later build's constant does not apply to them.
-      schemaVersion: OCSF_VERSION,
-      severityId: SEVERITY_ID[severity],
-      statusId: (input.outcome ?? outcomeOf(input.event)) === 'failure' ? 2 : 1,
-      // Null where the account is gone, as it would be had it gone after the
-      // line: a session can outlive its account, and the label still says who.
-      actorId: input.actor?.id
-        ? sql`(select ${user.id} from ${user} where ${user.id} = ${input.actor.id})`
-        : null,
-      actorLabel: input.actor?.label ?? null,
-      targetLabel: input.target ?? null,
-      detail: input.detail ?? {},
-      ipAddress,
-      userAgent,
-    })
+    await writeInstallActivity(db, input)
     return true
   } catch (why) {
     log.error(
@@ -187,4 +146,54 @@ export async function recordInstallActivity(
     )
     return false
   }
+}
+
+/**
+ * The same line, for a caller whose own act must fail with it.
+ *
+ * @throws whatever the store answers, leaving any transaction `db` is aborted
+ */
+export async function writeInstallActivity(db: Executor, input: InstallActivityInput): Promise<void> {
+  const { ipAddress, userAgent } = input.origin
+    ? { ipAddress: input.origin.ipAddress ?? null, userAgent: input.origin.userAgent ?? null }
+    : originOf(input.headers)
+  /**
+   * **The OCSF identity is stamped here, from the event alone.** It is a
+   * property of what happened, not of who reads it - so it is decided once,
+   * on the way in, and every consumer agrees without re-deriving.
+   *
+   * `severityId` is the one part that reads more than the event: a run of
+   * failures is louder than one. `runLength` is unknown at write time and
+   * defaults to 1, so the stored level is the *floor* and the reader raises
+   * it when it can see the neighbours. Both are the framework's numbers.
+   */
+  const ocsf = classify(input.event)
+  const severity = severityOf({ event: input.event, attributes: input.detail })
+
+  await db.insert(installActivity).values({
+    event: input.event,
+    // **Never from the caller.** A channel a call site chooses is a channel
+    // two call sites eventually disagree about, and the disagreement is
+    // invisible: both rows land, in different logs.
+    channel: CHANNEL_OF[input.event],
+    retentionClass: retentionClassOf(input.event),
+    classUid: ocsf.classUid,
+    activityId: ocsf.activityId,
+    typeUid: ocsf.typeUid,
+    // Stamped beside the ids it describes: they were decided under this
+    // version, and a later build's constant does not apply to them.
+    schemaVersion: OCSF_VERSION,
+    severityId: SEVERITY_ID[severity],
+    statusId: (input.outcome ?? outcomeOf(input.event)) === 'failure' ? 2 : 1,
+    // Null where the account is gone, as it would be had it gone after the
+    // line: a session can outlive its account, and the label still says who.
+    actorId: input.actor?.id
+      ? sql`(select ${user.id} from ${user} where ${user.id} = ${input.actor.id})`
+      : null,
+    actorLabel: input.actor?.label ?? null,
+    targetLabel: input.target ?? null,
+    detail: input.detail ?? {},
+    ipAddress,
+    userAgent,
+  })
 }

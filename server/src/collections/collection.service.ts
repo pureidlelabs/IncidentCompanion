@@ -154,8 +154,8 @@ export class CollectionService {
    * remove. Announcing nothing instead was the older remedy and it made the
    * opposite failure -- an act that committed and told nobody. -> `db/act.ts`
    */
-  private announce(caseId: string, scopes: readonly Scope[], by: string, on?: Executor): void {
-    const tell = () => this.channel?.announce(caseId, scopes, by)
+  private announce(caseId: string, scopes: readonly Scope[], on?: Executor): void {
+    const tell = () => this.channel?.announce(caseId, scopes)
     // **Asked of the handle, not compared against ours.** `Executor` also holds
     // the seed pool, which is a second `Database`: a write on it opens and
     // commits its own transaction and is not composed, where an identity check
@@ -302,7 +302,7 @@ export class CollectionService {
     // Filtered rather than cast: `collection` here came back from a delete
     // across tables, so it is a value the database produced.
     const moved = [...new Set(outcome.deleted.map((row) => row.collection))].filter(isScope)
-    if (moved.length > 0) this.announce(caseId, moved, actorId)
+    if (moved.length > 0) this.announce(caseId, moved)
     return outcome
   }
 
@@ -357,7 +357,7 @@ export class CollectionService {
       return row
     })
 
-    this.announce(caseId, [def.name], actorId)
+    this.announce(caseId, [def.name])
     return written
   }
 
@@ -400,7 +400,7 @@ export class CollectionService {
       return written.ids
     })
 
-    this.announce(caseId, [def.name], actorId, on)
+    this.announce(caseId, [def.name], on)
     return { ids, unlinked }
   }
 
@@ -504,7 +504,7 @@ export class CollectionService {
     })
 
     {
-      this.announce(caseId, wanted.map((group) => group.def.name), actorId, on)
+      this.announce(caseId, wanted.map((group) => group.def.name), on)
     }
     return { ids, unlinked }
   }
@@ -645,7 +645,7 @@ export class CollectionService {
       return { rows: written, moved: moved.length }
     })
 
-    if (result.moved > 0) this.announce(caseId, [def.name], actorId)
+    if (result.moved > 0) this.announce(caseId, [def.name])
     return { rows: result.rows }
   }
 
@@ -748,7 +748,7 @@ export class CollectionService {
       }
     })
 
-    if (result.updated.length > 0) this.announce(caseId, [def.name], actorId)
+    if (result.updated.length > 0) this.announce(caseId, [def.name])
     return result
   }
 
@@ -792,7 +792,7 @@ export class CollectionService {
       patch: coerceTimes(def.table, patch),
     })
 
-    if (result.ok) this.announce(caseId, [def.name], actorId)
+    if (result.ok) this.announce(caseId, [def.name])
     return result
   }
 
@@ -852,7 +852,7 @@ export class CollectionService {
       })
     }
 
-    if (removed.length > 0) this.announce(caseId, [def.name], actorId)
+    if (removed.length > 0) this.announce(caseId, [def.name])
     return removed.length > 0
   }
 

@@ -498,7 +498,7 @@ export class CasesService {
       actorId,
       patch: values,
     })
-    if (result.ok) this.channel?.announce(id, ['cases'], actorId)
+    if (result.ok) this.channel?.announce(id, ['cases'])
     return result
   }
 
@@ -543,7 +543,7 @@ export class CasesService {
       return gone
     })
     if (deleted.length === 0) throw new NotFoundException(`No case ${id}.`)
-    this.channel?.announce(id, ['cases'], actorId)
+    this.channel?.announce(id, ['cases'])
     this.gateway?.dropCase(id)
   }
 
@@ -568,13 +568,12 @@ export class CasesService {
   async attribute(
     id: string,
     customerId: string,
-    actorId: string,
   ): Promise<{ from: string | null; title: string }> {
     const answer = await withReach(this.db, (tx) => this.moveWithin(tx, id, customerId))
 
     // Outside the transaction: neither is a database write, and announcing a
     // move that then rolled back would be worse than announcing it late.
-    this.channel?.announce(id, ['cases'], actorId)
+    this.channel?.announce(id, ['cases'])
     this.gateway?.dropCase(id)
     return answer
   }

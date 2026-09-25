@@ -326,42 +326,26 @@ describe('the other analysts on a case', () => {
 })
 
 describe('announcing a write', () => {
-  it('tells every screen on the case which tables moved', async () => {
+  it('tells every screen on the case which tables moved, and not who moved them', async () => {
     const channel = channelWith()
     const ada = member('C-1', 'Ada', 's1')
     const grace = member('C-1', 'Grace', 's2')
     await channel.join(ada)
     await channel.join(grace)
 
-    await channel['publishAnnounce']('C-1', ['systems'], 'u-Ada')
+    channel.announce('C-1', ['systems'])
 
     for (const who of [ada, grace]) {
       expect(latest(who, 'case.changed')).toEqual({
         type: 'case.changed',
         scopes: ['systems'],
-        by: 'Ada',
       })
     }
   })
 
-  /**
-   * **`by` is a name, not an id.** The client puts it on screen; an account id
-   * there is an internal identifier shown to an analyst, which is what the
-   * fallback below is the exception to.
-   */
-  it('falls back to the id when the writer has no socket open', async () => {
+  it('says nothing to a case nobody is watching', () => {
     const channel = channelWith()
-    const ada = member('C-1', 'Ada', 's1')
-    await channel.join(ada)
-
-    await channel['publishAnnounce']('C-1', ['timeline'], 'u-NobodyHere')
-
-    expect(latest(ada, 'case.changed')).toMatchObject({ by: 'u-NobodyHere' })
-  })
-
-  it('says nothing to a case nobody is watching', async () => {
-    const channel = channelWith()
-    await expect(channel['publishAnnounce']('C-nobody', ['systems'], 'u-Ada')).resolves.not.toThrow()
+    expect(() => { channel.announce('C-nobody', ['systems']) }).not.toThrow()
   })
 
   it('keeps going when one socket is dead', async () => {
@@ -372,7 +356,7 @@ describe('announcing a write', () => {
     await channel.join(dead)
     await channel.join(alive)
 
-    await channel['publishAnnounce']('C-1', ['systems'], 'u-Alive')
+    channel.announce('C-1', ['systems'])
 
     expect(latest(alive, 'case.changed')).toBeDefined()
   })
@@ -401,7 +385,7 @@ describe('two connections arriving together', () => {
     await Promise.all([channel.join(ada), channel.join(grace)])
 
     ada.frames.length = 0
-    await channel['publishAnnounce']('C-1', ['systems'], 'u-Ada')
+    channel.announce('C-1', ['systems'])
 
     expect(ada.frames.filter((frame) => frame['type'] === 'case.changed')).toHaveLength(1)
   })
@@ -420,7 +404,7 @@ describe('when the store is unwell', () => {
     store.publish = () => Promise.reject(new Error('redis is away'))
     const channel = new CaseChannel(store)
 
-    expect(() => { channel.announce('C-1', ['systems'], 'u-Ada') }).not.toThrow()
+    expect(() => { channel.announce('C-1', ['systems']) }).not.toThrow()
     // Let the rejection settle; an unhandled one fails the run.
     await new Promise((resolve) => setTimeout(resolve, 10))
   })

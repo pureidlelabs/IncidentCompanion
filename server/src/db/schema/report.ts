@@ -24,7 +24,7 @@ import {
 import { cases } from './case.js'
 import { evidence } from './entities.js'
 import { bytea, rowVersioning } from './columns.js'
-import { caseScoped } from './scoped.js'
+import { caseScoped, proseKept } from './scoped.js'
 
 export const reports = pgTable(
   'reports',
@@ -94,6 +94,7 @@ export const reports = pgTable(
       sql`(${t.sentAt} is null) = (${t.frozen} is null) and (${t.frozen} is null) = (${t.frozenAt} is null)`,
     ),
     ...caseScoped(t.caseId),
+    ...proseKept(t.caseId, t.id, ['select', 'update'], t.updatedBy),
   ],
 )
 
@@ -130,5 +131,6 @@ export const reportBlocks = pgTable(
   (t) => [
     index('report_blocks_report_idx').on(t.reportId, t.position),
     ...caseScoped(t.caseId),
+    ...proseKept(t.caseId, t.reportId, ['select']),
   ],
 )

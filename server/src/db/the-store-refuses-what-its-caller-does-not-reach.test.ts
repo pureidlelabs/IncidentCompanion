@@ -144,8 +144,11 @@ const ROLLBACK = new Error('rolled back on purpose')
 const rowsOf = (tx: Tx | NonNullable<typeof seed>, subject: Subject, caseId: string) =>
   tx.select().from(subject.table).where(eq(subject.caseColumn, caseId))
 
+/** Tables whose rows are written once and never changed, by any caller. */
+const WRITTEN_ONCE = ['prose_acceptances']
+
 /** The rows of `caseId` an update touches: the case column set to what it holds. */
-const updated = (tx: Tx, subject: Subject, caseId: string) => {
+const updated =(tx: Tx, subject: Subject, caseId: string) => {
   const [key] = Object.entries(getTableColumns(subject.table)).find(
     ([, column]) => column === subject.caseColumn,
   )!
@@ -350,7 +353,7 @@ describe.skipIf(!app || !hasConcurrentConnections())(
       async (name) => {
         const subject = tables.find((one) => one.name === name)!
         const changed = await asking(reader, theirs, async (tx) => [
-          ...(await updated(tx, subject, theirs)),
+          ...(WRITTEN_ONCE.includes(name) ? [] : await updated(tx, subject, theirs)),
           ...(await deleted(tx, subject, theirs)),
         ])
         expect(changed, `${name} let a reader change or remove a row`).toHaveLength(0)
@@ -358,7 +361,19 @@ describe.skipIf(!app || !hasConcurrentConnections())(
     )
 
     /** The control: the same update, by a caller who writes the case, touches its rows. */
-    it.each(tables.map((one) => one.name).filter((name) => name !== 'case_visits'))(
+    it.each(WRITTEN_ONCE)('%s is changed by nobody, even a caller who writes the case', async (name) => {
+      const subject = tables.find((one) => one.name === name)!
+      const refused = await asking(insider, theirs, (tx) =>
+        updated(tx, subject, theirs)
+          .then(() => null)
+          .catch((error: unknown) => error as { code?: string; cause?: { code?: string } }),
+      )
+      expect(refused?.code ?? refused?.cause?.code).toBe('42501')
+    })
+
+    it.each(
+      tables.map((one) => one.name).filter((name) => name !== 'case_visits' && !WRITTEN_ONCE.includes(name)),
+    )(
       '%s is changed by a caller who writes the case',
       async (name) => {
         const subject = tables.find((one) => one.name === name)!

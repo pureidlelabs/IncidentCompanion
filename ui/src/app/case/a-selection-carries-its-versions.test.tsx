@@ -134,7 +134,7 @@ function otherAnalystChanges(collection: string, id: string, fields: Record<stri
     ),
   }
   socket?.onmessage?.({
-    data: JSON.stringify({ type: 'case.changed', scopes: [collection], by: 'u-b' }),
+    data: JSON.stringify({ type: 'case.changed', scopes: [collection] }),
   } as MessageEvent)
 }
 

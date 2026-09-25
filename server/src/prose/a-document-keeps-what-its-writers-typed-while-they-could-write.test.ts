@@ -1,11 +1,6 @@
 /**
- * A live document is stored by somebody who may still write it, and words the
- * store refuses stay waiting rather than being dropped.
- *
- * > #### Scenario: A writer loses reach before the words are stored
- * > - GIVEN two analysts writing in one note
- * > - WHEN one of them loses write before what both typed is stored
- * > - THEN what they typed is stored by the analyst who still holds write
+ * A live document is stored with what its writers typed while they could
+ * write, whoever still can when it is stored.
  *
  * **The attack is a revocation between the keystroke and the flush.** Each
  * edit is applied as the analyst whose frame carried it, the way the socket
@@ -135,7 +130,7 @@ describe.skipIf(!appPool || !hasConcurrentConnections())(
       expect(row!.by, 'the row names whoever stored it rather than who wrote last').toBe(last)
     })
 
-    it('keeps words the store refused, so a later flush stores them', async () => {
+    it('stores what the only writer typed before losing write, named for them', async () => {
       await levelOf(first, 'write')
       const prose = new ProseService(drizzle({ client: appPool! }))
       const { caseId, note } = await aNote()
@@ -145,15 +140,13 @@ describe.skipIf(!appPool || !hasConcurrentConnections())(
         prose.apply(caseId, note, typed('typed before the revocation'), 'a-socket', { id: first, label: first, headers: {} }),
       )
       await levelOf(first, 'read')
-      await prose.flush(caseId, note)
-      expect(await stored(note.id), 'a writer without write stored the document').toBe('seed')
-
-      await levelOf(first, 'write')
       await prose.release(caseId, note)
 
-      expect(await stored(note.id), 'a refused flush was taken as stored').toContain(
+      expect(await stored(note.id), 'the words were dropped with the write of their writer').toContain(
         'typed before the revocation',
       )
+      const [row] = await seed!.select({ by: caseNotes.updatedBy }).from(caseNotes).where(eq(caseNotes.id, note.id))
+      expect(row!.by).toBe(first)
     })
   },
 )

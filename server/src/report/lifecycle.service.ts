@@ -196,7 +196,7 @@ export class ReportLifecycleService {
 
       // **Announced only when somebody did it.** A seed at boot has no author
       // and no one connected to tell.
-      if (actorId) this.channel?.announce(caseId, ['reports'], actorId)
+      if (actorId) this.channel?.announce(caseId, ['reports'])
       return { id: reportId, sentAt: at.toISOString(), sections: document_.sections.length }
     } finally {
       await seal.settle(stamped)
@@ -343,7 +343,7 @@ export class ReportLifecycleService {
         return { id: fresh!.id, blocks: copied.length }
       })
 
-      this.channel?.announce(caseId, ['reports', 'report_blocks'], actorId)
+      this.channel?.announce(caseId, ['reports', 'report_blocks'])
       return { id: made.id, superseded: reportId, blocks: made.blocks }
     } finally {
       await this.prose.release(caseId, reportDocument(reportId))
@@ -406,7 +406,7 @@ export class ReportLifecycleService {
       return wanted
     })
 
-    if (gone.length > 0) this.channel?.announce(caseId, ['report_blocks'], actorId)
+    if (gone.length > 0) this.channel?.announce(caseId, ['report_blocks'])
     return {
       id: reportId,
       restored: gone.map((spec) => ({ kind: spec.kind, heading: spec.heading ?? spec.headingKey ?? '' })),

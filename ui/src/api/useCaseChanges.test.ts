@@ -14,14 +14,14 @@ import { EVERYTHING, invalidationsFor, readChange } from './useCaseChanges'
 
 describe('readChange', () => {
   it('reads the tables a write touched', () => {
-    expect(readChange({ type: 'case.changed', scopes: ['timeline'], by: 'r.o' }))
-      .toEqual({ scopes: ['timeline'], by: 'r.o' })
+    expect(readChange({ type: 'case.changed', scopes: ['timeline'] }))
+      .toEqual({ scopes: ['timeline'] })
   })
 
   it('reads null as "assume everything moved"', () => {
     // Not an empty list, which reads as its opposite - nothing invalidated,
     // and the screen stale for ever.
-    expect(readChange({ type: 'case.changed', scopes: null, by: '' })?.scopes)
+    expect(readChange({ type: 'case.changed', scopes: null })?.scopes)
       .toBeNull()
   })
 

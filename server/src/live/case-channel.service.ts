@@ -154,15 +154,12 @@ export class CaseChannel {
    * and two tabs of one analyst are two writers. One redundant refetch of data
    * that is already fresh is the cost the client documents as accepted.
    *
-   * **`by` is a name, not an id.** The client puts it on screen, and an
-   * account id there is an internal identifier shown to an analyst.
-   *
    * **`scopes` is `string[]` and deliberately not the `Scope` union.** The
    * socket is transport: `architecture.test.ts` forbids `live` importing
    * `domain`, because the channel knows about delivery and nothing about what
    * a scope means. The vocabulary is enforced at the callers, which own it.
    */
-  announce(caseId: string, scopes: readonly string[], actorId: string): void {
+  announce(caseId: string, scopes: readonly string[]): void {
     /**
      * **Nothing here may reach the caller, synchronously or otherwise.** The
      * write has already committed: an unhandled rejection exits the process on
@@ -170,19 +167,9 @@ export class CaseChannel {
      * already saved. A missed repaint is the right failure - the next read
      * corrects it. -> `test/degradation`
      */
-    this.publishAnnounce(caseId, scopes, actorId).catch((error: unknown) => {
+    this.store.publish(caseId, JSON.stringify({ type: 'case.changed', scopes })).catch((error: unknown) => {
       this.log.warn(`could not announce a write on ${caseId}: ${String(error)}`)
     })
-  }
-
-  private async publishAnnounce(
-    caseId: string,
-    scopes: readonly string[],
-    actorId: string,
-  ): Promise<void> {
-    const members = await this.store.members(caseId)
-    const by = members.find((one) => one.userId === actorId)?.username ?? actorId
-    await this.store.publish(caseId, JSON.stringify({ type: 'case.changed', scopes, by }))
   }
 
   private async announcePresence(caseId: string): Promise<void> {

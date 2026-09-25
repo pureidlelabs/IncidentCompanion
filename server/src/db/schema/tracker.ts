@@ -7,7 +7,7 @@ import { index, pgTable, text, uuid } from 'drizzle-orm/pg-core'
 
 import { cases } from './case.js'
 import { bytea, rowVersioning, source } from './columns.js'
-import { caseScoped } from './scoped.js'
+import { caseScoped, proseKept } from './scoped.js'
 
 const owner = () => ({
   id: uuid('id').primaryKey().defaultRandom(),
@@ -68,5 +68,9 @@ export const caseNotes = pgTable(
     tags: text('tags').notNull().default(''),
     ...rowVersioning,
   },
-  (t) => [index('casenotes_case_idx').on(t.caseId), ...caseScoped(t.caseId)],
+  (t) => [
+    index('casenotes_case_idx').on(t.caseId),
+    ...caseScoped(t.caseId),
+    ...proseKept(t.caseId, t.id, ['select', 'update'], t.updatedBy),
+  ],
 )

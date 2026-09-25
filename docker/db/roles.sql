@@ -12,7 +12,7 @@
 -- made once with one password would keep it for ever. `role-passwords.sql`
 -- runs unconditionally after this one for that reason, which makes `.env` the
 -- authority and a rotation one `docker compose up roles` away.
--- Three roles, separated by what they may do.
+-- Four roles, separated by what they may do.
 --
 -- Run once per database server, as a superuser. In development the dev
 -- container executes it on init; anywhere else it is the first step of an
@@ -27,7 +27,7 @@
 --
 -- Idempotent, so re-running it on an existing install is safe.
 
--- **Created without a password here.** `role-passwords.sql` gives them one, and
+-- **Created without a password here.** `role-passwords.sql` gives each that logs in one, and
 -- is a separate file because a psql variable is the one thing in here that not
 -- every executor understands -- the test harness runs this through a driver
 -- that has none. A role with no password cannot be authenticated as, so a run
@@ -53,12 +53,24 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ic_app') THEN
     CREATE ROLE ic_app LOGIN NOSUPERUSER NOBYPASSRLS;
   END IF;
+
+  -- Stores prose the app accepted, whatever its writers reach by then. No
+  -- login: the app enters it for one save at a time. Its column grants are the
+  -- schema step's, since no table exists when this runs.
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ic_prose') THEN
+    CREATE ROLE ic_prose NOLOGIN NOSUPERUSER NOBYPASSRLS;
+  END IF;
 END
 $$;
 
--- The schema belongs to the migration role; the other two are granted use of
--- what it creates, per table, by the migration that creates them.
-GRANT USAGE ON SCHEMA public TO ic_app, ic_seed;
+-- **Entered, never inherited.** Inheriting would put the prose policies on
+-- every query the app makes, and the prose grants beside its own.
+GRANT ic_prose TO ic_app WITH INHERIT FALSE, SET TRUE;
+
+-- The schema belongs to the migration role, and the other three may use it.
+-- The app and the seeder take what it creates, by the defaults below; the
+-- prose role takes only what the schema step grants it, column by column.
+GRANT USAGE ON SCHEMA public TO ic_app, ic_seed, ic_prose;
 
 -- **No default CREATE on the schema.** Postgres grants it to PUBLIC on
 -- `public` historically; revoking it is what stops the app role creating a

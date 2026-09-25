@@ -164,7 +164,7 @@ export class EvidenceFileController {
         })
       }
 
-      this.channel?.announce(caseId, ['evidence'], session.user.id)
+      this.channel?.announce(caseId, ['evidence'])
       return { hash: stored.hash, sizeBytes: stored.sizeBytes }
     })
   }

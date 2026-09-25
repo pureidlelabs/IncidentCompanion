@@ -100,7 +100,7 @@ function otherAnalystChanges(
   }
   if (frame) {
     socket?.onmessage?.({
-      data: JSON.stringify({ type: 'case.changed', scopes: [collection], by: 'u-b' }),
+      data: JSON.stringify({ type: 'case.changed', scopes: [collection] }),
     } as MessageEvent)
   }
 }
@@ -132,7 +132,7 @@ function mount(address: string, Screen: () => ReactNode, live = false) {
 /** The frame the server publishes for a change to `collection` already committed. */
 const announce = (collection: string) =>
   socket?.onmessage?.({
-    data: JSON.stringify({ type: 'case.changed', scopes: [collection], by: 'u-b' }),
+    data: JSON.stringify({ type: 'case.changed', scopes: [collection] }),
   } as MessageEvent)
 
 const settle = () => new Promise((done) => setTimeout(done, LATENCY * 12))

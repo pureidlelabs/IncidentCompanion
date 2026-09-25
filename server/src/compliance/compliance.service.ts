@@ -246,7 +246,7 @@ export class ComplianceService {
       actorId,
       patch,
     })
-    if (result.ok) this.channel?.announce(caseId, ['case_compliance'], actorId)
+    if (result.ok) this.channel?.announce(caseId, ['case_compliance'])
     return result
   }
 }
