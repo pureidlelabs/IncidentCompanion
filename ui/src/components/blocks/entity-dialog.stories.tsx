@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 
 import { Button } from '@/components/ui/button'
 
@@ -8,6 +8,7 @@ import { ApiError } from '@/api/client'
 import { refOptions } from '@/api/refOptions'
 import { formSpec } from '@/api/specs'
 import { EntityDialog } from '@/components/blocks/entity-dialog'
+import { ClaimsProvider } from '@/components/blocks/presence'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
@@ -202,6 +203,102 @@ export const Edit: Story = {
     form: formSpec(specsFixture, 'SYSTEM_FIELDS'),
     entry: system,
     references: { methods: refOptions(campaignCase.methods, (row) => row.name) },
+  },
+}
+
+/** A row another analyst holds: the dialog names them, and the edit still saves. */
+export const HeldByAnother: Story = {
+  parameters: openInFrame('760px'),
+  name: 'A system row another analyst holds',
+  decorators: [
+    (Story) => (
+      <ClaimsProvider
+        value={{
+          you: 'u-me',
+          holderOf: () => ({ user_id: 'u-jo', username: 'Jo Meyer' }),
+          claim: () => undefined,
+          release: () => undefined,
+          refused: () => false,
+        }}
+      >
+        <Story />
+      </ClaimsProvider>
+    ),
+  ],
+  play: async ({ args, canvasElement }) => {
+    await showsDialog(canvasElement, 'Edit system')
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('Jo Meyer is editing this entry')).toBeVisible()
+
+    const first = body.getAllByRole('textbox')[0]
+    if (first === undefined) throw new Error('the form drew no boxes')
+    await userEvent.type(first, '-2')
+    await userEvent.click(body.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(args.onCreate).toHaveBeenCalledOnce())
+  },
+  args: {
+    title: 'Edit system',
+    form: formSpec(specsFixture, 'SYSTEM_FIELDS'),
+    entry: system,
+    collection: 'systems',
+    references: { methods: refOptions(campaignCase.methods, (row) => row.name) },
+    onCreate: fn(),
+  },
+}
+
+/** A save refused because another analyst stored the same field first. */
+export const RefusedByAnother: Story = {
+  parameters: { docs: { story: { inline: false, height: '760px' } } },
+  name: 'A save another analyst beat to the same field',
+  args: {
+    title: 'Edit system',
+    form: formSpec(specsFixture, 'SYSTEM_FIELDS'),
+    references: { methods: refOptions(campaignCase.methods, (row) => row.name) },
+    onCreate: fn(),
+  },
+  render: function RefusedByAnother(args) {
+    const read = { ...system, hostname: 'WKS-FIN01', version: 3 }
+    const [served, setServed] = useState(read)
+    const [open, setOpen] = useState(true)
+    const [closes, setCloses] = useState(0)
+    return (
+      <>
+        <p data-testid="closes-asked">{String(closes)}</p>
+        <Dialog
+          {...args}
+          entry={read}
+          served={served}
+          open={open}
+          onOpenChange={(next) => {
+            if (!next) setCloses((count) => count + 1)
+            setOpen(next)
+          }}
+          onCreate={(fields, version) => {
+            ;(args.onCreate as (...call: unknown[]) => unknown)(fields, version)
+            if (served.version !== read.version) return undefined
+            setServed({ ...read, hostname: 'WKS-THEIRS', version: 4 })
+            return Promise.reject(new ApiError(409, 'Someone else wrote this first.', null))
+          }}
+        />
+      </>
+    )
+  },
+  play: async ({ args, canvasElement }) => {
+    await showsDialog(canvasElement, 'Edit system')
+    const body = within(canvasElement.ownerDocument.body)
+    const hostname = body.getByDisplayValue('WKS-FIN01')
+    await userEvent.clear(hostname)
+    await userEvent.type(hostname, 'WKS-MINE')
+    await userEvent.click(body.getByRole('button', { name: 'Save' }))
+
+    const band = await body.findByRole('group', { name: /changed Name \(hostname/ })
+    await expect(band).toHaveTextContent('WKS-THEIRS')
+    await expect(within(canvasElement).getByTestId('closes-asked')).toHaveTextContent('0')
+    await expect(hostname).toHaveValue('WKS-MINE')
+
+    await userEvent.click(within(band).getByRole('button', { name: 'Keep mine' }))
+    await userEvent.click(body.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(args.onCreate).toHaveBeenLastCalledWith({ hostname: 'WKS-MINE' }, 4))
   },
 }
 
