@@ -40,6 +40,8 @@ Reach is resolved from the caller's own session on the request that needs it. It
 
 The last account holding the management grant can be neither removed nor demoted. The check is made against the state the operation would produce rather than against the operation, so removal and demotion are one rule and not two.
 
+**An account's role and whether it can sign in change one at a time across the install.** The check that somebody can still administer, the read of what the account holds and the write run with no other such change between them. The write decides whether anything changed, and the line is written when it did. What follows it — ending the account's sessions on a disable, bringing its open sessions to the new role — runs on every request, including one that changed nothing, so asking again finishes an act a failure cut short.
+
 A recovery credential is issued when the install is claimed. It restores administration and does nothing else — it is not a password reset and grants no data reach — and it is the only way back that does not need somebody who is already an administrator.
 
 ## Local sign-in resists guessing

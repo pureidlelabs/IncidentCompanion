@@ -16,6 +16,9 @@ import { ADMIN_ROLE } from '../domain/analyst-account.js'
 import type { Analyst } from './last-admin.js'
 import { sameAddress } from './same-address.js'
 
+/** What a state change found: it made the change, the account already held it, or there is no account. */
+export type Outcome = 'changed' | 'unchanged' | 'missing'
+
 @Injectable()
 export class AccountLookupService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
@@ -66,31 +69,44 @@ export class AccountLookupService {
   }
 
   /**
-   * Sets whether the account is barred from signing in, and answers whether
-   * this call is the one that changed it. Of concurrent callers asking for the
-   * same state, exactly one answers `true`.
+   * Runs `act` while no other role, disable or enable change runs anywhere in
+   * the install, so what `act` reads is still true when it writes.
+   *
+   * Holds one pooled connection for as long as `act` runs; `act` itself uses
+   * others, so a write it makes commits on its own.
    */
-  async changeBanned(id: string, banned: boolean): Promise<boolean> {
-    const changed = await this.db
-      .update(user)
-      .set({ banned })
-      .where(and(eq(user.id, id), sql`coalesce(${user.banned}, false) <> ${banned}`))
-      .returning({ id: user.id })
-    return changed.length > 0
+  async serialised<T>(act: () => Promise<T>): Promise<T> {
+    return this.db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('account-state'))`)
+      return act()
+    })
   }
 
   /**
-   * Sets the account's role, answering the role it held before, or `null` when
-   * it already held this one. Of concurrent callers asking for the same role,
-   * exactly one gets a role back.
+   * Sets whether the account is barred from signing in, answering `changed`
+   * when this call changed it and `unchanged` when it already was.
    */
-  async changeRole(id: string, role: string): Promise<{ from: string } | null> {
-    return this.db.transaction(async (tx) => {
-      const [held] = await tx.select({ role: user.role }).from(user).where(eq(user.id, id)).for('update')
-      if (!held || held.role === role) return null
-      await tx.update(user).set({ role }).where(eq(user.id, id))
-      return { from: held.role ?? '' }
-    })
+  async changeBanned(id: string, banned: boolean): Promise<Outcome> {
+    const changed = await this.db
+      .update(user)
+      .set(banned ? { banned } : { banned, banReason: null, banExpires: null })
+      .where(and(eq(user.id, id), sql`coalesce(${user.banned}, false) <> ${banned}`))
+      .returning({ id: user.id })
+    if (changed.length > 0) return 'changed'
+    return (await this.byId(id)) ? 'unchanged' : 'missing'
+  }
+
+  /**
+   * Sets the account's role, answering the role it held before when this call
+   * changed it. Call inside `serialised`: the read and the write are two
+   * statements.
+   */
+  async changeRole(id: string, role: string): Promise<{ from: string } | Exclude<Outcome, 'changed'>> {
+    const held = await this.byId(id)
+    if (!held) return 'missing'
+    if (held.role === role) return 'unchanged'
+    await this.db.update(user).set({ role }).where(eq(user.id, id))
+    return { from: held.role ?? '' }
   }
 
   /** The account an id names, so a line can say who it was about. */

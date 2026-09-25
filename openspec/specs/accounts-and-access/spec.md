@@ -291,6 +291,13 @@ An install MUST NOT be able to reach a state where nobody can administer it. The
 - THEN it is refused
 - AND they are told they are the last
 
+#### Scenario: Two administrators act on each other at once
+
+- GIVEN an install whose only two administrators each demote or disable the other at the same moment
+- WHEN both are answered
+- THEN one succeeds and the other is refused
+- AND somebody who can administer the install remains
+
 ### Requirement: An install can be recovered without another administrator
 
 An install with one local administrator and no federation has no other way back. Nothing here sends a message, so no password is reset by email, and an administrator who forgets theirs or leaves the organisation takes the install with them. A locked account is the least likely reason this path is needed; a forgotten password is the likely one. Where an install federates, the provider answers a forgotten password for federated accounts — but never for the local administrator this specification requires it to keep.
@@ -933,6 +940,13 @@ Changing what the logging itself does is an administrative event.
 - GIVEN a request for a membership at the level it has, a customer a group already holds, or an account's current state or role
 - WHEN it is answered
 - THEN nothing is logged as changed
+
+#### Scenario: An act half done is asked for again
+
+- GIVEN an administrative act whose change was made but whose answer failed
+- WHEN the administrator asks for it again
+- THEN the act is finished, the account's open sessions included
+- AND it is logged once
 
 ### Requirement: An install serves only the account operations it offers
 
