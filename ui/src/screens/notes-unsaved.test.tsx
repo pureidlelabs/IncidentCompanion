@@ -127,6 +127,7 @@ describe('a note whose words the install holds unsaved', () => {
   it('takes the notice away once the install says the words are saved', () => {
     draw()
     install.says({ type: 'prose.state', field: FIELD, state: 'unsaved' })
+    expect(screen.getByText('Not saved yet')).toBeVisible()
     install.says({ type: 'prose.state', field: FIELD, state: 'saved' })
     expect(screen.queryByText('Not saved yet')).toBeNull()
   })
