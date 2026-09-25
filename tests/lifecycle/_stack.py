@@ -20,6 +20,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 
+from tests import _checkout as checkout
 from tests._repo import REPO_ROOT
 
 COMPOSE = REPO_ROOT / "compose.yaml"
@@ -197,7 +198,8 @@ class Stack:
         self.project = project
         self.port = free_port()
         self.edge = Edge(self.port)
-        self.env = {**os.environ, "IC_STACK_PROJECT": project, "IC_STACK_PORT": str(self.port)}
+        self.env = {**os.environ, **checkout.ENV, "IC_STACK_PROJECT": project,
+                    "IC_STACK_PORT": str(self.port)}
         self.capture = Capture(self)
 
     def compose_argv(self) -> list[str]:

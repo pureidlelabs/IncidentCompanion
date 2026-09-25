@@ -19,6 +19,7 @@ import uuid
 
 import pytest
 
+from tests import _checkout as checkout
 from tests._must_run import declined
 from tests._repo import REPO_ROOT
 
@@ -27,11 +28,10 @@ pytestmark = pytest.mark.skipif(
     reason="opt-in: set INCIDENTCOMPANION_CONTAINER_TESTS=1 (builds and runs the stack)")
 
 STACK = REPO_ROOT / "compose.yaml"
-_WORKER = os.environ.get("PYTEST_XDIST_WORKER", "gw0")
-PROJECT = f"incidentcompanion-lockout-test-{_WORKER}"
-PORT = 18643 + int(_WORKER.removeprefix("gw"))
+PROJECT = checkout.project("lockout")
+PORT = checkout.port("lockout")
 ORIGIN = f"https://localhost:{PORT}"
-EDGE_IMAGE = "incidentcompanion-nginx:local"
+EDGE_IMAGE = checkout.image("nginx")
 ADMIN = "admin@lockout.test"
 PASSWORD = "the-holders-own-password"
 THRESHOLD = 4
@@ -42,7 +42,7 @@ _names = itertools.count()
 def _compose(*args: str, check: bool = True) -> subprocess.CompletedProcess:
     result = subprocess.run(
         ["docker", "compose", "-p", PROJECT, "-f", str(STACK), *args],
-        capture_output=True, text=True, env={**os.environ, "IC_STACK_PORT": str(PORT)})
+        capture_output=True, text=True, env={**os.environ, **checkout.ENV, "IC_STACK_PORT": str(PORT)})
     if check:
         assert result.returncode == 0, f"compose {' '.join(args)}:\n{result.stderr[-3000:]}"
     return result

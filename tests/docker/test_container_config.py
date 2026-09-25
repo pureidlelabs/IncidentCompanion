@@ -18,7 +18,6 @@ the publish and the app is on the LAN. Neither file reads as wrong alone.
 from __future__ import annotations
 
 import functools
-import hashlib
 import ipaddress
 import json
 import os
@@ -29,6 +28,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from tests import _checkout as checkout
 from tests._must_run import declined
 from tests._repo import REPO_ROOT
 
@@ -1107,14 +1107,7 @@ TLS_ENTRYPOINT = REPO_ROOT / "docker" / "nginx" / "tls-entrypoint.sh"
 NGINX_DOCKERFILE = REPO_ROOT / "docker" / "nginx" / "Dockerfile"
 
 #: The edge image, built from the tree, tagged for this suite alone.
-#:
-#: Suffixed by checkout: parallel worktrees would otherwise race one tag, and
-#: whichever built last would serve both with no error anywhere.
-#: `hashlib`, not `hash()`: the built-in is salted per process, so a tag built
-#: from it changes every run and rebuilds the image every time.
-EDGE_IMAGE = (
-    "incidentcompanion-tls-edge:"
-    + hashlib.sha256(str(REPO_ROOT).encode()).hexdigest()[:12])
+EDGE_IMAGE = checkout.image("tls-edge")
 
 #: **Opt-in, because these build an image and run containers**, and the cheap
 #: `repository` job selects this module by name for the file-reading rest of it.

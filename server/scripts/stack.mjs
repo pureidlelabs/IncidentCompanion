@@ -252,6 +252,7 @@ const host = `127.0.0.1:${ports.pgPort}`
 const stack = {
   slug,
   slot,
+  maxSlot: MAX_SLOT,
   main,
   /**
    * **The slot is in the name, not only the ports.** Compose identifies a

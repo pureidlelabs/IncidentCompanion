@@ -32,6 +32,7 @@ from pathlib import Path
 
 import pytest
 
+from tests import _checkout as checkout
 from tests import posix_modes
 from tests._must_run import declined
 from tests._repo import REPO_ROOT
@@ -138,7 +139,7 @@ def _a_daemon_answers() -> None:
     if not _docker_available():
         declined("The container runtime tier", "no Docker daemon is reachable")
 
-IMAGE = "incidentcompanion-node:local"
+IMAGE = checkout.image("node")
 
 
 def test_the_host_profile_is_recognised_and_named(capsys):
@@ -312,12 +313,10 @@ def test_the_detected_profile_names_the_runtime_the_daemon_reports():
 
 
 #: This worktree's copy of the stack, and the project name that keeps a run of
-#: this tier off whatever the analyst has up. Per xdist worker, which may share
-#: this module.
+#: this tier off whatever the analyst has up.
 STACK = REPO_ROOT / "compose.yaml"
-_WORKER = os.environ.get("PYTEST_XDIST_WORKER", "gw0")
-PROJECT = f"incidentcompanion-runtime-test-{_WORKER}"
-PORT = 18443 + int(_WORKER.removeprefix("gw"))
+PROJECT = checkout.project("runtime")
+PORT = checkout.port("runtime")
 
 
 def _compose(*args, env=None, **kwargs):
@@ -325,7 +324,7 @@ def _compose(*args, env=None, **kwargs):
     """
     return subprocess.run(
         ["docker", "compose", "-p", PROJECT, "-f", str(STACK), *args],
-        capture_output=True, text=True, env={**os.environ, **(env or {})},
+        capture_output=True, text=True, env={**os.environ, **(env or {}), **checkout.ENV},
         **kwargs)
 
 
