@@ -648,6 +648,49 @@ def test_the_container_writes_its_install_volume(running_container):
         "this is what its absence looks like")
 
 
+#: What the serving and seeding roles may do to the tables whose privileges are
+#: narrower than a row policy, as the database answers it.
+_PRIVILEGES = """select
+  has_table_privilege('ic_app', 'change_feed', 'INSERT'),
+  has_table_privilege('ic_app', 'change_feed', 'UPDATE'),
+  has_table_privilege('ic_app', 'change_feed', 'DELETE'),
+  has_column_privilege('ic_app', 'cases', 'title', 'UPDATE'),
+  has_column_privilege('ic_app', 'cases', 'customer_id', 'UPDATE'),
+  has_column_privilege('ic_app', 'cases', 'is_demo', 'UPDATE'),
+  has_table_privilege('ic_app', 'prose_acceptances', 'UPDATE'),
+  has_table_privilege('ic_seed', 'prose_acceptances', 'UPDATE'),
+  has_table_privilege('ic_seed', 'install_activity', 'TRUNCATE')"""
+
+
+def _privileges(env) -> str:
+    asked = _compose(
+        "exec", "-T", "postgres", "psql", "-tA", "-U", "incidentcompanion",
+        "-d", "incidentcompanion", "-c", _PRIVILEGES, env=env)
+    assert asked.returncode == 0, f"the privileges could not be read: {asked.stderr}"
+    return asked.stdout.strip()
+
+
+def test_the_shipped_store_holds_the_app_to_its_privileges(running_container):
+    """After one `up`, and again after the roles step runs a second time.
+
+    The roles step and the schema step both run on every `up` and a `restart`
+    starts them together, so the privileges are asserted where either order
+    leaves them.
+    """
+    env = running_container
+    expected = "t|f|f|t|f|f|f|f|f"
+    assert _privileges(env) == expected, (
+        "after `up`, the app or the seeder holds a privilege on the change feed, "
+        "a case's customer or demo mark, or the acceptances, that the schema "
+        "step withholds")
+
+    rerun = _compose("up", "--no-deps", "--force-recreate", "roles", env=env)
+    assert rerun.returncode == 0, f"the roles step did not run again: {rerun.stderr[-2000:]}"
+    assert _privileges(env) == expected, (
+        "running the roles step again gave back a table privilege the schema "
+        "step withholds")
+
+
 def test_the_edge_keeps_the_private_key_owner_only(running_container):
     """0600 on the key, asserted where the key now lives.
 

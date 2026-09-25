@@ -68,8 +68,11 @@ $$;
 GRANT ic_prose TO ic_app WITH INHERIT FALSE, SET TRUE;
 
 -- The schema belongs to the migration role, and the other three may use it.
--- The app and the seeder take what it creates, by the defaults below; the
--- prose role takes only what the schema step grants it, column by column.
+-- **What each may do to a table is the schema step's, and none of it is
+-- here** (`server/src/db/schema/grants.ts`): that step revokes everything and
+-- grants exactly what each table needs, in the transaction that makes the
+-- tables. So this file may run again at any moment, before or after a push,
+-- and change no table privilege.
 GRANT USAGE ON SCHEMA public TO ic_app, ic_seed, ic_prose;
 
 -- **No default CREATE on the schema.** Postgres grants it to PUBLIC on
@@ -77,39 +80,3 @@ GRANT USAGE ON SCHEMA public TO ic_app, ic_seed, ic_prose;
 -- table beside the ones it is allowed to read.
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT CREATE ON SCHEMA public TO ic_migrate;
-
--- **`FOR ROLE ic_migrate`, and leaving it off is a silent no-op.** Default
--- privileges attach to whoever *creates* the object, and this file is run by an
--- administrator — so unnamed, these would cover tables the administrator makes
--- and none of the ones the schema push makes. It surfaces as `permission denied
--- for table user` on the first query, a long way from this file.
---
--- Set before the schema is pushed, so every table arrives already readable.
--- `GRANT ON ALL TABLES` cannot do this job: it covers what exists when it runs,
--- and at that moment nothing does.
-ALTER DEFAULT PRIVILEGES FOR ROLE ic_migrate IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ic_app;
--- **No TRUNCATE, and its absence is what makes `install_activity` append-only.**
--- That table's policies refuse UPDATE and DELETE to both roles -- measured, 0
--- rows affected -- but TRUNCATE is a table privilege and bypasses row-level
--- security entirely, so `ic_seed` could empty the audit in one statement while
--- being refused a single-row delete. Nothing in this tree issues a TRUNCATE:
--- the seeder deletes, under the `seeder_writes_across_cases` policy. So the
--- grant was reach nothing used, standing between a demo rebuild and the log.
---
--- **Break-verified against the default privileges, not the `GRANT ON ALL
--- TABLES` below.** A table is created after this file runs, so it takes its
--- privileges from here; restoring TRUNCATE to the other statement left the
--- test green and proved nothing.
-ALTER DEFAULT PRIVILEGES FOR ROLE ic_migrate IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ic_seed;
-ALTER DEFAULT PRIVILEGES FOR ROLE ic_migrate IN SCHEMA public
-  GRANT USAGE, SELECT ON SEQUENCES TO ic_app, ic_seed;
-
--- And for tables that already exist, so re-running this on a pushed install
--- catches up rather than leaving it half-granted.
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ic_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ic_seed;
--- Catches up an install pushed while the grant above still carried TRUNCATE.
-REVOKE TRUNCATE ON ALL TABLES IN SCHEMA public FROM ic_seed;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ic_app, ic_seed;

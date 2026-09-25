@@ -101,6 +101,7 @@ const MAP: Record<InstallEvent, Mapping> = {
   // **Delete, not Update.** A prune removes lines; a collector filtering for
   // deletions on this install must find it there.
   audit_pruned: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
+  familiar_addresses_pruned: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
 
   account_created: { cls: CLASS.accountChange, activityId: 1, activityName: 'Create' },
   account_enabled: { cls: CLASS.accountChange, activityId: 2, activityName: 'Enable' },

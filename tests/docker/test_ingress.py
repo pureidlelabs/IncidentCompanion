@@ -19,6 +19,7 @@ from __future__ import annotations
 import itertools
 import json
 import os
+import re
 import subprocess
 import time
 import uuid
@@ -26,6 +27,7 @@ import uuid
 import pytest
 
 from tests import _checkout as checkout
+from tests import posix_modes
 from tests._must_run import declined
 from tests._repo import REPO_ROOT
 
@@ -112,6 +114,12 @@ def install():
         if listed:
             subprocess.run(["docker", "rm", "-f", *listed], capture_output=True)
         _compose("down", "-v", "--remove-orphans", check=False)
+
+
+@pytest.fixture(autouse=True)
+def _through_the_entry_point(record_property):
+    """Every case here reaches the shipped stack through its edge, which `tests/certify.py` reads."""
+    record_property("entry", "compose")
 
 
 def _audit(where: str) -> list[str]:
@@ -310,3 +318,190 @@ def test_an_edge_started_after_the_application_is_believed_from_its_first_reques
                 for account in guessed]
     assert recorded == [[first.address], [second.address]], (
         f"{first.address} and {second.address} were recorded as {recorded}")
+
+
+def _answer(analyst: Analyst, *args: str) -> tuple[int, dict[str, list[str]], str]:
+    """Status, headers by lower-cased name, and body of one response, as curl `-i` prints it."""
+    printed = analyst.curl("-i", *args).stdout
+    head, _, body = printed.replace("\r\n", "\n").partition("\n\n")
+    lines = head.splitlines()
+    headers: dict[str, list[str]] = {}
+    for line in lines[1:]:
+        name, _, value = line.partition(":")
+        headers.setdefault(name.strip().lower(), []).append(value.strip())
+    return int(lines[0].split()[1]) if lines else 0, headers, body
+
+
+def _at_the_name(path: str, *args: str) -> tuple[str, ...]:
+    return ("--connect-to", f"{NAME}:{PORT}:nginx:8443", "--cacert", "/ca/cert.pem",
+            *args, f"{ORIGIN}{path}")
+
+
+def _assert_the_browser_is_told(what: str, answer) -> None:
+    status, headers, body = answer
+    policies = headers.get("content-security-policy", [])
+    assert len(policies) == 1, f"{what} ({status}) carries {len(policies)} content policies: {policies}"
+    assert "frame-ancestors 'none'" in policies[0], f"{what} ({status}) may be framed: {policies[0]}"
+    assert headers.get("x-content-type-options") == ["nosniff"], (
+        f"{what} ({status}) lets the browser guess what it was sent: {headers}")
+    assert headers.get("server", ["nginx"]) == ["nginx"], (
+        f"{what} ({status}) names the build that served it: {headers.get('server')}")
+    assert "nginx/" not in body, f"{what} ({status}) names the build in its body"
+
+
+#: Each answer the edge writes itself, the status it is, and how a caller provokes it.
+#: `--http1.1` where HTTP/2 would end the stream instead of answering.
+_EDGE_ANSWERS = {
+    "a foreign origin": (403, ("/api/health", "-H", "origin: https://evil.test")),
+    "a body past the limit": (413, ("/api/cases", "--http1.1", "-X", "POST",
+                                    "-H", "content-length: 600000000", "--data", "x")),
+    "a path above the root": (400, ("/..%2f..%2fetc%2fpasswd", "--path-as-is")),
+    "a header too large": (400, ("/api/health", "--http1.1", "-H", "cookie: " + "a" * 40000)),
+}
+
+
+def _refused_in_a_burst(analyst: Analyst, path: str, count: int):
+    """The first 429 the edge itself wrote among `count` requests in one connection.
+
+    Read inside the burst: a request after it can reach the application's own
+    limiter, whose 429 is JSON and carries the application's policy.
+    """
+    printed = analyst.curl("-i", *_at_the_name(f"{path}?n=[1-{count}]")).stdout
+    for one in re.split(r"(?m)^(?=HTTP/\d)", printed.replace("\r\n", "\n")):
+        head, _, body = one.partition("\n\n")
+        lines = head.splitlines()
+        if not lines or lines[0].split()[1:2] != ["429"]:
+            continue
+        headers: dict[str, list[str]] = {}
+        for line in lines[1:]:
+            name, _, value = line.partition(":")
+            headers.setdefault(name.strip().lower(), []).append(value.strip())
+        if headers.get("content-type") == ["text/html"]:
+            return 429, headers, body
+    pytest.fail(f"the edge refused nothing of {count} requests to {path}")
+
+
+def test_an_answer_the_edge_writes_itself_is_read_under_a_policy(install):
+    """Each status the edge writes without the application carries a policy, nosniff and no build."""
+    analyst = Analyst("edge")
+    answers = {what: _answer(analyst, *_at_the_name(*probe))
+               for what, (_, probe) in _EDGE_ANSWERS.items()}
+    answers["plain HTTP at the protected port"] = _answer(
+        analyst, "--connect-to", f"{NAME}:{PORT}:nginx:8443", f"http://{NAME}:{PORT}/")
+    answers["too many at the credential paths"] = _refused_in_a_burst(
+        analyst, "/api/auth/not-a-real-route", 25)
+    answers["too many elsewhere"] = _refused_in_a_burst(analyst, "/not-a-real-route", 150)
+
+    expected = {what: status for what, (status, _) in _EDGE_ANSWERS.items()} | {
+        "plain HTTP at the protected port": 400,
+        "too many at the credential paths": 429,
+        "too many elsewhere": 429,
+    }
+    assert {what: answer[0] for what, answer in answers.items()} == expected, (
+        "a probe no longer provokes the answer it names, so it asserts nothing about it")
+    for what, answer in answers.items():
+        _assert_the_browser_is_told(what, answer)
+
+
+def test_an_answer_the_edge_writes_while_the_application_is_down_is_read_under_a_policy(install):
+    """The edge's own 502 or 504, answered within ten seconds, with nothing behind it to write a policy.
+
+    Which of the two depends on whether the edge still holds the stopped
+    container's address; either way the edge answers rather than holding the caller.
+    """
+    analyst = Analyst("down")
+    _compose("stop", "app")
+    try:
+        started = time.monotonic()
+        answer = _answer(analyst, *_at_the_name("/api/health", "--max-time", "15"))
+        waited = time.monotonic() - started
+    finally:
+        _compose("up", "-d", "--no-deps", "--wait", "app")
+    assert answer[0] in (502, 504), f"the edge answered {answer[0]} after {waited:.1f}s"
+    assert waited < 10, f"the edge held the caller {waited:.1f}s before answering"
+    _assert_the_browser_is_told("the application down", answer)
+
+
+def test_a_page_and_an_answer_from_the_interface_carry_one_policy_through_the_edge(install):
+    """The application's own policy reaches the browser once, unchanged by the edge, on both."""
+    analyst = Analyst("reader")
+    page = _answer(analyst, *_at_the_name("/"))
+    api = _answer(analyst, *_at_the_name("/api/health"))
+    assert (page[0], api[0]) == (200, 200)
+    for what, answer in (("the page", page), ("the interface", api)):
+        _assert_the_browser_is_told(what, answer)
+    assert page[1]["content-security-policy"] == api[1]["content-security-policy"]
+    assert "wss://" in api[1]["content-security-policy"][0], (
+        "the edge's policy replaced the application's")
+
+
+def _handshake(analyst: Analyst, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["docker", "exec", analyst.container, "openssl", "s_client", "-connect", "nginx:8443",
+         "-servername", NAME, *args], capture_output=True, text=True, timeout=30)
+
+
+@pytest.mark.parametrize("suite", ["AES128-SHA", "AES256-SHA", "AES128-SHA256", "AES256-SHA256",
+                                   "AES128-GCM-SHA256", "ECDHE-RSA-AES256-SHA",
+                                   "ECDHE-RSA-AES128-SHA256"])
+def test_a_client_offering_only_a_weak_suite_is_refused(install, suite):
+    """No forward secrecy, or no AEAD: nothing under TLS 1.2 agrees to it."""
+    # `@SECLEVEL=0`, or the client withdraws the suite itself and the refusal is its own.
+    answer = _handshake(Analyst("weak"), "-tls1_2", "-cipher", f"{suite}:@SECLEVEL=0")
+    assert answer.returncode != 0, f"the edge agreed {suite}:\n{answer.stdout[-800:]}"
+
+
+@pytest.mark.parametrize("version,suite", [("-tls1_2", "ECDHE-RSA-AES128-GCM-SHA256"),
+                                           ("-tls1_2", "ECDHE-RSA-CHACHA20-POLY1305"),
+                                           ("-tls1_3", None)])
+def test_a_client_offering_a_forward_secret_aead_suite_is_served(install, version, suite):
+    """The half that shows the refusals above are a policy rather than a broken listener."""
+    answer = _handshake(Analyst("strong"), version, *(["-cipher", suite] if suite else []))
+    assert answer.returncode == 0, answer.stderr[-800:]
+    protocol = "TLSv1.2" if version == "-tls1_2" else "TLSv1.3"
+    assert protocol in answer.stdout and (suite or "TLS_AES") in answer.stdout, answer.stdout[-800:]
+
+
+def _session_read(analyst: Analyst) -> int:
+    return analyst.status("/api/auth/get-session", "-H", f"origin: {ORIGIN}")
+
+
+def test_an_address_reading_its_sessions_still_signs_in(install):
+    """Analysts at one address keep their sessions alive, and a colleague there signs in."""
+    office = Analyst("office")
+    reads = [_session_read(office) for _ in range(25)]
+    assert set(reads) == {200}, f"the edge refused an analyst's own session read: {reads}"
+    assert office.sign_in(ACCOUNT, PASSWORD) == 200, (
+        "session reads at this address spent its sign-in budget")
+
+
+def test_guessing_at_an_address_leaves_its_analysts_reporting_in(install):
+    """A burst of sign-ins at one address, and the analyst there still reports activity."""
+    office = Analyst("sprayed")
+    guesses = office.statuses("/api/auth/not-a-real-route", 40, "-H", f"origin: {ORIGIN}")
+    assert 429 in guesses, f"the burst never reached the sign-in limit: {guesses}"
+    assert _session_read(office) == 200, (
+        "sign-in attempts at this address refused its analyst's activity report")
+
+
+@pytest.mark.parametrize("destination", ["new", "open"])
+def test_a_copy_is_readable_only_by_whoever_took_it(install, tmp_path, destination):
+    """`backup.sh backup` against the running stack, and the modes of what it wrote, host side.
+
+    `open` is a directory left world-readable, holding a world-readable
+    part from an earlier copy, which the new copy writes over.
+    """
+    copy = tmp_path / "copy"
+    if destination == "open":
+        copy.mkdir()
+        copy.chmod(0o755)
+        (copy / "db.dump").write_text("an earlier copy")
+        (copy / "db.dump").chmod(0o644)
+    taken = subprocess.run(
+        ["sh", str(REPO_ROOT / "docker" / "backup.sh"), "backup", str(copy)],
+        capture_output=True, text=True, timeout=600,
+        env={**os.environ, **checkout.ENV, "IC_STACK_PROJECT": PROJECT, "IC_STACK_PORT": str(PORT), "IC_NAME": NAME})
+    assert taken.returncode == 0, taken.stdout[-2000:] + taken.stderr[-2000:]
+    posix_modes.assert_owner_only(copy, directory=True)
+    for part in ("db.dump", "evidence.tar", "shape", "SHA256SUMS"):
+        posix_modes.assert_owner_only(copy / part)

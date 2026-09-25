@@ -583,10 +583,14 @@ describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () =
     // block-level elements from the top of a fragment, so a loose text node
     // resolves to nothing - and a fixture in a shape the editor never produces
     // fails a correct clone.
-    const doc = await prose.open(caseId, reportDocument(reportId))
+    await prose.open(caseId, reportDocument(reportId))
+    const typed = new Y.Doc()
     const para = new Y.XmlElement('paragraph')
     para.insert(0, [new Y.XmlText('a credential was reused')])
-    doc.getXmlFragment(blockIds[0]).insert(0, [para])
+    typed.getXmlFragment(blockIds[0]).insert(0, [para])
+    // Sent as the analyst's editor sends it, so the save names them.
+    const frame = prose.frameUpdate(Y.encodeStateAsUpdate(typed))
+    await prose.apply(caseId, reportDocument(reportId), frame, 'a-socket', { id: actorId, label: 'Analyst', headers: {} })
     await prose.release(caseId, reportDocument(reportId))
 
     const { id: successor } = await lifecycle.supersede(caseId, reportId, actorId)

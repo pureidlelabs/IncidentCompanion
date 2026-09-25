@@ -21,7 +21,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import { user } from './auth.js'
 import { cases } from './case.js'
-import { caseScoped, proseKept } from './scoped.js'
+import { caseRecorded, proseKept } from './scoped.js'
 
 export const changeOp = pgEnum('change_op', ['insert', 'update', 'delete'])
 
@@ -66,7 +66,7 @@ export const changeFeed = pgTable(
   (table) => [
     // The only query this table serves: one case's writes, newest first.
     index('change_feed_case_seq_idx').on(table.caseId, table.seq),
-    ...caseScoped(table.caseId),
+    ...caseRecorded(table.caseId),
     ...proseKept(table.caseId, table.entityId, ['insert'], table.actorId),
   ],
 )

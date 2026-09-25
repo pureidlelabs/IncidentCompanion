@@ -92,4 +92,23 @@ export const storeGuards: readonly string[] = [
   `create or replace trigger a_sent_report_takes_no_new_part
      after insert or update on report_blocks
      for each row execute function refuse_a_part_of_a_sent_report()`,
+
+  // Invoker, so `current_user` is the writer: the tables' owner inside the
+  // store's own move, or the seeder attributing what nobody had.
+  `create or replace function refuse_a_customer_change() returns trigger
+     language plpgsql set search_path = pg_catalog as $$
+   begin
+     if current_user <> 'ic_seed'
+        and (select relowner from pg_class where oid = tg_relid)
+            <> (select oid from pg_roles where rolname = current_user) then
+       raise exception 'case % changes customer only through the store''s move', old.id
+         using errcode = '42501';
+     end if;
+     return new;
+   end $$`,
+  `revoke all on function refuse_a_customer_change() from public`,
+  `create or replace trigger a_case_changes_customer_only_by_the_move
+     before update of customer_id on cases
+     for each row when (old.customer_id is distinct from new.customer_id)
+     execute function refuse_a_customer_change()`,
 ]
