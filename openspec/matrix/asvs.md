@@ -46,6 +46,7 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V8.2.2 | Data-specific access restricted to explicit permissions | state :: The application cannot reach a row it should not, even by mistake |
 | V13.3.2 | Access to secret assets follows least privilege | state :: Changing the shape of the store is a separate power |
 | V12.2.1 | Protected transport for all connectivity between a client and an externally facing service | deployment :: The connection is protected, and there is no way to turn that off |
+| V12.1.1, V12.1.2 | Only the latest recommended TLS versions, and only recommended cipher suites with the strongest preferred | deployment :: The connection is protected, and there is no way to turn that off |
 | V13.3.2 | Access to secret assets follows least privilege | deployment :: The application runs with no more than it needs |
 | V2.4.1 | Anti-automation against excessive calls to application functions | the-api :: What a request costs is bounded before it runs |
 | V4.3.1 | Depth, amount or cost analysis against query and data-layer expression denial of service | the-api :: What a request costs is bounded before it runs |
