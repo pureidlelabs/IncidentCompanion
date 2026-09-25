@@ -29,7 +29,8 @@ ENV = {"IC_IMAGE_TAG": IMAGE_TAG}
 #: tier, slot and worker below 100 lands on another's.
 PORT_BASE = {"runtime": 18443, "ingress": 18543, "lockout": 18643}
 
-_WORKER = int(os.environ.get("PYTEST_XDIST_WORKER", "gw0").removeprefix("gw"))
+def _worker() -> int:
+    return int(os.environ.get("PYTEST_XDIST_WORKER", "gw0").removeprefix("gw"))
 
 
 def image(name: str) -> str:
@@ -37,8 +38,8 @@ def image(name: str) -> str:
 
 
 def project(tier: str) -> str:
-    return f"incidentcompanion-{tier}-test-{SLOT}-gw{_WORKER}"
+    return f"incidentcompanion-{tier}-test-{SLOT}-gw{_worker()}"
 
 
-def port(tier: str, slot: int = SLOT, worker: int = _WORKER) -> int:
-    return PORT_BASE[tier] + slot * 300 + worker
+def port(tier: str, slot: int = SLOT, worker: int | None = None) -> int:
+    return PORT_BASE[tier] + slot * 300 + (_worker() if worker is None else worker)
