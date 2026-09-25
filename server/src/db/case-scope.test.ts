@@ -46,7 +46,7 @@ function scopedTables(): string[] {
     const text = readFileSync(file, 'utf8')
     // `export const reports = pgTable(` ... `...caseScoped(t.caseId)]`
     for (const match of text.matchAll(/export const (\w+) = pgTable\(([\s\S]*?)\n\)/g)) {
-      if (match[2]?.includes('caseScoped(')) names.add(match[1]!)
+      if (/caseScoped\(|caseRecorded\(/.test(match[2] ?? '')) names.add(match[1]!)
     }
   }
   return [...names]

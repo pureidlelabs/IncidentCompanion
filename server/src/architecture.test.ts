@@ -218,7 +218,8 @@ const MAY_IMPORT: Record<string, string[]> = {
   // `access` because no guard runs on an upgrade: the socket asks the same
   // reach question a route's guard does, by hand. -> `live.gateway.ts`
   // `wire` for who an upgrade is from, which no middleware reaches either.
-  live: ['auth', 'db', 'config', 'prose', 'install-activity', 'access', 'wire'],
+  // `domain` for the frames the browser reads too.
+  live: ['auth', 'db', 'config', 'prose', 'install-activity', 'access', 'wire', 'domain'],
   /**
    * `db` is one connection, not a query tier: readiness runs `select 1` on the
    * pool the app serves from, so a pool with nothing free reads as unhealthy.
