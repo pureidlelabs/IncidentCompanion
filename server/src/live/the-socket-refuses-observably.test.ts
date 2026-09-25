@@ -102,6 +102,12 @@ const DRIVES: Record<Refusal, () => Promise<{ refused: Refusal | null }>> = {
     gatewayWith({ held: true }).check(request(`/api/cases/${CASE}/live`)),
   'no-such-case': () =>
     gatewayWith({ caseExists: false }).check(request(`/api/cases/${GHOST}/live`)),
+  'too-many': async () => {
+    const gateway = gatewayWith()
+    let verdict: { refused: Refusal | null } = { refused: null }
+    for (let i = 0; i < 100 && !verdict.refused; i += 1) verdict = await gateway.check(request(`/api/cases/${CASE}/live`))
+    return verdict
+  },
 }
 
 describe('every check on the handshake can be observed failing', () => {

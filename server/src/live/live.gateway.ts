@@ -45,7 +45,8 @@ import { onSessionEnded } from '../auth/session-ended.js'
 import { ReachService } from '../access/reach.service.js'
 import { UUID } from '../access/case-access.guard.js'
 import { onReachChanged } from '../access/reach-changed.js'
-import { attribute } from '../wire/caller-address.js'
+import { attribute, callerAddress, NO_ADDRESS } from '../wire/caller-address.js'
+import { Allowances } from './allowance.js'
 
 const LIVE_PATH = /^\/api\/cases\/([^/]+)\/live$/i
 
@@ -56,6 +57,7 @@ export type Refusal =
   | 'unauthenticated'
   | 'must-change-password'
   | 'no-such-case'
+  | 'too-many'
 
 /**
  * The status line each refusal answers with.
@@ -77,7 +79,14 @@ export const STATUS: Record<Refusal, string> = {
   // distinguishable from one that does not exist, or the socket becomes an
   // oracle for which case ids are real.
   'no-such-case': '404 Not Found',
+  'too-many': '429 Too Many Requests',
 }
+
+/** Refusals made before anybody is known, so they are counted against the address. */
+const ANONYMOUS: ReadonlySet<Refusal> = new Set(['no-such-path', 'cross-origin', 'unauthenticated'])
+
+/** The close code for a connection that sent past its budget. */
+const TOO_MUCH = 4429
 
 /** Authority that ended on an open connection, and the close code that says which way. */
 type Ended = 'unauthenticated' | 'must-change-password' | 'no-such-case'
@@ -115,6 +124,17 @@ const CLAIMS_PER_CONNECTION = 64
 /** How many frames one connection may have waiting to be acted on before it is ended. */
 const FRAMES_WAITING = 256
 
+/** How many connections one account may hold at once, and open: a burst, then one a second. */
+const CONNECTIONS_PER_ACCOUNT = 32
+const UPGRADES_PER_ACCOUNT = { burst: 60, perSecond: 1 }
+
+/** How many upgrades one address may have refused before anybody is known. */
+const ANONYMOUS_REFUSALS_PER_ADDRESS = { burst: 30, perSecond: 0.5 }
+
+/** What one connection may send: a burst, then a steady rate, in frames and in bytes. */
+const FRAMES_PER_CONNECTION = { burst: 1_000, perSecond: 100 }
+const BYTES_PER_CONNECTION = { burst: 4 * 1024 * 1024, perSecond: 256 * 1024 }
+
 interface OpenDocument {
   /** Which record this document is - a report, or one case note. */
   address: ProseRecord
@@ -133,6 +153,15 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   /** The frame types each connection has had refused and recorded, so a repeat writes no second line. */
   private readonly refusalsRecorded = new WeakMap<WebSocket, Set<string>>()
   private readonly carets = new Carets()
+  private readonly upgradesByAccount = new Allowances(UPGRADES_PER_ACCOUNT.burst, UPGRADES_PER_ACCOUNT.perSecond)
+  private readonly refusalsByAddress = new Allowances(
+    ANONYMOUS_REFUSALS_PER_ADDRESS.burst,
+    ANONYMOUS_REFUSALS_PER_ADDRESS.perSecond,
+  )
+  /** Connections each account holds, counted from admission to the socket closing. */
+  private readonly holding = new Map<string, number>()
+  /** Accounts refused for holding too many since they last opened one, so the run is told once. */
+  private readonly crowded = new Set<string>()
   private sweep: NodeJS.Timeout | undefined
   private readonly stopListeningForSessionEnds: () => void
   private readonly stopListeningForReachChanges: () => void
@@ -168,6 +197,8 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     // ponytail: one sweep, O(connections) per 15 s; a deadline per connection if the bound must tighten.
     this.sweep = setInterval(() => {
       for (const [live, admission] of this.admitted) void this.revalidateOne(live, admission)
+      this.upgradesByAccount.forgetFull()
+      this.refusalsByAddress.forgetFull()
     }, SWEEP_MS)
     this.sweep.unref()
     this.prose.onSaved((caseId, record) => {
@@ -288,12 +319,21 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   private async upgrade(request: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
     await attribute(request.headers, request.socket.remoteAddress)
     const verdict = await this.check(request)
+    if (verdict.refused && ANONYMOUS.has(verdict.refused)) {
+      const address = callerAddress(request.headers) ?? NO_ADDRESS
+      const taken = this.refusalsByAddress.take(address)
+      if (taken !== 'taken') {
+        if (taken === 'first') this.limited(request.headers, null, 'live upgrade', 'address')
+        this.refuse(socket, 'too-many')
+        return
+      }
+    }
+    if (verdict.refused === 'too-many') {
+      this.refuse(socket, 'too-many')
+      return
+    }
     if (verdict.refused) {
-      // **Refused, not ignored.** An unanswered upgrade stays open in the
-      // browser's per-host pool; enough of those and every later request
-      // queues forever. That failure cost an evening on the Vite proxy side.
-      socket.write(`HTTP/1.1 ${STATUS[verdict.refused]}\r\n\r\n`)
-      socket.destroy()
+      this.refuse(socket, verdict.refused)
       // A refused upgrade is an authorisation failure, and the one kind the
       // HTTP boundary never sees.
       //
@@ -317,6 +357,25 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
       return
     }
 
+    const userId = verdict.session.id
+    const held = this.holding.get(userId) ?? 0
+    if (held >= CONNECTIONS_PER_ACCOUNT) {
+      if (!this.crowded.has(userId)) {
+        this.crowded.add(userId)
+        this.limited(request.headers, verdict.session, 'live upgrade', 'connections')
+      }
+      this.refuse(socket, 'too-many')
+      return
+    }
+    this.crowded.delete(userId)
+    this.holding.set(userId, held + 1)
+    // The raw socket closes however the upgrade ends, admitted or not.
+    socket.once('close', () => {
+      const now = (this.holding.get(userId) ?? 1) - 1
+      if (now > 0) this.holding.set(userId, now)
+      else this.holding.delete(userId)
+    })
+
     // Who could have edited; who did is the line each saved change writes.
     void this.activity.record({
       event: 'case_opened_live',
@@ -330,6 +389,32 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
         this.log.warn(`could not open a socket: ${String(error)}`)
         live.terminate()
       })
+    })
+  }
+
+  /**
+   * **Refused, not ignored.** An unanswered upgrade stays open in the browser's
+   * per-host pool; enough of those and every later request queues forever.
+   */
+  private refuse(socket: Duplex, why: Refusal): void {
+    // Ended rather than destroyed, which can reset the connection before the status is read.
+    socket.once('finish', () => socket.destroy())
+    socket.end(`HTTP/1.1 ${STATUS[why]}\r\nConnection: close\r\n\r\n`)
+  }
+
+  /** One line for a run of limited upgrades or frames, as the throttler writes one for a request. */
+  private limited(
+    headers: IncomingHttpHeaders,
+    actor: { id: string; name: string } | null,
+    target: 'live upgrade' | 'live frames',
+    tier: 'address' | 'account' | 'connections' | 'connection',
+  ): void {
+    void this.activity.record({
+      event: 'rate_limited',
+      ...(actor ? { actor: { id: actor.id, label: actor.name } } : {}),
+      target,
+      detail: { tier },
+      headers,
     })
   }
 
@@ -353,6 +438,9 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     const caseId = named.toLowerCase()
     const session = await this.sessionFor(request.headers)
     if (!session?.sessionId) return { refused: 'unauthenticated' }
+    const taken = this.upgradesByAccount.take(session.id)
+    if (taken === 'first') this.limited(request.headers, session, 'live upgrade', 'account')
+    if (taken !== 'taken') return { refused: 'too-many' }
     // Before the case lookup, so a held account learns nothing about which
     // case ids exist -- the same ordering reason the origin check comes first.
     if (session.held) return { refused: 'must-change-password' }
@@ -509,8 +597,16 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     }
     live.on('close', close)
     live.on('error', close)
+    const frames = new Allowances(FRAMES_PER_CONNECTION.burst, FRAMES_PER_CONNECTION.perSecond)
+    const bytes = new Allowances(BYTES_PER_CONNECTION.burst, BYTES_PER_CONNECTION.perSecond)
     live.on('message', (raw: Buffer) => {
       if (gone) return
+      if (frames.take('') !== 'taken' || bytes.take('', raw.length) !== 'taken') {
+        this.limited(headers, session, 'live frames', 'connection')
+        close()
+        live.close(TOO_MUCH)
+        return
+      }
       // ponytail: one fixed cap; a per-type budget if a client legitimately bursts past it.
       if (++waiting > FRAMES_WAITING) {
         live.terminate()

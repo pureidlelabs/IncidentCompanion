@@ -8,7 +8,7 @@
  */
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { WebSocket } from 'ws'
 
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
@@ -59,6 +59,13 @@ const roster = (heard: Frame[]) => {
 
 const seed = () => drizzle({ client: seedPool })
 
+/** A case of its own for each test, so a deletion one lets through leaves the next intact. */
+async function aCase(): Promise<void> {
+  caseId = (await ok(owner, 'POST', '/api/cases', { title: `One room ${TAG}` }))['id'] as string
+  made.push(caseId)
+  await ok(owner, 'PUT', `/api/cases/${caseId}/customer`, { customerId: customer })
+}
+
 describe.skipIf(!(await bootable()))('a case named in capitals over the live connection', () => {
   beforeAll(async () => {
     harness = await boot()
@@ -77,12 +84,6 @@ describe.skipIf(!(await bootable()))('a case named in capitals over the live con
     writer = await analyst('Writer', 'write')
   }, 120_000)
 
-  // A case each, so a deletion one case lets through leaves the next intact.
-  beforeEach(async () => {
-    caseId = (await ok(owner, 'POST', '/api/cases', { title: `One room ${TAG}` }))['id'] as string
-    made.push(caseId)
-    await ok(owner, 'PUT', `/api/cases/${caseId}/customer`, { customerId: customer })
-  })
 
   afterAll(async () => {
     for (const socket of sockets) socket.terminate()
@@ -94,6 +95,7 @@ describe.skipIf(!(await bootable()))('a case named in capitals over the live con
   })
 
   it('puts the analyst in the roster the others see', async () => {
+    await aCase()
     const lowerOne = await lower.connect(owner)
     const upperOne = await upper.connect(reader)
     const both = [owner.id, reader.id].sort()
@@ -105,6 +107,7 @@ describe.skipIf(!(await bootable()))('a case named in capitals over the live con
   })
 
   it('refuses the case deletion while they are connected, by either spelling of the route', async () => {
+    await aCase()
     const present = await upper.connect(reader)
     expect((await call(owner, 'DELETE', `/api/cases/${caseId}`)).status).toBe(409)
     present.socket.terminate()
@@ -116,6 +119,7 @@ describe.skipIf(!(await bootable()))('a case named in capitals over the live con
   })
 
   it('stores the words the connection accepted, named for their writer', async () => {
+    await aCase()
     const noteId = (await ok(owner, 'POST', `/api/cases/${caseId}/casenotes`, { note: 'seed' }))['id'] as string
     const watching = await upper.opens(owner, noteId)
     const words = `typed through the capitalised id ${TAG}`
@@ -135,6 +139,7 @@ describe.skipIf(!(await bootable()))('a case named in capitals over the live con
   })
 
   it('edits one document whichever spelling each writer used', async () => {
+    await aCase()
     const noteId = (await ok(owner, 'POST', `/api/cases/${caseId}/casenotes`, { note: 'seed' }))['id'] as string
     const lowerOne = await lower.opens(owner, noteId)
     const upperOne = await upper.opens(writer, noteId)
@@ -143,6 +148,7 @@ describe.skipIf(!(await bootable()))('a case named in capitals over the live con
   })
 
   it('sends the words typed just before a send that names the report in capitals', async () => {
+    await aCase()
     const { id, blocks } = await aDraft(caller(harness!, owner), caseId, ['Assessment'])
     const field = `reports:${id}:document`
     const typing = await Live.open(harness!, writer, caseId)

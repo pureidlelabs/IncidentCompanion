@@ -193,6 +193,11 @@ async function driveUpgrade(gateway: LiveGateway, url: string, headers?: Record<
   let destroyed = false
   const socket = {
     write: (line: string) => written.push(line),
+    end: (line: string) => {
+      written.push(line)
+      destroyed = true
+    },
+    once: () => {},
     destroy: () => {
       destroyed = true
     },

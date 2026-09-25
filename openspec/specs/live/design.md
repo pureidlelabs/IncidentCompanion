@@ -130,3 +130,29 @@ The save is recorded in the install's audit, one line per writer, as the collect
 Stopping the application ends its connections before it stops listening, and waits for saves already under way. An open connection holds the listener open, so ending them last never ends them; and a save started by the last reader leaving is finished before the store closes.
 
 A save of words written on this instance and its audit lines are one act. Words are not stored where the lines naming their writers cannot be written, and neither lands without the other, whichever path made the save.
+
+## An identifier has one spelling after it is admitted
+
+An identifier is accepted in either letter case, as a uuid is, and carried from that moment in lower case. Admission takes the connection's case identifier as a uuid and keeps its lower-case form for every key after it: the room, the roster, the claims, the open documents and the audit. Every path parameter spelled as a uuid reaches its handler in lower case, and the case guard, which runs before that, asks and records in lower case too. A connection naming a case by anything that is not a uuid is refused as a path the install does not serve.
+
+## A caret belongs to the connection that announced it
+
+The first connection to announce a caret on a case holds it, and holds it until that connection ends. An update for a caret held by another analyst's connection is dropped entry by entry, and the rest of the update is still relayed. A connection of the same analyst takes a held caret over, because a reconnecting browser keeps its caret while the connection it left may not have ended yet. Every relayed caret is named for the analyst the connection was admitted as; the colour stays the sender's, since it names nobody and the editor draws only a plain hex colour. A connection holds at most 256 carets, and a reader keeps a caret as any analyst in the case does.
+
+## The bounds, and what they sit above
+
+A browser tab holds one connection per open case, reconnects with a backoff that starts at half a second, and on reconnecting sends, per open document, a state request, its whole state and its caret. A keystroke is one sync frame and one caret frame, and an idle caret is renewed every fifteen seconds. Each bound sits well above that:
+
+| Bound | Value | Answer past it |
+| --- | --- | --- |
+| Connections one account holds | 32 | the upgrade is refused 429 |
+| Upgrades one account opens | 60 at once, then one a second | the upgrade is refused 429 |
+| Upgrades one address has refused before anybody is known | 30 at once, then one every two seconds | the upgrade is refused 429 |
+| Frames one connection sends | 1,000 at once, then 100 a second | the connection is closed 4429 |
+| Bytes one connection sends | 4 MiB at once, then 256 KiB a second | the connection is closed 4429 |
+
+A refusal made before anybody is known is counted against the caller's address once it is made, so a flood of them cannot pass the count by arriving together. A refusal made for a signed-in analyst is counted against their account. The count of connections an account holds runs from admission until the underlying socket closes, however it closes.
+
+**A run is recorded once.** A refusal inside the address bound is recorded as any refused upgrade is. Past a bound, the first refusal writes one line in the class a throttled request writes, naming which bound, and nothing more is written until that caller is admitted within the bound again. A connection closed for its rate writes one line as it closes.
+
+**The counts live in the process**, as the connections do: one application process per install.
