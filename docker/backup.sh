@@ -15,6 +15,8 @@
 # `SHA256SUMS` (each of those three as it was written).
 # Every command exits non-zero, having changed nothing, when it cannot finish.
 set -eu
+# The copy holds every password hash and case, so it is no more readable than the volumes it copies.
+umask 077
 
 ROOT="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 
@@ -48,6 +50,9 @@ NAMED_SQL="select distinct hash from evidence where stored_at is not null and ha
 backup() {
   dir="${1:-$ROOT/backups/$(date -u +%Y%m%dT%H%M%SZ)}"
   mkdir -p "$dir"
+  # The umask reaches only what is created, so an existing destination is closed and its parts replaced.
+  chmod 700 "$dir"
+  for part in $PARTS SHA256SUMS; do rm -f "$dir/$part"; done
   excluded=""
   for table in $EPHEMERAL; do excluded="$excluded --exclude-table-data=public.$table"; done
   echo "==> the database, to $dir/db.dump"

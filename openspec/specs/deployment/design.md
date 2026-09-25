@@ -44,6 +44,16 @@ The install records the fingerprint of the certificate it makes. A certificate c
 
 A rename changes the host, so no browser holds HSTS for the new name: a browser records a host only over a connection it trusted. What traps an analyst is the same name with a new certificate after they trusted the old one, which only losing the certificate store produces, so it is backed up with the credentials.
 
+## The connection follows Mozilla's intermediate profile
+
+TLS 1.2 and 1.3 only. Under TLS 1.2, ECDHE key exchange with AES-GCM or ChaCha20-Poly1305 and nothing else; under TLS 1.3, the protocol's own suites, all of which qualify. The order among them is the client's, which is how the profile reads *the strongest set as preferred* once every suite left qualifies. The profile is set once, for every name the edge serves, because the handshake is settled before the requested name picks a server. → <https://ssl-config.mozilla.org/guidelines/6.0.json>
+
+## The session read spends the analyst's budget, not the guesser's
+
+The edge limits requests per address in two budgets: a tight one for the credential paths, where somebody guessing spends requests, and a wide one for everything an analyst does. The session read that reports an analyst at the keyboard takes the wide one. The client sends it on real input and at most once a minute per tab, plus once per page load, so behind one address it is sized like the rest of an analyst's traffic rather than like a guess.
+
+A request the credential budget refuses spends nothing of the wide one, so a burst of guesses from an address does not starve the reports of the analysts there. Every other path under the authentication library's mount stays in the tight budget, so a door added there later is limited as a credential path until somebody decides otherwise.
+
 ## An address is believed only from the edge
 
 The address a request is attributed to, for both limiters, the audit and the session, is resolved once and by one rule. The chain of addresses the edge forwards is believed only when the peer that handed it over is the edge; any other peer is attributed to itself, whatever it presents. The edge is named by host and looked up at start. A request from a peer that is not the edge and was not checked in the last few seconds waits for the edge to be looked up again before it is attributed, so an edge started or recreated after the application is recognised on its first request, and one direct caller costs one lookup every few seconds.
