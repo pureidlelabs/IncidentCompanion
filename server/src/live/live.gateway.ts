@@ -317,16 +317,8 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   }
 
   private async upgrade(request: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
-    // Listened for before the first await: a socket that closes inside one closes once, unheard.
-    let counted: string | null = null
     // Node drops its own error listener on an upgrade, so a reset here would be thrown unhandled.
     socket.on('error', () => socket.destroy())
-    socket.once('close', () => {
-      if (!counted) return
-      const now = (this.holding.get(counted) ?? 1) - 1
-      if (now > 0) this.holding.set(counted, now)
-      else this.holding.delete(counted)
-    })
     await attribute(request.headers, request.socket.remoteAddress)
     const verdict = await this.check(request)
     if (verdict.refused && ANONYMOUS.has(verdict.refused)) {
@@ -368,6 +360,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     }
 
     const userId = verdict.session.id
+    // A socket that closed during the checks has fired its close already, and is never counted.
     if (socket.destroyed) return
     const held = this.holding.get(userId) ?? 0
     if (held >= CONNECTIONS_PER_ACCOUNT) {
@@ -380,7 +373,11 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     }
     this.crowded.delete(userId)
     this.holding.set(userId, held + 1)
-    counted = userId
+    socket.once('close', () => {
+      const now = (this.holding.get(userId) ?? 1) - 1
+      if (now > 0) this.holding.set(userId, now)
+      else this.holding.delete(userId)
+    })
 
     // Who could have edited; who did is the line each saved change writes.
     void this.activity.record({
@@ -737,6 +734,8 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     update: string,
   ): Promise<void> {
     if (type === 'prose.awareness') {
+      // A caret frame still queued when its connection closed would hold carets that release has already let go.
+      if (!this.admitted.has(live)) return
       // Relayed on the field alone: an awareness frame for a field this
       // connection never opened is still somebody's caret.
       const vouched = this.carets.vouch(member.caseId, live, member.userId, member.username, Buffer.from(update, 'base64'))

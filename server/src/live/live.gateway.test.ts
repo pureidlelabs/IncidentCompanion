@@ -1496,7 +1496,8 @@ describe('frames that arrive while the socket is still joining', () => {
 })
 
 describe('a caret over the gateway', () => {
-  it('frees the carets of a connection that closed, once its analyst has had the time to return', async () => {
+  /** A gateway with analysts `u-1`, `u-2`, ... each on a connection of their own, and what it relays. */
+  async function room() {
     const relayed: Record<string, unknown>[] = []
     const channel = {
       join: () => Promise.resolve(),
@@ -1513,34 +1514,96 @@ describe('a caret over the gateway', () => {
       },
     }
     const gateway = new LiveGateway(channel as unknown as CaseChannel, auth as never, {} as never, audit as never, holding('read'))
-    const first = new FakeSocket()
-    const second = new FakeSocket()
-    await gateway.open(first as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada', sessionId: 's-u-1' }, { cookie: 'u-1' })
-    await gateway.open(second as unknown as WebSocket, CASE, { id: 'u-2', name: 'Bea', sessionId: 's-u-2' }, { cookie: 'u-2' })
-    const caret = (name: string, later = 0) => {
-      const doc = new Y.Doc()
-      doc.clientID = 7
-      const sender = new Awareness(doc)
-      // A later clock for the later sender, or a receiver keeps the first.
-      for (let i = 0; i <= later; i += 1) sender.setLocalStateField('user', { name })
-      return wire(encodeAwarenessUpdate(sender, [7]))
+    const connect = async (userId: string, name: string) => {
+      const live = new FakeSocket()
+      await gateway.open(live as unknown as WebSocket, CASE, { id: userId, name, sessionId: `s-${userId}` }, { cookie: userId })
+      return live
     }
+    /** The carets a browser draws from everything relayed. */
+    const drawn = () => {
+      const awareness = new Awareness(new Y.Doc())
+      for (const frame of relayed) applyAwarenessUpdate(awareness, Buffer.from(String(frame['update']), 'base64'), null)
+      return awareness.getStates()
+    }
+    return { relayed, connect, drawn }
+  }
 
+  /** Awareness entries as the wire frames them: client id, clock, and the state's JSON. */
+  const entries = (...each: [number, number, unknown][]) => {
+    const encoder = encoding.createEncoder()
+    encoding.writeVarUint(encoder, each.length)
+    for (const [client, clock, state] of each) {
+      encoding.writeVarUint(encoder, client)
+      encoding.writeVarUint(encoder, clock)
+      encoding.writeVarString(encoder, JSON.stringify(state))
+    }
+    return wire(encoding.toUint8Array(encoder))
+  }
+  const caret = (update: string) => ({ type: 'prose.awareness', field: FIELD, update })
+
+  it('frees the carets of a connection that closed, once its analyst has had the time to return', async () => {
+    const { connect, drawn } = await room()
+    const first = await connect('u-1', 'Ada')
+    const second = await connect('u-2', 'Bea')
     vi.useFakeTimers({ toFake: ['Date'] })
     try {
-      first.receive({ type: 'prose.awareness', field: FIELD, update: caret('Ada') })
+      first.receive(caret(entries([7, 1, { user: { name: 'Ada' } }])))
       await settle()
       first.drop()
       await settle()
       vi.setSystemTime(Date.now() + 31_000)
-      second.receive({ type: 'prose.awareness', field: FIELD, update: caret('Bea', 1) })
+      second.receive(caret(entries([7, 2, { user: { name: 'Bea' } }])))
       await settle()
     } finally {
       vi.useRealTimers()
     }
+    expect(drawn().get(7)).toEqual({ user: { name: 'Bea' } })
+  })
 
-    const drawn = new Awareness(new Y.Doc())
-    for (const frame of relayed) applyAwarenessUpdate(drawn, Buffer.from(String(frame['update']), 'base64'), null)
-    expect(drawn.getStates().get(7)).toEqual({ user: { name: 'Bea' } })
+  it('holds nothing for a caret frame still waiting when its connection closes', async () => {
+    const { connect, drawn } = await room()
+    const first = await connect('u-1', 'Ada')
+    const second = await connect('u-2', 'Bea')
+    first.receive(caret(entries([4242, 1, { user: { name: 'Ada' } }])))
+    first.drop()
+    await settle()
+    second.receive(caret(entries([4242, 2, { user: { name: 'Bea' } }])))
+    await settle()
+    expect(drawn().get(4242)).toEqual({ user: { name: 'Bea' } })
+  })
+
+  it('lets a caret leaving take nothing: another browser forgetting a departed analyst holds no id', async () => {
+    const { relayed, connect, drawn } = await room()
+    const first = await connect('u-1', 'Ada')
+    const second = await connect('u-2', 'Bea')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      first.receive(caret(entries([8, 1, { user: { name: 'Ada' } }])))
+      await settle()
+      first.drop()
+      await settle()
+      vi.setSystemTime(Date.now() + 31_000)
+      const before = relayed.length
+      second.receive(caret(entries([8, 2, null])))
+      await settle()
+      expect(relayed.length, 'a removal for a caret this connection never held was relayed').toBe(before)
+      const back = await connect('u-3', 'Cy')
+      back.receive(caret(entries([8, 3, { user: { name: 'Cy' } }])))
+      await settle()
+    } finally {
+      vi.useRealTimers()
+    }
+    expect(drawn().get(8)).toEqual({ user: { name: 'Cy' } })
+  })
+
+  it.each([
+    ['a number', 5],
+    ['an array', [1]],
+  ])('drops a whole update one of whose states is %s', async (_what, state) => {
+    const { relayed, connect } = await room()
+    const first = await connect('u-1', 'Ada')
+    first.receive(caret(entries([9, 1, { user: { name: 'Ada' } }], [10, 1, state])))
+    await settle()
+    expect(relayed).toEqual([])
   })
 })

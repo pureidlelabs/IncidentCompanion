@@ -165,7 +165,7 @@ describe.skipIf(!(await bootable()))('a case named in capitals over the live con
     expect(textOf(new Uint8Array(row!.document!), blocks[0]!.id)).toContain(`Typed before the send ${TAG}`)
   })
 
-  it('holds one claim on an entry whichever spelling each analyst claims it by', async () => {
+  it('holds one claim on an entry whichever spelling each analyst claims or releases it by', async () => {
     await aCase()
     const row = randomUUID()
     const holder = await lower.connect(owner)
@@ -177,6 +177,11 @@ describe.skipIf(!(await bootable()))('a case named in capitals over the live con
 
     const last = holder.heard.filter((one) => one.type === 'presence').at(-1) as { claims: { entry_id: string; user_id: string }[] }
     expect(last.claims.map((one) => `${one.entry_id.toLowerCase()} ${one.user_id}`)).toEqual([`${row} ${owner.id}`])
+
+    holder.socket.send(JSON.stringify({ type: 'release', table: 'systems', id: row.toUpperCase() }))
+    await pause(500)
+    const after = holder.heard.filter((one) => one.type === 'presence').at(-1) as { claims: unknown[] }
+    expect(after.claims, 'a release in capitals left the claim held').toEqual([])
     holder.socket.terminate()
     second.socket.terminate()
   })

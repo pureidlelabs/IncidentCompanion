@@ -43,6 +43,8 @@ export class Carets {
     for (const [client, clock, state] of entries) {
       const key = `${caseId}:${String(client)}`
       if (!mine.has(key)) {
+        // A caret leaving takes nothing: other browsers send one for a peer they have stopped hearing from.
+        if (state === null) continue
         const holder = this.held.get(key)
         if (holder && holder.userId !== userId) continue
         const kept = this.kept.get(key)
