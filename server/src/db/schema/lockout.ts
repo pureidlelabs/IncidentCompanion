@@ -36,6 +36,8 @@ export const signInLockout = pgTable(
     /** Locks since the run last saw the right password. */
     locks: integer('locks').notNull().default(0),
     lockedUntil: timestamp('locked_until', { withTimezone: true }),
+    /** The run reached the threshold and its lock waits on its audit line; the run is shut meanwhile. */
+    lockPending: boolean('lock_pending').notNull().default(false),
     /** Keyed hashes of the latest wrong passwords, oldest first. Never a password. */
     misses: text('misses').array().notNull().default(sql`'{}'::text[]`),
   },

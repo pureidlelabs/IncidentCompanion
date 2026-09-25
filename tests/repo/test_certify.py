@@ -345,3 +345,19 @@ def test_a_case_another_tier_reported_twice_certifies_no_row() -> None:
 
     assert certify.certified(run, "deployment", ident) == (
         f"cites {ident}, which the containers tier reports more than once")
+
+
+def test_a_store_surface_case_counts_only_for_a_state_row_and_only_by_its_exact_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ident = "server/test/store.test.ts :: the store > refuses as the app role"
+    renamed = f"{ident}, renamed"
+    monkeypatch.setattr(certify, "STORE_SURFACE", {ident: "the app role is the actor"})
+    run = certify.Run()
+    for one in (ident, renamed):
+        run.cases[one] = certify.Case("server", "server/test/store.test.ts", "passed")
+    below = "which never reached the product through its entry point"
+
+    assert certify.certified(run, "state", ident) is None
+    assert certify.certified(run, "report", ident) == f"cites {ident}, {below}"
+    assert certify.certified(run, "state", renamed) == f"cites {renamed}, {below}"

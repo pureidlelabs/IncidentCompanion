@@ -25,7 +25,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import type { Database } from '../src/db/client.js'
 import { DATABASE } from '../src/db/db.module.js'
-import { installActivity } from '../src/db/schema/index.js'
+import { installActivity, session } from '../src/db/schema/index.js'
 import {
   boot,
   bootable,
@@ -196,7 +196,16 @@ describe.skipIf(!(await bootable()))('an analyst signed in from two places', () 
     const [{ seq: since } = { seq: 0n }] = await db.select({ seq: max(installActivity.seq) }).from(installActivity)
     const listed = await sessionsOf(caller.cookie)
     const ended = listed.find((one) => ends.cookie.includes(one.token))
-    const others = listed.filter((one) => one !== ended && !caller.cookie.includes(one.token))
+    // The listing is read from Redis, which can still hold a session whose row
+    // is gone; ending that ends nothing and is rightly not recorded.
+    const held = new Set(
+      (await db.select({ token: session.token }).from(session).where(eq(session.userId, analyst.id))).map(
+        (one) => one.token,
+      ),
+    )
+    const others = listed.filter(
+      (one) => one !== ended && !caller.cookie.includes(one.token) && held.has(one.token),
+    )
     expect(others.length, 'nothing is left for revoke-other-sessions to end').toBeGreaterThan(0)
 
     for (const [path, body] of [

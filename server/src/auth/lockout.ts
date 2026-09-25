@@ -1,6 +1,6 @@
 /**
  * The lockout's arithmetic: what the install allows, whether a run is shut,
- * how long its next lock lasts, and what is kept of a wrong password.
+ * and what is kept of a wrong password.
  * `checkPassword` in `auth.config.ts` decides when to ask.
  * -> `openspec/specs/accounts-and-access/design.md`
  */
@@ -27,15 +27,6 @@ export function policyFrom(values: PolicyValues): LockoutPolicy {
 /** Whether a run locked until `lockedUntil` is shut at `now`; open from that instant on. */
 export function isLocked(lockedUntil: Date | null, now: Date): boolean {
   return lockedUntil !== null && lockedUntil.getTime() > now.getTime()
-}
-
-/**
- * Minutes the next lock lasts, after `locksBefore` locks with no right
- * password between them: the first for `minutes`, each after it twice the one
- * before, never more than `maxMinutes`.
- */
-export function lockMinutes(policy: LockoutPolicy, locksBefore: number): number {
-  return Math.min(policy.minutes * 2 ** locksBefore, policy.maxMinutes)
 }
 
 /** How many of its latest wrong passwords a run recognises when offered again. */
