@@ -42,6 +42,11 @@ export class InstallActivityService {
     await recordInstallActivity(this.db, input)
   }
 
+  /** Accounts for a request that changed nothing, so it leaves no line at all. */
+  unchanged(caller: Caller): void {
+    if (caller.request) (caller.request as Record<symbol, boolean>)[NAMED] = true
+  }
+
   async accountCreated(caller: Caller, username: string, role: string): Promise<void> {
     await this.write('account_created', caller, username, { role })
   }

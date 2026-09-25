@@ -40,6 +40,8 @@ Reach is resolved from the caller's own session on the request that needs it. It
 
 The last account holding the management grant can be neither removed nor demoted. The check is made against the state the operation would produce rather than against the operation, so removal and demotion are one rule and not two.
 
+**An account's role and whether it can sign in change one at a time across the install.** The check that somebody can still administer, the read of what the account holds and the write run with no other such change between them. The write decides whether anything changed, and the line is written when it did. What follows it — ending the account's sessions on a disable, bringing its open sessions to the new role — runs on every request, including one that changed nothing, so asking again finishes an act a failure cut short. Each act first asks again whether its caller can still administer, because the act before it may have taken that away. An act waiting its turn holds nothing another request needs, and one kept waiting past a bound by another instance is refused having changed nothing.
+
 A recovery credential is issued when the install is claimed. It restores administration and does nothing else — it is not a password reset and grants no data reach — and it is the only way back that does not need somebody who is already an administrator.
 
 ## Local sign-in resists guessing
@@ -85,3 +87,5 @@ Every sign-in is recorded with its outcome and how it was attempted. Every refus
 The record cannot be suppressed by whoever it would record, and where an event cannot be recorded the act it describes does not happen.
 
 A caller's own ending of a session, signing out included, is recorded where the session is deleted: once per session, and only for a session that existed. The operation answers the same whether it ended anything or not, so its answer is not evidence of an ending.
+
+An administrator's act is decided by the write that performs it, never by the request. Removing a membership or a customer from a group names the thing removed, so where there is none the act is refused as not there, as a grant naming a missing group or account is, and the record holds a refused request rather than the removal. Asking for a state that already stands — a membership at the level it has, a customer the group already holds, an account's current state or role — is answered as done and leaves no line at all: the state asked for is the state there is, and nothing changed to record. Whether a request changed anything is answered by its own write, so of concurrent requests for one change exactly one is recorded as making it.

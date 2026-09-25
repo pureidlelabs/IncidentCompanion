@@ -800,6 +800,9 @@ export class CollectionService {
    * **Deletes are version-checked too.** Removing a row another analyst has
    * just edited is the same lost update as overwriting it, and the version is
    * the only thing that can tell.
+   *
+   * Throws 404 when this case holds no such row and 409, with the version it
+   * holds, when it holds one at another version.
    */
   async remove(
     def: CollectionDefinition,
@@ -807,7 +810,7 @@ export class CollectionService {
     id: string,
     expectedVersion: number,
     actorId: string,
-  ): Promise<boolean> {
+  ): Promise<void> {
     const cols = columns(def)
     const deleting = () => withCase(this.db, caseId, async (tx) => {
       const deleted = (await tx
@@ -825,7 +828,18 @@ export class CollectionService {
         reportId?: string
       }[]
 
-      if (deleted.length === 0) return deleted
+      if (deleted.length === 0) {
+        // Read in the case's scope, so a row of another case is not there either.
+        const [held] = (await tx
+          .select({ version: cols.version })
+          .from(def.table)
+          .where(and(eq(cols.id, id), eq(cols.caseId, caseId)))) as { version: number }[]
+        if (!held) throw new NotFoundException(`No ${def.name} ${id} in this case.`)
+        throw new ConflictException({
+          message: 'Someone else wrote this first.',
+          currentVersion: held.version,
+        })
+      }
 
       await tx.insert(changeFeed).values({
         caseId,
@@ -852,8 +866,7 @@ export class CollectionService {
       })
     }
 
-    if (removed.length > 0) this.announce(caseId, [def.name])
-    return removed.length > 0
+    this.announce(caseId, [def.name])
   }
 
   async get(def: CollectionDefinition, caseId: string, id: string): Promise<unknown> {
@@ -864,7 +877,7 @@ export class CollectionService {
         .from(def.table)
         .where(and(eq(cols.id, id), eq(cols.caseId, caseId))),
     )
-    if (!row) throw new NotFoundException(`No ${def.name} ${id} in that case.`)
+    if (!row) throw new NotFoundException(`No ${def.name} ${id} in this case.`)
     return row
   }
 }

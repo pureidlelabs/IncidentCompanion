@@ -15,6 +15,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpCode,
   Param,
@@ -130,6 +131,15 @@ export class InstallAccountsController {
     private readonly lockouts: LockoutClearService,
     private readonly activity: InstallActivityService,
   ) {}
+
+  /**
+   * Refuses with 403 unless the caller can still administer the install.
+   * The route's guard asked before the act waited its turn, and a turn taken
+   * by another act may have demoted or disabled the caller.
+   */
+  private async stillAdministers(caller: Caller): Promise<void> {
+    if (!(await this.accounts.administers(caller.session.user.id))) throw new ForbiddenException()
+  }
 
   private headersOf(request: { headers: IncomingHttpHeaders }) {
     return fromNodeHeaders(request.headers)
@@ -322,34 +332,43 @@ export class InstallAccountsController {
     @Param('username') username: string,
     @Caller() caller: Caller,
   ): Promise<Written> {
-    // **Administrators rather than a page of everybody.** `stranding` decides
-    // by counting within what it is handed, and `listUsers` caps at 500 - so a
-    // roster page that happened to exclude the target answered that no
-    // administrator remains. -> `auth/account-lookup.service.ts`
-    const everyone = await this.accounts.administrators()
-    const target = await this.accounts.byAddress(username)
-    if (!target) refuse(`No account for ${username}.`)
-    // Compared by id, because that is what identifies an account. An address
-    // is how one is reached, and a comparison of two of them is a lookup
-    // wearing the shape of an identity check.
-    if (target.id === caller.session.user.id) {
-      refuse('You cannot disable the account you are signed in with.')
-    }
-    // `null` is a disable: a demotion to nobody, asking the same question the
-    // role change asks. -> `auth/last-admin.ts`
-    if (stranding(everyone, target, null)) {
-      refuse(
-        `${username} is the last administrator who can sign in. Give somebody else the ` +
-          'administrator role first.',
-      )
-    }
+    return this.accounts.serialised(async () => {
+      await this.stillAdministers(caller)
+      // **Administrators rather than a page of everybody.** `stranding` decides
+      // by counting within what it is handed, and `listUsers` caps at 500 - so a
+      // roster page that happened to exclude the target answered that no
+      // administrator remains. -> `auth/account-lookup.service.ts`
+      const everyone = await this.accounts.administrators()
+      const target = await this.accounts.byAddress(username)
+      if (!target) refuse(`No account for ${username}.`)
+      // Compared by id, because that is what identifies an account. An address
+      // is how one is reached, and a comparison of two of them is a lookup
+      // wearing the shape of an identity check.
+      if (target.id === caller.session.user.id) {
+        refuse('You cannot disable the account you are signed in with.')
+      }
+      // `null` is a disable: a demotion to nobody, asking the same question the
+      // role change asks. -> `auth/last-admin.ts`
+      if (stranding(everyone, target, null)) {
+        refuse(
+          `${username} is the last administrator who can sign in. Give somebody else the ` +
+            'administrator role first.',
+        )
+      }
 
-    await this.auth.api.banUser({
-      body: { userId: target.id, banReason: 'Disabled from the Accounts pane.' },
-      headers: this.headersOf(caller),
+      const outcome = await this.accounts.changeBanned(target.id, true)
+      if (outcome === 'missing') refuse(`No account for ${username}.`)
+      if (outcome === 'changed') await this.activity.accountDisabled(caller, target.email)
+      else this.activity.unchanged(caller)
+      // On every request, so asking again finishes a disable whose ending failed.
+      // The library's ban rather than its revocation, whose endings the gateway
+      // takes as already recorded; the ban writes the state just stored.
+      await this.auth.api.banUser({
+        body: { userId: target.id, banReason: 'Disabled from the Accounts pane.' },
+        headers: this.headersOf(caller),
+      })
+      return done(`${username} can no longer sign in.`)
     })
-    await this.activity.accountDisabled(caller, target.email)
-    return done(`${username} can no longer sign in.`)
   }
 
   @Post(':username/enable')
@@ -359,15 +378,17 @@ export class InstallAccountsController {
     @Param('username') username: string,
     @Caller() caller: Caller,
   ): Promise<Written> {
-    const target = await this.accounts.byAddress(username)
-    if (!target) refuse(`No account for ${username}.`)
+    return this.accounts.serialised(async () => {
+      await this.stillAdministers(caller)
+      const target = await this.accounts.byAddress(username)
+      if (!target) refuse(`No account for ${username}.`)
 
-    await this.auth.api.unbanUser({
-      body: { userId: target.id },
-      headers: this.headersOf(caller),
+      const outcome = await this.accounts.changeBanned(target.id, false)
+      if (outcome === 'missing') refuse(`No account for ${username}.`)
+      if (outcome === 'changed') await this.activity.accountEnabled(caller, target.email)
+      else this.activity.unchanged(caller)
+      return done(`${username} can sign in again.`)
     })
-    await this.activity.accountEnabled(caller, target.email)
-    return done(`${username} can sign in again.`)
   }
 
   /**
@@ -389,46 +410,55 @@ export class InstallAccountsController {
       refuse(...parsed.error.issues.map((one) => one.message))
     }
 
-    // **Administrators rather than a page of everybody.** `stranding` decides
-    // by counting within what it is handed, and `listUsers` caps at 500 - so a
-    // roster page that happened to exclude the target answered that no
-    // administrator remains. -> `auth/account-lookup.service.ts`
-    const everyone = await this.accounts.administrators()
-    const target = await this.accounts.byAddress(username)
-    if (!target) refuse(`No account for ${username}.`)
+    const role = parsed.data.role
+    return this.accounts.serialised(async () => {
+      await this.stillAdministers(caller)
+      // **Administrators rather than a page of everybody.** `stranding` decides
+      // by counting within what it is handed, and `listUsers` caps at 500 - so a
+      // roster page that happened to exclude the target answered that no
+      // administrator remains. -> `auth/account-lookup.service.ts`
+      const everyone = await this.accounts.administrators()
+      const target = await this.accounts.byAddress(username)
+      if (!target) refuse(`No account for ${username}.`)
 
-    if (stranding(everyone, target, parsed.data.role)) {
-      refuse(
-        `${username} is the last administrator who can sign in. Give somebody else the ` +
-          'administrator role first.',
-      )
-    }
+      if (stranding(everyone, target, role)) {
+        refuse(
+          `${username} is the last administrator who can sign in. Give somebody else the ` +
+            'administrator role first.',
+        )
+      }
 
-    /**
-     * **After the install's own rule**, so an administrator who is also the
-     * last one is told the thing they can act on rather than the thing they
-     * cannot.
-     *
-     * **A change, not the route.** Setting the role an account already has
-     * writes nothing and strands nobody; giving yourself a different one takes
-     * the pane away with it, and the door that grants a role is the one you
-     * just left. The screen leaves this off the caller's own row, which is a
-     * courtesy to whoever is reading it rather than a permission.
-     */
-    if (target.id === caller.session.user.id && target.role !== parsed.data.role) {
-      refuse('You cannot change the role of the account you are signed in with.')
-    }
+      /**
+       * **After the install's own rule**, so an administrator who is also the
+       * last one is told the thing they can act on rather than the thing they
+       * cannot.
+       *
+       * **A change, not the route.** Setting the role an account already has
+       * writes nothing and strands nobody; giving yourself a different one takes
+       * the pane away with it, and the door that grants a role is the one you
+       * just left. The screen leaves this off the caller's own row, which is a
+       * courtesy to whoever is reading it rather than a permission.
+       */
+      if (target.id === caller.session.user.id && target.role !== role) {
+        refuse('You cannot change the role of the account you are signed in with.')
+      }
 
-    // **Read `from` before the write, or it is the value the write just set.**
-    // A role line that cannot say what it changed *from* answers half the
-    // question somebody opens the audit with.
-    const from = target.role ?? ''
-    await this.auth.api.setRole({
-      body: { userId: target.id, role: parsed.data.role },
-      headers: this.headersOf(caller),
+      // A role line that cannot say what it changed *from* answers half the
+      // question somebody opens the audit with.
+      const outcome = await this.accounts.changeRole(target.id, role)
+      if (outcome === 'missing') refuse(`No account for ${username}.`)
+      if (outcome === 'unchanged') this.activity.unchanged(caller)
+      else await this.activity.roleChanged(caller, target.email, outcome.from, role)
+      // On every request and with the role already stored, so asking again
+      // retries bringing the account's open sessions to that role. The library
+      // logs rather than throws when that refresh fails, so a failed refresh
+      // is not reported here.
+      await this.auth.api.setRole({
+        body: { userId: target.id, role },
+        headers: this.headersOf(caller),
+      })
+      return done(`${username} is now ${aRole(role)}.`)
     })
-    await this.activity.roleChanged(caller, target.email, from, parsed.data.role)
-    return done(`${username} is now ${aRole(parsed.data.role)}.`)
   }
 
 }

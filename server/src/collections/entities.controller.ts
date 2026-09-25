@@ -343,14 +343,13 @@ abstract class EntityReads {
     @Query('version') version: string,
     @Session() session: UserSession,
   ) {
-    const removed = await this.collections.remove(
+    await this.collections.remove(
       this.definition,
       caseId,
       id,
       versionRead(version, 'delete'),
       session.user.id,
     )
-    if (!removed) throw new ConflictException({ message: 'Someone else wrote this first.' })
     return { deleted: true } as const
   }
 }
