@@ -132,6 +132,75 @@ describe.skipIf(!(await bootable()))('guessing at an account from machines on th
     }
   }, 60_000)
 
+  it('locks a run over a lowered threshold at its next failure', async () => {
+    const email = await anAccount()
+    const guesser = machine(63)
+    await guessFrom(guesser, email, 2)
+
+    await setPolicy('auth.lockoutAfterFailures', 2)
+    try {
+      await guessFrom(guesser, email, 1)
+      expect(await statusFrom(guesser, email, PASSWORD), 'a run over the new threshold never locked').toBe(401)
+      expect(await locksOf(email)).toEqual([FIRST_LOCK])
+    } finally {
+      await setPolicy('auth.lockoutAfterFailures', THRESHOLD)
+    }
+  }, 60_000)
+
+  it('locks a run once when the failures reaching the threshold arrive together', async () => {
+    const email = await anAccount()
+    const guesser = machine(64)
+    const burst = () =>
+      Promise.all(
+        Array.from({ length: THRESHOLD + 2 }, () => statusFrom(guesser, email, `wrong-${randomUUID()}`)),
+      )
+
+    expect(new Set(await burst())).toEqual(new Set([401]))
+    expect(await statusFrom(guesser, email, PASSWORD), 'the burst did not lock the run').toBe(401)
+    await ageTheLocks(email)
+    await burst()
+
+    expect(await locksOf(email), 'a burst locked more than once, or its lock did not follow the last').toEqual([
+      FIRST_LOCK,
+      2 * FIRST_LOCK,
+    ])
+  }, 60_000)
+
+  it('refuses a right password that arrives after the failure reaching the threshold', async () => {
+    const email = await anAccount()
+    const guesser = machine(65)
+    await guessFrom(guesser, email, THRESHOLD - 1)
+
+    // Holding the run's row queues the failure, then the right password, behind it in that order.
+    const [failure, right] = await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select 1 from ${signInLockout} where ${signInLockout.userId} = (select ${user.id} from ${user} where ${user.email} = ${email}) for update`,
+      )
+      const waitingBehind = async (count: number) => {
+        for (let tries = 0; tries < 200; tries += 1) {
+          // A transaction reads the activity view once and keeps that copy unless told to drop it.
+          await tx.execute(sql`select pg_stat_clear_snapshot()`)
+          const { rows } = await tx.execute<{ waiting: number }>(sql`
+            with first as (select pid from pg_stat_activity where pg_backend_pid() = any(pg_blocking_pids(pid)))
+            select (select count(*) from first)::int
+              + (select count(*) from pg_stat_activity where pg_blocking_pids(pid) && array(select pid from first))::int as waiting`)
+          if ((rows[0]?.waiting ?? 0) >= count) return
+          await new Promise((settle) => setTimeout(settle, 25))
+        }
+        throw new Error(`fewer than ${String(count)} sign-ins queued behind the held run`)
+      }
+      const failure = statusFrom(guesser, email, `wrong-${randomUUID()}`)
+      await waitingBehind(1)
+      const right = statusFrom(guesser, email, PASSWORD)
+      await waitingBehind(2)
+      return [failure, right]
+    })
+
+    expect(await failure).toBe(401)
+    expect(await right, 'a right password after the locking failure was let in').toBe(401)
+    expect(await locksOf(email)).toEqual([FIRST_LOCK])
+  }, 60_000)
+
   it('tells two machines on one IPv6 network apart', async () => {
     const email = await anAccount()
     const holder = '2001:db8:0:1::10'
