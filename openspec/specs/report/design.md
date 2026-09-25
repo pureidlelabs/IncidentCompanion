@@ -22,6 +22,10 @@
 
 **Where a report's freeze is refused, it is refused whole.** There is no partial write to a sent report, and no path that may write one for a reason of its own.
 
+**An indicator export is data for another tool, not a document to read.** It carries each value as the case holds it, because a neutralised indicator is one a blocklist cannot use.
+
+**A UNC path naming a single-label host stays as written.** Such a host resolves only on the reader's own network, so it names nothing of the adversary's.
+
 # Design
 
 ## An audience is a value
@@ -106,3 +110,27 @@ Prose arriving while a send decides waits. A send that stamps refuses it with th
 A correction writes the further report, its parts, their records and its prose together. For a sent report, the prose it inherits is what was sent.
 
 A restore locks the report, works out what its shape expects that it does not hold, and writes those sections with their records in the same act, so a second restore waiting behind the first finds nothing missing.
+
+## An address leaves unlinkable
+
+The criterion is what a reader's software links: a word processor, a PDF reader, a mail client and a GitHub-flavoured Markdown renderer. Every such address in generated text is rewritten in the notation threat-intelligence tooling reads back, and the case keeps the real value.
+
+| Written in the case | Leaves as |
+| --- | --- |
+| `http://`, `https://`, `ftp://`, `ftps://` | `hxxp://`, `hxxps://`, `fxp://`, `fxps://`, with every dot of the host as `[.]` |
+| Any other scheme followed by `//` | the scheme, then `[:]//`, with the host's dots bracketed |
+| A name beginning `www.` | every dot of the host bracketed, whatever the name ends in |
+| A UNC path | the host's dots bracketed |
+| An email address | `[@]`, and the domain's dots bracketed |
+| An IPv4 address | every dot bracketed |
+| Any other dotted name | every dot bracketed, when it ends in a top-level domain of the root zone |
+
+A path, a query and an email's local part are left as written, since none of them is what a reader's software opens.
+
+**A bare name counts as a host only under a real top-level domain**, which is what keeps a version number, an abbreviation and most filenames whole: none of `1.2.3`, `e.g.` or `report.pdf` ends in one. A dotted name inside a path, a Windows path or an address already defanged is never judged on its own.
+
+**A top-level domain that also names a common file type in incident evidence does not make a host in free text**: `payload.zip`, `setup.py` and `dropper.one` leave as typed. A value in a field that declares it an indicator is defanged whatever it ends in.
+
+**A bare IPv6 address is left as written.** No reader's software links one; the form that links carries a scheme, and the scheme is what is rewritten.
+
+**Applying the rules twice changes nothing.** A preserved document is rewritten again when it is read in, so a bracketed dot, a bracketed `@` and a rewritten scheme are each left alone.

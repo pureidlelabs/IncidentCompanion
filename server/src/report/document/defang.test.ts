@@ -24,6 +24,13 @@ describe('a value the model says is entirely an indicator', () => {
     )
   })
 
+  it.each([
+    ['ftp://evil.example.com/a.b', 'fxp://evil[.]example[.]com/a.b'],
+    ['ops@evil.example.com', 'ops[@]evil[.]example[.]com'],
+  ])('defangs %s whatever its spelling', (given, expected) => {
+    expect(defangIndicator(given)).toBe(expected)
+  })
+
   it('preserves the case the analyst typed in the scheme', () => {
     expect(defangIndicator('HTTP://EVIL.COM/x')).toBe('HXXP://EVIL[.]COM/x')
   })
@@ -70,9 +77,26 @@ describe('free text inside a generated block', () => {
   it.each([
     'the operator dropped payload.zip on the share',
     'renamed it to invoice.mov before exfil',
-    'see evil.example.com in the indicator table',
-  ])('leaves a bare domain alone: %s', (text) => {
+    'ran setup.py, then report.pdf, e.g. at 16:10:00',
+    'wrote dropper.one and C:\\Users\\x\\evil.com',
+  ])('leaves a filename alone: %s', (text) => {
     expect(defangText(text)).toBe(text)
+  })
+
+  it.each([
+    ['see evil.example.com in the table', 'see evil[.]example[.]com in the table'],
+    ['beacon to www.c2.example/login', 'beacon to www[.]c2[.]example/login'],
+    ['pulled ftp://c2.example.com/x', 'pulled fxp://c2[.]example[.]com/x'],
+    ['mounted smb://c2.example.com/share', 'mounted smb[:]//c2[.]example[.]com/share'],
+    [
+      'copied to \\\\files.c2.example.com\\share',
+      'copied to \\\\files[.]c2[.]example[.]com\\share',
+    ],
+    ['mail from ops@c2.example.org', 'mail from ops[@]c2[.]example[.]org'],
+    ['\u043f\u0440\u0438\u043c\u0435\u0440.\u0440\u0444', '\u043f\u0440\u0438\u043c\u0435\u0440[.]\u0440\u0444'],
+  ])('defangs %s', (given, expected) => {
+    expect(defangText(given)).toBe(expected)
+    expect(defangText(expected), 'a second pass changes nothing').toBe(expected)
   })
 
   it('is not fooled by a version string that is shaped like an address', () => {
