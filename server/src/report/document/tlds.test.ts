@@ -8,11 +8,10 @@ describe('the vendored root zone', () => {
   })
 
   it('holds exactly the number of domains its header states, each once and lower-case', () => {
-    const entries = ROOT_ZONE.trim().split(/\s+/)
     expect({
-      count: entries.length,
-      distinct: new Set(entries).size,
-      cased: entries.filter((one) => one !== one.toLowerCase()),
+      count: ROOT_ZONE.length,
+      distinct: new Set(ROOT_ZONE).size,
+      cased: ROOT_ZONE.filter((one) => one !== one.toLowerCase() || one.trim() !== one || one === ''),
     }).toEqual({
       count: ROOT_ZONE_COUNT,
       distinct: ROOT_ZONE_COUNT,

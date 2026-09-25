@@ -115,7 +115,7 @@ export type ReportRow = Row<typeof reportSchema> & {
    * superseded report is known to be superseded.
    */
   supersedes: string | null
-}
+} & EntrySource
 export type ReportBlockRow = Row<typeof reportBlockSchema> & {
   /**
    * **Derived per read, never stored.** A second copy of "is there text"

@@ -23,7 +23,7 @@ import {
 
 import { cases } from './case.js'
 import { evidence } from './entities.js'
-import { bytea, rowVersioning } from './columns.js'
+import { bytea, rowVersioning, source } from './columns.js'
 import { caseScoped, proseKept } from './scoped.js'
 
 export const reports = pgTable(
@@ -64,6 +64,9 @@ export const reports = pgTable(
      */
     frozen: jsonb('frozen'),
     frozenAt: timestamp('frozen_at', { withTimezone: true }),
+
+    /** Which door the report came through: a report read in from an archive is painted with no exemptions. */
+    source: source(),
 
     /**
      * The report this one replaces, where it replaces one.

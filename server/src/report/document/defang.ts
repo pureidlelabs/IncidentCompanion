@@ -38,8 +38,8 @@ const URL_WITH_SCHEME = /\b[a-z][a-z\d+.-]*:\/\/[^\s<>"')\]]+/gi
  */
 const AUTHORITY = /^([a-z][a-z\d+.-]*:\/\/)([^/?#]*)([/?#][\s\S]*)?$/i
 
-/** A scheme a reader opens without `//`: `http:evil.example`. */
-const SCHEME_ALONE = /\b(https?|ftps?):(?!\/\/)([^\s/?#\\<>"')\]]+)/gi
+/** A scheme a reader opens without `//`: `http:evil.example`, `http:\\evil.example`. */
+const SCHEME_ALONE = /\b(https?|ftps?):(?!\/\/)(\\\\)?([^\s/?#\\<>"')\]]+)/gi
 
 /** A protocol-relative address. Not after a letter, `:` or `]`, which is a path or a scheme already handled. */
 const PROTOCOL_RELATIVE = /(?<![\p{L}\p{N}:\]/])\/\/([^\s/?#\\<>"')\]]+)/gu
@@ -47,8 +47,12 @@ const PROTOCOL_RELATIVE = /(?<![\p{L}\p{N}:\]/])\/\/([^\s/?#\\<>"')\]]+)/gu
 /** A UNC path's host, after the leading backslashes or the long-path `\\?\UNC\` prefix. */
 const UNC = /\\\\(?:\?\\UNC\\)?([^\\\s/]+)/gi
 
-/** A zero-width character beside a dot, which splits a name for the eye and not for a reader's software. */
-const HIDDEN = /[\u200b-\u200d\u2060\ufeff]+(?=\.)|(?<=\.)[\u200b-\u200d\u2060\ufeff]+/g
+/**
+ * What separates two labels of a host as a reader's software reads it: a full
+ * stop, its fullwidth and ideographic forms, and any zero-width character
+ * beside one, which hides the name from the eye and not from the software.
+ */
+const SEPARATOR = /[\u200b-\u200d\u2060\ufeff]*[.\uff0e\u3002][\u200b-\u200d\u2060\ufeff]*/u
 
 /** The domain half of an email address; the local part is not an indicator. */
 const EMAIL = /(?<=[\p{L}\p{N}._%+-])@([\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+)/gu
@@ -60,7 +64,8 @@ const EMAIL = /(?<=[\p{L}\p{N}._%+-])@([\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+)/gu
  * Windows path, a port and a label already inside a defanged address are never
  * taken for a host of their own.
  */
-const HOST = /(?<![\p{L}\p{N}@.\\/:[-])(?:[\p{L}\p{N}_-]+\.)+[\p{L}\p{N}_-]+/gu
+const HOST =
+  /(?<![\p{L}\p{N}@.\uff0e\u3002\\/:[-])(?:[\p{L}\p{N}_-]+[\u200b-\u200d\u2060\ufeff]*[.\uff0e\u3002][\u200b-\u200d\u2060\ufeff]*)+[\p{L}\p{N}_-]+/gu
 
 const SCHEMES: Readonly<Record<string, string>> = {
   http: 'hxxp',
@@ -70,11 +75,7 @@ const SCHEMES: Readonly<Record<string, string>> = {
 }
 const REWRITTEN = new Set(Object.values(SCHEMES))
 
-const TLDS = new Set(
-  ROOT_ZONE.trim()
-    .split(/\s+/)
-    .flatMap((tld) => [tld, domainToUnicode(tld)]),
-)
+const TLDS = new Set(ROOT_ZONE.flatMap((tld) => [tld, domainToUnicode(tld)]))
 
 /**
  * **A dot already inside `[.]` is left alone, which is what makes a second pass
@@ -113,10 +114,10 @@ export function defangUrl(value: string): string {
 
 /** A `www.` name whatever its ending, and any other only under a real top-level domain. */
 function bareHost(found: string): string {
-  const labels = found.split('.')
+  const labels = found.split(SEPARATOR)
   const tld = labels.at(-1)!.toLowerCase()
   const host = /^www\d{0,3}$/i.test(labels[0]!) || TLDS.has(tld)
-  return host ? dots(found) : found
+  return host ? labels.join('[.]') : found
 }
 
 /**
@@ -137,9 +138,12 @@ export function defangIndicator(value: string): string {
 export function defangText(value: string): string {
   if (!value) return value
   return value
-    .replace(HIDDEN, '')
     .replace(URL_WITH_SCHEME, (found) => defangUrl(found))
-    .replace(SCHEME_ALONE, (_, name: string, host: string) => `${renamed(name)!}:${dots(host)}`)
+    .replace(
+      SCHEME_ALONE,
+      (_, name: string, slashes: string | undefined, host: string) =>
+        `${renamed(name)!}:${slashes ?? ''}${dots(host)}`,
+    )
     .replace(PROTOCOL_RELATIVE, (_, host: string) => `//${dots(host)}`)
     .replace(UNC, (found: string, host: string) => found.slice(0, -host.length) + dots(host))
     .replace(EMAIL, (_, host: string) => `[@]${dots(host)}`)

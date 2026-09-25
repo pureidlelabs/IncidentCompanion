@@ -133,12 +133,12 @@ A path, a query and an email's local part are left as written, since none of the
 
 **A filename whose extension is also a top-level domain is bracketed like a host**: `payload[.]zip`, `setup[.]py`. Readers link those names, and a bracketed filename still reads as the file it names.
 
-**A zero-width character beside a dot is removed** before the rules run, since it hides a name from a reader and not from the software that links it.
+**A host's labels may be separated by a full stop, its fullwidth or ideographic form, or a full stop with a zero-width character beside it**, since each hides nothing from the software that links the name. The separator is rewritten only inside a name that then counts as a host; prose keeps its zero-width characters.
 
 **The list of top-level domains is IANA's root zone, pinned to a stated version** and refreshed by regenerating it from IANA's published list.
 
 **A bare IPv6 address is left as written.** No reader's software links one; the form that links carries a scheme, and the scheme is what is rewritten.
 
-**Applying the rules twice changes nothing.** A preserved document is rewritten again when it is read in, so a bracketed dot, a bracketed `@` and a rewritten scheme are each left alone.
+**Applying the rules twice changes nothing.** A document the install sent was rewritten before it was preserved, and is rewritten again wherever it is painted, so a bracketed dot, a bracketed `@` and a rewritten scheme are each left alone.
 
-**A preserved document read in is held to the rules whole.** Its sections marked as the analyst's own writing, its code blocks marked verbatim and the address carried beside a run's text are all rewritten, since each mark came from whoever wrote the archive and nothing on the way in can tell a genuine one from a forged one. In a report the install renders itself, the analyst's written prose and a method's verbatim query leave as written.
+**The rules apply where a document leaves, never where one is stored.** A preserved document read in is stored as it arrived, and the install records, on the report and never from the archive, that the report was read in. Every output of such a report applies the rules to all of it: its sections marked as the analyst's writing, its code blocks marked verbatim and the address carried beside a run's text, since each mark came from whoever wrote the archive. A report sent from this install keeps the analyst's written prose and a method's verbatim query as written.

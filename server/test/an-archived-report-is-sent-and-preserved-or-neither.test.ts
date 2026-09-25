@@ -13,6 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { boot, bootable, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
 import { as } from './acting.js'
 import { openTestPool } from './database.js'
+import { pdfText, wordText } from './document-text.js'
 import { cases } from '../src/db/schema/case.js'
 import { reports } from '../src/db/schema/report.js'
 import { ProseService, reportDocument } from '../src/prose/prose.service.js'
@@ -21,6 +22,9 @@ import { CASE_NAME, MANIFEST_NAME, pack, readArchive } from '../src/archive/form
 
 const STAMP = String(Date.now())
 const LIVE = 'https://evil.example/login'
+/** An address in the analyst's own written prose, and a method's saved query. */
+const WRITTEN = 'https://written-c2.example.com/a'
+const QUERY = 'curl https://query-c2.example.com/a'
 const LIMITS = { memberBytes: 64 * 1024 * 1024, totalBytes: 128 * 1024 * 1024 }
 
 describe.skipIf(!(await bootable()))('a report an archive says was sent', () => {
@@ -31,6 +35,7 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
   const made: string[] = []
   let members: Record<string, Uint8Array> = {}
   let sentReport = ''
+  let filed = ''
 
   async function call(method: string, path: string, body?: unknown, type = 'application/json') {
     return fetch(`${harness.base}${path}`, {
@@ -60,6 +65,20 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
     return pack(rest, 'omitted', [])
   }
 
+  /** Each export of a report, as its reader sees the text, with Markdown's escaping backslashes removed. */
+  async function exported(caseId: string, reportId: string): Promise<Record<string, string>> {
+    const read = async (format: string) => {
+      const answer = await call('GET', `/api/cases/${caseId}/report.${format}?report=${reportId}`)
+      expect(answer.status, format).toBe(200)
+      return answer.arrayBuffer()
+    }
+    return {
+      markdown: new TextDecoder().decode(await read('md')).replaceAll('\\', ''),
+      word: (await wordText(await read('docx'))).replaceAll('\\', ''),
+      pdf: pdfText(await read('pdf')).replaceAll('\\', ''),
+    }
+  }
+
   const importing = (archive: Uint8Array) =>
     call('POST', '/api/cases/import', new Uint8Array(archive), 'application/octet-stream')
 
@@ -71,6 +90,7 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
     analyst = await sharedAnalyst(harness)
     const caseId = (await json<{ id: string }>('POST', '/api/cases', { title: `Filed ${STAMP}` })).id
     made.push(caseId)
+    filed = caseId
     sentReport = (await json<{ id: string }>('POST', `/api/cases/${caseId}/reports`, { label: `Seen at ${LIVE}` })).id
     const block = await json<{ id: string }>('POST', `/api/cases/${caseId}/report_blocks`, {
       reportId: sentReport,
@@ -81,10 +101,12 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
     const address = reportDocument(sentReport)
     const doc = await prose.open(caseId, address)
     const paragraph = new Y.XmlElement('paragraph')
-    paragraph.insert(0, [new Y.XmlText("The phishing page is named in the title.")])
+    paragraph.insert(0, [new Y.XmlText(`The phishing page is named in the title, and served from ${WRITTEN}.`)])
     fragmentFor(doc, block.id).insert(0, [paragraph])
     await prose.flush(caseId, address)
     await prose.release(caseId, address)
+    await json('POST', `/api/cases/${caseId}/methods`, { name: 'Proxy search', query: QUERY })
+    await json('POST', `/api/cases/${caseId}/report_blocks`, { reportId: sentReport, kind: 'methods', position: 1 })
     await json('POST', `/api/cases/${caseId}/reports/${sentReport}/send`)
 
     const out = await call('POST', `/api/cases/${caseId}/archive`, { includeFiles: false })
@@ -174,11 +196,48 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
     const { id } = (await answer.json()) as { id: string }
     const [report] = await seed.select({ id: reports.id }).from(reports).where(eq(reports.caseId, id))
 
-    const markdown = (await (await call('GET', `/api/cases/${id}/report.md?report=${report!.id}`)).text()).replaceAll('\\', '')
-    expect({
-      live: markdown.includes(`${host}.example.com`),
-      contained: markdown.includes(`hxxps://${host}[.]example[.]com/a`),
-    }).toEqual({ live: false, contained: true })
+    const formats = await exported(id, report!.id)
+    expect(
+      Object.entries(formats).map(([format, text]) => ({
+        format,
+        live: text.includes(`${host}.example.com`),
+        contained: text.includes(`hxxps://${host}[.]example[.]com/a`),
+      })),
+    ).toEqual(Object.keys(formats).map((format) => ({ format, live: false, contained: true })))
+  })
+
+  it('stores a genuine preserved report as it arrived, and exports it with no live address', async () => {
+    const archive = await forged(`Round trip ${STAMP}`, () => undefined)
+    const sent = (JSON.parse(new TextDecoder().decode(members[CASE_NAME])) as { reports: { frozen: unknown }[] })
+      .reports[0]!.frozen
+    const answer = await importing(archive)
+    expect(answer.status, await answer.clone().text()).toBe(201)
+    const { id } = (await answer.json()) as { id: string }
+    const [report] = await seed
+      .select({ id: reports.id, frozen: reports.frozen })
+      .from(reports)
+      .where(eq(reports.caseId, id))
+
+    expect({ identical: report!.frozen, query: JSON.stringify(report!.frozen).includes(QUERY) }).toEqual({
+      identical: sent,
+      query: true,
+    })
+    const formats = await exported(id, report!.id)
+    expect(
+      Object.entries(formats).map(([format, text]) => ({
+        format,
+        live: ['written-c2.example.com', 'query-c2.example.com', 'evil.example/login'].filter((host) => text.includes(host)),
+        written: text.includes('hxxps://written-c2[.]example[.]com/a'),
+        query: text.includes('hxxps://query-c2[.]example[.]com/a'),
+      })),
+    ).toEqual(Object.keys(formats).map((format) => ({ format, live: [], written: true, query: true })))
+  })
+
+  it("keeps the analyst's written address and a saved query as written in a report sent here", async () => {
+    const formats = await exported(filed, sentReport)
+    expect(
+      Object.entries(formats).map(([format, text]) => ({ format, written: text.includes(WRITTEN), query: text.includes(QUERY) })),
+    ).toEqual(Object.keys(formats).map((format) => ({ format, written: true, query: true })))
   })
 
   it.each([

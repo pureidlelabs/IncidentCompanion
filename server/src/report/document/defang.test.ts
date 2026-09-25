@@ -72,6 +72,8 @@ describe('free text inside a generated block', () => {
     'the operator dropped payload.exe on the share',
     'opened report.pdf, e.g. at 16:10:00',
     'wrote C:\\Users\\x\\evil.com',
+    'released v1.\u200b2 today',
+    '\u0d05\u0d35\u0d28\u0d4d\u200d. then',
   ])('leaves prose with no host in it alone: %s', (text) => {
     expect(defangText(text)).toBe(text)
   })
@@ -105,6 +107,9 @@ describe('free text inside a generated block', () => {
     ['copy \\\\?\\UNC\\evil.example.com\\share', 'copy \\\\?\\UNC\\evil[.]example[.]com\\share'],
     ['beacon evil\u200b.example.com', 'beacon evil[.]example[.]com'],
     ['beacon evil.\u200bexample.com', 'beacon evil[.]example[.]com'],
+    ['open http:\\\\evil.example.com', 'open hxxp:\\\\evil[.]example[.]com'],
+    ['beacon evil\uff0eexample\uff0ecom', 'beacon evil[.]example[.]com'],
+    ['beacon evil\u3002example\u3002com', 'beacon evil[.]example[.]com'],
   ])('defangs %s', (given, expected) => {
     expect(defangText(given)).toBe(expected)
     expect(defangText(expected), 'a second pass changes nothing').toBe(expected)
