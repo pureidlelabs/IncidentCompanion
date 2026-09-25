@@ -41,6 +41,8 @@ import {
   user,
 } from '../db/schema/index.js'
 import { reseedDemos } from '../../test/demo-fixture.js'
+import { CASE_WRITABLE, INCIDENT_CLASS } from '../domain/case.js'
+import { SEVERITY, caseStatusSchema } from '../domain/vocabularies.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -171,6 +173,16 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
       expect(seeded).toHaveLength(expected.length)
       expect(seeded.map((a) => a.task)).toEqual(expect.arrayContaining(expected.map((a) => a.task)))
       expect(seeded.every((a) => a.createdBy === session.user.id)).toBe(true)
+    })
+
+    it('sets the initial access vector the chosen template names', async () => {
+      const entry = await library.entry('templates', 'bec')
+      const expected = (entry!.payload as { initialAccessVector: string }).initialAccessVector
+
+      const row = await controller.create({ title: 'Seeded vector', template: 'bec' }, asCaller())
+
+      const [stored] = await seed!.select().from(cases).where(eq(cases.id, row.id))
+      expect(stored?.initialAccessVector).toBe(expected)
     })
 
     it('seeds nothing when no template is named', async () => {
@@ -367,6 +379,47 @@ describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
   })
 
   describe('patch', () => {
+    /**
+     * **Every field at once, through the serving role**, whose column grant on
+     * the case row is an allowlist. A field the form gains is refused here
+     * until it has a value, so none reaches the analyst unwritable.
+     */
+    it('writes every field a case edit may set', async () => {
+      const at = '2026-01-02T03:04:05.000Z'
+      const values: Record<string, unknown> = {
+        title: 'Every field',
+        customer: 'Somebody',
+        reference: `EVERY-${String(Date.now())}`,
+        analyst: 'An analyst',
+        status: caseStatusSchema.options.find((one) => one !== 'respond'),
+        severity: SEVERITY[0],
+        incidentClass: INCIDENT_CLASS[1],
+        detectionSource: 'A detection',
+        initialAccessVector: 'A vector',
+        detectionGap: 'A gap',
+        summary: 'A summary',
+        openedAt: at,
+        detectedAt: at,
+        containedAt: at,
+        eradicatedAt: at,
+        recoveredAt: at,
+        closedAt: at,
+      }
+      expect(Object.keys(values).sort(), 'a writable field has no value here').toEqual([...CASE_WRITABLE].sort())
+      const { id, version } = await freshCase()
+
+      await controller.patch(id, { version, ...values }, session as never)
+
+      const [row] = await seed!.select().from(cases).where(eq(cases.id, id))
+      const stored = Object.fromEntries(
+        Object.keys(values).map((key) => {
+          const value = (row as Record<string, unknown>)[key]
+          return [key, value instanceof Date ? value.toISOString() : value]
+        }),
+      )
+      expect(stored).toEqual(values)
+    })
+
     it('applies the change, bumps the version and attributes it to the caller', async () => {
       const { id, version } = await freshCase()
 
