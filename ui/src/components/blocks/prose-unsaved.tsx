@@ -57,7 +57,12 @@ function Unsaved({ channel }: { channel: ProseChannel }) {
   if (unsaved === null) return null
   // In a dialog, keeping the words is the emphasised action.
   const copy = (emphasised: boolean) => (
-    <CopyButton value={text} variant={emphasised ? 'default' : 'outline'}>
+    <CopyButton
+      value={text}
+      variant={emphasised ? 'default' : 'outline'}
+      // A dialog's footer buttons are one height.
+      {...(emphasised ? { size: 'default' as const } : {})}
+    >
       Copy the text
     </CopyButton>
   )
