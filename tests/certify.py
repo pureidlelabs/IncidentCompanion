@@ -93,7 +93,14 @@ STORE_SURFACE: dict[str, str] = {
     "is visible only to a second session at the store, and every route refuses before it writes",
 }
 
-EDGE_IMAGE_FILE = "tests/docker/test_container_config.py"
+#: Stories whose scenario's surface is what they draw, with nothing stubbed on
+#: the actor's path; each with why, and counting only for the capability named.
+DRAWN_SURFACE: dict[tuple[str, str], str] = {
+    ("ui/src/screens/case-archive.stories.tsx :: An export left unencrypted", "case-archive"): "being told is "
+    "a readable line the screen draws from the analyst leaving the passphrase blank, which its container never sets",
+}
+
+EDGE_IMAGE_FILE ="tests/docker/test_container_config.py"
 
 
 def _needs_edge_image() -> list[str]:
@@ -294,15 +301,15 @@ def entry_level(ident: str, case: Case, capability: str) -> bool:
     """Whether a passing case reached the product through its actor's surface.
 
     A server case says so in its report, where the booted app tags a request or
-    a socket, unless `STORE_SURFACE` names it for a `state` row. A story renders
-    in a browser, and a Compose case is tagged by the fixture that raised the
-    stack.
+    a socket, unless `STORE_SURFACE` names it for a `state` row. A story counts
+    only where `DRAWN_SURFACE` names it for the row's capability, and a Compose
+    case is tagged by the fixture that raised the stack.
     """
     if case.tier == "server":
         served = bool(case.meta.get("served") or case.meta.get("socket"))
         return served or (capability == "state" and ident in STORE_SURFACE)
     if case.tier == "screen":
-        return True
+        return (ident, capability) in DRAWN_SURFACE
     if case.tier == "containers":
         return case.meta.get("entry") == "compose"
     if case.tier == "client":
