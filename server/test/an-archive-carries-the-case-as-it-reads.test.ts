@@ -201,6 +201,7 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
     await prose.release(read.id, address)
 
     expect(shown, 'the editor opened a document the archive record planted').not.toContain(PLANTED)
+    expect(shown, 'the note did not open as its own words').toContain(NOTE_KEPT)
   })
 
   // What sealing promises: an archive altered by somebody without the secret is refused at the door.
@@ -221,7 +222,32 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
       body: sealed,
     })
 
-    expect(read.status, await read.text()).toBe(422)
+    expect({ status: read.status, said: ((await read.json()) as { message?: string }).message }).toEqual({
+      status: 422,
+      said: 'This archive is not readable as one.',
+    })
+  })
+
+  // A forger with no secret sends a plain archive where a sealed one was expected.
+  it('refuses a plain archive offered with a secret, as not the sealed one it claims to be', async () => {
+    const { bytes } = await archiveOf(caseId)
+    const read = await fetch(`${harness.base}/api/cases/import`, {
+      method: 'POST',
+      headers: {
+        cookie: analyst.cookie,
+        origin: harness.origin,
+        'content-type': 'application/octet-stream',
+        'x-archive-passphrase': `a passphrase long enough ${STAMP}`,
+      },
+      body: new Uint8Array(bytes),
+    })
+    const body = (await read.json()) as { id?: string; message?: string }
+    if (body.id) made.push(body.id)
+
+    expect({ status: read.status, said: body.message }).toEqual({
+      status: 422,
+      said: 'This archive is not encrypted, so it needs no passphrase.',
+    })
   })
 
   it('starts a correction from the report as it reads', async () => {

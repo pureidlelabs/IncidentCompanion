@@ -71,6 +71,7 @@ describe.skipIf(!(await bootable()))('how many rows an archive may describe', ()
     const titled = await seed.select({ id: cases.id }).from(cases).where(inArray(cases.title, [
       'One row past the ceiling',
       'Exactly at the ceiling',
+      'At the ceiling in notes, past it with an asset',
     ]))
     const ids = [...made, ...titled.map((row) => row.id)]
     if (ids.length > 0) await seed.delete(cases).where(inArray(cases.id, ids))
@@ -86,6 +87,46 @@ describe.skipIf(!(await bootable()))('how many rows an archive may describe', ()
       status: answer.status,
       named: body.message?.includes(ARCHIVE_ROWS_FLOOR.toLocaleString('en-GB')),
       written: await casesTitled('One row past the ceiling'),
+    }).toEqual({ status: 422, named: true, written: 0 })
+  })
+
+  // A first row no install could write: a refusal naming the ceiling was reached before any row was.
+  it('refuses by the ceiling before it tries to write a single row', async () => {
+    const archive = JSON.parse(new TextDecoder().decode(template[CASE_NAME])) as Record<string, unknown>
+    archive.title = 'One row past the ceiling, the first unwritable'
+    archive.casenotes = [
+      { id: randomUUID(), note: 42 },
+      ...Array.from({ length: ARCHIVE_ROWS_FLOOR }, (_, at) => ({ id: randomUUID(), note: `line ${String(at)}` })),
+    ]
+    const members: Record<string, Uint8Array> = Object.fromEntries(
+      Object.entries(template).filter(([name]) => name !== MANIFEST_NAME),
+    )
+    members[CASE_NAME] = new TextEncoder().encode(JSON.stringify(archive))
+    const answer = await importing(await pack(members, 'omitted', []))
+    const body = (await answer.json()) as { message?: string }
+
+    expect({ status: answer.status, message: body.message }).toEqual({
+      status: 422,
+      message: expect.stringContaining(`reads at most ${ARCHIVE_ROWS_FLOOR.toLocaleString('en-GB')}`),
+    })
+  })
+
+  it('counts every collection an archive states toward the ceiling', async () => {
+    const archive = JSON.parse(new TextDecoder().decode(template[CASE_NAME])) as Record<string, unknown>
+    archive.title = 'At the ceiling in notes, past it with an asset'
+    archive.casenotes = Array.from({ length: ARCHIVE_ROWS_FLOOR }, (_, at) => ({ id: randomUUID(), note: `line ${String(at)}` }))
+    archive.systems = [{ id: randomUUID(), hostname: 'one-asset-too-many' }]
+    const members: Record<string, Uint8Array> = Object.fromEntries(
+      Object.entries(template).filter(([name]) => name !== MANIFEST_NAME),
+    )
+    members[CASE_NAME] = new TextEncoder().encode(JSON.stringify(archive))
+    const answer = await importing(await pack(members, 'omitted', []))
+    const body = (await answer.json()) as { message?: string }
+
+    expect({
+      status: answer.status,
+      named: body.message?.includes(ARCHIVE_ROWS_FLOOR.toLocaleString('en-GB')),
+      written: await casesTitled('At the ceiling in notes, past it with an asset'),
     }).toEqual({ status: 422, named: true, written: 0 })
   })
 

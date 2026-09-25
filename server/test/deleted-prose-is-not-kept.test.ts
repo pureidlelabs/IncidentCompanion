@@ -14,9 +14,10 @@ import { writeUpdate } from 'y-protocols/sync'
 import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { boot, bootable, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
+import { boot, bootable, sharedAdmin, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
 import { as } from './acting.js'
 import { openTestPool } from './database.js'
+import { Live, textOf } from './report-writers.js'
 import { cases } from '../src/db/schema/case.js'
 import { reports } from '../src/db/schema/report.js'
 import { caseNotes } from '../src/db/schema/tracker.js'
@@ -100,6 +101,47 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
     const [row] = await seed.select({ document: caseNotes.document }).from(caseNotes).where(eq(caseNotes.id, note.id))
     expect(Buffer.from(row!.document!).toString('utf8')).not.toContain(DELETED)
   })
+
+  it('gives the next reader none of the text an analyst deleted over the live connection', async () => {
+    const report = await json<{ id: string }>('POST', `/api/cases/${caseId}/reports`, { label: 'Typed live' })
+    const block = await json<{ id: string }>('POST', `/api/cases/${caseId}/report_blocks`, {
+      reportId: report.id,
+      kind: 'written',
+      position: 0,
+    })
+    const field = `reports:${report.id}:document`
+    const writer = await Live.open(harness, analyst, caseId)
+    const typing = new Y.Doc()
+    await writer.openField(field, typing)
+    typing.on('update', (update: Uint8Array) => {
+      const encoder = encoding.createEncoder()
+      writeUpdate(encoder, update)
+      writer.send({ type: 'prose.sync', field, update: Buffer.from(encoding.toUint8Array(encoder)).toString('base64') })
+    })
+    const text = new Y.XmlText()
+    const paragraph = new Y.XmlElement('paragraph')
+    paragraph.insert(0, [text])
+    fragmentFor(typing, block.id).insert(0, [paragraph])
+    text.insert(0, DELETED)
+    text.delete(0, DELETED.length)
+    text.insert(0, KEPT)
+    // The reader arrives while the writer still holds the document open.
+    const reader = await Live.open(harness, await sharedAdmin(harness), caseId)
+    await reader.openField(field, new Y.Doc())
+    const served = reader.frames.find((frame) => frame.type === 'prose.sync' && frame.field === field)
+    await reader.close()
+    await writer.close()
+
+    const stored = async () =>
+      (await seed.select({ document: reports.document }).from(reports).where(eq(reports.id, report.id)))[0]?.document
+    await expect.poll(async () => textOf((await stored()) ?? null, block.id), { timeout: 10_000 }).toContain(KEPT)
+
+    expect({
+      record: Buffer.from((await stored())!).toString('utf8').includes(DELETED),
+      reader: Buffer.from(served!.update!, 'base64').toString('utf8').includes(DELETED),
+      readerSees: Buffer.from(served!.update!, 'base64').toString('utf8').includes(KEPT),
+    }).toEqual({ record: false, reader: false, readerSees: true })
+  }, 60_000)
 
   it('keeps nothing of a section once it is removed', async () => {
     const report = await json<{ id: string }>('POST', `/api/cases/${caseId}/reports`, { label: 'Two parts' })

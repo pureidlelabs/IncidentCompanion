@@ -32,7 +32,12 @@ const urlOf = (input: RequestInfo | URL) =>
 const bodyOf = (init?: RequestInit) => (typeof init?.body === 'string' ? init.body : '')
 
 const ID = campaignCase.id
+/** Each analyst's value, distinct from every word the band draws around them. */
+const MINE = 'Mine 2208'
+const THEIRS = 'Theirs 7731'
 let latency = 30
+/** How long a read of the case takes to be answered, when it is not `latency`. */
+let readLatency: number | undefined
 /** How long a PATCH takes to be answered, when it is not `latency`. */
 let patchLatency: number | undefined
 
@@ -57,7 +62,7 @@ function server(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
   const method = init?.method ?? 'GET'
   if (url === '/api/specs') return json(200, specsWire)
   if (url === `/api/cases/${ID}/compliance`) return json(200, campaignCompliance)
-  if (url === `/api/cases/${ID}` && method === 'GET') return json(200, row)
+  if (url === `/api/cases/${ID}` && method === 'GET') return json(200, row, readLatency)
   if (url === `/api/cases/${ID}` && method === 'PATCH') {
     const { version, ...rest } = JSON.parse(bodyOf(init)) as Record<string, unknown>
     if (version !== row.version) {
@@ -139,6 +144,7 @@ beforeEach(() => {
   row.version = 7
   latency = 30
   patchLatency = undefined
+  readLatency = undefined
   patches = []
   socket = null
   setTransport(server)
@@ -168,9 +174,9 @@ describe('a case field another analyst saves while this analyst is changing it',
     const client = mount()
     const title = await field(user, 'Title', campaignCase.title)
     await user.clear(title)
-    await user.type(title, 'Mine')
+    await user.type(title, MINE)
 
-    otherAnalystWrites({ title: 'Theirs' })
+    otherAnalystWrites({ title: THEIRS })
     await servedAt(client, 8)
     await user.tab()
     await settle()
@@ -180,8 +186,8 @@ describe('a case field another analyst saves while this analyst is changing it',
           sent: patches,
           stored: row.title,
           shown: title.value,
-          theirs: band('Title')?.textContent.includes('Theirs') ?? false,
-        }).toEqual({ sent: [], stored: 'Theirs', shown: 'Mine', theirs: true })
+          theirs: band('Title')?.textContent.includes(`Theirs: ${THEIRS}.`) ?? false,
+        }).toEqual({ sent: [], stored: THEIRS, shown: MINE, theirs: true })
       },
       { timeout: 10_000 },
     )
@@ -193,7 +199,7 @@ describe('a case field another analyst saves while this analyst is changing it',
     const title = await field(user, 'Title', campaignCase.title)
     await user.click(title)
 
-    otherAnalystWrites({ title: 'Theirs' })
+    otherAnalystWrites({ title: THEIRS })
     await servedAt(client, 8)
     await user.tab()
     await settle()
@@ -201,8 +207,8 @@ describe('a case field another analyst saves while this analyst is changing it',
       () => {
         expect({ sent: patches, stored: row.title, shown: title.value }).toEqual({
           sent: [],
-          stored: 'Theirs',
-          shown: 'Theirs',
+          stored: THEIRS,
+          shown: THEIRS,
         })
       },
       { timeout: 10_000 },
@@ -214,9 +220,9 @@ describe('a case field another analyst saves while this analyst is changing it',
     const client = mount()
     const title = await field(user, 'Title', campaignCase.title)
     await user.clear(title)
-    await user.type(title, 'Mine')
+    await user.type(title, MINE)
 
-    otherAnalystWrites({ title: 'Theirs' }, false)
+    otherAnalystWrites({ title: THEIRS }, false)
     await user.tab()
     await servedAt(client, 8)
     await settle()
@@ -230,11 +236,11 @@ describe('a case field another analyst saves while this analyst is changing it',
           sent: patches,
           stored: row.title,
           shown: title.value,
-          theirs: band('Title')?.textContent.includes('Theirs') ?? false,
+          theirs: band('Title')?.textContent.includes(`Theirs: ${THEIRS}.`) ?? false,
         }).toEqual({
           sent: [{ version: 7, status: 409 }],
-          stored: 'Theirs',
-          shown: 'Mine',
+          stored: THEIRS,
+          shown: MINE,
           theirs: true,
         })
       },
@@ -248,9 +254,9 @@ describe('a case field another analyst saves while this analyst is changing it',
     const client = mount()
     const title = await field(user, 'Title', campaignCase.title)
     await user.clear(title)
-    await user.type(title, 'Mine')
+    await user.type(title, MINE)
 
-    otherAnalystWrites({ title: 'Theirs' }, false)
+    otherAnalystWrites({ title: THEIRS }, false)
     await user.tab()
     announce()
     await servedAt(client, 8)
@@ -260,15 +266,49 @@ describe('a case field another analyst saves while this analyst is changing it',
           sent: patches,
           stored: row.title,
           shown: title.value,
-          theirs: band('Title')?.textContent.includes('Theirs') ?? false,
+          theirs: band('Title')?.textContent.includes(`Theirs: ${THEIRS}.`) ?? false,
           waiting: waiting(),
         }).toEqual({
           sent: [{ version: 7, status: 409 }],
-          stored: 'Theirs',
-          shown: 'Mine',
+          stored: THEIRS,
+          shown: MINE,
           theirs: true,
           waiting: false,
         })
+      },
+      { timeout: 10_000 },
+    )
+  })
+
+  it('says the change is not saved while the refusal is checked, then shows what the server holds', async () => {
+    const user = userEvent.setup()
+    const client = mount()
+    const title = await field(user, 'Title', campaignCase.title)
+    await user.clear(title)
+    await user.type(title, MINE)
+
+    otherAnalystWrites({ title: THEIRS }, false)
+    readLatency = 1500
+    await user.tab()
+    await waitFor(
+      () => {
+        expect({ sent: patches, waiting: waiting(), shown: title.value }).toEqual({
+          sent: [{ version: 7, status: 409 }],
+          waiting: true,
+          shown: MINE,
+        })
+      },
+      { timeout: 5_000 },
+    )
+    await servedAt(client, 8)
+    await waitFor(
+      () => {
+        expect({
+          stored: row.title,
+          shown: title.value,
+          theirs: band('Title')?.textContent.includes(`Theirs: ${THEIRS}.`) ?? false,
+          waiting: waiting(),
+        }).toEqual({ stored: THEIRS, shown: MINE, theirs: true, waiting: false })
       },
       { timeout: 10_000 },
     )
@@ -279,8 +319,8 @@ describe('a case field another analyst saves while this analyst is changing it',
     const client = mount()
     const title = await field(user, 'Title', campaignCase.title)
     await user.clear(title)
-    await user.type(title, 'Mine')
-    otherAnalystWrites({ title: 'Theirs' })
+    await user.type(title, MINE)
+    otherAnalystWrites({ title: THEIRS })
     await servedAt(client, 8)
 
     await user.click(within(band('Title')!).getByRole('button', { name: 'Keep mine' }))
@@ -294,8 +334,8 @@ describe('a case field another analyst saves while this analyst is changing it',
           band: band('Title'),
         }).toEqual({
           sent: [{ version: 8, status: 200 }],
-          stored: 'Mine',
-          shown: 'Mine',
+          stored: MINE,
+          shown: MINE,
           band: null,
         })
       },
@@ -308,8 +348,8 @@ describe('a case field another analyst saves while this analyst is changing it',
     const client = mount()
     const title = await field(user, 'Title', campaignCase.title)
     await user.clear(title)
-    await user.type(title, 'Mine')
-    otherAnalystWrites({ title: 'Theirs' })
+    await user.type(title, MINE)
+    otherAnalystWrites({ title: THEIRS })
     await servedAt(client, 8)
 
     await user.click(within(band('Title')!).getByRole('button', { name: 'Take theirs' }))
@@ -323,8 +363,8 @@ describe('a case field another analyst saves while this analyst is changing it',
           band: band('Title'),
         }).toEqual({
           sent: [],
-          stored: 'Theirs',
-          shown: 'Theirs',
+          stored: THEIRS,
+          shown: THEIRS,
           band: null,
         })
       },
@@ -339,7 +379,7 @@ describe('a case field another analyst did not touch', () => {
     const client = mount()
     const title = await field(user, 'Title', campaignCase.title)
     await user.clear(title)
-    await user.type(title, 'Mine')
+    await user.type(title, MINE)
     otherAnalystWrites({ summary: 'Their summary' })
     await servedAt(client, 8)
     await user.tab()
@@ -353,7 +393,7 @@ describe('a case field another analyst did not touch', () => {
           band: band('Title'),
         }).toEqual({
           sent: [{ version: 8, status: 200 }],
-          title: 'Mine',
+          title: MINE,
           summary: 'Their summary',
           band: null,
         })
@@ -367,7 +407,7 @@ describe('a case field another analyst did not touch', () => {
     mount()
     const title = await field(user, 'Title', campaignCase.title)
     await user.clear(title)
-    await user.type(title, 'Mine')
+    await user.type(title, MINE)
     otherAnalystWrites({ summary: 'Their summary' }, false)
     await user.tab()
     await settle()
@@ -383,7 +423,7 @@ describe('a case field another analyst did not touch', () => {
             { version: 7, status: 409 },
             { version: 8, status: 200 },
           ],
-          title: 'Mine',
+          title: MINE,
           summary: 'Their summary',
           band: null,
         })
@@ -397,7 +437,7 @@ describe('a case field another analyst did not touch', () => {
     const client = mount()
     const title = await field(user, 'Title', campaignCase.title)
     await user.clear(title)
-    await user.type(title, 'Mine')
+    await user.type(title, MINE)
     otherAnalystWrites({ summary: 'Their summary' }, false)
     await user.tab()
     announce()
@@ -414,7 +454,7 @@ describe('a case field another analyst did not touch', () => {
             { version: 7, status: 409 },
             { version: 8, status: 200 },
           ],
-          title: 'Mine',
+          title: MINE,
           summary: 'Their summary',
           waiting: false,
         })
