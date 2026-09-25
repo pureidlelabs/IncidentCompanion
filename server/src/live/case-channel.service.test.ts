@@ -117,7 +117,12 @@ function member(caseId: string, username: string, sessionId: string, userId?: st
   }
 }
 
-const channelWith = () => new CaseChannel(new FakeStore())
+/** Answers every account lookup with one analyst called Ada; who is named is asserted against the booted app. */
+const accounts = {
+  select: () => ({ from: () => ({ where: () => Promise.resolve([{ name: 'Ada', email: 'ada@example.invalid' }]) }) }),
+} as never
+
+const channelWith = () => new CaseChannel(new FakeStore(), accounts)
 
 const latest = (who: Fake, type: string) =>
   [...who.frames].reverse().find((frame) => frame['type'] === type)
@@ -344,21 +349,6 @@ describe('announcing a write', () => {
     }
   })
 
-  /**
-   * **`by` is a name, not an id.** The client puts it on screen; an account id
-   * there is an internal identifier shown to an analyst, which is what the
-   * fallback below is the exception to.
-   */
-  it('falls back to the id when the writer has no socket open', async () => {
-    const channel = channelWith()
-    const ada = member('C-1', 'Ada', 's1')
-    await channel.join(ada)
-
-    await channel['publishAnnounce']('C-1', ['timeline'], 'u-NobodyHere')
-
-    expect(latest(ada, 'case.changed')).toMatchObject({ by: 'u-NobodyHere' })
-  })
-
   it('says nothing to a case nobody is watching', async () => {
     const channel = channelWith()
     await expect(channel['publishAnnounce']('C-nobody', ['systems'], 'u-Ada')).resolves.not.toThrow()
@@ -393,7 +383,7 @@ describe('announcing a write', () => {
 describe('two connections arriving together', () => {
   it('subscribes once, and delivers each frame once', async () => {
     const store = new FakeStore()
-    const channel = new CaseChannel(store)
+    const channel = new CaseChannel(store, accounts)
     const ada = member('C-1', 'Ada', 's1')
     const grace = member('C-1', 'Grace', 's2')
 
@@ -418,7 +408,7 @@ describe('when the store is unwell', () => {
   it('swallows a failed announcement rather than rejecting', async () => {
     const store = new FakeStore()
     store.publish = () => Promise.reject(new Error('redis is away'))
-    const channel = new CaseChannel(store)
+    const channel = new CaseChannel(store, accounts)
 
     expect(() => { channel.announce('C-1', ['systems'], 'u-Ada') }).not.toThrow()
     // Let the rejection settle; an unhandled one fails the run.

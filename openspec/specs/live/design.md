@@ -12,6 +12,8 @@
 
 **Prose is attributed per saved change and per writer, never per word.** Two analysts writing into one passage before a save are both named for it, and nothing says which words each wrote. That is the attribution every other write carries: who changed a record, never which characters.
 
+**The install stores words only where nobody who wrote them has an account.** A writer who still has an account and has lost write, and an analyst who never wrote, are never stored through it; their words wait for an analyst who can write the record.
+
 **Only a writer on this process is named for a save it made.** Prose arriving from another process is named by the process it was written on.
 
 **Order is kept per connection, and nowhere wider.** Two connections, including two tabs of one analyst, are two writers whose frames interleave however they arrive; prose merges them and a version check judges everything else.
@@ -91,3 +93,11 @@ Each connection's change to prose is remembered against the analyst it came from
 A send holds a report's prose still only after saving what was typed and not yet saved, this same way, and after waiting out a save already under way, so the words a send stores are already named. A save that fails there leaves the report unsent.
 
 Once stored, the save is announced to the case and recorded in the install's audit, one line per writer, as the collection routes record a write.
+
+A save no writer and no asker can make falls to the install where no writer's account remains. It stores the words with the same act and the same records as any save, naming nobody as the writer, which is what the record would say had the account gone after the save.
+
+Stopping the application ends its connections before it stops listening, and waits for saves already under way. An open connection holds the listener open, so ending them last never ends them; and a save started by the last reader leaving is finished before the store closes.
+
+## An announcement names who wrote as the record of changes does
+
+An announcement reads who wrote from the account, by the same name the case's record of changes shows, so an analyst outside the room is named and one whose account is gone is not.

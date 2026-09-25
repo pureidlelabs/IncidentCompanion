@@ -1206,7 +1206,7 @@ describe('how much of a frame the socket will read', () => {
 
     expect(await closed, 'the socket read a frame it should have refused').toBe(1009)
 
-    gateway.onApplicationShutdown()
+    gateway.beforeApplicationShutdown()
     await new Promise<void>((done) => {
       server.close(() => { done() })
     })

@@ -8,6 +8,11 @@
  * nothing - the row version does that.
  */
 import { Inject, Injectable, Logger } from '@nestjs/common'
+import { eq } from 'drizzle-orm'
+
+import { DATABASE } from '../db/db.module.js'
+import type { Database } from '../db/client.js'
+import { user } from '../db/schema/auth.js'
 
 import { PresenceStore, type PresenceCoordinator, type StoredMember } from './presence.store.js'
 
@@ -78,7 +83,10 @@ export class CaseChannel {
    * *declared dependency* stays the eight methods this class actually uses,
    * which is what lets a test fake be checked rather than cast.
    */
-  constructor(@Inject(PresenceStore) private readonly store: PresenceCoordinator) {}
+  constructor(
+    @Inject(PresenceStore) private readonly store: PresenceCoordinator,
+    @Inject(DATABASE) private readonly db: Database,
+  ) {}
 
   async join(member: Member): Promise<void> {
     const room = this.local.get(member.caseId) ?? new Set<Member>()
@@ -155,7 +163,8 @@ export class CaseChannel {
    * that is already fresh is the cost the client documents as accepted.
    *
    * **`by` is a name, not an id.** The client puts it on screen, and an
-   * account id there is an internal identifier shown to an analyst.
+   * account id there is an internal identifier shown to an analyst. It is
+   * read from the account, and empty where the account is gone.
    *
    * **`scopes` is `string[]` and deliberately not the `Scope` union.** The
    * socket is transport: `architecture.test.ts` forbids `live` importing
@@ -180,8 +189,11 @@ export class CaseChannel {
     scopes: readonly string[],
     actorId: string,
   ): Promise<void> {
-    const members = await this.store.members(caseId)
-    const by = members.find((one) => one.userId === actorId)?.username ?? actorId
+    const [account] = await this.db
+      .select({ name: user.name, email: user.email })
+      .from(user)
+      .where(eq(user.id, actorId))
+    const by = account ? account.name.trim() || account.email || actorId : ''
     await this.store.publish(caseId, JSON.stringify({ type: 'case.changed', scopes, by }))
   }
 

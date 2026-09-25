@@ -35,7 +35,7 @@
  */
 import { Inject, Injectable, Logger, Optional, type OnApplicationShutdown } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import {
@@ -46,14 +46,14 @@ import {
 } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
-import { DATABASE } from '../db/db.module.js'
+import { DATABASE, SEED_DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { user } from '../db/schema/auth.js'
 import { changeFeed } from '../db/schema/change-feed.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
-import { actingAs, principalNow, withCase, type Executor } from '../db/scope.js'
+import { actingAs, principalNow, unattended, withCase, type Executor } from '../db/scope.js'
 import { fragmentFor } from '../domain/prose-fields.js'
 
 /**
@@ -238,6 +238,8 @@ export class ProseService implements OnApplicationShutdown {
      * test without Redis wants, and what a one-process install is.
      */
     @Optional() @Inject(PROSE_RELAY) private readonly relay?: ProseRelay,
+    /** Stores words whose every writer's account is gone; null leaves them unsaved. */
+    @Inject(SEED_DATABASE) private readonly install: Database | null = null,
   ) {}
 
   /**
@@ -673,7 +675,8 @@ export class ProseService implements OnApplicationShutdown {
   /**
    * Write the document to its row, as the latest analyst who wrote into it
    * since it was last stored and whom the store still lets write it, or else as
-   * whoever is asking. `updated_by` names the latest who wrote, and everyone
+   * whoever is asking, or else, where no writer's account remains, as the
+   * install. `updated_by` names the latest who wrote, and everyone
    * who wrote gets a feed row in the same transaction. Then tells the `onSaved` listener.
    * Resolves once every flush queued before it has run too. Public so a test
    * can force it.
@@ -708,56 +711,66 @@ export class ProseService implements OnApplicationShutdown {
     const account = (id: string) => sql<string | null>`(select ${user.id} from ${user} where ${user.id} = ${id})`
     const by = writers.at(-1)
     const attributed = by ? { updatedBy: account(by.id), updatedAt: new Date() } : {}
-    try {
-      for (const who of candidates) {
-        let pruned: Y.Doc | null = null
-        const stored = await actingAs(who, () =>
-          withCase(this.db, caseId, async (tx) => {
-            // A copy: a writer who cannot see the sections prunes them all, and
-            // only a store that took it reaches the live document.
-            if (address.table === 'reports') pruned = await this.prunedCopy(tx, address.id, held.doc)
-            const bytes = Buffer.from(Y.encodeStateAsUpdate(pruned ?? held.doc))
-            const [row] = await (address.table === 'casenotes'
-              ? tx
-                  .update(caseNotes)
-                  // **`note` is re-derived from the document on every flush.**
-                  // The document is the record; the column is the projection the
-                  // index row, the search and the CSV export read, and a note has
-                  // no heading to find it by instead. A note's creation writes the
-                  // column once, as the document's first words; this is its only
-                  // writer after that.
-                  .set({ document: bytes, note: noteText(held.doc), ...attributed })
-                  .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
-                  .returning({ version: caseNotes.version })
-              : tx
-                  .update(reports)
-                  .set({ document: bytes, ...attributed })
-                  .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
-                  .returning({ version: reports.version }))
-            // No row is the store refusing this writer, which raises nothing.
-            if (!row) return false
-            if (writers.length > 0) {
-              await tx.insert(changeFeed).values(
-                writers.map((writer) => ({
-                  caseId,
-                  entity: address.table,
-                  entityId: address.id,
-                  op: 'update' as const,
-                  version: row.version,
-                  actorId: account(writer.id),
-                  fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
-                })),
-              )
-            }
-            return true
-          }),
-        )
-        if (pruned) {
-          const copy: Y.Doc = pruned
-          if (stored) Y.applyUpdate(held.doc, Y.encodeStateAsUpdate(copy, Y.encodeStateVector(held.doc)), PRUNED)
-          copy.destroy()
+    // Stores the document as whoever `db` and the calling context name; false where the store refuses them.
+    const write = async (db: Database): Promise<boolean> => {
+      let pruned: Y.Doc | null = null
+      const stored = await withCase(db, caseId, async (tx) => {
+        // A copy: a writer who cannot see the sections prunes them all, and
+        // only a store that took it reaches the live document.
+        if (address.table === 'reports') pruned = await this.prunedCopy(tx, address.id, held.doc)
+        const bytes = Buffer.from(Y.encodeStateAsUpdate(pruned ?? held.doc))
+        const [row] = await (address.table === 'casenotes'
+          ? tx
+              .update(caseNotes)
+              // **`note` is re-derived from the document on every flush.**
+              // The document is the record; the column is the projection the
+              // index row, the search and the CSV export read, and a note has
+              // no heading to find it by instead. A note's creation writes the
+              // column once, as the document's first words; this is its only
+              // writer after that.
+              .set({ document: bytes, note: noteText(held.doc), ...attributed })
+              .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
+              .returning({ version: caseNotes.version })
+          : tx
+              .update(reports)
+              .set({ document: bytes, ...attributed })
+              .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
+              .returning({ version: reports.version }))
+        // No row is the store refusing this writer, which raises nothing.
+        if (!row) return false
+        if (writers.length > 0) {
+          await tx.insert(changeFeed).values(
+            writers.map((writer) => ({
+              caseId,
+              entity: address.table,
+              entityId: address.id,
+              op: 'update' as const,
+              version: row.version,
+              actorId: account(writer.id),
+              fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
+            })),
+          )
         }
-        if (!stored) continue
+        return true
+      })
+      if (pruned) {
+        const copy: Y.Doc = pruned
+        if (stored) Y.applyUpdate(held.doc, Y.encodeStateAsUpdate(copy, Y.encodeStateVector(held.doc)), PRUNED)
+        copy.destroy()
+      }
+      return stored
+    }
+    try {
+      let stored = false
+      for (const who of candidates) {
+        stored = await actingAs(who, () => write(this.db))
+        if (stored) break
+      }
+      const install = this.install
+      if (!stored && install && (await this.everyAccountGone(writers))) {
+        stored = await unattended(() => write(install))
+      }
+      if (stored) {
         if (writers.length > 0) this.saved?.(caseId, address, writers)
         return
       }
@@ -781,6 +794,17 @@ export class ProseService implements OnApplicationShutdown {
     }
   }
 
+  /** Whether `writers` names somebody and no account behind any of them remains. */
+  private async everyAccountGone(writers: readonly Writer[]): Promise<boolean> {
+    if (writers.length === 0) return false
+    const left = await this.db
+      .select({ id: user.id })
+      .from(user)
+      .where(inArray(user.id, writers.map((writer) => writer.id)))
+      .limit(1)
+    return left.length === 0
+  }
+
   /**
    * Write every document still held before the process exits.
    *
@@ -792,7 +816,11 @@ export class ProseService implements OnApplicationShutdown {
     for (const [key, holding] of this.live) {
       const held = await holding
       if (held.timer) clearTimeout(held.timer)
-      if (!held.dirty) continue
+      // A save the last reader leaving started is waited for, not left to a closing pool.
+      if (!held.dirty) {
+        await held.saving
+        continue
+      }
       const [caseId, table, id] = key.split('/') as [string, ProseTable, string]
       await this.flush(caseId, { table, id })
     }

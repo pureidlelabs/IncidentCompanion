@@ -29,7 +29,7 @@
  *
  * `live.gateway.test.ts` asserts all four, because a missing one is invisible.
  */
-import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common'
+import { Injectable, Logger, type BeforeApplicationShutdown, type OnModuleInit } from '@nestjs/common'
 import { AuthService } from '@thallesp/nestjs-better-auth'
 import type { IncomingHttpHeaders, IncomingMessage, Server } from 'node:http'
 import type { Duplex } from 'node:stream'
@@ -121,7 +121,7 @@ interface OpenDocument {
 }
 
 @Injectable()
-export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
+export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   private readonly log = new Logger(LiveGateway.name)
   private readonly sockets = new WebSocketServer({ noServer: true, maxPayload: MAX_FRAME_BYTES })
   private connections = 0
@@ -769,7 +769,7 @@ export class LiveGateway implements OnModuleInit, OnApplicationShutdown {
    * rebuild compiles cleanly and then cannot listen. One leftover socket from
    * a probe is enough to hold the old process.
    */
-  onApplicationShutdown(): void {
+  beforeApplicationShutdown(): void {
     clearInterval(this.sweep)
     this.stopListeningForSessionEnds()
     this.stopListeningForReachChanges()
