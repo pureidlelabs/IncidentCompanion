@@ -78,6 +78,8 @@ Everything reaching the install MUST arrive over a protected connection. There M
 
 The rule is that there is **one** way in rather than that it is protected specifically: a second way is a second thing to be correct about, and the one that is off by default is the one nobody checks.
 
+**Every protocol version and cipher suite the install agrees MUST give forward secrecy and authenticated encryption**, and a client offering nothing else MUST be refused rather than served. A connection recorded today and read the day its key leaks was never protected.
+
 An install with no certificate MUST make one rather than serve without, so that a first start needs nothing prepared. A certificate the install makes MUST cover the name it is reached at. Where that name changes, a certificate the install made MUST be made again for the new name, and the operator MUST be told its fingerprint changed.
 
 **A certificate the operator supplies MUST be used, and MUST NOT be replaced.** An install generating its own on every start would make it impossible to serve one an organisation's own authority issued, which is the only way an install exposed beyond its own machine is trusted by the browsers reaching it. A generated certificate is the fallback for an install nobody has given one to, never the only option.
@@ -90,6 +92,13 @@ Where a supplied certificate cannot be used — malformed, expired, not matching
 - WHEN the install comes up
 - THEN it has made one
 - AND it is serving protected
+
+#### Scenario: A client offers only a weaker protection
+
+- GIVEN a client offering only suites without forward secrecy or without authenticated encryption
+- WHEN it connects to the install
+- THEN the install refuses the connection
+- AND a client offering a suite with both is served
 
 #### Scenario: The operator supplies a certificate
 
