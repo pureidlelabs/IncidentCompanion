@@ -18,6 +18,7 @@ import { WebSocket } from 'ws'
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 import { asked, caseSocket, issued, pause, typed, until } from './case-socket.js'
 import { openTestPool } from './database.js'
+import { ACCEPTANCE_LASTS } from '../src/db/schema/scoped.js'
 import {
   caseNotes,
   cases,
@@ -315,34 +316,71 @@ describe.skipIf(!(await bootable()))('words accepted before their writer loses w
     })
   })
 
-  it('stores words whose saves failed for longer than an acceptance lasts, once the store recovers, named for their writer', async () => {
-    const owners = openTestPool(process.env['TEST_DATABASE_URL']!)
-    const asOwner = drizzle({ client: owners })
-    const noteId = await aNote()
-    const watching = await opens(owner, noteId)
-    const writer = await anAnalyst('write')
-    const live = await opens(writer, noteId)
-    const refusal = `refuse_the_audit_aged_${String(process.pid)}`
+  /**
+   * The audit refuses every line for `noteId` until the returned function lifts it, so each save
+   * of it fails and the document stays held.
+   */
+  async function refuseTheAuditOf(asOwner: ReturnType<typeof drizzle>, noteId: string, name: string) {
     await asOwner.execute(
       sql.raw(
-        `create or replace function ${refusal}() returns trigger language plpgsql as $f$ begin if new.actor_id = '${writer.id}' then raise exception 'the audit refuses this line'; end if; return new; end $f$`,
+        `create or replace function ${name}() returns trigger language plpgsql as $f$ begin if new.detail->>'record' = '${noteId}' then raise exception 'the audit refuses this line'; end if; return new; end $f$`,
       ),
     )
     await asOwner.execute(
-      sql.raw(`create trigger ${refusal} before insert on install_activity for each row execute function ${refusal}()`),
+      sql.raw(`create trigger ${name} before insert on install_activity for each row execute function ${name}()`),
     )
+    return async () => {
+      await asOwner.execute(sql.raw(`drop trigger if exists ${name} on install_activity`))
+      await asOwner.execute(sql.raw(`drop function if exists ${name}()`))
+    }
+  }
+
+  /** Ages `noteId`'s acceptances to three seconds short of lapsing, further than a held one gets between refreshes. */
+  const nearlyLapsed = (asOwner: ReturnType<typeof drizzle>, noteId: string) =>
+    asOwner.execute(
+      sql`update prose_acceptances set accepted_at = now() - ${ACCEPTANCE_LASTS}::interval + interval '3 seconds' where record_id = ${noteId}`,
+    )
+
+  /** How many acceptances `noteId` holds, and how many of them were refreshed in the last minute. */
+  async function acceptancesOf(noteId: string) {
+    const rows = await seed()
+      .select({ fresh: sql<boolean>`${proseAcceptances.acceptedAt} > now() - interval '1 minute'` })
+      .from(proseAcceptances)
+      .where(eq(proseAcceptances.recordId, noteId))
+    return { held: rows.length, fresh: rows.filter((one) => one.fresh).length }
+  }
+
+  it('keeps a failing document\'s acceptances refreshed, one per writer, for as long as it is held, and stores its words once the store recovers', async () => {
+    const owners = openTestPool(process.env['TEST_DATABASE_URL']!)
+    const asOwner = drizzle({ client: owners })
+    const noteId = await aNote()
+    const elsewhere = await aNote()
+    const watching = await opens(owner, noteId)
+    const writer = await anAnalyst('write')
+    const live = await opens(writer, noteId)
+    // Another record's acceptance, current but not fresh, which no refresh of this document may touch.
+    await seed()
+      .insert(proseAcceptances)
+      .values({
+        caseId,
+        entity: 'casenotes',
+        recordId: elsewhere,
+        writerId: writer.id,
+        acceptedAt: sql`now() - interval '30 minutes'`,
+      })
+    const lift = await refuseTheAuditOf(asOwner, noteId, `refuse_the_audit_held_${String(process.pid)}`)
+    const whileFailing: { held: number; fresh: number }[] = []
     try {
-      await types(live, noteId, `aged words ${TAG}`, watching)
+      await types(live, noteId, `held words 0 ${TAG}`, watching)
       await pause(1_500)
-      // The hour passes while every save keeps failing.
-      await asOwner.execute(
-        sql`update prose_acceptances set accepted_at = now() - interval '2 hours' where record_id = ${noteId}`,
-      )
-      await types(live, noteId, `more words ${TAG}`, watching)
-      await pause(1_500)
+      for (const round of [1, 2, 3]) {
+        await nearlyLapsed(asOwner, noteId)
+        await types(live, noteId, `held words ${String(round)} ${TAG}`, watching)
+        await pause(1_500)
+        whileFailing.push(await acceptancesOf(noteId))
+      }
     } finally {
-      await asOwner.execute(sql.raw(`drop trigger ${refusal} on install_activity`))
-      await asOwner.execute(sql.raw(`drop function ${refusal}()`))
+      await lift()
       await owners.end()
     }
     await types(live, noteId, `after the recovery ${TAG}`, watching)
@@ -352,18 +390,65 @@ describe.skipIf(!(await bootable()))('words accepted before their writer loses w
     await pause(1_500)
 
     const after = await stored(noteId)
-    const left = await seed()
-      .select()
-      .from(proseAcceptances)
-      .where(eq(proseAcceptances.recordId, noteId))
     expect({
-      words: [`aged words ${TAG}`, `more words ${TAG}`, `after the recovery ${TAG}`].every((words) =>
-        after.note.includes(words),
-      ),
+      whileFailing,
+      elsewhere: await acceptancesOf(elsewhere),
+      words: [0, 1, 2, 3].every((round) => after.note.includes(`held words ${String(round)} ${TAG}`)),
       updatedBy: after.updatedBy,
-      left: left.length,
-    }).toEqual({ words: true, updatedBy: writer.id, left: 0 })
-  }, 30_000)
+      left: await acceptancesOf(noteId),
+    }).toEqual({
+      whileFailing: [1, 2, 3].map(() => ({ held: 1, fresh: 1 })),
+      elsewhere: { held: 1, fresh: 0 },
+      words: true,
+      updatedBy: writer.id,
+      left: { held: 0, fresh: 0 },
+    })
+    await seed().delete(proseAcceptances).where(eq(proseAcceptances.recordId, elsewhere))
+  }, 40_000)
+
+  it('stores what every writer typed into a failing document once the store recovers, though one of them has since lost write', async () => {
+    const owners = openTestPool(process.env['TEST_DATABASE_URL']!)
+    const asOwner = drizzle({ client: owners })
+    const noteId = await aNote()
+    const staying = await anAnalyst('write')
+    const leaving = await anAnalyst('write')
+    const one = await opens(staying, noteId)
+    const two = await opens(leaving, noteId)
+    const lift = await refuseTheAuditOf(asOwner, noteId, `refuse_the_audit_two_${String(process.pid)}`)
+    try {
+      await types(two, noteId, `from the one who loses write ${TAG}`, one)
+      await types(one, noteId, `from the one who stays ${TAG}`, two)
+      await pause(1_500)
+      await nearlyLapsed(asOwner, noteId)
+      await lowered(leaving)
+      await types(one, noteId, `more from the one who stays ${TAG}`, two)
+      // Past the moment an acceptance nobody refreshed would have lapsed.
+      await pause(3_500)
+    } finally {
+      await lift()
+      await owners.end()
+    }
+    await types(one, noteId, `after the recovery ${TAG}`, two)
+    await pause(1_500)
+    one.socket.close()
+    two.socket.close()
+    await pause(1_500)
+
+    const after = await stored(noteId)
+    expect({
+      words: [
+        `from the one who loses write ${TAG}`,
+        `from the one who stays ${TAG}`,
+        `after the recovery ${TAG}`,
+      ].every((words) => after.note.includes(words)),
+      updatedBy: after.updatedBy,
+      audit: [...after.audit].sort(),
+    }).toEqual({
+      words: true,
+      updatedBy: staying.id,
+      audit: [`Writer ${String(count - 1)}`, `Writer ${String(count)}`].sort(),
+    })
+  }, 40_000)
 
   it('names the writer who wrote last on the record', async () => {
     const noteId = await aNote()

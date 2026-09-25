@@ -13,7 +13,7 @@ import { sql } from 'drizzle-orm'
 import { check, index, pgPolicy, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 import { cases } from './case.js'
-import { ACCEPTANCE_LASTS, caseScoped, proseKept } from './scoped.js'
+import { ACCEPTANCE_LASTS, PROSE_ROLE, caseScoped, proseKept } from './scoped.js'
 
 export const proseAcceptances = pgTable(
   'prose_acceptances',
@@ -43,20 +43,21 @@ export const proseAcceptances = pgTable(
         to: 'ic_app',
         withCheck: sql`${t.writerId} = ${principal} and ${t.acceptedAt} = now()`,
       }),
-      pgPolicy('acceptance_is_removed_by_its_writer_or_once_expired', {
+      pgPolicy('acceptance_is_removed_by_its_writer', {
         as: 'restrictive',
         for: 'delete',
         to: 'ic_app',
-        using: sql`${t.writerId} = ${principal} or ${expired}`,
+        using: sql`${t.writerId} = ${principal}`,
       }),
-      ...proseKept(t.caseId, t.recordId, ['select', 'delete']),
-      // A delete reads the rows it removes, so the sweep has to be able to see them.
-      pgPolicy('an_expired_acceptance_is_seen_to_be_swept', {
-        for: 'select',
-        to: 'ic_app',
-        using: expired,
+      ...proseKept(t.caseId, t.recordId, ['select', 'update', 'delete']),
+      // Kept current while its words are held, and never brought back once lapsed.
+      pgPolicy('prose_keeps_only_a_current_acceptance_current', {
+        as: 'restrictive',
+        for: 'update',
+        to: PROSE_ROLE,
+        using: sql`not (${expired})`,
+        withCheck: sql`${t.acceptedAt} = now()`,
       }),
-      pgPolicy('an_expired_acceptance_is_swept', { for: 'delete', to: 'ic_app', using: expired }),
     ]
   },
 )

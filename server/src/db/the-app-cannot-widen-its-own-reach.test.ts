@@ -186,6 +186,8 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
   }
   /** Asked for nobody, so they answer identifiers and digests and never what a case holds. */
   const FOR_NOBODY = ['ic_artefacts_named']
+  /** Acts that remove only what has lapsed, whoever asks. */
+  const LAPSED_ONLY = ['ic_sweep_acceptances']
 
   const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
   const admin = `acts-admin-${String(process.pid)}-${String(Date.now())}`
@@ -233,7 +235,7 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
     expect(
       rows.map((one) => one.name),
       'an act the app role may call is in no class here, so nobody decided who it answers',
-    ).toEqual([...PER_PRINCIPAL, ...Object.keys(ADMINISTRATOR_ONLY), ...FOR_NOBODY].sort())
+    ).toEqual([...PER_PRINCIPAL, ...Object.keys(ADMINISTRATOR_ONLY), ...FOR_NOBODY, ...LAPSED_ONLY].sort())
   })
 
   it.each(['refuse_a_change_to_a_sent_report', 'refuse_a_part_of_a_sent_report'])(
@@ -446,10 +448,12 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by
           sql`insert into prose_acceptances (case_id, entity, record_id, writer_id, accepted_at)
               values (${open!.id}, 'casenotes', ${note!.id}, ${victim}, ${when})`,
         )
-      expect({ now: await dated(sql`now()`), later: await dated(sql`now() + interval '100 years'`) }).toEqual({
-        now: 1,
-        later: '42501',
-      })
+      expect({
+        now: await dated(sql`now()`),
+        aMinute: await dated(sql`now() + interval '1 minute'`),
+        aDay: await dated(sql`now() + interval '1 day'`),
+        aCentury: await dated(sql`now() + interval '100 years'`),
+      }).toEqual({ now: 1, aMinute: '42501', aDay: '42501', aCentury: '42501' })
     } finally {
       await seed().delete(cases).where(eq(cases.id, open!.id))
     }
@@ -473,7 +477,27 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by
     }
   })
 
-  it('sweeps an acceptance older than one lasts, and leaves a current one', async () => {
+  it('sweeps an acceptance older than one lasts, and leaves one that has not yet lapsed', async () => {
+    const aged = (by: ReturnType<typeof sql>) =>
+      seed()
+        .insert(proseAcceptances)
+        .values({ caseId: caseA, entity: 'casenotes', recordId: unaccepted, writerId: writer, acceptedAt: by })
+        .returning({ id: proseAcceptances.id })
+    const [{ id: old } = { id: '' }] = await aged(sql`now() - ${ACCEPTANCE_LASTS}::interval - interval '1 minute'`)
+    const [{ id: nearly } = { id: '' }] = await aged(sql`now() - ${ACCEPTANCE_LASTS}::interval + interval '1 minute'`)
+    try {
+      await new ProseService(app!).sweepExpiredAcceptances()
+      const left = await seed()
+        .select({ id: proseAcceptances.id })
+        .from(proseAcceptances)
+        .where(inArray(proseAcceptances.id, [old, nearly]))
+      expect(left.map((one) => one.id)).toEqual([nearly])
+    } finally {
+      await seed().delete(proseAcceptances).where(inArray(proseAcceptances.id, [old, nearly]))
+    }
+  })
+
+  it('reads no lapsed acceptance, naming nobody or naming somebody who does not reach its case', async () => {
     const [{ id: old } = { id: '' }] = await seed()
       .insert(proseAcceptances)
       .values({
@@ -485,15 +509,50 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by
       })
       .returning({ id: proseAcceptances.id })
     try {
-      await new ProseService(app!).sweepExpiredAcceptances()
-      const left = await seed()
-        .select({ id: proseAcceptances.id })
-        .from(proseAcceptances)
-        .where(inArray(proseAcceptances.recordId, [accepted, unaccepted]))
-      expect(left.map((one) => one.id)).not.toContain(old)
-      expect(left, 'the current acceptance went too').not.toHaveLength(0)
+      const read = (principal: string, kase: string) =>
+        app!.transaction(async (tx) => {
+          await tx.execute(
+            sql`select set_config('app.case_id', ${kase}, true), set_config('app.principal', ${principal}, true)`,
+          )
+          return (await tx.execute(sql`select writer_id from prose_acceptances where id = ${old}`)).rows.length
+        })
+      expect({ nobody: await read('', ''), outsider: await read(victim, caseA) }).toEqual({
+        nobody: 0,
+        outsider: 0,
+      })
     } finally {
       await seed().delete(proseAcceptances).where(eq(proseAcceptances.id, old))
+    }
+  })
+
+  it('keeps only a current acceptance of the accepted record current, and changes nothing else about one', async () => {
+    const [{ id: old } = { id: '' }] = await seed()
+      .insert(proseAcceptances)
+      .values({
+        caseId: caseA,
+        entity: 'casenotes',
+        recordId: accepted,
+        writerId: writer,
+        acceptedAt: sql`now() - ${ACCEPTANCE_LASTS}::interval - interval '1 minute'`,
+      })
+      .returning({ id: proseAcceptances.id })
+    const [{ id: elsewhere } = { id: '' }] = await seed()
+      .insert(proseAcceptances)
+      .values({ caseId: caseA, entity: 'casenotes', recordId: unaccepted, writerId: writer })
+      .returning({ id: proseAcceptances.id })
+    try {
+      const refresh = (where: ReturnType<typeof sql>, set = sql`accepted_at = now()`) =>
+        asProse(caseA, accepted, sql`update prose_acceptances set ${set} where ${where}`)
+      expect({
+        // The residual: an application that enters the role keeps a live acceptance of its record live.
+        current: await refresh(sql`record_id = ${accepted} and writer_id = ${writer} and id <> ${old}`),
+        lapsed: await refresh(sql`id = ${old}`),
+        anotherRecord: await refresh(sql`id = ${elsewhere}`),
+        later: await refresh(sql`record_id = ${accepted} and id <> ${old}`, sql`accepted_at = now() + interval '1 day'`),
+        anotherWriter: await refresh(sql`record_id = ${accepted} and id <> ${old}`, sql`writer_id = ${victim}`),
+      }).toEqual({ current: 1, lapsed: 0, anotherRecord: 0, later: '42501', anotherWriter: '42501' })
+    } finally {
+      await seed().delete(proseAcceptances).where(inArray(proseAcceptances.id, [old, elsewhere]))
     }
   })
 

@@ -43,7 +43,7 @@ import {
   type OnApplicationShutdown,
 } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
-import { and, eq, inArray, isNull, not, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import {
@@ -62,8 +62,8 @@ import { proseAcceptances } from '../db/schema/prose-acceptances.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
-import { ACCEPTANCE_LASTS, PROSE_ROLE } from '../db/schema/scoped.js'
-import { actingAs, principalNow, unattended, withCase, withReach, type Executor } from '../db/scope.js'
+import { PROSE_ROLE } from '../db/schema/scoped.js'
+import { actingAs, principalNow, unattended, withCase, type Executor } from '../db/scope.js'
 import { fragmentFor } from '../domain/prose-fields.js'
 import { writeInstallActivity } from '../install-activity/record.js'
 
@@ -120,8 +120,11 @@ function isProseTable(name: string): name is ProseTable {
 
 const QUIET_MS = 750
 
-/** Acceptances too old to authorise anything, which a save or a start removes. */
-const expired = sql`${proseAcceptances.acceptedAt} <= now() - ${sql.raw(`interval '${ACCEPTANCE_LASTS}'`)}`
+/** How long a held document waits between failed saves; each one keeps its acceptances current. */
+const RETRY_MS = 5 * 60 * 1000
+
+/** Removes every acceptance past `ACCEPTANCE_LASTS`, in any case, as a definer act. */
+const sweepLapsed = sql`select ic_sweep_acceptances()`
 
 /**
  * Which record a document key names.
@@ -577,7 +580,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
 
   /** Removes every acceptance older than one lasts, whatever case it is in. */
   async sweepExpiredAcceptances(): Promise<void> {
-    await unattended(() => withReach(this.db, (tx) => tx.delete(proseAcceptances).where(expired)))
+    await this.db.execute(sweepLapsed)
   }
 
   /** Sets who is told once a flush has stored what somebody wrote. */
@@ -815,7 +818,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       const scope = writers.length > 0 ? unattended : <T>(work: () => T) => work()
       const stored = await scope(() => withCase(this.db, caseId, async (tx) => {
         if (writers.length > 0) {
-          await tx.delete(proseAcceptances).where(expired)
+          await tx.execute(sweepLapsed)
           await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
           await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
         }
@@ -898,56 +901,41 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
           ? 'the store holds no current acceptance for a writer it would name'
           : String(error)
       this.log.error(`could not save the prose for ${recordOf(address)}: ${reason}`)
-      if (writers.length > 0) await this.renewLapsed(caseId, address, held, writers)
+      if (held.acceptances.length > 0) await this.keepCurrent(caseId, address, held.acceptances)
+      if (held.readers > 0) {
+        if (held.timer) clearTimeout(held.timer)
+        held.timer = setTimeout(() => {
+          void this.flush(caseId, address)
+        }, RETRY_MS)
+      }
     }
   }
 
   /**
-   * Records a fresh acceptance, under each writer's reach now, for every one of
-   * `writers` whose acceptance of this record has lapsed, so the next save can
-   * name them. A writer the store refuses is logged, and dropped from those
-   * the document holds as accepted.
+   * Makes `acceptances` of this record current again, so words a failing save
+   * holds stay storable for as long as it holds them. One that has already
+   * lapsed stays lapsed, and is logged.
    */
-  private async renewLapsed(
-    caseId: string,
-    address: ProseRecord,
-    held: LiveDocument,
-    writers: readonly Writer[],
-  ): Promise<void> {
-    let current: Set<string>
+  private async keepCurrent(caseId: string, address: ProseRecord, acceptances: readonly string[]): Promise<void> {
     try {
-      const rows = await unattended(() =>
+      const kept = await unattended(() =>
         withCase(this.db, caseId, async (tx) => {
           await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
           await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
           return tx
-            .select({ writer: proseAcceptances.writerId })
-            .from(proseAcceptances)
-            .where(and(eq(proseAcceptances.recordId, address.id), not(expired)))
+            .update(proseAcceptances)
+            .set({ acceptedAt: sql`now()` })
+            .where(inArray(proseAcceptances.id, [...acceptances]))
+            .returning({ id: proseAcceptances.id })
         }),
       )
-      current = new Set(rows.map((row) => row.writer))
-    } catch (error) {
-      this.log.warn(`could not read the acceptances of ${recordOf(address)}: ${String(error)}`)
-      return
-    }
-    for (const writer of writers.filter((one) => !current.has(one.id))) {
-      try {
-        const [row] = await actingAs(writer.id, () =>
-          withCase(this.db, caseId, (tx) =>
-            tx
-              .insert(proseAcceptances)
-              .values({ caseId, entity: address.table, recordId: address.id, writerId: writer.id })
-              .returning({ id: proseAcceptances.id }),
-          ),
-        )
-        held.acceptances.push(row!.id)
-      } catch {
-        held.accepted.delete(writer.id)
+      if (kept.length < acceptances.length) {
         this.log.error(
-          `the words ${writer.label} wrote into ${recordOf(address)} cannot be stored: their acceptance has lapsed, and the store refuses them one now`,
+          `${String(acceptances.length - kept.length)} acceptance(s) of ${recordOf(address)} lapsed while its saves failed, so the words they accepted cannot be stored`,
         )
       }
+    } catch (error) {
+      this.log.warn(`could not keep the acceptances of ${recordOf(address)} current: ${String(error)}`)
     }
   }
 
