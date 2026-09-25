@@ -16,6 +16,7 @@ export const familiarAddress = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     address: text('address').notNull(),
+    lastRightAt: timestamp('last_right_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.address] })],
 )
