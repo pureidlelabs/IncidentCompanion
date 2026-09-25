@@ -30,8 +30,6 @@ import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate }
 import { readSyncMessage, writeSyncStep1, writeUpdate } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
-import { PROSE_STATES, type ProseState } from '@contract/prose-state'
-
 import { acquireLink, releaseLink, type CaseLink, type Message } from './caseSocket'
 
 /** Marks a transaction as arriving from the wire, so it is not sent back. */
@@ -119,7 +117,7 @@ export class ProseChannel {
    * Whether the install holds this document's words unsaved (`unsaved`), or
    * has given them up (`lost`), as it last said. Null once a save stores them.
    */
-  unsaved: Exclude<ProseState, 'saved'> | null = null
+  unsaved: 'unsaved' | 'lost' | null = null
   private readonly unsavedListeners = new Set<() => void>()
 
   /** Calls `listener` whenever `unsaved` changes. Returns what stops it. */
@@ -241,9 +239,11 @@ export class ProseChannel {
      * `prose.sync` arrives *after* this and must not put the editor back.
      */
     if (kind === 'prose.state') {
-      const state = PROSE_STATES.find((known) => known === message.state)
-      if (!state) return
-      this.unsaved = state === 'saved' ? null : state
+      // The states `server/src/domain/prose-state.ts` declares, spelled here
+      // because a server suite runs this file where `@contract` resolves nothing.
+      if (message.state === 'unsaved' || message.state === 'lost') this.unsaved = message.state
+      else if (message.state === 'saved') this.unsaved = null
+      else return
       for (const listener of [...this.unsavedListeners]) listener()
       return
     }

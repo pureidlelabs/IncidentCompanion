@@ -255,9 +255,6 @@ export default tseslint.config(
            * `prose-fields` is where a fragment lives and its words as plain
            * text, which the unsaved notice copies; its closure is yjs too.
            *
-           * `prose-state` is the vocabulary of the frame saying whether the
-           * install holds a document's words unsaved. It imports nothing.
-           *
            * `killchain` is which phase sits in which cycle, which the coverage
            * screen asks rather than spelling the one member that has none. Its
            * closure is `vocabularies`, which `collections` already carries.
@@ -288,13 +285,12 @@ export default tseslint.config(
             '!@contract/malware-shape',
             '!@contract/prose-authoring',
             '!@contract/prose-fields',
-            '!@contract/prose-state',
           ],
           allowTypeImports: true,
           message:
             'Types only, except @contract/*.lists, @contract/analyst-account, ' +
             '@contract/collections, @contract/identity, @contract/killchain, ' +
-            '@contract/prose-authoring, @contract/prose-fields, @contract/prose-state ' +
+            '@contract/prose-authoring, @contract/prose-fields ' +
             'and the @contract/*-shape advice modules. A value import from ' +
             'anywhere else can reach a Drizzle table.',
         }],

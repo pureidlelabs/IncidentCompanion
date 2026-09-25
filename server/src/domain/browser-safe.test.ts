@@ -57,7 +57,6 @@ const ENTRIES = [
   'malware-shape.ts',
   'prose-authoring.ts',
   'prose-fields.ts',
-  'prose-state.ts',
   /**
    * **Every `.lists` module the client value-imports, named one at a time.**
    * `ui/eslint.config.js` permits them by the glob `!@contract/*.lists`, and a

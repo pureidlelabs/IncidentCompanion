@@ -1,4 +1,11 @@
-import { useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react'
 import { UNSAFE_DataRouterContext, useBlocker } from 'react-router-dom'
 import type * as Y from 'yjs'
 
@@ -24,13 +31,17 @@ export function ProseUnsaved({ channel }: { channel: ProseChannel | null }) {
 
 function Unsaved({ channel }: { channel: ProseChannel }) {
   const unsaved = useSyncExternalStore(channel.watchUnsaved, () => channel.unsaved)
-  const text = useSyncExternalStore(
-    (changed) => {
+  const held = unsaved !== null
+  // Read from the document only while the words are unsaved.
+  const followText = useCallback(
+    (changed: () => void) => {
+      if (!held) return () => undefined
       channel.doc.on('update', changed)
       return () => channel.doc.off('update', changed)
     },
-    () => (unsaved === null ? '' : textOf(channel.doc)),
+    [channel, held],
   )
+  const text = useSyncExternalStore(followText, () => (held ? textOf(channel.doc) : ''))
   const [closed, setClosed] = useState(false)
   const inDataRouter = useContext(UNSAFE_DataRouterContext) !== null
 
