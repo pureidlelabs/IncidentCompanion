@@ -26,7 +26,7 @@ import {
   reportDocument,
   type ProseRelay,
 } from './prose.service.js'
-import { caseNotes, cases, changeFeed, installActivity, reportBlocks, reports, user } from '../db/schema/index.js'
+import { caseNotes, cases, changeFeed, installActivity, proseAcceptances, reportBlocks, reports, user } from '../db/schema/index.js'
 import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { suiteStore } from '../../test/evidence-on-disk.js'
 
@@ -56,6 +56,8 @@ function typed(text: string, fragment = sections[0]): { update: Uint8Array; doc:
 
 /** The analyst every frame here is written as. */
 const WRITER = { id: 'prose-analyst', label: 'Prose Analyst', headers: {} }
+/** A second analyst, writing on the other instance. */
+const COWRITER = { id: 'prose-cowriter', label: 'Prose Cowriter', headers: {} }
 
 // **Ended once, for the file.** The pool is shared across every block here, so
 // a `describe` that closes it in its own teardown takes the next one down with
@@ -77,14 +79,16 @@ beforeAll(async () => {
   const now = new Date()
   await seed
     .insert(user)
-    .values({
-      id: 'prose-analyst',
-      name: 'Prose Analyst',
-      email: 'prose@example.test',
-      emailVerified: true,
-      createdAt: now,
-      updatedAt: now,
-    })
+    .values(
+      [WRITER, COWRITER].map((who) => ({
+        id: who.id,
+        name: who.label,
+        email: `${who.id}@example.test`,
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      })),
+    )
     .onConflictDoNothing()
 })
 
@@ -991,6 +995,10 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
     }
   }
 
+  /** The acceptances the store holds for a report. */
+  const acceptancesOf = async (reportId: string) =>
+    (await seed!.select().from(proseAcceptances).where(eq(proseAcceptances.recordId, reportId))).length
+
   it('names the writer another instance accepted when a send stores their relayed words', async () => {
     const bus = new Bus()
     const one = as('prose-analyst', new ProseService(db!, bus))
@@ -1011,18 +1019,81 @@ describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one
     expect(stored.updatedBy).toBe(WRITER.id)
     expect(stored.feed).toEqual([WRITER.id])
     expect(stored.audit).toEqual([WRITER.id])
+    await seal.settle(null)
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+  })
 
-    // The send stamps; the instance that accepted the words is then refused as sent, and so is its writer.
+  it('names the writers of both instances when one of them saves', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-cowriter', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    await one.open(caseId, address)
+    await two.open(caseId, address)
+
+    await withQuietHeld(async () => {
+      await one.apply(caseId, address, framed(typed('written on one').update), 'a-socket', WRITER)
+      await two.apply(caseId, address, framed(typed('written on two', sections[1]).update), 'a-socket', COWRITER)
+    })
+    const seal = await two.seal(caseId, reportId)
+
+    const stored = await storedReport(reportId)
+    expect(stored.feed.sort()).toEqual([WRITER.id, COWRITER.id].sort())
+    expect(stored.audit.sort()).toEqual([WRITER.id, COWRITER.id].sort())
+    await seal.settle(null)
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+  })
+
+  it('names one act once, whichever instance stores it first', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    await one.open(caseId, address)
+    await two.open(caseId, address)
+
+    await withQuietHeld(() => one.apply(caseId, address, framed(typed('stored once').update), 'a-socket', WRITER))
+    const seal = await two.seal(caseId, reportId)
+    await seal.settle(null)
+    await one.flush(caseId, address)
+
+    expect((await storedReport(reportId)).feed).toEqual([WRITER.id])
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+    expect(await acceptancesOf(reportId)).toBe(0)
+  })
+
+  it('tells the writer their words are lost when a send another instance made took none of them', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    await one.open(caseId, address)
+    await two.open(caseId, address)
+    const told: string[] = []
+    await one.watch(caseId, address, (state) => told.push(state))
+
+    const seal = await two.seal(caseId, reportId)
     const stamp = new Date()
+    await new Promise((wake) => setTimeout(wake, 5))
+    await withQuietHeld(() => one.apply(caseId, address, framed(typed('after the send').update), 'a-socket', WRITER))
     await seed!.update(reports).set({ sentAt: stamp, frozen: {}, frozenAt: stamp }).where(eq(reports.id, reportId))
     await seal.settle(stamp)
     await one.flush(caseId, address)
-    const after = await one.apply(caseId, address, framed(typed('after the send').update), 'a-socket', WRITER)
-    expect(after).toEqual({ refused: stamp })
-    expect((await storedReport(reportId)).feed).toEqual([WRITER.id])
 
+    expect(told).toEqual(['lost'])
+    expect(await one.apply(caseId, address, framed(typed('and more').update), 'a-socket', WRITER)).toEqual({
+      refused: stamp,
+    })
+    expect((await storedReport(reportId)).text).not.toContain('after the send')
     await one.release(caseId, address)
     await two.release(caseId, address)
+    expect(await acceptancesOf(reportId)).toBe(0)
   })
 
   it('stores nothing relayed that no acceptance on record names', async () => {

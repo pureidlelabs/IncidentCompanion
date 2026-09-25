@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, waitFor, within } from 'storybook/test'
+import { RouterProvider, createMemoryRouter } from 'react-router-dom'
 import * as Y from 'yjs'
 
 import { ProseUnsaved } from './prose-unsaved'
@@ -47,6 +48,34 @@ export const GivenUp: Story = {
     const page = within(canvasElement.ownerDocument.body)
     await expect(await page.findByRole('dialog')).toHaveTextContent(
       'This text can no longer be saved',
+    )
+  },
+}
+
+/**
+ * The analyst goes to leave while the words are unsaved. Drawn in a router of
+ * its own, since the question is asked on a change of route.
+ */
+export const Leaving: Story = {
+  args: { channel: channel('unsaved') },
+  render: (args) => {
+    const router = createMemoryRouter(
+      [
+        { path: '/notes', element: <ProseUnsaved {...args} /> },
+        { path: '/elsewhere', element: <p>Elsewhere</p> },
+      ],
+      { initialEntries: ['/notes'] },
+    )
+    void Promise.resolve().then(() => router.navigate('/elsewhere'))
+    return <RouterProvider router={router} />
+  },
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body)
+    const dialog = await page.findByRole('dialog')
+    await expect(dialog).toHaveTextContent('Leave with the text unsaved?')
+    // After the dialog's entrance, which starts it transparent.
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: /Copy the text/ })).toBeVisible(),
     )
   },
 }

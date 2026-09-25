@@ -43,7 +43,7 @@ import {
   type OnApplicationShutdown,
 } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
-import { and, eq, inArray, isNull, max, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import {
@@ -180,6 +180,8 @@ interface LiveDocument {
   unsaved: 'unsaved' | 'lost' | null
   /** Told each time `unsaved` changes. */
   watchers: Set<(state: ProseState) => void>
+  /** When a writer here last changed it, in epoch milliseconds. */
+  changedAt: number
 }
 
 /** An analyst writing through a connection, and the headers that connection arrived with. */
@@ -187,6 +189,14 @@ export interface Writer {
   readonly id: string
   readonly label: string
   readonly headers: IncomingHttpHeaders
+}
+
+/** The writers a store holds current acceptances for on one record, and the acceptances. */
+interface Accepted {
+  writers: Writer[]
+  ids: string[]
+  /** This record's acceptances that have lapsed and not yet been swept. */
+  lapsed: string[]
 }
 
 /** Told once a flush has stored, and recorded in the install's audit, what somebody wrote. */
@@ -414,6 +424,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       saving: Promise.resolve(),
       unsaved: null,
       watchers: new Set(),
+      changedAt: 0,
     }
     doc.on('update', (update: Uint8Array, origin: unknown) => {
       if (origin === PRUNED) {
@@ -422,6 +433,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       }
       entry.dirty = true
       const now = Date.now()
+      if (origin !== REMOTE) entry.changedAt = now
       entry.unsavedSince ??= now
       // A stream of writing past the longest wait leaves the pending save alone.
       if (!entry.timer || now - entry.unsavedSince < PROSE_PACE.longestWaitMs) {
@@ -830,24 +842,37 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       held.unsavedSince = null
       return
     }
-    let named: Writer[] = []
-    if (held.writers.size === 0 && !byAsker) {
+    let current: Accepted = { writers: [], ids: [], lapsed: [] }
+    if (!byAsker) {
       try {
-        named = await this.acceptedWriters(caseId, address)
+        current = await this.acceptedWriters(caseId, address)
       } catch (error) {
         this.log.error(`could not read who wrote ${recordOf(address)}, so it is not saved: ${String(error)}`)
         return
       }
+      // A writer here with no acceptance left had their words stored, and named, by another process's save.
+      const accepted = new Set(current.writers.map((writer) => writer.id))
+      for (const id of [...held.writers.keys()]) {
+        if (accepted.has(id)) continue
+        held.writers.delete(id)
+        held.accepted.delete(id)
+      }
+      if (held.acceptances.some((id) => current.lapsed.includes(id))) {
+        this.log.error(`an acceptance of ${recordOf(address)} lapsed before its words were stored, so they cannot be`)
+        if (held.unsaved !== 'lost') this.tell(held, 'lost')
+      }
+      held.acceptances = held.acceptances.filter((id) => current.ids.includes(id))
     }
     const local = [...held.writers.values()]
-    const writers = [...named.filter((writer) => !held.writers.has(writer.id)), ...local]
+    const writers = byAsker ? local : current.writers.map((writer) => held.writers.get(writer.id) ?? writer)
     if (writers.length === 0 && !byAsker) {
       held.dirty = false
       held.unsavedSince = null
-      this.log.warn(`${recordOf(address)} holds words no writer here typed and no acceptance names, so they are not saved here`)
+      this.log.warn(`${recordOf(address)} holds words no acceptance names, so they are not saved here`)
       return
     }
-    const acceptances = held.acceptances
+    const own = held.acceptances
+    const acceptances = [...new Set([...current.ids, ...own])]
     held.writers.clear()
     held.accepted = new Set()
     held.acceptances = []
@@ -946,6 +971,8 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       const sent = sentReportIn(error)
       if (sent) {
         held.sealed ??= sent.sentAt
+        await this.forget(caseId, address, own)
+        if (held.changedAt > sent.sentAt.getTime()) this.tell(held, 'lost')
         return
       }
       // **Marked dirty again**, so the next edit's quiet moment, the last
@@ -953,7 +980,7 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
       // how a report loses an afternoon to a transient database error nobody saw.
       held.dirty = true
       held.unsavedSince = null
-      held.acceptances = [...acceptances, ...held.acceptances]
+      held.acceptances = [...own, ...held.acceptances]
       for (const writer of local) held.accepted.add(writer.id)
       held.writers = new Map([
         ...local.filter((writer) => !held.writers.has(writer.id)).map((writer) => [writer.id, writer] as const),
@@ -976,29 +1003,41 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
     }
   }
 
-  /** The writers the store holds current acceptances for on this record, the latest accepted last. */
-  private async acceptedWriters(caseId: string, address: ProseRecord): Promise<Writer[]> {
-    const latest = max(proseAcceptances.acceptedAt)
-    const accepted = await unattended(() =>
+  /** The writers the store holds current acceptances for on this record, the latest accepted last, and those acceptances. */
+  private async acceptedWriters(caseId: string, address: ProseRecord): Promise<Accepted> {
+    const all = await unattended(() =>
       withCase(this.db, caseId, async (tx) => {
         await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
         await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
         return tx
-          .select({ id: proseAcceptances.writerId })
+          .select({
+            id: proseAcceptances.id,
+            writer: proseAcceptances.writerId,
+            lapsed: sql<boolean>`${proseAcceptances.acceptedAt} <= now() - ${ACCEPTANCE_LASTS}`,
+          })
           .from(proseAcceptances)
-          .where(and(eq(proseAcceptances.recordId, address.id), sql`${proseAcceptances.acceptedAt} > now() - ${ACCEPTANCE_LASTS}`))
-          .groupBy(proseAcceptances.writerId)
-          .orderBy(latest)
+          .where(eq(proseAcceptances.recordId, address.id))
+          .orderBy(proseAcceptances.acceptedAt)
       }),
     )
-    if (accepted.length === 0) return []
+    const lapsed = all.filter((row) => row.lapsed).map((row) => row.id)
+    const rows = all.filter((row) => !row.lapsed)
+    // A writer's latest acceptance decides their place.
+    const latest = new Set<string>()
+    for (const row of rows) {
+      latest.delete(row.writer)
+      latest.add(row.writer)
+    }
+    const order = [...latest]
+    const ids = rows.map((row) => row.id)
+    if (order.length === 0) return { writers: [], ids, lapsed }
     const accounts = await this.db
       .select({ id: user.id, name: user.name, email: user.email })
       .from(user)
-      .where(inArray(user.id, accepted.map((writer) => writer.id)))
+      .where(inArray(user.id, order))
     const labels = new Map(accounts.map((account) => [account.id, account.name.trim() || account.email]))
     // Labelled as the accepting connection labels them; an account that is gone is named by nobody.
-    return accepted.map(({ id }) => ({ id, label: labels.get(id) ?? id, headers: {} }))
+    return { writers: order.map((id) => ({ id, label: labels.get(id) ?? id, headers: {} })), ids, lapsed }
   }
 
   /**
@@ -1010,20 +1049,24 @@ export class ProseService implements OnApplicationBootstrap, OnApplicationShutdo
     const acceptances = held.acceptances
     if (acceptances.length === 0) return
     try {
-      const kept = await unattended(() =>
+      const { kept, left } = await unattended(() =>
         withCase(this.db, caseId, async (tx) => {
           await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
           await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
-          return tx
+          const ids = [...acceptances]
+          const kept = await tx
             .update(proseAcceptances)
             .set({ acceptedAt: sql`now()` })
-            .where(inArray(proseAcceptances.id, [...acceptances]))
+            .where(inArray(proseAcceptances.id, ids))
             .returning({ id: proseAcceptances.id })
+          // Lapsed ones are still there; one another process's save removed is not.
+          const left = await tx.select({ id: proseAcceptances.id }).from(proseAcceptances).where(inArray(proseAcceptances.id, ids))
+          return { kept, left }
         }),
       )
-      if (kept.length < acceptances.length) {
+      if (kept.length < left.length) {
         this.log.error(
-          `${String(acceptances.length - kept.length)} acceptance(s) of ${recordOf(address)} lapsed while its saves failed, so the words they accepted cannot be stored`,
+          `${String(left.length - kept.length)} acceptance(s) of ${recordOf(address)} lapsed while its saves failed, so the words they accepted cannot be stored`,
         )
         if (held.unsaved !== 'lost') this.tell(held, 'lost')
       }

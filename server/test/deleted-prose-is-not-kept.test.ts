@@ -5,7 +5,6 @@
  * Read through the seeding role, beneath every door, so a projection at one of
  * them cannot hide a record that still holds the text.
  */
-import { randomUUID } from 'node:crypto'
 
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq, inArray } from 'drizzle-orm'
@@ -23,7 +22,6 @@ import { reports } from '../src/db/schema/report.js'
 import { caseNotes } from '../src/db/schema/tracker.js'
 import { NOTE_FRAGMENT, ProseService, reportDocument, type ProseRecord } from '../src/prose/prose.service.js'
 import { fragmentFor } from '../src/domain/prose-fields.js'
-import { actingAs } from '../src/db/scope.js'
 
 const STAMP = String(Date.now())
 const DELETED = `a customer's secret pasted by mistake ${STAMP}`
@@ -168,30 +166,6 @@ describe.skipIf(!(await bootable()))('what the stored record keeps of prose', ()
 
     const [row] = await seed.select({ document: reports.document }).from(reports).where(eq(reports.id, report.id))
     expect(Buffer.from(row!.document ?? []).toString('utf8')).not.toContain(REMOVED)
-  })
-
-  it('keeps every section when the flush is asked for by somebody who reaches nothing', async () => {
-    const report = await json<{ id: string }>('POST', `/api/cases/${caseId}/reports`, { label: 'Kept' })
-    const block = await json<{ id: string }>('POST', `/api/cases/${caseId}/report_blocks`, {
-      reportId: report.id,
-      kind: 'written',
-      position: 0,
-    })
-    const address = reportDocument(report.id)
-    const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
-    const client = new Y.Doc()
-    Y.applyUpdate(client, Y.encodeStateAsUpdate(await prose.open(caseId, address)))
-    await typed(prose, address, client, () => {
-      const paragraph = new Y.XmlElement('paragraph')
-      paragraph.insert(0, [new Y.XmlText(KEPT)])
-      fragmentFor(client, block.id).insert(0, [paragraph])
-    })
-
-    await actingAs(randomUUID(), () => harness.app.get(ProseService, { strict: false }).flush(caseId, address))
-    await prose.release(caseId, address)
-
-    const [row] = await seed.select({ document: reports.document }).from(reports).where(eq(reports.id, report.id))
-    expect(Buffer.from(row!.document ?? []).toString('utf8')).toContain(KEPT)
   })
 
   it('keeps nothing typed into a section after it was removed', async () => {

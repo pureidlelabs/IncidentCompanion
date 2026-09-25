@@ -238,22 +238,23 @@ export class ProseChannel {
      * state request even on a filed report so the text can still be read, so a
      * `prose.sync` arrives *after* this and must not put the editor back.
      */
-    if (kind === 'prose.state') {
-      // The states `server/src/domain/prose-state.ts` declares, spelled here
-      // because a server suite runs this file where `@contract` resolves nothing.
-      if (message.state === 'unsaved' || message.state === 'lost') this.unsaved = message.state
-      else if (message.state === 'saved') this.unsaved = null
-      else return
-      for (const listener of [...this.unsavedListeners]) listener()
-      return
-    }
     if (kind === 'prose.refused') {
       this.refusedAt = typeof message.sentAt === 'string' ? message.sentAt : null
       this.refusedBecause = message.reason === 'report-sent' ? 'report-sent' : 'read-only'
+      // The refusal says what became of the words from here on.
+      if (this.refusedBecause === 'report-sent') this.setUnsaved(null)
       this.settle('refused')
       return
     }
     if (this.status === 'refused') return
+
+    if (kind === 'prose.state') {
+      // The states `server/src/domain/prose-state.ts` declares, spelled here
+      // because a server suite runs this file where `@contract` resolves nothing.
+      if (message.state === 'unsaved' || message.state === 'lost') this.setUnsaved(message.state)
+      else if (message.state === 'saved') this.setUnsaved(null)
+      return
+    }
 
     if (kind === 'prose.sync') {
       const bytes = typeof message.update === 'string'
@@ -300,6 +301,11 @@ export class ProseChannel {
       // exchange rather than answering each other for ever.
       if (this.awareness.getStates().size > known) this.announce()
     }
+  }
+
+  private setUnsaved(state: 'unsaved' | 'lost' | null): void {
+    this.unsaved = state
+    for (const listener of [...this.unsavedListeners]) listener()
   }
 
   private announce(): void {

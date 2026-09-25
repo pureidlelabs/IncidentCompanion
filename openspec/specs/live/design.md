@@ -16,7 +16,7 @@
 
 **The identity that stores accepted prose is not a caller.** It serves no request, is named in no session, and reaches per save one record in one case, which somebody who could write it was accepted into. It is the one exception Article III grants, and it holds nothing the article does not name.
 
-**A save names whoever the words were accepted from, whichever process makes it.** Prose arriving from another process is named by the writers the store accepted it from. Where no acceptance names anybody, this process does not store it: the words are the accepting process's to store, and are stored already or can no longer be.
+**A save names whoever the store accepted the words from, whichever process makes it.** Prose arriving from another process is named by the writers the store accepted it from, beside any writer here. Where no acceptance names anybody, this process does not store it: the words are stored already or can no longer be.
 
 **A section's removal is its own attributed act.** Emptying a removed section's prose is stored as whoever removed it and names no writer; the removal's own change row and audit line name them.
 
@@ -100,7 +100,7 @@ The save is recorded in the install's audit, one line per writer, as the collect
 
 **Accepting a word is where reach is decided, and it is decided twice over.** The connection refuses a frame unless the analyst's session still covers it and they still hold write, which the application asks on every frame. The first frame since the last save that changes the document is also recorded as an acceptance, in the store, as that analyst, before the document holds it and before it is measured against a send. The store refuses the acceptance unless they hold write on the case at that moment, so a word the store has no acceptance for is never applied, and a send that seals the report meanwhile refuses or holds the word rather than losing it.
 
-**Every save of words written on this instance runs as the prose role**, whoever is still connected or permitted: the quiet moment, the last reader leaving, a socket closing, shutdown and an analyst asking all store the same way. A save with no writer here names the writers the store holds current acceptances for on that record, the latest accepted last, exactly as the accepting process would, and runs as the prose role under the same policies. It leaves those acceptances to the save that took them. Where the store holds none, it stores nothing and says so in the log. Only a section's removal stores as whoever asks.
+**Every save of words written on this instance runs as the prose role**, whoever is still connected or permitted: the quiet moment, the last reader leaving, a socket closing, shutdown and an analyst asking all store the same way. Every save names the writers the store holds current acceptances for on that record, the latest accepted last, whichever process accepted them, and removes those acceptances in the same act, so one act is named once. A writer here whose acceptance another process's save removed is not named again, and their next accepted frame records a fresh acceptance. Where the store holds none, a save stores nothing and says so in the log. Only a section's removal stores as whoever asks.
 
 **The store, not the code that enters the role, holds each of its boundaries:**
 
@@ -123,7 +123,7 @@ The save is recorded in the install's audit, one line per writer, as the collect
 
 **Deleted prose is not kept, even while it is held.** When the store answers that a record is gone, the document stops retrying and removes the acceptances it held for it.
 
-**Acceptances do not outlive their use.** The save removes the acceptances it stored, in the same act. A document dropped with nothing left to store removes the acceptances it holds. Every save made as the prose role, and every start of the application, removes the acceptances past their lasting, through a store act that removes only those and answers nothing.
+**Acceptances do not outlive their use.** The save removes the acceptances it stored, in the same act. A save refused because the report was sent removes the acceptances it held. A document dropped with nothing left to store removes the acceptances it holds. Every save made as the prose role, and every start of the application, removes the acceptances past their lasting, through a store act that removes only those and answers nothing.
 
 **What the prose role adds beyond a request.** An application that enters it can keep a current acceptance current for the record it names, so that record stays storable, and its accepted writers nameable, for as long as the application keeps doing so. That reaches exactly the records with a live acceptance, and never another record, column or case, nor a record whose every acceptance has lapsed.
 
@@ -135,6 +135,6 @@ A save of words written on this instance and its audit lines are one act. Words 
 
 ## Words held unsaved are said to be
 
-A failed save tells every connection holding the document that its words are unsaved, once; a save that then stores them tells them they are saved; an acceptance found lapsed tells them the words are lost. A connection opening a document whose words are unsaved, or asking again for its state, is told at once. The states are one closed vocabulary both ends read.
+A failed save tells every connection holding the document on this process that its words are unsaved, once; a save that then stores them tells them they are saved; an acceptance found lapsed, or a send that took none of what was written here after it, tells them the words are lost. A connection opening a document whose words are unsaved, or asking again for its state, is told at once. **An install runs one process**, so every connection holding a document is on the process holding its words, and no state crosses between processes. The states are one closed vocabulary, declared once, and a test holds the client to reading every one of them.
 
-The screen draws one notice per document, with the text to copy, and locks nothing. Words given up raise a dialog, once. While words are unsaved, the screen asks before a change of route or an unload takes the analyst away: a connection's end is when the install lets go of a document, and a connection that has ended can be told nothing.
+The screen draws one notice per document, with the text to copy, and locks nothing. Words given up raise a dialog, once, whose emphasised action copies the text. A refusal because the report was sent replaces the notice, since it says what became of the words from then on. While words are unsaved, the screen asks before a change of route or an unload takes the analyst away: a connection's end is when the install lets go of a document, and a connection that has ended can be told nothing.

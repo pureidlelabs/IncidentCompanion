@@ -55,8 +55,9 @@ function Unsaved({ channel }: { channel: ProseChannel }) {
   }, [unsaved])
 
   if (unsaved === null) return null
-  const copy = (
-    <CopyButton value={text} variant="outline">
+  // In a dialog, keeping the words is the emphasised action.
+  const copy = (emphasised: boolean) => (
+    <CopyButton value={text} variant={emphasised ? 'default' : 'outline'}>
       Copy the text
     </CopyButton>
   )
@@ -68,9 +69,9 @@ function Unsaved({ channel }: { channel: ProseChannel }) {
         </AlertTitle>
         <AlertDescription>
           {unsaved === 'lost'
-            ? 'The install held it unsaved for longer than it can, so it will not be stored. What is on screen is the copy that is left.'
+            ? 'The install could not store it and has stopped trying. What is on screen is the copy that is left.'
             : 'The last save of this text failed. The install holds what was written while somebody has it open, and tries again. You can keep writing.'}
-          <div className="mt-2">{copy}</div>
+          <div className="mt-2">{copy(false)}</div>
         </AlertDescription>
       </Alert>
       <Dialog
@@ -82,16 +83,18 @@ function Unsaved({ channel }: { channel: ProseChannel }) {
         <DialogHeader title="This text can no longer be saved" />
         <DialogBody>
           <p className="text-sm">
-            The install held it unsaved for longer than it can, so it will not be stored. Copy it
-            before you leave this screen.
+            The install could not store it and has stopped trying. Copy it before you leave this
+            screen.
           </p>
         </DialogBody>
         <DialogFooter>
-          {copy}
-          <Button onPress={() => setClosed(true)}>Close</Button>
+          <Button variant="outline" onPress={() => setClosed(true)}>
+            Close
+          </Button>
+          {copy(true)}
         </DialogFooter>
       </Dialog>
-      {inDataRouter && <LeaveGuard copy={copy} />}
+      {inDataRouter && <LeaveGuard copy={copy(true)} />}
     </>
   )
 }
@@ -111,11 +114,13 @@ function LeaveGuard({ copy }: { copy: ReactNode }) {
         </p>
       </DialogBody>
       <DialogFooter>
-        {copy}
+        <Button variant="outline" onPress={() => blocker.proceed?.()}>
+          Leave
+        </Button>
         <Button variant="outline" onPress={() => blocker.reset?.()}>
           Stay
         </Button>
-        <Button onPress={() => blocker.proceed?.()}>Leave</Button>
+        {copy}
       </DialogFooter>
     </Dialog>
   )

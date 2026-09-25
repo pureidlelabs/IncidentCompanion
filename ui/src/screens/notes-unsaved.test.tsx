@@ -46,18 +46,35 @@ class Install implements CaseLink {
 let install = new Install()
 const channels = new Map<string, ProseChannel>()
 
+/** Told whenever a channel's status moves, so the screen draws what the channel says. */
+const statusListeners = new Set<() => void>()
+
 vi.mock('@/api/proseSync', async (original) => {
   const real = await original<typeof ProseSync>()
+  const { useSyncExternalStore } = await import('react')
+  const follow = (listener: () => void) => {
+    statusListeners.add(listener)
+    return () => statusListeners.delete(listener)
+  }
   return {
     ...real,
     useProseSync: (_caseId: string, docKey: string) => {
-      if (!docKey) return { channel: null, status: 'ready' as const, settled: true }
-      let channel = channels.get(docKey)
-      if (!channel) {
-        channel = new real.ProseChannel(install, docKey)
+      let channel = docKey ? channels.get(docKey) : undefined
+      if (docKey && !channel) {
+        channel = new real.ProseChannel(install, docKey, {
+          onStatus: () => {
+            for (const listener of [...statusListeners]) listener()
+          },
+        })
         channels.set(docKey, channel)
       }
-      return { channel, status: 'ready' as const, settled: true }
+      // The channel's own status, so a lock it takes reaches the editor; nothing here answers the opening.
+      const status = useSyncExternalStore(follow, () => channel?.status ?? 'ready')
+      return {
+        channel: channel ?? null,
+        status: status === 'opening' ? ('ready' as const) : status,
+        settled: true,
+      }
     },
   }
 })
@@ -162,12 +179,53 @@ describe('a note whose words the install holds unsaved', () => {
     install.says({ type: 'prose.state', field: FIELD, state: 'unsaved' })
 
     await act(() => router.navigate('/elsewhere'))
-    expect(await screen.findByRole('dialog')).toHaveTextContent('Leave with the text unsaved?')
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent('Leave with the text unsaved?')
+    expect(within(dialog).getByRole('button', { name: /Copy the text/ })).toBeVisible()
     expect(router.state.location.pathname).toBe('/notes')
 
     await user.click(screen.getByRole('button', { name: 'Leave' }))
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/elsewhere')
     })
+  })
+
+  it('lets the analyst leave without asking once the words are saved', async () => {
+    const router = draw()
+    install.says({ type: 'prose.state', field: FIELD, state: 'unsaved' })
+    install.says({ type: 'prose.state', field: FIELD, state: 'saved' })
+
+    await act(() => router.navigate('/elsewhere'))
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/elsewhere')
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('holds a closing tab only while the words are unsaved', () => {
+    const unloading = () => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+    draw()
+    expect(unloading()).toBe(false)
+    install.says({ type: 'prose.state', field: FIELD, state: 'unsaved' })
+    expect(unloading()).toBe(true)
+    install.says({ type: 'prose.state', field: FIELD, state: 'saved' })
+    expect(unloading()).toBe(false)
+  })
+
+  it('gives way to the refusal once the report is sent', () => {
+    draw()
+    install.says({ type: 'prose.state', field: FIELD, state: 'unsaved' })
+    install.says({
+      type: 'prose.refused',
+      field: FIELD,
+      reason: 'report-sent',
+      sentAt: '2026-09-25T10:00:00.000Z',
+    })
+    expect(screen.queryByText('Not saved yet')).toBeNull()
+    expect(field().getAttribute('contenteditable')).toBe('false')
   })
 })
