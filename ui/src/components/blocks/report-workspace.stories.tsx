@@ -587,11 +587,11 @@ function manySections() {
  * them. The gaps are what a keyboard user has instead of a shadow-sm following
  * the pointer, so this route needs none of the pointer one's geometry.
  *
- * **Escape at the end, and it is not tidiness.** A drag left open outlives the
- * story: React Aria's drag session is global, so the next story in the same
- * document mounts with its rows inert and every later drag test fails while
- * passing when run alone: `Rearranged` was green alone and red behind this
- * one.
+ * **Escape at the end, even on a failure, and it is not tidiness.** A drag
+ * left open outlives the story: React Aria's drag session is global, so the
+ * next story in the same document mounts with its rows inert and every later
+ * drag test fails while passing when run alone: `Rearranged` was green alone
+ * and red behind this one.
  */
 export const MidDrag: Story = {
   name: 'A section picked up',
@@ -607,14 +607,17 @@ export const MidDrag: Story = {
     grip.focus()
     await userEvent.keyboard('{Enter}')
 
-    // The gaps exist and one of them has the focus, which is what says the
-    // section is up rather than that a button was pressed.
-    await waitFor(async () => {
-      await expect(canvas.getAllByRole('button', { name: /^Insert / }).length).toBeGreaterThan(1)
-    })
-    await expect(document.activeElement?.getAttribute('aria-label') ?? '').toMatch(/^Insert /)
-
-    await userEvent.keyboard('{Escape}')
+    try {
+      // The gaps exist and one of them has the focus, which is what says the
+      // section is up rather than that a button was pressed. The focus lands
+      // a frame after the gaps draw, so both are waited for.
+      await waitFor(async () => {
+        await expect(canvas.getAllByRole('button', { name: /^Insert / }).length).toBeGreaterThan(1)
+        await expect(document.activeElement?.getAttribute('aria-label') ?? '').toMatch(/^Insert /)
+      })
+    } finally {
+      await userEvent.keyboard('{Escape}')
+    }
     await waitFor(async () => {
       await expect(canvas.queryAllByRole('button', { name: /^Insert / })).toHaveLength(0)
     })
