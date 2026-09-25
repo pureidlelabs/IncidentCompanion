@@ -47,7 +47,8 @@ function server(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
   const url = new URL(input instanceof Request ? input.url : input.toString(), 'http://ic.test')
   const method = init?.method ?? 'GET'
   if (method === 'POST') {
-    writes.push({ path: url.pathname, body: JSON.parse(String(init?.body)) as Record<string, unknown> })
+    const body = typeof init?.body === 'string' ? init.body : '{}'
+    writes.push({ path: url.pathname, body: JSON.parse(body) as Record<string, unknown> })
   }
   if (url.pathname === '/api/imports/preview' && method === 'POST') return json(200, PREVIEW)
   if (url.pathname === '/api/imports/case' && method === 'POST') {

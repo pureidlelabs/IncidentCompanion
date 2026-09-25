@@ -65,12 +65,17 @@ function server(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
   const method = init?.method ?? 'GET'
   if (url.pathname === `/api/cases/${CASE}` && method === 'GET') return json(200, kase)
   if (url.pathname === `/api/cases/${CASE}/reports/${DUTCH}` && method === 'PATCH') {
-    const { language } = JSON.parse(String(init?.body)) as { language: string }
+    const { language } = JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as {
+      language: string
+    }
     const reports = kase.reports.map((one) =>
       one.id === DUTCH ? { ...one, language, version: one.version + 1 } : one,
     )
     kase = { ...kase, reports }
-    return json(200, reports.find((one) => one.id === DUTCH))
+    return json(
+      200,
+      reports.find((one) => one.id === DUTCH),
+    )
   }
   if (url.pathname === '/api/report-layouts') {
     const language = url.searchParams.get('lang') ?? ''
