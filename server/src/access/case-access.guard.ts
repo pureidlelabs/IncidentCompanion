@@ -28,7 +28,7 @@ import { routeOf } from '../install-activity/route-of.js'
 import { RANK, ReachService, type Level } from './reach.service.js'
 
 /** What `ParseUUIDPipe` accepts, so the guard and the pipe refuse the same set. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const enough = (held: Level | null, needed: Level): boolean =>
   held !== null && RANK.indexOf(held) >= RANK.indexOf(needed)
@@ -167,11 +167,11 @@ export class CaseAccessGuard implements CanActivate {
       session?: { user?: { id?: string; name?: string; email?: string } }
       headers?: Record<string, unknown>
     }>()
-    const caseId = request.params['caseId']
+    const named = request.params['caseId']
     // A guarded route naming no `caseId` is a wiring fault, so it is a 500
     // rather than a pass - letting it through makes a misspelled parameter a
     // silent no-op.
-    if (!caseId) {
+    if (!named) {
       throw new InternalServerErrorException(
         'This route is guarded as a case route and names no caseId.',
       )
@@ -184,7 +184,9 @@ export class CaseAccessGuard implements CanActivate {
      * and Postgres refused the cast. The pipe is still right; it is simply not
      * the first thing to see the value.
      */
-    if (!UUID.test(caseId)) throw new BadRequestException(`${caseId} is not a case id.`)
+    if (!UUID.test(named)) throw new BadRequestException(`${named} is not a case id.`)
+    // The pipes lower-case it for the handler; this guard runs before them.
+    const caseId = named.toLowerCase()
 
     const userId = request.session?.user?.id ?? request.user?.id
     // A guarded route with no session is a wiring fault in the same way a

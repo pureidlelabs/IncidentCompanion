@@ -20,6 +20,7 @@ import * as encoding from 'lib0/encoding'
 import { Logger } from '@nestjs/common'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket as Client, type WebSocket } from 'ws'
+import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import { readSyncMessage } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
@@ -508,12 +509,15 @@ describe('prose on a report that has been sent', () => {
    */
   it('still relays a caret', async () => {
     const { live, relayed } = await connected(SENT, filed('as filed'))
-    const caret = wire(new Uint8Array([1, 2]))
+    const sender = new Awareness(new Y.Doc())
+    sender.setLocalStateField('user', { name: 'Ada' })
 
-    live.receive({ type: 'prose.awareness', field: FIELD, update: caret })
+    live.receive({ type: 'prose.awareness', field: FIELD, update: wire(encodeAwarenessUpdate(sender, [sender.clientID])) })
     await settle()
 
-    expect(relayed).toEqual([{ type: 'prose.awareness', field: FIELD, update: caret }])
+    const drawn = new Awareness(new Y.Doc())
+    for (const frame of relayed) applyAwarenessUpdate(drawn, Buffer.from(String(frame['update']), 'base64'), null)
+    expect(drawn.getStates().get(sender.clientID)).toEqual({ user: { name: 'Ada' } })
   })
 })
 

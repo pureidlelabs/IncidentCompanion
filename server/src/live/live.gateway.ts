@@ -38,14 +38,16 @@ import type * as Y from 'yjs'
 
 import { actingAs } from '../db/scope.js'
 import { CaseChannel, type Member } from './case-channel.service.js'
+import { Carets } from './carets.js'
 import { ProseService, type ProseRecord, type Writer } from '../prose/prose.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
 import { ReachService } from '../access/reach.service.js'
+import { UUID } from '../access/case-access.guard.js'
 import { onReachChanged } from '../access/reach-changed.js'
 import { attribute } from '../wire/caller-address.js'
 
-const LIVE_PATH = /^\/api\/cases\/([0-9a-f-]{36})\/live$/i
+const LIVE_PATH = /^\/api\/cases\/([^/]+)\/live$/i
 
 /** Why an upgrade was refused. Returned rather than logged, so a test can read it. */
 export type Refusal =
@@ -130,6 +132,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   private readonly admitted = new Map<WebSocket, Admission>()
   /** The frame types each connection has had refused and recorded, so a repeat writes no second line. */
   private readonly refusalsRecorded = new WeakMap<WebSocket, Set<string>>()
+  private readonly carets = new Carets()
   private sweep: NodeJS.Timeout | undefined
   private readonly stopListeningForSessionEnds: () => void
   private readonly stopListeningForReachChanges: () => void
@@ -303,7 +306,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
       // partition -- and which a collector receives whole while the activity
       // pane draws no attributes at all, so on the screen it is gone until
       // that pane grows a column. -> #541, #544
-      const asked = LIVE_PATH.exec(request.url ?? '')?.[1]
+      const asked = LIVE_PATH.exec(request.url ?? '')?.[1]?.match(UUID)?.[0]
       void this.activity.record({
         event: 'live_refused',
         outcome: 'failure',
@@ -342,11 +345,12 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     | { refused: Refusal }
     | { refused: null; caseId: string; session: { id: string; name: string; held: boolean; sessionId?: string } }
   > {
-    const match = LIVE_PATH.exec(request.url ?? '')
-    if (!match) return { refused: 'no-such-path' }
+    const named = LIVE_PATH.exec(request.url ?? '')?.[1]
+    if (!named || !UUID.test(named)) return { refused: 'no-such-path' }
     if (!this.sameOrigin(request)) return { refused: 'cross-origin' }
 
-    const caseId = match[1]!
+    // One spelling from here on: every key after admission is this string.
+    const caseId = named.toLowerCase()
     const session = await this.sessionFor(request.headers)
     if (!session?.sessionId) return { refused: 'unauthenticated' }
     // Before the case lookup, so a held account learns nothing about which
@@ -464,6 +468,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
       if (gone) return
       gone = true
       this.admitted.delete(live)
+      this.carets.release(live)
       order = order
         .then(async () => {
           await ready
@@ -610,7 +615,8 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   /**
    * One prose frame: sync or awareness.
    *
-   * **Awareness is relayed and never interpreted** - carets are not stored.
+   * **Awareness is relayed as the connection's own carets, named for its
+   * analyst** -> `Carets`. Carets are not stored.
    * A sync frame is applied to the server's own document first, since that
    * document is the record; the answer goes to the sender and the update to
    * everyone else.
@@ -630,9 +636,11 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   ): Promise<void> {
     if (type === 'prose.awareness') {
       // Relayed on the field alone: an awareness frame for a field this
-      // connection never opened is still somebody's caret, and refusing it
-      // would need the roster this deliberately does not keep.
-      this.channel.prose(member.caseId, { type, field, update }, member.sessionId)
+      // connection never opened is still somebody's caret.
+      const vouched = this.carets.vouch(member.caseId, live, member.userId, member.username, Buffer.from(update, 'base64'))
+      if (vouched) {
+        this.channel.prose(member.caseId, { type, field, update: Buffer.from(vouched).toString('base64') }, member.sessionId)
+      }
       return
     }
 
