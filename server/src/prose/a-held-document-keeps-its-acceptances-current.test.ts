@@ -210,5 +210,68 @@ describe.skipIf(!appPool || !ownerPool || !hasConcurrentConnections())(
       expect(await settles(() => fresh(note))).toBe(true)
       saves.mockRestore()
     })
+
+    /** Ages the note's acceptances past lasting, as a store refusing for over a day would. */
+    const lapsed = (note: ProseRecord) =>
+      asOwner!.execute(
+        sql`update prose_acceptances set accepted_at = now() - ${ACCEPTANCE_LASTS}::interval - interval '1 hour' where record_id = ${note.id}`,
+      )
+
+    /** Every state the service tells about `note`. */
+    async function told(caseId: string, note: ProseRecord, prose: ProseService): Promise<string[]> {
+      const states: string[] = []
+      await prose.watch(caseId, note, (state) => states.push(state))
+      return states
+    }
+
+    it('tells the words lost when their acceptance lapsed and was swept before the next save, and stores what the writer types after', async () => {
+      const { caseId, note, prose } = await aFailingNote()
+      const states = await told(caseId, note, prose)
+      await lapsed(note)
+      await prose.sweepExpiredAcceptances()
+      await lift()
+      await prose.flush(caseId, note)
+      expect(states).toContain('lost')
+
+      await actingAs(writer, () =>
+        prose.apply(caseId, note, typed(`again ${writer}`), 'a-socket', { id: writer, label: writer, headers: {} }),
+      )
+      await prose.flush(caseId, note)
+      expect(states.at(-1)).toBe('saved')
+      await prose.release(caseId, note)
+    })
+
+    it('tells the words lost when the keeper finds their acceptance lapsed and swept', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+      const { caseId, note, prose } = await aFailingNote()
+      const states = await told(caseId, note, prose)
+      const saves = vi.spyOn(prose, 'flush').mockResolvedValue()
+      await lapsed(note)
+      await prose.sweepExpiredAcceptances()
+
+      await runFor(TWO_HOURS)
+
+      expect(await settles(() => Promise.resolve(states.includes('lost')))).toBe(true)
+      saves.mockRestore()
+    })
+
+    it('tells nothing lost when the keeper fires during a save that stores, or after it', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+      const { caseId, note, prose } = await aFailingNote()
+      const states = await told(caseId, note, prose)
+      await lift()
+      const locker = await ownerPool!.connect()
+      await locker.query('begin')
+      await locker.query('select 1 from casenotes where id = $1 for update', [note.id])
+      const saving = prose.flush(caseId, note)
+      await runFor(TWO_HOURS)
+      await locker.query('commit')
+      locker.release()
+      await saving
+      await runFor(TWO_HOURS)
+
+      expect(states).toEqual(['unsaved', 'saved'])
+      await prose.release(caseId, note)
+    })
   },
 )

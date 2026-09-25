@@ -161,6 +161,19 @@ A refusal is a reference entry for somebody writing a client. It names the condi
 - WHEN a write it makes would depend on what that customer holds
 - THEN the answer is the same whatever that customer holds
 
+#### Scenario: A caller removes something that is not there
+
+- GIVEN a record that does not exist, and one in another case
+- WHEN a caller removes either through a case it writes
+- THEN both are refused as not there rather than as somebody having written first
+- AND the two refusals are identical
+
+#### Scenario: A caller removes something another has changed
+
+- GIVEN a record changed since the caller read it
+- WHEN the caller removes it at the version it read
+- THEN it is refused as somebody having written first, naming the version the record holds
+
 ### Requirement: What a request costs is bounded before it runs
 
 The work a single request can demand MUST be bounded, and the bound MUST be enforced before the work starts rather than by noticing it took too long.

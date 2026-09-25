@@ -107,8 +107,7 @@ describe.skipIf(!db || !hasConcurrentConnections())('an analyst removing somethi
 
       expect(made.id, 'nothing was created, so nothing is being removed').toBeDefined()
 
-      const removed = await service.remove(kind.def, caseId, made.id, made.version, ANALYST)
-      expect(removed, 'the service reported that it removed nothing').toBe(true)
+      await service.remove(kind.def, caseId, made.id, made.version, ANALYST)
 
       const idColumn = (kind.def.table as unknown as { id: PgColumn }).id
       const left = await seed!.select().from(kind.def.table).where(eq(idColumn, made.id))

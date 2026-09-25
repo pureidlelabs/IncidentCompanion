@@ -476,6 +476,7 @@ async function connected(
     resolve: () => Promise.resolve({ table: 'reports', id: REPORT }),
     open: () => Promise.resolve(document),
     release: () => Promise.resolve(),
+    watch: () => Promise.resolve(() => undefined),
     apply: (_caseId: string, _address: unknown, frame: Uint8Array, origin: unknown) =>
       Promise.resolve(refusing ? { refused: refusing } : { reply: codec.applySync(document, frame, origin) }),
     frameUpdate: codec.frameUpdate.bind(codec),
@@ -1249,6 +1250,7 @@ describe('two prose frames for one field arriving together', () => {
       isStateRequest: codec.isStateRequest.bind(codec),
       addsNothing: codec.addsNothing.bind(codec),
       hello: codec.hello.bind(codec),
+      watch: () => Promise.resolve(() => undefined),
     }
     const gateway = new LiveGateway(
       channel as unknown as CaseChannel,
@@ -1334,6 +1336,7 @@ describe('frames that arrive while the socket is still joining', () => {
       isStateRequest: codec.isStateRequest.bind(codec),
       addsNothing: codec.addsNothing.bind(codec),
       hello: codec.hello.bind(codec),
+      watch: () => Promise.resolve(() => undefined),
     }
     const reached = { customerId: 'a-default-customer', level: 'write' as const }
     const levels = {

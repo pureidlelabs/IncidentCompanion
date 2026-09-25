@@ -379,3 +379,75 @@ def test_a_story_counts_only_where_drawn_surface_names_it_for_its_capability(
     assert certify.certified(run, "report", ident) == f"cites {ident}, {below}"
     assert certify.certified(run, "cases", renamed) == f"cites {renamed}, {below}"
     assert certify.certified(run, "cases", stubbed) == f"cites {stubbed}, {below}"
+
+
+RENDERS = "import { render } from '@testing-library/react'\nimport { Door } from '@/app/case/Door'\n"
+CLIENT_CASE = "ui/src/app/case/door.test.tsx"
+BELOW = "which never reached the product through its entry point"
+
+
+def client_case(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, body: str, path: str = CLIENT_CASE) -> str:
+    """A passing client case in a file holding `body`, laid out where certify reads it."""
+    lay_out(tmp_path, {path: body})
+    monkeypatch.setattr(certify, "REPO_ROOT", tmp_path)
+    return f"{path} :: the door > opens"
+
+
+def client_run(*idents: str) -> certify.Run:
+    run = certify.Run()
+    for ident in idents:
+        run.cases[ident] = certify.Case("client", ident.split(" :: ")[0], "passed")
+    return run
+
+
+@pytest.mark.parametrize(
+    "stub",
+    [
+        "vi.mock('@/api/case', () => ({ useCase: () => ({ data: DOOR }) }))\n",
+        "vi.mock('../../api/case', () => ({ useCase: () => ({ data: DOOR }) }))\n",
+        'vi.doMock("@/api/useSession", () => ({}))\n',
+        "vi.mock(import('@/api/case'), () => ({}))\n",
+        "vi.mock('@/lib/useGround', () => ({ useGround: () => DOOR }))\n",
+    ],
+)
+def test_a_client_case_that_replaces_the_request_layer_or_a_data_hook_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stub: str
+) -> None:
+    ident = client_case(tmp_path, monkeypatch, RENDERS + stub)
+
+    assert certify.certified(client_run(ident), "cases", ident) == f"cites {ident}, {BELOW}"
+
+
+def test_a_client_case_whose_server_is_modelled_at_the_network_counts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    network = (
+        "import { setTransport } from '@/api/transport'\n"
+        "vi.mock('@/components/ui/clipboard', () => ({}))\n"
+        "setTransport(server)\n"
+    )
+    ident = client_case(tmp_path, monkeypatch, RENDERS + network)
+
+    assert certify.certified(client_run(ident), "cases", ident) is None
+
+
+def test_a_client_case_drawing_a_screen_from_props_it_built_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    body = "import { render } from '@testing-library/react'\nimport { DoorScreen } from './door'\n"
+    ident = client_case(tmp_path, monkeypatch, body, "ui/src/screens/door.test.tsx")
+
+    assert certify.certified(client_run(ident), "cases", ident) == f"cites {ident}, {BELOW}"
+
+
+def test_a_client_case_that_stubs_the_server_counts_only_where_drawn_surface_names_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ident = client_case(tmp_path, monkeypatch, RENDERS + "vi.mock('@/api/case', () => ({}))\n")
+    renamed = f"{ident} wide"
+    monkeypatch.setattr(certify, "DRAWN_SURFACE", {(ident, "cases"): "the door being drawn is the scenario"})
+    run = client_run(ident, renamed)
+
+    assert certify.certified(run, "cases", ident) is None
+    assert certify.certified(run, "report", ident) == f"cites {ident}, {BELOW}"
+    assert certify.certified(run, "cases", renamed) == f"cites {renamed}, {BELOW}"

@@ -114,11 +114,11 @@ describe.skipIf(!db)('a revocation reaches a session already open', () => {
   })
 
   it.each([
-    ['a membership granted', async (s: GroupsService) => s.grant(sector, ANALYST, 'read')],
-    ['a level changed', async (s: GroupsService) => s.grant(sector, ANALYST, 'delete')],
-    ['a membership revoked', async (s: GroupsService) => s.revoke(sector, ANALYST)],
-  ])('announces the analyst on %s', async (_what, act) => {
-    await service.grant(sector, ANALYST, 'read')
+    ['a membership granted', false, async (s: GroupsService) => s.grant(sector, ANALYST, 'read')],
+    ['a level changed', true, async (s: GroupsService) => s.grant(sector, ANALYST, 'delete')],
+    ['a membership revoked', true, async (s: GroupsService) => s.revoke(sector, ANALYST)],
+  ])('announces the analyst on %s', async (_what, member, act) => {
+    if (member) await service.grant(sector, ANALYST, 'read')
     told.length = 0
 
     await act(service)

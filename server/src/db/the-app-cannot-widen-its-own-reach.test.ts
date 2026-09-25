@@ -17,17 +17,34 @@
  * is actually run and its refusal is the assertion.
  */
 import { randomUUID } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 
-import { eq, inArray, sql } from 'drizzle-orm'
+import { eq, inArray, is, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
+import { PgTable } from 'drizzle-orm/pg-core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { caseNotes, cases, customers, proseAcceptances, user } from './schema/index.js'
+import {
+  caseNotes,
+  cases,
+  changeFeed,
+  customers,
+  groupCustomers,
+  groupMembers,
+  groups,
+  proseAcceptances,
+  user,
+} from './schema/index.js'
+import * as schema from './schema/index.js'
+import { grants } from './schema/grants.js'
 import { ACCEPTANCE_LASTS } from './schema/scoped.js'
+import { CASE_WRITABLE } from '../domain/case.js'
 import { CHANNEL_OF } from './schema/install-activity.js'
 import { OCSF_VERSION, classify } from '../install-activity/ocsf.js'
 import { retentionClassOf } from '../install-activity/retention-class.js'
 import { ProseService } from '../prose/prose.service.js'
+import { defaultCustomer } from '../customers/customers.service.js'
 import { asRole, hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -570,5 +587,247 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by
     } finally {
       await seed().delete(proseAcceptances).where(eq(proseAcceptances.writerId, gone))
     }
+  })
+})
+
+/**
+ * **What the application keeps as a record, and what only the store may change.**
+ * A writer of a case adds to its change feed and never rewrites it, and moves
+ * the case to another customer only through `ic_move_case`.
+ */
+describe.skipIf(!app || !hasConcurrentConnections())('what a writer of a case cannot rewrite', () => {
+  const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
+  /** The administrator, on the suite's own database rather than the one its URL names. */
+  const adminPool = (() => {
+    if (!URL_ || !process.env.ADMIN_DATABASE_URL) return null
+    const at = new URL(process.env.ADMIN_DATABASE_URL)
+    at.pathname = new URL(URL_).pathname
+    return openTestPool(at.toString())
+  })()
+  const seed = () => drizzle({ client: seedPool! })
+  const stamp = `${String(process.pid)}-${String(Date.now())}`
+  const [writer, other, admin] = ['writer', 'other', 'admin'].map((who) => `record-${who}-${stamp}`) as [
+    string,
+    string,
+    string,
+  ]
+  let owner = ''
+  let elsewhere = ''
+  let fallback = ''
+  let kase = ''
+
+  /** Runs `statement` as the application with `principal` asking in `scope`; the rows it touched, or its SQLSTATE. */
+  async function asApp(principal: string, statement: ReturnType<typeof sql>, scope = kase): Promise<number | string> {
+    try {
+      return await app!.transaction(async (tx) => {
+        await tx.execute(
+          sql`select set_config('app.case_id', ${scope}, true), set_config('app.principal', ${principal}, true)`,
+        )
+        return (await tx.execute(statement)).rowCount ?? 0
+      })
+    } catch (error) {
+      for (let at: unknown = error; at instanceof Object; at = (at as { cause?: unknown }).cause) {
+        const code = (at as { code?: unknown }).code
+        if (typeof code === 'string') return code
+      }
+      throw error
+    }
+  }
+
+  /**
+   * The same, with `grant` given to the app role for the transaction alone, so
+   * a refusal that lasts is the store's and not the missing privilege's.
+   */
+  async function asAppGranted(grant: string, principal: string, statement: string): Promise<number | string> {
+    const client = await adminPool!.connect()
+    try {
+      await client.query('begin')
+      await client.query(grant)
+      await client.query('set local role ic_app')
+      await client.query(`select set_config('app.case_id', $1, true), set_config('app.principal', $2, true)`, [
+        kase,
+        principal,
+      ])
+      return await client.query(statement).then(
+        (result) => result.rowCount ?? 0,
+        (error: { code?: string }) => String(error.code),
+      )
+    } finally {
+      await client.query('rollback')
+      client.release()
+    }
+  }
+
+  const feedOf = async (id: string) =>
+    (await seed().select().from(changeFeed).where(eq(changeFeed.caseId, id)).orderBy(changeFeed.seq)).map(
+      (row) => `${row.entity}:${String(row.actorId)}`,
+    )
+
+  const customerOf = async (id: string) =>
+    (await seed().select({ at: cases.customerId }).from(cases).where(eq(cases.id, id)))[0]?.at
+
+  beforeAll(async () => {
+    await seed()
+      .insert(user)
+      .values(
+        [writer, other, admin].map((id) => ({
+          id,
+          name: id,
+          email: `${id}@example.invalid`,
+          emailVerified: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          role: id === admin ? 'admin' : 'analyst',
+        })),
+      )
+    fallback = (await defaultCustomer(seed())).id
+    ;[owner, elsewhere] = (
+      await seed()
+        .insert(customers)
+        .values([{ name: `Owner ${stamp}` }, { name: `Elsewhere ${stamp}` }])
+        .returning()
+    ).map((one) => one.id) as [string, string]
+    const [group] = await seed().insert(groups).values({ name: `Writers ${stamp}` }).returning()
+    await seed()
+      .insert(groupCustomers)
+      .values([owner, elsewhere].map((customerId) => ({ groupId: group!.id, customerId })))
+    await seed().insert(groupMembers).values({ groupId: group!.id, userId: writer, level: 'write' })
+    kase = (await seed().insert(cases).values({ title: 'Attributed', customerId: owner }).returning())[0]!.id
+    await seed()
+      .insert(changeFeed)
+      .values(
+        ['cases', 'casenotes'].map((entity) => ({
+          caseId: kase,
+          entity,
+          entityId: kase,
+          op: 'insert' as const,
+          version: 1,
+          actorId: writer,
+        })),
+      )
+  })
+
+  afterAll(async () => {
+    await seed().delete(cases).where(eq(cases.id, kase))
+    await seed().delete(groups).where(eq(groups.name, `Writers ${stamp}`))
+    await seed().delete(customers).where(inArray(customers.id, [owner, elsewhere]))
+    await seed().delete(user).where(inArray(user.id, [writer, other, admin]))
+    await seedPool?.end()
+    await adminPool?.end()
+  })
+
+  it('adds to the change feed, and cannot rename who made a change or remove one', async () => {
+    expect({
+      appended: await asApp(
+        writer,
+        sql`insert into change_feed (case_id, entity, entity_id, op, version, actor_id) values (${kase}, 'systems', ${kase}, 'insert', 1, ${writer})`,
+      ),
+      renamed: await asApp(writer, sql`update change_feed set actor_id = ${other} where case_id = ${kase}`),
+      removed: await asApp(writer, sql`delete from change_feed where case_id = ${kase}`),
+    }).toEqual({ appended: 1, renamed: '42501', removed: '42501' })
+    expect(await feedOf(kase)).toEqual([`cases:${writer}`, `casenotes:${writer}`, `systems:${writer}`])
+  })
+
+  it('rewrites and removes no change feed entry even holding the privilege to', async () => {
+    const granted = (statement: string) =>
+      asAppGranted('grant update, delete on change_feed to ic_app', writer, statement)
+    expect({
+      renamed: await granted(`update change_feed set actor_id = '${other}' where case_id = '${kase}'`),
+      removed: await granted(`delete from change_feed where case_id = '${kase}'`),
+    }).toEqual({ renamed: 0, removed: 0 })
+  })
+
+  it('moves no case to another customer by an ordinary write, even holding the privilege to', async () => {
+    const granted = (statement: string) => asAppGranted('grant update on cases to ic_app', writer, statement)
+    expect({
+      toTheDefault: await granted(`update cases set customer_id = '${fallback}' where id = '${kase}'`),
+      toNone: await granted(`update cases set customer_id = null where id = '${kase}'`),
+      toAnother: await granted(`update cases set customer_id = '${elsewhere}' where id = '${kase}'`),
+      unchanged: await granted(`update cases set customer_id = customer_id where id = '${kase}'`),
+    }).toEqual({ toTheDefault: '42501', toNone: '42501', toAnother: '42501', unchanged: 1 })
+  })
+
+  it('keeps these privileges when the roles are provisioned again after the schema', async () => {
+    const roles = await readFile(fileURLToPath(new URL('../../../docker/db/roles.sql', import.meta.url)), 'utf8')
+    const client = await adminPool!.connect()
+    try {
+      await client.query('begin')
+      await client.query(roles)
+      const { rows } = await client.query<Record<string, boolean>>(`select
+        has_table_privilege('ic_app', 'change_feed', 'UPDATE') as "feedUpdate",
+        has_table_privilege('ic_app', 'change_feed', 'DELETE') as "feedDelete",
+        has_table_privilege('ic_app', 'change_feed', 'INSERT') as "feedInsert",
+        has_column_privilege('ic_app', 'cases', 'customer_id', 'UPDATE') as "customer",
+        has_column_privilege('ic_app', 'cases', 'is_demo', 'UPDATE') as "isDemo",
+        has_column_privilege('ic_app', 'cases', 'title', 'UPDATE') as "title",
+        has_table_privilege('ic_seed', 'prose_acceptances', 'UPDATE') as "acceptanceBySeeder",
+        has_table_privilege('ic_seed', 'install_activity', 'TRUNCATE') as "truncateBySeeder"`)
+      expect(rows[0]).toEqual({
+        feedUpdate: false,
+        feedDelete: false,
+        feedInsert: true,
+        customer: false,
+        isDemo: false,
+        title: true,
+        acceptanceBySeeder: false,
+        truncateBySeeder: false,
+      })
+    } finally {
+      await client.query('rollback')
+      client.release()
+    }
+  })
+
+  it('takes back on the next push what was granted to everybody', async () => {
+    const tables = Object.values(schema as Record<string, unknown>).filter((value): value is PgTable => is(value, PgTable))
+    const client = await adminPool!.connect()
+    try {
+      await client.query('begin')
+      await client.query('grant update on cases to public')
+      await client.query('grant update on change_feed to public')
+      for (const statement of grants(CASE_WRITABLE, tables)) await client.query(statement)
+      const { rows } = await client.query<Record<string, boolean>>(`select
+        has_column_privilege('ic_app', 'cases', 'customer_id', 'UPDATE') as "customer",
+        has_table_privilege('ic_app', 'change_feed', 'UPDATE') as "feed"`)
+      expect(rows[0]).toEqual({ customer: false, feed: false })
+    } finally {
+      await client.query('rollback')
+      client.release()
+    }
+  })
+
+  it('sets nothing a case is made with or marked by', async () => {
+    const set = (assignment: ReturnType<typeof sql>) =>
+      asApp(writer, sql`update cases set ${assignment} where id = ${kase}`)
+    expect({
+      isDemo: await set(sql`is_demo = true`),
+      createdBy: await set(sql`created_by = ${other}`),
+      createdAt: await set(sql`created_at = now() - interval '1 year'`),
+      id: await set(sql`id = gen_random_uuid()`),
+    }).toEqual({ isDemo: '42501', createdBy: '42501', createdAt: '42501', id: '42501' })
+  })
+
+  it('cannot return an attributed case to the default customer, or to none', async () => {
+    expect({
+      toTheDefault: await asApp(writer, sql`update cases set customer_id = ${fallback} where id = ${kase}`),
+      toNone: await asApp(writer, sql`update cases set customer_id = null where id = ${kase}`),
+      throughTheMove: await asApp(writer, sql`select ic_move_case(${kase}, ${fallback})`),
+    }).toEqual({ toTheDefault: '42501', toNone: '42501', throughTheMove: 1 })
+    expect(await customerOf(kase)).toBe(owner)
+  })
+
+  it('moves the case to another customer through the store, and still edits the rest of it', async () => {
+    expect(await asApp(writer, sql`select ic_move_case(${kase}, ${elsewhere})`)).toBe(1)
+    expect(await customerOf(kase)).toBe(elsewhere)
+    expect(await asApp(writer, sql`update cases set title = 'Renamed' where id = ${kase}`)).toBe(1)
+  })
+
+  it('takes its change feed with it when the case is deleted', async () => {
+    const [open] = await seed().insert(cases).values({ title: 'Deleted', customerId: fallback }).returning()
+    await seed()
+      .insert(changeFeed)
+      .values({ caseId: open!.id, entity: 'cases', entityId: open!.id, op: 'insert', version: 1, actorId: admin })
+    expect(await asApp(admin, sql`delete from cases where id = ${open!.id}`, open!.id)).toBe(1)
+    expect(await feedOf(open!.id)).toEqual([])
   })
 })

@@ -114,6 +114,19 @@ export class ProseChannel {
   refusedBecause: 'read-only' | 'report-sent' | null = null
 
   /**
+   * Whether the install holds this document's words unsaved (`unsaved`), or
+   * has given them up (`lost`), as it last said. Null once a save stores them.
+   */
+  unsaved: 'unsaved' | 'lost' | null = null
+  private readonly unsavedListeners = new Set<() => void>()
+
+  /** Calls `listener` whenever `unsaved` changes. Returns what stops it. */
+  readonly watchUnsaved = (listener: () => void): (() => void) => {
+    this.unsavedListeners.add(listener)
+    return () => this.unsavedListeners.delete(listener)
+  }
+
+  /**
    * **Public because `CollaborationCaret` has to be handed the same object.**
    *
    * Its ProseMirror plugin does `awareness.setLocalStateField("user",
@@ -228,10 +241,20 @@ export class ProseChannel {
     if (kind === 'prose.refused') {
       this.refusedAt = typeof message.sentAt === 'string' ? message.sentAt : null
       this.refusedBecause = message.reason === 'report-sent' ? 'report-sent' : 'read-only'
+      // The refusal says what became of the words from here on.
+      if (this.refusedBecause === 'report-sent') this.setUnsaved(null)
       this.settle('refused')
       return
     }
     if (this.status === 'refused') return
+
+    if (kind === 'prose.state') {
+      // The states `server/src/domain/prose-state.ts` declares, spelled here
+      // because a server suite runs this file where `@contract` resolves nothing.
+      if (message.state === 'unsaved' || message.state === 'lost') this.setUnsaved(message.state)
+      else if (message.state === 'saved') this.setUnsaved(null)
+      return
+    }
 
     if (kind === 'prose.sync') {
       const bytes = typeof message.update === 'string'
@@ -278,6 +301,11 @@ export class ProseChannel {
       // exchange rather than answering each other for ever.
       if (this.awareness.getStates().size > known) this.announce()
     }
+  }
+
+  private setUnsaved(state: 'unsaved' | 'lost' | null): void {
+    this.unsaved = state
+    for (const listener of [...this.unsavedListeners]) listener()
   }
 
   private announce(): void {

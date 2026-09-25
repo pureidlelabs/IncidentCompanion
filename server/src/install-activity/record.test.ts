@@ -140,7 +140,7 @@ describe.skipIf(!db)('the install audit log', () => {
    * so the two policies above are worth nothing on their own: a role holding
    * `TRUNCATE ON ALL TABLES` empties the log in one statement while being
    * refused a single-row delete. What stops it is the missing grant in
-   * `docker/db/roles.sql`, which is why this asserts on an error rather than
+   * `src/db/schema/grants.ts`, which is why this asserts on an error rather than
    * on a row count - a refused TRUNCATE raises.
    */
   it('refuses to let the seeder truncate the log', async () => {
