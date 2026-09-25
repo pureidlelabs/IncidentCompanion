@@ -55,6 +55,7 @@ import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
 import { actingAs, principalNow, unattended, withCase, type Executor } from '../db/scope.js'
 import { fragmentFor } from '../domain/prose-fields.js'
+import { recordInstallActivity } from '../install-activity/record.js'
 
 /**
  * The one fragment a note's document holds.
@@ -176,8 +177,8 @@ export interface Writer {
   readonly headers: IncomingHttpHeaders
 }
 
-/** Told once a flush has stored what `writers` wrote. */
-export type Saved = (caseId: string, record: ProseRecord, writers: readonly Writer[]) => void
+/** Told once a flush has stored, and recorded in the install's audit, what somebody wrote. */
+export type Saved = (caseId: string, record: ProseRecord) => void
 
 /** What a connection's frame is answered with. */
 export type Applied = { refused: Date } | { reply: Uint8Array | null }
@@ -677,7 +678,7 @@ export class ProseService implements OnApplicationShutdown {
    * since it was last stored and whom the store still lets write it, or else as
    * whoever is asking, or else, where no writer's account remains, as the
    * install. `updated_by` names the latest who wrote, and everyone
-   * who wrote gets a feed row in the same transaction. Then tells the `onSaved` listener.
+   * who wrote gets a feed row and an audit line in the same transaction. Then tells the `onSaved` listener.
    * Resolves once every flush queued before it has run too. Public so a test
    * can force it.
    *
@@ -751,6 +752,18 @@ export class ProseService implements OnApplicationShutdown {
             })),
           )
         }
+        for (const writer of writers) {
+          const recorded = await recordInstallActivity(tx, {
+            event: 'api_called',
+            outcome: 'success',
+            actor: { id: writer.id, label: writer.label },
+            target: `live prose.sync ${address.table}`,
+            detail: { case: caseId, record: address.id },
+            headers: writer.headers,
+          })
+          // The words are not stored where the line saying who wrote them is not.
+          if (!recorded) throw new Error(`the audit refused the prose of ${recordOf(address)}`)
+        }
         return true
       })
       if (pruned) {
@@ -771,7 +784,7 @@ export class ProseService implements OnApplicationShutdown {
         stored = await unattended(() => write(install))
       }
       if (stored) {
-        if (writers.length > 0) this.saved?.(caseId, address, writers)
+        if (writers.length > 0) this.saved?.(caseId, address)
         return
       }
       throw new Error('the store took it from nobody who wrote it, or its row is gone')

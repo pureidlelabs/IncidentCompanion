@@ -8,4 +8,4 @@
 
 **Stopping the application ends its connections before it stops listening, and waits for saves already under way.** An open connection holds the listener open, so ending them last never ends them; and a save started by the last reader leaving is finished before the store closes.
 
-**An announcement reads who wrote from the account**, by the same name the case's record of changes shows, so an analyst outside the room is named and one whose account is gone is not.
+**A save and its audit lines are one act.** Words are not stored where the lines naming their writers cannot be written, and neither lands without the other, whichever path made the save.

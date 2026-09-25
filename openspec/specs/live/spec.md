@@ -124,8 +124,6 @@ What is delivered MUST be enough to know what to re-read and no more. The change
 
 This is what keeps one boundary rather than two. A connection that carried case content would be a second place where reach is decided, and it is the place with no guards.
 
-An announcement MUST name who wrote as the case's record of changes names them, whether or not they are on the case, and MUST name nobody where their account is gone.
-
 #### Scenario: Another analyst writes
 
 - GIVEN two analysts with the same case open
@@ -144,18 +142,6 @@ An announcement MUST name who wrote as the case's record of changes names them, 
 - GIVEN a screen told that something changed
 - WHEN it asks for the new state
 - THEN that request is subject to every check any other request is
-
-#### Scenario: Another analyst writes from outside the case
-
-- GIVEN an analyst with a case open
-- WHEN another analyst who does not have it open writes to it
-- THEN the announcement names the writer by their name
-
-#### Scenario: A writer whose account is gone
-
-- GIVEN an analyst with a case open
-- WHEN a write is saved whose writer's account is gone
-- THEN the announcement names nobody
 
 ### Requirement: Written prose is edited together, not saved over
 

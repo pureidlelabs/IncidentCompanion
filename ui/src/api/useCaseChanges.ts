@@ -126,8 +126,6 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
 export interface CaseChanged {
   /** The tables that moved, or `null` for "assume everything did". */
   scopes: string[] | null
-  /** Who wrote it. Not used to skip -- `useCaseChanges` says why. */
-  by: string
 }
 
 export function readChange(message: Record<string, unknown>): CaseChanged | null {
@@ -135,7 +133,6 @@ export function readChange(message: Record<string, unknown>): CaseChanged | null
   const scopes = message.scopes
   return {
     scopes: Array.isArray(scopes) ? scopes.filter((s) => typeof s === 'string') : null,
-    by: typeof message.by === 'string' ? message.by : '',
   }
 }
 

@@ -47,7 +47,7 @@ export class CaseCustomerController {
     @Caller() caller: Caller,
   ): Promise<{ done: true; from: string | null }> {
     const { customerId } = attributeSchema.parse(body)
-    const { from, title } = await this.cases.attribute(caseId, customerId, caller.session.user.id)
+    const { from, title } = await this.cases.attribute(caseId, customerId)
 
     await this.activity.caseAttributed(caller, caseId, title, { from, to: customerId })
     return { done: true, from }

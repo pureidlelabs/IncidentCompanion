@@ -8,11 +8,6 @@
  * nothing - the row version does that.
  */
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
-
-import { DATABASE } from '../db/db.module.js'
-import type { Database } from '../db/client.js'
-import { user } from '../db/schema/auth.js'
 
 import { PresenceStore, type PresenceCoordinator, type StoredMember } from './presence.store.js'
 
@@ -83,10 +78,7 @@ export class CaseChannel {
    * *declared dependency* stays the eight methods this class actually uses,
    * which is what lets a test fake be checked rather than cast.
    */
-  constructor(
-    @Inject(PresenceStore) private readonly store: PresenceCoordinator,
-    @Inject(DATABASE) private readonly db: Database,
-  ) {}
+  constructor(@Inject(PresenceStore) private readonly store: PresenceCoordinator) {}
 
   async join(member: Member): Promise<void> {
     const room = this.local.get(member.caseId) ?? new Set<Member>()
@@ -162,16 +154,12 @@ export class CaseChannel {
    * and two tabs of one analyst are two writers. One redundant refetch of data
    * that is already fresh is the cost the client documents as accepted.
    *
-   * **`by` is a name, not an id.** The client puts it on screen, and an
-   * account id there is an internal identifier shown to an analyst. It is
-   * read from the account, and empty where the account is gone.
-   *
    * **`scopes` is `string[]` and deliberately not the `Scope` union.** The
    * socket is transport: `architecture.test.ts` forbids `live` importing
    * `domain`, because the channel knows about delivery and nothing about what
    * a scope means. The vocabulary is enforced at the callers, which own it.
    */
-  announce(caseId: string, scopes: readonly string[], actorId: string): void {
+  announce(caseId: string, scopes: readonly string[]): void {
     /**
      * **Nothing here may reach the caller, synchronously or otherwise.** The
      * write has already committed: an unhandled rejection exits the process on
@@ -179,22 +167,9 @@ export class CaseChannel {
      * already saved. A missed repaint is the right failure - the next read
      * corrects it. -> `test/degradation`
      */
-    this.publishAnnounce(caseId, scopes, actorId).catch((error: unknown) => {
+    this.store.publish(caseId, JSON.stringify({ type: 'case.changed', scopes })).catch((error: unknown) => {
       this.log.warn(`could not announce a write on ${caseId}: ${String(error)}`)
     })
-  }
-
-  private async publishAnnounce(
-    caseId: string,
-    scopes: readonly string[],
-    actorId: string,
-  ): Promise<void> {
-    const [account] = await this.db
-      .select({ name: user.name, email: user.email })
-      .from(user)
-      .where(eq(user.id, actorId))
-    const by = account ? account.name.trim() || account.email || actorId : ''
-    await this.store.publish(caseId, JSON.stringify({ type: 'case.changed', scopes, by }))
   }
 
   private async announcePresence(caseId: string): Promise<void> {

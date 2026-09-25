@@ -214,7 +214,7 @@ const MAY_IMPORT: Record<string, string[]> = {
   evidence: ['config', 'policy'],
   preferences: ['db', 'config', 'auth', 'domain', 'install-activity', 'policy'],
   /** No `live`: the socket knows about documents, never the reverse. */
-  prose: ['db', 'config', 'domain'],
+  prose: ['db', 'config', 'domain', 'install-activity'],
   // `access` because no guard runs on an upgrade: the socket asks the same
   // reach question a route's guard does, by hand. -> `live.gateway.ts`
   // `wire` for who an upgrade is from, which no middleware reaches either.

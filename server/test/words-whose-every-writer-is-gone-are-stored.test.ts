@@ -11,7 +11,7 @@
  * and the process shutting down. The boundary cases take the same paths with a
  * writer whose account remains.
  */
-import { and, eq } from 'drizzle-orm'
+import { and, eq, like, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { WebSocket } from 'ws'
@@ -19,7 +19,14 @@ import { WebSocket } from 'ws'
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 import { caseSocket, issued, pause, typed, until } from './case-socket.js'
 import { openTestPool } from './database.js'
-import { caseNotes, cases, changeFeed, customers, user } from '../src/db/schema/index.js'
+import {
+  caseNotes,
+  cases,
+  changeFeed,
+  customers,
+  installActivity,
+  user,
+} from '../src/db/schema/index.js'
 
 const TAG = `${String(process.pid)}-${String(Date.now()).slice(-6)}`
 
@@ -81,7 +88,21 @@ async function stored(noteId: string) {
     .from(changeFeed)
     .where(and(eq(changeFeed.entity, 'casenotes'), eq(changeFeed.entityId, noteId)))
     .orderBy(changeFeed.seq)
-  return { note: row!.note, updatedBy: row!.updatedBy, lastActor: feed.at(-1)?.actorId }
+  const audit = await seed()
+    .select({ label: installActivity.actorLabel })
+    .from(installActivity)
+    .where(
+      and(
+        sql`${installActivity.detail}->>'record' = ${noteId}`,
+        like(installActivity.targetLabel, 'live prose.sync%'),
+      ),
+    )
+  return {
+    note: row!.note,
+    updatedBy: row!.updatedBy,
+    lastActor: feed.at(-1)?.actorId,
+    audit: audit.map((line) => line.label),
+  }
 }
 
 const gone = (who: Persona) => seed().delete(user).where(eq(user.id, who.id))
@@ -137,6 +158,7 @@ describe.skipIf(!(await bootable()))('words whose writers are gone before they a
       note: expect.stringContaining(`alone and gone before the quiet moment ${TAG}`),
       updatedBy: null,
       lastActor: null,
+      audit: [`Writer ${String(count)}`],
     })
   })
 
@@ -155,6 +177,7 @@ describe.skipIf(!(await bootable()))('words whose writers are gone before they a
       note: expect.stringContaining(`alone and gone before the close ${TAG}`),
       updatedBy: null,
       lastActor: null,
+      audit: [`Writer ${String(count)}`],
     })
   })
 
@@ -229,6 +252,7 @@ describe.skipIf(!(await bootable()))('words whose writers are gone before they a
       note: expect.stringContaining(`alone and gone before the shutdown ${TAG}`),
       updatedBy: null,
       lastActor: null,
+      audit: [`Writer ${String(count)}`],
     })
   }, 30_000)
 })

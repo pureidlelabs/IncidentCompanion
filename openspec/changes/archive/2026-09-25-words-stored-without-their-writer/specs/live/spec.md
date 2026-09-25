@@ -2,47 +2,6 @@
 
 ## MODIFIED Requirements
 
-### Requirement: A change reaches every open screen, and says only what changed
-
-A write anywhere MUST reach every screen open on that case, so that an analyst reading a case sees what another has just done without asking for it.
-
-What is delivered MUST be enough to know what to re-read and no more. The change itself MUST NOT travel: a screen learns that something in a part of the case moved, and asks for it through the interface that decides whether it may have it.
-
-This is what keeps one boundary rather than two. A connection that carried case content would be a second place where reach is decided, and it is the place with no guards.
-
-An announcement MUST name who wrote as the case's record of changes names them, whether or not they are on the case, and MUST name nobody where their account is gone.
-
-#### Scenario: Another analyst writes
-
-- GIVEN two analysts with the same case open
-- WHEN one changes something
-- THEN the other's screen shows it without being reloaded
-
-#### Scenario: What travels over the connection
-
-- GIVEN a change to a case
-- WHEN it is announced
-- THEN the announcement names what moved
-- AND does not carry the content that moved
-
-#### Scenario: A screen re-reads after an announcement
-
-- GIVEN a screen told that something changed
-- WHEN it asks for the new state
-- THEN that request is subject to every check any other request is
-
-#### Scenario: Another analyst writes from outside the case
-
-- GIVEN an analyst with a case open
-- WHEN another analyst who does not have it open writes to it
-- THEN the announcement names the writer by their name
-
-#### Scenario: A writer whose account is gone
-
-- GIVEN an analyst with a case open
-- WHEN a write is saved whose writer's account is gone
-- THEN the announcement names nobody
-
 ### Requirement: Written prose is edited together, not saved over
 
 Prose an analyst writes into a report MUST be editable by two analysts at once without either losing work, and without one having to wait for the other.

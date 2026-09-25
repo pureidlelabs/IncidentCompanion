@@ -117,12 +117,7 @@ function member(caseId: string, username: string, sessionId: string, userId?: st
   }
 }
 
-/** Answers every account lookup with one analyst called Ada; who is named is asserted against the booted app. */
-const accounts = {
-  select: () => ({ from: () => ({ where: () => Promise.resolve([{ name: 'Ada', email: 'ada@example.invalid' }]) }) }),
-} as never
-
-const channelWith = () => new CaseChannel(new FakeStore(), accounts)
+const channelWith = () => new CaseChannel(new FakeStore())
 
 const latest = (who: Fake, type: string) =>
   [...who.frames].reverse().find((frame) => frame['type'] === type)
@@ -331,27 +326,26 @@ describe('the other analysts on a case', () => {
 })
 
 describe('announcing a write', () => {
-  it('tells every screen on the case which tables moved', async () => {
+  it('tells every screen on the case which tables moved, and not who moved them', async () => {
     const channel = channelWith()
     const ada = member('C-1', 'Ada', 's1')
     const grace = member('C-1', 'Grace', 's2')
     await channel.join(ada)
     await channel.join(grace)
 
-    await channel['publishAnnounce']('C-1', ['systems'], 'u-Ada')
+    channel.announce('C-1', ['systems'])
 
     for (const who of [ada, grace]) {
       expect(latest(who, 'case.changed')).toEqual({
         type: 'case.changed',
         scopes: ['systems'],
-        by: 'Ada',
       })
     }
   })
 
-  it('says nothing to a case nobody is watching', async () => {
+  it('says nothing to a case nobody is watching', () => {
     const channel = channelWith()
-    await expect(channel['publishAnnounce']('C-nobody', ['systems'], 'u-Ada')).resolves.not.toThrow()
+    expect(() => { channel.announce('C-nobody', ['systems']) }).not.toThrow()
   })
 
   it('keeps going when one socket is dead', async () => {
@@ -362,7 +356,7 @@ describe('announcing a write', () => {
     await channel.join(dead)
     await channel.join(alive)
 
-    await channel['publishAnnounce']('C-1', ['systems'], 'u-Alive')
+    channel.announce('C-1', ['systems'])
 
     expect(latest(alive, 'case.changed')).toBeDefined()
   })
@@ -383,7 +377,7 @@ describe('announcing a write', () => {
 describe('two connections arriving together', () => {
   it('subscribes once, and delivers each frame once', async () => {
     const store = new FakeStore()
-    const channel = new CaseChannel(store, accounts)
+    const channel = new CaseChannel(store)
     const ada = member('C-1', 'Ada', 's1')
     const grace = member('C-1', 'Grace', 's2')
 
@@ -391,7 +385,7 @@ describe('two connections arriving together', () => {
     await Promise.all([channel.join(ada), channel.join(grace)])
 
     ada.frames.length = 0
-    await channel['publishAnnounce']('C-1', ['systems'], 'u-Ada')
+    channel.announce('C-1', ['systems'])
 
     expect(ada.frames.filter((frame) => frame['type'] === 'case.changed')).toHaveLength(1)
   })
@@ -408,9 +402,9 @@ describe('when the store is unwell', () => {
   it('swallows a failed announcement rather than rejecting', async () => {
     const store = new FakeStore()
     store.publish = () => Promise.reject(new Error('redis is away'))
-    const channel = new CaseChannel(store, accounts)
+    const channel = new CaseChannel(store)
 
-    expect(() => { channel.announce('C-1', ['systems'], 'u-Ada') }).not.toThrow()
+    expect(() => { channel.announce('C-1', ['systems']) }).not.toThrow()
     // Let the rejection settle; an unhandled one fails the run.
     await new Promise((resolve) => setTimeout(resolve, 10))
   })

@@ -118,7 +118,7 @@ describe.skipIf(!db)('a reference within its customer', () => {
    */
   it('refuses a second case taking a reference an attributed case holds', async () => {
     const first = await make({ title: 'First for Acme', reference: 'TICKET-2' })
-    await service.attribute(first.id, acme, ANALYST)
+    await service.attribute(first.id, acme)
 
     const second = await make({ title: 'Second for Acme' })
 
@@ -127,7 +127,7 @@ describe.skipIf(!db)('a reference within its customer', () => {
       'a reference was free for a case in the default group and taken in Acme',
     ).resolves.toMatchObject({ ok: true })
 
-    await service.attribute(second.id, acme, ANALYST).catch(() => undefined)
+    await service.attribute(second.id, acme).catch(() => undefined)
     const rows = await seed!.select().from(cases).where(eq(cases.reference, 'TICKET-2'))
     expect(
       rows.filter((row) => row.customerId === acme),
@@ -164,10 +164,10 @@ describe.skipIf(!db)('a reference within its customer', () => {
     // never reaches -- which is how this rule was believed covered while the
     // door that introduces collisions checked nothing.
     const first = await make({ title: 'Acme side', reference: 'TICKET-4' })
-    await service.attribute(first.id, acme, ANALYST)
+    await service.attribute(first.id, acme)
 
     const second = await make({ title: 'Other side', reference: 'TICKET-4' })
-    await service.attribute(second.id, other, ANALYST)
+    await service.attribute(second.id, other)
 
     const rows = await seed!.select().from(cases).orderBy(cases.title)
     expect(
