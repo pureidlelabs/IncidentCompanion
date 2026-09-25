@@ -24,7 +24,7 @@ import { Algorithm, hash as argonHash, verify as argonVerify } from '@node-rs/ar
 import type { Database } from '../db/client.js'
 import * as schema from '../db/schema/index.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_REFUSED, refusePassword } from './password-policy.js'
-import { REMEMBERED_MISSES, isLocked, missOf, policyFrom } from './lockout.js'
+import { REMEMBERED_MISSES, familiarTo, isLocked, missOf, policyFrom } from './lockout.js'
 import { readPolicy } from '../policy/read.js'
 import { SESSION_LIFETIME_CEILING_MINUTES } from '../policy/keys.js'
 import { sessionEnded } from './session-ended.js'
@@ -143,7 +143,7 @@ async function checkPassword(
   const right = await argonVerify(hash, password, ARGON2ID)
   const address = callerOfThisCheck()
   const now = new Date()
-  const run = await runOf(db, hash, address)
+  const run = await runOf(db, hash, address, now)
   if (run && !isLocked(run.lockedUntil, now)) {
     if (right && !run.lockPending) return startAgain(db, run, address, now)
     await countAgainst(db, { ...run, miss: right ? null : missOf(secret, run.id, password) }, now)
@@ -182,12 +182,14 @@ interface Run {
   lockPending: boolean | null
 }
 
-/** The account holding `hash`, and which of its runs an answer from `address` falls in. */
-async function runOf(db: Database, hash: string, address: string | null): Promise<Run | undefined> {
-  const familiar =
-    address === null
-      ? sql<boolean>`false`
-      : sql<boolean>`exists (select 1 from ${schema.familiarAddress} where ${schema.familiarAddress.userId} = ${schema.user.id} and ${schema.familiarAddress.address} = ${address})`
+/** The account holding `hash`, and which of its runs an answer from `address` at `now` falls in. */
+async function runOf(
+  db: Database,
+  hash: string,
+  address: string | null,
+  now: Date,
+): Promise<Run | undefined> {
+  const familiar = address === null ? sql<boolean>`false` : familiarTo(schema.user.id, address, now)
   const [run] = await db
     .select({
       id: schema.user.id,
@@ -209,7 +211,7 @@ async function runOf(db: Database, hash: string, address: string | null): Promis
 
 /**
  * The right password on an open run: the run is forgotten, and the address
- * becomes familiar. Answers `false`, changing nothing, where a failure counted
+ * is familiar from `now`. Answers `false`, changing nothing, where a failure counted
  * since `run` was read has locked the run or left its lock pending.
  */
 async function startAgain(
@@ -237,8 +239,14 @@ async function startAgain(
       .where(and(ofRun, or(eq(lockout.lockPending, true), gt(lockout.lockedUntil, now))))
     if (locked) return false
   }
-  if (address !== null && !run.familiar) {
-    await db.insert(schema.familiarAddress).values({ userId: run.id, address }).onConflictDoNothing()
+  if (address !== null) {
+    await db
+      .insert(schema.familiarAddress)
+      .values({ userId: run.id, address, lastRightAt: now })
+      .onConflictDoUpdate({
+        target: [schema.familiarAddress.userId, schema.familiarAddress.address],
+        set: { lastRightAt: now },
+      })
   }
   return true
 }
@@ -711,8 +719,9 @@ export function authOptions(
             .where(sameAddress(attempted))
             .limit(1)
           if (!holds) {
-            await runOf(db, NOBODY_HOLDS, null)
-            await countAgainst(db, undefined, new Date())
+            const now = new Date()
+            await runOf(db, NOBODY_HOLDS, null, now)
+            await countAgainst(db, undefined, now)
           }
         }
         /**

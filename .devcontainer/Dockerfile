@@ -91,7 +91,7 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins \
 # unchanged (verified against the lockfile, 1233 packages, no blocked script).
 # Pinned like Node; bump the two together when the major moves.
 # renovate: datasource=npm depName=npm
-ARG NPM_VERSION=12.0.2
+ARG NPM_VERSION=12.1.0
 RUN npm install -g "npm@${NPM_VERSION}" && npm --version
 
 # **The block reaches the `claude-code` feature too, and that install has no

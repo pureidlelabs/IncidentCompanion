@@ -25,4 +25,7 @@ proxy_set_header Connection $connection_upgrade;
 # A CRDT frame is worth nothing batched: buffering holds a caret update until
 # the buffer fills, which reads as the other analyst freezing.
 proxy_buffering off;
+# The app is on the same network, so a connect that has not completed in a
+# few seconds is an app that is gone; the default holds the caller a minute.
+proxy_connect_timeout 3s;
 proxy_read_timeout 1h;
