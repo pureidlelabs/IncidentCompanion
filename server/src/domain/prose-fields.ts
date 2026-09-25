@@ -32,6 +32,24 @@ export function hasProse(doc: Y.Doc, blockId: string): boolean {
   return textIn(fragment).trim() !== ''
 }
 
+/**
+ * A fragment's words as plain text, one line per top-level node.
+ *
+ * From the deltas rather than `toString()`, which serialises marks as tags.
+ */
+export function plainText(fragment: Y.XmlFragment): string {
+  const flat = (node: unknown): string => {
+    if (node instanceof Y.XmlText) {
+      // Typed `any[]` by yjs; anything but a string insert is an embed.
+      const runs = node.toDelta() as { insert?: unknown }[]
+      return runs.map((run) => (typeof run.insert === 'string' ? run.insert : '')).join('')
+    }
+    if (node instanceof Y.XmlElement || node instanceof Y.XmlFragment) return node.toArray().map(flat).join('')
+    return ''
+  }
+  return fragment.toArray().map(flat).join('\n').trim()
+}
+
 /** Every character under a node, ignoring what element it sits in. */
 function textIn(node: Y.XmlFragment | Y.XmlElement | Y.XmlText | Y.XmlHook): string {
   // `YXmlText.toString()` is declared `any` by Yjs though it returns the

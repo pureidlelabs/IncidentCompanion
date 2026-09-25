@@ -51,7 +51,10 @@ vi.mock('@/api/proseSync', () => ({
   useProseSync: (caseId: string, docKey: string, presence?: { name: string }) => {
     opened.push({ kase: caseId, doc: docKey, who: presence?.name })
     return {
-      channel: docKey === '' || !settled ? null : ({ opened: docKey } as never),
+      channel:
+        docKey === '' || !settled
+          ? null
+          : ({ opened: docKey, unsaved: null, watchUnsaved: () => () => undefined } as never),
       status: settled ? ('ready' as const) : ('opening' as const),
       settled,
     }
