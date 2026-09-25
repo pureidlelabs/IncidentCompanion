@@ -167,7 +167,7 @@ export class TimelineController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<TimelineRow> {
     const row = await this.collections.get(TIMELINE_COLLECTION, caseId, id)
-    if (row === undefined) throw new NotFoundException(`No timeline entry ${id} in this case.`)
+    if (row === undefined) throw new NotFoundException(`No ${TIMELINE_COLLECTION.name} ${id} in this case.`)
     return timelineToWire(row as Record<string, unknown>) as TimelineRow
   }
 
@@ -297,7 +297,7 @@ export class TimelineController {
     // case naming another case's row and the patch aimed at it. See the entity
     // controller, which has the argument in full.
     if (result.currentVersion === null) {
-      throw new NotFoundException(`No timeline entry ${id} in this case.`)
+      throw new NotFoundException(`No ${TIMELINE_COLLECTION.name} ${id} in this case.`)
     }
 
     // Kept before the refusal is thrown: these values exist nowhere else once

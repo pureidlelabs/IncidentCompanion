@@ -877,7 +877,7 @@ export class CollectionService {
         .from(def.table)
         .where(and(eq(cols.id, id), eq(cols.caseId, caseId))),
     )
-    if (!row) throw new NotFoundException(`No ${def.name} ${id} in that case.`)
+    if (!row) throw new NotFoundException(`No ${def.name} ${id} in this case.`)
     return row
   }
 }

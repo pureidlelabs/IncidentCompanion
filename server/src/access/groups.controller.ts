@@ -151,6 +151,7 @@ export class GroupsController {
       `group ${groupId} or analyst ${userId}`,
     )
     if (granted) await this.activity.reachGranted(caller, userId, { groupId, level })
+    else this.activity.unchanged(caller)
     return DONE
   }
 
@@ -182,6 +183,7 @@ export class GroupsController {
       `group ${groupId} or customer ${customerId}`,
     )
     if (held) await this.activity.groupHeldCustomer(caller, customerId, { groupId })
+    else this.activity.unchanged(caller)
     return DONE
   }
 

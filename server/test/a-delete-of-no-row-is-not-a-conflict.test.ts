@@ -78,6 +78,10 @@ describe.skipIf(!(await bootable()))('a single-row delete', () => {
         absent.text.replace(ABSENT, '{id}'),
       )
 
+      const patched = await call('PATCH', `/api/cases/${here}/${collection.name}/${ABSENT}`, { version: 1, ...collection.change })
+      expect(patched.status, `${collection.name}: ${patched.text}`).toBe(404)
+      expect(patched.text, `${collection.name}: a patch and a delete of no row read differently`).toBe(absent.text)
+
       const still = await call('GET', `/api/cases/${elsewhere}/${collection.name}/${theirs.id}`)
       expect(still.status, `${collection.name}: a delete aimed at another case removed its row`).toBe(200)
     }
