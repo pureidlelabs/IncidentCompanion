@@ -718,7 +718,7 @@
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | undemonstrated | |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | An operator asks what protects the state at rest | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
-| What is stored can be recovered, and the recovery is proven | A copy is taken | demonstrated | tests/docker/test_ingress.py :: test_a_copy_is_readable_only_by_whoever_took_it |
+| What is stored can be recovered, and the recovery is proven | A copy is taken | demonstrated | tests/docker/test_ingress.py :: test_a_copy_is_readable_only_by_whoever_took_it[new] ; tests/docker/test_ingress.py :: test_a_copy_is_readable_only_by_whoever_took_it[open] |
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | undemonstrated | |

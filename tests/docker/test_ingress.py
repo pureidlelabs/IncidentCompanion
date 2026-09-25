@@ -19,6 +19,7 @@ from __future__ import annotations
 import itertools
 import json
 import os
+import re
 import subprocess
 import time
 import uuid
@@ -359,6 +360,27 @@ _EDGE_ANSWERS = {
 }
 
 
+def _refused_in_a_burst(analyst: Analyst, path: str, count: int):
+    """The first 429 the edge itself wrote among `count` requests in one connection.
+
+    Read inside the burst: a request after it can reach the application's own
+    limiter, whose 429 is JSON and carries the application's policy.
+    """
+    printed = analyst.curl("-i", *_at_the_name(f"{path}?n=[1-{count}]")).stdout
+    for one in re.split(r"(?m)^(?=HTTP/\d)", printed.replace("\r\n", "\n")):
+        head, _, body = one.partition("\n\n")
+        lines = head.splitlines()
+        if not lines or lines[0].split()[1:2] != ["429"]:
+            continue
+        headers: dict[str, list[str]] = {}
+        for line in lines[1:]:
+            name, _, value = line.partition(":")
+            headers.setdefault(name.strip().lower(), []).append(value.strip())
+        if headers.get("content-type") == ["text/html"]:
+            return 429, headers, body
+    pytest.fail(f"the edge refused nothing of {count} requests to {path}")
+
+
 def test_an_answer_the_edge_writes_itself_is_read_under_a_policy(install):
     """Each status the edge writes without the application carries a policy, nosniff and no build."""
     analyst = Analyst("edge")
@@ -366,11 +388,9 @@ def test_an_answer_the_edge_writes_itself_is_read_under_a_policy(install):
                for what, (_, probe) in _EDGE_ANSWERS.items()}
     answers["plain HTTP at the protected port"] = _answer(
         analyst, "--connect-to", f"{NAME}:{PORT}:nginx:8443", f"http://{NAME}:{PORT}/")
-    analyst.statuses("/api/auth/not-a-real-route", 25)
-    answers["too many at the credential paths"] = _answer(
-        analyst, *_at_the_name("/api/auth/not-a-real-route"))
-    analyst.statuses("/not-a-real-route", 150)
-    answers["too many elsewhere"] = _answer(analyst, *_at_the_name("/not-a-real-route"))
+    answers["too many at the credential paths"] = _refused_in_a_burst(
+        analyst, "/api/auth/not-a-real-route", 25)
+    answers["too many elsewhere"] = _refused_in_a_burst(analyst, "/not-a-real-route", 150)
 
     expected = {what: status for what, (status, _) in _EDGE_ANSWERS.items()} | {
         "plain HTTP at the protected port": 400,
@@ -384,19 +404,21 @@ def test_an_answer_the_edge_writes_itself_is_read_under_a_policy(install):
 
 
 def test_an_answer_the_edge_writes_while_the_application_is_down_is_read_under_a_policy(install):
-    """The edge's own 502, with nothing behind it to write a policy."""
+    """The edge's own 502 or 504, answered within ten seconds, with nothing behind it to write a policy.
+
+    Which of the two depends on whether the edge still holds the stopped
+    container's address; either way the edge answers rather than holding the caller.
+    """
     analyst = Analyst("down")
     _compose("stop", "app")
     try:
-        # Until the edge's resolver lets go of the stopped container's address, a
-        # request waits on a peer that never answers rather than being refused.
-        for _ in range(6):
-            answer = _answer(analyst, *_at_the_name("/api/health", "--max-time", "5"))
-            if answer[0]:
-                break
+        started = time.monotonic()
+        answer = _answer(analyst, *_at_the_name("/api/health", "--max-time", "15"))
+        waited = time.monotonic() - started
     finally:
         _compose("up", "-d", "--no-deps", "--wait", "app")
-    assert answer[0] == 502, answer[0]
+    assert answer[0] in (502, 504), f"the edge answered {answer[0]} after {waited:.1f}s"
+    assert waited < 10, f"the edge held the caller {waited:.1f}s before answering"
     _assert_the_browser_is_told("the application down", answer)
 
 
@@ -462,9 +484,19 @@ def test_guessing_at_an_address_leaves_its_analysts_reporting_in(install):
         "sign-in attempts at this address refused its analyst's activity report")
 
 
-def test_a_copy_is_readable_only_by_whoever_took_it(install, tmp_path):
-    """`backup.sh backup` against the running stack, and the modes of what it wrote, host side."""
+@pytest.mark.parametrize("destination", ["new", "open"])
+def test_a_copy_is_readable_only_by_whoever_took_it(install, tmp_path, destination):
+    """`backup.sh backup` against the running stack, and the modes of what it wrote, host side.
+
+    `open` is a directory left world-readable, holding a world-readable
+    part from an earlier copy, which the new copy writes over.
+    """
     copy = tmp_path / "copy"
+    if destination == "open":
+        copy.mkdir()
+        copy.chmod(0o755)
+        (copy / "db.dump").write_text("an earlier copy")
+        (copy / "db.dump").chmod(0o644)
     taken = subprocess.run(
         ["sh", str(REPO_ROOT / "docker" / "backup.sh"), "backup", str(copy)],
         capture_output=True, text=True, timeout=600,
