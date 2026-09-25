@@ -89,9 +89,9 @@ export class GroupsController {
    * one would name the wrong row about half the time, and re-reading both to
    * find out races the write it is about to make anyway.
    */
-  private async named(write: () => Promise<void>, what: string): Promise<void> {
+  private async named<T>(write: () => Promise<T>, what: string): Promise<T> {
     try {
-      await write()
+      return await write()
     } catch (error) {
       if (!isMissingParent(error)) throw error
       throw new NotFoundException(`No ${what}.`)
@@ -146,8 +146,11 @@ export class GroupsController {
     @Caller() caller: Caller,
   ): Promise<typeof DONE> {
     const { userId, level } = this.parse(grantSchema, body)
-    await this.named(() => this.groups.grant(groupId, userId, level), `group ${groupId} or analyst ${userId}`)
-    await this.activity.reachGranted(caller, userId, { groupId, level })
+    const granted = await this.named(
+      () => this.groups.grant(groupId, userId, level),
+      `group ${groupId} or analyst ${userId}`,
+    )
+    if (granted) await this.activity.reachGranted(caller, userId, { groupId, level })
     return DONE
   }
 
@@ -158,7 +161,9 @@ export class GroupsController {
     @Param('userId') userId: string,
     @Caller() caller: Caller,
   ): Promise<typeof DONE> {
-    await this.groups.revoke(groupId, userId)
+    if (!(await this.groups.revoke(groupId, userId))) {
+      throw new NotFoundException(`No analyst ${userId} in group ${groupId}.`)
+    }
     await this.activity.reachRevoked(caller, userId, { groupId })
     return DONE
   }
@@ -172,8 +177,11 @@ export class GroupsController {
     @Caller() caller: Caller,
   ): Promise<typeof DONE> {
     const { customerId } = this.parse(holdSchema, body)
-    await this.named(() => this.groups.hold(groupId, customerId), `group ${groupId} or customer ${customerId}`)
-    await this.activity.groupHeldCustomer(caller, customerId, { groupId })
+    const held = await this.named(
+      () => this.groups.hold(groupId, customerId),
+      `group ${groupId} or customer ${customerId}`,
+    )
+    if (held) await this.activity.groupHeldCustomer(caller, customerId, { groupId })
     return DONE
   }
 
@@ -184,7 +192,9 @@ export class GroupsController {
     @Param('customerId', ParseUUIDPipe) customerId: string,
     @Caller() caller: Caller,
   ): Promise<typeof DONE> {
-    await this.groups.release(groupId, customerId)
+    if (!(await this.groups.release(groupId, customerId))) {
+      throw new NotFoundException(`No customer ${customerId} held by group ${groupId}.`)
+    }
     await this.activity.groupReleasedCustomer(caller, customerId, { groupId })
     return DONE
   }

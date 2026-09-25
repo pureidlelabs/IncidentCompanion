@@ -325,16 +325,13 @@ export class TimelineController {
     @Query('version') version: string,
     @Session() session: UserSession,
   ) {
-    const removed = await this.collections.remove(
+    await this.collections.remove(
       TIMELINE_COLLECTION,
       caseId,
       id,
       versionRead(version, 'delete'),
       session.user.id,
     )
-    if (!removed) {
-      throw new ConflictException({ message: 'Someone else wrote this first.' })
-    }
     return { deleted: true } as const
   }
 }

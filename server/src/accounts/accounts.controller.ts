@@ -344,6 +344,7 @@ export class InstallAccountsController {
       )
     }
 
+    if (target.banned === true) return done(`${username} can no longer sign in.`)
     await this.auth.api.banUser({
       body: { userId: target.id, banReason: 'Disabled from the Accounts pane.' },
       headers: this.headersOf(caller),
@@ -362,6 +363,7 @@ export class InstallAccountsController {
     const target = await this.accounts.byAddress(username)
     if (!target) refuse(`No account for ${username}.`)
 
+    if (target.banned !== true) return done(`${username} can sign in again.`)
     await this.auth.api.unbanUser({
       body: { userId: target.id },
       headers: this.headersOf(caller),
@@ -423,6 +425,7 @@ export class InstallAccountsController {
     // A role line that cannot say what it changed *from* answers half the
     // question somebody opens the audit with.
     const from = target.role ?? ''
+    if (from === parsed.data.role) return done(`${username} is now ${aRole(parsed.data.role)}.`)
     await this.auth.api.setRole({
       body: { userId: target.id, role: parsed.data.role },
       headers: this.headersOf(caller),

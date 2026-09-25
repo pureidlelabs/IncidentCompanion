@@ -922,6 +922,18 @@ Changing what the logging itself does is an administrative event.
 - THEN no session is ended
 - AND nothing is logged as ended
 
+#### Scenario: A removal that removes nothing
+
+- GIVEN a request to take an analyst out of a group they are not in, or a customer out of a group that does not hold it, including a group or an analyst that does not exist
+- WHEN it is answered
+- THEN nothing is logged as removed
+
+#### Scenario: A change to what already stands
+
+- GIVEN a request for a membership at the level it has, a customer a group already holds, or an account's current state or role
+- WHEN it is answered
+- THEN nothing is logged as changed
+
 ### Requirement: An install serves only the account operations it offers
 
 An account operation MUST be reachable over the network only where a requirement in this specification offers it. The authentication mechanism an install is built on may define more — changing an address, deleting an account, linking another provider, an administrator's own shortcuts — and every one no requirement offers MUST NOT exist to a caller, whoever asks, at any role, signed in or not.
