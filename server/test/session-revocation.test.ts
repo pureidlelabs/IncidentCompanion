@@ -18,11 +18,11 @@
  * ones that read without refreshing - which is every app route, the guard
  * having been made an observer. -> `auth.config.ts`, `observesTheWindow`
  */
-import { beforeAll, afterAll, describe, expect, it } from 'vitest'
+import { beforeAll, afterAll, describe, expect, it, onTestFinished } from 'vitest'
 import { Redis } from 'ioredis'
 import { Pool } from 'pg'
 
-import { boot, bootable, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
+import { boot, bootable, sharedAnalyst, signIn, type Harness, type Persona } from './app-harness.js'
 
 const RUNNABLE = await bootable()
 
@@ -81,6 +81,18 @@ describe.skipIf(!RUNNABLE)('a session revoked in Postgres but still in Redis', (
     // The cookie carries `<token>.<signature>`; the row is keyed on the token.
     const token = decodeURIComponent(doomed.cookie.split('=')[1] ?? '').split('.')[0]
     const revoked = await pool.query('DELETE FROM "session" WHERE token = $1', [token])
+    // The account is shared, so the Redis copy left behind would be listed to
+    // every later file as a session of theirs. Ending it clears Redis.
+    onTestFinished(async () => {
+      const other = await signIn(harness, doomed.email)
+      const ended = await fetch(`${harness.base}/api/auth/revoke-session`, {
+        method: 'POST',
+        headers: { cookie: other.cookie, 'content-type': 'application/json', origin: harness.base },
+        body: JSON.stringify({ token }),
+      })
+      expect(ended.status, 'the session left in Redis was not ended').toBe(200)
+      expect(await redis.exists(`auth:${token}`), 'the session is still in Redis').toBe(0)
+    })
     expect(
       revoked.rowCount,
       'no row was revoked -- the cookie no longer spells `<token>.<signature>`, ' +
