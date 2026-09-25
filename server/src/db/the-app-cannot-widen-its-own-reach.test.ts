@@ -22,12 +22,23 @@ import { eq, inArray, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { caseNotes, cases, customers, proseAcceptances, user } from './schema/index.js'
+import {
+  caseNotes,
+  cases,
+  changeFeed,
+  customers,
+  groupCustomers,
+  groupMembers,
+  groups,
+  proseAcceptances,
+  user,
+} from './schema/index.js'
 import { ACCEPTANCE_LASTS } from './schema/scoped.js'
 import { CHANNEL_OF } from './schema/install-activity.js'
 import { OCSF_VERSION, classify } from '../install-activity/ocsf.js'
 import { retentionClassOf } from '../install-activity/retention-class.js'
 import { ProseService } from '../prose/prose.service.js'
+import { defaultCustomer } from '../customers/customers.service.js'
 import { asRole, hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -570,5 +581,136 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by
     } finally {
       await seed().delete(proseAcceptances).where(eq(proseAcceptances.writerId, gone))
     }
+  })
+})
+
+/**
+ * **What the application keeps as a record, and what only the store may change.**
+ * A writer of a case adds to its change feed and never rewrites it, and moves
+ * the case to another customer only through `ic_move_case`.
+ */
+describe.skipIf(!app || !hasConcurrentConnections())('what a writer of a case cannot rewrite', () => {
+  const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
+  const seed = () => drizzle({ client: seedPool! })
+  const stamp = `${String(process.pid)}-${String(Date.now())}`
+  const [writer, other, admin] = ['writer', 'other', 'admin'].map((who) => `record-${who}-${stamp}`) as [
+    string,
+    string,
+    string,
+  ]
+  let owner = ''
+  let elsewhere = ''
+  let fallback = ''
+  let kase = ''
+
+  /** Runs `statement` as the application with `principal` asking in `scope`; the rows it touched, or its SQLSTATE. */
+  async function asApp(principal: string, statement: ReturnType<typeof sql>, scope = kase): Promise<number | string> {
+    try {
+      return await app!.transaction(async (tx) => {
+        await tx.execute(
+          sql`select set_config('app.case_id', ${scope}, true), set_config('app.principal', ${principal}, true)`,
+        )
+        return (await tx.execute(statement)).rowCount ?? 0
+      })
+    } catch (error) {
+      for (let at: unknown = error; at instanceof Object; at = (at as { cause?: unknown }).cause) {
+        const code = (at as { code?: unknown }).code
+        if (typeof code === 'string') return code
+      }
+      throw error
+    }
+  }
+
+  const feedOf = async (id: string) =>
+    (await seed().select().from(changeFeed).where(eq(changeFeed.caseId, id)).orderBy(changeFeed.seq)).map(
+      (row) => `${row.entity}:${String(row.actorId)}`,
+    )
+
+  const customerOf = async (id: string) =>
+    (await seed().select({ at: cases.customerId }).from(cases).where(eq(cases.id, id)))[0]?.at
+
+  beforeAll(async () => {
+    await seed()
+      .insert(user)
+      .values(
+        [writer, other, admin].map((id) => ({
+          id,
+          name: id,
+          email: `${id}@example.invalid`,
+          emailVerified: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          role: id === admin ? 'admin' : 'analyst',
+        })),
+      )
+    fallback = (await defaultCustomer(seed())).id
+    ;[owner, elsewhere] = (
+      await seed()
+        .insert(customers)
+        .values([{ name: `Owner ${stamp}` }, { name: `Elsewhere ${stamp}` }])
+        .returning()
+    ).map((one) => one.id) as [string, string]
+    const [group] = await seed().insert(groups).values({ name: `Writers ${stamp}` }).returning()
+    await seed()
+      .insert(groupCustomers)
+      .values([owner, elsewhere].map((customerId) => ({ groupId: group!.id, customerId })))
+    await seed().insert(groupMembers).values({ groupId: group!.id, userId: writer, level: 'write' })
+    kase = (await seed().insert(cases).values({ title: 'Attributed', customerId: owner }).returning())[0]!.id
+    await seed()
+      .insert(changeFeed)
+      .values(
+        ['cases', 'casenotes'].map((entity) => ({
+          caseId: kase,
+          entity,
+          entityId: kase,
+          op: 'insert' as const,
+          version: 1,
+          actorId: writer,
+        })),
+      )
+  })
+
+  afterAll(async () => {
+    await seed().delete(cases).where(eq(cases.id, kase))
+    await seed().delete(groups).where(eq(groups.name, `Writers ${stamp}`))
+    await seed().delete(customers).where(inArray(customers.id, [owner, elsewhere]))
+    await seed().delete(user).where(inArray(user.id, [writer, other, admin]))
+    await seedPool?.end()
+  })
+
+  it('adds to the change feed, and cannot rename who made a change or remove one', async () => {
+    expect({
+      appended: await asApp(
+        writer,
+        sql`insert into change_feed (case_id, entity, entity_id, op, version, actor_id) values (${kase}, 'systems', ${kase}, 'insert', 1, ${writer})`,
+      ),
+      renamed: await asApp(writer, sql`update change_feed set actor_id = ${other} where case_id = ${kase}`),
+      removed: await asApp(writer, sql`delete from change_feed where case_id = ${kase}`),
+    }).toEqual({ appended: 1, renamed: '42501', removed: '42501' })
+    expect(await feedOf(kase)).toEqual([`cases:${writer}`, `casenotes:${writer}`, `systems:${writer}`])
+  })
+
+  it('cannot return an attributed case to the default customer, or to none', async () => {
+    expect({
+      toTheDefault: await asApp(writer, sql`update cases set customer_id = ${fallback} where id = ${kase}`),
+      toNone: await asApp(writer, sql`update cases set customer_id = null where id = ${kase}`),
+      throughTheMove: await asApp(writer, sql`select ic_move_case(${kase}, ${fallback})`),
+    }).toEqual({ toTheDefault: '42501', toNone: '42501', throughTheMove: 1 })
+    expect(await customerOf(kase)).toBe(owner)
+  })
+
+  it('moves the case to another customer through the store, and still edits the rest of it', async () => {
+    expect(await asApp(writer, sql`select ic_move_case(${kase}, ${elsewhere})`)).toBe(1)
+    expect(await customerOf(kase)).toBe(elsewhere)
+    expect(await asApp(writer, sql`update cases set title = 'Renamed' where id = ${kase}`)).toBe(1)
+  })
+
+  it('takes its change feed with it when the case is deleted', async () => {
+    const [open] = await seed().insert(cases).values({ title: 'Deleted', customerId: fallback }).returning()
+    await seed()
+      .insert(changeFeed)
+      .values({ caseId: open!.id, entity: 'cases', entityId: open!.id, op: 'insert', version: 1, actorId: admin })
+    expect(await asApp(admin, sql`delete from cases where id = ${open!.id}`, open!.id)).toBe(1)
+    expect(await feedOf(open!.id)).toEqual([])
   })
 })

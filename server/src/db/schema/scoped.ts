@@ -134,11 +134,23 @@ export function caseScoped(
 }
 
 /**
+ * The same, for a record of the case: read and added to, and never changed or
+ * removed by the application. It goes with its case by its foreign key.
+ */
+export function caseRecorded(caseId: PgColumn): ReturnType<typeof pgPolicy>[] {
+  return [
+    pgPolicy('case_reads', { for: 'select', using: inScope(caseId, 'read') }),
+    pgPolicy('case_inserts', { for: 'insert', withCheck: inScope(caseId, 'write') }),
+    seeder(),
+  ]
+}
+
+/**
  * The same, for `cases` itself, which is reached through its own customer.
  *
- * Deleting a case needs `delete`. **Moving one is not an update this allows**:
- * the new row has to be one the mover still sees, so a move out of the mover's
- * reach goes through `ic_move_case`.
+ * Deleting a case needs `delete`. **Moving one is not an update the
+ * application may make**: it holds no grant on the customer column, so only
+ * the store's own acts change it. -> `prose-grants.ts`, `db/reach.sql`
  */
 export function customerScoped(customerId: PgColumn): ReturnType<typeof pgPolicy>[] {
   const holds = (needed: (typeof LEVELS)[number]): SQL =>

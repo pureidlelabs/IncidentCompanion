@@ -4,10 +4,16 @@
  * change-feed row and an audit line. The row each may reach is the policies'
  * business. -> `scoped.ts`
  *
+ * Also what the app and seeding roles may not touch that their table-wide
+ * default grants would allow.
+ *
  * Applied by `server/scripts/apply-schema.mts` after the tables, in the same
  * transaction; revoked first, so a column taken out of this list loses its
  * grant on the next application.
  */
+import { getTableColumns } from 'drizzle-orm'
+
+import { cases } from './case.js'
 import { PROSE_ROLE } from './scoped.js'
 
 export const proseGrants: readonly string[] = [
@@ -15,6 +21,14 @@ export const proseGrants: readonly string[] = [
   `revoke all on all sequences in schema public from ${PROSE_ROLE}`,
   // An acceptance is written once and removed; nobody renames the writer it names.
   `revoke update, truncate on prose_acceptances from ic_app, ic_seed`,
+  // Who changed a case is added to and never rewritten; the case's delete takes it by cascade.
+  `revoke update, delete on change_feed from ic_app`,
+  // A case changes customer only through the store's move, which holds the move's rules.
+  `revoke update on cases from ic_app`,
+  `grant update (${Object.values(getTableColumns(cases))
+    .filter((column) => column !== cases.customerId)
+    .map((column) => `"${column.name}"`)
+    .join(', ')}) on cases to ic_app`,
   `grant select (id, case_id, version), update (document, updated_by, updated_at) on reports to ${PROSE_ROLE}`,
   `grant select (id, case_id, version), update (document, note, updated_by, updated_at) on casenotes to ${PROSE_ROLE}`,
   `grant select (id, report_id, case_id) on report_blocks to ${PROSE_ROLE}`,
