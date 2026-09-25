@@ -18,12 +18,22 @@ Where the application needs the browser to reach somewhere that is not the insta
 
 Every response MUST also tell the browser not to guess at what it has been sent.
 
+**An answer the install gives without the application is a response too** — a refusal before the application is asked, a request it cannot read, the application unreachable. It MUST carry a policy that permits nothing and refuses to be framed, and MUST tell the browser not to guess. No answer MUST name the version of the software that wrote it.
+
 #### Scenario: A response is read by a browser
 
 - GIVEN any response from the install, whether a page or an answer from the interface
 - WHEN a browser reads it
 - THEN it carries a content policy
 - AND the policy is the same one in both cases
+
+#### Scenario: The install answers without the application
+
+- GIVEN a request the install answers without the application, refused or with the application unreachable
+- WHEN a browser reads the answer
+- THEN it carries a content policy that permits nothing and refuses to be framed
+- AND it tells the browser not to guess at what it was sent
+- AND it names no software version
 
 #### Scenario: The policy is read for what it permits
 

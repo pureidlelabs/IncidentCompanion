@@ -143,7 +143,7 @@ The wrapping is applied on the way in and is what the store holds. Nothing in th
 
 An install can produce a copy of its durable state and return to that copy. Returning is an ordinary operator action with a stated procedure rather than something first attempted under pressure.
 
-A copy is taken from the running install: the database as one consistent dump without session or verification rows, then the shape of the store, then an archive of the evidence directory. Evidence is never rewritten, so an archive taken after the dump holds every artefact the dump names.
+A copy is taken from the running install: the database as one consistent dump without session or verification rows, then the shape of the store, then an archive of the evidence directory. Evidence is never rewritten, so an archive taken after the dump holds every artefact the dump names. Every part, the directory holding them and any directory made on the way to it are written owner-only from the moment each exists. A destination that already exists is taken rather than refused: it is closed to its owner, and each part it holds is removed before the new one is written, so no part keeps the mode of whatever stood there before.
 
 Taking a copy records a digest of each of its parts as written. Checking a copy first compares each part with its digest, which refuses damage that leaves a part readable. It then restores the database into a scratch database, which a dump already short when written cannot survive, refuses a copy carrying session rows or lacking their tables, and requires every artefact the restored rows name to be in the evidence archive.
 
