@@ -94,7 +94,7 @@ export const reports = pgTable(
       sql`(${t.sentAt} is null) = (${t.frozen} is null) and (${t.frozen} is null) = (${t.frozenAt} is null)`,
     ),
     ...caseScoped(t.caseId),
-    ...proseKept(t.caseId, t.id, ['select', 'update']),
+    ...proseKept(t.caseId, t.id, ['select', 'update'], t.updatedBy),
   ],
 )
 

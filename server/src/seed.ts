@@ -142,5 +142,8 @@ async function seed(): Promise<void> {
 
 seed().catch((error: unknown) => {
   new Logger('Seed').error(error instanceof Error ? error.message : String(error))
-  process.exitCode = 1
+  // Exited rather than left to drain: a context that failed while it was
+  // being built holds pools nothing here can close, and they keep the process
+  // alive for good, which an install waiting on this reads as a hang.
+  process.exit(1)
 })

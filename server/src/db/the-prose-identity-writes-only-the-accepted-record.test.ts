@@ -10,7 +10,7 @@ import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { caseNotes, cases, reports } from './schema/index.js'
+import { caseNotes, cases, proseAcceptances, reports, user } from './schema/index.js'
 import { CHANNEL_OF } from './schema/install-activity.js'
 import { SENT_REPORT_REFUSED } from './schema/store-guards.js'
 import { asRole, hasConcurrentConnections, openTestPool } from '../../test/database.js'
@@ -30,6 +30,7 @@ let noteA = ''
 let otherNoteA = ''
 let noteB = ''
 let sentReport = ''
+const writer = `prose-identity-writer-${String(process.pid)}-${String(Date.now())}`
 
 /** Runs `statement` as the prose identity with `record` in `kase` accepted; answers the rows it touched, or the SQLSTATE it raised. */
 async function asProse(
@@ -59,6 +60,15 @@ const PERMISSION = '42501'
 
 describe.skipIf(!app || !hasConcurrentConnections())('the prose identity', () => {
   beforeAll(async () => {
+    await seed!.insert(user).values({
+      id: writer,
+      name: writer,
+      email: `${writer}@example.invalid`,
+      emailVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      role: 'analyst',
+    })
     const [a] = await seed!.insert(cases).values({ title: 'Prose identity A' }).returning()
     const [b] = await seed!.insert(cases).values({ title: 'Prose identity B' }).returning()
     caseA = a!.id
@@ -78,18 +88,23 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose identity', () =>
       .update(reports)
       .set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() })
       .where(eq(reports.id, sentReport))
+    await seed!.insert(proseAcceptances).values([
+      { caseId: caseA, entity: 'casenotes', recordId: noteA, writerId: writer },
+      { caseId: caseA, entity: 'reports', recordId: sentReport, writerId: writer },
+    ])
   })
 
   afterAll(async () => {
     if (caseA) await seed!.delete(cases).where(eq(cases.id, caseA))
     if (caseB) await seed!.delete(cases).where(eq(cases.id, caseB))
+    await seed!.delete(user).where(eq(user.id, writer))
     await appPool?.end()
     await seedPool?.end()
   })
 
   it('stores the words of the accepted record', async () => {
     expect(
-      await asProse(caseA, noteA, sql`update casenotes set note = 'kept' where id = ${noteA}`),
+      await asProse(caseA, noteA, sql`update casenotes set note = 'kept', updated_by = ${writer} where id = ${noteA}`),
     ).toBe(1)
   })
 
@@ -133,7 +148,9 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose identity', () =>
     ).toBe(PERMISSION)
   })
 
-  it('reads nothing', async () => {
+  it('reads nothing but who was accepted into the record it stores, and whether an account exists', async () => {
+    expect(await asProse(caseA, noteA, sql`select writer_id from prose_acceptances`)).toBe(1)
+    expect(await asProse(caseA, noteA, sql`select id from "user" where id = ${writer}`)).toBe(1)
     expect(await asProse(caseA, noteA, sql`select note from casenotes`)).toBe(PERMISSION)
     expect(await asProse(caseA, noteA, sql`select title from cases`)).toBe(PERMISSION)
     expect(await asProse(caseA, noteA, sql`select email from "user"`)).toBe(PERMISSION)
@@ -145,11 +162,11 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose identity', () =>
 
   it('writes a feed row and an audit line for the accepted record, and for no other', async () => {
     const feed = (record: string) =>
-      sql`insert into change_feed (case_id, entity, entity_id, op, version) values (${caseA}, 'casenotes', ${record}, 'update', 1)`
+      sql`insert into change_feed (case_id, entity, entity_id, op, version, actor_id) values (${caseA}, 'casenotes', ${record}, 'update', 1, ${writer})`
     const ocsf = classify('api_called')
     const line = (record: string) =>
-      sql`insert into install_activity (event, channel, retention_class, class_uid, activity_id, type_uid, schema_version, severity_id, status_id, detail)
-          values ('api_called', ${CHANNEL_OF.api_called}, ${retentionClassOf('api_called')}, ${ocsf.classUid}, ${ocsf.activityId}, ${ocsf.typeUid}, ${OCSF_VERSION}, 1, 1, ${JSON.stringify({ case: caseA, record })}::jsonb)`
+      sql`insert into install_activity (event, channel, retention_class, class_uid, activity_id, type_uid, schema_version, severity_id, status_id, actor_id, detail)
+          values ('api_called', ${CHANNEL_OF.api_called}, ${retentionClassOf('api_called')}, ${ocsf.classUid}, ${ocsf.activityId}, ${ocsf.typeUid}, ${OCSF_VERSION}, 1, 1, ${writer}, ${JSON.stringify({ case: caseA, record })}::jsonb)`
     expect(await asProse(caseA, noteA, feed(noteA))).toBe(1)
     expect(await asProse(caseA, noteA, line(noteA))).toBe(1)
     expect(await asProse(caseA, noteA, feed(otherNoteA))).toBe(PERMISSION)
@@ -161,13 +178,13 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose identity', () =>
       await asProse(
         caseA,
         sentReport,
-        sql`update reports set document = '\\x00' where id = ${sentReport}`,
+        sql`update reports set document = '\\x00', updated_by = ${writer} where id = ${sentReport}`,
       ),
     ).toBe(SENT_REPORT_REFUSED)
   })
 
   it('refuses to start for a connection that cannot become it', async () => {
-    await expect(new ProseService(seed!).onModuleInit()).rejects.toThrow(/ic_prose/)
-    await expect(new ProseService(app!).onModuleInit()).resolves.toBeUndefined()
+    await expect(new ProseService(seed!).assertIdentity()).rejects.toThrow(/ic_prose/)
+    await expect(new ProseService(app!).assertIdentity()).resolves.toBeUndefined()
   })
 })

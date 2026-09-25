@@ -46,8 +46,21 @@ export const PROSE_ROLE = 'ic_prose'
 const acceptedRecord = sql`nullif(current_setting('app.prose_record', true), '')`
 
 /**
- * Spread into a table the prose role writes: it reaches only rows of the
- * accepted record, in the case in scope, and only for `commands`.
+ * `who` names a writer whose words were accepted for `record`, or nobody where
+ * one of them has no account left.
+ */
+function anAcceptedWriter(who: PgColumn | SQL, record: PgColumn | SQL): SQL {
+  return sql`(${who} in (select a.writer_id from prose_acceptances a where a.record_id::text = ${record}::text)
+    or (${who} is null and exists (
+      select 1 from prose_acceptances a
+       where a.record_id::text = ${record}::text
+         and not exists (select 1 from "user" u where u.id = a.writer_id))))`
+}
+
+/**
+ * Spread into a table the prose role touches: it reaches only rows of the
+ * accepted record, in the case in scope, and only for `commands`. Where the
+ * row names a writer in `writer`, it must be one whose words were accepted.
  *
  * The first policy is restrictive, so a permissive policy granted to everybody
  * cannot widen what the role reaches.
@@ -55,22 +68,24 @@ const acceptedRecord = sql`nullif(current_setting('app.prose_record', true), '')
 export function proseKept(
   caseId: PgColumn,
   record: PgColumn,
-  commands: readonly ('select' | 'insert' | 'update')[],
+  commands: readonly ('select' | 'insert' | 'update' | 'delete')[],
+  writer?: PgColumn,
 ): ReturnType<typeof pgPolicy>[] {
   const accepted = sql`${caseId} = ${currentCase} and ${record}::text = ${acceptedRecord}`
+  const written = writer ? sql`${accepted} and ${anAcceptedWriter(writer, record)}` : accepted
   return [
     pgPolicy('prose_reaches_only_the_accepted_record', {
       as: 'restrictive',
       to: PROSE_ROLE,
       using: accepted,
-      withCheck: accepted,
+      withCheck: written,
     }),
     ...commands.map((command) =>
       pgPolicy(`prose_${command}s_the_accepted_record`, {
         for: command,
         to: PROSE_ROLE,
         ...(command === 'insert' ? {} : { using: accepted }),
-        ...(command === 'select' ? {} : { withCheck: accepted }),
+        ...(command === 'select' || command === 'delete' ? {} : { withCheck: written }),
       }),
     ),
   ]
@@ -80,12 +95,14 @@ export function proseKept(
  * The same, for the audit, whose rows name their case and record in `detail`
  * rather than in a column.
  */
-export function proseAudited(detail: PgColumn): ReturnType<typeof pgPolicy> {
+export function proseAudited(detail: PgColumn, actor: PgColumn): ReturnType<typeof pgPolicy> {
+  const record = sql`${detail}->>'record'`
   return pgPolicy('prose_audits_only_the_accepted_record', {
     as: 'restrictive',
     for: 'insert',
     to: PROSE_ROLE,
-    withCheck: sql`${detail}->>'case' = ${currentCase}::text and ${detail}->>'record' = ${acceptedRecord}`,
+    withCheck: sql`${detail}->>'case' = ${currentCase}::text and ${record} = ${acceptedRecord}
+      and ${anAcceptedWriter(actor, record)}`,
   })
 }
 

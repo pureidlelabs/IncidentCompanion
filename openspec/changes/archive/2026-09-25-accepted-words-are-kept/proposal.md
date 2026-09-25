@@ -11,7 +11,7 @@ Prose an analyst typed while they could write was lost when their write was with
 
 ## Impact
 
-- Every save runs under one narrow identity, and its audit lines are written in the same act as the words.
+- A word's acceptance is recorded in the store under its writer's own reach, and the narrow identity every save runs under may store and name only what was accepted. Its audit lines are written in the same act as the words.
 - The application ends its connections before it stops listening, and waits for a save already under way.
-- An install needs the identity provisioned. The application refuses to start without it.
+- An install needs the identity provisioned. The serving process refuses to start without it, and the seeder, which never stores prose, does not ask.
 - An announcement no longer carries its writer.

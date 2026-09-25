@@ -12,6 +12,7 @@ import { openApiDocument } from './openapi'
 import { OpenApiStore } from './openapi.controller'
 import { InstallActivityService } from './install-activity/install-activity.service.js'
 import { SetupController } from './auth/setup.controller'
+import { ProseService } from './prose/prose.service'
 import { bundlePath } from './spa/spa.module'
 
 import { join } from 'node:path'
@@ -70,6 +71,9 @@ async function bootstrap(): Promise<void> {
    * `seed` entry included.
    */
   await app.get(SetupController).mintIfUnclaimed()
+
+  // Here for the same reason: only the serving process stores prose.
+  await app.get(ProseService).assertIdentity()
 
   await app.listen(env.PORT, '0.0.0.0')
 

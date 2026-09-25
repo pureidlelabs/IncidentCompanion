@@ -71,6 +71,6 @@ export const caseNotes = pgTable(
   (t) => [
     index('casenotes_case_idx').on(t.caseId),
     ...caseScoped(t.caseId),
-    ...proseKept(t.caseId, t.id, ['select', 'update']),
+    ...proseKept(t.caseId, t.id, ['select', 'update'], t.updatedBy),
   ],
 )

@@ -180,17 +180,68 @@ describe.skipIf(!(await bootable()))('words accepted before their writer loses w
     expect(await stored(noteId)).toEqual(namedFor(writer, words, `Writer ${String(count)}`))
   })
 
-  it('stores what a writer typed before their account was disabled, named for them', async () => {
+  it('ends a disabled writer\'s connection, refuses what they send after, and keeps what came before, named for them', async () => {
     const noteId = await aNote()
     const watching = await opens(owner, noteId)
     const writer = await anAnalyst('write')
+    const live = await opens(writer, noteId)
+    const closed = new Promise<void>((done) => live.socket.once('close', () => done()))
     const words = `typed before being disabled ${TAG}`
-    await types(await opens(writer, noteId), noteId, words, watching)
+    await types(live, noteId, words, watching)
     await disabled(writer)
+    live.socket.send(
+      JSON.stringify({
+        type: 'prose.sync',
+        field: `casenotes:${noteId}:document`,
+        update: typed(`sent after being disabled ${TAG}`),
+      }),
+    )
+    await closed
     watching.socket.close()
     await pause(1_500)
 
-    expect(await stored(noteId)).toEqual(namedFor(writer, words, `Writer ${String(count)}`))
+    const after = await stored(noteId)
+    expect({ ...after, late: after.note.includes(`sent after being disabled ${TAG}`) }).toEqual({
+      ...namedFor(writer, words, `Writer ${String(count)}`),
+      late: false,
+    })
+  })
+
+  it('keeps words whose audit line the store refuses unstored, and stores them with it once it can', async () => {
+    const owners = openTestPool(process.env['TEST_DATABASE_URL']!)
+    const asOwner = drizzle({ client: owners })
+    const noteId = await aNote()
+    const watching = await opens(owner, noteId)
+    const writer = await anAnalyst('write')
+    const live = await opens(writer, noteId)
+    const words = `typed while the audit refuses ${TAG}`
+    const refusal = `refuse_the_audit_${String(process.pid)}`
+    await asOwner.execute(
+      sql.raw(
+        `create or replace function ${refusal}() returns trigger language plpgsql as $f$ begin if new.actor_id = '${writer.id}' then raise exception 'the audit refuses this line'; end if; return new; end $f$`,
+      ),
+    )
+    await asOwner.execute(
+      sql.raw(`create trigger ${refusal} before insert on install_activity for each row execute function ${refusal}()`),
+    )
+    let refused: Awaited<ReturnType<typeof stored>>
+    try {
+      await types(live, noteId, words, watching)
+      await pause(1_500)
+      refused = await stored(noteId)
+    } finally {
+      await asOwner.execute(sql.raw(`drop trigger ${refusal} on install_activity`))
+      await asOwner.execute(sql.raw(`drop function ${refusal}()`))
+      await owners.end()
+    }
+    live.socket.close()
+    watching.socket.close()
+    await pause(1_500)
+
+    expect({ refused: refused.note, after: await stored(noteId) }).toEqual({
+      refused: 'seed',
+      after: namedFor(writer, words, `Writer ${String(count)}`),
+    })
   })
 
   it('refuses a word sent after write is withdrawn, and never stores it', async () => {

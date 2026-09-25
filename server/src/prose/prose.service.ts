@@ -39,10 +39,9 @@ import {
   Logger,
   Optional,
   type OnApplicationShutdown,
-  type OnModuleInit,
 } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import {
@@ -57,11 +56,12 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { user } from '../db/schema/auth.js'
 import { changeFeed } from '../db/schema/change-feed.js'
+import { proseAcceptances } from '../db/schema/prose-acceptances.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
 import { PROSE_ROLE } from '../db/schema/scoped.js'
-import { principalNow, unattended, withCase, type Executor } from '../db/scope.js'
+import { actingAs, principalNow, unattended, withCase, type Executor } from '../db/scope.js'
 import { fragmentFor } from '../domain/prose-fields.js'
 import { recordInstallActivity } from '../install-activity/record.js'
 
@@ -174,6 +174,10 @@ interface LiveDocument {
   deciding: (() => void)[] | null
   /** Whoever wrote into it since it was last stored, the latest last. */
   writers: Map<string, Writer>
+  /** Writers whose acceptance is recorded since it was last stored. */
+  accepted: Set<string>
+  /** The acceptances recorded since it was last stored, which the next store removes. */
+  acceptances: string[]
   /** The last flush queued; each waits for the one before it. */
   saving: Promise<void>
 }
@@ -233,7 +237,7 @@ function seedNote(doc: Y.Doc, text: string): void {
 }
 
 @Injectable()
-export class ProseService implements OnModuleInit, OnApplicationShutdown {
+export class ProseService implements OnApplicationShutdown {
   private readonly log = new Logger(ProseService.name)
   private readonly live = new Map<string, Promise<LiveDocument>>()
   private saved: Saved | undefined
@@ -250,12 +254,12 @@ export class ProseService implements OnModuleInit, OnApplicationShutdown {
   ) {}
 
   /**
-   * Refuses to start where the connection cannot become the prose role, or the
-   * role holds no grant on the words it stores.
+   * Whether this connection can store accepted prose: it can become the prose
+   * role, and the role holds its grant on the words. Call before serving.
    *
-   * @throws naming the role, so an install missing it fails at boot rather than at the first save
+   * @throws naming the role where it cannot
    */
-  async onModuleInit(): Promise<void> {
+  async assertIdentity(): Promise<void> {
     try {
       const granted = await this.db.transaction(async (tx) => {
         await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
@@ -403,6 +407,8 @@ export class ProseService implements OnModuleInit, OnApplicationShutdown {
       sealed,
       deciding: null,
       writers: new Map(),
+      accepted: new Set(),
+      acceptances: [],
       saving: Promise.resolve(),
     }
     doc.on('update', (update: Uint8Array, origin: unknown) => {
@@ -553,7 +559,10 @@ export class ProseService implements OnModuleInit, OnApplicationShutdown {
    * Content for a sent report is refused with its stamp. Content arriving while
    * a send decides waits for it: refused if the send stamps, applied if not.
    * Content that changes the document names `writer` in the next flush. The
-   * document has to be open.
+   * first frame carrying content since the last store is recorded as accepted,
+   * as `writer` and under their reach. The document has to be open.
+   *
+   * @throws where the store refuses to record `writer`'s acceptance, applying nothing
    */
   async apply(
     caseId: string,
@@ -574,6 +583,24 @@ export class ProseService implements OnModuleInit, OnApplicationShutdown {
             answer(this.apply(caseId, address, frame, origin, writer))
           })
         })
+      }
+    }
+    if (!held.accepted.has(writer.id) && !this.isStateRequest(frame)) {
+      held.accepted.add(writer.id)
+      try {
+        const [row] = await actingAs(writer.id, () =>
+          withCase(this.db, caseId, (tx) =>
+            tx
+              .insert(proseAcceptances)
+              .values({ caseId, entity: address.table, recordId: address.id, writerId: writer.id })
+              .returning({ id: proseAcceptances.id }),
+          ),
+        )
+        held.acceptances.push(row!.id)
+      } catch (error) {
+        held.accepted.delete(writer.id)
+        // A reader answering with nothing new is refused an acceptance and needs none.
+        if (!this.addsNothing(held.doc, frame)) throw error
       }
     }
     let changed = false
@@ -733,7 +760,10 @@ export class ProseService implements OnModuleInit, OnApplicationShutdown {
   private async store(caseId: string, address: ProseRecord, held: LiveDocument): Promise<void> {
     const writers = [...held.writers.values()]
     if (writers.length === 0 && !principalNow()) return
+    const acceptances = held.acceptances
     held.writers.clear()
+    held.accepted = new Set()
+    held.acceptances = []
     held.dirty = false
     // Null where the account is gone, as it would be had it gone after the write.
     const account = (id: string) => sql<string | null>`(select ${user.id} from ${user} where ${user.id} = ${id})`
@@ -742,9 +772,14 @@ export class ProseService implements OnModuleInit, OnApplicationShutdown {
     // False where the store has no such row in this case.
     const write = async (): Promise<boolean> => {
       let pruned: Y.Doc | null = null
-      const stored = await unattended(() => withCase(this.db, caseId, async (tx) => {
-        await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
-        await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
+      // Words written here are stored as the prose role; a save with none, as
+      // whoever asks, under their own reach.
+      const scope = writers.length > 0 ? unattended : <T>(work: () => T) => work()
+      const stored = await scope(() => withCase(this.db, caseId, async (tx) => {
+        if (writers.length > 0) {
+          await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
+          await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
+        }
         // A copy, so only a store that took it reaches the live document.
         if (address.table === 'reports') pruned = await this.prunedCopy(tx, address.id, held.doc)
         const bytes = Buffer.from(Y.encodeStateAsUpdate(pruned ?? held.doc))
@@ -791,6 +826,7 @@ export class ProseService implements OnModuleInit, OnApplicationShutdown {
           // The words are not stored where the line saying who wrote them is not.
           if (!recorded) throw new Error(`the audit refused the prose of ${recordOf(address)}`)
         }
+        if (acceptances.length > 0) await tx.delete(proseAcceptances).where(inArray(proseAcceptances.id, acceptances))
         return true
       }))
       if (pruned) {
@@ -810,10 +846,12 @@ export class ProseService implements OnModuleInit, OnApplicationShutdown {
         held.sealed ??= sent.sentAt
         return
       }
-      // **Marked dirty again**, so the next quiet moment or the last reader
-      // leaving tries once more. Swallowing it silently is how a report loses
-      // an afternoon to a transient database error nobody saw.
+      // **Marked dirty again**, so the next edit's quiet moment, the last
+      // reader leaving or shutdown tries once more. Swallowing it silently is
+      // how a report loses an afternoon to a transient database error nobody saw.
       held.dirty = true
+      held.acceptances = [...acceptances, ...held.acceptances]
+      for (const writer of writers) held.accepted.add(writer.id)
       held.writers = new Map([
         ...writers.filter((writer) => !held.writers.has(writer.id)).map((writer) => [writer.id, writer] as const),
         ...held.writers,

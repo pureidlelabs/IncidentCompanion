@@ -67,6 +67,6 @@ export const changeFeed = pgTable(
     // The only query this table serves: one case's writes, newest first.
     index('change_feed_case_seq_idx').on(table.caseId, table.seq),
     ...caseScoped(table.caseId),
-    ...proseKept(table.caseId, table.entityId, ['insert']),
+    ...proseKept(table.caseId, table.entityId, ['insert'], table.actorId),
   ],
 )

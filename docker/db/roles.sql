@@ -12,7 +12,7 @@
 -- made once with one password would keep it for ever. `role-passwords.sql`
 -- runs unconditionally after this one for that reason, which makes `.env` the
 -- authority and a rotation one `docker compose up roles` away.
--- Three roles, separated by what they may do.
+-- Four roles, separated by what they may do.
 --
 -- Run once per database server, as a superuser. In development the dev
 -- container executes it on init; anywhere else it is the first step of an
@@ -27,7 +27,7 @@
 --
 -- Idempotent, so re-running it on an existing install is safe.
 
--- **Created without a password here.** `role-passwords.sql` gives them one, and
+-- **Created without a password here.** `role-passwords.sql` gives each that logs in one, and
 -- is a separate file because a psql variable is the one thing in here that not
 -- every executor understands -- the test harness runs this through a driver
 -- that has none. A role with no password cannot be authenticated as, so a run
@@ -67,8 +67,9 @@ $$;
 -- every query the app makes, and the prose grants beside its own.
 GRANT ic_prose TO ic_app WITH INHERIT FALSE, SET TRUE;
 
--- The schema belongs to the migration role; the other two are granted use of
--- what it creates, per table, by the migration that creates them.
+-- The schema belongs to the migration role, and the other three may use it.
+-- The app and the seeder take what it creates, by the defaults below; the
+-- prose role takes only what the schema step grants it, column by column.
 GRANT USAGE ON SCHEMA public TO ic_app, ic_seed, ic_prose;
 
 -- **No default CREATE on the schema.** Postgres grants it to PUBLIC on

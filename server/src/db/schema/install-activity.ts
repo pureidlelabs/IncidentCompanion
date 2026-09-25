@@ -457,7 +457,7 @@ export const installActivity = pgTable(
     // cursor, ascending, within one log.
     index('install_activity_channel_seq_idx').on(table.channel, table.seq),
     ...appendOnly(),
-    proseAudited(table.detail),
+    proseAudited(table.detail, table.actorId),
   ],
 )
 

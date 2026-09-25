@@ -39,12 +39,13 @@ Words the application accepted from an analyst who could write at that moment MU
 - THEN the words are stored
 - AND the record, the case's record of changes and the install's audit name them
 
-#### Scenario: A writer is disabled before the words are stored
+#### Scenario: A writer is disabled while writing
 
 - GIVEN an analyst writing in a passage
 - WHEN their account is disabled before what they typed is stored
-- THEN the words are stored
-- AND the record, the case's record of changes and the install's audit name them
+- THEN their connection ends
+- AND what they send after is refused and never stored
+- AND what they typed before is stored, and the record, the case's record of changes and the install's audit name them
 
 #### Scenario: A word arrives after write is withdrawn
 

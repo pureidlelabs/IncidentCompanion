@@ -17,6 +17,7 @@ export const proseGrants: readonly string[] = [
   `grant select (id, case_id, version), update (document, note, updated_by, updated_at) on casenotes to ${PROSE_ROLE}`,
   `grant select (id, report_id, case_id) on report_blocks to ${PROSE_ROLE}`,
   `grant select (id) on "user" to ${PROSE_ROLE}`,
+  `grant select (id, case_id, record_id, writer_id), delete on prose_acceptances to ${PROSE_ROLE}`,
   `grant insert on change_feed, install_activity to ${PROSE_ROLE}`,
   `grant usage on sequence change_feed_seq_seq, install_activity_seq_seq to ${PROSE_ROLE}`,
 ]

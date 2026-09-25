@@ -18,11 +18,14 @@
  */
 import { randomUUID } from 'node:crypto'
 
-import { sql } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { user } from './schema/index.js'
+import { caseNotes, cases, customers, proseAcceptances, user } from './schema/index.js'
+import { CHANNEL_OF } from './schema/install-activity.js'
+import { OCSF_VERSION, classify } from '../install-activity/ocsf.js'
+import { retentionClassOf } from '../install-activity/retention-class.js'
 import { asRole, hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -253,5 +256,129 @@ describe.skipIf(!app || !hasConcurrentConnections())("the store's own acts", () 
   it.each(FOR_NOBODY)('%s answers no case content', async (name) => {
     const { fields } = await pool!.query(`select * from ${name}() limit 0`)
     expect(fields.map((one) => one.name)).toEqual(['case_id', 'hash', 'stored'])
+  })
+})
+
+/**
+ * **The role the application enters to store prose is not a way past the case
+ * boundary.** It may store a record only where the store holds an acceptance
+ * for it, made under a writer's own reach, and may name only those writers.
+ * Each attack enters it the way the save does and names what it likes.
+ */
+describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by the application', () => {
+  const seedPool = URL_ ? openTestPool(asRole(URL_, 'ic_seed')) : null
+  const seed = () => drizzle({ client: seedPool! })
+  const stamp = `${String(process.pid)}-${String(Date.now())}`
+  const writer = `prose-writer-${stamp}`
+  const victim = `prose-victim-${stamp}`
+  let unreached = ''
+  let caseA = ''
+  let caseB = ''
+  let accepted = ''
+  let unaccepted = ''
+  let elsewhere = ''
+
+  /** Runs `statement` as the prose role with `record` in `kase`; the rows it touched, or its SQLSTATE. */
+  async function asProse(kase: string, record: string, statement: ReturnType<typeof sql>): Promise<number | string> {
+    try {
+      return await app!.transaction(async (tx) => {
+        await tx.execute(sql`set local role ic_prose`)
+        await tx.execute(
+          sql`select set_config('app.case_id', ${kase}, true), set_config('app.prose_record', ${record}, true), set_config('app.principal', '', true)`,
+        )
+        return (await tx.execute(statement)).rowCount ?? 0
+      })
+    } catch (error) {
+      for (let at: unknown = error; at instanceof Object; at = (at as { cause?: unknown }).cause) {
+        const code = (at as { code?: unknown }).code
+        if (typeof code === 'string') return code
+      }
+      throw error
+    }
+  }
+
+  beforeAll(async () => {
+    await seed()
+      .insert(user)
+      .values(
+        [writer, victim].map((id) => ({
+          id,
+          name: id,
+          email: `${id}@example.invalid`,
+          emailVerified: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          role: 'analyst',
+        })),
+      )
+    unreached = ((await seed().insert(customers).values({ name: `Nobody reaches ${stamp}` }).returning())[0]!).id
+    caseA = ((await seed().insert(cases).values({ title: 'Prose A', customerId: unreached }).returning())[0]!).id
+    caseB = ((await seed().insert(cases).values({ title: 'Prose B', customerId: unreached }).returning())[0]!).id
+    const notes = await seed()
+      .insert(caseNotes)
+      .values([
+        { caseId: caseA, note: 'accepted' },
+        { caseId: caseA, note: 'unaccepted' },
+        { caseId: caseB, note: 'elsewhere' },
+      ])
+      .returning()
+    ;[accepted, unaccepted, elsewhere] = notes.map((one) => one.id) as [string, string, string]
+    await seed()
+      .insert(proseAcceptances)
+      .values({ caseId: caseA, entity: 'casenotes', recordId: accepted, writerId: writer })
+  })
+
+  afterAll(async () => {
+    await seed().delete(cases).where(inArray(cases.id, [caseA, caseB]))
+    await seed().delete(customers).where(eq(customers.id, unreached))
+    await seed().delete(user).where(inArray(user.id, [writer, victim]))
+    await seedPool?.end()
+  })
+
+  it('stores a record its writer was accepted into, naming them', async () => {
+    expect(
+      await asProse(caseA, accepted, sql`update casenotes set note = 'kept', updated_by = ${writer} where id = ${accepted}`),
+    ).toBe(1)
+  })
+
+  it('stores no record nobody was accepted into', async () => {
+    expect(
+      await asProse(caseA, unaccepted, sql`update casenotes set note = 'INJECTED', updated_by = ${writer} where id = ${unaccepted}`),
+    ).not.toBe(1)
+  })
+
+  it('stores no record of another case, whichever case it names', async () => {
+    expect(
+      await asProse(caseA, elsewhere, sql`update casenotes set note = 'INJECTED', updated_by = ${writer} where id = ${elsewhere}`),
+    ).toBe(0)
+    expect(
+      await asProse(caseB, elsewhere, sql`update casenotes set note = 'INJECTED', updated_by = ${writer} where id = ${elsewhere}`),
+    ).not.toBe(1)
+  })
+
+  it('names nobody on the record whose words were not accepted', async () => {
+    expect(
+      await asProse(caseA, accepted, sql`update casenotes set note = 'x', updated_by = ${victim} where id = ${accepted}`),
+    ).toBe('42501')
+  })
+
+  it('writes no change or audit line naming somebody whose words were not accepted', async () => {
+    expect(
+      await asProse(
+        caseA,
+        accepted,
+        sql`insert into change_feed (case_id, entity, entity_id, op, version, actor_id) values (${caseA}, 'casenotes', ${accepted}, 'update', 1, ${victim})`,
+      ),
+    ).toBe('42501')
+    expect(
+      await asProse(
+        caseA,
+        accepted,
+        sql`insert into install_activity (event, channel, retention_class, class_uid, activity_id, type_uid, schema_version, severity_id, status_id, actor_id, detail)
+            values ('api_called', ${CHANNEL_OF.api_called}, ${retentionClassOf('api_called')}, ${classify('api_called').classUid},
+                    ${classify('api_called').activityId}, ${classify('api_called').typeUid}, ${OCSF_VERSION}, 1, 1, ${victim},
+                    ${JSON.stringify({ case: caseA, record: accepted })}::jsonb)`,
+      ),
+    ).toBe('42501')
   })
 })
