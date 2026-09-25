@@ -110,6 +110,11 @@ describe('free text inside a generated block', () => {
     ['open http:\\\\evil.example.com', 'open hxxp:\\\\evil[.]example[.]com'],
     ['beacon evil\uff0eexample\uff0ecom', 'beacon evil[.]example[.]com'],
     ['beacon evil\u3002example\u3002com', 'beacon evil[.]example[.]com'],
+    ['mail a@evil\uff0eexample\uff0ecom', 'mail a[@]evil[.]example[.]com'],
+    ['load //evil\uff0eexample\u3002com/x', 'load //evil[.]example[.]com/x'],
+    ['copy \\\\evil\uff0eexample\uff0ecom\\s', 'copy \\\\evil[.]example[.]com\\s'],
+    ['fetch http://evil\uff0eexample\u200b.com/x', 'fetch hxxp://evil[.]example[.]com/x'],
+    ['open http:evil\u3002example\u3002com', 'open hxxp:evil[.]example[.]com'],
   ])('defangs %s', (given, expected) => {
     expect(defangText(given)).toBe(expected)
     expect(defangText(expected), 'a second pass changes nothing').toBe(expected)

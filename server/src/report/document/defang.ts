@@ -55,7 +55,8 @@ const UNC = /\\\\(?:\?\\UNC\\)?([^\\\s/]+)/gi
 const SEPARATOR = /[\u200b-\u200d\u2060\ufeff]*[.\uff0e\u3002][\u200b-\u200d\u2060\ufeff]*/u
 
 /** The domain half of an email address; the local part is not an indicator. */
-const EMAIL = /(?<=[\p{L}\p{N}._%+-])@([\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+)/gu
+const EMAIL =
+  /(?<=[\p{L}\p{N}._%+-])@([\p{L}\p{N}-]+(?:[\u200b-\u200d\u2060\ufeff]*[.\uff0e\u3002][\u200b-\u200d\u2060\ufeff]*[\p{L}\p{N}-]+)+)/gu
 
 /**
  * A dotted name standing on its own, which `bareHost` then judges.
@@ -83,8 +84,15 @@ const TLDS = new Set(ROOT_ZONE.flatMap((tld) => [tld, domainToUnicode(tld)]))
  * bracket notation contains a dot of its own, so bracketing is *not* naturally
  * idempotent. A frozen report is re-painted from its stored tree, so a document
  * meeting this twice is an ordinary event rather than a mistake.
+ *
+ * Every separator `SEPARATOR` names is bracketed, with the zero-width
+ * characters beside it.
  */
-const dots = (value: string) => value.replace(/(?<!\[)\.(?!\])/g, '[.]')
+const dots = (value: string) =>
+  value.replace(
+    /[\u200b-\u200d\u2060\ufeff]*(?:(?<!\[)\.(?!\])|[\uff0e\u3002])[\u200b-\u200d\u2060\ufeff]*/gu,
+    '[.]',
+  )
 
 const ats = (value: string) => value.replace(/(?<!\[)@(?!\])/g, '[@]')
 
