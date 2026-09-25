@@ -2,7 +2,7 @@
 
 /** A filename with no control character and no path separator in it. */
 export function safeFilename(name: string): string {
-  return name.replace(/[\u0000-\u001f\u007f]/g, '').replace(/[/\\]/g, '_').trim()
+  return name.replace(/\p{Cc}/gu, '').replace(/[/\\]/g, '_').trim()
 }
 
 /**

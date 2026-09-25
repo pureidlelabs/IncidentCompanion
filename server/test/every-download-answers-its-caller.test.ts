@@ -17,18 +17,18 @@ const runnable = await bootable()
 
 /** What a browser saves the file as: RFC 6266 prefers `filename*` wherever it is present. */
 function savedAs(disposition: string): string {
-  const extended = /filename\*=UTF-8''([^;\s]+)/.exec(disposition)
+  const extended = /filename\*=UTF-8\x27\x27([^;\s]+)/.exec(disposition)
   expect(extended, `no filename* in ${disposition}`).not.toBeNull()
   // RFC 8187 attr-char, and nothing else, or a strict parser drops the parameter.
-  expect(extended![1]).toMatch(/^[A-Za-z0-9!#$&+\-.^_`|~%]+$/)
+  expect(extended![1]).toMatch(/^[A-Za-z0-9!#$&+\-.^_\x60|~%]+$/)
   return decodeURIComponent(extended![1]!)
 }
 
 /** The fallback a client without RFC 8187 reads: one quoted, printable-ASCII value. */
 function fallbackOf(disposition: string): string {
-  const plain = /filename="([^"]*)"/.exec(disposition)
+  const plain = /filename=\x22([^\x22]*)\x22/.exec(disposition)
   expect(plain, `no filename in ${disposition}`).not.toBeNull()
-  expect(disposition.match(/"/g) ?? []).toHaveLength(2)
+  expect(disposition.match(/\x22/g) ?? []).toHaveLength(2)
   expect(plain![1]).toMatch(/^[\x20-\x7e]+$/)
   return plain![1]!
 }
@@ -66,9 +66,9 @@ describe.skipIf(!runnable)('every download answers its caller', () => {
    * what arrives here: a raw CR/LF could not reach the header at all.
    */
   it.each([
-    ['Japanese', '請求書の写し.eml', '請求書の写し.eml.zip'],
-    ['Cyrillic', 'Счёт-фактура.pdf', 'Счёт-фактура.pdf.zip'],
-    ['an emoji', '📎 invoice.docm', '📎 invoice.docm.zip'],
+    ['Japanese', '\u8acb\u6c42\u66f8\u306e\u5199\u3057.eml', '\u8acb\u6c42\u66f8\u306e\u5199\u3057.eml.zip'],
+    ['Cyrillic', '\u0421\u0447\u0451\u0442-\u0444\u0430\u043a\u0442\u0443\u0440\u0430.pdf', '\u0421\u0447\u0451\u0442-\u0444\u0430\u043a\u0442\u0443\u0440\u0430.pdf.zip'],
+    ['an emoji', '\ud83d\udcce invoice.docm', '\ud83d\udcce invoice.docm.zip'],
     ['a quote and a semicolon', 'a"b;c.txt', 'a"b;c.txt.zip'],
     ['a line break carrying a header', 'x\r\nSet-Cookie: pwned=1.txt', 'xSet-Cookie: pwned=1.txt.zip'],
     ['a path climbing out', '../../etc/passwd', '.._.._etc_passwd.zip'],
@@ -99,7 +99,7 @@ describe.skipIf(!runnable)('every download answers its caller', () => {
     const bytes = `a live artefact ${String(Date.now())}`
     await call('POST', `/api/cases/${caseId}/evidence/${id}/file`, bytes, {
       'content-type': 'text/plain',
-      'x-original-filename': encodeURIComponent('Письмо.eml'),
+      'x-original-filename': encodeURIComponent('\u041f\u0438\u0441\u044c\u043c\u043e.eml'),
     })
 
     const got = await call('GET', `/api/cases/${caseId}/evidence/${id}/file`)
@@ -110,7 +110,7 @@ describe.skipIf(!runnable)('every download answers its caller', () => {
     expect(served.toString('latin1')).not.toContain(bytes)
     const reader = new ZipReader(new Uint8ArrayReader(new Uint8Array(served)), { password: ARTEFACT_PASSWORD })
     const [entry] = await reader.getEntries()
-    expect(entry!.filename).toBe('Письмо.eml')
+    expect(entry!.filename).toBe('\u041f\u0438\u0441\u044c\u043c\u043e.eml')
     const inside = await (entry as { getData: (w: Uint8ArrayWriter) => Promise<Uint8Array> }).getData(
       new Uint8ArrayWriter(),
     )
