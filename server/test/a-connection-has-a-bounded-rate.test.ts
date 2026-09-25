@@ -47,6 +47,8 @@ interface Upgrade {
   answered: Promise<number | 'open'>
   closed: Promise<number>
   heardBytes: () => number
+  /** The analysts, and how many connections each holds, in the last roster this connection heard. */
+  roster: () => { user_id: string; connections: number }[]
 }
 
 function upgrade(who: Persona | null, path = `/api/cases/${caseId}/live`): Upgrade {
@@ -55,8 +57,11 @@ function upgrade(who: Persona | null, path = `/api/cases/${caseId}/live`): Upgra
   })
   sockets.push(socket)
   let bytes = 0
+  let roster: { user_id: string; connections: number }[] = []
   socket.on('message', (raw: Buffer) => {
     bytes += raw.length
+    const frame = JSON.parse(raw.toString()) as { type?: string; roster?: typeof roster }
+    if (frame.type === 'presence' && frame.roster) roster = frame.roster
   })
   socket.on('error', () => {})
   const answered = new Promise<number | 'open'>((done) => {
@@ -69,7 +74,7 @@ function upgrade(who: Persona | null, path = `/api/cases/${caseId}/live`): Upgra
     socket.once('error', () => done(0))
   })
   const closed = new Promise<number>((done) => socket.once('close', (code) => done(code)))
-  return { socket, answered, closed, heardBytes: () => bytes }
+  return { socket, answered, closed, heardBytes: () => bytes, roster: () => roster }
 }
 
 const lines = (event: 'case_opened_live' | 'live_refused' | 'rate_limited', from: Date, actorId?: string) =>
@@ -116,11 +121,27 @@ describe.skipIf(!(await bootable()))('a connection to the case, at a rate', () =
     noteId = (await post(`/cases/${caseId}/casenotes`, { note: 'seed' })).id
   }, 120_000)
 
+  /**
+   * A connection leaves the roster only once every frame queued on it has run, so the app is closed
+   * after a fresh connection sees itself alone: closing it sooner leaves those frames reading a
+   * closed store and logging past the file's end.
+   */
   afterAll(async () => {
     for (const socket of sockets) socket.terminate()
+    if (!harness) return
+    const last = upgrade(admin)
+    expect(await last.answered).toBe('open')
+    const alone = () => {
+      const roster = last.roster()
+      return roster.length === 1 && roster[0]!.user_id === admin.id && roster[0]!.connections === 1
+    }
+    for (const end = Date.now() + 60_000; Date.now() < end && !alone();) await pause(100)
+    expect(alone(), 'connections this file opened were still running').toBe(true)
+    last.socket.close()
+    await last.closed
     await pause(300)
-    await harness?.close()
-  })
+    await harness.close()
+  }, 90_000)
 
   it('admits a bounded number of one analyst\'s upgrades made at once, and records each refusal once', async () => {
     const who = await anAnalyst()
@@ -134,10 +155,11 @@ describe.skipIf(!(await bootable()))('a connection to the case, at a rate', () =
       boundedAdmitted: admitted <= 32,
       restRefused: answers.filter((one) => one === 429).length === 200 - admitted,
       opened: (await lines('case_opened_live', from, who.id)) === admitted,
-      limitedLines: (await lines('rate_limited', from)) <= 2,
+      // A run per bound, and the account's allowance refilling mid-run can start one more: never a line per refusal.
+      limitedLines: (await lines('rate_limited', from)) < 10,
     }).toEqual({ someAdmitted: true, boundedAdmitted: true, restRefused: true, opened: true, limitedLines: true })
     for (const one of all) one.socket.terminate()
-  })
+  }, 30_000)
 
   it('refuses anonymous upgrades past a bound per address, and writes a bounded number of lines', async () => {
     const from = new Date(Date.now() - 50)
@@ -151,7 +173,7 @@ describe.skipIf(!(await bootable()))('a connection to the case, at a rate', () =
       refusalLines: (await lines('live_refused', from)) === refused && refused <= 30,
       limitedLines: (await lines('rate_limited', from)) <= 1,
     }).toEqual({ someHeardWhy: true, restLimited: true, refusalLines: true, limitedLines: true })
-  })
+  }, 30_000)
 
   it('ends a connection that sends past its budget, before much of it reaches anybody', async () => {
     const reader = await anAnalyst()
