@@ -8,7 +8,7 @@
 
 ## How a row is filled in
 
-**`demonstrated`** names the tests that demonstrate it, each as `path :: describe > case`, several separated by ` ; `. Each reaches the product the way the scenario's actor does: a request or a socket the booted application served, a story drawn in a browser, a stack raised with Compose, or a screen rendered. A path alone, a check that reads the repository, and a test that builds the parts by hand demonstrate nothing. The run that decides a landing refuses a row whose cited test is absent, skipped, failed, or never reached the product, and `tests/certify.py` is that refusal.
+**`demonstrated`** names the tests that demonstrate it, each as `path :: describe > case`, several separated by ` ; `. Each reaches the product the way the scenario's actor does: a request or a socket the booted application served, a story whose scenario is what it draws, a stack raised with Compose, or a screen rendered. A story is evidence rather than a demonstration unless `tests/certify.py` names it for the row's capability, because a story replaces with a constant whatever its providers would have read. A path alone, a check that reads the repository, and a test that builds the parts by hand demonstrate nothing. The run that decides a landing refuses a row whose cited test is absent, skipped, failed, or never reached the product, and `tests/certify.py` is that refusal.
 
 **`undemonstrable`** carries the reason instead. Some scenarios are honestly beyond automation -- an operator is told, an analyst can tell at a glance, a refusal reveals nothing by its timing. Those are demonstrated by somebody looking, or they are not demonstrated at all, and the constitution requires that they are recorded rather than quietly counted.
 
@@ -659,7 +659,7 @@
 | Which languages an install can write reports in is the administrator's to change | A report produced after its language was removed | undemonstrated | |
 | Which languages an install can write reports in is the administrator's to change | A file that is not a language | undemonstrated | |
 | Which languages an install can write reports in is the administrator's to change | A language carrying words the application has no place for | undemonstrated | |
-| Which languages an install can write reports in is the administrator's to change | An incomplete language is managed | demonstrated | ui/src/components/blocks/languages-pane.stories.tsx :: A pack four strings short |
+| Which languages an install can write reports in is the administrator's to change | An incomplete language is managed | undemonstrated |  |
 | A report is for an audience, and the audience decides what it owes | A report is created | unbuilt | Not built: a report records no audience. -> #228 |
 | A report is for an audience, and the audience decides what it owes | A layout omits something the audience requires | unbuilt | Not built: what a report owes is read from its layout, not its audience. -> #228 |
 | A report never carries another customer's data | A report carries a row from another customer | unbuilt | Not built: the boundary is held at the write and at the evidence store, and no export refuses. -> #227 |
@@ -675,7 +675,7 @@
 | The report an analyst is reading is in the address | A command travelled on the address and has been run | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx :: a report has an address > leaves the New report dialog shut after the command that opened it |
 | A case's reports are navigation, and are reachable from every section | An analyst is reading another part of the case | undemonstrated | |
 | A case's reports are navigation, and are reachable from every section | A report is opened from elsewhere in the case | undemonstrated | |
-| A case's reports are navigation, and are reachable from every section | A case holds no reports | demonstrated | ui/src/screens/report-section.stories.tsx :: A case with no reports |
+| A case's reports are navigation, and are reachable from every section | A case holds no reports | undemonstrated |  |
 | A case's reports are navigation, and are reachable from every section | The address names a report the case no longer holds | undemonstrated | |
 | A case's reports are navigation, and are reachable from every section | The analyst leaves the section that draws a report | undemonstrated | |
 | A report filed under a regime records which step of it the report is | A filing is created from the layout that files it | undemonstrated | |
