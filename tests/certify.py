@@ -86,7 +86,12 @@ UNREAD = {
 #: Cases whose scenario's actor is the database role the application connects
 #: as, so the store is the surface they reach it through; each with why. They
 #: count only for a `state` row.
-STORE_SURFACE: dict[str, str] = {}
+STORE_SURFACE: dict[str, str] = {
+    "server/test/a-sent-report-says-nothing-to-a-writer-out-of-its-reach.test.ts :: a part naming a sent "
+    "report out of the writer's reach > refuses it at the store as it refuses a report that does not "
+    "exist, naming nothing and waiting on nothing": "whether a refused write waits on another case's row "
+    "is visible only to a second session at the store, and every route refuses before it writes",
+}
 
 EDGE_IMAGE_FILE = "tests/docker/test_container_config.py"
 
