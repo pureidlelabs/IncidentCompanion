@@ -10,54 +10,57 @@
  *
  * What this does not reach: the browser's own Back, which no jsdom history
  * implements. The scenarios here move the address and let the router hear it.
+ *
+ * No module is mocked: the case and the report catalogue reach the container
+ * through the real hooks and request layer, from a model of the network.
  */
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import { setSession } from '@/api/session'
+import { setTransport } from '@/api/transport'
 import { EntityCardProvider } from '@/components/blocks/entity-card'
 import { CaseFrame } from '@/components/blocks/case-frame'
-import { DEMO_LAYOUTS, DEMO_TLP } from '@/components/blocks/report-layouts'
+import reportLayouts from '@/demo/catalogue/report-layouts.json'
 import { DEMO_BLOCKS, DEMO_REPORTS, demoReport } from '@/fixtures/report-demo'
 import { AriaRouter } from '@/components/ui/aria-router'
 import { campaignCase } from '@/fixtures/campaign'
+
+import { ReportContainer } from './ReportContainer'
 
 const CASE = campaignCase.id
 const FIRST = demoReport(0)
 const SECOND = demoReport(1)
 
-vi.mock('@/api/case', () => ({
-  useCase: () => ({
-    data: { ...campaignCase, reportBlocks: DEMO_BLOCKS },
-    isPending: false,
-    error: null,
-    refetch: vi.fn(),
-  }),
-}))
-vi.mock('@/api/regimes', () => ({
-  useRegimes: () => ({ data: undefined }),
-  regimeEnabled: () => false,
-}))
-// Partial, because `report-layouts.ts` reads `BLANK_LAYOUT` from here at
-// module scope and a whole-module mock leaves it undefined.
-vi.mock('@/api/reportLayouts', async () => ({
-  ...(await vi.importActual<Record<string, unknown>>('@/api/reportLayouts')),
-  useReportLayouts: () => ({ data: { layouts: DEMO_LAYOUTS, tlp: DEMO_TLP } }),
-}))
-vi.mock('@/api/reportBlockKinds', () => ({ useReportBlockKinds: () => ({ data: undefined }) }))
-vi.mock('@/api/useEntryCreate', () => ({ useEntryCreate: () => ({ mutateAsync: vi.fn() }) }))
-vi.mock('@/api/useEntryMutation', () => ({
-  useEntryMutation: () => ({ mutateAsync: vi.fn() }),
-}))
-vi.mock('@/api/useEntryBulkCreate', () => ({
-  useEntryBulkCreate: () => ({ mutateAsync: vi.fn() }),
-}))
-vi.mock('@/api/useEntryReorder', () => ({ useEntryReorder: () => ({ mutateAsync: vi.fn() }) }))
-vi.mock('@/api/useSession', () => ({ useSession: () => ({ username: 'Ada' }) }))
+const json = (status: number, body: unknown) =>
+  Promise.resolve(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    }),
+  )
 
-const { ReportContainer } = await import('./ReportContainer')
+/** The reads the report section makes, answered as the server answers them. */
+function server(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const url = new URL(input instanceof Request ? input.url : input.toString(), 'http://ic.test')
+  if ((init?.method ?? 'GET') !== 'GET') return json(405, { message: 'this file writes nothing' })
+  if (url.pathname === `/api/cases/${CASE}`) {
+    return json(200, { ...campaignCase, reportBlocks: DEMO_BLOCKS })
+  }
+  if (url.pathname === '/api/report-layouts') return json(200, reportLayouts)
+  if (url.pathname === '/api/report-block-kinds') return json(200, { groups: [] })
+  if (url.pathname === '/api/regimes') return json(200, { enabled: false, regimes: {} })
+  return json(404, { message: `unmodelled ${url.pathname}` })
+}
+
+beforeEach(() => {
+  setTransport(server)
+  setSession({ userId: 'u-ada', username: 'Ada' })
+})
 
 /**
  * The frame as the app mounts it: the rail draws the reports, and reads which
@@ -93,16 +96,19 @@ function Framed({ children }: { children: ReactNode }) {
 /** The container under a route that carries a case id, at the given address. */
 function at(address: string) {
   window.history.replaceState({}, '', address)
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <BrowserRouter>
-      <EntityCardProvider caseId={CASE}>
-        <Framed>
-          <Routes>
-            <Route path="/cases/:caseId/:section" element={<ReportContainer />} />
-          </Routes>
-        </Framed>
-      </EntityCardProvider>
-    </BrowserRouter>,
+    <QueryClientProvider client={client}>
+      <BrowserRouter>
+        <EntityCardProvider caseId={CASE}>
+          <Framed>
+            <Routes>
+              <Route path="/cases/:caseId/:section" element={<ReportContainer />} />
+            </Routes>
+          </Framed>
+        </EntityCardProvider>
+      </BrowserRouter>
+    </QueryClientProvider>,
   )
 }
 
@@ -130,6 +136,7 @@ async function open(user: ReturnType<typeof userEvent.setup>, label: string): Pr
 
 afterEach(() => {
   window.history.replaceState({}, '', '/')
+  setTransport((input, init) => fetch(input, init))
 })
 
 describe('a report has an address', () => {

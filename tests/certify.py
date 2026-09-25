@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import posixpath
 import re
 import subprocess
 import sys
@@ -93,8 +94,8 @@ STORE_SURFACE: dict[str, str] = {
     "is visible only to a second session at the store, and every route refuses before it writes",
 }
 
-#: Stories whose scenario's surface is what they draw, with nothing stubbed on
-#: the actor's path; each with why, and counting only for the capability named.
+#: Stories, and client cases that stub the server, whose scenario's surface is
+#: what they draw; each with why, and counting only for the capability named.
 DRAWN_SURFACE: dict[tuple[str, str], str] = {
     ("ui/src/screens/case-archive.stories.tsx :: An export left unencrypted", "case-archive"): "being told is "
     "a readable line the screen draws from the analyst leaving the passphrase blank, which its container never sets",
@@ -286,15 +287,26 @@ def read(reports: Path, known: set[str]) -> Run:
     return run
 
 
-def renders_a_screen(path: str) -> bool:
-    """Whether a client test file renders a screen or an app container.
+#: A module a client test replaces with `vi.mock` or `vi.doMock`, in any spelling of the call.
+MOCKED = re.compile(r"""vi\.(?:do)?[mM]ock\(\s*(?:import\(\s*)?['"]([^'"]+)['"]""")
+
+
+def _replaces_the_server(path: str, module: str) -> bool:
+    """Whether `module`, as a test at `path` names it, is the request layer or a data hook."""
+    if module.startswith("."):
+        module = "@/" + posixpath.normpath(posixpath.join(posixpath.dirname(path), module)).removeprefix("ui/src/")
+    return module.startswith("@/api/") or bool(re.search(r"(^|/)use[A-Z]\w*$", module))
+
+
+def reaches_the_server(path: str) -> bool:
+    """Whether a client test file renders an app container with nothing between it and the network replaced.
 
     Read from the file rather than the run, so one case in it can still test a helper.
     """
     text = (REPO_ROOT / path).read_text(encoding="utf-8")
-    under = path.startswith(("ui/src/app/", "ui/src/screens/"))
-    imports = re.search(r"from '@/(app|screens)/", text)
-    return "@testing-library/react" in text and bool(under or imports)
+    container = path.startswith("ui/src/app/") or "from '@/app/" in text
+    stubbed = any(_replaces_the_server(path, module) for module in MOCKED.findall(text))
+    return "@testing-library/react" in text and container and not stubbed
 
 
 def entry_level(ident: str, case: Case, capability: str) -> bool:
@@ -302,7 +314,8 @@ def entry_level(ident: str, case: Case, capability: str) -> bool:
 
     A server case says so in its report, where the booted app tags a request or
     a socket, unless `STORE_SURFACE` names it for a `state` row. A story counts
-    only where `DRAWN_SURFACE` names it for the row's capability, and a Compose
+    only where `DRAWN_SURFACE` names it for the row's capability, a client case
+    where its file reaches the server or `DRAWN_SURFACE` names it, and a Compose
     case is tagged by the fixture that raised the stack.
     """
     if case.tier == "server":
@@ -313,7 +326,7 @@ def entry_level(ident: str, case: Case, capability: str) -> bool:
     if case.tier == "containers":
         return case.meta.get("entry") == "compose"
     if case.tier == "client":
-        return renders_a_screen(case.path)
+        return reaches_the_server(case.path) or (ident, capability) in DRAWN_SURFACE
     return False
 
 
