@@ -152,4 +152,51 @@ describe.skipIf(!(await bootable()))('an account act that waits its turn', () =>
     expect(asideTook, 'an unrelated route waited on the account acts').toBeLessThan(2_000)
     expect(Date.now() - started, 'the acts took too long').toBeLessThan(5_000)
   }, 30_000)
+
+  /**
+   * Another instance holds the lock for longer than an act waits. The request
+   * is bounded at 8 s so an act that waits indefinitely fails here rather than
+   * at the test's own timeout.
+   */
+  it('refuses an act kept waiting past its bound, changing nothing, and takes the next one', async () => {
+    const target = await anAccount('outwaited', 'analyst')
+    const holder = await pool.connect()
+    const refused = async () => {
+      await holder.query(`select pg_advisory_lock(hashtext('account-state'))`)
+      const answer = await fetch(`${harness.base}${at(target)}/disable`, {
+        method: 'POST',
+        headers: { cookie: admin.cookie, origin: harness.origin },
+        signal: AbortSignal.timeout(8_000),
+      }).catch(() => null)
+      return { status: answer?.status ?? 0, text: (await answer?.text()) ?? '' }
+    }
+    let answered: { status: number; text: string }
+    try {
+      answered = await refused()
+    } finally {
+      await holder.query(`select pg_advisory_unlock(hashtext('account-state'))`)
+      holder.release()
+    }
+    const { status, text } = answered
+    const lines = async () =>
+      (
+        await pool.query<{ event: string }>(
+          `select event from install_activity where target_label = $1 and event = 'account_disabled'`,
+          [target],
+        )
+      ).rows.length
+
+    expect({ status, text, target: await heldBy(target), lines: await lines() }).toEqual({
+      status: 503,
+      text: expect.stringContaining('Another change to an account is under way, so this one was not made.'),
+      target: { role: 'analyst', banned: false },
+      lines: 0,
+    })
+
+    expect((await post(admin, `${at(target)}/disable`)).status).toBe(200)
+    expect({ target: await heldBy(target), lines: await lines() }).toEqual({
+      target: { role: 'analyst', banned: true },
+      lines: 1,
+    })
+  }, 30_000)
 })
