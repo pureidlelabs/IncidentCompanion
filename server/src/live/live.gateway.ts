@@ -39,6 +39,7 @@ import type * as Y from 'yjs'
 import { actingAs } from '../db/scope.js'
 import { CaseChannel, type Member } from './case-channel.service.js'
 import { ProseService, type ProseRecord, type Writer } from '../prose/prose.service.js'
+import type { ProseState, ProseStateFrame } from '../domain/prose-state.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
 import { ReachService } from '../access/reach.service.js'
@@ -117,6 +118,8 @@ interface OpenDocument {
   /** Which record this document is - a report, or one case note. */
   address: ProseRecord
   doc: Y.Doc
+  /** What this connection was last told about the words the document holds unsaved, while they are. */
+  unsaved: ProseState | null
   stop: () => void
 }
 
@@ -695,6 +698,8 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     }
 
     const { reply } = applied
+    // A screen opening the field again is told what an earlier one was.
+    if (!opens && held.unsaved && this.prose.isStateRequest(frame)) this.tellUnsaved(live, field, held.unsaved)
     // The server's own step 1 goes after the answer, so the client is ready first.
     for (const bytes of [reply, opens ? this.prose.hello(held.doc) : null]) {
       if (!bytes) continue
@@ -735,17 +740,30 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     }
     doc.on('update', onUpdate)
 
-    return {
+    const open: OpenDocument = {
       address,
       doc,
+      unsaved: null,
       stop: () => {
         doc.off('update', onUpdate)
+        void unwatch.then((stop) => stop())
         // As in `attach`: a release racing a closing Redis rejects, which `void` would leak.
         this.prose.release(member.caseId, address).catch((error: unknown) => {
           this.log.warn(`could not release ${field}: ${String(error)}`)
         })
       },
     }
+    const unwatch = this.prose.watch(member.caseId, address, (state) => {
+      open.unsaved = state === 'saved' ? null : state
+      this.tellUnsaved(live, field, state)
+    })
+    await unwatch
+    return open
+  }
+
+  private tellUnsaved(live: WebSocket, field: string, state: ProseState): void {
+    const frame: ProseStateFrame = { type: 'prose.state', field, state }
+    live.send(JSON.stringify(frame))
   }
 
   /**

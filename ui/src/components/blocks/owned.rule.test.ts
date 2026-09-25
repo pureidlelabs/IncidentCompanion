@@ -62,6 +62,7 @@ const OWNED: Readonly<Record<string, string>> = {
   Cell: 'blocks/data-table.tsx',
   CheckboxGroup: 'blocks/compliance-field.tsx',
   Column: 'blocks/data-table.tsx',
+  CopyButton: 'blocks/prose-unsaved.tsx',
   ComboBox: 'blocks/entity-combobox.tsx',
   Disclosure: 'blocks/field-row.tsx',
   DisclosureHeader: 'blocks/field-row.tsx',

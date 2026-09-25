@@ -147,14 +147,20 @@ const rowsOf = (tx: Tx | NonNullable<typeof seed>, subject: Subject, caseId: str
 /** Tables whose rows are written once and never changed, by any caller. */
 const WRITTEN_ONCE = ['prose_acceptances']
 
-/** The rows of `caseId` an update touches: the case column set to what it holds. */
+/** Tables whose rows are added to and never changed or removed, by any caller; they go with their case. */
+const APPENDED = ['change_feed']
+
+/**
+ * The rows of `caseId` an update touches: the case column set to what it
+ * holds, or for `cases`, whose case column is its id, the title.
+ */
 const updated =(tx: Tx, subject: Subject, caseId: string) => {
   const [key] = Object.entries(getTableColumns(subject.table)).find(
     ([, column]) => column === subject.caseColumn,
   )!
   return tx
     .update(subject.table)
-    .set({ [key]: caseId })
+    .set(subject.name === 'cases' ? { title: sql`title` } : { [key]: caseId })
     .where(eq(subject.caseColumn, caseId))
     .returning()
 }
@@ -348,7 +354,7 @@ describe.skipIf(!app || !hasConcurrentConnections())(
       },
     )
 
-    it.each(tables.map((one) => one.name))(
+    it.each(tables.map((one) => one.name).filter((name) => !APPENDED.includes(name)))(
       '%s changes and removes nothing for a caller who only reads the case',
       async (name) => {
         const subject = tables.find((one) => one.name === name)!
@@ -371,8 +377,24 @@ describe.skipIf(!app || !hasConcurrentConnections())(
       expect(refused?.code ?? refused?.cause?.code).toBe('42501')
     })
 
+    it.each(APPENDED)('%s is changed and removed by nobody, even a caller who writes the case', async (name) => {
+      const subject = tables.find((one) => one.name === name)!
+      const refusal = (write: (tx: Tx) => Promise<unknown>) =>
+        asking(insider, theirs, (tx) =>
+          write(tx)
+            .then(() => null)
+            .catch((error: unknown) => error as { code?: string; cause?: { code?: string } }),
+        ).then((refused) => refused?.code ?? refused?.cause?.code)
+      expect({
+        changed: await refusal((tx) => updated(tx, subject, theirs)),
+        removed: await refusal((tx) => deleted(tx, subject, theirs)),
+      }).toEqual({ changed: '42501', removed: '42501' })
+    })
+
     it.each(
-      tables.map((one) => one.name).filter((name) => name !== 'case_visits' && !WRITTEN_ONCE.includes(name)),
+      tables
+        .map((one) => one.name)
+        .filter((name) => name !== 'case_visits' && !WRITTEN_ONCE.includes(name) && !APPENDED.includes(name)),
     )(
       '%s is changed by a caller who writes the case',
       async (name) => {

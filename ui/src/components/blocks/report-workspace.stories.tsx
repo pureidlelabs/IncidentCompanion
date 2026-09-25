@@ -109,7 +109,14 @@ export const ManySections: Story = {
 function refusedSync(at: string): NonNullable<ReportWorkspaceProps['sync']> {
   const doc = new Y.Doc()
   return {
-    channel: { doc, awareness: new Awareness(doc), refusedAt: at, refusedBecause: 'report-sent' },
+    channel: {
+      doc,
+      awareness: new Awareness(doc),
+      refusedAt: at,
+      refusedBecause: 'report-sent',
+      unsaved: null,
+      watchUnsaved: () => () => undefined,
+    },
     status: 'refused',
     settled: true,
   } as unknown as NonNullable<ReportWorkspaceProps['sync']>
