@@ -23,6 +23,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { caseNotes, cases, customers, proseAcceptances, user } from './schema/index.js'
+import { ACCEPTANCE_LASTS } from './schema/scoped.js'
 import { CHANNEL_OF } from './schema/install-activity.js'
 import { OCSF_VERSION, classify } from '../install-activity/ocsf.js'
 import { retentionClassOf } from '../install-activity/retention-class.js'
@@ -380,5 +381,52 @@ describe.skipIf(!app || !hasConcurrentConnections())('the prose role, entered by
                     ${JSON.stringify({ case: caseA, record: accepted })}::jsonb)`,
       ),
     ).toBe('42501')
+  })
+
+  it('cannot rename the writer an acceptance names', async () => {
+    const renamed = await app!
+      .transaction(async (tx) => {
+        await tx.execute(
+          sql`select set_config('app.case_id', ${caseA}, true), set_config('app.principal', ${writer}, true)`,
+        )
+        return (await tx.execute(sql`update prose_acceptances set writer_id = ${victim} where record_id = ${accepted}`))
+          .rowCount
+      })
+      .catch((error: unknown) => (error as { cause?: { code?: string } }).cause?.code ?? String(error))
+
+    expect(renamed).toBe('42501')
+  })
+
+  it('stores nothing on an acceptance older than an acceptance lasts', async () => {
+    await seed()
+      .insert(proseAcceptances)
+      .values({
+        caseId: caseA,
+        entity: 'casenotes',
+        recordId: unaccepted,
+        writerId: writer,
+        acceptedAt: sql`now() - ${ACCEPTANCE_LASTS}::interval - interval '1 minute'`,
+      })
+    try {
+      expect(
+        await asProse(caseA, unaccepted, sql`update casenotes set note = 'late', updated_by = ${writer} where id = ${unaccepted}`),
+      ).not.toBe(1)
+    } finally {
+      await seed().delete(proseAcceptances).where(eq(proseAcceptances.recordId, unaccepted))
+    }
+  })
+
+  it('names nobody on a record only because another record has a writer without an account', async () => {
+    const gone = `prose-gone-${stamp}`
+    await seed()
+      .insert(proseAcceptances)
+      .values({ caseId: caseA, entity: 'casenotes', recordId: unaccepted, writerId: gone })
+    try {
+      expect(
+        await asProse(caseA, accepted, sql`update casenotes set note = 'x', updated_by = null where id = ${accepted}`),
+      ).toBe('42501')
+    } finally {
+      await seed().delete(proseAcceptances).where(eq(proseAcceptances.writerId, gone))
+    }
   })
 })

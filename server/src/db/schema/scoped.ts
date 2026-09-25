@@ -42,6 +42,9 @@ const seeder = (): ReturnType<typeof pgPolicy> =>
 /** The role accepted prose is stored as. -> `openspec/specs/live/design.md` */
 export const PROSE_ROLE = 'ic_prose'
 
+/** How long an acceptance authorises storing what it accepted. -> `openspec/specs/live/design.md` */
+export const ACCEPTANCE_LASTS = '1 hour'
+
 /** The record whose accepted prose is being stored, as text, or null. */
 const acceptedRecord = sql`nullif(current_setting('app.prose_record', true), '')`
 
@@ -50,10 +53,11 @@ const acceptedRecord = sql`nullif(current_setting('app.prose_record', true), '')
  * one of them has no account left.
  */
 function anAcceptedWriter(who: PgColumn | SQL, record: PgColumn | SQL): SQL {
-  return sql`(${who} in (select a.writer_id from prose_acceptances a where a.record_id::text = ${record}::text)
+  const current = sql`a.record_id::text = ${record}::text and a.accepted_at > now() - ${sql.raw(`interval '${ACCEPTANCE_LASTS}'`)}`
+  return sql`(${who} in (select a.writer_id from prose_acceptances a where ${current})
     or (${who} is null and exists (
       select 1 from prose_acceptances a
-       where a.record_id::text = ${record}::text
+       where ${current}
          and not exists (select 1 from "user" u where u.id = a.writer_id))))`
 }
 

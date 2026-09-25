@@ -96,7 +96,7 @@ A send holds a report's prose still only after saving what was typed and not yet
 
 The save is recorded in the install's audit, one line per writer, as the collection routes record a write, and once stored it is announced to the case.
 
-**Accepting a word is where reach is decided, and it is decided twice over.** The connection refuses a frame unless the analyst's session still covers it and they still hold write, which the application asks on every frame. The first frame carrying content since the last save is also recorded as an acceptance, in the store, as that analyst. The store refuses the acceptance unless they hold write on the case at that moment, so a word the store has no acceptance for is never applied.
+**Accepting a word is where reach is decided, and it is decided twice over.** The connection refuses a frame unless the analyst's session still covers it and they still hold write, which the application asks on every frame. The first frame since the last save that changes the document is also recorded as an acceptance, in the store, as that analyst, before the document holds it and before it is measured against a send. The store refuses the acceptance unless they hold write on the case at that moment, so a word the store has no acceptance for is never applied, and a send that seals the report meanwhile refuses or holds the word rather than losing it.
 
 **Every save of words written on this instance runs as the prose role**, whoever is still connected or permitted: the quiet moment, the last reader leaving, a socket closing, shutdown and an analyst asking all store the same way. A save with no writer here runs as whoever asks, under their own reach.
 
@@ -110,10 +110,10 @@ The save is recorded in the install's audit, one line per writer, as the collect
 - It can run the reach function every case policy calls. That answers nothing the application, the only role that can enter it, cannot already ask.
 - A sent report takes no words from it, as from anybody.
 
-**The save removes the acceptances it stored, in the same act.** A save that fails keeps them, and its writers, for the next save.
+**An acceptance lasts an hour, and authorises nothing after.** That is far longer than a quiet moment and the retries a failed save waits for, and short enough that an acceptance outliving its words cannot be used against a record whose reach has since changed. Accepted words whose every save fails for longer than that stay unsaved, and are logged. The save removes the acceptances it stored, in the same act. A document dropped with nothing left to store removes the acceptances it holds. Every save and every start of the serving process removes the acceptances past their hour. A save that fails keeps its acceptances, and its writers, for the next save. Nobody may change an acceptance once it is written.
 
 **The application enters the role for one save and leaves it with the transaction.** Nothing inherits it, so none of its policies or grants reach a request. The serving process refuses to start where it cannot enter the role or the role holds no grant, and says which role is missing. The seeder never stores prose and does not ask.
 
 Stopping the application ends its connections before it stops listening, and waits for saves already under way. An open connection holds the listener open, so ending them last never ends them; and a save started by the last reader leaving is finished before the store closes.
 
-A save and its audit lines are one act. Words are not stored where the lines naming their writers cannot be written, and neither lands without the other, whichever path made the save.
+A save of words written on this instance and its audit lines are one act. Words are not stored where the lines naming their writers cannot be written, and neither lands without the other, whichever path made the save.

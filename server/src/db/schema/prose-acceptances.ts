@@ -13,7 +13,7 @@ import { sql } from 'drizzle-orm'
 import { check, index, pgPolicy, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 import { cases } from './case.js'
-import { caseScoped, proseKept } from './scoped.js'
+import { ACCEPTANCE_LASTS, caseScoped, proseKept } from './scoped.js'
 
 export const proseAcceptances = pgTable(
   'prose_acceptances',
@@ -40,5 +40,10 @@ export const proseAcceptances = pgTable(
       withCheck: sql`${t.writerId} = nullif(current_setting('app.principal', true), '')`,
     }),
     ...proseKept(t.caseId, t.recordId, ['select', 'delete']),
+    pgPolicy('an_expired_acceptance_is_swept', {
+      for: 'delete',
+      to: 'ic_app',
+      using: sql`${t.acceptedAt} <= now() - ${sql.raw(`interval '${ACCEPTANCE_LASTS}'`)}`,
+    }),
   ],
 )

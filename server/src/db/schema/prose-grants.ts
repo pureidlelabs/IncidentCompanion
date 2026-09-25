@@ -13,11 +13,13 @@ import { PROSE_ROLE } from './scoped.js'
 export const proseGrants: readonly string[] = [
   `revoke all on all tables in schema public from ${PROSE_ROLE}`,
   `revoke all on all sequences in schema public from ${PROSE_ROLE}`,
+  // An acceptance is written once and removed; nobody renames the writer it names.
+  `revoke update, truncate on prose_acceptances from ic_app, ic_seed`,
   `grant select (id, case_id, version), update (document, updated_by, updated_at) on reports to ${PROSE_ROLE}`,
   `grant select (id, case_id, version), update (document, note, updated_by, updated_at) on casenotes to ${PROSE_ROLE}`,
   `grant select (id, report_id, case_id) on report_blocks to ${PROSE_ROLE}`,
   `grant select (id) on "user" to ${PROSE_ROLE}`,
-  `grant select (id, case_id, record_id, writer_id), delete on prose_acceptances to ${PROSE_ROLE}`,
+  `grant select (id, case_id, record_id, writer_id, accepted_at), delete on prose_acceptances to ${PROSE_ROLE}`,
   `grant insert on change_feed, install_activity to ${PROSE_ROLE}`,
   `grant usage on sequence change_feed_seq_seq, install_activity_seq_seq to ${PROSE_ROLE}`,
 ]

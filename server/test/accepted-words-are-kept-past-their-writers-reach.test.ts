@@ -314,6 +314,18 @@ describe.skipIf(!(await bootable()))('words accepted before their writer loses w
     })
   })
 
+  it('names the writer who wrote last on the record', async () => {
+    const noteId = await aNote()
+    const watching = await opens(owner, noteId)
+    const first = await anAnalyst('write')
+    const last = await anAnalyst('write')
+    await types(await opens(first, noteId), noteId, `typed first ${TAG}`, watching)
+    await types(await opens(last, noteId), noteId, `typed last ${TAG}`, watching)
+    await pause(1_500)
+
+    expect((await stored(noteId)).updatedBy).toBe(last.id)
+  })
+
   // Last: it shuts the application down.
   it('stores what the only writer typed before losing write as the application shuts down, named for them', async () => {
     const noteId = await aNote()

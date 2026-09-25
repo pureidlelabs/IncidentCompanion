@@ -60,10 +60,10 @@ import { proseAcceptances } from '../db/schema/prose-acceptances.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
-import { PROSE_ROLE } from '../db/schema/scoped.js'
-import { actingAs, principalNow, unattended, withCase, type Executor } from '../db/scope.js'
+import { ACCEPTANCE_LASTS, PROSE_ROLE } from '../db/schema/scoped.js'
+import { actingAs, principalNow, unattended, withCase, withReach, type Executor } from '../db/scope.js'
 import { fragmentFor } from '../domain/prose-fields.js'
-import { recordInstallActivity } from '../install-activity/record.js'
+import { writeInstallActivity } from '../install-activity/record.js'
 
 /**
  * The one fragment a note's document holds.
@@ -117,6 +117,9 @@ function isProseTable(name: string): name is ProseTable {
 }
 
 const QUIET_MS = 750
+
+/** Acceptances too old to authorise anything, which a save or a start removes. */
+const expired = sql`${proseAcceptances.acceptedAt} <= now() - ${sql.raw(`interval '${ACCEPTANCE_LASTS}'`)}`
 
 /**
  * Which record a document key names.
@@ -546,6 +549,28 @@ export class ProseService implements OnApplicationShutdown {
     held.unsubscribe?.()
     this.live.delete(key)
     held.doc.destroy()
+    if (!held.dirty && held.acceptances.length > 0) await this.forget(caseId, address, held.acceptances)
+  }
+
+  /** Removes acceptances nothing will store, such as a frame refused because its report was sent. */
+  private async forget(caseId: string, address: ProseRecord, acceptances: readonly string[]): Promise<void> {
+    try {
+      await unattended(() =>
+        withCase(this.db, caseId, async (tx) => {
+          await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
+          await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
+          await tx.delete(proseAcceptances).where(inArray(proseAcceptances.id, [...acceptances]))
+        }),
+      )
+    } catch (error) {
+      // Left to lapse: an acceptance authorises nothing once it is older than it lasts.
+      this.log.warn(`could not remove the acceptances of ${recordOf(address)}: ${String(error)}`)
+    }
+  }
+
+  /** Removes every acceptance older than one lasts, whatever case it is in. Call before serving. */
+  async sweepExpiredAcceptances(): Promise<void> {
+    await unattended(() => withReach(this.db, (tx) => tx.delete(proseAcceptances).where(expired)))
   }
 
   /** Sets who is told once a flush has stored what somebody wrote. */
@@ -559,8 +584,8 @@ export class ProseService implements OnApplicationShutdown {
    * Content for a sent report is refused with its stamp. Content arriving while
    * a send decides waits for it: refused if the send stamps, applied if not.
    * Content that changes the document names `writer` in the next flush. The
-   * first frame carrying content since the last store is recorded as accepted,
-   * as `writer` and under their reach. The document has to be open.
+   * first such frame since the last store is recorded as accepted, as `writer`
+   * and under their reach. The document has to be open.
    *
    * @throws where the store refuses to record `writer`'s acceptance, applying nothing
    */
@@ -574,18 +599,14 @@ export class ProseService implements OnApplicationShutdown {
     const holding = this.live.get(keyOf(caseId, address))
     if (!holding) throw new Error(`${recordOf(address)} is not open`)
     const held = await holding
-    const deciding = held.deciding
-    if ((held.sealed || deciding) && !this.addsNothing(held.doc, frame)) {
-      if (held.sealed) return { refused: held.sealed }
-      if (deciding) {
-        return new Promise((answer) => {
-          deciding.push(() => {
-            answer(this.apply(caseId, address, frame, origin, writer))
-          })
-        })
-      }
-    }
-    if (!held.accepted.has(writer.id) && !this.isStateRequest(frame)) {
+    // Recorded before the send check below, so a send that seals while this
+    // waits is seen there, and the frame is refused or held rather than lost.
+    if (
+      !held.sealed &&
+      !held.accepted.has(writer.id) &&
+      !this.isStateRequest(frame) &&
+      !this.addsNothing(held.doc, frame)
+    ) {
       held.accepted.add(writer.id)
       try {
         const [row] = await actingAs(writer.id, () =>
@@ -599,8 +620,18 @@ export class ProseService implements OnApplicationShutdown {
         held.acceptances.push(row!.id)
       } catch (error) {
         held.accepted.delete(writer.id)
-        // A reader answering with nothing new is refused an acceptance and needs none.
-        if (!this.addsNothing(held.doc, frame)) throw error
+        throw error
+      }
+    }
+    const deciding = held.deciding
+    if ((held.sealed || deciding) && !this.addsNothing(held.doc, frame)) {
+      if (held.sealed) return { refused: held.sealed }
+      if (deciding) {
+        return new Promise((answer) => {
+          deciding.push(() => {
+            answer(this.apply(caseId, address, frame, origin, writer))
+          })
+        })
       }
     }
     let changed = false
@@ -777,6 +808,7 @@ export class ProseService implements OnApplicationShutdown {
       const scope = writers.length > 0 ? unattended : <T>(work: () => T) => work()
       const stored = await scope(() => withCase(this.db, caseId, async (tx) => {
         if (writers.length > 0) {
+          await tx.delete(proseAcceptances).where(expired)
           await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
           await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
         }
@@ -815,7 +847,7 @@ export class ProseService implements OnApplicationShutdown {
           )
         }
         for (const writer of writers) {
-          const recorded = await recordInstallActivity(tx, {
+          await writeInstallActivity(tx, {
             event: 'api_called',
             outcome: 'success',
             actor: { id: writer.id, label: writer.label },
@@ -823,8 +855,6 @@ export class ProseService implements OnApplicationShutdown {
             detail: { case: caseId, record: address.id },
             headers: writer.headers,
           })
-          // The words are not stored where the line saying who wrote them is not.
-          if (!recorded) throw new Error(`the audit refused the prose of ${recordOf(address)}`)
         }
         if (acceptances.length > 0) await tx.delete(proseAcceptances).where(inArray(proseAcceptances.id, acceptances))
         return true

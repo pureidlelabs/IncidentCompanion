@@ -74,6 +74,7 @@ async function bootstrap(): Promise<void> {
 
   // Here for the same reason: only the serving process stores prose.
   await app.get(ProseService).assertIdentity()
+  await app.get(ProseService).sweepExpiredAcceptances()
 
   await app.listen(env.PORT, '0.0.0.0')
 

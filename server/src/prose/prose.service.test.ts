@@ -419,15 +419,17 @@ describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => 
     })
   })
 
-  it('applies a frame to a draft without first measuring it against the document', async () => {
+  it('measures a draft\'s frames once per writer between stores, not once per keystroke', async () => {
     const { caseId, reportId } = await freshReport()
     const address = reportDocument(reportId)
     await prose.open(caseId, address)
     const measured = vi.spyOn(prose, 'addsNothing')
 
-    await prose.apply(caseId, address, framed(typed('an ordinary keystroke').update), 'a-socket', WRITER)
+    for (const keystroke of ['an ordinary keystroke', 'and another', 'and a third']) {
+      await prose.apply(caseId, address, framed(typed(keystroke).update), 'a-socket', WRITER)
+    }
 
-    expect(measured).not.toHaveBeenCalled()
+    expect(measured).toHaveBeenCalledTimes(1)
     measured.mockRestore()
     await prose.release(caseId, address)
   })
