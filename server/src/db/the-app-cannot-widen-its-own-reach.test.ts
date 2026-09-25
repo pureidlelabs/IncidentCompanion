@@ -20,8 +20,9 @@ import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
-import { eq, inArray, sql } from 'drizzle-orm'
+import { eq, inArray, is, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
+import { PgTable } from 'drizzle-orm/pg-core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
@@ -35,7 +36,10 @@ import {
   proseAcceptances,
   user,
 } from './schema/index.js'
+import * as schema from './schema/index.js'
+import { grants } from './schema/grants.js'
 import { ACCEPTANCE_LASTS } from './schema/scoped.js'
+import { CASE_WRITABLE } from '../domain/case.js'
 import { CHANNEL_OF } from './schema/install-activity.js'
 import { OCSF_VERSION, classify } from '../install-activity/ocsf.js'
 import { retentionClassOf } from '../install-activity/retention-class.js'
@@ -768,6 +772,24 @@ describe.skipIf(!app || !hasConcurrentConnections())('what a writer of a case ca
         acceptanceBySeeder: false,
         truncateBySeeder: false,
       })
+    } finally {
+      await client.query('rollback')
+      client.release()
+    }
+  })
+
+  it('takes back on the next push what was granted to everybody', async () => {
+    const tables = Object.values(schema as Record<string, unknown>).filter((value): value is PgTable => is(value, PgTable))
+    const client = await adminPool!.connect()
+    try {
+      await client.query('begin')
+      await client.query('grant update on cases to public')
+      await client.query('grant update on change_feed to public')
+      for (const statement of grants(CASE_WRITABLE, tables)) await client.query(statement)
+      const { rows } = await client.query<Record<string, boolean>>(`select
+        has_column_privilege('ic_app', 'cases', 'customer_id', 'UPDATE') as "customer",
+        has_table_privilege('ic_app', 'change_feed', 'UPDATE') as "feed"`)
+      expect(rows[0]).toEqual({ customer: false, feed: false })
     } finally {
       await client.query('rollback')
       client.release()

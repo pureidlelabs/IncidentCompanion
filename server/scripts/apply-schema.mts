@@ -213,7 +213,10 @@ export async function applySchema(url: string): Promise<Outcome> {
       return { kind: 'refused', statements: refused }
     }
 
-    const granted = grants(CASE_WRITABLE)
+    const granted = grants(
+      CASE_WRITABLE,
+      Object.values(schema).filter((value): value is PgTable => is(value, PgTable)),
+    )
     for (const statement of [...sqlStatements, ...storeGuards, ...granted]) await client.query(statement)
 
     const onlyPolicies = sqlStatements.every((statement) => /^CREATE POLICY\b/i.test(statement.trim()))
