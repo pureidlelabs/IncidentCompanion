@@ -59,6 +59,9 @@ function sentFilename(name: string): string {
   } catch {
     // A malformed escape sequence: an ordinary per cent sign in a filename.
   }
+  if (decoded.length > 255) {
+    throw new UnprocessableEntityException({ message: 'x-original-filename is longer than 255 characters.' })
+  }
   return safeFilename(decoded) || 'attachment'
 }
 

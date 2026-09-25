@@ -9,6 +9,9 @@
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from '@zip.js/zip.js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { randomUUID } from 'node:crypto'
+
+import { CASE_NAME, pack } from '../src/archive/format.js'
 import { ARTEFACT_PASSWORD } from '../src/evidence/store.js'
 
 import { boot, bootable, seedDemoContent, sharedAdmin, type Harness, type Persona } from './app-harness.js'
@@ -91,6 +94,84 @@ describe.skipIf(!runnable)('every download answers its caller', () => {
     expect(savedAs(disposition)).toBe(saved)
     expect(fallbackOf(disposition)).not.toMatch(/[/\\]/)
     expect((await got.arrayBuffer()).byteLength).toBeGreaterThan(0)
+  }, 30_000)
+
+  async function attached(name: string): Promise<string> {
+    const row = await call('POST', `/api/cases/${caseId}/evidence`, { name: 'download names' })
+    const { id } = (await row.json()) as { id: string }
+    const sent = await call('POST', `/api/cases/${caseId}/evidence/${id}/file`, 'the artefact', {
+      'content-type': 'text/plain',
+      'x-original-filename': encodeURIComponent(name),
+    })
+    expect(sent.status, await sent.clone().text()).toBe(200)
+    return id
+  }
+
+  /**
+   * **The proxy in front refuses a response header past about 4 KB**, and a
+   * name costs up to nine bytes a character once percent-encoded.
+   */
+  it('downloads evidence under the longest name it accepts, in a header a proxy passes', async () => {
+    const name = `${'\u65e5'.repeat(251)}.eml`
+    const id = await attached(name)
+
+    const got = await call('GET', `/api/cases/${caseId}/evidence/${id}/file`)
+
+    expect(got.status, await got.clone().text()).toBe(200)
+    const disposition = got.headers.get('content-disposition') ?? ''
+    expect(Buffer.byteLength(disposition)).toBeLessThan(2048)
+    expect(savedAs(disposition)).toBe(`${'\u65e5'.repeat(146)}.zip`)
+  }, 30_000)
+
+  it('refuses to attach a name longer than 255 characters, naming the header', async () => {
+    const row = await call('POST', `/api/cases/${caseId}/evidence`, { name: 'too long a name' })
+    const { id } = (await row.json()) as { id: string }
+
+    const sent = await call('POST', `/api/cases/${caseId}/evidence/${id}/file`, 'the artefact', {
+      'content-type': 'text/plain',
+      'x-original-filename': encodeURIComponent(`${'\u65e5'.repeat(600)}.pdf`),
+    })
+
+    expect(sent.status).toBe(422)
+    expect(await sent.text()).toContain('x-original-filename')
+  }, 30_000)
+
+  it.each([
+    [256, 422],
+    [255, 201],
+  ])('takes an archived evidence name of %i characters with a %i', async (length, status) => {
+    const record = {
+      title: `archived name ${String(length)} ${String(Date.now())}`,
+      evidence: [{ id: randomUUID(), name: 'mail', hash: 'a'.repeat(64), originalFilename: 'n'.repeat(length) }],
+    }
+    const archive = await pack({ [CASE_NAME]: new TextEncoder().encode(JSON.stringify(record)) }, 'omitted')
+
+    const got = await fetch(`${h.base}/api/cases/import`, {
+      method: 'POST',
+      headers: { cookie: admin.cookie, 'content-type': 'application/octet-stream' },
+      body: new Uint8Array(archive),
+    })
+
+    expect(got.status, await got.clone().text()).toBe(status)
+    if (status === 422) expect(await got.text()).toContain('originalFilename')
+  }, 30_000)
+
+  /**
+   * **The stored name keeps them, because it is evidence**: a right-to-left
+   * override in a filename is itself the masquerade being recorded.
+   */
+  it('keeps bidirectional and zero-width controls out of the saved name, and in the stored one', async () => {
+    const name = 'in\ufeffvoice\u202egpj.exe\u200b\u2066'
+    const id = await attached(name)
+
+    const got = await call('GET', `/api/cases/${caseId}/evidence/${id}/file`)
+
+    expect(got.status).toBe(200)
+    expect(savedAs(got.headers.get('content-disposition') ?? '')).toBe('invoicegpj.exe.zip')
+    const stored = (await (await call('GET', `/api/cases/${caseId}/evidence/${id}`)).json()) as {
+      originalFilename: string
+    }
+    expect(stored.originalFilename).toBe(name)
   }, 30_000)
 
   it('hands evidence named outside Latin-1 back wrapped, holding the bytes as stored', async () => {
