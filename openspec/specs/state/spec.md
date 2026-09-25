@@ -51,6 +51,8 @@ The identity the application connects as MUST NOT be able to bypass that refusal
 
 Reading and changing case data MUST carry which case it is for and who is asking, established once per operation, so that no individual statement is where the boundary is remembered. The store MUST refuse a row to an operation that names nobody as asking, and to one naming somebody who does not reach the case.
 
+A refusal MUST say nothing of a row its caller does not reach, and MUST hold nothing of it. A write naming such a row is refused as a write naming a row that does not exist is, whatever that row is.
+
 #### Scenario: A query forgets its boundary
 
 - GIVEN an operation reading case data
@@ -81,6 +83,14 @@ Reading and changing case data MUST carry which case it is for and who is asking
 - GIVEN an operation reading or changing case data
 - WHEN it names nobody as asking
 - THEN it is refused rather than served
+
+#### Scenario: A write names a row of a case its caller does not reach
+
+- GIVEN an analyst writing to a case they reach
+- WHEN the write names a row held by a case they do not reach
+- THEN it is refused as a write naming a row that does not exist is
+- AND the refusal says nothing of the row it named
+- AND nothing that case's own writers do waits on the refused write
 
 ### Requirement: Changing the shape of the store is a separate power
 

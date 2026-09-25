@@ -5,10 +5,9 @@
 import { describe, expect, it } from 'vitest'
 
 import { defaultPolicy } from '../policy/read.js'
-import { isLocked, lockMinutes, missOf, policyFrom } from './lockout.js'
+import { isLocked, missOf, policyFrom } from './lockout.js'
 
 const NOW = new Date('2026-08-23T12:00:00Z')
-const POLICY = { afterFailures: 10, minutes: 15, maxMinutes: 24 * 60 }
 
 describe('the lockout policy', () => {
   /**
@@ -22,23 +21,6 @@ describe('the lockout policy', () => {
       'auth.lockoutMaxMinutes': 30,
     })
     expect(policy.maxMinutes).toBe(60)
-    expect(lockMinutes(policy, 0)).toBe(60)
-  })
-})
-
-describe('how long a lock lasts', () => {
-  it("lasts the install's first duration the first time", () => {
-    expect(lockMinutes(POLICY, 0)).toBe(15)
-  })
-
-  it('doubles for each lock since the run last saw the right password', () => {
-    expect([1, 2, 3].map((before) => lockMinutes(POLICY, before))).toEqual([30, 60, 120])
-  })
-
-  /** Unbounded growth is a lock nobody but an administrator can end. */
-  it("stops at the install's maximum, however many locks came before", () => {
-    expect(lockMinutes(POLICY, 7)).toBe(24 * 60)
-    expect(lockMinutes(POLICY, 10_000)).toBe(24 * 60)
   })
 })
 

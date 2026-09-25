@@ -9,12 +9,14 @@
 import { randomUUID } from 'node:crypto'
 
 import { and, eq, inArray, sql } from 'drizzle-orm'
+import { Client } from 'pg'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import type { Database } from '../src/db/client.js'
 import { DATABASE } from '../src/db/db.module.js'
 import { installActivity, signInLockout, user } from '../src/db/schema/index.js'
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
+import { ADMIN_URL } from './global-setup.js'
 
 const PASSWORD = 'the-holders-own-password'
 const THRESHOLD = 4
@@ -88,6 +90,72 @@ async function ageTheLocks(email: string): Promise<void> {
     .where(inArray(signInLockout.userId, db.select({ id: user.id }).from(user).where(eq(user.email, email))))
 }
 
+/** The account's unfamiliar run as stored. */
+async function runOf(email: string) {
+  const [run] = await db
+    .select({ lockedUntil: signInLockout.lockedUntil, locks: signInLockout.locks })
+    .from(signInLockout)
+    .innerJoin(user, eq(user.id, signInLockout.userId))
+    .where(and(eq(user.email, email), eq(signInLockout.familiar, false)))
+  return run
+}
+
+/** Makes the audit log refuse this account's `account_locked` line until lifted. */
+async function refuseTheLockLine(email: string): Promise<{ lift: () => Promise<void> }> {
+  const onTestDatabase = new URL(process.env.DATABASE_URL ?? '')
+  const owner = new URL(ADMIN_URL)
+  onTestDatabase.username = owner.username
+  onTestDatabase.password = owner.password
+  const client = new Client({ connectionString: onTestDatabase.toString() })
+  await client.connect()
+  const name = `refuse_${randomUUID().slice(0, 8)}`
+  await client.query(`
+    create function ${name}() returns trigger language plpgsql as $$
+    begin raise exception 'audit log refused'; end $$`)
+  await client.query(
+    `create trigger ${name} before insert on install_activity for each row
+     when (new.event = 'account_locked' and new.target_label = '${email}') execute function ${name}()`,
+  )
+  return {
+    lift: async () => {
+      await client.query(`drop trigger if exists ${name} on install_activity`)
+      await client.query(`drop function if exists ${name}()`)
+      await client.end()
+    },
+  }
+}
+
+/**
+ * A failure that reaches the threshold, then the right password, both from
+ * `guesser` and queued behind the run's row in that order.
+ */
+async function rightPasswordBehindTheLockingFailure(email: string, guesser: string) {
+  // Holding the run's row queues the failure, then the right password, behind it in that order.
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select 1 from ${signInLockout} where ${signInLockout.userId} = (select ${user.id} from ${user} where ${user.email} = ${email}) for update`,
+    )
+    const waitingBehind = async (count: number) => {
+      for (let tries = 0; tries < 200; tries += 1) {
+        // A transaction reads the activity view once and keeps that copy unless told to drop it.
+        await tx.execute(sql`select pg_stat_clear_snapshot()`)
+        const { rows } = await tx.execute<{ waiting: number }>(sql`
+          with first as (select pid from pg_stat_activity where pg_backend_pid() = any(pg_blocking_pids(pid)))
+          select (select count(*) from first)::int
+            + (select count(*) from pg_stat_activity where pg_blocking_pids(pid) && array(select pid from first))::int as waiting`)
+        if ((rows[0]?.waiting ?? 0) >= count) return
+        await new Promise((settle) => setTimeout(settle, 25))
+      }
+      throw new Error(`fewer than ${String(count)} sign-ins queued behind the held run`)
+    }
+    const failure = statusFrom(guesser, email, `wrong-${randomUUID()}`)
+    await waitingBehind(1)
+    const right = statusFrom(guesser, email, PASSWORD)
+    await waitingBehind(2)
+    return [failure, right] as const
+  })
+}
+
 describe.skipIf(!(await bootable()))('guessing at an account from machines on the network', () => {
   beforeAll(async () => {
     vi.stubEnv('IC_EDGE', 'localhost')
@@ -130,6 +198,68 @@ describe.skipIf(!(await bootable()))('guessing at an account from machines on th
     } finally {
       await setPolicy('auth.lockoutAfterFailures', THRESHOLD)
     }
+  }, 60_000)
+
+  it('locks a run over a lowered threshold at its next failure', async () => {
+    const email = await anAccount()
+    const guesser = machine(63)
+    await guessFrom(guesser, email, 2)
+
+    await setPolicy('auth.lockoutAfterFailures', 2)
+    try {
+      await guessFrom(guesser, email, 1)
+      expect(await statusFrom(guesser, email, PASSWORD), 'a run over the new threshold never locked').toBe(401)
+      expect(await locksOf(email)).toEqual([FIRST_LOCK])
+    } finally {
+      await setPolicy('auth.lockoutAfterFailures', THRESHOLD)
+    }
+  }, 60_000)
+
+  it('locks a run once when the failures reaching the threshold arrive together', async () => {
+    const email = await anAccount()
+    const guesser = machine(64)
+    const burst = () =>
+      Promise.all(
+        Array.from({ length: THRESHOLD + 2 }, () => statusFrom(guesser, email, `wrong-${randomUUID()}`)),
+      )
+
+    expect(new Set(await burst())).toEqual(new Set([401]))
+    expect(await statusFrom(guesser, email, PASSWORD), 'the burst did not lock the run').toBe(401)
+    await ageTheLocks(email)
+    await burst()
+
+    expect(await locksOf(email), 'a burst locked more than once, or its lock did not follow the last').toEqual([
+      FIRST_LOCK,
+      2 * FIRST_LOCK,
+    ])
+  }, 60_000)
+
+  it('refuses a right password that arrives after the failure reaching the threshold', async () => {
+    const email = await anAccount()
+    const guesser = machine(65)
+    await guessFrom(guesser, email, THRESHOLD - 1)
+
+    const [failure, right] = await rightPasswordBehindTheLockingFailure(email, guesser)
+
+    expect(await failure).toBe(401)
+    expect(await right, 'a right password after the locking failure was let in').toBe(401)
+    expect(await locksOf(email)).toEqual([FIRST_LOCK])
+  }, 60_000)
+
+  it('refuses a right password that arrives after the failure reaching the threshold while the lock waits on its line', async () => {
+    const email = await anAccount()
+    const guesser = machine(68)
+    await guessFrom(guesser, email, THRESHOLD - 1)
+
+    const refusal = await refuseTheLockLine(email)
+    try {
+      const [failure, right] = await rightPasswordBehindTheLockingFailure(email, guesser)
+      expect(await failure).toBe(401)
+      expect(await right, 'a right password after the failure that left the lock pending was let in').toBe(401)
+    } finally {
+      await refusal.lift()
+    }
+    expect(await locksOf(email)).toEqual([])
   }, 60_000)
 
   it('tells two machines on one IPv6 network apart', async () => {
@@ -188,6 +318,66 @@ describe.skipIf(!(await bootable()))('guessing at an account from machines on th
       await statusFrom(guesser, counted, PASSWORD),
       'a repeated wrong password counted as nothing at all',
     ).toBe(401)
+
+    const afterAnother = await anAccount()
+    await guessFrom(guesser, afterAnother, 1)
+    for (let i = 0; i < THRESHOLD + 2; i += 1) {
+      expect(await statusFrom(guesser, afterAnother, 'the-same-wrong-password')).toBe(401)
+    }
+    expect(
+      await statusFrom(guesser, afterAnother, PASSWORD),
+      'a wrong password repeated after another failure locked the account',
+    ).toBe(200)
+
+    const interleaved = await anAccount()
+    for (let round = 0; round < THRESHOLD; round += 1) {
+      for (const miss of ['wrong-a', 'wrong-b', 'wrong-c']) await statusFrom(guesser, interleaved, miss)
+    }
+    expect(
+      await statusFrom(guesser, interleaved, PASSWORD),
+      'three wrong passwords taken in turn were counted as new each time',
+    ).toBe(200)
+  }, 60_000)
+
+  it('refuses a run whose lock the audit log cannot record, and locks it once the log takes the line', async () => {
+    const email = await anAccount()
+    const guesser = machine(66)
+    const refusal = await refuseTheLockLine(email)
+    try {
+      await guessFrom(guesser, email, THRESHOLD + 2)
+      expect(
+        await statusFrom(guesser, email, PASSWORD),
+        'a run that reached the threshold let the right password in while its lock could not be logged',
+      ).toBe(401)
+      expect((await runOf(email))?.lockedUntil ?? null, 'a lock was written with no audit line').toBeNull()
+      expect(await locksOf(email)).toEqual([])
+    } finally {
+      await refusal.lift()
+    }
+
+    expect(await statusFrom(guesser, email, PASSWORD)).toBe(401)
+    expect(await locksOf(email), 'the pending lock did not fall once the log took its line').toEqual([FIRST_LOCK])
+    expect((await runOf(email))?.locks).toBe(1)
+  }, 60_000)
+
+  it('clears a lock the audit log could not record when an administrator releases the account', async () => {
+    const email = await anAccount()
+    const guesser = machine(67)
+    const refusal = await refuseTheLockLine(email)
+    try {
+      await guessFrom(guesser, email, THRESHOLD)
+      const reissued = 'a-password-the-administrator-chose'
+      const released = await fetch(`${harness.base}/api/accounts/${encodeURIComponent(email)}/reset`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: admin.cookie },
+        body: JSON.stringify({ password: reissued }),
+      })
+      expect(released.status).toBe(200)
+      expect(await statusFrom(guesser, email, reissued), 'the release left the run refused').toBe(200)
+    } finally {
+      await refusal.lift()
+    }
+    expect(await locksOf(email)).toEqual([])
   }, 60_000)
 
   it("makes each lock that follows another longer, up to the install's maximum", async () => {
