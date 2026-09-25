@@ -151,6 +151,36 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
     })
   })
 
+  /** Each a part an archive can claim is exempt from the rule, holding an address of its own. */
+  it.each([
+    ['a link on a generated run', 'run-c2', (host: string) => ({
+      blockId: 'forged', kind: 'timeline', heading: '',
+      nodes: [{ type: 'richPara', runs: [{ text: 'see here', url: `https://${host}.example.com/a` }] }],
+    })],
+    ['a section it says the analyst wrote', 'written-c2', (host: string) => ({
+      blockId: 'forged', kind: 'written', heading: '',
+      nodes: [{ type: 'richPara', runs: [{ text: `fetched https://${host}.example.com/a` }] }],
+    })],
+    ['a code block it says is verbatim', 'verbatim-c2', (host: string) => ({
+      blockId: 'forged', kind: 'methods', heading: '',
+      nodes: [{ type: 'code', lines: [`curl https://${host}.example.com/a`], verbatim: true }],
+    })],
+  ])('contains %s, on the way in', async (_what, host, section) => {
+    const archive = await forged(`Forged ${host} ${STAMP}`, (report) => {
+      ;(report.frozen as { sections: unknown[] }).sections.push(section(host))
+    })
+    const answer = await importing(archive)
+    expect(answer.status, await answer.clone().text()).toBe(201)
+    const { id } = (await answer.json()) as { id: string }
+    const [report] = await seed.select({ id: reports.id }).from(reports).where(eq(reports.caseId, id))
+
+    const markdown = (await (await call('GET', `/api/cases/${id}/report.md?report=${report!.id}`)).text()).replaceAll('\\', '')
+    expect({
+      live: markdown.includes(`${host}.example.com`),
+      contained: markdown.includes(`hxxps://${host}[.]example[.]com/a`),
+    }).toEqual({ live: false, contained: true })
+  })
+
   it.each([
     ['preserves a document on a draft', sql`update reports set frozen = '{}'::jsonb, frozen_at = now() where id = `],
     ['stamps a report sent that preserves nothing', sql`update reports set sent_at = now() where id = `],

@@ -463,7 +463,7 @@ export class ArchiveImportService {
           if (name === 'reports') {
             stamp = {
               sentAt: values.sentAt instanceof Date ? values.sentAt : null,
-              frozen: values.frozen ? defangDocument(values.frozen as Document) : null,
+              frozen: values.frozen ? defangDocument(values.frozen as Document, { preserved: true }) : null,
               frozenAt: values.frozenAt instanceof Date ? values.frozenAt : null,
             }
             values.sentAt = null

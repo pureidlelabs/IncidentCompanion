@@ -1,4 +1,6 @@
-/** Every top-level domain in the root zone, ASCII form. -> <https://data.iana.org/TLD/tlds-alpha-by-domain.txt> */
+/** Every top-level domain in the root zone, ASCII form. Written by `server/scripts/tlds.mts` from <https://data.iana.org/TLD/tlds-alpha-by-domain.txt>. */
+export const ROOT_ZONE_VERSION = '2026092500'
+export const ROOT_ZONE_COUNT = 1438
 export const ROOT_ZONE = `
 aaa aarp abb abbott abbvie abc able abogado abudhabi ac academy accenture accountant accountants aco
 actor ad ads adult ae aeg aero aetna af afl africa ag agakhan agency ai aig airbus airforce airtel

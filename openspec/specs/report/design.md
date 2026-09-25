@@ -118,19 +118,27 @@ The criterion is what a reader's software links: a word processor, a PDF reader,
 | Written in the case | Leaves as |
 | --- | --- |
 | `http://`, `https://`, `ftp://`, `ftps://` | `hxxp://`, `hxxps://`, `fxp://`, `fxps://`, with every dot of the host as `[.]` |
+| `http:`, `https:`, `ftp:`, `ftps:` with no `//` | the same rewritten scheme, with the host's dots bracketed |
 | Any other scheme followed by `//` | the scheme, then `[:]//`, with the host's dots bracketed |
+| A protocol-relative `//host` | the host's dots bracketed |
 | A name beginning `www.` | every dot of the host bracketed, whatever the name ends in |
-| A UNC path | the host's dots bracketed |
+| A UNC path, long-path `\\?\UNC\` form included | the host's dots bracketed |
 | An email address | `[@]`, and the domain's dots bracketed |
 | An IPv4 address | every dot bracketed |
 | Any other dotted name | every dot bracketed, when it ends in a top-level domain of the root zone |
 
 A path, a query and an email's local part are left as written, since none of them is what a reader's software opens.
 
-**A bare name counts as a host only under a real top-level domain**, which is what keeps a version number, an abbreviation and most filenames whole: none of `1.2.3`, `e.g.` or `report.pdf` ends in one. A dotted name inside a path, a Windows path or an address already defanged is never judged on its own.
+**A bare name counts as a host only under a real top-level domain**, which is what keeps a version number, an abbreviation and most filenames whole: none of `1.2.3`, `e.g.` or `report.pdf` ends in one. A label may carry an underscore. A dotted name inside a path, a Windows path or an address already defanged is never judged on its own.
 
-**A top-level domain that also names a common file type in incident evidence does not make a host in free text**: `payload.zip`, `setup.py` and `dropper.one` leave as typed. A value in a field that declares it an indicator is defanged whatever it ends in.
+**A filename whose extension is also a top-level domain is bracketed like a host**: `payload[.]zip`, `setup[.]py`. Readers link those names, and a bracketed filename still reads as the file it names.
+
+**A zero-width character beside a dot is removed** before the rules run, since it hides a name from a reader and not from the software that links it.
+
+**The list of top-level domains is IANA's root zone, pinned to a stated version** and refreshed by regenerating it from IANA's published list.
 
 **A bare IPv6 address is left as written.** No reader's software links one; the form that links carries a scheme, and the scheme is what is rewritten.
 
 **Applying the rules twice changes nothing.** A preserved document is rewritten again when it is read in, so a bracketed dot, a bracketed `@` and a rewritten scheme are each left alone.
+
+**A preserved document read in is held to the rules whole.** Its sections marked as the analyst's own writing, its code blocks marked verbatim and the address carried beside a run's text are all rewritten, since each mark came from whoever wrote the archive and nothing on the way in can tell a genuine one from a forged one. In a report the install renders itself, the analyst's written prose and a method's verbatim query leave as written.

@@ -38,6 +38,7 @@
     "probe:report-live": "tsx scripts/report-live-check.ts",
     "probe:report-all": "tsx scripts/report-render-all.ts",
     "probe:word": "tsx scripts/word-check.ts",
+    "refresh:tlds": "tsx scripts/tlds.mts",
     "probe:prose-two-instances": "tsx scripts/prose-two-instances.ts",
     "prune": "bash scripts/prune.sh"
   },

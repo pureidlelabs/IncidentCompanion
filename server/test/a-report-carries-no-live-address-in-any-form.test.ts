@@ -42,12 +42,38 @@ const FORMS = [
   },
   { typed: 'b-c2.example.net', shown: 'b-c2[.]example[.]net', host: 'b-c2.example.net' },
   { typed: 'ops@m-c2.example.org', shown: 'ops[@]m-c2[.]example[.]org', host: 'm-c2.example.org' },
+  { typed: 'pl-c2.example.pl', shown: 'pl-c2[.]example[.]pl', host: 'pl-c2.example.pl' },
+  { typed: 'payload.zip', shown: 'payload[.]zip', host: 'payload.zip' },
+  {
+    typed: 'a_b.us-c2.example.com',
+    shown: 'a_b[.]us-c2[.]example[.]com',
+    host: 'us-c2.example.com',
+  },
+  { typed: '//pr-c2.example.com/x', shown: '//pr-c2[.]example[.]com/x', host: 'pr-c2.example.com' },
+  {
+    typed: 'http:nc-c2.example.com',
+    shown: 'hxxp:nc-c2[.]example[.]com',
+    host: 'nc-c2.example.com',
+  },
+  {
+    typed: '\\\\?\\UNC\\lp-c2.example.com\\share',
+    shown: '\\\\?\\UNC\\lp-c2[.]example[.]com\\share',
+    host: 'lp-c2.example.com',
+  },
+  // The host checked is the tail a reader links once the zero-width space splits the name.
+  { typed: 'zw-c2\u200b.example.com', shown: 'zw-c2[.]example[.]com', host: 'example.com' },
 ]
 
 /** Ordinary prose shaped like an address, which must arrive as typed. */
-const PROSE = ['version 1.2.3', 'report.pdf', 'e.g.', 'payload.zip', 'setup.py', 'at 16:10:00']
+const PROSE = ['version 1.2.3', 'report.pdf', 'e.g.', 'at 16:10:00']
 
 const SENTENCE = `${FORMS.map((form) => form.typed).join(' and ')}; ${PROSE.join(', ')}`
+
+/** A timeline description holds 500 characters, so the sentence is split across two entries. */
+const HALVES = [
+  SENTENCE.slice(0, SENTENCE.indexOf(' and ', SENTENCE.length / 2)),
+  SENTENCE.slice(SENTENCE.indexOf(' and ', SENTENCE.length / 2) + ' and '.length),
+]
 
 /** Markdown escapes brackets and backslashes, so every comparison is made without them. */
 const plain = (text: string) => text.replaceAll('\\', '')
@@ -173,11 +199,13 @@ describe.skipIf(!(await bootable()))('a report carries no live address in any fo
       title: 'Every spelling of an address',
       customer: 'Output Ltd',
     })
-    await send(`/api/cases/${caseId}/timeline`, {
-      kind: 'event',
-      time: new Date().toISOString(),
-      description: SENTENCE,
-    })
+    for (const description of HALVES) {
+      await send(`/api/cases/${caseId}/timeline`, {
+        kind: 'event',
+        time: new Date().toISOString(),
+        description,
+      })
+    }
     await send(`/api/cases/${caseId}/network_indicators`, {
       type: 'ipv4',
       value: '198.51.100.7',
