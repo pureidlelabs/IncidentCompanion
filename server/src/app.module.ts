@@ -34,6 +34,7 @@ import { HealthModule } from './health/health.module.js'
 import { DocsController } from './docs.controller.js'
 import { OpenApiController, OpenApiStore } from './openapi.controller.js'
 import { ALL_ROUTES, CamelCaseBodyMiddleware } from './wire/camel-case.middleware.js'
+import { CanonicalIdsPipe } from './wire/canonical-ids.pipe.js'
 import { actingAs } from './db/scope.js'
 import { ValidationPipe } from './wire/refusals.js'
 
@@ -91,6 +92,7 @@ import { ValidationPipe } from './wire/refusals.js'
      * whatever shape a client sent.
      */
     { provide: APP_PIPE, useClass: ValidationPipe },
+    { provide: APP_PIPE, useClass: CanonicalIdsPipe },
     /**
      * Parses every `@ZodResponse` route's payload against the schema the
      * reference publishes; undecorated routes pass through untouched.

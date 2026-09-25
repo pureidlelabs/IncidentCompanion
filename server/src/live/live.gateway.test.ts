@@ -20,6 +20,7 @@ import * as encoding from 'lib0/encoding'
 import { Logger } from '@nestjs/common'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket as Client, type WebSocket } from 'ws'
+import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import { readSyncMessage } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
@@ -192,6 +193,12 @@ async function driveUpgrade(gateway: LiveGateway, url: string, headers?: Record<
   let destroyed = false
   const socket = {
     write: (line: string) => written.push(line),
+    end: (line: string) => {
+      written.push(line)
+      destroyed = true
+    },
+    on: () => {},
+    once: () => {},
     destroy: () => {
       destroyed = true
     },
@@ -310,11 +317,16 @@ describe('what it refuses', () => {
 
   it.each([
     ['a path that is not the live socket', '/api/cases/abc/other'],
-    ['a case id that is not a uuid', '/api/cases/not-a-uuid/live'],
     ['the api root', '/api'],
   ])('refuses %s', async (_name, url) => {
     const verdict = await gatewayWith().check(request(url))
     expect(verdict.refused).toBe('no-such-path')
+  })
+
+  /** Only once the session is read: anybody else is told to sign in, whatever the path names. */
+  it('refuses a signed-in caller a case id that is not a uuid as a case that is not there', async () => {
+    expect((await gatewayWith().check(request('/api/cases/not-a-uuid/live'))).refused).toBe('no-such-case')
+    expect((await gatewayWith({ signedIn: false }).check(request('/api/cases/not-a-uuid/live'))).refused).toBe('unauthenticated')
   })
 
   /**
@@ -509,12 +521,15 @@ describe('prose on a report that has been sent', () => {
    */
   it('still relays a caret', async () => {
     const { live, relayed } = await connected(SENT, filed('as filed'))
-    const caret = wire(new Uint8Array([1, 2]))
+    const sender = new Awareness(new Y.Doc())
+    sender.setLocalStateField('user', { name: 'Ada' })
 
-    live.receive({ type: 'prose.awareness', field: FIELD, update: caret })
+    live.receive({ type: 'prose.awareness', field: FIELD, update: wire(encodeAwarenessUpdate(sender, [sender.clientID])) })
     await settle()
 
-    expect(relayed).toEqual([{ type: 'prose.awareness', field: FIELD, update: caret }])
+    const drawn = new Awareness(new Y.Doc())
+    for (const frame of relayed) applyAwarenessUpdate(drawn, Buffer.from(String(frame['update']), 'base64'), null)
+    expect(drawn.getStates().get(sender.clientID)).toEqual({ user: { name: 'Ada' } })
   })
 })
 
@@ -1485,5 +1500,118 @@ describe('frames that arrive while the socket is still joining', () => {
     await opening
     await wait(50)
     expect(order.filter((step) => step.startsWith('release')), 'a frame within the bound was dropped').toHaveLength(256)
+  })
+})
+
+describe('a caret over the gateway', () => {
+  /** A gateway with analysts `u-1`, `u-2`, ... each on a connection of their own, and what it relays. */
+  async function room() {
+    const relayed: Record<string, unknown>[] = []
+    const channel = {
+      join: () => Promise.resolve(),
+      leave: () => Promise.resolve(),
+      prose: (_caseId: string, payload: Record<string, unknown>) => {
+        relayed.push(payload)
+      },
+    }
+    // Each connection's own session, told apart by the cookie it was admitted with.
+    const auth = {
+      api: {
+        getSession: ({ headers }: { headers: Headers }) =>
+          Promise.resolve({ user: { id: headers.get('cookie'), name: 'x' }, session: { id: `s-${String(headers.get('cookie'))}` } }),
+      },
+    }
+    const gateway = new LiveGateway(channel as unknown as CaseChannel, auth as never, {} as never, audit as never, holding('read'))
+    const connect = async (userId: string, name: string) => {
+      const live = new FakeSocket()
+      await gateway.open(live as unknown as WebSocket, CASE, { id: userId, name, sessionId: `s-${userId}` }, { cookie: userId })
+      return live
+    }
+    /** The carets a browser draws from everything relayed. */
+    const drawn = () => {
+      const awareness = new Awareness(new Y.Doc())
+      for (const frame of relayed) applyAwarenessUpdate(awareness, Buffer.from(String(frame['update']), 'base64'), null)
+      return awareness.getStates()
+    }
+    return { relayed, connect, drawn }
+  }
+
+  /** Awareness entries as the wire frames them: client id, clock, and the state's JSON. */
+  const entries = (...each: [number, number, unknown][]) => {
+    const encoder = encoding.createEncoder()
+    encoding.writeVarUint(encoder, each.length)
+    for (const [client, clock, state] of each) {
+      encoding.writeVarUint(encoder, client)
+      encoding.writeVarUint(encoder, clock)
+      encoding.writeVarString(encoder, JSON.stringify(state))
+    }
+    return wire(encoding.toUint8Array(encoder))
+  }
+  const caret = (update: string) => ({ type: 'prose.awareness', field: FIELD, update })
+
+  it('frees the carets of a connection that closed, once its analyst has had the time to return', async () => {
+    const { connect, drawn } = await room()
+    const first = await connect('u-1', 'Ada')
+    const second = await connect('u-2', 'Bea')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      first.receive(caret(entries([7, 1, { user: { name: 'Ada' } }])))
+      await settle()
+      first.drop()
+      await settle()
+      vi.setSystemTime(Date.now() + 31_000)
+      second.receive(caret(entries([7, 2, { user: { name: 'Bea' } }])))
+      await settle()
+    } finally {
+      vi.useRealTimers()
+    }
+    expect(drawn().get(7)).toEqual({ user: { name: 'Bea' } })
+  })
+
+  it('holds nothing for a caret frame still waiting when its connection closes', async () => {
+    const { connect, drawn } = await room()
+    const first = await connect('u-1', 'Ada')
+    const second = await connect('u-2', 'Bea')
+    first.receive(caret(entries([4242, 1, { user: { name: 'Ada' } }])))
+    first.drop()
+    await settle()
+    second.receive(caret(entries([4242, 2, { user: { name: 'Bea' } }])))
+    await settle()
+    expect(drawn().get(4242)).toEqual({ user: { name: 'Bea' } })
+  })
+
+  it('lets a caret leaving take nothing: another browser forgetting a departed analyst holds no id', async () => {
+    const { relayed, connect, drawn } = await room()
+    const first = await connect('u-1', 'Ada')
+    const second = await connect('u-2', 'Bea')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      first.receive(caret(entries([8, 1, { user: { name: 'Ada' } }])))
+      await settle()
+      first.drop()
+      await settle()
+      vi.setSystemTime(Date.now() + 31_000)
+      const before = relayed.length
+      second.receive(caret(entries([8, 2, null])))
+      await settle()
+      expect(relayed.length, 'a removal for a caret this connection never held was relayed').toBe(before)
+      const back = await connect('u-3', 'Cy')
+      back.receive(caret(entries([8, 3, { user: { name: 'Cy' } }])))
+      await settle()
+    } finally {
+      vi.useRealTimers()
+    }
+    expect(drawn().get(8)).toEqual({ user: { name: 'Cy' } })
+  })
+
+  it.each([
+    ['a number', 5],
+    ['an array', [1]],
+  ])('drops a whole update one of whose states is %s', async (_what, state) => {
+    const { relayed, connect } = await room()
+    const first = await connect('u-1', 'Ada')
+    first.receive(caret(entries([9, 1, { user: { name: 'Ada' } }], [10, 1, state])))
+    await settle()
+    expect(relayed).toEqual([])
   })
 })

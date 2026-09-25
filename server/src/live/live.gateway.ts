@@ -38,15 +38,18 @@ import type * as Y from 'yjs'
 
 import { actingAs } from '../db/scope.js'
 import { CaseChannel, type Member } from './case-channel.service.js'
+import { Carets } from './carets.js'
 import { ProseService, type ProseRecord, type Writer } from '../prose/prose.service.js'
 import type { ProseState, ProseStateFrame } from '../domain/prose-state.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
 import { ReachService } from '../access/reach.service.js'
+import { UUID } from '../access/case-access.guard.js'
 import { onReachChanged } from '../access/reach-changed.js'
-import { attribute } from '../wire/caller-address.js'
+import { attribute, callerAddress, NO_ADDRESS } from '../wire/caller-address.js'
+import { Allowances } from './allowance.js'
 
-const LIVE_PATH = /^\/api\/cases\/([0-9a-f-]{36})\/live$/i
+const LIVE_PATH = /^\/api\/cases\/([^/]+)\/live$/i
 
 /** Why an upgrade was refused. Returned rather than logged, so a test can read it. */
 export type Refusal =
@@ -55,6 +58,7 @@ export type Refusal =
   | 'unauthenticated'
   | 'must-change-password'
   | 'no-such-case'
+  | 'too-many'
 
 /**
  * The status line each refusal answers with.
@@ -76,7 +80,14 @@ export const STATUS: Record<Refusal, string> = {
   // distinguishable from one that does not exist, or the socket becomes an
   // oracle for which case ids are real.
   'no-such-case': '404 Not Found',
+  'too-many': '429 Too Many Requests',
 }
+
+/** Refusals made before anybody is known, so they are counted against the address. */
+const ANONYMOUS: ReadonlySet<Refusal> = new Set(['no-such-path', 'cross-origin', 'unauthenticated'])
+
+/** The close code for a connection that sent past its budget. */
+const TOO_MUCH = 4429
 
 /** Authority that ended on an open connection, and the close code that says which way. */
 type Ended = 'unauthenticated' | 'must-change-password' | 'no-such-case'
@@ -114,6 +125,17 @@ const CLAIMS_PER_CONNECTION = 64
 /** How many frames one connection may have waiting to be acted on before it is ended. */
 const FRAMES_WAITING = 256
 
+/** How many connections one account may hold at once, and open: a burst, then one a second. */
+const CONNECTIONS_PER_ACCOUNT = 32
+const UPGRADES_PER_ACCOUNT = { burst: 60, perSecond: 1 }
+
+/** How many upgrades one address may have refused before anybody is known. */
+const ANONYMOUS_REFUSALS_PER_ADDRESS = { burst: 30, perSecond: 0.5 }
+
+/** What one connection may send: a burst, then a steady rate, in frames and in bytes. */
+const FRAMES_PER_CONNECTION = { burst: 1_000, perSecond: 100 }
+const BYTES_PER_CONNECTION = { burst: 4 * 1024 * 1024, perSecond: 256 * 1024 }
+
 interface OpenDocument {
   /** Which record this document is - a report, or one case note. */
   address: ProseRecord
@@ -133,6 +155,16 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   private readonly admitted = new Map<WebSocket, Admission>()
   /** The frame types each connection has had refused and recorded, so a repeat writes no second line. */
   private readonly refusalsRecorded = new WeakMap<WebSocket, Set<string>>()
+  private readonly carets = new Carets()
+  private readonly upgradesByAccount = new Allowances(UPGRADES_PER_ACCOUNT.burst, UPGRADES_PER_ACCOUNT.perSecond)
+  private readonly refusalsByAddress = new Allowances(
+    ANONYMOUS_REFUSALS_PER_ADDRESS.burst,
+    ANONYMOUS_REFUSALS_PER_ADDRESS.perSecond,
+  )
+  /** Connections each account holds, counted from admission to the socket closing. */
+  private readonly holding = new Map<string, number>()
+  /** Accounts refused for holding too many since they last opened one, so the run is told once. */
+  private readonly crowded = new Set<string>()
   private sweep: NodeJS.Timeout | undefined
   private readonly stopListeningForSessionEnds: () => void
   private readonly stopListeningForReachChanges: () => void
@@ -168,6 +200,8 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     // ponytail: one sweep, O(connections) per 15 s; a deadline per connection if the bound must tighten.
     this.sweep = setInterval(() => {
       for (const [live, admission] of this.admitted) void this.revalidateOne(live, admission)
+      this.upgradesByAccount.forgetFull()
+      this.refusalsByAddress.forgetFull()
     }, SWEEP_MS)
     this.sweep.unref()
     this.prose.onSaved((caseId, record) => {
@@ -286,14 +320,25 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   }
 
   private async upgrade(request: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
+    // Node drops its own error listener on an upgrade, so a reset here would be thrown unhandled.
+    socket.on('error', () => socket.destroy())
     await attribute(request.headers, request.socket.remoteAddress)
     const verdict = await this.check(request)
+    if (verdict.refused && ANONYMOUS.has(verdict.refused)) {
+      const address = callerAddress(request.headers) ?? NO_ADDRESS
+      const taken = this.refusalsByAddress.take(address)
+      if (taken !== 'taken') {
+        if (taken === 'first') this.limited(request.headers, null, 'live upgrade', 'address')
+        this.refuse(socket, 'too-many')
+        return
+      }
+    }
+    if (verdict.refused === 'too-many') {
+      this.refuse(socket, 'too-many')
+      return
+    }
     if (verdict.refused) {
-      // **Refused, not ignored.** An unanswered upgrade stays open in the
-      // browser's per-host pool; enough of those and every later request
-      // queues forever. That failure cost an evening on the Vite proxy side.
-      socket.write(`HTTP/1.1 ${STATUS[verdict.refused]}\r\n\r\n`)
-      socket.destroy()
+      this.refuse(socket, verdict.refused)
       // A refused upgrade is an authorisation failure, and the one kind the
       // HTTP boundary never sees.
       //
@@ -306,7 +351,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
       // partition -- and which a collector receives whole while the activity
       // pane draws no attributes at all, so on the screen it is gone until
       // that pane grows a column. -> #541, #544
-      const asked = LIVE_PATH.exec(request.url ?? '')?.[1]
+      const asked = LIVE_PATH.exec(request.url ?? '')?.[1]?.match(UUID)?.[0].toLowerCase()
       void this.activity.record({
         event: 'live_refused',
         outcome: 'failure',
@@ -316,6 +361,26 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
       })
       return
     }
+
+    const userId = verdict.session.id
+    // A socket that closed during the checks has fired its close already, and is never counted.
+    if (socket.destroyed) return
+    const held = this.holding.get(userId) ?? 0
+    if (held >= CONNECTIONS_PER_ACCOUNT) {
+      if (!this.crowded.has(userId)) {
+        this.crowded.add(userId)
+        this.limited(request.headers, verdict.session, 'live upgrade', 'connections')
+      }
+      this.refuse(socket, 'too-many')
+      return
+    }
+    this.crowded.delete(userId)
+    this.holding.set(userId, held + 1)
+    socket.once('close', () => {
+      const now = (this.holding.get(userId) ?? 1) - 1
+      if (now > 0) this.holding.set(userId, now)
+      else this.holding.delete(userId)
+    })
 
     // Who could have edited; who did is the line each saved change writes.
     void this.activity.record({
@@ -334,6 +399,32 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   }
 
   /**
+   * **Refused, not ignored.** An unanswered upgrade stays open in the browser's
+   * per-host pool; enough of those and every later request queues forever.
+   */
+  private refuse(socket: Duplex, why: Refusal): void {
+    // Ended rather than destroyed, which can reset the connection before the status is read.
+    socket.once('finish', () => socket.destroy())
+    socket.end(`HTTP/1.1 ${STATUS[why]}\r\nConnection: close\r\n\r\n`)
+  }
+
+  /** One line for a run of limited upgrades or frames, as the throttler writes one for a request. */
+  private limited(
+    headers: IncomingHttpHeaders,
+    actor: { id: string; name: string } | null,
+    target: 'live upgrade' | 'live frames',
+    tier: 'address' | 'account' | 'connections' | 'connection',
+  ): void {
+    void this.activity.record({
+      event: 'rate_limited',
+      ...(actor ? { actor: { id: actor.id, label: actor.name } } : {}),
+      target,
+      detail: { tier },
+      headers,
+    })
+  }
+
+  /**
    * The whole admission decision, separated from the socket so it is testable.
    *
    * A `ws` handshake cannot be driven from a unit test without a real server;
@@ -345,16 +436,21 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     | { refused: Refusal }
     | { refused: null; caseId: string; session: { id: string; name: string; held: boolean; sessionId?: string } }
   > {
-    const match = LIVE_PATH.exec(request.url ?? '')
-    if (!match) return { refused: 'no-such-path' }
+    const named = LIVE_PATH.exec(request.url ?? '')?.[1]
+    if (!named) return { refused: 'no-such-path' }
     if (!this.sameOrigin(request)) return { refused: 'cross-origin' }
 
-    const caseId = match[1]!
     const session = await this.sessionFor(request.headers)
     if (!session?.sessionId) return { refused: 'unauthenticated' }
+    const taken = this.upgradesByAccount.take(session.id)
+    if (taken === 'first') this.limited(request.headers, session, 'live upgrade', 'account')
+    if (taken !== 'taken') return { refused: 'too-many' }
     // Before the case lookup, so a held account learns nothing about which
     // case ids exist -- the same ordering reason the origin check comes first.
     if (session.held) return { refused: 'must-change-password' }
+    // Only a signed-in caller learns that a name is no case; one spelling from here on.
+    if (!UUID.test(named)) return { refused: 'no-such-case' }
+    const caseId = named.toLowerCase()
     if (!(await this.reach.levelOnCase(session.id, caseId))?.level) {
       return { refused: 'no-such-case' }
     }
@@ -467,6 +563,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
       if (gone) return
       gone = true
       this.admitted.delete(live)
+      this.carets.release(live)
       order = order
         .then(async () => {
           await ready
@@ -507,8 +604,16 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     }
     live.on('close', close)
     live.on('error', close)
+    const frames = new Allowances(FRAMES_PER_CONNECTION.burst, FRAMES_PER_CONNECTION.perSecond)
+    const bytes = new Allowances(BYTES_PER_CONNECTION.burst, BYTES_PER_CONNECTION.perSecond)
     live.on('message', (raw: Buffer) => {
       if (gone) return
+      if (frames.take('') !== 'taken' || bytes.take('', raw.length) !== 'taken') {
+        this.limited(headers, session, 'live frames', 'connection')
+        close()
+        live.close(TOO_MUCH)
+        return
+      }
       // ponytail: one fixed cap; a per-type budget if a client legitimately bursts past it.
       if (++waiting > FRAMES_WAITING) {
         live.terminate()
@@ -573,7 +678,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     }
 
     const table = typeof message.table === 'string' ? message.table : null
-    const id = typeof message.id === 'string' ? message.id : null
+    const id = typeof message.id === 'string' ? message.id.toLowerCase() : null
     if (!table || !id) return
 
     if (message.type === 'claim') await this.onClaim(member, live, claims, table, id)
@@ -613,7 +718,8 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   /**
    * One prose frame: sync or awareness.
    *
-   * **Awareness is relayed and never interpreted** - carets are not stored.
+   * **Awareness is relayed as the connection's own carets, named for its
+   * analyst** -> `Carets`. Carets are not stored.
    * A sync frame is applied to the server's own document first, since that
    * document is the record; the answer goes to the sender and the update to
    * everyone else.
@@ -632,10 +738,14 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     update: string,
   ): Promise<void> {
     if (type === 'prose.awareness') {
+      // A caret frame still queued when its connection closed would hold carets that release has already let go.
+      if (!this.admitted.has(live)) return
       // Relayed on the field alone: an awareness frame for a field this
-      // connection never opened is still somebody's caret, and refusing it
-      // would need the roster this deliberately does not keep.
-      this.channel.prose(member.caseId, { type, field, update }, member.sessionId)
+      // connection never opened is still somebody's caret.
+      const vouched = this.carets.vouch(member.caseId, live, member.userId, member.username, Buffer.from(update, 'base64'))
+      if (vouched) {
+        this.channel.prose(member.caseId, { type, field, update: Buffer.from(vouched).toString('base64') }, member.sessionId)
+      }
       return
     }
 
