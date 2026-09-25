@@ -47,7 +47,7 @@
 | Case data is reached through groups, at a level | An administrator disposes of a case nobody has attributed | undemonstrated | |
 | Case data is reached through groups, at a level | An analyst is refused the same deletion | undemonstrated | |
 | Case data is reached through groups, at a level | A group raises an account above the floor | undemonstrated | |
-| Case data is reached through groups, at a level | An identity the install does not hold | undemonstrated | |
+| Case data is reached through groups, at a level | An identity the install does not hold | demonstrated | server/test/an-identity-the-install-does-not-hold-reaches-nothing.test.ts :: an identity the install does not hold > is refused a default-customer case over a session that outlived its account |
 | Case data is reached through groups, at a level | A list is asked for by an analyst in no group | undemonstrated | |
 | Case data is reached through groups, at a level | Reach is withdrawn after the case was opened | undemonstrated | |
 | An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts :: changing a role > through the app’s own route > refuses the demotion, and leaves the role alone |
@@ -120,7 +120,7 @@
 | Administrative events are logged | An entry is edited | undemonstrated | |
 | Administrative events are logged | The record is read | undemonstrated | |
 | Administrative events are logged | Where the record goes is changed | unbuilt | Not built: there is no destination to change. -> #13 |
-| Administrative events are logged | A session is refused after its account is gone | undemonstrated | |
+| Administrative events are logged | A session is refused after its account is gone | demonstrated | server/test/an-identity-the-install-does-not-hold-reaches-nothing.test.ts :: an identity the install does not hold > records the refusal, naming who the session said it was |
 | Administrative events are logged | An analyst ends their own session | undemonstrated | |
 | Administrative events are logged | An ending that ends nothing | undemonstrated | |
 | An install serves only the account operations it offers | A caller asks for an account operation the install does not offer | undemonstrated | |
@@ -154,20 +154,20 @@
 | An archive is one file holding the whole case | A case is archived | undemonstrated | |
 | An archive is one file holding the whole case | An analyst archives without the attachments | undemonstrated | |
 | An archive is one file holding the whole case | Expected material is not found | undemonstrated | |
-| An archive is one file holding the whole case | Deleted text does not travel | undemonstrated | |
-| An archive is one file holding the whole case | A removed section does not travel | undemonstrated | |
-| An archive is one file holding the whole case | A note's prose is archived | undemonstrated | |
-| An archive is one file holding the whole case | A case larger than an archive may carry | undemonstrated | |
+| An archive is one file holding the whole case | Deleted text does not travel | demonstrated | server/test/an-archive-carries-the-case-as-it-reads.test.ts :: an archive carries the case as it reads > carries each report as it reads, and none of how it came to |
+| An archive is one file holding the whole case | A removed section does not travel | demonstrated | server/test/an-archive-carries-the-case-as-it-reads.test.ts :: an archive carries the case as it reads > carries each report as it reads, and none of how it came to |
+| An archive is one file holding the whole case | A note's prose is archived | demonstrated | server/test/an-archive-carries-the-case-as-it-reads.test.ts :: an archive carries the case as it reads > reads a note back as it was written |
+| An archive is one file holding the whole case | A case larger than an archive may carry | demonstrated | server/test/an-archive-states-more-rows-than-the-install-writes.test.ts :: how many rows an archive may describe > refuses to archive a case past the ceiling, naming the ceiling |
 | An archive says what it should contain, and is checked against it | An archive is read | undemonstrated | |
 | An archive says what it should contain, and is checked against it | An archive has been altered | undemonstrated | |
 | An archive says what it should contain, and is checked against it | A sealed archive is altered by somebody without its secret | undemonstrated | |
-| An archive says what it should contain, and is checked against it | An analyst archives without sealing | undemonstrated | |
+| An archive says what it should contain, and is checked against it | An analyst archives without sealing | demonstrated | ui/src/screens/case-archive.stories.tsx :: An export left unencrypted |
 | An analyst can seal an archive, and the seal is theirs to hold | An analyst seals an archive | undemonstrated | |
 | An analyst can seal an archive, and the seal is theirs to hold | The install is asked to open a sealed archive | undemonstrated | |
 | An analyst can seal an archive, and the seal is theirs to hold | A secret too weak to be worth having | undemonstrated | |
 | Reading an archive cannot be made to cost more than the install will spend | An archive declares more work than the install produces | undemonstrated | |
 | Reading an archive cannot be made to cost more than the install will spend | An archive describing more content than the install accepts | undemonstrated | |
-| Reading an archive cannot be made to cost more than the install will spend | An archive describing more rows than the install writes | undemonstrated | |
+| Reading an archive cannot be made to cost more than the install will spend | An archive describing more rows than the install writes | demonstrated | server/test/an-archive-states-more-rows-than-the-install-writes.test.ts :: how many rows an archive may describe > refuses an archive stating one row past the ceiling, naming the ceiling, and writes none of it |
 | Reading an archive creates a case; it never overwrites one | An archive is read in | undemonstrated | |
 | Reading an archive creates a case; it never overwrites one | An archive names things the install already holds | undemonstrated | |
 | Reading an archive creates a case; it never overwrites one | An archive names an artefact it does not carry | demonstrated | server/test/a-digest-reaches-nothing-outside-its-case.test.ts :: an artefact is reached only through the case that holds it > serves an account that reaches nothing of customer B none of it by naming its digests |
@@ -186,10 +186,10 @@
 | An archive's rows are checked against what this install can hold | An archive is refused after some of its rows were sound | undemonstrated | |
 | An archive's rows are checked against what this install can hold | An archive carries a field this install does not know | undemonstrated | |
 | An archive's rows are checked against what this install can hold | An archive leaves a column out | undemonstrated | |
-| An archive's rows are checked against what this install can hold | An archive states a value in a field its other fields make inapplicable | undemonstrated | |
-| An archive's rows are checked against what this install can hold | An archive's report is sent without its document, or the reverse | undemonstrated | |
-| An archive's rows are checked against what this install can hold | An archive carries a report it says was sent | undemonstrated | |
-| An archive's rows are checked against what this install can hold | An archive's record plants a note document | undemonstrated | |
+| An archive's rows are checked against what this install can hold | An archive states a value in a field its other fields make inapplicable | demonstrated | server/test/every-cross-field-rule-holds-at-the-archive.test.ts :: a rule spanning fields, at the archive door > refuses 'scope' set in 'network_indicators' where its gate says it does not apply |
+| An archive's rows are checked against what this install can hold | An archive's report is sent without its document, or the reverse | demonstrated | server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts :: a report an archive says was sent > refuses a report that preserves a document no painter reads, and leaves no case behind ; server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts :: a report an archive says was sent > refuses a report that preserves a document and was never sent, and leaves no case behind ; server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts :: a report an archive says was sent > refuses a report that says it was sent and preserves nothing, and leaves no case behind |
+| An archive's rows are checked against what this install can hold | An archive carries a report it says was sent | demonstrated | server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts :: a report an archive says was sent > reads a genuine sent report as sent, and produces what it preserved ; server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts :: a report an archive says was sent > contains a live indicator an archive preserved, on the way in |
+| An archive's rows are checked against what this install can hold | An archive's record plants a note document | demonstrated | server/test/an-archive-carries-the-case-as-it-reads.test.ts :: an archive carries the case as it reads > reads no note document from an archive record, whatever it plants |
 
 ## cases
 
@@ -623,9 +623,9 @@
 | A sent report is frozen, and the freeze is one rule | A new way to write a part is added | undemonstrated | |
 | A sent report is frozen, and the freeze is one rule | Prose reaches a sent report | undemonstrated | |
 | A sent report is frozen, and the freeze is one rule | The report a sent report corrects is removed | undemonstrated | |
-| A report is sent and preserved, or neither | Any writer states half a sent report | undemonstrated | |
-| What the install generates in a document leaving it carries no live indicator | A report leaves the install | undemonstrated | |
-| What the install generates in a document leaving it carries no live indicator | A preserved document is read in with a live address | undemonstrated | |
+| A report is sent and preserved, or neither | Any writer states half a sent report | demonstrated | server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts :: a report an archive says was sent > refuses a report that preserves a document and was never sent, and leaves no case behind ; server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts :: a report an archive says was sent > refuses a report that says it was sent and preserves nothing, and leaves no case behind |
+| What the install generates in a document leaving it carries no live indicator | A report leaves the install | demonstrated | server/test/case-rows-reach-every-output.test.ts :: what a case holds reaches what it publishes > prints every indicator the case holds in the rendered report |
+| What the install generates in a document leaving it carries no live indicator | A preserved document is read in with a live address | demonstrated | server/test/an-archived-report-is-sent-and-preserved-or-neither.test.ts :: a report an archive says was sent > contains a live indicator an archive preserved, on the way in |
 | Sending stamps and preserves in one act | A report is sent | undemonstrated | |
 | Sending stamps and preserves in one act | The document cannot be produced | undemonstrated | |
 | Sending stamps and preserves in one act | The case changes after sending | undemonstrated | |
