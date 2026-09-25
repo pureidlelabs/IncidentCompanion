@@ -18,7 +18,7 @@ import re
 import pytest
 
 from tests import certify
-from tests._ledger import citations
+from tests._ledger import FILE_AND_TITLE, citations
 from tests._ledger import rows as ledger_rows
 from tests._repo import REPO_ROOT
 
@@ -148,12 +148,15 @@ def test_what_a_status_owes_is_present(row: tuple[str, str, str, str, str]) -> N
                 "tags a case whose own body reached nothing."
             )
             reaching = {"server", "screen", "containers"} | (
-                {"client"} if certify.renders_a_screen(path) else set()
+                {"client"}
+                if certify.reaches_the_server(path)
+                or (path + FILE_AND_TITLE + title, capability) in certify.DRAWN_SURFACE
+                else set()
             )
             assert reaching & set(certify.owners(path)), (
                 f"{capability}: {scenario!r} cites {path!r}, which no certifying run reads at the "
                 "product's entry point: a repository check, a Playwright spec, or a client test "
-                "that renders no screen."
+                "that renders no container or replaces what it asks the server."
             )
 
     if status == "undemonstrable":

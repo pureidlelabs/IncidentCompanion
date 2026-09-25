@@ -7,28 +7,41 @@
  * headings as English on a Dutch report, and the query key would never change
  * when the analyst changed the language. -> #513
  *
- * **Asserted at the query, not on the screen.** What the screen draws is
- * `report-shape.ts`'s and is asserted there against a pack handed in. This is
- * the seam above it: which pack gets fetched at all.
+ * No module is mocked: the real container, hooks, request layer and screen,
+ * against a model of the network that answers each pack in the language asked.
  *
  * **What this does not cover:** that the served endpoint answers in the asked
  * language, which is the server's and `report/render.service.ts`'s.
  */
-import { render, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import type { Case, Report } from '@/api/model'
-import type * as ReportLayoutsModuleShape from '@/api/reportLayouts'
-
-type ReportLayoutsModule = typeof ReportLayoutsModuleShape
+import { setSession } from '@/api/session'
+import { setTransport } from '@/api/transport'
+import { campaignCase } from '@/fixtures/campaign'
 
 import { ReportContainer } from './ReportContainer'
 
-const CASE = '22222222-2222-4222-8222-222222222222'
+const CASE = campaignCase.id
+const DUTCH = campaignCase.reports[0]!.id
+
+/** What the pack answers, per language, as the server would. */
+const PACKS: Record<string, string> = {
+  nl: 'Managementsamenvatting',
+  en: 'Executive summary',
+  '': 'Executive summary',
+}
+
+const LANGUAGES = [
+  { code: 'en', label: 'English', coverage: 1 },
+  { code: 'nl', label: 'Nederlands', coverage: 1 },
+]
 
 /**
- * Every language `useReportLayouts` was asked for.
+ * Every language a pack was asked for.
  *
  * **Two queries, and both matter.** The screen's headings follow the open
  * report; the new-report dialog's layout chips and markings follow the
@@ -37,100 +50,94 @@ const CASE = '22222222-2222-4222-8222-222222222222'
  * languages fetched rather than which came last.
  */
 const asked: string[] = []
+let kase: typeof campaignCase
 
-/** Mutable, so a case that changes under the screen can be drawn. */
-let reports = [
-  { id: 'report-nl', version: 1, language: 'nl', label: 'Dutch report' },
-  { id: 'report-en', version: 1, language: '', label: 'Default report' },
-] as unknown as Report[]
+const json = (status: number, body: unknown) =>
+  Promise.resolve(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    }),
+  )
 
-vi.mock('@/app/useCaseId', () => ({ useCaseId: () => CASE }))
-vi.mock('@/api/useSession', () => ({ useSession: () => ({ username: 'Ada' }) }))
-vi.mock('@/api/case', () => ({
-  useCase: () => ({
-    data: { id: CASE, reports, reportBlocks: [] } as unknown as Case,
-    isPending: false,
-    error: null,
-    refetch: vi.fn(),
-  }),
-}))
-vi.mock('@/api/regimes', () => ({
-  useRegimes: () => ({ data: undefined }),
-  regimeEnabled: () => false,
-}))
-/** What the pack answers, per language, as the server would. */
-const PACKS: Record<string, { key: string; label: string }[]> = {
-  nl: [{ key: 'heading.exec_summary', label: 'Managementsamenvatting' }],
-  '': [{ key: 'heading.exec_summary', label: 'Executive summary' }],
-}
-
-vi.mock('@/api/reportLayouts', async () => {
-  // **The real `headingLabelsByKey`.** Mocking it is what let an empty object
-  // stand in for the served pack in every other file here.
-  const real = await vi.importActual<ReportLayoutsModule>('@/api/reportLayouts')
-  return {
-    ...real,
-    useReportLayouts: (language: string) => {
-      asked.push(language)
-      return { data: { languages: [], layouts: [], tlp: [], headings: PACKS[language] ?? [] } }
-    },
+function server(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const url = new URL(input instanceof Request ? input.url : input.toString(), 'http://ic.test')
+  const method = init?.method ?? 'GET'
+  if (url.pathname === `/api/cases/${CASE}` && method === 'GET') return json(200, kase)
+  if (url.pathname === `/api/cases/${CASE}/reports/${DUTCH}` && method === 'PATCH') {
+    const { language } = JSON.parse(String(init?.body)) as { language: string }
+    const reports = kase.reports.map((one) =>
+      one.id === DUTCH ? { ...one, language, version: one.version + 1 } : one,
+    )
+    kase = { ...kase, reports }
+    return json(200, reports.find((one) => one.id === DUTCH))
   }
-})
-vi.mock('@/api/reportBlockKinds', () => ({ useReportBlockKinds: () => ({ data: undefined }) }))
-vi.mock('@/api/useEntryCreate', () => ({ useEntryCreate: () => ({ mutateAsync: vi.fn() }) }))
-vi.mock('@/api/useEntryMutation', () => ({ useEntryMutation: () => ({ mutateAsync: vi.fn() }) }))
-vi.mock('@/api/useEntryBulkCreate', () => ({
-  useEntryBulkCreate: () => ({ mutateAsync: vi.fn() }),
-}))
-vi.mock('@/api/useEntryReorder', () => ({ useEntryReorder: () => ({ mutateAsync: vi.fn() }) }))
-/**
- * **The screen records what it was handed rather than drawing nothing.**
- * Mocked to `null`, this file could not tell the fetched pack from an empty
- * object -- and passing `{}` as `headings` survived every test in the client.
- *
- * `vi.hoisted`, because a mock factory is lifted above every `let` in the file.
- */
-const held = vi.hoisted(() => ({ props: null as Record<string, unknown> | null }))
-vi.mock('@/screens/report-section', () => ({
-  ReportSectionScreen: (props: Record<string, unknown>) => {
-    held.props = props
-    return null
-  },
-}))
-
+  if (url.pathname === '/api/report-layouts') {
+    const language = url.searchParams.get('lang') ?? ''
+    asked.push(language)
+    return json(200, {
+      layouts: [],
+      stages: [],
+      tlp: [],
+      languages: LANGUAGES,
+      headings: [{ key: 'heading.exec_summary', label: PACKS[language] }],
+    })
+  }
+  if (url.pathname === '/api/report-block-kinds') return json(200, { groups: [] })
+  if (url.pathname === '/api/regimes') return json(200, { enabled: false, regimes: {} })
+  return json(404, { message: `unmodelled ${method} ${url.pathname}` })
+}
 
 /** The distinct languages fetched, the two queries asking one key between them. */
 const languages = () => [...new Set(asked)].sort()
 
-const open = async (at: string) => {
-  return render(
-    <MemoryRouter initialEntries={[at]}>
-      <ReportContainer />
-    </MemoryRouter>,
+async function open(at: string) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[at]}>
+        <Routes>
+          <Route path="/cases/:caseId/:section" element={<ReportContainer />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
   await waitFor(() => {
     expect(asked.length).toBeGreaterThan(0)
   })
 }
 
+const at = (report?: string) =>
+  `/cases/${CASE}/report${report === undefined ? '' : `?report=${report}`}`
+
 describe('the language the heading pack is fetched in', () => {
   beforeEach(() => {
     asked.length = 0
-    held.props = null
-    reports = [
-      { id: 'report-nl', version: 1, language: 'nl', label: 'Dutch report' },
-      { id: 'report-en', version: 1, language: '', label: 'Default report' },
-    ] as unknown as Report[]
+    kase = {
+      ...campaignCase,
+      reports: campaignCase.reports.map((one, index) => ({
+        ...one,
+        language: index === 0 ? 'nl' : '',
+      })),
+    }
+    setTransport(server)
+    setSession({ userId: 'u-ada', username: 'Ada' })
+  })
+
+  afterEach(() => {
+    setTransport((input, init) => fetch(input, init))
   })
 
   it("is the open report's own", async () => {
-    await open('/?report=report-nl')
+    await open(at(DUTCH))
 
-    expect(
-      languages(),
-      "the pack was fetched in the install's language, so a Dutch report would draw " +
-        'whatever the install happens to be set to',
-    ).toEqual(['', 'nl'])
+    await waitFor(() => {
+      expect(
+        languages(),
+        "the pack was fetched in the install's language, so a Dutch report would draw " +
+          'whatever the install happens to be set to',
+      ).toEqual(['', 'nl'])
+    })
   })
 
   /**
@@ -138,8 +145,9 @@ describe('the language the heading pack is fetched in', () => {
    * what `''` asks for -- not a second default invented here.
    */
   it("is the install's where the report names none", async () => {
-    await open('/?report=report-en')
+    await open(at(campaignCase.reports[1]!.id))
 
+    await screen.findByRole('button', { name: /language/i })
     expect(languages()).toEqual([''])
   })
 
@@ -148,24 +156,22 @@ describe('the language the heading pack is fetched in', () => {
    * follow, and the list draws what the install answers.
    */
   it("is the install's where no report is open", async () => {
-    await open('/')
+    await open(at())
 
     expect(languages()).toEqual([''])
   })
 
   /**
    * **The pack has to reach the screen, not merely be fetched.** Handing the
-   * screen an empty object leaves every heading drawn as its own key, and it
-   * survived every test in this client -- the seam between the query and the
-   * screen was the whole fix and was asserted by nothing.
+   * screen an empty object leaves every heading drawn as its own key.
    */
   it('reaches the screen as the words the pack answered with', async () => {
-    await open('/?report=report-nl')
+    await open(at(DUTCH))
 
     expect(
-      (held.props as { headings?: Record<string, string> } | null)?.headings,
-      'the screen was handed something other than the pack that was fetched for it',
-    ).toEqual({ 'heading.exec_summary': 'Managementsamenvatting' })
+      (await screen.findAllByText('Managementsamenvatting')).length,
+      'the screen drew something other than the pack that was fetched for it',
+    ).toBeGreaterThan(0)
   })
 
   /**
@@ -176,27 +182,19 @@ describe('the language the heading pack is fetched in', () => {
    * one step later.
    */
   it('follows the report when the analyst changes it', async () => {
-    const drawn = await open('/?report=report-nl')
-    expect((held.props as { headings?: Record<string, string> }).headings).toEqual({
-      'heading.exec_summary': 'Managementsamenvatting',
-    })
+    const user = userEvent.setup()
+    await open(at(DUTCH))
+    await screen.findAllByText('Managementsamenvatting')
 
-    // The case as it reads after the patch has landed and been re-fetched.
-    reports = [
-      { id: 'report-nl', version: 2, language: '', label: 'Dutch report' },
-      { id: 'report-en', version: 1, language: '', label: 'Default report' },
-    ] as unknown as Report[]
-    drawn.rerender(
-      <MemoryRouter initialEntries={['/?report=report-nl']}>
-        <ReportContainer />
-      </MemoryRouter>,
-    )
+    await user.click(screen.getByRole('button', { name: /language/i }))
+    await user.click(await screen.findByRole('option', { name: 'English' }))
 
     await waitFor(() => {
       expect(
-        (held.props as { headings?: Record<string, string> }).headings,
-        'the screen kept the old language\'s headings over a report that no longer carries it',
-      ).toEqual({ 'heading.exec_summary': 'Executive summary' })
+        screen.queryAllByText('Managementsamenvatting'),
+        "the screen kept the old language's headings over a report that no longer carries it",
+      ).toEqual([])
     })
+    expect(screen.getAllByText('Executive summary').length).toBeGreaterThan(0)
   })
 })

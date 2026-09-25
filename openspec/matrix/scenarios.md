@@ -8,7 +8,7 @@
 
 ## How a row is filled in
 
-**`demonstrated`** names the tests that demonstrate it, each as `path :: describe > case`, several separated by ` ; `. Each reaches the product the way the scenario's actor does: a request or a socket the booted application served, a story whose scenario is what it draws, a stack raised with Compose, or a screen rendered. A story is evidence rather than a demonstration unless `tests/certify.py` names it for the row's capability, because a story replaces with a constant whatever its providers would have read. A path alone, a check that reads the repository, and a test that builds the parts by hand demonstrate nothing. The run that decides a landing refuses a row whose cited test is absent, skipped, failed, or never reached the product, and `tests/certify.py` is that refusal.
+**`demonstrated`** names the tests that demonstrate it, each as `path :: describe > case`, several separated by ` ; `. Each reaches the product the way the scenario's actor does: a request or a socket the booted application served, a story whose scenario is what it draws, a stack raised with Compose, or a container rendered whose server answers arrive through the real client code from a model of the network. A story, and a client test that replaces the request layer or a data hook or hands a screen its props, is evidence rather than a demonstration unless `tests/certify.py` names it for the row's capability, because each replaces with a constant whatever the server would have answered. A path alone, a check that reads the repository, and a test that builds the parts by hand demonstrate nothing. The run that decides a landing refuses a row whose cited test is absent, skipped, failed, or never reached the product, and `tests/certify.py` is that refusal.
 
 **`undemonstrable`** carries the reason instead. Some scenarios are honestly beyond automation -- an operator is told, an analyst can tell at a glance, a refusal reveals nothing by its timing. Those are demonstrated by somebody looking, or they are not demonstrated at all, and the constitution requires that they are recorded rather than quietly counted.
 
@@ -321,12 +321,12 @@
 | What the application writes, it can read back | A file names a field that does not exist | undemonstrated | |
 | What the application writes, it can read back | A blank value | undemonstrated | |
 | An import is all of it or none of it | One row in a file is invalid | undemonstrated | |
-| An import is all of it or none of it | An import succeeds | demonstrated | ui/src/screens/an-import-says-all-four-counts.test.tsx :: an import that met rows the case already held > says how many were already there and how many it replaced |
+| An import is all of it or none of it | An import succeeds | demonstrated | ui/src/app/case/an-import-tells-the-analyst-what-it-did.test.tsx :: an import the route took > says how many rows were added and how many were already there |
 | A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | undemonstrated | |
 | A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | undemonstrated | |
 | A reference travels as what it points at, not as where it was kept | A file names where a row was kept | undemonstrated | |
 | A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | undemonstrated | |
-| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | ui/src/screens/an-import-says-all-four-counts.test.tsx :: an import that lost references > says plainly that an import carried everything |
+| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | ui/src/app/case/an-import-tells-the-analyst-what-it-did.test.tsx :: an import the route took > says plainly that it carried every reference |
 | An import says what to do about something already there | The analyst does not say what to do | undemonstrated | |
 | An import says what to do about something already there | A row was changed by somebody else | undemonstrated | |
 | An import says what to do about something already there | An unrecognised instruction | undemonstrated | |
@@ -440,14 +440,14 @@
 | An import that failed partway can be run again without doing it twice | A partly written import is reported | undemonstrated | |
 | An analyst can start a case from an incident | An analyst starts a case from an incident | undemonstrated | |
 | An analyst can start a case from an incident | The analyst names the case at the review | undemonstrated | |
-| An analyst can start a case from an incident | An analyst leaves the wizard | demonstrated | ui/src/screens/import-sentinel-starts-a-case.test.tsx :: a wizard that starts the case it fills > writes nothing when the analyst leaves before the ending |
-| An analyst can start a case from an incident | A case is named by what an analyst had to give it | demonstrated | ui/src/app/case/CaseFrameContainer.test.tsx :: the case the frame is drawn for > heads the rail with the title when the case carries no reference |
+| An analyst can start a case from an incident | An analyst leaves the wizard | demonstrated | ui/src/app/case/starting-a-case-from-an-incident.test.tsx :: a case started from an incident > is not created when the analyst leaves before accepting the review |
+| An analyst can start a case from an incident | A case is named by what an analyst had to give it | demonstrated | ui/src/app/case/a-case-with-no-reference-is-named-by-its-title.test.tsx :: a case whose reference was never filled in > is named in the rail by its title rather than by its identifier |
 | A case opened from an incident keeps what the provider reported | An incident the provider judged | demonstrated | server/test/an-import-that-opens-a-case-fills-the-one-it-opened.test.ts :: an import asked to open a case and fill it > carries the severity the provider reported, in this vocabulary |
 | A case opened from an incident keeps what the provider reported | One case from several incidents | demonstrated | server/test/incident-import.test.ts :: importing an incident > the door that starts a case > marks a case opened from several incidents with the worst of them |
 | A case opened from an incident keeps what the provider reported | A level this vocabulary cannot express | demonstrated | server/test/incident-import.test.ts :: importing an incident > the door that starts a case > opens and fills the case where the reported level is a word it cannot say |
 | A case opened from an incident keeps what the provider reported | A caller naming the severity itself | demonstrated | server/test/incident-import.test.ts :: importing an incident > the door that starts a case > refuses a caller that names the severity itself |
 | An incident is not used up by the case it starts | A second case from the same incident | undemonstrated | |
-| An incident is not used up by the case it starts | A composed field would have to be unique | demonstrated | ui/src/app/case/ImportSentinelContainer.test.tsx :: the Sentinel import container > the ending that makes the case it fills > seeds no reference, so one incident can start a second case |
+| An incident is not used up by the case it starts | A composed field would have to be unique | demonstrated | ui/src/app/case/starting-a-case-from-an-incident.test.tsx :: a case started from an incident > is created with no reference composed from the incident |
 
 ## install-audit
 
