@@ -317,6 +317,16 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   }
 
   private async upgrade(request: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
+    // Listened for before the first await: a socket that closes inside one closes once, unheard.
+    let counted: string | null = null
+    // Node drops its own error listener on an upgrade, so a reset here would be thrown unhandled.
+    socket.on('error', () => socket.destroy())
+    socket.once('close', () => {
+      if (!counted) return
+      const now = (this.holding.get(counted) ?? 1) - 1
+      if (now > 0) this.holding.set(counted, now)
+      else this.holding.delete(counted)
+    })
     await attribute(request.headers, request.socket.remoteAddress)
     const verdict = await this.check(request)
     if (verdict.refused && ANONYMOUS.has(verdict.refused)) {
@@ -346,7 +356,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
       // partition -- and which a collector receives whole while the activity
       // pane draws no attributes at all, so on the screen it is gone until
       // that pane grows a column. -> #541, #544
-      const asked = LIVE_PATH.exec(request.url ?? '')?.[1]?.match(UUID)?.[0]
+      const asked = LIVE_PATH.exec(request.url ?? '')?.[1]?.match(UUID)?.[0].toLowerCase()
       void this.activity.record({
         event: 'live_refused',
         outcome: 'failure',
@@ -358,6 +368,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     }
 
     const userId = verdict.session.id
+    if (socket.destroyed) return
     const held = this.holding.get(userId) ?? 0
     if (held >= CONNECTIONS_PER_ACCOUNT) {
       if (!this.crowded.has(userId)) {
@@ -369,12 +380,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     }
     this.crowded.delete(userId)
     this.holding.set(userId, held + 1)
-    // The raw socket closes however the upgrade ends, admitted or not.
-    socket.once('close', () => {
-      const now = (this.holding.get(userId) ?? 1) - 1
-      if (now > 0) this.holding.set(userId, now)
-      else this.holding.delete(userId)
-    })
+    counted = userId
 
     // Who could have edited; who did is the line each saved change writes.
     void this.activity.record({
@@ -671,7 +677,7 @@ export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
     }
 
     const table = typeof message.table === 'string' ? message.table : null
-    const id = typeof message.id === 'string' ? message.id : null
+    const id = typeof message.id === 'string' ? message.id.toLowerCase() : null
     if (!table || !id) return
 
     if (message.type === 'claim') await this.onClaim(member, live, claims, table, id)

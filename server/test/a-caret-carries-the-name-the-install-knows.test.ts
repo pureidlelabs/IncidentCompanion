@@ -132,4 +132,47 @@ describe.skipIf(!(await bootable()))('a caret drawn from the live connection', (
     expect(clientsIn(watching.live.frames.slice(heard))).not.toContain(victim.client)
     expect(carets(watching.live).get(victim.client)?.user?.name).toBe('Caret Writer')
   })
+
+  it('keeps a caret for its analyst across a reconnect, whoever announces it in between', async () => {
+    const watching = await editor(admin, 'watching')
+    const victim = await editor(writer, 'Caret Writer')
+    const forger = await editor(reader, 'Caret Reader')
+    await pause(300)
+    await victim.live.close()
+    await pause(300)
+    const heard = watching.live.frames.length
+    forger.live.send({ type: 'prose.awareness', field, update: entry(victim.client, 1000, { user: { name: 'x' } }) })
+    await pause(300)
+    const back = await Live.open(harness!, writer, caseId)
+    open.push(back)
+    back.send({ type: 'prose.awareness', field, update: entry(victim.client, 1001, { user: { name: 'Caret Writer' } }) })
+    await pause(500)
+
+    expect({
+      relayed: clientsIn(watching.live.frames.slice(heard)).filter((one) => one === victim.client).length,
+      drawn: carets(watching.live).get(victim.client)?.user?.name,
+    }).toEqual({ relayed: 1, drawn: 'Caret Writer' })
+  })
+
+  it('holds nothing for an update it could not read', async () => {
+    const watching = await editor(admin, 'watching')
+    const forger = await editor(reader, 'Caret Reader')
+    const planted = 4_000_000_000 + Math.floor(Math.random() * 1_000_000)
+    const encoder = encoding.createEncoder()
+    encoding.writeVarUint(encoder, 2)
+    encoding.writeVarUint(encoder, planted)
+    encoding.writeVarUint(encoder, 1)
+    encoding.writeVarString(encoder, JSON.stringify({ user: { name: 'x' } }))
+    encoding.writeVarUint(encoder, planted + 1)
+    encoding.writeVarUint(encoder, 1)
+    encoding.writeVarString(encoder, 'not json')
+    forger.live.send({ type: 'prose.awareness', field, update: b64(encoding.toUint8Array(encoder)) })
+    await pause(300)
+    const owner = await Live.open(harness!, writer, caseId)
+    open.push(owner)
+    owner.send({ type: 'prose.awareness', field, update: entry(planted, 1, { user: { name: 'Caret Writer' } }) })
+    await pause(500)
+
+    expect(carets(watching.live).get(planted)?.user?.name).toBe('Caret Writer')
+  })
 })

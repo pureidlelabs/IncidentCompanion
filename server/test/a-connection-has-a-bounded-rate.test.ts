@@ -8,6 +8,7 @@
  * anonymous upgrades writing one audit line each.
  */
 import { randomUUID } from 'node:crypto'
+import { connect } from 'node:net'
 
 import { and, eq, gte, sql } from 'drizzle-orm'
 import * as encoding from 'lib0/encoding'
@@ -220,4 +221,25 @@ describe.skipIf(!(await bootable()))('a connection to the case, at a rate', () =
     expect({ refused: answers.filter((one) => one !== 'open'), limited: codes.filter((one) => one === 4429) })
       .toEqual({ refused: [], limited: [] })
   }, 60_000)
+
+  it('counts nothing against an analyst for upgrades they abandoned before the answer', async () => {
+    const who = await anAnalyst()
+    const { hostname, port } = new URL(harness.base)
+    const origin = harness.origin
+    for (let i = 0; i < 40; i += 1) {
+      const raw = connect(Number(port), hostname)
+      raw.on('error', () => {})
+      await new Promise<void>((done) => raw.once('connect', () => done()))
+      raw.write(
+        `GET /api/cases/${caseId}/live HTTP/1.1\r\nHost: ${hostname}:${port}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n` +
+          `Sec-WebSocket-Version: 13\r\nSec-WebSocket-Key: ${Buffer.from(randomUUID().slice(0, 16)).toString('base64')}\r\n` +
+          `Origin: ${origin}\r\nCookie: ${who.cookie}\r\n\r\n`,
+      )
+      // Gone while the install is still reading the session.
+      setImmediate(() => raw.resetAndDestroy())
+    }
+    await pause(2_000)
+
+    expect(await upgrade(who).answered).toBe('open')
+  }, 30_000)
 })

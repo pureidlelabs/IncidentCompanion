@@ -6,7 +6,9 @@
  * passed every check and then keyed everything after admission by the string
  * it sent, so it sat in a room of its own.
  */
-import { and, eq } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
+
+import { and, eq, gte, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { WebSocket } from 'ws'
@@ -15,7 +17,7 @@ import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-h
 import { caseSocket, issued, pause, until, type Frame } from './case-socket.js'
 import { aDraft, caller, Live, textOf, typed } from './report-writers.js'
 import { openTestPool } from './database.js'
-import { caseNotes, cases, changeFeed, customers, reports } from '../src/db/schema/index.js'
+import { caseNotes, cases, changeFeed, customers, installActivity, reports } from '../src/db/schema/index.js'
 import * as Y from 'yjs'
 
 const TAG = `${String(process.pid)}-${String(Date.now()).slice(-6)}`
@@ -161,5 +163,45 @@ describe.skipIf(!(await bootable()))('a case named in capitals over the live con
 
     const [row] = await seed().select({ document: reports.document }).from(reports).where(eq(reports.id, id))
     expect(textOf(new Uint8Array(row!.document!), blocks[0]!.id)).toContain(`Typed before the send ${TAG}`)
+  })
+
+  it('holds one claim on an entry whichever spelling each analyst claims it by', async () => {
+    await aCase()
+    const row = randomUUID()
+    const holder = await lower.connect(owner)
+    const second = await upper.connect(writer)
+    holder.socket.send(JSON.stringify({ type: 'claim', table: 'systems', id: row }))
+    await pause(300)
+    second.socket.send(JSON.stringify({ type: 'claim', table: 'systems', id: row.toUpperCase() }))
+    await pause(500)
+
+    const last = holder.heard.filter((one) => one.type === 'presence').at(-1) as { claims: { entry_id: string; user_id: string }[] }
+    expect(last.claims.map((one) => `${one.entry_id.toLowerCase()} ${one.user_id}`)).toEqual([`${row} ${owner.id}`])
+    holder.socket.terminate()
+    second.socket.terminate()
+  })
+
+  it('records a refused connection and a refused request against the case in one spelling', async () => {
+    await aCase()
+    const from = new Date(Date.now() - 50)
+    const refused = new WebSocket(`${harness!.base.replace('http://', 'ws://')}/api/cases/${caseId.toUpperCase()}/live`, {
+      headers: { origin: harness!.origin },
+    })
+    refused.on('error', () => {})
+    await new Promise<void>((done) => {
+      refused.once('unexpected-response', (request) => {
+        request.on('error', () => {})
+        request.destroy()
+        done()
+      })
+    })
+    expect((await call(reader, 'DELETE', `/api/cases/${caseId.toUpperCase()}`)).status).toBe(403)
+    await pause(500)
+
+    const lines = await seed()
+      .select({ event: installActivity.event, spelled: sql<string>`${installActivity.detail}->>'case'` })
+      .from(installActivity)
+      .where(and(gte(installActivity.at, from), sql`lower(${installActivity.detail}->>'case') = ${caseId}`))
+    expect(lines.map((one) => `${one.event} ${one.spelled}`).sort()).toEqual([`access_denied ${caseId}`, `live_refused ${caseId}`])
   })
 })
