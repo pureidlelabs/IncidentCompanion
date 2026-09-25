@@ -90,6 +90,41 @@ async function ageTheLocks(email: string): Promise<void> {
     .where(inArray(signInLockout.userId, db.select({ id: user.id }).from(user).where(eq(user.email, email))))
 }
 
+/** The account's unfamiliar run as stored. */
+async function runOf(email: string) {
+  const [run] = await db
+    .select({ lockedUntil: signInLockout.lockedUntil, locks: signInLockout.locks })
+    .from(signInLockout)
+    .innerJoin(user, eq(user.id, signInLockout.userId))
+    .where(and(eq(user.email, email), eq(signInLockout.familiar, false)))
+  return run
+}
+
+/** Makes the audit log refuse this account's `account_locked` line until lifted. */
+async function refuseTheLockLine(email: string): Promise<{ lift: () => Promise<void> }> {
+  const onTestDatabase = new URL(process.env.DATABASE_URL ?? '')
+  const owner = new URL(ADMIN_URL)
+  onTestDatabase.username = owner.username
+  onTestDatabase.password = owner.password
+  const client = new Client({ connectionString: onTestDatabase.toString() })
+  await client.connect()
+  const name = `refuse_${randomUUID().slice(0, 8)}`
+  await client.query(`
+    create function ${name}() returns trigger language plpgsql as $$
+    begin raise exception 'audit log refused'; end $$`)
+  await client.query(
+    `create trigger ${name} before insert on install_activity for each row
+     when (new.event = 'account_locked' and new.target_label = '${email}') execute function ${name}()`,
+  )
+  return {
+    lift: async () => {
+      await client.query(`drop trigger if exists ${name} on install_activity`)
+      await client.query(`drop function if exists ${name}()`)
+      await client.end()
+    },
+  }
+}
+
 describe.skipIf(!(await bootable()))('guessing at an account from machines on the network', () => {
   beforeAll(async () => {
     vi.stubEnv('IC_EDGE', 'localhost')
@@ -269,39 +304,55 @@ describe.skipIf(!(await bootable()))('guessing at an account from machines on th
       await statusFrom(guesser, afterAnother, PASSWORD),
       'a wrong password repeated after another failure locked the account',
     ).toBe(200)
+
+    const interleaved = await anAccount()
+    for (let round = 0; round < THRESHOLD; round += 1) {
+      for (const miss of ['wrong-a', 'wrong-b', 'wrong-c']) await statusFrom(guesser, interleaved, miss)
+    }
+    expect(
+      await statusFrom(guesser, interleaved, PASSWORD),
+      'three wrong passwords taken in turn were counted as new each time',
+    ).toBe(200)
   }, 60_000)
 
-  it('writes no lock the audit log cannot record', async () => {
+  it('refuses a run whose lock the audit log cannot record, and locks it once the log takes the line', async () => {
     const email = await anAccount()
     const guesser = machine(66)
-    const onTestDatabase = new URL(process.env.DATABASE_URL ?? '')
-    const owner = new URL(ADMIN_URL)
-    onTestDatabase.username = owner.username
-    onTestDatabase.password = owner.password
-    const admin = new Client({ connectionString: onTestDatabase.toString() })
-    await admin.connect()
-    const name = `refuse_${randomUUID().slice(0, 8)}`
+    const refusal = await refuseTheLockLine(email)
     try {
-      await admin.query(`
-        create function ${name}() returns trigger language plpgsql as $$
-        begin raise exception 'audit log refused'; end $$`)
-      await admin.query(
-        `create trigger ${name} before insert on install_activity for each row
-         when (new.event = 'account_locked' and new.target_label = '${email}') execute function ${name}()`,
-      )
-      await guessFrom(guesser, email, THRESHOLD)
+      await guessFrom(guesser, email, THRESHOLD + 2)
+      expect(
+        await statusFrom(guesser, email, PASSWORD),
+        'a run that reached the threshold let the right password in while its lock could not be logged',
+      ).toBe(401)
+      expect((await runOf(email))?.lockedUntil ?? null, 'a lock was written with no audit line').toBeNull()
+      expect(await locksOf(email)).toEqual([])
     } finally {
-      await admin.query(`drop trigger if exists ${name} on install_activity`)
-      await admin.query(`drop function if exists ${name}()`)
-      await admin.end()
+      await refusal.lift()
     }
 
-    const [run] = await db
-      .select({ lockedUntil: signInLockout.lockedUntil })
-      .from(signInLockout)
-      .innerJoin(user, eq(user.id, signInLockout.userId))
-      .where(eq(user.email, email))
-    expect(run?.lockedUntil ?? null, 'a lock was written with no audit line').toBeNull()
+    expect(await statusFrom(guesser, email, PASSWORD)).toBe(401)
+    expect(await locksOf(email), 'the pending lock did not fall once the log took its line').toEqual([FIRST_LOCK])
+    expect((await runOf(email))?.locks).toBe(1)
+  }, 60_000)
+
+  it('clears a lock the audit log could not record when an administrator releases the account', async () => {
+    const email = await anAccount()
+    const guesser = machine(67)
+    const refusal = await refuseTheLockLine(email)
+    try {
+      await guessFrom(guesser, email, THRESHOLD)
+      const reissued = 'a-password-the-administrator-chose'
+      const released = await fetch(`${harness.base}/api/accounts/${encodeURIComponent(email)}/reset`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: admin.cookie },
+        body: JSON.stringify({ password: reissued }),
+      })
+      expect(released.status).toBe(200)
+      expect(await statusFrom(guesser, email, reissued), 'the release left the run refused').toBe(200)
+    } finally {
+      await refusal.lift()
+    }
     expect(await locksOf(email)).toEqual([])
   }, 60_000)
 

@@ -7,7 +7,7 @@
  */
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
 import { APIError, createAuthMiddleware, getIP, getSessionFromCtx } from 'better-auth/api'
-import { type SQL, TransactionRollbackError, and, eq, gt, isNull, lte, or, sql } from 'drizzle-orm'
+import { TransactionRollbackError, and, eq, gt, isNull, lte, or, sql } from 'drizzle-orm'
 
 import { ADMIN_ROLE, DEFAULT_ROLE, ROLES } from '../domain/analyst-account.js'
 import { recordInstallActivity } from '../install-activity/record.js'
@@ -145,8 +145,8 @@ async function checkPassword(
   const now = new Date()
   const run = await runOf(db, hash, address)
   if (run && !isLocked(run.lockedUntil, now)) {
-    if (right) return startAgain(db, run, address, now)
-    await countAgainst(db, { ...run, miss: missOf(secret, run.id, password) }, now)
+    if (right && !run.lockPending) return startAgain(db, run, address, now)
+    await countAgainst(db, { ...run, miss: right ? null : missOf(secret, run.id, password) }, now)
     return false
   }
   await countAgainst(db, undefined, now)
@@ -179,6 +179,7 @@ interface Run {
   email: string
   familiar: boolean
   lockedUntil: Date | null
+  lockPending: boolean | null
 }
 
 /** The account holding `hash`, and which of its runs an answer from `address` falls in. */
@@ -193,6 +194,7 @@ async function runOf(db: Database, hash: string, address: string | null): Promis
       email: schema.user.email,
       familiar,
       lockedUntil: schema.signInLockout.lockedUntil,
+      lockPending: schema.signInLockout.lockPending,
     })
     .from(schema.account)
     .innerJoin(schema.user, eq(schema.user.id, schema.account.userId))
@@ -208,7 +210,7 @@ async function runOf(db: Database, hash: string, address: string | null): Promis
 /**
  * The right password on an open run: the run is forgotten, and the address
  * becomes familiar. Answers `false`, changing nothing, where a failure counted
- * since `run` was read has locked the run.
+ * since `run` was read has locked the run or left its lock pending.
  */
 async function startAgain(
   db: Database,
@@ -220,13 +222,19 @@ async function startAgain(
   const ofRun = and(eq(lockout.userId, run.id), eq(lockout.familiar, run.familiar))
   const forgotten = await db
     .delete(lockout)
-    .where(and(ofRun, or(isNull(lockout.lockedUntil), lte(lockout.lockedUntil, now))))
+    .where(
+      and(
+        ofRun,
+        eq(lockout.lockPending, false),
+        or(isNull(lockout.lockedUntil), lte(lockout.lockedUntil, now)),
+      ),
+    )
     .returning({ id: lockout.userId })
   if (forgotten.length === 0) {
     const [locked] = await db
       .select({ id: lockout.userId })
       .from(lockout)
-      .where(and(ofRun, gt(lockout.lockedUntil, now)))
+      .where(and(ofRun, or(eq(lockout.lockPending, true), gt(lockout.lockedUntil, now))))
     if (locked) return false
   }
   if (address !== null && !run.familiar) {
@@ -237,15 +245,17 @@ async function startAgain(
 
 /**
  * One more failure in `counted`'s run, unless it is a wrong password the run
- * already holds; the failure reaching the install's threshold locks the run in
- * the same statement. Writes `account_locked` then, in the same transaction
- * and with the address of the call being answered, and takes no lock where
- * that line cannot be written. `undefined` counts nothing, at the cost of the
- * same statements.
+ * already holds; the failure reaching the install's threshold marks the run's
+ * lock pending in the same statement. A pending lock is then taken together
+ * with its `account_locked` line, which carries the address of the call being
+ * answered; where the line cannot be written the lock stays pending, and every
+ * later answer in that run tries again. A `null` miss counts nothing and only
+ * tries the pending lock; `undefined` counts nothing, at the cost of the same
+ * statements.
  */
 async function countAgainst(
   db: Database,
-  counted: (Run & { miss: string }) | undefined,
+  counted: (Run & { miss: string | null }) | undefined,
   now: Date,
 ): Promise<void> {
   // Read now: a threshold cached at boot ignores the change an administrator
@@ -253,60 +263,60 @@ async function countAgainst(
   const policy = policyFrom(await readPolicy(db))
   const lockout = schema.signInLockout
   const miss = counted?.miss ?? ''
+  const counts = counted !== undefined && counted.miss !== null
   const at = sql`${now.toISOString()}::timestamptz`
-  const lockWhen = (failures: SQL, locksBefore: SQL) => ({
-    reached: sql`${failures} >= ${policy.afterFailures}::int`,
-    // Doubling stops long before the exponent could overflow; the maximum caps it anyway.
-    until: sql`${at} + interval '1 minute' * least(
-      ${policy.minutes}::float8 * power(2, least(${locksBefore}, 32)),
-      ${policy.maxMinutes}::float8
-    )`,
-  })
-  const first = lockWhen(sql`1`, sql`0`)
-  const next = lockWhen(sql`${lockout}.failures + 1`, sql`${lockout}.locks`)
-  await db
-    .transaction(async (tx) => {
-      const { rows } = await tx.execute<{
-        failures: number
-        locked_until: string | Date | null
-      }>(sql`
-    insert into ${lockout} (user_id, familiar, failures, locks, locked_until, misses)
-    select ${counted?.id ?? null}::text, ${counted?.familiar ?? false}::boolean,
-      case when ${first.reached} then 0 else 1 end,
-      case when ${first.reached} then 1 else 0 end,
-      case when ${first.reached} then ${first.until} end,
-      array[${miss}::text]
-    where ${counted !== undefined}::boolean
-    on conflict (user_id, familiar) do update set
-      failures = case when ${next.reached} then 0 else ${lockout}.failures + 1 end,
-      locks = ${lockout}.locks + case when ${next.reached} then 1 else 0 end,
-      locked_until = case when ${next.reached} then ${next.until} else ${lockout}.locked_until end,
-      misses = (${lockout}.misses || excluded.misses)[greatest(cardinality(${lockout}.misses) + 2 - ${REMEMBERED_MISSES}::int, 1):]
-    where not (${miss}::text = any(${lockout}.misses))
-      and (${lockout}.locked_until is null or ${lockout}.locked_until <= ${at})
-    returning coalesce(old.failures, 0) + 1 as failures, locked_until`)
-      const lockedUntil = asDate(rows[0]?.locked_until)
-      if (!counted || !lockedUntil || !isLocked(lockedUntil, now)) return
+  const ofRun = sql`${lockout}.user_id = ${counted?.id ?? null}::text and ${lockout}.familiar = ${counted?.familiar ?? false}::boolean`
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`
+      insert into ${lockout} (user_id, familiar, failures, lock_pending, misses)
+      select ${counted?.id ?? null}::text, ${counted?.familiar ?? false}::boolean, 1,
+        1 >= ${policy.afterFailures}::int, array[${miss}::text]
+      where ${counts}::boolean
+      on conflict (user_id, familiar) do update set
+        failures = ${lockout}.failures + 1,
+        lock_pending = ${lockout}.lock_pending or ${lockout}.failures + 1 >= ${policy.afterFailures}::int,
+        misses = (${lockout}.misses || excluded.misses)[greatest(cardinality(${lockout}.misses) + 2 - ${REMEMBERED_MISSES}::int, 1):]
+      where not (${miss}::text = any(${lockout}.misses))
+        and (${lockout}.locked_until is null or ${lockout}.locked_until <= ${at})`)
+    await tx
+      .transaction(async (lock) => {
+        const { rows } = await lock.execute<{
+          failures: number
+          locked_until: string | Date | null
+        }>(sql`
+          update ${lockout} set
+            failures = 0,
+            locks = ${lockout}.locks + 1,
+            lock_pending = false,
+            locked_until = ${at} + interval '1 minute' * least(
+              ${policy.minutes}::float8 * power(2, least(${lockout}.locks, 32)),
+              ${policy.maxMinutes}::float8
+            )
+          where ${ofRun} and ${lockout}.lock_pending
+          returning old.failures, locked_until`)
+        const lockedUntil = asDate(rows[0]?.locked_until)
+        if (!counted || !lockedUntil) return
 
-      const recorded = await recordInstallActivity(tx, {
-        event: 'account_locked',
-        target: counted.email,
-        detail: {
-          failures: String(rows[0]?.failures),
-          minutes: String(Math.round((lockedUntil.getTime() - now.getTime()) / 60_000)),
-          sources: counted.familiar ? 'familiar' : 'unfamiliar',
-        },
-        headers: Object.fromEntries(
-          (
-            tryGetCurrentAuthEndpointContext() as { headers?: Headers } | undefined
-          )?.headers?.entries() ?? [],
-        ),
+        const recorded = await recordInstallActivity(lock, {
+          event: 'account_locked',
+          target: counted.email,
+          detail: {
+            failures: String(rows[0]?.failures),
+            minutes: String(Math.round((lockedUntil.getTime() - now.getTime()) / 60_000)),
+            sources: counted.familiar ? 'familiar' : 'unfamiliar',
+          },
+          headers: Object.fromEntries(
+            (
+              tryGetCurrentAuthEndpointContext() as { headers?: Headers } | undefined
+            )?.headers?.entries() ?? [],
+          ),
+        })
+        if (!recorded) lock.rollback()
       })
-      if (!recorded) tx.rollback()
-    })
-    .catch((why: unknown) => {
-      if (!(why instanceof TransactionRollbackError)) throw why
-    })
+      .catch((why: unknown) => {
+        if (!(why instanceof TransactionRollbackError)) throw why
+      })
+  })
 }
 
 /** A date the adapter may hand over as a `Date` or as the string it stored. */
