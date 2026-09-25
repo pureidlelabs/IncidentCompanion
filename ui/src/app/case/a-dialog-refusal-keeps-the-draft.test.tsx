@@ -17,6 +17,7 @@ import { setSocketFactory, type SocketLike } from '@/api/caseSocket'
 import { setSession } from '@/api/session'
 import { setTransport } from '@/api/transport'
 import { useCaseChanges } from '@/api/useCaseChanges'
+import { CaseProvidersLive } from '@/app/case/CaseProviders'
 import { EntitiesContainer } from '@/app/case/EntitiesContainer'
 import { TimelineContainer } from '@/app/case/TimelineContainer'
 import { casePath } from '@/components/blocks/case-paths'
@@ -31,6 +32,9 @@ const bodyOf = (init?: RequestInit) => (typeof init?.body === 'string' ? init.bo
 
 const ID = campaignCase.id
 const LATENCY = 30
+/** Each analyst's value, distinct from every word the band draws around them. */
+const MINE = 'WKS-MINE-2208'
+const THEIRS = 'WKS-THEIRS-7731'
 /** How long a PATCH takes to be answered, when it is not `LATENCY`. */
 let patchLatency: number | undefined
 
@@ -101,13 +105,19 @@ function otherAnalystChanges(
   }
 }
 
-function mount(address: string, Screen: () => ReactNode) {
+function mount(address: string, Screen: () => ReactNode, live = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   function Shell() {
     useCaseChanges(ID)
-    return <Screen />
+    return live ? (
+      <CaseProvidersLive caseId={ID}>
+        <Screen />
+      </CaseProvidersLive>
+    ) : (
+      <Screen />
+    )
   }
   const router = createMemoryRouter([{ path: '/cases/:caseId/:section', element: <Shell /> }], {
     initialEntries: [address],
@@ -198,7 +208,7 @@ async function openEditor(surface: Surface, user: ReturnType<typeof userEvent.se
   const dialog = await screen.findByRole('dialog')
   const input = within(dialog).getByRole<HTMLInputElement>('textbox', { name: surface.label })
   await user.clear(input)
-  await user.type(input, 'Mine')
+  await user.type(input, MINE)
   return { row, dialog, input }
 }
 
@@ -207,7 +217,7 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
     const user = userEvent.setup()
     const { row, dialog, input } = await openEditor(surface, user)
 
-    otherAnalystChanges(surface.collection, row.id, { [surface.field]: 'Theirs' }, false)
+    otherAnalystChanges(surface.collection, row.id, { [surface.field]: THEIRS }, false)
     await user.click(within(dialog).getByRole('button', { name: 'Save' }))
     await settle()
     await waitFor(
@@ -216,9 +226,9 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
         expect({
           open: dialog.isConnected,
           shown: input.value,
-          theirs: band?.textContent.includes('Theirs') ?? false,
+          theirs: band?.textContent.includes(`Theirs: ${THEIRS}.`) ?? false,
           stored: surface.row()[surface.field],
-        }).toEqual({ open: true, shown: 'Mine', theirs: true, stored: 'Theirs' })
+        }).toEqual({ open: true, shown: MINE, theirs: true, stored: THEIRS })
       },
       { timeout: 10_000 },
     )
@@ -228,7 +238,7 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
     const user = userEvent.setup()
     const { row, dialog } = await openEditor(surface, user)
 
-    otherAnalystChanges(surface.collection, row.id, { [surface.field]: 'Theirs' }, true)
+    otherAnalystChanges(surface.collection, row.id, { [surface.field]: THEIRS }, true)
     await waitFor(() => {
       expect(within(dialog).queryByRole('group', { name: /changed/ })).not.toBeNull()
     })
@@ -243,7 +253,7 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
           sent: patches.map((one) => one.status),
         }).toEqual({
           open: false,
-          stored: 'Mine',
+          stored: MINE,
           sent: [200],
         })
       },
@@ -255,7 +265,7 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
     const user = userEvent.setup()
     const { row, dialog } = await openEditor(surface, user)
 
-    otherAnalystChanges(surface.collection, row.id, { [surface.field]: 'Theirs' }, false)
+    otherAnalystChanges(surface.collection, row.id, { [surface.field]: THEIRS }, false)
     await user.click(within(dialog).getByRole('button', { name: 'Save' }))
     const band = await within(dialog).findByRole('group', { name: /changed/ }, { timeout: 10_000 })
     await user.click(within(band).getByRole('button', { name: 'Keep mine' }))
@@ -267,7 +277,7 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
           open: dialog.isConnected,
           stored: surface.row()[surface.field],
           sent: patches.map((one) => one.status),
-        }).toEqual({ open: false, stored: 'Mine', sent: [409, 200] })
+        }).toEqual({ open: false, stored: MINE, sent: [409, 200] })
       },
       { timeout: 10_000 },
     )
@@ -286,7 +296,7 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
           open: dialog.isConnected,
           stored: [surface.row()[surface.field], surface.row()[surface.other]],
           sent: patches.map((one) => one.status),
-        }).toEqual({ open: false, stored: ['Mine', 'Their change'], sent: [409, 200] })
+        }).toEqual({ open: false, stored: [MINE, 'Their change'], sent: [409, 200] })
       },
       { timeout: 10_000 },
     )
@@ -297,7 +307,7 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
     const user = userEvent.setup()
     const { row, dialog, input } = await openEditor(surface, user)
 
-    otherAnalystChanges(surface.collection, row.id, { [surface.field]: 'Theirs' }, false)
+    otherAnalystChanges(surface.collection, row.id, { [surface.field]: THEIRS }, false)
     await user.click(within(dialog).getByRole('button', { name: 'Save' }))
     announce(surface.collection)
     await waitFor(
@@ -306,10 +316,10 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
         expect({
           open: dialog.isConnected,
           shown: input.value,
-          theirs: band?.textContent.includes('Theirs') ?? false,
+          theirs: band?.textContent.includes(`Theirs: ${THEIRS}.`) ?? false,
           checking: dialog.textContent.includes('Checking what they changed'),
           sent: patches.map((one) => one.status),
-        }).toEqual({ open: true, shown: 'Mine', theirs: true, checking: false, sent: [409] })
+        }).toEqual({ open: true, shown: MINE, theirs: true, checking: false, sent: [409] })
       },
       { timeout: 10_000 },
     )
@@ -329,7 +339,35 @@ describe.each(SURFACES)('an edit dialog on $name', (surface) => {
           open: dialog.isConnected,
           stored: [surface.row()[surface.field], surface.row()[surface.other]],
           sent: patches.map((one) => one.status),
-        }).toEqual({ open: false, stored: ['Mine', 'Their change'], sent: [409, 200] })
+        }).toEqual({ open: false, stored: [MINE, 'Their change'], sent: [409, 200] })
+      },
+      { timeout: 10_000 },
+    )
+  })
+})
+
+describe('an entry another analyst holds, as the case socket reports it', () => {
+  it('names the holder in the edit dialog, and still saves the edit', async () => {
+    const user = userEvent.setup()
+    mount(`${casePath(ID, 'entities')}#assets`, EntitiesContainer, true)
+    const row = (doc.systems as Row[])[0]!
+    const edit = await screen.findByRole('button', { name: `Edit ${String(row.hostname)} in full` })
+    const claim = { table: 'systems', entry_id: row.id, user_id: 'u-b', username: 'Jo Meyer', session_id: 's-b', taken_at: 1 }
+    socket?.onmessage?.({ data: JSON.stringify({ type: 'presence', roster: [], claims: [claim] }) } as MessageEvent)
+
+    await user.click(edit)
+    const dialog = await screen.findByRole('dialog')
+    expect(await within(dialog).findByText('Jo Meyer is editing this entry')).toBeInTheDocument()
+    const input = within(dialog).getByRole<HTMLInputElement>('textbox', { name: /^Name/ })
+    await user.clear(input)
+    await user.type(input, MINE)
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(
+      () => {
+        expect({ stored: (doc.systems as Row[])[0]!.hostname, sent: patches.map((one) => one.status) }).toEqual({
+          stored: MINE,
+          sent: [200],
+        })
       },
       { timeout: 10_000 },
     )

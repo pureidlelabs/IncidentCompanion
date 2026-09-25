@@ -121,14 +121,14 @@ describe.skipIf(!(await bootable()))('a report an archive says was sent', () => 
     })
   })
 
-  it('reads a genuine sent report as sent, and produces what it preserved', async () => {
+  it('reads a genuine sent report as sent', async () => {
     const title = `Genuine ${STAMP}`
     const answer = await importing(await forged(title, () => undefined))
     expect(answer.status, await answer.clone().text()).toBe(201)
     const { id } = (await answer.json()) as { id: string }
-    const [report] = await seed.select({ id: reports.id, sentAt: reports.sentAt }).from(reports).where(eq(reports.caseId, id))
+    const [report] = await json<{ sentAt: string | null }[]>('GET', `/api/cases/${id}/reports`)
 
-    expect(report!.sentAt).not.toBeNull()
+    expect(report?.sentAt).toEqual(expect.any(String))
   })
 
   it('contains a live indicator an archive preserved, on the way in', async () => {

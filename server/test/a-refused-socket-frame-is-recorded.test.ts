@@ -14,6 +14,7 @@ import { boot, bootable, sharedAdmin, sharedAnalyst, type Harness, type Persona 
 import { DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
 import { installActivity } from '../src/db/schema/index.js'
+import { Live } from './report-writers.js'
 
 const runnable = await bootable()
 
@@ -67,6 +68,7 @@ describe.skipIf(!runnable)('a refused socket frame, beside a refused request', (
     const group = await call(admin, 'POST', '/api/groups', { name: `refused-frame-${stamp}` })
     expect((await call(admin, 'POST', `/api/groups/${String(group.body['id'])}/customers`, { customerId: customer.body['id'] })).status).toBeLessThan(300)
     expect((await call(admin, 'POST', `/api/groups/${String(group.body['id'])}/members`, { userId: reader.id, level: 'read' })).status).toBeLessThan(300)
+    expect((await call(admin, 'POST', `/api/groups/${String(group.body['id'])}/members`, { userId: admin.id, level: 'write' })).status).toBeLessThan(300)
     expect((await call(admin, 'PUT', `/api/cases/${caseId}/customer`, { customerId: customer.body['id'] })).status).toBe(200)
     expect((await call(reader, 'GET', `/api/cases/${caseId}`)).status).toBe(200)
   }, 120_000)
@@ -82,6 +84,9 @@ describe.skipIf(!runnable)('a refused socket frame, beside a refused request', (
     ws.on('message', (raw: Buffer) => frames.push(JSON.parse(raw.toString()) as Record<string, unknown>))
     await new Promise<void>((ok, fail) => { ws.once('open', () => ok()); ws.once('error', fail) })
     await expect.poll(() => frames.length, { timeout: 10_000 }).toBeGreaterThan(0)
+    const field = `casenotes:${noteId}:document`
+    const writer = await Live.open(h, admin, caseId)
+    await writer.openField(field, new Y.Doc())
 
     ws.send(JSON.stringify({ type: 'claim', table: 'systems', id: rowId }))
     const doc = new Y.Doc()
@@ -90,13 +95,18 @@ describe.skipIf(!runnable)('a refused socket frame, beside a refused request', (
     writeUpdate(enc, Y.encodeStateAsUpdate(doc))
     ws.send(JSON.stringify({
       type: 'prose.sync',
-      field: `casenotes:${noteId}:document`,
+      field,
       update: Buffer.from(encoding.toUint8Array(enc)).toString('base64'),
     }))
     await expect.poll(() => frames.filter((f) => f['type'] === 'claim.refused' || f['type'] === 'prose.refused').map((f) => `${String(f['type'])}:${String(f['reason'])}`).sort(), { timeout: 10_000 })
       .toEqual(['claim.refused:read-only', 'prose.refused:read-only'])
     await new Promise((r) => setTimeout(r, 1500))
     ws.terminate()
+    await writer.close()
+    const relayed = writer.frames.some(
+      (f) => f.type === 'prose.sync' && f.field === field && Buffer.from(f.update ?? '', 'base64').toString('utf8').includes('typed by a reader'),
+    )
+    expect(relayed, 'the refused edit reached another analyst holding the note').toBe(false)
 
     const lines = await linesNamingCase(from)
     expect(lines.filter((l) => l.statusId === 2).map((l) => `${l.event} ${String(l.target)}`).sort()).toEqual([
