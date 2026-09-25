@@ -15,6 +15,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpCode,
   Param,
@@ -130,6 +131,15 @@ export class InstallAccountsController {
     private readonly lockouts: LockoutClearService,
     private readonly activity: InstallActivityService,
   ) {}
+
+  /**
+   * Refuses with 403 unless the caller can still administer the install.
+   * The route's guard asked before the act waited its turn, and a turn taken
+   * by another act may have demoted or disabled the caller.
+   */
+  private async stillAdministers(caller: Caller): Promise<void> {
+    if (!(await this.accounts.administers(caller.session.user.id))) throw new ForbiddenException()
+  }
 
   private headersOf(request: { headers: IncomingHttpHeaders }) {
     return fromNodeHeaders(request.headers)
@@ -323,6 +333,7 @@ export class InstallAccountsController {
     @Caller() caller: Caller,
   ): Promise<Written> {
     return this.accounts.serialised(async () => {
+      await this.stillAdministers(caller)
       // **Administrators rather than a page of everybody.** `stranding` decides
       // by counting within what it is handed, and `listUsers` caps at 500 - so a
       // roster page that happened to exclude the target answered that no
@@ -368,6 +379,7 @@ export class InstallAccountsController {
     @Caller() caller: Caller,
   ): Promise<Written> {
     return this.accounts.serialised(async () => {
+      await this.stillAdministers(caller)
       const target = await this.accounts.byAddress(username)
       if (!target) refuse(`No account for ${username}.`)
 
@@ -400,6 +412,7 @@ export class InstallAccountsController {
 
     const role = parsed.data.role
     return this.accounts.serialised(async () => {
+      await this.stillAdministers(caller)
       // **Administrators rather than a page of everybody.** `stranding` decides
       // by counting within what it is handed, and `listUsers` caps at 500 - so a
       // roster page that happened to exclude the target answered that no
@@ -437,7 +450,9 @@ export class InstallAccountsController {
       if (outcome === 'unchanged') this.activity.unchanged(caller)
       else await this.activity.roleChanged(caller, target.email, outcome.from, role)
       // On every request and with the role already stored, so asking again
-      // brings the account's open sessions up to the role a failed call left.
+      // retries bringing the account's open sessions to that role. The library
+      // logs rather than throws when that refresh fails, so a failed refresh
+      // is not reported here.
       await this.auth.api.setRole({
         body: { userId: target.id, role },
         headers: this.headersOf(caller),
