@@ -91,7 +91,7 @@
     "@electric-sql/pglite": "0.5.8",
     "@electric-sql/pglite-socket": "0.2.11",
     "@eslint/js": "10.0.1",
-    "@nestjs/cli": "12.0.3",
+    "@nestjs/cli": "12.0.5",
     "@nestjs/schematics": "12.0.4",
     "@nestjs/testing": "12.0.4",
     "@playwright/test": "1.63.0",
