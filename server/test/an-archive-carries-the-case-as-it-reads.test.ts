@@ -8,6 +8,8 @@
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { inArray } from 'drizzle-orm'
+import * as encoding from 'lib0/encoding'
+import { writeUpdate } from 'y-protocols/sync'
 import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -53,17 +55,30 @@ describe.skipIf(!(await bootable()))('an archive carries the case as it reads', 
   /** Type into one fragment as the editor does, one transaction per act. */
   async function write(caseId: string, address: ProseRecord, fragmentName: string, acts: (text: Y.XmlText) => void) {
     const prose = as(analyst.id, harness.app.get(ProseService, { strict: false }))
-    const doc = await prose.open(caseId, address)
-    const fragment = fragmentFor(doc, fragmentName)
+    const client = new Y.Doc()
+    Y.applyUpdate(client, Y.encodeStateAsUpdate(await prose.open(caseId, address)))
+    // Sent as the analyst's editor sends it, so the save names them.
+    const send = async (act: () => void) => {
+      const before = Y.encodeStateVector(client)
+      act()
+      const encoder = encoding.createEncoder()
+      writeUpdate(encoder, Y.encodeStateAsUpdate(client, before))
+      await prose.apply(caseId, address, encoding.toUint8Array(encoder), 'a-socket', { id: analyst.id, label: 'A', headers: {} })
+    }
+    const fragment = fragmentFor(client, fragmentName)
     let text = fragment.length > 0 ? (fragment.get(0) as Y.XmlElement).get(0) as Y.XmlText | undefined : undefined
     if (!(text instanceof Y.XmlText)) {
-      fragment.delete(0, fragment.length)
       const paragraph = new Y.XmlElement('paragraph')
-      text = new Y.XmlText()
-      paragraph.insert(0, [text])
-      fragment.insert(0, [paragraph])
+      const made = new Y.XmlText()
+      text = made
+      await send(() => {
+        fragment.delete(0, fragment.length)
+        paragraph.insert(0, [made])
+        fragment.insert(0, [paragraph])
+      })
     }
-    acts(text)
+    const typing = text
+    await send(() => { acts(typing) })
     await prose.flush(caseId, address)
     await prose.release(caseId, address)
   }
