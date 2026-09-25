@@ -15,6 +15,8 @@
 # `SHA256SUMS` (each of those three as it was written).
 # Every command exits non-zero, having changed nothing, when it cannot finish.
 set -eu
+# The copy holds every password hash and case, so it is no more readable than the volumes it copies.
+umask 077
 
 ROOT="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 

@@ -2,6 +2,8 @@
 
 **One policy, on everything.** The page and the interface carry the same content policy. Two policies would mean two things to keep true, and the one that lapses is the one nobody looks at.
 
+**The edge's own answers carry a policy of their own.** The application's policy depends on where the install is reached and what the operator turned on, and the edge knows neither, so an answer it writes carries one that permits nothing rather than a copy that could drift from the application's.
+
 **Two layers answer this specification, and which one answers what is not arbitrary.** The application decides what the browser may do with a response it produced — the content policy, framing, what may be kept, what is a page and what is an answer. The edge decides everything about the connection, because the edge is the only thing that has one: it terminates the protected connection and the application is reached over a plain one behind it.
 
 **So a rule about the connection is never the application's to state.** An application that never speaks the protected protocol asserting a policy about it is asserting something it cannot know, over a connection where the assertion means nothing. A reader who finds that setting switched off in the application and switches it on has moved the rule to the layer that cannot enforce it.
@@ -59,3 +61,7 @@ The boundary: an install reached over plain http is told nothing, because a brow
 Any path that is not the interface is answered with the application's page, so reloading the browser on a case does not lose it.
 
 **A path under the interface is never answered with the page, whether or not a route serves it.** A caller expecting an answer and receiving a document parses a document, and the failure surfaces a long way from its cause. A route that does not exist says so in the form the interface answers in.
+
+## What the edge adds, and what it leaves alone
+
+The edge adds its policy and nosniff to an answer only where the application sent none, so a response the application wrote reaches the browser with the application's own headers and no second policy beside them: two policies would both be enforced, and the edge's permits nothing. An answer the edge writes itself — a refusal, an unreadable request, the application unreachable — has neither and gets both. The edge names itself without a version, in the header and in the pages it writes.
