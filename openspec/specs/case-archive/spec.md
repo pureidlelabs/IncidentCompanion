@@ -268,7 +268,7 @@ An archive matching its own statement MUST NOT be read as though its rows were s
 
 Every row MUST be checked against the shape its collection declares, before any row is written, and against the rules its collection declares across fields, as its own door checks them.
 
-A report an archive says was sent MUST also preserve its document, and one that preserves a document MUST say it was sent; the preserved document MUST be one this install can produce. What the install generates in it MUST NOT be a live indicator, whatever the archive carried; what an analyst wrote in it is theirs, as it is in a report sent here.
+A report an archive says was sent MUST also preserve its document, and one that preserves a document MUST say it was sent; the preserved document MUST be one this install can produce. The preserved document MUST be stored as it arrived, and every output of it MUST carry no live indicator, whatever the archive carried and whichever part the archive marks as an analyst's writing: nothing read in shows which prose an analyst wrote.
 
 An archive's record MUST NOT carry a prose document: prose travels beside the record, and a record planting one is read as though it carried none. A value of a shape the field does not take MUST be refused rather than stored, and where a field's terms are fixed, a term outside them MUST be refused too.
 

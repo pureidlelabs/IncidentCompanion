@@ -45,7 +45,9 @@ export const rowVersioning = {
  * `db/import-stamp.ts` is what narrows a stamp to the columns a table has: a
  * table without this one takes the stamp and stores nothing.
  */
-export const source = () => text('source').notNull().default('manual')
+export const MANUAL = 'manual'
+
+export const source = () => text('source').notNull().default(MANUAL)
 
 /**
  * Postgres `bytea`.
