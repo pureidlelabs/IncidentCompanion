@@ -523,6 +523,12 @@ jobs:
     # the run: a wedged browser would otherwise spend GitHub's 360-minute
     # default before the queue heard anything.
     timeout-minutes: 45
+    # **A shard per runner, each with its own stack**, because one runner
+    # holding both configs was the merge group's whole wall time.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
@@ -550,12 +556,14 @@ jobs:
       - name: The app in a browser
         env:
           IC_SUITE_MUST_RUN: '1'
-        run: cd server && npx playwright test --config=e2e/playwright.config.ts
+          SHARD: ${{ matrix.shard }}
+        run: cd server && npx playwright test --config=e2e/playwright.config.ts --shard="$SHARD/4"
 
       - name: The kit in a browser
         env:
           IC_SUITE_MUST_RUN: '1'
-        run: cd server && npx playwright test --config=e2e/playwright.kit.config.ts
+          SHARD: ${{ matrix.shard }}
+        run: cd server && npx playwright test --config=e2e/playwright.kit.config.ts --shard="$SHARD/4"
 
       # **The traces, not a report**: both configs declare `reporter: [['list']]`
       # and no HTML one, so `playwright-report/` is never written. `test-results/`
@@ -563,7 +571,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
-          name: browser-tier-traces
+          name: browser-tier-traces-${{ matrix.shard }}
           path: server/test-results/
           retention-days: 7
 
