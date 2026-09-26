@@ -1,8 +1,7 @@
 """A cloud session's shells resolve every tool to its own binary, never to a mise shim.
 
-A shim re-applies the root `mise.toml` environment on every hop, so
-`DATABASE_URL="$IC_MIGRATE_DATABASE_URL" npm run db:push` reaches the schema
-step as `ic_app` and is refused.
+A shim re-evaluates the root `mise.toml` environment, running the stack script,
+before every call it stands in front of.
 """
 
 import pathlib

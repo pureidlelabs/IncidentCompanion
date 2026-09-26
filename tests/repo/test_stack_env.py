@@ -177,6 +177,33 @@ def test_mise_hands_the_sourced_script_its_own_node(tmp_path: Path) -> None:
     assert "DATABASE_URL=" in ran.stdout, ran.stderr
 
 
+def test_a_value_the_caller_set_survives_the_environment(tmp_path: Path) -> None:
+    """A shim sources `stack-env.sh` under its caller's environment, and fills only
+    what the caller left unset.
+
+    `DATABASE_URL="$IC_MIGRATE_DATABASE_URL" npm run db:push` through a shim is the
+    case: overwritten, the schema step runs as `ic_app` and is refused (#1285).
+    """
+    tree = _fresh_clone(tmp_path)
+    ran = subprocess.run(
+        ["bash", "--noprofile", "-c", '. ./stack-env.sh; echo "$DATABASE_URL"; echo "${IC_MIGRATE_DATABASE_URL:-unset}"'],
+        cwd=tree,
+        env={
+            "HOME": str(tmp_path),
+            "PATH": f"{_real_node().parent}:/usr/bin:/bin",
+            "DATABASE_URL": "postgres://caller@127.0.0.1/set",
+        },
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+    assert ran.returncode == 0, ran.stderr
+    kept, filled = ran.stdout.splitlines()
+    assert kept == "postgres://caller@127.0.0.1/set"
+    assert filled.startswith("postgres://ic_migrate:"), filled
+
+
 @pytest.mark.parametrize("install", ["absent", "partial"])
 def test_a_worktree_without_its_install_is_refused_in_one_line(tmp_path: Path, install: str) -> None:
     """A worktree needs the slot lock, and the lock is a package the clone may not have yet.
