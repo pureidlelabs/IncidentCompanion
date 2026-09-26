@@ -8,7 +8,11 @@
  */
 import { expect, test } from '@playwright/test'
 
-import { openFirstCase, signIn } from './support/app.js'
+import { ensureCase, openFirstCase, signIn } from './support/app.js'
+
+test.beforeAll(async ({ browser, baseURL }) => {
+  await ensureCase(browser, baseURL ?? '')
+})
 
 test.describe('the shortcut hints', () => {
   test('draws a cap per key on the cheat sheet, side by side', async ({ page }) => {
