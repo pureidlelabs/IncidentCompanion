@@ -77,18 +77,19 @@ for _ in $(seq 1 30); do pgrep -x dockerd > /dev/null || break; sleep 1; done
 BEGIN='# >>> incidentcompanion cloud >>>'
 END='# <<< incidentcompanion cloud <<<'
 touch "$HOME/.bashrc"
-sed -i "/^$BEGIN\$/,/^$END\$/d" "$HOME/.bashrc"
+sed -i --follow-symlinks "/^$BEGIN\$/,/^$END\$/d" "$HOME/.bashrc"
 {
   cat <<'EOF'
 # >>> incidentcompanion cloud >>>
 export MISE_GLOBAL_CONFIG_FILE=/etc/mise/config.toml
-IC_TOOLS="$(cd / && "$HOME/.local/bin/mise" bin-paths 2> /dev/null | paste -sd:)"
+IC_TOOLS="$(cd / && "$HOME/.local/bin/mise" bin-paths 2> /dev/null | paste -sd:)" || IC_TOOLS=
 export PATH="${IC_TOOLS:+$IC_TOOLS:}$HOME/.local/bin:$PATH"
 unset IC_TOOLS
 # <<< incidentcompanion cloud <<<
 EOF
   cat "$HOME/.bashrc"
 } > "$HOME/.bashrc.new"
-mv "$HOME/.bashrc.new" "$HOME/.bashrc"
+cat "$HOME/.bashrc.new" > "$HOME/.bashrc"
+rm "$HOME/.bashrc.new"
 
 echo "ready: node $(node -v), npm $(npm -v), $("$(mise where python@3.14)/bin/python3" -V), vale $(vale --version | awk '{print $NF}')"
