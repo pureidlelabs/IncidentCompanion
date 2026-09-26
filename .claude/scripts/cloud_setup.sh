@@ -23,7 +23,7 @@ set -euo pipefail
 cd /
 
 SRC="$(mktemp -d)"
-trap 'jobs -p | xargs -r kill 2>/dev/null; rm -rf "$SRC"' EXIT
+trap 'rm -rf "$SRC"' EXIT
 git clone -q --depth 1 https://github.com/pureidlelabs/IncidentCompanion.git "$SRC"
 
 pinned() {
