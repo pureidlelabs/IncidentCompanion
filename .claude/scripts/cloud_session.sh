@@ -18,7 +18,7 @@ case "$(timeout 2 cat 2> /dev/null)" in
 esac
 
 export MISE_GLOBAL_CONFIG_FILE=/etc/mise/config.toml
-export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 if ! command -v mise > /dev/null; then
   echo "cloud session: the environment's setup script is not .claude/scripts/cloud_setup.sh, so nothing is installed"
   exit 0
@@ -36,6 +36,15 @@ mise trust --quiet "$PWD/mise.toml" >> "$LOG" 2>&1
 if ! cmp -s .devcontainer/mise.toml /etc/mise/config.toml; then
   cp .devcontainer/mise.toml /etc/mise/config.toml
   mise install >> "$LOG" 2>&1 || { say "mise install failed"; exit 0; }
+fi
+
+# Not the shims, for the reason `cloud_setup.sh` gives. What a hook exports ends
+# with it, so `CLAUDE_ENV_FILE` carries it into the session's shells.
+TOOLS="$(cd / && mise bin-paths 2> /dev/null | paste -sd:)"
+[ -n "$TOOLS" ] || { say "mise lists no tools"; exit 0; }
+export PATH="$TOOLS:$PATH"
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+  printf 'export MISE_GLOBAL_CONFIG_FILE=%q\nexport PATH=%q\n' "$MISE_GLOBAL_CONFIG_FILE" "$PATH" >> "$CLAUDE_ENV_FILE"
 fi
 NPM_VERSION="$(sed -nE 's/^ARG NPM_VERSION=//p' .devcontainer/Dockerfile)"
 if [ -n "$NPM_VERSION" ] && [ "$(npm -v 2> /dev/null)" != "$NPM_VERSION" ]; then

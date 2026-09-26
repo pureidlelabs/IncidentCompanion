@@ -51,9 +51,10 @@ docker cp "$MISE_BOX:/usr/local/bin/mise" "$HOME/.local/bin/mise"
 docker rm "$MISE_BOX" > /dev/null
 
 export MISE_YES=1 MISE_GLOBAL_CONFIG_FILE=/etc/mise/config.toml
-export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 mise install
+PATH="$(mise bin-paths | paste -sd:):$PATH"
 # `pyproject.toml` requires 3.14, which the cloud image does not ship.
 mise install python@3.14
 npm install -g "npm@$NPM_VERSION"
@@ -69,15 +70,25 @@ pkill -TERM -x dockerd
 for _ in $(seq 1 30); do pgrep -x dockerd > /dev/null || break; sleep 1; done
 ! pgrep -x dockerd > /dev/null || { echo "dockerd did not stop within 30 s" >&2; exit 1; }
 
+# Each tool's own directory, never mise's shims: a shim re-applies the root
+# `mise.toml` environment and overwrites a `DATABASE_URL` set inline. From `/`,
+# `bin-paths` reads no project config. First in the file, because `.bashrc`
+# returns early in a shell without a prompt.
 BEGIN='# >>> incidentcompanion cloud >>>'
 END='# <<< incidentcompanion cloud <<<'
-touch /root/.bashrc
-sed -i "/^$BEGIN\$/,/^$END\$/d" /root/.bashrc
-cat >> /root/.bashrc <<EOF
-$BEGIN
+touch "$HOME/.bashrc"
+sed -i "/^$BEGIN\$/,/^$END\$/d" "$HOME/.bashrc"
+{
+  cat <<'EOF'
+# >>> incidentcompanion cloud >>>
 export MISE_GLOBAL_CONFIG_FILE=/etc/mise/config.toml
-export PATH="\$HOME/.local/share/mise/shims:\$HOME/.local/bin:\$PATH"
-$END
+IC_TOOLS="$(cd / && "$HOME/.local/bin/mise" bin-paths 2> /dev/null | paste -sd:)"
+export PATH="${IC_TOOLS:+$IC_TOOLS:}$HOME/.local/bin:$PATH"
+unset IC_TOOLS
+# <<< incidentcompanion cloud <<<
 EOF
+  cat "$HOME/.bashrc"
+} > "$HOME/.bashrc.new"
+mv "$HOME/.bashrc.new" "$HOME/.bashrc"
 
 echo "ready: node $(node -v), npm $(npm -v), $("$(mise where python@3.14)/bin/python3" -V), vale $(vale --version | awk '{print $NF}')"
