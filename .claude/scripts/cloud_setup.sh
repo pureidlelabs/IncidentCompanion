@@ -20,6 +20,7 @@
 # read from a shallow clone of `main`. The environment caches the result and
 # does not re-run it when this file changes, so paste it again to rebuild.
 set -euo pipefail
+cd /
 
 SRC="$(mktemp -d)"
 trap 'jobs -p | xargs -r kill 2>/dev/null; rm -rf "$SRC"' EXIT
@@ -66,6 +67,7 @@ docker compose -f "$SRC/server/compose.dev.yaml" pull -q
 # rather than leaving its socket and databases mid-write.
 pkill -TERM -x dockerd
 for _ in $(seq 1 30); do pgrep -x dockerd > /dev/null || break; sleep 1; done
+! pgrep -x dockerd > /dev/null || { echo "dockerd did not stop within 30 s" >&2; exit 1; }
 
 BEGIN='# >>> incidentcompanion cloud >>>'
 END='# <<< incidentcompanion cloud <<<'
@@ -73,7 +75,7 @@ touch /root/.bashrc
 sed -i "/^$BEGIN\$/,/^$END\$/d" /root/.bashrc
 cat >> /root/.bashrc <<EOF
 $BEGIN
-export MISE_GLOBAL_CONFIG_FILE=/etc/mise/config.toml MISE_TRUSTED_CONFIG_PATHS=/home/user
+export MISE_GLOBAL_CONFIG_FILE=/etc/mise/config.toml
 export PATH="\$HOME/.local/share/mise/shims:\$HOME/.local/bin:\$PATH"
 $END
 EOF
