@@ -70,10 +70,10 @@ pkill -TERM -x dockerd
 for _ in $(seq 1 30); do pgrep -x dockerd > /dev/null || break; sleep 1; done
 ! pgrep -x dockerd > /dev/null || { echo "dockerd did not stop within 30 s" >&2; exit 1; }
 
-# Each tool's own directory, never mise's shims: a shim re-applies the root
-# `mise.toml` environment and overwrites a `DATABASE_URL` set inline. From `/`,
-# `bin-paths` reads no project config. First in the file, because `.bashrc`
-# returns early in a shell without a prompt.
+# Each tool's own directory, never mise's shims: a shim re-evaluates the root
+# `mise.toml` environment, running the stack script, before every call. From
+# `/`, `bin-paths` reads no project config. First in the file, because
+# `.bashrc` returns early in a shell without a prompt.
 BEGIN='# >>> incidentcompanion cloud >>>'
 END='# <<< incidentcompanion cloud <<<'
 touch "$HOME/.bashrc"
