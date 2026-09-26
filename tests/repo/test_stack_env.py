@@ -177,31 +177,50 @@ def test_mise_hands_the_sourced_script_its_own_node(tmp_path: Path) -> None:
     assert "DATABASE_URL=" in ran.stdout, ran.stderr
 
 
-def test_a_value_the_caller_set_survives_the_environment(tmp_path: Path) -> None:
-    """A shim sources `stack-env.sh` under its caller's environment, and fills only
-    what the caller left unset.
-
-    `DATABASE_URL="$IC_MIGRATE_DATABASE_URL" npm run db:push` through a shim is the
-    case: overwritten, the schema step runs as `ic_app` and is refused (#1285).
-    """
-    tree = _fresh_clone(tmp_path)
+def _sourced(tree: Path, home: Path, preset: dict[str, str]) -> list[str]:
+    """`DATABASE_URL` and `IC_MIGRATE_DATABASE_URL` after sourcing `stack-env.sh`
+    under `preset`, which is what a shim does with its caller's environment."""
     ran = subprocess.run(
         ["bash", "--noprofile", "-c", '. ./stack-env.sh; echo "$DATABASE_URL"; echo "${IC_MIGRATE_DATABASE_URL:-unset}"'],
         cwd=tree,
-        env={
-            "HOME": str(tmp_path),
-            "PATH": f"{_real_node().parent}:/usr/bin:/bin",
-            "DATABASE_URL": "postgres://caller@127.0.0.1/set",
-        },
+        env={"HOME": str(home), "PATH": f"{_real_node().parent}:/usr/bin:/bin", **preset},
         capture_output=True,
         text=True,
         timeout=60,
     )
-
     assert ran.returncode == 0, ran.stderr
-    kept, filled = ran.stdout.splitlines()
+    return ran.stdout.splitlines()
+
+
+def _project(tree: Path) -> str:
+    exports = subprocess.check_output([str(_real_node()), "server/scripts/stack.mjs", "--export"], cwd=tree, text=True)
+    match = re.search(r"^export IC_COMPOSE_PROJECT='([^']*)'$", exports, re.M)
+    assert match, exports
+    return match.group(1)
+
+
+def test_a_value_the_caller_set_for_this_stack_survives(tmp_path: Path) -> None:
+    """`DATABASE_URL="$IC_MIGRATE_DATABASE_URL" npm run db:push`, after the stack's
+    own exports: overwritten, the schema step runs as `ic_app` and is refused."""
+    tree = _fresh_clone(tmp_path)
+    kept, filled = _sourced(tree, tmp_path, {
+        "IC_COMPOSE_PROJECT": _project(tree),
+        "DATABASE_URL": "postgres://caller@127.0.0.1/set",
+    })
     assert kept == "postgres://caller@127.0.0.1/set"
     assert filled.startswith("postgres://ic_migrate:"), filled
+
+
+@pytest.mark.parametrize("project", ["another-stack", None], ids=["another worktree", "no stack"])
+def test_a_value_from_another_stack_is_replaced(tmp_path: Path, project: str | None) -> None:
+    """Exports inherited from another worktree, or a `DATABASE_URL` left in a profile."""
+    tree = _fresh_clone(tmp_path)
+    preset = {"DATABASE_URL": "postgres://ic_app@127.0.0.1:1/elsewhere"}
+    if project:
+        preset["IC_COMPOSE_PROJECT"] = project
+    replaced, _ = _sourced(tree, tmp_path, preset)
+    assert replaced.startswith("postgres://ic_app:"), replaced
+    assert "elsewhere" not in replaced
 
 
 @pytest.mark.parametrize("install", ["absent", "partial"])
