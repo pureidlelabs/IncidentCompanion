@@ -25,9 +25,9 @@ describe('the shortcuts sheet', () => {
   })
 
   /**
-   * **Every key, not a sample.** The sheet exists because a binding that works
-   * and is listed nowhere is indistinguishable from one that does not exist,
-   * so a sheet missing one row is the exact defect it was built against.
+   * **Every key, not a sample.** A binding that works and is listed nowhere is
+   * indistinguishable from one that does not exist, so a sheet missing a single
+   * row is the defect rather than an omission.
    */
   it('lists every key in the table the bindings come from', () => {
     render(<ProseShortcuts open onOpenChange={vi.fn()} />)

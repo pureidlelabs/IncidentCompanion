@@ -152,10 +152,8 @@ export interface EntityColumnMeta<TData> {
   /**
    * Which of the shared verbs *this row* allows.
    *
-   * The libraries are why it exists - a built-in template can be duplicated
-   * and neither edited nor deleted, decided per file by the server - and
-   * reading the table's `meta` alone drew a pencil and a bin that were refused
-   * on click.
+   * The libraries are the case it answers: a built-in template can be
+   * duplicated and neither edited nor deleted, decided per file by the server.
    *
    * Narrows only: a row cannot grant a verb the table did not supply.
    */
