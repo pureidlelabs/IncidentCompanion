@@ -3,13 +3,21 @@
 # Prepare a Claude Code cloud session: the toolchain the dev container has,
 # the dependencies, Chromium, and the stack's images.
 #
-# The cloud environment's setup script is one line, run from the repository
-# root as root:
+# The claude.ai/code "Add cloud environment" form:
 #
-#     bash .claude/scripts/cloud_setup.sh
+#   Name                   IncidentCompanion
+#   Network access         Custom, "Also include default list" ticked, plus:
+#                            mise.jdx.dev
+#                            nodejs.org
+#                            cdn.playwright.dev
+#                            playwright.download.prss.microsoft.com
+#   Environment variables  DISABLE_ERROR_REPORTING=1
+#                          DISABLE_FEEDBACK_COMMAND=1
+#                          CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1
+#   Setup script           this whole file, pasted
 #
-# The environment caches the result and does not re-run it when this file
-# changes, so edit the environment's setup script to rebuild.
+# It runs as root from the repository root. The environment caches the result
+# and does not re-run it when this file changes, so paste it again to rebuild.
 set -euo pipefail
 
 REPO="$(pwd)"
