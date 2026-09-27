@@ -107,6 +107,8 @@ export const timelineCandidateSchema = z
       malware: z.array(z.string()),
       cloudApps: z.array(z.string()),
     }),
+    /** The entry a previous import of this alert wrote, if the case holds it. */
+    existing: z.uuid().nullable(),
     checked: z.boolean(),
   })
   .strict()

@@ -108,7 +108,7 @@ const PREVIEW = {
     },
   ],
   /**
-   * **A timeline row, which the review is never shown.** The server filters
+   * **The timeline rows, which the review is never shown.** The server filters
    * both halves against the same approved set, so a commit that carries only
    * the entity ids imports a case's assets and none of its events -- and with
    * an empty timeline here, nothing would say so. -> #392
@@ -123,6 +123,21 @@ const PREVIEW = {
       fields: { summary: 'A phish was reported' },
       existing: null,
       checked: true,
+    },
+    /**
+     * **An entry an earlier import of this incident wrote**, which is what a
+     * re-import is mostly made of. The review reads its verdict off
+     * `existing`, because the server sends none on this list.
+     */
+    {
+      id: 'SEN-1001\u001Ftimeline\u0000alert\u0000a-7c4',
+      incident: 'SEN-1001',
+      collection: 'timeline',
+      label: 'A mailbox rule was created',
+      verdict: 'new' as const,
+      fields: { summary: 'A mailbox rule was created' },
+      existing: 'an-entry-the-case-holds',
+      checked: false,
     },
   ],
 }
@@ -210,7 +225,10 @@ interface Writes {
   connect: (registration: unknown) => Promise<unknown>
   sources: () => Promise<unknown>
   incidents: (sourceId: string, dials: Record<string, unknown>) => Promise<unknown>
-  preview: (sourceId: string, ids: readonly string[]) => Promise<readonly { id: string }[]>
+  preview: (
+    sourceId: string,
+    ids: readonly string[],
+  ) => Promise<readonly { id: string; verdict: 'new' | 'merge' }[]>
   commit: (
     sourceId: string,
     ids: readonly string[],
@@ -357,9 +375,8 @@ describe('the Sentinel import container', () => {
   /**
    * **The preview answers two lists and the write covers both**, so a review
    * given one of them has the analyst approving a smaller picture than the
-   * import. A timeline entry carries no verdict and no collection of its own
-   * -- the server matches an entity against the case and a timeline row
-   * against nothing -- so it is mapped rather than dropped. -> #392
+   * import. A timeline entry carries no collection of its own, so it is
+   * mapped rather than dropped. -> #392
    */
   it('offers every row the import would write, timeline entries included', async () => {
     const held = await ready()
@@ -369,6 +386,24 @@ describe('the Sentinel import container', () => {
       proposed.map((one) => one.id),
       'a row the import would write that the analyst never saw',
     ).toEqual(EVERY_ROW)
+  })
+
+  /**
+   * **An entry the case already holds is drawn as a merge**, read off
+   * `existing` because the server sends no verdict on this list. Drawn as new,
+   * the review promises a row the import will not write, and the re-import an
+   * analyst runs to pick up what a platform added reads as a doubled case.
+   */
+  it('draws a timeline entry the case already holds as a merge', async () => {
+    const held = await ready()
+    const proposed = await held.preview(WORKSPACE.key, ['SEN-1001'])
+    const drawn = (at: number) =>
+      proposed.find((one) => one.id === PREVIEW.timeline[at]?.id)?.verdict
+
+    expect(drawn(1), 'an entry the case holds is offered as a row the import will add').toBe(
+      'merge',
+    )
+    expect(drawn(0), 'an entry nothing matched is drawn as one the case already has').toBe('new')
   })
 
   /**

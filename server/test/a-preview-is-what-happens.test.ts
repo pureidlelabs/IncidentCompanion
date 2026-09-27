@@ -65,7 +65,7 @@ interface Candidate {
 }
 interface Plan {
   entities: Candidate[]
-  timeline: { id: string }[]
+  timeline: { id: string; existing: string | null }[]
   skipped: { unsupportedKind: number; unmappable: number }
 }
 interface Written {
@@ -176,6 +176,42 @@ describe.skipIf(!runnable)('a preview is what happens', () => {
 
     expect(again.entities).toBe(0)
     expect(again.skippedExisting).toBe(fresh.length)
+  }, 60_000)
+
+  /**
+   * **The timeline half of the same round trip**, and the half the unit rigs
+   * cannot see: the store answers an entry's time as a timestamp where the
+   * mapping produced text, so a match built on what the candidate carries
+   * holds in a rig and matches nothing here.
+   */
+  it('calls an alert it wrote existing, and writes no second copy of it', async () => {
+    const caseId = await newCase('The second alert')
+    const first = await preview(caseId, 'promise-alert')
+    expect(first.timeline.length, 'the incident proposed no entry to write').toBeGreaterThan(0)
+    expect(
+      first.timeline.filter((one) => one.existing !== null),
+      'an empty case matched an entry, so the second look below proves nothing',
+    ).toEqual([])
+
+    const everything = [
+      ...first.entities.map((one) => one.id),
+      ...first.timeline.map((one) => one.id),
+    ]
+    const wrote = await commit(caseId, 'promise-alert', everything)
+    expect(wrote.timeline).toBe(first.timeline.length)
+
+    const second = await preview(caseId, 'promise-alert')
+    expect(
+      second.timeline.filter((one) => one.existing === null),
+      'an entry the import wrote is offered as new again',
+    ).toEqual([])
+
+    const again = await commit(caseId, 'promise-alert', everything)
+    expect(again.timeline, 'the re-import wrote the same alert a second time').toBe(0)
+    expect(
+      again.skippedExisting,
+      'the re-import reported rows as added that it did not write',
+    ).toBe(everything.length)
   }, 60_000)
 
   /**
