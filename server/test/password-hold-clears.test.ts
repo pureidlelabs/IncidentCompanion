@@ -92,6 +92,20 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
     expect(after.status, 'the mistyped pair was written anyway').toBe(403)
   })
 
+  it('refuses a wrong current password as the body, not as the session', async () => {
+    const held = await heldAccount()
+
+    const refused = await fetch(`${harness.base}/api/change-password`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: held.cookie },
+      body: JSON.stringify({ current: `${ISSUED}-typo`, password: CHOSEN, repeat: CHOSEN }),
+    })
+    expect(refused.status).toBe(422)
+    expect(((await refused.json()) as { message?: string }).message).toBe(
+      'That is not the current password.',
+    )
+  })
+
   it('may use the app immediately afterwards, on the same session', async () => {
     const held = await heldAccount()
 

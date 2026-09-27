@@ -8,6 +8,7 @@ import { Controller, Get } from '@nestjs/common'
 import { Public } from '@thallesp/nestjs-better-auth'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 
+import { PRESENCE_BOUND_SECONDS } from '../config/presence.js'
 import { aboutSchema, type About } from '../domain/about.js'
 
 export { aboutSchema, type About }
@@ -29,6 +30,7 @@ const ABOUT = {
   makerUrl: 'https://pureidle.dev',
   repoUrl: REPO_URL,
   issuesUrl: `${REPO_URL}/issues`,
+  presenceBoundSeconds: PRESENCE_BOUND_SECONDS,
 } as const satisfies About
 
 @Controller('api')

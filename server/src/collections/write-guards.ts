@@ -8,12 +8,12 @@
  * owe a closed-row guard.
  */
 import { BadRequestException } from '@nestjs/common'
-import { eq, getTableColumns } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import { columnOf } from '../db/column-access.js'
 import type { Transaction } from '../db/client.js'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
-import { hasCrossFieldRule } from '../domain/field-spec.js'
+import { crossFieldIssue, hasCrossFieldRule } from '../domain/field-spec.js'
 import type { CollectionDefinition } from './collection.service.js'
 import { danglingReferences, refusalFor } from './reference-check.js'
 
@@ -149,50 +149,6 @@ export async function refuseIfCrossFieldRuleBroken(
   if (!stored) return
   if (expectedVersion !== undefined && stored['version'] !== expectedVersion) return
 
-  // **The stored half comes out of Drizzle, the patch half off the wire, and
-  // they spell a time differently.** A `timestamp` column reads back as a
-  // `Date`; the schemas declare `z.iso.datetime()`, a string. Parsing the
-  // merge without this refuses a patch that never touched the time, and only
-  // on rows where the timestamp is set -- which is why it survived the first
-  // two tests here.
-  //
-  // **On the value, not the column type**, so a `date()` column in date mode
-  // is caught as well -- a `columnType.startsWith('PgTimestamp')` predicate,
-  // which is what `coerceTimes` uses, would let one through.
-  //
-  // The open half: a field declared `z.iso.date()` would be handed a full
-  // datetime and reject it. No schema has one today; add the date-only
-  // spelling here when the first does.
-  const wire = Object.fromEntries(
-    Object.entries(stored).map(([key, value]) =>
-      [key, value instanceof Date ? value.toISOString() : value]),
-  )
-
-  const merged = schema.safeParse({ ...wire, ...patch })
-  if (!merged.success) {
-    throw new BadRequestException({ message: merged.error.issues[0]?.message ?? 'Invalid' })
-  }
-}
-
-/**
- * ISO strings become `Date`s for the columns that are timestamps.
- *
- * **Derived from the table, never from the field name.** Every time arrives
- * as a string, because a schema is also the API document and JSON Schema has
- * no date type - and the columns carrying one share no naming rule.
- */
-export function coerceTimes(
-  def: CollectionDefinition,
-  values: Record<string, unknown>,
-): Record<string, unknown> {
-  const cols = getTableColumns(def.table)
-  const out: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(values)) {
-    const column = cols[key]
-    // `columnType`, not `dataType`: a timestamp's `dataType` is
-    // `'object date'`, so an `=== 'date'` test matches nothing.
-    const isTimestamp = column?.columnType?.startsWith('PgTimestamp') ?? false
-    out[key] = isTimestamp && typeof value === 'string' ? new Date(value) : value
-  }
-  return out
+  const issue = crossFieldIssue(schema, { ...stored, ...patch })
+  if (issue) throw new BadRequestException({ message: issue })
 }

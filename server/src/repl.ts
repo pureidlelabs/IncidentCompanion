@@ -16,7 +16,7 @@
  * reached through a socket is unreachable from here.
  *
  * **It does not seed**, and neither does starting the server: that is the
- * `seed` one-shot's job. A seeder resolved from this container reseeds for
+ * `seed` one-shot's job. A seeder resolved from this container writes for
  * real, against whatever database the environment points at.
  */
 import { repl } from '@nestjs/core'

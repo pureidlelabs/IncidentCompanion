@@ -80,32 +80,6 @@ export const Flyout: Story = {
   },
 }
 
-/**
- * A field another analyst saved first.
- *
- * The screen opens on the tab that holds the field, because a merge review
- * drawn on a pane nobody is looking at is a lost write reported as a save.
- */
-export const Refused: Story = {
-  name: 'A refused write',
-  args: { refusal: { field: 'Severity', by: 'A. Okonkwo' } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(await canvas.findByText('Severity was not saved')).toBeInTheDocument()
-  },
-}
-
-/** A stamp refused: the same band, on the key times tab. */
-export const RefusedTime: Story = {
-  name: 'A refused stamp',
-  args: { refusal: { field: 'Contained at', by: 'A. Okonkwo' } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(await canvas.findByText('Contained at was not saved')).toBeInTheDocument()
-    await expect(await canvas.findByLabelText('Recovered at')).toBeInTheDocument()
-  },
-}
-
 /** Every field answered, which is what a case looks like at write-up. */
 export const Complete: Story = {
   play: async ({ canvas, step }) => {

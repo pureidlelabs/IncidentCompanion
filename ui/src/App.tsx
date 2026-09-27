@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { RouterProvider } from 'react-router-dom'
 
 import { installIsUnclaimed } from '@/api/client'
-import { router } from '@/app/routes'
+import { appRouter } from '@/app/routes'
 import { BackendBanner } from '@/components/blocks/backend-banner'
 import { ChangePasswordContainer } from '@/app/auth/ChangePasswordContainer'
 import { FirstRunContainer } from '@/app/auth/FirstRunContainer'
@@ -92,7 +92,7 @@ export function App() {
       {mustChangePassword ? (
         <ChangePasswordContainer onChanged={() => setChosenOwn(true)} />
       ) : session ? (
-        <RouterProvider router={router} />
+        <RouterProvider router={appRouter()} />
       ) : unclaimed === null ? null : unclaimed ? (
         <FirstRunContainer />
       ) : (

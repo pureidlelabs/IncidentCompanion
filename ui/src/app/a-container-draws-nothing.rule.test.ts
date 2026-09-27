@@ -85,11 +85,11 @@ const ALLOWED: Readonly<Record<string, string>> = {
   'AppProviders.tsx: ToastRegion':
     'the toast outlet, which belongs above every screen and inside no one of them',
   'aria-routing.tsx: AriaRouter': "the kit's router adapter; it teaches navigation and draws children",
-  'RootError.tsx: div': 'the last boundary renders without the kit, because the kit is what threw',
-  'RootError.tsx: h1': 'the last boundary renders without the kit, because the kit is what threw',
-  'RootError.tsx: p': 'the last boundary renders without the kit, because the kit is what threw',
-  'RootError.tsx: button': 'the last boundary renders without the kit, because the kit is what threw',
-  'RootError.tsx: pre': 'the last boundary renders without the kit, because the kit is what threw',
+  'RootError.tsx: div': 'the last boundary falls back to markup depending on nothing, for when the kit is what threw',
+  'RootError.tsx: h1': 'the last boundary falls back to markup depending on nothing, for when the kit is what threw',
+  'RootError.tsx: p': 'the last boundary falls back to markup depending on nothing, for when the kit is what threw',
+  'RootError.tsx: button': 'the last boundary falls back to markup depending on nothing, for when the kit is what threw',
+  'RootError.tsx: pre': 'the last boundary falls back to markup depending on nothing, for when the kit is what threw',
 }
 
 /**

@@ -56,11 +56,11 @@ function Events() {
 /**
  * `Timeline` at three points in a run, and on both axes.
  *
- * **Everything it does is a group selector**, and there are two groups. An item
- * carries `data-completed` while its `step` is at or below the timeline's
- * `value`, and the timeline carries `data-orientation`; the mark, the line, the
- * date and the title all read one or both off an ancestor rather than taking a
- * prop. So a caller composes the parts and sets one number.
+ * **Almost everything it does is a group selector**, and there are two groups.
+ * An item carries `data-completed` while its `step` is at or below the
+ * timeline's `value`, and the timeline carries `data-orientation`; the mark,
+ * the date and the title all read one or both off an ancestor rather than
+ * taking a prop. So a caller composes the parts and sets one number.
  *
  * That also means **none of it is visible to a renderer without styles**: every
  * claim in these stories is a computed colour or a rectangle, and the same
@@ -164,9 +164,10 @@ export const AllComplete: Story = {
 /**
  * The same markup on the other axis.
  *
- * **Not one part takes an orientation prop.** Each reads `data-orientation` off
- * the timeline through a group selector. So the axis changes from the root
- * alone, and a part used outside a `Timeline` draws at neither.
+ * **No part takes an orientation prop**, and the axis still changes from the
+ * root alone. Most read `data-orientation` off the timeline through a group
+ * selector; the line reads the context instead, because a prefixed class
+ * outranks a caller's bare one and the line is the part callers size. -> #897
  */
 export const Horizontal: Story = {
   render: () => (
@@ -175,8 +176,8 @@ export const Horizontal: Story = {
     </Timeline>
   ),
   play: async ({ canvasElement, step }) => {
-    const boxes = [...canvasElement.querySelectorAll('[data-part="timeline-item"]')].map(
-      (item) => item.getBoundingClientRect(),
+    const boxes = [...canvasElement.querySelectorAll('[data-part="timeline-item"]')].map((item) =>
+      item.getBoundingClientRect(),
     )
 
     await step('The run goes across rather than down', async () => {

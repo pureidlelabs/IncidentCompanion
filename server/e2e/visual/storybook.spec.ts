@@ -41,10 +41,18 @@ import { dirname } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
+import { ALREADY_FOUND } from './findings-baseline.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
-import { componentGroup, duplicateClusters, hashFrame, sayCluster, type FrameRecord } from './frame-oracle.js'
-import { armStoryFinished, loadStory } from './storybook-lifecycle.js'
+import {
+  componentGroup,
+  duplicateClusters,
+  hashFrame,
+  sayCluster,
+  type FrameRecord,
+} from './frame-oracle.js'
+import { armStoryFinished, fromAStaleServer, loadStory } from './storybook-lifecycle.js'
 import { findings, sayFinding, type Ground } from './view.js'
 
 const SB = STORYBOOK_URL
@@ -72,7 +80,25 @@ const WIDTHS = (process.env['VISUAL_WIDTHS'] ?? '1440,720')
 const GROUNDS = (process.env['VISUAL_GROUNDS'] ?? 'light,dark')
   .split(',')
   .filter(Boolean) as Ground[]
+/**
+ * **Refused here rather than asserted in a test.** Both axes filter to empty
+ * on an empty string, and they are the loop heads that declare the tests -- so
+ * `VISUAL_GROUNDS=$UNSET` declares none, and an assertion inside a test that
+ * does not exist cannot fire. Playwright's own answer is `No tests found`,
+ * which does not name the variable that emptied.
+ */
+if (GROUNDS.length === 0) throw new Error('VISUAL_GROUNDS named no ground to walk')
+if (WIDTHS.length === 0) throw new Error('VISUAL_WIDTHS named no width to walk')
+
 const ONLY = process.env['STORYBOOK_STORIES']?.split(',').filter(Boolean)
+
+/**
+ * How many tests each ground-and-width probe is split into.
+ *
+ * Playwright shards tests, so a probe walking every story in one test is one
+ * shard's work. Sorted by id first, so an index chunks the same everywhere.
+ */
+const CHUNKS = Math.max(1, Number(process.env['STORYBOOK_CHUNKS'] ?? '5'))
 const SHOTS = process.env['STORYBOOK_SHOTS']
 
 interface Entry {
@@ -80,8 +106,53 @@ interface Entry {
   title: string
   name: string
   type: string
+  tags?: string[]
   componentPath?: string
 }
+
+/**
+ * The tag a story carries when its `play` asserts something only the story
+ * tier can be true of.
+ *
+ * `@storybook/addon-vitest` resizes its tester to a fixed viewport, and a story
+ * guarding that constant is asserting about the tier rather than about itself.
+ * This walk drives its own widths, so such a story throws on every probe and
+ * the line is noise in a log whose whole point is that nothing in it is. The
+ * story says which tier owns it, because the story is what knows. -> #1052
+ */
+const STORY_TIER_ONLY = 'story-tier-only'
+
+/** The stories this walk is entitled to probe. */
+export function walkable(entries: Entry[]): Entry[] {
+  return entries.filter((one) => !(one.tags ?? []).includes(STORY_TIER_ONLY))
+}
+
+/**
+ * Stories the walk reached and neither probed nor accounted for.
+ *
+ * A story that refused to render or whose play threw is reported, and its
+ * baseline entries are exempt from the shrink check for that run. One that is
+ * neither walked nor reported exempts them in silence. -> #1059
+ */
+export function unexplained(planned: string[], walked: string[], skipped: string[]): string[] {
+  const reached = new Set(walked)
+  const said = new Set(skipped)
+  return planned.filter((one) => !reached.has(one) && !said.has(one)).sort()
+}
+
+test('a story that went missing without a word is told from one that was reported', () => {
+  const planned = ['light A / one', 'light A / two', 'light A / three']
+  expect(unexplained(planned, ['light A / one'], ['light A / two'])).toEqual(['light A / three'])
+  expect(unexplained(planned, ['light A / one'], ['light A / two', 'light A / three'])).toEqual([])
+})
+
+test('a story that belongs to the story tier is not walked here', () => {
+  const entries = [
+    { id: 'a', title: 'T', name: 'kept', type: 'story' },
+    { id: 'b', title: 'T', name: 'skipped', type: 'story', tags: ['dev', STORY_TIER_ONLY] },
+  ]
+  expect(walkable(entries).map((one) => one.name)).toEqual(['kept'])
+})
 
 /** The story index, or null when no Storybook is listening. */
 async function storyIndex(): Promise<Entry[] | null> {
@@ -106,26 +177,76 @@ async function storyIndex(): Promise<Entry[] | null> {
  * worker out of memory still print nothing.
  */
 const report: {
+  at: string
   probed: number
   expected: number
   died: string | null
   failures: string[]
   plays: string[]
-  found: { where: string; line: string }[]
+  found: { where: string; kind: string; line: string }[]
+  walked: string[]
+  planned: string[]
+  skipped: string[]
   frames: FrameRecord[]
-} = { probed: 0, expected: 0, died: null, failures: [], plays: [], found: [], frames: [] }
+} = {
+  at: '',
+  probed: 0,
+  expected: 0,
+  died: null,
+  failures: [],
+  plays: [],
+  found: [],
+  walked: [],
+  planned: [],
+  skipped: [],
+  frames: [],
+}
+
+/** The baseline's key: what was walked and what the probe called it. */
+function keyOf(where: string, kind: string): string {
+  return `${where} - ${kind}`
+}
 
 // **Reset per test rather than trusted to be fresh.** The config runs this
 // file once per density project, and module state outlives a single test in a
 // worker that serves more than one.
+test('a stale server and a broken story are told apart', () => {
+  // The two shapes measured on one unchanged tree, beside what a real
+  // breakage reads like. Pure, so it costs the tier nothing. -> #887
+  expect(
+    fromAStaleServer(
+      'light Components/Calendar / Default - Failed to fetch dynamically imported module: ' +
+        'http://127.0.0.1:6006/src/components/ui/calendar.stories.tsx',
+    ),
+  ).toBe(true)
+  expect(
+    fromAStaleServer(
+      'light X / Y - page.evaluate: Error: storyFinished never fired within 20000ms',
+    ),
+  ).toBe(true)
+  expect(
+    fromAStaleServer(
+      "light X / Y - TypeError: Cannot read properties of undefined (reading 'map')",
+    ),
+  ).toBe(false)
+  expect(fromAStaleServer('light X / Y - Objects are not valid as a React child')).toBe(false)
+})
+
+// Beside the `report` object both hooks reset and print, rather than above a
+// test of a pure helper that touches neither.
+// eslint-disable-next-line playwright/prefer-hooks-on-top
 test.beforeEach(() => {
   Object.assign(report, {
+    at: '',
     probed: 0,
     expected: 0,
     died: null,
     failures: [],
     plays: [],
     found: [],
+    walked: [],
+    planned: [],
+    skipped: [],
     frames: [],
   })
 })
@@ -140,18 +261,18 @@ function say(line: string): void {
  * A hook rather than the walk's own last lines: Playwright runs this after a
  * test that timed out, which is the case the walk cannot write from.
  */
+// eslint-disable-next-line playwright/prefer-hooks-on-top
 test.afterEach(() => {
   if (report.expected === 0) return
   const whole = report.probed === report.expected
   say(
     `\nprobed ${String(report.probed)} of ${String(report.expected)} story renders` +
-      ` (${GROUNDS.join(', ')} at ${WIDTHS.map((one) => String(one)).join(', ')}px)`,
+      ` (${report.at})`,
   )
 
   // Reconciled: #286 records `probed 1788 of 2800` with the arithmetic
   // unexplained, and the run can answer that itself.
-  const unaccounted =
-    report.expected - report.probed - report.failures.length - report.plays.length
+  const unaccounted = report.expected - report.probed - report.failures.length - report.plays.length
   if (unaccounted !== 0) {
     say(`    ${String(unaccounted)} renders in no bucket -- neither probed, refused nor a play`)
   }
@@ -162,7 +283,9 @@ test.afterEach(() => {
   }
 
   if (report.plays.length > 0) {
-    say(`\n${String(report.plays.length)} play function(s) threw, which this tier does not measure:`)
+    say(
+      `\n${String(report.plays.length)} play function(s) threw, which this tier does not measure:`,
+    )
     for (const one of report.plays) say(`  ~ ${one}`)
   }
 
@@ -178,136 +301,213 @@ test.afterEach(() => {
     for (const { where, line } of report.found) say(`  ! ${where} - ${line}`)
   }
 
-  const clusters = duplicateClusters(report.frames)
-  if (clusters.length === 0) {
-    say(whole ? '\nno duplicate frames' : `\nno duplicate frames${over} -- a partial walk cannot find them`)
-  } else {
-    say(`\n${String(clusters.length)} group(s) of sibling stories render identical pixels:`)
-    for (const cluster of clusters) say(`  = ${sayCluster(cluster)}`)
-  }
-})
-
-test('probes every Storybook story and reports what it measured', async ({ browser }) => {
-  // Long: every story, three probe passes each, times the grounds.
-  test.setTimeout(30 * 60_000)
-
-  const all = await storyIndex()
-  test.skip(all === null, `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`)
-  const stories = (all ?? [])
-    .filter((one) => ONLY === undefined || ONLY.some((prefix) => one.title.startsWith(prefix)))
-    .sort((a, b) => a.id.localeCompare(b.id))
-
-  // A run over nothing is the failure mode a reporting tier hides best.
-  expect(stories.length, 'the index matched no story').toBeGreaterThan(0)
-  // The same failure on the other two axes: both filter to empty on an empty
-  // string, so `VISUAL_GROUNDS=$UNSET` walks nothing and passes green.
-  expect(GROUNDS.length, 'VISUAL_GROUNDS named no ground to walk').toBeGreaterThan(0)
-  expect(WIDTHS.length, 'VISUAL_WIDTHS named no width to walk').toBeGreaterThan(0)
-
-  report.expected = stories.length * GROUNDS.length * WIDTHS.length
-
-
-  for (const ground of GROUNDS) {
-   for (const width of WIDTHS) {
-    const viewport = { width, height: DEFAULT_VIEWPORT.height }
-    const primary = width === WIDTHS[0]
-    const context = await browser.newContext({
-      viewport,
-      colorScheme: ground === 'dark' ? 'dark' : 'light',
-      reducedMotion: 'reduce',
-    })
-    const page = await context.newPage()
-    await armStoryFinished(page)
-
-    for (const story of stories) {
-      // The width is named only where it is not the primary, so the usual run
-      // reads as it always did and a narrow finding stands out as narrow.
-      const at = primary ? '' : ` @${String(width)}`
-      const where = `${ground}${at} ${story.title} / ${story.name}`
-      try {
-        // Undoes a previous story's `viewport` global before this one's own
-        // load decides whether it needs one -- `loadStory` only resizes when
-        // a story asks for it, so a page left narrow from the last story
-        // would otherwise capture this one narrow too.
-        await page.setViewportSize(viewport)
-        const { broke, playError } = await loadStory(page, SB, story.id, ground)
-        if (broke !== null) {
-          report.failures.push(`${where} - ${broke}`)
-          continue
-        }
-        // A story whose `play` threw has not reached the state it is named
-        // for, so its frame is of something else. Reported rather than
-        // captured -- hashing it feeds the oracle a state nothing asked for.
-        //
-        // **Not a failure, because it is not this tier's measurement.** This
-        // tier fails on not being able to *probe*, and a red run for a reason
-        // it did not measure teaches its reader to skim the failure line.
-        // -> #191
-        //
-        // **A demotion rather than a handover.** The story tier is a CI gate,
-        // so an ordinary play regression still goes red -- but it runs each
-        // story once, light ground, default viewport. A play that throws only
-        // in dark or at the narrow width is printed here and asserted nowhere.
-        if (playError !== null) {
-          report.plays.push(`${where} - play threw: ${playError.split('\n')[0] ?? ''}`)
-          continue
-        }
-        for (const one of await findings(page))
-          report.found.push({ where, line: sayFinding(one) })
-        // One capture serves both the oracle and `STORYBOOK_SHOTS` -- a
-        // second `page.screenshot()` here would double the run's cost across
-        // every story render for a file nobody asked for.
-        const png = await page.screenshot()
-        // The oracle pairs stories that render identically, so it is fed one
-        // width: the same story at two widths is two frames, and every story
-        // in the run would pair with itself.
-        if (primary) {
-          report.frames.push({
-            ground,
-            group: componentGroup(story.componentPath, story.title),
-            title: story.title,
-            name: story.name,
-            hash: hashFrame(png),
-          })
-        }
-        if (SHOTS !== undefined) {
-          const safe = story.id.replace(/[^\w.-]/g, '_')
-          const path = `${SHOTS}/${ground}-${String(width)}-${safe}.png`
-          mkdirSync(dirname(path), { recursive: true })
-          writeFileSync(path, png)
-        }
-        report.probed += 1
-      } catch (error) {
-        const why = error instanceof Error ? (error.message.split('\n')[0] ?? '') : ''
-        // **A dead server is one fact, not one per story.** A connection refused
-        // mid-sweep otherwise reports every remaining story as broken, which
-        // reads as a catastrophe in the tree rather than as the one thing that
-        // happened.
-        if (why.includes('ERR_CONNECTION_REFUSED')) {
-          report.died = `${SB} stopped answering at "${where}" -- probed ${String(report.probed)} first`
-          break
-        }
-        report.failures.push(`${where} - ${why}`)
-      }
+  // **Only the shard that captured frames speaks about them.** The oracle is
+  // fed at the primary width alone, so the others hold none -- and
+  // `duplicateClusters([])` is empty for want of input rather than for want of
+  // duplicates, which printed as `no duplicate frames` from a shard that never
+  // looked.
+  if (report.frames.length > 0) {
+    const clusters = duplicateClusters(report.frames)
+    if (clusters.length === 0) {
+      say(
+        whole
+          ? '\nno duplicate frames'
+          : `\nno duplicate frames${over} -- a partial walk cannot find them`,
+      )
+    } else {
+      say(`\n${String(clusters.length)} group(s) of sibling stories render identical pixels:`)
+      for (const cluster of clusters) say(`  = ${sayCluster(cluster)}`)
     }
-
-    await context.close()
-    if (report.died !== null) break
-   }
-   if (report.died !== null) break
   }
-
-  // The one thing this tier asserts: it could look. A story that will not
-  // render is a fact about the tree, and a reporting run that quietly probed
-  // nothing is indistinguishable from a clean one.
-  expect(report.failures, 'these stories could not be probed').toEqual([])
-  // A floor under the demotion: every play throwing is indistinguishable from
-  // plays no longer running.
-  expect(
-    report.plays.length,
-    'every render reported a thrown play, which is plays not running rather than plays being timing-sensitive',
-  ).toBeLessThan(report.expected)
-  // Asserted after the failures, and both after the hook has already printed
-  // everything the walk saw.
-  expect(report.died, 'the sweep did not finish').toBeNull()
 })
+
+/**
+ * One test per ground and width, each with its own budget and its own summary.
+ *
+ * **A test's timeout is the budget for one test**, and one walk over every
+ * axis asks a single budget to cover the whole gallery several times over.
+ * Each shard's summary printing as it lands is also the only progress this
+ * tier can show, since `list` prints nothing until a test ends.
+ *
+ * The frame oracle is unaffected: `duplicateClusters` buckets by ground and
+ * component group, so no cluster ever spanned two grounds.
+ */
+for (const ground of GROUNDS) {
+  for (const width of WIDTHS) {
+    // The width is named only where it is not the primary, so the usual run
+    // reads as it always did and a narrow finding stands out as narrow.
+    const primary = width === WIDTHS[0]
+
+    for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
+      const part = CHUNKS === 1 ? '' : `, ${String(chunk + 1)}/${String(CHUNKS)}`
+
+      test(`probes every Storybook story at ${ground}, ${String(width)}px${part}`, async ({
+        browser,
+      }) => {
+        // Under the job's ceiling: a test timeout prints what it walked, a
+        // job killed by its own prints nothing. -> #286
+        test.setTimeout(Math.max(10, Math.ceil(30 / CHUNKS)) * 60_000)
+        report.at = `${ground} at ${String(width)}px${part}`
+
+        const all = await storyIndex()
+        // A null index is the no-Storybook case, so the same helper answers it:
+        // a skip while exploring, a refusal on a run that claims to certify.
+        if (all === null) await requireStorybook()
+        const matched = walkable(all ?? [])
+          .filter(
+            (one) => ONLY === undefined || ONLY.some((prefix) => one.title.startsWith(prefix)),
+          )
+          .sort((a, b) => a.id.localeCompare(b.id))
+
+        // Asked of the whole match, not this chunk: more chunks than
+        // stories leaves the later ones legitimately empty.
+        expect(matched.length, 'the index matched no story').toBeGreaterThan(0)
+
+        const stories = matched.filter((_, at) => at % CHUNKS === chunk)
+
+        report.expected = stories.length
+
+        const viewport = { width, height: DEFAULT_VIEWPORT.height }
+        const context = await browser.newContext({
+          viewport,
+          colorScheme: ground === 'dark' ? 'dark' : 'light',
+          reducedMotion: 'reduce',
+        })
+        const page = await context.newPage()
+        await armStoryFinished(page)
+
+        for (const story of stories) {
+          const at = primary ? '' : ` @${String(width)}`
+          const where = `${ground}${at} ${story.title} / ${story.name}`
+          report.planned.push(where)
+          try {
+            // Undoes a previous story's `viewport` global before this one's own
+            // load decides whether it needs one -- `loadStory` only resizes when
+            // a story asks for it, so a page left narrow from the last story
+            // would otherwise capture this one narrow too.
+            await page.setViewportSize(viewport)
+            const { broke, playError } = await loadStory(page, SB, story.id, ground)
+            if (broke !== null) {
+              report.failures.push(`${where} - ${broke}`)
+              report.skipped.push(where)
+              continue
+            }
+            // A story whose `play` threw has not reached the state it is named
+            // for, so its frame is of something else. Reported rather than
+            // captured -- hashing it feeds the oracle a state nothing asked for.
+            //
+            // **Not a failure, because it is not this tier's measurement.** This
+            // tier fails on not being able to *probe*, and a red run for a reason
+            // it did not measure teaches its reader to skim the failure line.
+            // -> #191
+            //
+            // **A demotion rather than a handover.** The story tier is a CI gate,
+            // so an ordinary play regression still goes red -- but it runs each
+            // story once, light ground, default viewport. A play that throws only
+            // in dark or at the narrow width is printed here and asserted nowhere.
+            if (playError !== null) {
+              report.plays.push(`${where} - play threw: ${playError.split('\n')[0] ?? ''}`)
+              report.skipped.push(where)
+              continue
+            }
+            report.walked.push(where)
+            for (const one of await findings(page))
+              report.found.push({ where, kind: one.kind, line: sayFinding(one) })
+            // One capture serves both the oracle and `STORYBOOK_SHOTS` -- a
+            // second `page.screenshot()` here would double the run's cost across
+            // every story render for a file nobody asked for.
+            const png = await page.screenshot()
+            // The oracle pairs stories that render identically, so it is fed one
+            // width: the same story at two widths is two frames, and every story
+            // in the run would pair with itself.
+            if (primary) {
+              report.frames.push({
+                ground,
+                group: componentGroup(story.componentPath, story.title),
+                title: story.title,
+                name: story.name,
+                hash: hashFrame(png),
+              })
+            }
+            if (SHOTS !== undefined) {
+              const safe = story.id.replace(/[^\w.-]/g, '_')
+              const path = `${SHOTS}/${ground}-${String(width)}-${safe}.png`
+              mkdirSync(dirname(path), { recursive: true })
+              writeFileSync(path, png)
+            }
+            report.probed += 1
+          } catch (error) {
+            const why = error instanceof Error ? (error.message.split('\n')[0] ?? '') : ''
+            // **A dead server is one fact, not one per story.** A connection refused
+            // mid-sweep otherwise reports every remaining story as broken, which
+            // reads as a catastrophe in the tree rather than as the one thing that
+            // happened.
+            if (why.includes('ERR_CONNECTION_REFUSED')) {
+              report.died = `${SB} stopped answering at "${where}" -- probed ${String(report.probed)} first`
+              break
+            }
+            report.failures.push(`${where} - ${why}`)
+            report.skipped.push(where)
+          }
+        }
+
+        await context.close()
+
+        // The one thing this tier asserts: it could look. A story that will not
+        // render is a fact about the tree, and a reporting run that quietly probed
+        // nothing is indistinguishable from a clean one.
+        //
+        // **Split by what the failure is about, because the two read identically and
+        // are not the same finding.** A long-lived dev Storybook hands the browser
+        // module URLs from before its last re-optimisation, and what comes back
+        // names the component -- 31 date and time stories in one measured run, all
+        // of which rendered after a restart of the server and nothing else. Reported
+        // together, a stale server looks exactly like a broken tree, and the run
+        // costs its reader a search through the tree for a fault that is not there.
+        // Both still fail the run. -> #887
+        const stale = report.failures.filter((one) => fromAStaleServer(one))
+        const broken = report.failures.filter((one) => !fromAStaleServer(one))
+        expect(broken, 'these stories could not be probed').toEqual([])
+        expect(
+          stale,
+          'the Storybook serving these did not hand over their modules, which is the server rather ' +
+            'than the tree: restart it and walk again. A story that stays here across a restart is ' +
+            'the tree after all.',
+        ).toEqual([])
+        // A floor under the demotion: every play throwing is indistinguishable from
+        // plays no longer running.
+        expect(
+          report.plays.length,
+          'every render reported a thrown play, which is plays not running rather than plays being timing-sensitive',
+        ).toBeLessThan(report.expected)
+        // Asserted after the failures, and both after the hook has already printed
+        // everything the walk saw.
+        expect(report.died, 'the sweep did not finish').toBeNull()
+
+        // Only over the stories this test walked, so the answer is the same under
+        // `STORYBOOK_CHUNKS` and `--shard` as it is in one run.
+        const walked = new Set(report.walked)
+        const seen = new Set(report.found.map((one) => keyOf(one.where, one.kind)))
+        expect(
+          [...seen].filter((key) => !ALREADY_FOUND.has(key)).sort(),
+          'the probe found something `findings-baseline.ts` does not list: fix it, or add it there with the reason',
+        ).toEqual([])
+        expect(
+          [...ALREADY_FOUND]
+            .filter((key) => walked.has(key.slice(0, key.lastIndexOf(' - '))) && !seen.has(key))
+            .sort(),
+          'these no longer happen, so `findings-baseline.ts` describes a tree nobody has: remove them',
+        ).toEqual([])
+
+        // **A story reached but not walked exempts its entries from the check
+        // above.** That is right when it refused to render or its play threw,
+        // because both are reported; with neither, the entries went unchecked
+        // and nothing said so. -> #1059
+        expect(
+          unexplained(report.planned, report.walked, report.skipped),
+          'these stories were neither walked nor reported, so their baseline entries went unchecked in silence',
+        ).toEqual([])
+      })
+    }
+  }
+}

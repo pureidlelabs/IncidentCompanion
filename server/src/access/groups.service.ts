@@ -13,7 +13,7 @@
  * -> `reach-changed.ts`
  */
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, ne } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import { user } from '../db/schema/auth.js'
@@ -84,40 +84,62 @@ export class GroupsService {
    * **Upserted on the pair**, because the pair is the primary key: *most
    * permissive applies* is about two different groups, never about one
    * membership recorded twice. A second grant is a change of level.
+   *
+   * `false` when the analyst already held that level, and nothing changed.
    */
-  async grant(groupId: string, userId: string, level: Level): Promise<void> {
-    await this.db
+  async grant(groupId: string, userId: string, level: Level): Promise<boolean> {
+    const made = await this.db
       .insert(groupMembers)
       .values({ groupId, userId, level })
-      .onConflictDoUpdate({ target: [groupMembers.groupId, groupMembers.userId], set: { level } })
-    reachChanged(userId)
+      .onConflictDoUpdate({
+        target: [groupMembers.groupId, groupMembers.userId],
+        set: { level },
+        setWhere: ne(groupMembers.level, level),
+      })
+      .returning({ userId: groupMembers.userId })
+    if (made.length > 0) reachChanged(userId)
+    return made.length > 0
   }
 
   /**
    * **Silent when there was nothing to take out.** Announcing a reach change
    * that did not happen would end that analyst's open connections for nothing,
    * and a caller cannot always know whether the membership was there.
+   *
+   * `false` when there was no such membership.
    */
-  async revoke(groupId: string, userId: string): Promise<void> {
+  async revoke(groupId: string, userId: string): Promise<boolean> {
     const gone = await this.db
       .delete(groupMembers)
       .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)))
       .returning({ userId: groupMembers.userId })
     if (gone.length > 0) reachChanged(userId)
+    return gone.length > 0
   }
 
-  /** Everybody in the group thereby reaches the customer's cases. */
-  async hold(groupId: string, customerId: string): Promise<void> {
-    await this.db.insert(groupCustomers).values({ groupId, customerId }).onConflictDoNothing()
-    await this.announceEveryMember(groupId)
+  /**
+   * Everybody in the group thereby reaches the customer's cases.
+   *
+   * `false` when the group already held it.
+   */
+  async hold(groupId: string, customerId: string): Promise<boolean> {
+    const made = await this.db
+      .insert(groupCustomers)
+      .values({ groupId, customerId })
+      .onConflictDoNothing()
+      .returning({ groupId: groupCustomers.groupId })
+    if (made.length > 0) await this.announceEveryMember(groupId)
+    return made.length > 0
   }
 
   /**
    * The scenario names this beside a revocation - *the group that reached it is
    * revoked, or the customer leaves it* - because to an analyst the two are
    * the same event.
+   *
+   * `false` when the group did not hold it.
    */
-  async release(groupId: string, customerId: string): Promise<void> {
+  async release(groupId: string, customerId: string): Promise<boolean> {
     const gone = await this.db
       .delete(groupCustomers)
       .where(
@@ -125,6 +147,7 @@ export class GroupsService {
       )
       .returning({ groupId: groupCustomers.groupId })
     if (gone.length > 0) await this.announceEveryMember(groupId)
+    return gone.length > 0
   }
 
   /**

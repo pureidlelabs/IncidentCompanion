@@ -206,48 +206,25 @@ export const Complete: Story = {
 }
 
 /**
- * An answer another analyst saved first.
- *
- * Above the progress bar and the cards, not inside the card the field belongs
- * to: a card folds shut once every question in it is answered, and a refusal
- * drawn inside a shut card is a refusal nobody sees.
+ * The write seam, spied on, answering as the container does: the record as
+ * stored. One per story, since `fn` remembers its calls.
  */
-export const Refused: Story = {
-  name: 'A refused write',
-  args: { refusal: { field: 'Notified at', by: 'R. Okonkwo' } },
-  play: async ({ canvasElement, canvas, step }) => {
-    await step('the refusal names the field and who got there first', async () => {
-      await expect(canvas.getByText(/Notified at/)).toBeVisible()
-      await expect(canvas.getByText(/R\. Okonkwo/)).toBeVisible()
-    })
-    await step('and sits above the cards, where a folded one cannot hide it', async () => {
-      // A card folds shut once every question in it is answered, so a refusal
-      // drawn inside one is a refusal nobody sees.
-      // Every card is folded here -- no `form-grid` is drawn at all -- and the
-      // refusal is still on screen. That is the whole claim: inside a card it
-      // would be shut away exactly when a card folds, which is the moment
-      // every question in it has been answered.
-      await expect(canvasElement.querySelectorAll('[data-part="form-grid"]')).toHaveLength(0)
-      await expect(canvas.getByText(/R\. Okonkwo/)).toBeVisible()
-    })
-  },
-}
-
-/** The write seam, spied on. One per story, since `fn` remembers its calls. */
 function spying(): ComplianceWrites {
-  return { save: fn(() => Promise.resolve({})) }
+  return {
+    save: fn((values: Record<string, unknown>, read: number) =>
+      Promise.resolve({ ...campaignCompliance, ...values, version: read + 1 }),
+    ),
+  }
 }
 
 /**
- * An answer typed into a card, all the way through to the seam.
+ * An answer typed into a card, all the way through to the seam, once the field
+ * is left.
  *
  * An answer held in the screen's own draft and never sent looks identical to
- * one the server took, and this record is what a regulator is told.
- *
- * **The descriptor travels, not the field's name.** Six kinds share one
- * control and it emits a string for all of them, while the record stores an
- * array for the sets and null for an unanswered number -- so the conversion
- * needs the spec, and a seam handed a bare name has nothing to convert with.
+ * one the server took, and this record is what a regulator is told. A typed
+ * answer leaves whole, when the analyst leaves the field, never a keystroke at
+ * a time.
  */
 export const SendsAnAnswer: Story = {
   name: 'Sending a typed answer',
@@ -255,21 +232,22 @@ export const SendsAnAnswer: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.type(canvas.getByLabelText('Competent authority'), 'RDI')
+    await expect(args.writes!.save).not.toHaveBeenCalled()
+    await userEvent.tab()
 
-    await expect(args.writes!.save).toHaveBeenLastCalledWith(
-      expect.objectContaining({ name: 'competentAuthority', kind: 'text' }),
-      'RDI',
+    await expect(args.writes!.save).toHaveBeenCalledTimes(1)
+    await expect(args.writes!.save).toHaveBeenCalledWith(
+      { competentAuthority: 'RDI' },
+      campaignCompliance.version,
     )
   },
 }
 
 /**
- * The same seam from a closed vocabulary, where the spec carries the options.
+ * The same seam from a closed vocabulary, which leaves as it is chosen.
  *
- * The kind and the option list are the half of the descriptor the wire
- * conversion reads. A seam that sent the label the analyst pressed, or the
- * name alone, would look right on this screen and store a value the server
- * cannot place.
+ * A choice is one act, so there is nothing to wait for; the value stored is
+ * the option, never the label the analyst pressed.
  */
 export const SendsAChosenAnswer: Story = {
   name: 'Sending an answer from a vocabulary',
@@ -280,11 +258,10 @@ export const SendsAChosenAnswer: Story = {
     await userEvent.click(await screen.findByRole('option', { name: 'essential' }))
 
     await expect(args.writes!.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'nis2EntityClass',
-        kind: 'select',
-        options: expect.arrayContaining(['essential']),
-      }),
+      { nis2EntityClass: 'essential' },
+      campaignCompliance.version,
+    )
+    await expect(canvas.getByRole('button', { name: /NIS2 classification/ })).toHaveTextContent(
       'essential',
     )
   },

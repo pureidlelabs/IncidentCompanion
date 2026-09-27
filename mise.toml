@@ -1,4 +1,6 @@
 # `.devcontainer/mise.toml` is the container's tool list. This one names no
 # tools and holds the environment.
 [env]
-_.source = "stack-env.sh"
+# `tools` puts mise's own node ahead of its shims for the sourced script, so
+# evaluating this never runs a shim that evaluates it again.
+_.source = { path = "stack-env.sh", tools = true }

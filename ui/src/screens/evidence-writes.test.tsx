@@ -32,6 +32,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
 import { EvidenceScreen, type EvidenceWrites } from './evidence'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 
 /**
  * A spy for each path, so a missed one is named rather than counted.
@@ -45,8 +46,8 @@ function spies(): EvidenceWrites {
   if (!first) throw new Error('the campaign fixture holds no evidence')
   return {
     save: vi.fn((_entry, fields) => Promise.resolve({ ...first, ...fields, id: 'ev-stored' })),
-    patch: vi.fn((ids: readonly string[], fields: Partial<typeof first>) =>
-      Promise.resolve(ids.map((id) => ({ ...first, ...fields, id }))),
+    patch: vi.fn((rows: readonly BulkPatchRow[], fields: Partial<typeof first>) =>
+      Promise.resolve(rows.map(({ id }) => ({ ...first, ...fields, id }))),
     ),
     remove: vi.fn(() => Promise.resolve()),
   }
@@ -126,8 +127,10 @@ describe('the writes a container supplies', () => {
     const confirm = await screen.findByRole('alertdialog')
     await user.click(within(confirm).getByRole('button', { name: /delete/i }))
 
-    expect(writes.remove).toHaveBeenCalledWith([row.id])
-    expect(screen.getAllByRole('row')).toHaveLength(before)
+    expect(writes.remove).toHaveBeenCalledWith([{ id: row.id, version: row.version }])
+    // The confirmation stays open while the delete is out, so the rows behind it are hidden
+    // from the tree rather than gone.
+    expect(screen.getAllByRole('row', { hidden: true })).toHaveLength(before)
 
     gate.answer(undefined)
     await waitFor(() => {

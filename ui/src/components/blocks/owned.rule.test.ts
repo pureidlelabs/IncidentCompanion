@@ -53,6 +53,8 @@ const OWNED: Readonly<Record<string, string>> = {
   // These parts are held by a block and reached by no screen. Recorded rather
   // than decided: a line leaves this list when a screen legitimately holds the
   // part directly.
+  // The choice between two values sits in the band that quotes them.
+  AlertAction: 'blocks/merge-review.tsx',
   AlertDialog: 'blocks/confirm-delete-dialog.tsx',
   Autocomplete: 'blocks/case-search-box.tsx',
   Avatar: 'blocks/presence.tsx',
@@ -60,6 +62,7 @@ const OWNED: Readonly<Record<string, string>> = {
   Cell: 'blocks/data-table.tsx',
   CheckboxGroup: 'blocks/compliance-field.tsx',
   Column: 'blocks/data-table.tsx',
+  CopyButton: 'blocks/prose-unsaved.tsx',
   ComboBox: 'blocks/entity-combobox.tsx',
   Disclosure: 'blocks/field-row.tsx',
   DisclosureHeader: 'blocks/field-row.tsx',
@@ -113,7 +116,7 @@ const OWNED: Readonly<Record<string, string>> = {
   PointerAt: 'blocks/incident-canvas.tsx',
   PointerContextMenu: 'blocks/data-table.tsx',
   PopoverTrigger: 'blocks/incident-canvas.tsx',
-  Radio: 'blocks/choice-row.tsx',
+  Radio: 'blocks/new-account-dialog.tsx',
   Row: 'blocks/data-table.tsx',
   ScrollArea: 'blocks/activity-door.tsx',
   Sheet: 'blocks/case-key-times-sheet.tsx',
@@ -197,6 +200,7 @@ const TONE_TABLES = [
   'TONE_CLASS',
   'TONE_FILL',
   'TONE_INK',
+  'TONE_STRIPE',
   'SEVERITY_FILL',
   'SEVERITY_INK',
 ]

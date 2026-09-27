@@ -23,6 +23,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -41,15 +42,6 @@ const STORY = 'screens-correlate-investigation-graph--empty'
 /** The layers the overlay spans, whichever of them a given case draws. */
 const UNDER = ['canvas-toolbar', 'canvas-legend', 'canvas-status']
 
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
-
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
     waitUntil: 'load',
@@ -61,10 +53,7 @@ async function openStory(page: Page, id: string): Promise<void> {
 
 test.describe('an overlaid canvas', () => {
   test.beforeEach(async () => {
-    test.skip(
-      !(await storybookIsUp()),
-      `no Storybook at ${SB} - run \`cd ui && npm run storybook\``,
-    )
+    await requireStorybook()
   })
 
   test('leaves every control in the frame under the pointer', async ({ page }) => {

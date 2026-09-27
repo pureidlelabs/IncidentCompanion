@@ -7,8 +7,10 @@
  */
 import { Controller, Get } from '@nestjs/common'
 import { HealthCheck, HealthCheckService, type HealthCheckResult } from '@nestjs/terminus'
+import { SkipThrottle } from '@nestjs/throttler'
 import { Public } from '@thallesp/nestjs-better-auth'
 
+import { TIERS } from '../throttle/tiers.js'
 import { PostgresHealth, RedisHealth } from './dependencies.health.js'
 
 @Controller('api')
@@ -30,8 +32,13 @@ export class HealthController {
    * does not hide a Redis that is also down - which is the report worth having
    * when someone is looking at this at all. It answers 503 when either is
    * down, and the body says which.
+   *
+   * **Outside every throttle tier**, because the count lives in Redis: a lost
+   * Redis would otherwise answer here as an unnamed 500. The edge still
+   * limits this path.
    */
   @Public()
+  @SkipThrottle(Object.fromEntries(TIERS.map(({ name }) => [name, true])))
   @Get('health')
   @HealthCheck()
   check(): Promise<HealthCheckResult> {

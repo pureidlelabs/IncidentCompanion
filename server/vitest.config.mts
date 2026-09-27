@@ -12,6 +12,7 @@
  * picker of a running app. See `test/global-setup.ts`.
  */
 import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 import { defineConfig } from 'vitest/config'
 
@@ -58,6 +59,12 @@ process.env['SEED_DATABASE_URL'] ??= stack.seedDatabaseUrl
  * keys, and a skip in silence if that instance is down.
  */
 process.env['REDIS_URL'] ??= stack.redisUrl
+/**
+ * **An evidence directory beside the suite's own database**, not the dev
+ * app's. Global setup empties it whenever it makes that database fresh, so a
+ * suite sharing the dev directory would remove the dev app's artefacts.
+ */
+process.env['EVIDENCE_DIR'] ??= fileURLToPath(new URL('.evidence-suite', import.meta.url))
 
 export default defineConfig({
   test: {

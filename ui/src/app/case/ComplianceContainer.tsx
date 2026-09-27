@@ -4,14 +4,12 @@ import { useSpecs } from '@/api/specs'
 import { useCaseId } from '@/app/useCaseId'
 import { ComplianceScreen, type ComplianceWrites } from '@/screens/compliance'
 
-import { announcing } from './entryWrites'
-
 /**
  * `ComplianceScreen` bound to the record it draws and the answers it writes.
  *
  * **Nothing converts on the way out.** `ComplianceControl` emits the stored
  * shape already -- `string[]` for the multi kinds, `null` for an emptied
- * number or stamp. A conversion here would take a `multi_lines` answer through
+ * number or stamp or a ground taken back. A conversion here would take a `multi_lines` answer through
  * `String(['a','b'])` and split it on a newline, storing one element with a
  * comma in it.
  */
@@ -24,10 +22,7 @@ export function ComplianceContainer() {
   const patch = useComplianceMutation(caseId)
 
   const writes: ComplianceWrites = {
-    save: (spec, value) =>
-      announcing('the compliance record', () =>
-        patch.mutateAsync({ [spec.name]: value }),
-      ),
+    save: (fields, version) => patch.mutateAsync({ version, fields }),
   }
 
   return (

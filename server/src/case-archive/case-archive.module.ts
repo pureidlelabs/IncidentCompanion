@@ -7,6 +7,7 @@
  * against hostile input with no database in the way. This one knows what a case
  * *is*, and everything it imports points downwards.
  */
+import { ProseModule } from '../prose/prose.module.js'
 import { Module } from '@nestjs/common'
 
 import { ArchiveController } from './archive.controller.js'
@@ -16,7 +17,7 @@ import { CasesModule } from '../cases/cases.module.js'
 import { EvidenceStore } from '../evidence/store.js'
 
 @Module({
-  imports: [CasesModule],
+  imports: [CasesModule, ProseModule],
   controllers: [ArchiveController],
   providers: [ArchiveExportService, ArchiveImportService, EvidenceStore],
 })

@@ -252,7 +252,7 @@ function resolve(seed: LayoutSeed): ReportLayout {
     summary: seed.summary,
     builtin: true,
     nis2: seed.requiresFeature === 'nis2',
-    ...(seed.stage === undefined ? {} : { stage: seed.stage }),
+    stage: seed.stage ?? '',
     blocks,
   }
 }
@@ -335,12 +335,13 @@ export function layoutsMatching(
  * The reporting stage a layout already is, or `''` for one that is not a
  * filing.
  *
- * The four NIS2 layouts are the four Article 23 steps, and each one's label is
- * the stage word for word -- so the stage was never a second question. A
- * picker beside them asked the analyst to restate the card they had just
- * clicked.
+ * The four NIS2 layouts are the four Article 23 steps, so the stage was never
+ * a second question -- a picker beside them asked the analyst to restate the
+ * card they had just clicked. The layout declares it rather than the label
+ * implying it: `NIS2 final report` is not a value the vocabulary holds.
+ * -> #954
  */
 export function stageOf(layout: ReportLayout | undefined, nis2Enabled: boolean): string {
-  if (!nis2Enabled || !(layout?.nis2 ?? false)) return ''
-  return layout?.stage ?? ''
+  if (layout === undefined || !nis2Enabled || !layout.nis2) return ''
+  return layout.stage
 }

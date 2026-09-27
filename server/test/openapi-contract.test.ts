@@ -166,10 +166,12 @@ describe.skipIf(!RUNNABLE)('the published contract', () => {
     const stack = (express.router ?? express._router)?.stack ?? []
 
     /**
-     * Not everything mounted is ours to document. Better Auth serves its own
-     * routes under `/api/auth` behind one handler, the reference UI and its
-     * document are pages rather than API calls, and the SPA catch-all answers
-     * every address the client owns.
+     * Not everything mounted is on this router. Better Auth serves its routes
+     * under `/api/auth` behind one handler, and
+     * `the-auth-library-serves-only-what-the-install-offers.test.ts` holds
+     * those to the document; the reference UI and its document are pages
+     * rather than API calls, and the SPA catch-all answers every address the
+     * client owns.
      */
     const NOT_OURS = /^\/api\/(auth|docs)\b/
 

@@ -17,26 +17,35 @@ import { rowVersion } from './column-bounds.js'
 /**
  * How a field is drawn. Lifted from the Python spec vocabulary; the renderer
  * decides what each means, and the server never draws anything.
+ *
+ * **Served as `field_kinds`, and that is what a client checks against.** The
+ * renderer's `switch` ends in a `default` that builds a text input, so a kind
+ * it has never heard of draws as a plain box and posts a string rather than
+ * failing.
  */
-export type FieldKind =
-  | 'text'
+export const FIELD_KINDS = [
+  'autocomplete',
+  'checkbox',
+  'color',
+  /** One reference to another collection's row. */
+  'device_select',
+  'event_datetime',
+  'multi_device_select',
   /** A whole number. Rendered as a numeric input, never a free text box. */
-  | 'number'
-  | 'textarea'
-  | 'select'
-  | 'checkbox'
-  | 'color'
-  | 'autocomplete'
-  | 'event_datetime'
+  'number',
+  'select',
   /**
    * Tags. **A csv string underneath, not a list** - `entry_tags` is what every
    * reader goes through, and a chips control that stored an array would give
    * the filter a second shape to understand.
    */
-  | 'tag_select'
-  /** One reference to another collection's row. */
-  | 'device_select'
-  | 'multi_device_select'
+  'tag_select',
+  'text',
+  'textarea',
+] as const
+
+/** Derived, so a kind cannot reach a field without reaching the served list. */
+export type FieldKind = (typeof FIELD_KINDS)[number]
 
 /**
  * The three surfaces an entity dialog stacks, in reading order.
@@ -56,6 +65,9 @@ export type FieldTier = 'identity' | 'assessment' | 'detail'
 export interface FieldMeta {
   label: string
   kind: FieldKind
+
+  /** Written by the store from the record's live document: seeded on create, never patched. */
+  derived?: true
 
   /**
    * The vocabulary this field's options come from. The options are **inlined**
@@ -291,8 +303,42 @@ export function hasCrossFieldRule(schema: z.ZodObject): boolean {
 }
 
 /**
+ * What `schema`'s rules spanning fields refuse in `row`, or null. `row` is a
+ * whole row as stored or as it will be, timestamps as `Date` or as strings.
+ */
+export function crossFieldIssue(schema: z.ZodObject, row: Record<string, unknown>): string | null {
+  if (!hasCrossFieldRule(schema)) return null
+  // **The stored half comes out of Drizzle, the patch half off the wire, and
+  // they spell a time differently.** A `timestamp` column reads back as a
+  // `Date`; the schemas declare `z.iso.datetime()`, a string. Parsing the
+  // merge without this refuses a patch that never touched the time, and only
+  // on rows where the timestamp is set -- which is why it survived the first
+  // two tests here.
+  //
+  // **On the value, not the column type**, so a `date()` column in date mode
+  // is caught as well -- a `columnType.startsWith('PgTimestamp')` predicate,
+  // which is what `coerceTimes` uses, would let one through.
+  //
+  // The open half: a field declared `z.iso.date()` would be handed a full
+  // datetime and reject it. No schema has one today; add the date-only
+  // spelling here when the first does.
+  const wire = Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key, value instanceof Date ? value.toISOString() : value]),
+  )
+  const parsed = schema.safeParse(wire)
+  return parsed.success ? null : (parsed.error.issues[0]?.message ?? 'Invalid')
+}
+
+/** The fields a schema marks as derived, which a patch does not offer. */
+export function derivedFields(schema: z.ZodObject): string[] {
+  return Object.entries(schema.shape)
+    .filter(([, sub]) => fields.get(sub as z.ZodType)?.derived)
+    .map(([name]) => name)
+}
+
+/**
  * The body a PATCH may carry: every field optional, **every default
- * unwrapped**, nothing else.
+ * unwrapped**, no derived field, nothing else.
  *
  * `.partial()` alone is not this - it marks a field optional and leaves the
  * default underneath, which fires on absent input and turns a one-column patch
@@ -310,10 +356,11 @@ export function hasCrossFieldRule(schema: z.ZodObject): boolean {
  * -> `collections/collection.service.ts`, `refuseIfCrossFieldRuleBroken`
  */
 export function patchSchema(schema: z.ZodObject): z.ZodObject {
+  const derived = new Set(derivedFields(schema))
   return z
     .object(
       Object.fromEntries(
-        Object.entries(schema.shape).map(([name, sub]) => {
+        Object.entries(schema.shape).filter(([name]) => !derived.has(name)).map(([name, sub]) => {
           const field = sub as z.ZodType & { def?: { type?: string; innerType?: z.ZodType } }
           const inner = field.def?.type === 'default' ? field.def.innerType! : field
           return [name, inner.optional()]

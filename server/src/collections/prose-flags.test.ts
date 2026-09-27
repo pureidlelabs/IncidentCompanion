@@ -13,10 +13,11 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 
-import { cases } from '../db/schema/index.js'
+import { cases, user } from '../db/schema/index.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
 import { openTestPool } from '../../test/database.js'
 import { withProseFlags } from './prose-flags.js'
+import { actingAs } from '../db/scope.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -27,6 +28,10 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/** Who the store is asked for: an account every default-customer case is open to. */
+const READER = 'prose-flags-reader'
+
+
 describe.skipIf(!db)('whether a block has prose', () => {
   let caseId = ''
   let reportId = ''
@@ -34,6 +39,10 @@ describe.skipIf(!db)('whether a block has prose', () => {
   let untouched = ''
 
   beforeAll(async () => {
+    await seed!
+      .insert(user)
+      .values({ id: READER, name: READER, email: `${READER}@example.test`, emailVerified: true, createdAt: new Date(), updatedAt: new Date() })
+      .onConflictDoNothing()
     const [row] = await seed!.insert(cases).values({ title: 'Prose flags' }).returning()
     caseId = row!.id
 
@@ -75,16 +84,16 @@ describe.skipIf(!db)('whether a block has prose', () => {
   })
 
   it('is true for the section somebody wrote in', async () => {
-    const rows = await withProseFlags(db!, caseId, [
+    const rows = await actingAs(READER, () => withProseFlags(db!, caseId, [
       { id: written, reportId },
-    ])
+    ]))
     expect(rows[0]?.['hasProse']).toBe(true)
   })
 
   it('is false for the section nobody has opened', async () => {
-    const rows = await withProseFlags(db!, caseId, [
+    const rows = await actingAs(READER, () => withProseFlags(db!, caseId, [
       { id: untouched, reportId },
-    ])
+    ]))
     expect(rows[0]?.['hasProse']).toBe(false)
   })
 })

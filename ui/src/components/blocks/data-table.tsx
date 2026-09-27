@@ -13,7 +13,6 @@ import {
 } from 'react'
 
 import type { CollectionName } from '@/api/model'
-import { isOptimisticId } from '@/api/useEntryCreate'
 import {
   ESTIMATED_ROW_HEIGHT,
   VIRTUALIZE_FROM,
@@ -73,7 +72,12 @@ const OVERSCAN = 8
  */
 function rowWindow(
   count: number,
-  { top, height, rowHeight, headerHeight }: {
+  {
+    top,
+    height,
+    rowHeight,
+    headerHeight,
+  }: {
     top: number
     height: number
     rowHeight: number
@@ -158,6 +162,11 @@ function shown(value: unknown): string {
   return ''
 }
 
+/** Takes the row a spacer's filler sits in out of the tree and the focus order. */
+const inertRow = (node: HTMLElement | null) => {
+  node?.closest('[role="row"]')?.setAttribute('inert', '')
+}
+
 /**
  * The entity table every screen renders, on the kit's React Aria `Table`.
  *
@@ -175,8 +184,8 @@ function shown(value: unknown): string {
  * - **Turned off** for `renderExpanded` (a detail row is a variable height
  *   the spacers cannot account for), `scroll: 'page'` (this block does not
  *   own the pane), and a row model shorter than `virtualizeFrom`.
- * - Windowed, browser find reaches only the drawn rows, and arrow-key
- *   navigation crosses the two spacer rows.
+ * - Windowed, browser find reaches only the drawn rows. The spacer rows are
+ *   inert, so neither the reader nor the keyboard meets them.
  * - No table-wide right-click menu -- the kit's `ContextMenuTarget` is a
  *   button and cannot wrap a table. A sortable header carries the column's
  *   own sort button, so `Column` sets no `aria-sort`.
@@ -379,9 +388,7 @@ export function DataTable<TData extends { id: string }>({
     }
   }, [windowed, measure, rows.length])
 
-  const { start, end } = windowed
-    ? rowWindow(rows.length, metrics)
-    : { start: 0, end: rows.length }
+  const { start, end } = windowed ? rowWindow(rows.length, metrics) : { start: 0, end: rows.length }
   const drawnRows = windowed ? rows.slice(start, end) : rows
   const padTop = windowed ? start * metrics.rowHeight : 0
   const padBottom = windowed ? (rows.length - end) * metrics.rowHeight : 0
@@ -407,9 +414,7 @@ export function DataTable<TData extends { id: string }>({
     }
   }, [highlightId])
 
-  const highlightIndex = highlightId
-    ? rows.findIndex((row) => row.id === highlightId)
-    : -1
+  const highlightIndex = highlightId ? rows.findIndex((row) => row.id === highlightId) : -1
 
   useEffect(() => {
     if (!highlightId) return
@@ -436,13 +441,86 @@ export function DataTable<TData extends { id: string }>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightId, highlightIndex, rows.length, windowed, measure])
 
+  /**
+   * The count the analyst has, and the place each drawn row holds in it.
+   *
+   * **Windowed, the document holds a slice**, so a reader counting rows counts
+   * the window and hears a total that changes as they scroll. `aria-rowcount`
+   * on the grid and `aria-rowindex` per row are what say otherwise, with the
+   * header counting as the first row.
+   *
+   * **Windowed only.** A table holding every row in the document is counted
+   * correctly by the browser, so numbering one by hand adds a second answer
+   * that can disagree with the first.
+   *
+   * **Written to the nodes, and watched rather than written once.** React Aria
+   * drops either attribute passed to a `Row` as a prop -- measured, the same
+   * way it drops `aria-hidden`. It also commits its rows after this
+   * component's effects run: an effect alone reached 32 of 48 rows on the
+   * first render and none at all after a scroll. The index rides in as
+   * `data-row-index`, which React Aria does carry, and an observer copies it
+   * onto whatever rows exist. -> #974
+   */
+  useEffect(() => {
+    if (!windowed) return
+    const grid = scrollRef.current?.querySelector('[role="grid"]')
+    if (grid === null || grid === undefined) return
+
+    const number = () => {
+      grid.setAttribute('aria-rowcount', String(rows.length + 1))
+      // The header is the first row, and a grid that numbers some of its rows
+      // and not others is worse than one that numbers none.
+      grid.querySelector('thead tr')?.setAttribute('aria-rowindex', '1')
+      for (const row of grid.querySelectorAll('[data-row-index]')) {
+        const at = row.getAttribute('data-row-index')
+        if (at !== null && row.getAttribute('aria-rowindex') !== at) {
+          row.setAttribute('aria-rowindex', at)
+        }
+      }
+    }
+
+    number()
+    const watching = new MutationObserver(number)
+    watching.observe(grid, { childList: true, subtree: true })
+    return () => {
+      watching.disconnect()
+      // Filtering three hundred rows down to ten stops the windowing without
+      // replacing the grid, and a count left behind is then a wrong one.
+      grid.removeAttribute('aria-rowcount')
+      for (const row of grid.querySelectorAll('[aria-rowindex]')) {
+        row.removeAttribute('aria-rowindex')
+      }
+    }
+  }, [rows.length, windowed])
+
   if (rows.length === 0 && empty) return <>{empty}</>
 
-  /** A row that draws nothing and holds the height of the rows above or below. */
+  /**
+   * A row that draws nothing and holds the height of the rows above or below.
+   *
+   * **`inert`, set on the node.** React Aria builds a `Row`'s attributes from
+   * its collection and drops an `aria-hidden` passed to it -- measured, along
+   * with `role="presentation"` -- so a spacer sat in the accessibility tree as
+   * a row with an empty header: one phantom row at the end of every windowed
+   * table.
+   *
+   * `aria-hidden` alone would leave it focusable, and the collection does put
+   * focus there -- a page-down lands on the bottom spacer, which ARIA forbids
+   * inside a hidden subtree. `inert` takes it out of the tree and out of the
+   * focus order together, so a page-down stops at the last real row.
+   *
+   * **Not `isDisabled` with `disabledBehavior="all"`**, which would be the
+   * collection's own way to do it: rows already carry `isDisabled` for what
+   * cannot be selected, and that switch would make every one of those
+   * unreachable by keyboard too. -> #933
+   */
   const spacer = (which: 'top' | 'bottom', height: number) =>
     height > 0 ? (
-      <Row key={`--pad-${which}`} id={`--pad-${which}`} style={{ height }} aria-hidden>
-        <Cell colSpan={headers.length} className="border-b-0 p-0" style={{ height }} />
+      <Row key={`--pad-${which}`} id={`--pad-${which}`} style={{ height }}>
+        <Cell colSpan={headers.length} className="border-b-0 p-0" style={{ height }}>
+          {/* A `Row` takes no ref, so the attribute is reached from inside it. */}
+          <span className="block h-0" ref={inertRow} />
+        </Cell>
       </Row>
     ) : null
 
@@ -479,13 +557,17 @@ export function DataTable<TData extends { id: string }>({
       >
         {[
           spacer('top', padTop),
-          ...drawnRows.flatMap((row) => {
+          ...drawnRows.flatMap((row, at) => {
             const action = rowAction(row, table, actionsMeta, setOpenMenuRowId)
             const drawn = [
               <Row
                 key={row.id}
                 id={row.id}
                 data-row-id={row.id}
+                // Carried as data because React Aria builds a row's own ARIA
+                // attributes and drops one passed to it. Copied onto the node
+                // below. -> #974
+                data-row-index={start + at + 2}
                 {...(row.id === arrived ? { 'data-arrived': 'true' } : {})}
                 // Not `data-selected`: React Aria owns and overwrites that
                 // one. This selection is TanStack's.
@@ -502,10 +584,7 @@ export function DataTable<TData extends { id: string }>({
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <Cell
-                    key={cell.id}
-                    className={cn('py-1', cell.column.columnDef.meta?.className)}
-                  >
+                  <Cell key={cell.id} className={cn('py-1', cell.column.columnDef.meta?.className)}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </Cell>
                 ))}
@@ -544,7 +623,8 @@ export function DataTable<TData extends { id: string }>({
       // event too, at the focused element, so the keyboard route is the same
       // code.
       onContextMenu={(event) => {
-        const within = event.target instanceof Element ? event.target.closest('[data-row-id]') : null
+        const within =
+          event.target instanceof Element ? event.target.closest('[data-row-id]') : null
         const id = within?.getAttribute('data-row-id')
         const row = id === null || id === undefined ? undefined : rows.find((one) => one.id === id)
         // No row, or a row with nothing to offer: the browser's own menu is a
@@ -773,7 +853,7 @@ export function actionsColumn<TData extends { id: string }>(
                 }
               : {})}
             {...(meta.edit ? { onEdit: () => meta.edit?.(row.id) } : {})}
-            editDisabled={isOptimisticId(row.id)}
+            editDisabled={metaOf(table).pendingIds.has(row.id)}
             {...(meta.remove
               ? {
                   onDelete: () => {
@@ -789,9 +869,7 @@ export function actionsColumn<TData extends { id: string }>(
                   },
                 }
               : {})}
-            {...(groups.length > 0
-              ? { menu: <RowMenuItems groups={groups} as="dropdown" /> }
-              : {})}
+            {...(groups.length > 0 ? { menu: <RowMenuItems groups={groups} as="dropdown" /> } : {})}
           />
         </div>
       )

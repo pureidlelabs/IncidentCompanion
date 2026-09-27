@@ -11,10 +11,13 @@
  */
 import { writeFile } from 'node:fs/promises'
 
+import { desc } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 
 import { CasesService } from '../src/cases/cases.service.js'
+// The list route is filtered by who is asking, and a probe is nobody.
+import { cases as caseRows } from '../src/db/schema/case.js'
 import { resolveReport } from '../src/report/document/resolve.js'
 import { toPdf } from '../src/report/document/pdf.js'
 import { toWord } from '../src/report/document/word.js'
@@ -31,7 +34,7 @@ async function main(): Promise<void> {
     othersOn: () => Promise.resolve([]),
   } as never)
 
-  const listed = await cases.list()
+  const listed = await db.select().from(caseRows).orderBy(desc(caseRows.updatedAt))
   const first = listed[0]
   if (!first) {
     console.log('no cases to paint')

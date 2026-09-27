@@ -4,10 +4,11 @@ import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-
 import { useActivity } from '@/api/activity'
 import { useAppearances } from '@/api/appearance'
 import { useCase, useCaseSummary, useCases } from '@/api/case'
+import { useSentinelOffered } from '@/api/importPlatforms'
 import { useSpecs } from '@/api/specs'
+import { useCaseChanges } from '@/api/useCaseChanges'
 import { useCaseMutation } from '@/api/useCaseMutation'
 import { CaseKeyTimesSheet } from '@/components/blocks/case-key-times-sheet'
-import { announcing } from '@/app/case/entryWrites'
 import { useCasePresence } from '@/api/presence'
 import { SECTIONS } from '@/components/blocks/case-sections'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
@@ -92,6 +93,11 @@ export function CaseFrameContainer() {
   const record = useCase(caseId, keyTimes)
   const specs = useSpecs()
   const patch = useCaseMutation(caseId)
+  // For the whole case rather than per section: a section that is not on
+  // screen still holds a cached query, and that is the one the analyst meets
+  // stale when they navigate back to it.
+  const live = useCaseChanges(caseId)
+  const sentinel = useSentinelOffered()
 
   // **Recorded on arrival, not on the picker's click.** A case reached by a
   // pasted URL, by the switcher or by browser history is just as opened as one
@@ -112,11 +118,12 @@ export function CaseFrameContainer() {
         section={section}
         {...(fragment === '' ? {} : { fragment })}
         caseName={caseName}
+        {...(sentinel === true ? {} : { absent: ['import-sentinel'] })}
         {...(kase.data?.customer == null ? {} : { caseCaption: kase.data.customer })}
         // The title captions the menu, where there is room for it. The head
         // above is the compact label and prefers the reference, so on a case
-        // started from an incident this is the only place the name an analyst
-        // typed is drawn.
+        // that carries one this is the only place the name an analyst typed is
+        // drawn.
         switcher={switcherRows(kase.data?.title || caseName, others, (to) => {
           void navigate(to)
         })}
@@ -156,15 +163,11 @@ export function CaseFrameContainer() {
             onOpenChange={setKeyTimes}
             kase={record.data}
             specs={specs.data}
-            writes={{
-              save: (field, value, version) =>
-                announcing('the case', () =>
-                  patch.mutateAsync({ version, fields: { [field]: value } }),
-                ),
-            }}
+            writes={{ save: (fields, version) => patch.mutateAsync({ version, fields }) }}
           />
         }
         people={peopleFrom(presence.roster, session?.userId, appearances.data)}
+        live={live}
         activity={{
           entries: activity.data ?? [],
           busy: activity.isPending,

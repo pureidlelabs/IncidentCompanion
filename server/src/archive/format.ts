@@ -28,6 +28,8 @@ configure({ useWebWorkers: false })
 export const MANIFEST_NAME = 'manifest.json'
 export const CASE_NAME = 'case.json'
 export const PROSE_PREFIX = 'prose/'
+/** A note's document, under its note's id; every other `PROSE_PREFIX` member is a report's. */
+export const NOTE_PROSE_PREFIX = `${PROSE_PREFIX}casenotes/`
 export const EVIDENCE_PREFIX = 'evidence/'
 
 /** The format the reader accepts. Bumped when a member's meaning changes. */
@@ -249,7 +251,7 @@ export async function unpack(
   // taking the manifest as a lower bound rather than the whole truth is how an
   // unlisted member gets imported.
   for (const name of Object.keys(members)) {
-    if (name !== MANIFEST_NAME && !(name in manifest.files)) {
+    if (name !== MANIFEST_NAME && !Object.hasOwn(manifest.files, name)) {
       throw new BadArchive(`${name} is in this archive and not in its manifest`)
     }
   }

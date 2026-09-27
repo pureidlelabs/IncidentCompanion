@@ -109,7 +109,14 @@ export const ManySections: Story = {
 function refusedSync(at: string): NonNullable<ReportWorkspaceProps['sync']> {
   const doc = new Y.Doc()
   return {
-    channel: { doc, awareness: new Awareness(doc), refusedAt: at, refusedBecause: 'report-sent' },
+    channel: {
+      doc,
+      awareness: new Awareness(doc),
+      refusedAt: at,
+      refusedBecause: 'report-sent',
+      unsaved: null,
+      watchUnsaved: () => () => undefined,
+    },
     status: 'refused',
     settled: true,
   } as unknown as NonNullable<ReportWorkspaceProps['sync']>
@@ -179,7 +186,8 @@ export const AnUntitledSection: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rail = await canvas.findByTestId('report-section-rail')
-    // Below lg the rail is not drawn; the document is reached by scrolling.
+    // Under 64rem of pane the rail is not drawn; the document is reached by
+    // scrolling.
     if (!drawn(rail)) {
       await expect(rail).not.toBeVisible()
       return
@@ -200,7 +208,8 @@ export const RailFollowsTheCaret: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rail = await canvas.findByTestId('report-section-rail')
-    // Below lg the rail is not drawn; the document is reached by scrolling.
+    // Under 64rem of pane the rail is not drawn; the document is reached by
+    // scrolling.
     if (!drawn(rail)) {
       await expect(rail).not.toBeVisible()
       return
@@ -231,11 +240,11 @@ export const BesideThePage: Story = {
     await expect(firstWritten).toBeDefined()
     if (firstWritten === undefined) return
     const page = await canvas.findByLabelText('The printed page')
-    // Below lg the page is not drawn beside the column.
-    if (!drawn(page)) {
-      await expect(page).not.toBeVisible()
-      return
-    }
+    // Asserted rather than guarded: this pane is the full tier width, so a
+    // page that is not drawn here is a threshold nothing else would catch.
+    await expect(drawn(page), 'the default pane stopped drawing the page beside the column').toBe(
+      true,
+    )
     const body = await canvas.findByRole('textbox', {
       name: headingOf(firstWritten, DEMO_HEADINGS),
     })
@@ -392,19 +401,125 @@ export const SectionKindChosen: Story = {
 }
 
 /**
- * A 760px window: the rail and the page both fold away, and the column keeps
- * its measure.
+ * An 820px pane in paper: the rail and the page both fold, and the column
+ * keeps its measure.
  *
- * A narrow window needs the measure more than it needs the index.
+ * A narrow pane needs the measure more than it needs the index, and it answers
+ * to the pane rather than to the window -- a browser wide enough around a pane
+ * this narrow used to draw all three columns. -> #952
+ *
+ * The width is the one `NarrowComposeKeepsTheRail` uses, so the pair is what
+ * says the two views fold at different panes rather than at one.
  */
 export const Narrow: Story = {
-  name: 'A narrow window',
+  name: 'A narrow pane folds the rail and the page',
   args: { view: 'paper' },
   render: (args) => (
-    <div className="flex h-dvh w-[760px] flex-col overflow-y-auto border-r border-dashed border-border">
+    <div className="flex h-dvh w-[820px] flex-col overflow-y-auto border-r border-dashed border-border">
       <ReportWorkspace {...args} />
     </div>
   ),
+  play: async ({ canvas, canvasElement }) => {
+    // Both folds, because folding one and not the other is the state that
+    // looks right in a wide window: the rail goes and the page drops to a
+    // full-width band under the document rather than beside it.
+    const rail = await canvas.findByTestId('report-section-rail')
+    await expect(
+      drawn(rail),
+      'an 820px pane drew the rail, so the columns came from the window',
+    ).toBe(false)
+    const paper = canvasElement.querySelector('[aria-label="The printed page"]')
+    await expect(
+      paper === null || !drawn(paper as HTMLElement),
+      'an 820px pane drew the printed page, which has nowhere beside the column to go',
+    ).toBe(true)
+
+    // The row's heading is the only part saying which block it is, and it is
+    // the part built to give way. -> #949
+    const rows = canvasElement.querySelectorAll('[data-part="report-index-row"]')
+    await expect(rows.length).toBeGreaterThan(0)
+
+    for (const row of rows) {
+      const heading = row.querySelector('[data-part="report-index-heading"]')
+      // **At least the gutter the number sits in.** A floor of zero is met by
+      // one glyph and an ellipsis, which is not keeping the name of anything;
+      // the number's own 20px is a width already on the row to compare to.
+      const gutter = row.firstElementChild?.getBoundingClientRect().width ?? 0
+      await expect(
+        heading?.getBoundingClientRect().width ?? 0,
+        `the row gives its name less room than its number: ${String(gutter)}px`,
+      ).toBeGreaterThanOrEqual(gutter)
+    }
+  },
+}
+
+/**
+ * The same 820px pane in compose, which keeps its index.
+ *
+ * Compose has two columns where paper has three, so it comes back at a pane
+ * the paper view cannot hold. Charging it the paper view's threshold takes the
+ * index off a laptop with room for it. -> `FOLD`
+ */
+export const NarrowComposeKeepsTheRail: Story = {
+  name: 'A narrow pane keeps the index in compose',
+  render: (args) => (
+    <div className="flex h-dvh w-[820px] flex-col overflow-y-auto border-r border-dashed border-border">
+      <ReportWorkspace {...args} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const rail = await canvas.findByTestId('report-section-rail')
+    await expect(drawn(rail), 'an 820px compose pane folded the index away').toBe(true)
+  },
+}
+
+/**
+ * A row narrow enough that its count and badge give way.
+ *
+ * **Boxed directly rather than reached through a pane.** The row hides its
+ * count below `@3xs` and its badge below `@2xs` -- 16rem and 18rem of the
+ * row's own width -- and the layout no longer produces a row that narrow: the
+ * grid answers to the pane now, so the narrowest a row gets in the workspace
+ * is the measure beside a 13rem index. An assertion reached that way passes on
+ * room it never had to fight for, and would stay green with the hiding
+ * deleted. -> #957
+ */
+export const ANarrowRowGivesWay: Story = {
+  name: 'A row with no room for its count',
+  render: (args) => (
+    <div className="flex h-dvh w-[240px] flex-col overflow-y-auto border-r border-dashed border-border">
+      <ReportWorkspace {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const rows = canvasElement.querySelectorAll('[data-part="report-index-row"]')
+    await expect(rows.length, 'no rows to measure').toBeGreaterThan(0)
+
+    for (const row of rows) {
+      // The row is what the query answers to, so the width asserted is its
+      // own rather than the box it was put in.
+      await expect(
+        row.getBoundingClientRect().width,
+        'the row is not narrow enough for the thresholds this is about',
+      ).toBeLessThan(256)
+
+      const heading = row.querySelector('[data-part="report-index-heading"]')
+      await expect(heading, 'a row drew no heading at all').not.toBeNull()
+      await expect(
+        (heading as HTMLElement).getBoundingClientRect().width,
+        'the row dropped its name, which is the one part that says which section it is',
+      ).toBeGreaterThan(0)
+
+      for (const gave of [...row.children].filter(
+        (one) => one !== heading && one !== row.firstElementChild,
+      )) {
+        await expect(
+          getComputedStyle(gave as HTMLElement).display,
+          'a row this narrow still drew something beside its number and its name',
+        ).toBe('none')
+      }
+    }
+  },
 }
 
 /** A label and a heading past the room they have. */
@@ -451,10 +566,10 @@ export const Dense: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rail = await canvas.findByTestId('report-section-rail')
-    if (!drawn(rail)) {
-      await expect(rail).not.toBeVisible()
-      return
-    }
+    // Asserted rather than guarded, for the same reason the page is in
+    // `BesideThePage`: this pane is the full tier width, so a rail folded here
+    // is a threshold that has moved.
+    await expect(drawn(rail), 'the default pane stopped drawing the section rail').toBe(true)
     await expect(within(rail).getAllByRole('button').length).toBeGreaterThan(20)
   },
 }
@@ -479,11 +594,11 @@ function manySections() {
  * them. The gaps are what a keyboard user has instead of a shadow-sm following
  * the pointer, so this route needs none of the pointer one's geometry.
  *
- * **Escape at the end, and it is not tidiness.** A drag left open outlives the
- * story: React Aria's drag session is global, so the next story in the same
- * document mounts with its rows inert and every later drag test fails while
- * passing when run alone: `Rearranged` was green alone and red behind this
- * one.
+ * **Escape at the end, even on a failure, and it is not tidiness.** A drag
+ * left open outlives the story: React Aria's drag session is global, so the
+ * next story in the same document mounts with its rows inert and every later
+ * drag test fails while passing when run alone: `Rearranged` was green alone
+ * and red behind this one.
  */
 export const MidDrag: Story = {
   name: 'A section picked up',
@@ -499,14 +614,17 @@ export const MidDrag: Story = {
     grip.focus()
     await userEvent.keyboard('{Enter}')
 
-    // The gaps exist and one of them has the focus, which is what says the
-    // section is up rather than that a button was pressed.
-    await waitFor(async () => {
-      await expect(canvas.getAllByRole('button', { name: /^Insert / }).length).toBeGreaterThan(1)
-    })
-    await expect(document.activeElement?.getAttribute('aria-label') ?? '').toMatch(/^Insert /)
-
-    await userEvent.keyboard('{Escape}')
+    try {
+      // The gaps exist and one of them has the focus, which is what says the
+      // section is up rather than that a button was pressed. The focus lands
+      // a frame after the gaps draw, so both are waited for.
+      await waitFor(async () => {
+        await expect(canvas.getAllByRole('button', { name: /^Insert / }).length).toBeGreaterThan(1)
+        await expect(document.activeElement?.getAttribute('aria-label') ?? '').toMatch(/^Insert /)
+      })
+    } finally {
+      await userEvent.keyboard('{Escape}')
+    }
     await waitFor(async () => {
       await expect(canvas.queryAllByRole('button', { name: /^Insert / })).toHaveLength(0)
     })
@@ -575,14 +693,20 @@ export const Rearranged: Story = {
       await canvas.findByRole('button', { name: `Drag ${headingOf(moved, DEMO_HEADINGS)}` })
     ).focus()
     await userEvent.keyboard('{Enter}')
-    // The gaps are registered a turn after the pickup, and an arrow key
-    // arriving first is swallowed: the drop then lands where the section
-    // already was, announces *Drop complete* and reports nothing.
-    await waitFor(async () => {
-      await expect(document.activeElement?.getAttribute('aria-label') ?? '').toMatch(/^Insert /)
-    })
-    await userEvent.keyboard('{ArrowDown}')
-    await userEvent.keyboard('{Enter}')
+    try {
+      // The gaps are registered a turn after the pickup, and an arrow key
+      // arriving first is swallowed: the drop then lands where the section
+      // already was, announces *Drop complete* and reports nothing.
+      await waitFor(async () => {
+        await expect(document.activeElement?.getAttribute('aria-label') ?? '').toMatch(/^Insert /)
+      })
+      await userEvent.keyboard('{ArrowDown}')
+      await userEvent.keyboard('{Enter}')
+    } catch (failure) {
+      // A drag left open outlives the story. -> `MidDrag`
+      await userEvent.keyboard('{Escape}')
+      throw failure
+    }
 
     // What left: the whole scope, once each, in the order dropped.
     await waitFor(async () => {

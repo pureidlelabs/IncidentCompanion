@@ -1,9 +1,14 @@
 # The gate a pull request into `main` has to pass.
 #
-# **It decides whether the change broke what it touched**, not whether `main`
-# is green -- that is `nightly-build.yml`'s question. So a tier whose inputs did not
-# move is not run, and a tier that did not run does not fail the gate: `gate`
-# passes on `skipped`.
+# **The merge group runs every tier, whatever the diff, and a tier that skipped
+# there fails `gate`.** The tiers read across trees -- the client compiles
+# `server/src/domain`, the server suite reads `ui/src` and `docker/db`, the image
+# is built from both -- so no path rule can say which of them a change reached.
+#
+# **A pull request's run is scoped by path, and advisory.** A tier whose paths
+# did not move is not run there, `gate` passes it as skipped, and says it did:
+# a green pull request means the tiers it ran passed, and the merge group is
+# the verdict that lands. The cheap tiers are not scoped on any event.
 #
 # **Everything starts at once, and the draft is what pays for that.** No tier
 # waits on another, so the run lasts as long as its slowest job rather than a
@@ -12,14 +17,14 @@
 # reach a suite red.
 #
 # **The three states divide the work.** A draft proves the branch lints, builds
-# and passes the repository checks; a branch marked ready adds the suites, so a
-# failure lands on its own head commit; the merge group proves the tree that
-# ships, which is the only tree whose verdict decides the merge.
+# and passes the repository checks; a branch marked ready adds the suites its
+# paths touch, so a failure lands on its own head commit; the merge group proves
+# the tree that ships, which is the only tree whose verdict decides the merge.
 #
 # **Every `github.event.pull_request.*` field is null in a merge group**, and
 # null compares false rather than erroring -- so a condition reading one skips
-# its job in silence and `gate` passes it. Every condition reads the event
-# first for that reason, and `test_no_tier_runs_on_neither_event` keeps it true.
+# its job in silence. Every condition reads the event first for that reason,
+# and `test_no_tier_runs_on_neither_event` keeps it true.
 #
 # **`gate` is the check to require, and the only one.** A shard's name carries
 # its index; `gate`'s does not move.
@@ -80,13 +85,8 @@ jobs:
       server: ${{ steps.scope.outputs.server }}
       client: ${{ steps.scope.outputs.client }}
       screen: ${{ steps.scope.outputs.screen }}
-      linters: ${{ steps.scope.outputs.linters }}
-      shell: ${{ steps.scope.outputs.shell }}
-      actions: ${{ steps.scope.outputs.actions }}
-      renovate: ${{ steps.scope.outputs.renovate }}
       devcontainer: ${{ steps.scope.outputs.devcontainer }}
       containers: ${{ steps.scope.outputs.containers }}
-      prose: ${{ steps.scope.outputs.prose }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -104,16 +104,13 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
           ALL: ${{ inputs.all }}
         run: |
-          # **The two callers differ in what changed, and in nothing else.** A
-          # called run has no base to diff against and wants every tier, which
-          # is the whole tree having moved -- so it says that, and one
-          # derivation below answers for both. Stating the tiers here instead
-          # made a second copy of the mapping, and it drifted twice: `screen`
-          # arrived in #327 and `linters` in #328, each reaching only the
-          # derivation. An unset output is the empty string, so `client-screen`
-          # skipped in silence and `lint` died in `fromJSON`.
-          if [ "$ALL" = "true" ]; then
-            echo 'every tier, asked for by the caller'
+          # **The events differ in what changed, and in nothing else.** A run
+          # that certifies -- the merge group, or a caller asking for every
+          # tier -- takes the whole tree as having moved, so one derivation
+          # below answers for every event. Stating the tiers here instead made
+          # a second copy of the mapping, and it drifted twice. -> #327, #328
+          if [ "$ALL" = "true" ] || [ "$GITHUB_EVENT_NAME" = "merge_group" ]; then
+            echo "every tier: a $GITHUB_EVENT_NAME run certifies"
             changed="$(git ls-files)"
           else
             # **Three dots, so the base is the merge base.** Two dots compares
@@ -148,42 +145,10 @@ jobs:
             && screen=true
           [ "$deps" = true ] && server=true && client=true && screen=true
 
-          shell="$(match '\.sh$')"
-          actions="$(match '^\.github/(workflows|actions)/')"
-          renovate="$(match '^\.github/renovate\.json5$')"
-          prose="$(match '^(openspec/|\.claude/|\.devcontainer/|tests/|server/src/|server/test/|ui/src/|README\.md)')"
-
-          # **A shard per unit of work, not per linter.** `actionlint`,
-          # `renovate`, `shellcheck`, `vale` and the byte lint are seconds each;
-          # a shard of their own pays a checkout, a node install and a mise
-          # install to spend them, and the tier is bounded by `client` either
-          # way. So the four tool linters share one shard and the two eslint
-          # runs keep theirs.
-          #
-          # `jq -R` quotes each name, `-sc` folds them into the one-line array
-          # `fromJSON` wants.
-          selected=""
-          [ "$server" = true ] && selected="${selected}server\n"
-          [ "$client" = true ] && selected="${selected}client\n"
-          # The byte lint is unscoped -- every file in the tree is its subject --
-          # so the tool shard exists whenever any linter does, and it rides
-          # along rather than running on a diff that selected nothing.
-          if [ -n "$selected" ] || [ "$actions" = true ] || \
-             [ "$renovate" = true ] || [ "$shell" = true ] || \
-             [ "$prose" = true ]; then
-            selected="${selected}tools\n"
-          fi
-          linters="$(printf '%b' "$selected" | jq -R . | jq -sc .)"
-
           {
             echo "server=$server"
             echo "client=$client"
             echo "screen=$screen"
-            echo "shell=$shell"
-            echo "actions=$actions"
-            echo "renovate=$renovate"
-            echo "prose=$prose"
-            echo "linters=$linters"
             echo "devcontainer=$(match '^\.devcontainer/')"
             echo "containers=$(match '^(\.devcontainer/|docker/|compose.*\.yaml|tests/docker/)')"
             # **Not `deps`**, which is forced false on `renovate/linters` so the
@@ -192,16 +157,10 @@ jobs:
             echo "manifests=$(match '^(package(-lock)?\.json|[^/]+/package\.json|packages/[^/]+/package\.json)$')"
           } >> "$GITHUB_OUTPUT"
 
-      # **One clear failure instead of eight opaque ones.** `npm ci` refuses a
-      # manifest and lock file that disagree, and every job installs -- so the
-      # whole matrix went red fifteen seconds in, each job saying only that its
-      # install failed. Every one of them `needs: scope` and carries
-      # `!failure()`, so refusing here skips them rather than repeating this.
-      #
-      # **npm's own check rather than a second implementation of it.** The same
-      # property is asserted in `tests/contract/test_workspaces.py`, but that
-      # tier installs before it runs pytest, so the clearer message never
-      # arrives. -> #444, #449
+      # **One clear failure instead of eight opaque ones.** Every job installs,
+      # so a manifest and lock file that disagree fail all of them saying only
+      # that. Refusing here skips them: each `needs: scope` and carries
+      # `!failure()`. -> #444
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         if: steps.scope.outputs.manifests == 'true'
         with:
@@ -218,15 +177,14 @@ jobs:
   # rather than found: every `run:` stands at the root, where a shim finds none.
   lint:
     needs: scope
-    # **Three shards at most, and `scope` decides which exist.** A shard that
-    # discovers it has nothing to do is a checkout and an install spent on
-    # nothing.
-    if: needs.scope.outputs.linters != '[]'
     runs-on: ubuntu-24.04
+    # **A shard per unit of work, not per linter.** `actionlint`, `renovate`,
+    # `shellcheck`, `vale` and the byte lint are seconds each, so the four tool
+    # linters share one shard and the two eslint runs keep theirs.
     strategy:
       fail-fast: false
       matrix:
-        linter: ${{ fromJSON(needs.scope.outputs.linters) }}
+        linter: [server, client, tools]
     env:
       MISE_GLOBAL_CONFIG_FILE: ${{ github.workspace }}/.devcontainer/mise.toml
     steps:
@@ -256,10 +214,6 @@ jobs:
       - name: ${{ matrix.linter }}
         env:
           LINTER: ${{ matrix.linter }}
-          WANT_ACTIONS: ${{ needs.scope.outputs.actions }}
-          WANT_RENOVATE: ${{ needs.scope.outputs.renovate }}
-          WANT_SHELL: ${{ needs.scope.outputs.shell }}
-          WANT_PROSE: ${{ needs.scope.outputs.prose }}
         run: |
           case "$LINTER" in
             server) cd server && npm run --silent lint ;;
@@ -273,24 +227,15 @@ jobs:
               # expressions and the shell inside `run:` both being opaque to it.
               # `renovate` because a malformed rule matches nothing, and
               # Renovate reports a clean run for having skipped it.
-              # `bytes` over the whole tree rather than the diff: the five stray
-              # bytes it first caught had been on `main` since the import, under
-              # paths no tier reached.
-              if [ "$WANT_ACTIONS" = true ]; then
-                actionlint --version
-                npm run --silent lint:actions
-              fi
-              if [ "$WANT_RENOVATE" = true ]; then
-                npm run --silent lint:renovate
-              fi
-              if [ "$WANT_SHELL" = true ]; then
-                shellcheck --version
-                npm run --silent lint:shell
-              fi
-              if [ "$WANT_PROSE" = true ]; then
-                vale --version
-                npm run --silent lint:prose
-              fi
+              # `bytes` over the whole tree rather than the diff: a stray byte
+              # sits under paths no tier reaches.
+              actionlint --version
+              npm run --silent lint:actions
+              npm run --silent lint:renovate
+              shellcheck --version
+              npm run --silent lint:shell
+              vale --version
+              npm run --silent lint:prose
               # The local rules' own tests, before the lint that runs them:
               # a rule whose matcher stopped matching reports a clean tree.
               node --test tools/eslint-rules/comment-hygiene.test.mjs
@@ -304,32 +249,24 @@ jobs:
   # for the other.
   build:
     needs: scope
-    if: >-
-      needs.scope.outputs.server == 'true' ||
-      needs.scope.outputs.client == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
       - name: Server typecheck
-        if: needs.scope.outputs.server == 'true'
         run: cd server && npm run --silent typecheck
       - name: Client typecheck
-        if: needs.scope.outputs.client == 'true'
         run: cd ui && npx tsc -b --noEmit --force
       - name: Server build
-        if: needs.scope.outputs.server == 'true'
         run: cd server && npm run --silent build
       - name: Client build
-        if: needs.scope.outputs.client == 'true'
         run: cd ui && npm run --silent build
 
   # ------------------------------------------------------------------ the tree
   # Reads the repository rather than running it, so it needs no stack. It does
   # need `node_modules`: `tests/contract` resolves shared dependencies from
   # both workspaces, and `tests/repo` runs the OpenSpec CLI from the pinned dev
-  # dependency. `-n auto` is paired with `--dist loadfile`, which
-  # `tests/repo/test_platform_portability.py` holds true.
+  # dependency.
   repository:
     needs: scope
     runs-on: ubuntu-24.04
@@ -352,14 +289,17 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install -q -r requirements-dev.txt
           # **Two `tests/docker` modules that read files rather than run
-          # containers.** Both compare a container file against a package
+          # containers.** Both hold a container file against a package
           # manifest, and the `containers` scope fires on the container file
-          # alone -- so a bump to `engines.node` never reached the check that
-          # holds it against the image's `FROM`. 54 tests, six seconds, no
-          # daemon. -> #460
+          # alone. -> #460
           .venv/bin/python -m pytest tests/docs tests/repo tests/contract .claude/tests \
             tests/docker/test_container_config.py tests/docker/test_stack_images.py \
-            -q -n auto --dist loadfile
+            -q -n auto --junitxml=reports/repository.xml
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: report-repository
+          path: reports/
+          retention-days: 7
 
   # ------------------------------------------------------------- server suite
   # **Sharded across runners, so each shard gets its own cluster.** The suite
@@ -367,10 +307,8 @@ jobs:
   # shards is that defect at a larger scale.
   #
   # **`needs: scope` alone, and this is the longest tier, so it starts first.**
-  # `build` uploads no artifact and this downloads none; they run on separate
-  # runners, so naming it would be a gate rather than a dependency. What holds
-  # in its place is the draft, which lints and typechecks the branch before it
-  # can be offered -- take that away and the gate has to come back.
+  # Naming `build` would gate rather than depend: separate runners, no artifact
+  # between them. -> `test_the_expensive_tier_is_not_held_behind_the_cheap_one`
   server-suite:
     needs: scope
     if: >-
@@ -395,11 +333,10 @@ jobs:
     # holds these two numbers to the script rather than to a memory of it.
     #
     # The credentials are `compose.dev.yaml`'s, because `adminDatabaseUrl`
-    # assumes them. Writing a second set here is what put five connection
-    # strings in this file that nothing held against the script.
+    # assumes them.
     services:
       postgres:
-        image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
         env:
           POSTGRES_USER: incidentcompanion
           POSTGRES_PASSWORD: incidentcompanion
@@ -409,7 +346,7 @@ jobs:
           --health-cmd "pg_isready -U incidentcompanion -d incidentcompanion"
           --health-interval 5s --health-timeout 5s --health-retries 10
       redis:
-        image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
+        image: redis:8.10-alpine@sha256:ba6e394f6acc2a695ef1b6944f161b9ca813711739be68319fa0db3470673f1d
         ports: ['56379:6379']
         options: >-
           --health-cmd "redis-cli ping | grep -q PONG"
@@ -472,11 +409,17 @@ jobs:
         run: |
           set -o pipefail
           cd server
-          npx vitest run --pool=threads --shard="$SHARD/2" 2>&1 | tee ../suite.log
+          npx vitest run --pool=threads --shard="$SHARD/2" --reporter=default \
+            --reporter=json --outputFile.json="../reports/server-$SHARD.json" 2>&1 | tee ../suite.log
           if grep -q 'in-process engine' ../suite.log; then
             echo 'the suite ran on the embedded engine; no write path touched Postgres'
             exit 1
           fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: report-server-${{ matrix.shard }}
+          path: reports/
+          retention-days: 7
 
   # ------------------------------------------------------------- client suite
   # The longest tier, and the one nothing waits on. jsdom is single-threaded
@@ -496,12 +439,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
-      # Named, where the server tier takes `CI`. -> `ui/vite.config.ts`
       - name: Client suite
         env:
           SHARD: ${{ matrix.shard }}
-          IC_SUITE_MUST_RUN: '1'
+          IC_REPORT: ${{ github.workspace }}/reports/client-${{ matrix.shard }}.json
         run: cd ui && npx vitest run --shard="$SHARD/3"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: report-client-${{ matrix.shard }}
+          path: reports/
+          retention-days: 7
 
   # -------------------------------------------------------------- the image
   # **A build that succeeds proves the image assembled, not that it works** --
@@ -549,7 +496,144 @@ jobs:
       - name: Story tier
         env:
           SHARD: ${{ matrix.shard }}
+          IC_REPORT: ${{ github.workspace }}/reports/screen-${{ matrix.shard }}.json
         run: cd ui && npx vitest run --project=storybook --shard="$SHARD/2"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: report-screen-${{ matrix.shard }}
+          path: reports/
+          retention-days: 7
+
+  # ------------------------------------------------------- the app in a browser
+  #
+  # `client-screen` drives the story tier in a real browser; this drives
+  # `server/e2e/` -- real Nest, real Vite, real Postgres and real navigation,
+  # which is where a rail that mounts no section and a pane that scrolls
+  # underneath the document are visible and nowhere else. -> #89
+  browser:
+    needs: scope
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
+      (inputs.all || needs.scope.outputs.server == 'true' ||
+       needs.scope.outputs.client == 'true')
+    runs-on: ubuntu-24.04
+    # Each test is capped at 60s and the launcher at 300s, but nothing bounds
+    # the run: a wedged browser would otherwise spend GitHub's 360-minute
+    # default before the queue heard anything.
+    timeout-minutes: 45
+    # **A shard per runner, each with its own stack**, because one runner
+    # holding both configs was the merge group's whole wall time.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/node
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: >-
+            playwright-${{ runner.os }}-${{ runner.arch }}-${{
+            hashFiles('package-lock.json') }}
+
+      - name: The browser both tiers need
+        run: cd server && npx playwright install --with-deps chromium
+
+      # **Both configs raise their own stack** through Playwright's `webServer`,
+      # which runs `dev-node.sh`: compose brings Postgres and Redis up, the
+      # server is built, the schema pushed and the case seeded before Vite
+      # answers. So there are no service containers here, and nothing to start
+      # first.
+      #
+      # `IC_SUITE_MUST_RUN` is what arms `mustRunWithAStack()`, so a stack that
+      # never came up refuses the run rather than skipping it. A runner sets
+      # `CI` too, which arms the prerequisite check on its own -- this is the
+      # half that answers for the compose stack.
+      - name: The app in a browser
+        env:
+          IC_SUITE_MUST_RUN: '1'
+          SHARD: ${{ matrix.shard }}
+        run: cd server && npx playwright test --config=e2e/playwright.config.ts --shard="$SHARD/4"
+
+      - name: The kit in a browser
+        env:
+          IC_SUITE_MUST_RUN: '1'
+          SHARD: ${{ matrix.shard }}
+        run: cd server && npx playwright test --config=e2e/playwright.kit.config.ts --shard="$SHARD/4"
+
+      # **The traces, not a report**: both configs declare `reporter: [['list']]`
+      # and no HTML one, so `playwright-report/` is never written. `test-results/`
+      # is what `trace: 'retain-on-failure'` fills.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: browser-tier-traces-${{ matrix.shard }}
+          path: server/test-results/
+          retention-days: 7
+
+  # ------------------------------------------------- every story in a browser
+  #
+  # **A shard per chunk**, because `workers: 1` is a statement about one
+  # machine and a runner is a machine each.
+  #
+  # **A pull request walks light; the merge group and the nightly walk both.**
+  # Most kinds are geometry, but `low-contrast` and `paints-past-the-corner`
+  # read colour, so a dark-only regression is invisible to a light walk.
+  gallery:
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
+      (inputs.all || needs.scope.outputs.screen == 'true')
+    needs: scope
+    runs-on: ubuntu-24.04
+    # Above the budgets declared inside it -- 5 minutes for the launcher, 4 for
+    # the warm and 10 per test -- plus the checkout and install ahead of them.
+    # A test that times out prints what it walked; a job killed by this prints
+    # nothing.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((inputs.all || github.event_name == 'merge_group') && '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]' || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/node
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: >-
+            playwright-${{ runner.os }}-${{ runner.arch }}-${{
+            hashFiles('package-lock.json') }}
+
+      - name: The browser the sweep needs
+        run: cd server && npx playwright install --with-deps chromium
+
+      # The config raises its own Storybook, so there is nothing to start
+      # first. -> #1040
+      - name: Every story in a browser
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ (inputs.all || github.event_name == 'merge_group') && 40 || 20 }}
+          STORYBOOK_CHUNKS: '10'
+          VISUAL_GROUNDS: ${{ (inputs.all || github.event_name == 'merge_group') && 'light,dark' || 'light' }}
+          IC_SUITE_MUST_RUN: '1'
+        run: |
+          cd server && npx playwright test \
+            --config=e2e/visual/playwright.storybook.config.ts \
+            --shard="$SHARD/$SHARDS"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: gallery-traces-${{ matrix.shard }}
+          path: server/test-results/
+          retention-days: 7
 
   devcontainer:
     needs: scope
@@ -567,19 +651,13 @@ jobs:
           docker run --rm ic-devcontainer bash /usr/local/bin/ic-smoke.sh
 
   # ------------------------------------------------------------- the containers
-  # **`tests/docker` ran locally and in no job here.** `test.sh` runs `pytest
-  # tests` unqualified so it reached the local sweep; `ci.yml` names four
-  # directories and this was not one, which is how four failures sat at head
-  # unseen. `verify.sh --detailed` is the local half of the same tier.
-  #
   # In the merge group with the other expensive tiers: it builds images and
   # resolves the compose stack, which is the tree that ships rather than the
-  # branch's own question.
+  # branch's own question. `verify.sh --detailed` is the local half.
   #
   # **`INCIDENTCOMPANION_CONTAINER_TESTS` is what makes the tier run the thing
   # it is named for.** Without it the runtime tests skip and the job reports
-  # green in five seconds, which is how the built output stayed unexecuted after
-  # the tier itself was added.
+  # green in five seconds.
   #
   # **`docker/secrets.sh` first, or none of them get as far as a build.** Every
   # credential is `${NAME:?...}` rather than defaulted, so compose refuses to
@@ -602,50 +680,140 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install -q -r requirements-dev.txt
           sh docker/secrets.sh
-          .venv/bin/python -m pytest tests/docker -q -n auto --dist loadfile
+          .venv/bin/python -m pytest tests/docker -q -rs -n auto --junitxml=reports/containers.xml
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: report-containers
+          path: reports/
+          retention-days: 7
+
+  # ------------------------------------------------------------- the ledger
+  # **The run's own reports decide what it certified.** Every test file a tier
+  # owns ran, nothing skipped that `tests/certify.py` does not excuse by name,
+  # every `demonstrated` row's cited tests passed at the product's entry point,
+  # and a landing closes no issue an `unbuilt` row still cites. A pull
+  # request's run is scoped, so only a run of every tier is read.
+  certify:
+    needs: [repository, server-suite, client-suite, client-screen, containers, lifecycle]
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: report-*
+          path: reports
+          merge-multiple: true
+      - name: The run certifies the ledger
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUEUED: ${{ github.event.merge_group.head_ref }}
+        run: |
+          closes=""
+          if [ "$GITHUB_EVENT_NAME" = merge_group ]; then
+            pr="$(printf '%s' "$QUEUED" | sed -nE 's#^(refs/heads/)?gh-readonly-queue/[^/]+/pr-([0-9]+)-[0-9a-f]+$#\2#p')"
+            if [ -z "$pr" ]; then
+              echo "no pull request in the queued ref '$QUEUED'"
+              exit 1
+            fi
+            closes="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" \
+              --json closingIssuesReferences --jq '[.closingIssuesReferences[].number] | join(",")')"
+            echo "pull request #$pr closes: ${closes:-nothing}"
+          fi
+          python3 -m tests.certify reports --closes "$closes"
+
+  # --------------------------------------------------------------- lifecycle
+  # **The shipped `compose.yaml`, through its whole life**: first start, a
+  # write, preparation again, stop and start, down and up, each store
+  # restarted under the server, a crash, an unordered start, a copy returned
+  # to and a shape that would lose data, with the stack's network captured
+  # throughout. Anything the images are built from can break it, so the
+  # server, the client and the container files all scope it in.
+  lifecycle:
+    needs: scope
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
+      (needs.scope.outputs.server == 'true' || needs.scope.outputs.client == 'true' ||
+       needs.scope.outputs.containers == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The shipped stack's lifecycle
+        env:
+          INCIDENTCOMPANION_LIFECYCLE_TESTS: '1'
+          IC_SUITE_MUST_RUN: '1'
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q -r requirements-dev.txt
+          .venv/bin/python -m pytest tests/lifecycle -q -rA --junitxml=reports/lifecycle.xml
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: report-lifecycle
+          path: reports/
+          retention-days: 7
 
   # ---------------------------------------------------------------- the gate
   # **The one check to require on `main`.** `always()` is what makes it report
   # on a run where a tier failed; without it a failed dependency skips this
   # job, and a skipped required check reads as success.
   #
-  # A draft runs the cheap tiers, so this reports there too and the branch has
-  # a verdict before it is offered.
-  #
-  # `skipped` passes -- that is how a tier says its paths did not move.
-  # `cancelled` does not: that run's verdict is not the head commit's.
+  # **A job joins it by being listed in `needs`.** A skip passes only on a pull
+  # request, whose run is advisory.
   gate:
     if: always()
     needs:
-      [scope, lint, build, repository, server-suite, client-suite, client-screen, devcontainer, containers]
+      [scope, lint, build, repository, server-suite, client-suite, client-screen, browser,
+       gallery, devcontainer, containers, lifecycle, certify]
     runs-on: ubuntu-24.04
     steps:
       - name: Every tier
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-          # Empty in every event but a called run, and a comparison against the
-          # empty string is what makes that the pull request's reading.
+          NEEDS: ${{ toJSON(needs) }}
+          # Empty in every event but a called run.
           ALL: ${{ inputs.all }}
         run: |
-          echo "$RESULTS"
+          # Assigned rather than piped into the loop, so a `jq` that fails
+          # fails the step instead of feeding it nothing to refuse.
+          results="$(printf '%s' "$NEEDS" | jq -r 'to_entries[] | "\(.key) \(.value.result)"')"
+          if [ -z "$results" ]; then
+            echo 'the gate read no tier'
+            exit 1
+          fi
           failed=false
-          for result in $RESULTS; do
+          left_out=""
+          while read -r name result; do
+            echo "$name: $result"
             case "$result" in
               success) ;;
               skipped)
-                # **A skip means two different things, and only the event
-                # separates them.** On a pull request it is a tier saying its
-                # paths did not move. On a run that asked for every tier
-                # nothing scoped anything out, so it is a tier that was
-                # dispatched and never arrived -- which is the defect this
-                # pipeline keeps shipping, and it was green each time.
                 if [ "$ALL" = true ]; then
-                  echo 'a tier skipped a run that asked for every tier'
+                  echo "  $name skipped a run that asked for every tier"
                   failed=true
+                elif [ "$GITHUB_EVENT_NAME" = merge_group ]; then
+                  echo "  $name skipped the run that decides the merge"
+                  failed=true
+                else
+                  left_out="$left_out $name"
                 fi
                 ;;
-              *) echo "a tier reported $result"; failed=true ;;
+              *) echo "  $name reported $result"; failed=true ;;
             esac
-          done
+          done <<< "$results"
           if [ "$failed" = true ]; then exit 1; fi
-          echo 'every tier reported success or was out of scope'
+          if [ -n "$left_out" ]; then
+            {
+              echo "advisory: this run left out${left_out}."
+              echo 'The merge group runs every tier, and its gate is the verdict that lands.'
+            } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          else
+            echo 'every tier reported success'
+          fi

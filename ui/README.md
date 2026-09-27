@@ -71,7 +71,7 @@ open storybook-static/index.html
 
 That is a set of static files. No server, no Python, no network. Every story renders from `src/fixtures/campaign.json` — a real `GET /api/cases/DEMO-CAMPAIGN` captured off a running app, 86 timeline entries and all.
 
-**Storybook renders the production components.** `TimelineList.stories.tsx` imports the same `TimelineList.tsx` the app imports. There is no demo variant of anything, and there must not be: every design approved in this project's history was an artifact sharing no code with what shipped, which is why the approval never transferred.
+**Storybook renders the production components.** `timeline-entry-row.stories.tsx` imports the same `timeline-entry-row.tsx` the app imports. There is no demo variant of anything, and there must not be: every design approved in this project's history was an artifact sharing no code with what shipped, which is why the approval never transferred.
 
 The toolbar has a **Theme** switch (light/dark) and a **Language** one that currently offers a single entry, `console` — the comparison languages the design phase ran against are gone, and `tokens.css` declares one `[data-language]` block. The token layer is still built so a second is a block of CSS variables and no component change at all.
 
@@ -111,7 +111,7 @@ What is still stored client-side is a **display identity** — the username and 
 
 **Sign-out calls `POST /api/logout`**, which revokes the session id server-side (ASVS V3.3.1). Clearing local state is not the control — the cookie is a signed claim, so a copy taken a moment earlier stays valid until the server refuses it.
 
-The session expires after a window of no *real input* — 30 minutes by default, `app/idle.py`. `useActivityReporter` posts to `/activity` on keys and pointers, throttled to once a minute. It deliberately has no heartbeat: a timer reporting on its own would turn the timeout into a no-op for exactly the abandoned tab it was written to catch.
+The session expires after a window of no *real input* — 30 minutes by default, `SESSION_IDLE_MINUTES` in `server/src/policy/keys.ts`, applied in `server/src/auth/auth.config.ts`. **The idle window is the session's expiry**, so there is no separate activity route to post to: `useActivityReporter` re-reads the session on keys and pointers, throttled to once a minute, and that read is what moves the expiry. It deliberately has no heartbeat: a timer reporting on its own would turn the timeout into a no-op for exactly the abandoned tab it was written to catch.
 
 ---
 
@@ -124,9 +124,9 @@ What is worth knowing before the first edit:
 - Import from `@/api/*`. `src/api/client.ts` is the **only** file that calls `fetch`. Everything else calls `request()`.
 - Query keys come from `@/api/queryKeys`. Never write the array inline.
 - Writes go through `useEntryCreate` / `useEntryMutation` / `useEntryDelete` / `useCaseMutation` — per row, only the changed fields.
-- `useWritable()` says what this sign-in may do. Do not read `session.access`, and do not work it out from your own mutation's error.
+- `useSession()?.admin` says whether the server will accept an admin-only route. It is a claim about what the server will accept and never a check, so do not gate a write on it and do not work permissions out from your own mutation's error.
 - `useCaseId()` reads the case from the route. A section takes no `caseId` prop.
-- Add a screen by adding a row to `features/workspace/sections.tsx` and a component. The router, the rail and the outlet all read that list. Its actions go in the command registry, never a hand-built row — `SectionActionRow` draws the toolbar, the palette and the cheat sheet from the one list, so an action cannot be in one and missing from another.
+- Add a screen by adding a row to `ui/src/components/blocks/case-sections.ts` and a component. The router, the rail and the outlet all read that list. Its actions go in the command registry, never a hand-built row — `palette-rows.ts` derives every destination the palette offers from the same list, so a hand-list is how an action ends up in one surface and missing from another.
 - `AsyncBoundary` owns loading, error and the 409-that-is-a-wait. `EmptyState` owns an empty table. `reportWriteFailure` owns a refused write that no section is rendering.
 - Fields are `<Field>` + `Input`/`Select`/`Textarea` — it wires `for`/`id` and `aria-describedby`, which is what a hand-rolled field forgets.
 - Every visual value comes from `src/styles/tokens.css`. A hex, a `duration-150` or an `h-8` in a component is a defect and `tokens.test.ts` fails on it.

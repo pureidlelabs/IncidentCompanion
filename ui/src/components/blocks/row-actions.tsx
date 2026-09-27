@@ -13,8 +13,8 @@ import { cn } from '@/lib/cn'
  * - A `Toolbar`, so the cluster is one tab stop with arrow keys inside it.
  * - The cluster is revealed on hover, on `:focus-visible`, and while the row
  *   is expanded or selected.
- * - `heldBy` refuses edit and delete and names the analyst holding the row,
- *   through a tooltip on the control that is refusing.
+ * - `heldBy` names the analyst holding the row, through a tooltip on edit and
+ *   delete. Both stay live: a hold warns, and the version check decides.
  * - `menu` takes kit `MenuItem` children; React Aria reads them as a
  *   collection rather than as markup.
  * - `onMenuOpenChange` makes the overflow a controlled trigger, so the row
@@ -44,11 +44,11 @@ export function RowActions({
   onToggleExpanded?: (() => void) | undefined
   onEdit?: (() => void) | undefined
   /**
-   * The row has no server id yet, so neither verb has anywhere to go.
+   * A write to this row is out, so neither verb starts another against the
+   * version the row was drawn at.
    *
-   * **Both, not just the pencil.** A bin left live on an optimistic row sends
-   * a delete for a row the server has never seen, while the greyed-out pencil
-   * beside it says the row is not there to act on.
+   * **Both, not just the pencil.** A bin left live while an edit is out deletes
+   * against a version the edit is about to move.
    */
   editDisabled?: boolean | undefined
   /** Another analyst has this row open. Their name, or absent. */
@@ -116,15 +116,12 @@ export function RowActions({
             variant="ghost"
             size="icon-xs"
             aria-label={`Edit ${label} in full`}
-            isRefused={(editDisabled ?? false) || Boolean(heldBy)}
+            isRefused={editDisabled ?? false}
             onPress={onEdit}
             className={icon}
           >
             <Pencil className="size-4" aria-hidden />
           </Button>
-          {/* `isRefused` keeps the tab stop and the pointer events, so the
-              tooltip naming the colleague can still fire on a control that
-              will not act. */}
           <Tooltip>{heldBy ? `${heldBy} is editing this` : ''}</Tooltip>
         </TooltipTrigger>
       )}
@@ -134,7 +131,7 @@ export function RowActions({
             variant="ghost"
             size="icon-xs"
             aria-label={`Delete ${label}`}
-            isRefused={(editDisabled ?? false) || Boolean(heldBy)}
+            isRefused={editDisabled ?? false}
             onPress={onDelete}
             className={icon}
           >

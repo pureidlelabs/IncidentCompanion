@@ -13,9 +13,9 @@
  *   asserted is the field *set*, so a stamp added to one and not the other is
  *   red rather than found by eye.
  *
- * The merge review is the third: a refusal is a write another analyst won
- * first, and one drawn on a pane nobody is looking at is a lost write reported
- * as a clean save.
+ * The merge review is the third: a field another analyst changed while this
+ * one was changing it is a choice, and one drawn on a pane nobody is looking
+ * at is a choice nobody makes.
  *
  * **What none of this can see: whether a panel is painted.** The kit's
  * `TabPanel` animates its box in with Motion, and jsdom runs no animation - so
@@ -120,63 +120,54 @@ describe('the key times flyout', () => {
     expect(inPanel.length).toBeGreaterThan(0)
     expect([...inPanel].sort()).toEqual([...onTab].sort())
   })
-
-  /** Both surfaces name the same field, so a refusal reads the same in each. */
-  it('names the field a refusal carries', () => {
-    render(<CaseKeyTimesSheet isOpen refusal={{ field: 'Contained at', by: 'A. Okonkwo' }} />)
-    expect(screen.getByText('Contained at was not saved')).toBeInTheDocument()
-  })
 })
 
-describe('a refused write', () => {
-  it('opens the tab holding the field it names', () => {
-    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />)
-    expect(screen.getByText('Severity was not saved')).toBeInTheDocument()
+/** Another analyst changing a field this analyst is changing, arriving as the case is served again. */
+async function disputeCustomer(): Promise<ReturnType<typeof render>['rerender']> {
+  const user = userEvent.setup()
+  const { rerender } = render(
+    <OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />,
+  )
+  await press('Properties')
+  const customer = screen.getByRole('textbox', { name: 'Customer' })
+  await user.clear(customer)
+  await user.type(customer, 'Mine')
+  return rerender
+}
+
+const theirs = { ...campaignCase, version: campaignCase.version + 1, customer: 'Theirs' }
+
+describe('a field in dispute', () => {
+  /**
+   * The dispute arrives with the repaint that caused it, and the analyst may
+   * have moved to another tab by then. A screen that only chose its tab at
+   * mount leaves the band on a pane nobody opened.
+   */
+  it('moves to the tab holding the field when it arrives after the analyst left it', async () => {
+    const rerender = await disputeCustomer()
+    await press('Read')
+    expect(screen.queryByLabelText(ONLY_ON_PROPERTIES)).toBeNull()
+
+    rerender(<OverviewScreen now={CAMPAIGN_NOW} kase={theirs} specs={specsFixture} record={campaignCompliance} />)
+
+    expect(screen.getByRole('group', { name: 'Another analyst changed Customer' })).toBeInTheDocument()
     expect(screen.getByLabelText(ONLY_ON_PROPERTIES)).toBeInTheDocument()
   })
 
-  /**
-   * A stamp is on the other tab, so a screen that always opened Properties
-   * would pass the case above and strand this one.
-   */
-  it('opens the key times tab for a stamp', () => {
-    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Contained at', by: 'A. Okonkwo' }} />)
-    expect(screen.getByText('Contained at was not saved')).toBeInTheDocument()
-    expect(screen.getByLabelText(ONLY_ON_TIMES)).toBeInTheDocument()
+  /** What the analyst typed survives the tab they left, because the screen holds it rather than the pane. */
+  it('keeps the value across a move between tabs', async () => {
+    const rerender = await disputeCustomer()
+    await press('Key times')
+    rerender(<OverviewScreen now={CAMPAIGN_NOW} kase={theirs} specs={specsFixture} record={campaignCompliance} />)
+
+    expect(screen.getByRole('textbox', { name: 'Customer' })).toHaveValue('Mine')
   })
 
-  /** A label neither pane recognises still has to be shown somewhere. */
-  it('shows a refusal on a field it cannot place', () => {
-    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Some field nobody serves', by: 'A. Okonkwo' }} />)
-    expect(screen.getByText('Some field nobody serves was not saved')).toBeInTheDocument()
-  })
-
-  /**
-   * The refusal arrives with the repaint that caused it, and the screen was on
-   * the read tab when it did. A screen that only chose its tab at mount leaves
-   * the band on a pane nobody opened.
-   */
-  it('moves to the tab when the refusal arrives after the screen was drawn', () => {
-    const { rerender } = render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
-    expect(screen.getByRole('region', { name: 'Open items' })).toBeInTheDocument()
-
-    rerender(
-      <OverviewScreen
-        now={CAMPAIGN_NOW}
-        kase={{ ...campaignCase, severity: 'critical' }}
-        specs={specsFixture}
-        record={campaignCompliance}
-        refusal={{ field: 'Severity', by: 'A. Okonkwo' }}
-      />,
-    )
-    expect(screen.getByText('Severity was not saved')).toBeInTheDocument()
-    expect(screen.getByLabelText(ONLY_ON_PROPERTIES)).toBeInTheDocument()
-  })
-
-  /** One band, not one per pane: a second copy reads as a second refusal. */
-  it('draws the band once', () => {
-    render(<OverviewScreen now={CAMPAIGN_NOW} kase={campaignCase} specs={specsFixture} record={campaignCompliance} refusal={{ field: 'Severity', by: 'A. Okonkwo' }} />)
-    expect(screen.getAllByText('Severity was not saved')).toHaveLength(1)
+  /** One band, not one per pane: a second copy reads as a second dispute. */
+  it('draws the band once', async () => {
+    const rerender = await disputeCustomer()
+    rerender(<OverviewScreen now={CAMPAIGN_NOW} kase={theirs} specs={specsFixture} record={campaignCompliance} />)
+    expect(screen.getAllByRole('group', { name: /changed Customer/ })).toHaveLength(1)
   })
 })
 

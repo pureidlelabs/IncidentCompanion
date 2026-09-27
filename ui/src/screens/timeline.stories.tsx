@@ -16,6 +16,7 @@ import type { TimelineEntry } from '@/api/model'
 
 import { TimelineScreen, type TimelineFields, type TimelineWrites } from './timeline'
 import { EMPTY_CAMPAIGN } from '@/fixtures/empty-cases'
+import type { Drawn } from '@/api/rowWrite'
 
 /**
  * The case as it happened, and the holes in it.
@@ -293,45 +294,6 @@ export const Dense: Story = {
   },
 }
 
-/** A row another analyst saved first, named by both field and row above the
- *  body so a filter cannot hide the refusal with it. */
-export const Refused: Story = {
-  play: async ({ canvas, step }) => {
-    await step('the refusal names both the field and the row', async () => {
-      // Either alone is unactionable: the field says what to retype, the row
-      // says where, and an analyst who has been away needs both.
-      await expect(canvas.getByText(/Phase/)).toBeVisible()
-      await expect(canvas.getByText(/Initial access/)).toBeVisible()
-      await expect(canvas.getByText(/A\. Okonkwo/)).toBeVisible()
-    })
-  },
-  name: 'A refused write',
-  args: { refusal: { field: 'Phase', row: 'Initial access', by: 'A. Okonkwo' } },
-}
-
-/** The same refusal with every row filtered out, which is when it matters. */
-export const RefusedWhileFiltered: Story = {
-  play: async ({ canvas, step }) => {
-    await step('every row is hidden', async () => {
-      // The consequence rather than the query: `search` seeds the screen's own
-      // state, so asserting the box's value tests the fixture, not the filter.
-      await expect(canvas.queryByText(/Ransomware deployment|Mass file rename/)).toBeNull()
-    })
-    await step('and the refusal is still there, which is when it matters', async () => {
-      // Above the body rather than on the row, so a filter cannot take the
-      // refusal away with the row it is about -- and this is the state where
-      // an analyst is least likely to go looking for it.
-      await expect(canvas.getByText(/A\. Okonkwo/)).toBeVisible()
-      await expect(canvas.getByText(/Initial access/)).toBeVisible()
-    })
-  },
-  name: 'A refused write, with the row filtered out',
-  args: {
-    search: 'no-entry-matches-this',
-    refusal: { field: 'Phase', row: 'Initial access', by: 'A. Okonkwo' },
-  },
-}
-
 /** The campaign with its two middle days deleted, leaving one long silence. */
 function withHole() {
   const stamps = campaignCase.timeline
@@ -429,12 +391,12 @@ function never(): TimelineWrites {
 /** A container that answers at once, with the row it stored. */
 function answering(): TimelineWrites {
   return {
-    save: fn((entry: TimelineEntry | null, fields: TimelineFields) =>
+    save: fn((entry: Drawn<TimelineEntry> | null, fields: TimelineFields) =>
       Promise.resolve({
         ...(entry ?? campaignCase.timeline[0]!),
         ...fields,
         id: entry?.id ?? 'tl-stored',
-      }),
+      } as TimelineEntry),
     ),
     remove: fn(() => Promise.resolve()),
   }
@@ -528,7 +490,9 @@ export const RowDeleted: Story = {
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     await expect(args.writes!.remove).toHaveBeenCalledOnce()
-    await expect(args.writes!.remove).toHaveBeenCalledWith([withTwins().timeline[2]!.id])
+    await expect(args.writes!.remove).toHaveBeenCalledWith([
+      { id: withTwins().timeline[2]!.id, version: withTwins().timeline[2]!.version },
+    ])
   },
 }
 
@@ -566,7 +530,7 @@ export const BulkDeleted: Story = {
     await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     await expect(args.writes!.remove).toHaveBeenCalledOnce()
     await expect(args.writes!.remove).toHaveBeenCalledWith(
-      withTwins().timeline.map((entry) => entry.id),
+      expect.arrayContaining(withTwins().timeline.map((entry) => ({ id: entry.id, version: entry.version }))),
     )
   },
 }

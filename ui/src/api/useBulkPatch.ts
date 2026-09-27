@@ -9,14 +9,6 @@
  * wrong; what it answers per row is whether that row took it. Two ways it may
  * not: `missing`, whose row another session deleted, and `refused`, whose
  * version had moved. Both are reported and neither is fatal.
- *
- * There is nothing here for a caller to roll back row-by-row: no optimistic
- * patch is applied, so none needs undoing.
- *
- * No `mutationFn` snapshot/rollback pair, unlike `useEntryMutation`: a
- * bulk PATCH either lands as one frame or does not land at all, so there is
- * no per-row optimistic state to keep in sync with a server that might
- * refuse only some of it.
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
@@ -24,17 +16,18 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import { request, type ApiError } from './client'
 import type { CollectionEntry, CollectionName } from './model'
 import { keys } from './queryKeys'
+import { rowKey, writeRows, type Read } from './rowWrite'
 
 /**
- * A row named for patching, and the version the analyst read it at.
+ * A row named for a selection's act, and the version the analyst read it at.
  *
- * The selection is what the screen showed, which may be older than the case
- * by the time apply is pressed -- so the version travels per row rather than
- * per request, and a row somebody else moved is turned away on its own.
+ * The selection is what the screen showed when the act was pressed, which may
+ * be older than the case by the time it is confirmed -- so the version travels
+ * per row, and a row somebody else moved is turned away on its own.
  */
 export interface BulkPatchRow {
   id: string
-  version: number
+  version: Read
 }
 
 export interface BulkPatchVars<N extends CollectionName> {
@@ -62,9 +55,23 @@ export function useBulkPatch<N extends CollectionName>(
     mutationKey: [...listKey, 'bulk-patch'],
 
     mutationFn: ({ ids, fields }) =>
-      request<BulkPatchResult>(
-        `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}/bulk`,
-        { method: 'PATCH', body: { ids, fields } },
+      writeRows(
+        client,
+        ids.map((row) => ({ key: rowKey(caseId, collection, row.id), read: row.version })),
+        (versions) =>
+          request<BulkPatchResult>(
+            `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}/bulk`,
+            {
+              method: 'PATCH',
+              body: { ids: ids.map((row, at) => ({ id: row.id, version: versions[at] })), fields },
+            },
+          ),
+        // A row the patch took moved one version past the one it stated.
+        (answer, stated) =>
+          ids.map((row, at) => {
+            const from = stated[at]
+            return from !== undefined && answer.updated.includes(row.id) ? from + 1 : undefined
+          }),
       ),
 
     onSettled: () => {

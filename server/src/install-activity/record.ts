@@ -14,10 +14,13 @@
 import { Logger } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
 
-import type { Database } from '../db/client.js'
+import { sql } from 'drizzle-orm'
+
+import type { Executor } from '../db/scope.js'
 import { callerAddress } from '../wire/caller-address.js'
 import { retentionClassOf } from './retention-class.js'
 import { CHANNEL_OF, installActivity } from '../db/schema/install-activity.js'
+import { user } from '../db/schema/auth.js'
 import { OCSF_VERSION, classify } from './ocsf.js'
 import { SEVERITY_ID, outcomeOf, severityOf } from './severity.js'
 
@@ -96,10 +99,8 @@ function forOneLine(value: string): string {
  * The request's origin, as far as this install can honestly know it.
  *
  * **The address is decided by `callerAddress` rather than read here**, so the
- * audit believes the header on exactly the same terms the two rate limiters
- * do. No socket is passed: this writes from a request it was handed rather
- * than one it is holding, and inventing an address for the line would be the
- * forgery the column exists to prevent. -> `wire/caller-address.ts`
+ * audit attributes a request exactly as the two rate limiters and the session
+ * record do. -> `wire/caller-address.ts`
  *
  * The agent is caller text in every mode and is not a partition column of the
  * reader's run window, so it is recorded rather than dropped; `forOneLine` is
@@ -109,7 +110,7 @@ function originOf(headers: IncomingHttpHeaders | undefined) {
   const one = (value: string | string[] | undefined) =>
     (Array.isArray(value) ? value[0] : value) ?? null
   return {
-    ipAddress: callerAddress(headers ?? {}, undefined),
+    ipAddress: callerAddress(headers ?? {}),
     userAgent: one(headers?.['user-agent']),
   }
 }
@@ -130,48 +131,11 @@ function originOf(headers: IncomingHttpHeaders | undefined) {
  * which is the one outcome worse than a vague line.
  */
 export async function recordInstallActivity(
-  db: Database,
+  db: Executor,
   input: InstallActivityInput,
 ): Promise<boolean> {
-  const { ipAddress, userAgent } = input.origin
-    ? { ipAddress: input.origin.ipAddress ?? null, userAgent: input.origin.userAgent ?? null }
-    : originOf(input.headers)
   try {
-    /**
-     * **The OCSF identity is stamped here, from the event alone.** It is a
-     * property of what happened, not of who reads it - so it is decided once,
-     * on the way in, and every consumer agrees without re-deriving.
-     *
-     * `severityId` is the one part that reads more than the event: a run of
-     * failures is louder than one. `runLength` is unknown at write time and
-     * defaults to 1, so the stored level is the *floor* and the reader raises
-     * it when it can see the neighbours. Both are the framework's numbers.
-     */
-    const ocsf = classify(input.event)
-    const severity = severityOf({ event: input.event, attributes: input.detail })
-
-    await db.insert(installActivity).values({
-      event: input.event,
-      // **Never from the caller.** A channel a call site chooses is a channel
-      // two call sites eventually disagree about, and the disagreement is
-      // invisible: both rows land, in different logs.
-      channel: CHANNEL_OF[input.event],
-      retentionClass: retentionClassOf(input.event),
-      classUid: ocsf.classUid,
-      activityId: ocsf.activityId,
-      typeUid: ocsf.typeUid,
-      // Stamped beside the ids it describes: they were decided under this
-      // version, and a later build's constant does not apply to them.
-      schemaVersion: OCSF_VERSION,
-      severityId: SEVERITY_ID[severity],
-      statusId: (input.outcome ?? outcomeOf(input.event)) === 'failure' ? 2 : 1,
-      actorId: input.actor?.id ?? null,
-      actorLabel: input.actor?.label ?? null,
-      targetLabel: input.target ?? null,
-      detail: input.detail ?? {},
-      ipAddress,
-      userAgent,
-    })
+    await writeInstallActivity(db, input)
     return true
   } catch (why) {
     log.error(
@@ -182,4 +146,54 @@ export async function recordInstallActivity(
     )
     return false
   }
+}
+
+/**
+ * The same line, for a caller whose own act must fail with it.
+ *
+ * @throws whatever the store answers, leaving any transaction `db` is aborted
+ */
+export async function writeInstallActivity(db: Executor, input: InstallActivityInput): Promise<void> {
+  const { ipAddress, userAgent } = input.origin
+    ? { ipAddress: input.origin.ipAddress ?? null, userAgent: input.origin.userAgent ?? null }
+    : originOf(input.headers)
+  /**
+   * **The OCSF identity is stamped here, from the event alone.** It is a
+   * property of what happened, not of who reads it - so it is decided once,
+   * on the way in, and every consumer agrees without re-deriving.
+   *
+   * `severityId` is the one part that reads more than the event: a run of
+   * failures is louder than one. `runLength` is unknown at write time and
+   * defaults to 1, so the stored level is the *floor* and the reader raises
+   * it when it can see the neighbours. Both are the framework's numbers.
+   */
+  const ocsf = classify(input.event)
+  const severity = severityOf({ event: input.event, attributes: input.detail })
+
+  await db.insert(installActivity).values({
+    event: input.event,
+    // **Never from the caller.** A channel a call site chooses is a channel
+    // two call sites eventually disagree about, and the disagreement is
+    // invisible: both rows land, in different logs.
+    channel: CHANNEL_OF[input.event],
+    retentionClass: retentionClassOf(input.event),
+    classUid: ocsf.classUid,
+    activityId: ocsf.activityId,
+    typeUid: ocsf.typeUid,
+    // Stamped beside the ids it describes: they were decided under this
+    // version, and a later build's constant does not apply to them.
+    schemaVersion: OCSF_VERSION,
+    severityId: SEVERITY_ID[severity],
+    statusId: (input.outcome ?? outcomeOf(input.event)) === 'failure' ? 2 : 1,
+    // Null where the account is gone, as it would be had it gone after the
+    // line: a session can outlive its account, and the label still says who.
+    actorId: input.actor?.id
+      ? sql`(select ${user.id} from ${user} where ${user.id} = ${input.actor.id})`
+      : null,
+    actorLabel: input.actor?.label ?? null,
+    targetLabel: input.target ?? null,
+    detail: input.detail ?? {},
+    ipAddress,
+    userAgent,
+  })
 }

@@ -72,6 +72,20 @@ An entry-point check is necessary and MUST NOT be the only one. Where a caller c
 - THEN it is protected without anybody adding a check
 - AND omitting the check is not something a reviewer must catch
 
+#### Scenario: A route forgets to ask
+
+- GIVEN a route that asks nothing about reach before it serves a case
+- WHEN a caller asks it for a case whose customer they do not reach
+- THEN none of that case is served
+- AND nothing is written into it
+
+#### Scenario: A route forgets to ask before it writes
+
+- GIVEN a route that asks nothing about reach before it writes into a case
+- WHEN a caller writes into a case whose customer they do not reach
+- THEN nothing is written
+- AND they are answered as though the case were not there
+
 ### Requirement: A read tells a caller what it is looking at
 
 Anything a caller may later change MUST arrive carrying what a write will be checked against, so that a caller which read, thought, and then wrote can be told that the ground moved.
@@ -91,7 +105,7 @@ Anything a caller may later change MUST arrive carrying what a write will be che
 
 ### Requirement: The interface describes itself, and the description is generated
 
-A caller MUST be able to learn what the interface offers from the interface, and that description MUST be derived from what is actually served rather than maintained beside it.
+A caller MUST be able to learn what the interface offers from the interface, and that description MUST be derived from what is actually served rather than maintained beside it. That includes every route a library the application mounts serves on its behalf: a route served and not described is one no client can be generated for and no check over the description reaches.
 
 The description MUST be organised the way somebody thinks about the product, not the way the routes happen to be arranged.
 
@@ -107,6 +121,13 @@ The description MUST be organised the way somebody thinks about the product, not
 - WHEN the description is fetched
 - THEN it describes the new shape
 - AND a caller built against the old one can tell what moved
+
+#### Scenario: A route served by a library the application mounts
+
+- GIVEN a route the application serves through a library it mounts
+- WHEN the description is fetched
+- THEN the route is there, described as the library describes it
+- AND a route the library defines and the application does not serve is not
 
 ### Requirement: A refusal says which of the caller's problems it is
 
@@ -128,11 +149,38 @@ A refusal is a reference entry for somebody writing a client. It names the condi
 - WHEN it is refused
 - THEN the refusal names what was wrong with it
 
+#### Scenario: A caller times the refusal
+
+- GIVEN a caller without reach to a customer
+- WHEN it measures how long the refusal of one of that customer's cases takes
+- THEN it takes the work the refusal of an identifier that does not exist takes
+
+#### Scenario: A write depends on another customer's data
+
+- GIVEN a caller who does not reach a customer
+- WHEN a write it makes would depend on what that customer holds
+- THEN the answer is the same whatever that customer holds
+
+#### Scenario: A caller removes something that is not there
+
+- GIVEN a record that does not exist, and one in another case
+- WHEN a caller removes either through a case it writes
+- THEN both are refused as not there rather than as somebody having written first
+- AND the two refusals are identical
+
+#### Scenario: A caller removes something another has changed
+
+- GIVEN a record changed since the caller read it
+- WHEN the caller removes it at the version it read
+- THEN it is refused as somebody having written first, naming the version the record holds
+
 ### Requirement: What a request costs is bounded before it runs
 
 The work a single request can demand MUST be bounded, and the bound MUST be enforced before the work starts rather than by noticing it took too long.
 
 A caller that can shape its own request can shape an expensive one, whether or not it means to.
+
+A limit on how often a caller may ask MUST be that caller's own. Another caller spending theirs MUST NOT refuse it, and neither MUST a page on another site sending requests through the analyst's browser.
 
 #### Scenario: A caller asks for too much at once
 
@@ -147,6 +195,27 @@ A caller that can shape its own request can shape an expensive one, whether or n
 - WHEN it makes a further request
 - THEN it is refused
 - AND told when it may try again
+
+#### Scenario: Another caller asks too often
+
+- GIVEN a caller refused for asking too often
+- WHEN a caller on another machine asks
+- THEN it is served
+
+#### Scenario: A page on another site asks on the analyst's behalf
+
+- GIVEN a page on another site open in the analyst's browser
+- WHEN it sends sign-in requests to the install
+- THEN each is refused
+- AND the analyst's own next attempt is not refused for asking too often
+
+#### Scenario: A page on another site calls the install on the analyst's behalf
+
+- GIVEN a page on another site open in the analyst's browser
+- WHEN it fetches from the install, and draws from it, more often than the install permits one caller
+- THEN each is refused
+- AND the analyst's own next request is served
+- AND a link from that page still opens the install
 
 ### Requirement: A fact can be asked for across cases
 

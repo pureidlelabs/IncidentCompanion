@@ -23,7 +23,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
-import { eq, getTableColumns } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import { toCsv } from './csv.js'
 import {
@@ -37,7 +37,7 @@ import { MAX_CSV_BYTES } from './csv-import.js'
 import { ImportService, type ImportResult } from './import.service.js'
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { CollectionService } from '../collections/collection.service.js'
-import { columnOf } from '../db/column-access.js'
+import { columnOf, wired } from '../db/column-access.js'
 import { withCase } from '../db/scope.js'
 import { BULK_TARGETS, REFERENCE_TABLES, TABLES, type BulkTarget } from '../collections/registry.js'
 import { referencesOf } from '../domain/collections.js'
@@ -157,7 +157,7 @@ export class ExportsController {
      * to parse what an export wrote. A header of `caseId` beside a client that
      * sends `case_id` is one spelling too many.
      */
-    const columns = Object.entries(getTableColumns(table)).map(
+    const columns = Object.entries(wired(table)).map(
       ([property, column]) => [property, (column as { name: string }).name] as const,
     )
 
@@ -347,7 +347,7 @@ export class ExportsController {
     caseId: string,
   ): Promise<Record<string, unknown>[]> {
     return (await withCase(this.collections.database, caseId, (tx) =>
-      tx.select().from(table).where(eq(columnOf(table, 'caseId'), caseId)),
+      tx.select(wired(table)).from(table).where(eq(columnOf(table, 'caseId'), caseId)),
     ))
   }
 

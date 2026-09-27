@@ -58,8 +58,15 @@ SOURCE_SUFFIXES = (".ts", ".tsx", ".mts", ".cts", ".mjs", ".cjs", ".js", ".jsx",
 #: edit is as wrong as answering "none".
 STACK_DECLARATIONS = (
     "compose.yaml", "compose.dev.yaml", "package.json", "package-lock.json",
-    "Dockerfile", "nginx.conf", "pyproject.toml", "requirements.txt",
+    "Dockerfile", "pyproject.toml", "requirements.txt",
+    "mise.toml", "stack-env.sh",
 )
+
+#: What the TypeScript suites read, and they read it together: the client
+#: compiles `server/src/domain` as `@contract`, the server's tests read `ui/src`
+#: and `ui/eslint.config.js`, the server suite provisions `docker/db`, and both
+#: load `tests/data`. So a change to any of it owes both.
+TYPESCRIPT_INPUTS = (SERVER, UI, "packages/", "docker/db/", "tests/data/")
 
 #: Prose Vale reads. `.vale/` is included because one token re-lints every file.
 PROSE_TREES = ("openspec/", ".vale/")
@@ -94,7 +101,7 @@ def changed(base: str | None) -> list[str]:
                       "Give a ref, or no argument to read the working tree.",
                       file=sys.stderr)
                 raise SystemExit(2)
-        out = subprocess.run(["git", "diff", "--name-only", "--no-renames", base],
+        out = subprocess.run(["git", "diff", "--name-only", "--no-renames", _since(base)],
                              capture_output=True, text=True, check=True).stdout
     else:
         tracked = subprocess.run(["git", "diff", "--name-only", "--no-renames", "HEAD"],
@@ -103,6 +110,22 @@ def changed(base: str | None) -> list[str]:
                                    capture_output=True, text=True, check=True).stdout
         out = tracked + untracked
     return sorted({p for p in out.split("\n") if p})
+
+
+def _since(base: str) -> str:
+    """Where this branch left `base`, for a base given as a ref.
+
+    **A ref names a moving branch, and `git diff <ref>` compares it as it
+    stands now**, so a trunk that gained a file while the branch was open
+    reports that file as the branch's.
+
+    A range is left alone: somebody spelling `a..b` has said which two ends
+    they mean, so that is the one form this does not touch.
+    """
+    if ".." in base:
+        return base
+    found = subprocess.run(["git", "merge-base", base, "HEAD"], capture_output=True, text=True)
+    return found.stdout.strip() if found.returncode == 0 and found.stdout.strip() else base
 
 
 def touches(paths: list[str], *prefixes: str) -> bool:
@@ -153,7 +176,7 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
     if touches(paths, AGENT):
         out.append((f"{PYTEST} .claude/tests -q -n auto",
                     "the agent tooling's own guards"))
-    whole_python_tier = touches(paths, PYTHON) or any(
+    whole_python_tier = touches(paths, PYTHON, "docker/") or any(
         p.rsplit("/", 1)[-1] in STACK_DECLARATIONS for p in paths
     )
     if whole_python_tier:
@@ -183,17 +206,16 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
         out.append((f"{PYTEST} tests/repo tests/docs tests/contract .claude/tests -q -n auto",
                     "the repository and contract checks, which read `server/src`, "
                     "`ui/src` and `openspec/`"))
-    if touches(paths, SERVER):
+    if touches(paths, *TYPESCRIPT_INPUTS):
         out.append(("(cd server && npm run check && npm run lint)",
                     "typecheck, the Nest suite, and the eslint config nothing used to load"))
-    if touches(paths, UI):
         out.append(("(cd ui && npm run typecheck && npm test && npm run lint)",
                     "the React tier; `typecheck` is `tsc -b` -- `tsc --noEmit` checks nothing here"))
     if touches_prose(paths):
         out.append(("npm run lint:prose",
                     "Vale over openspec/, README.md and .claude/ -- in neither ./test.sh nor CI"))
     if touches(paths, "openspec/"):
-        out.append(('npx --no-install openspec validate --strict',
+        out.append(('npx --no-install openspec validate --all --strict',
                     "the spec tree's own shape -- owed with the lint. The CLI is a "
                     "pinned dev dependency, and `--no-install` keeps npm out of it"))
     if touches(paths, *BROWSER_SURFACE):
@@ -208,6 +230,10 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
             "a colour or a hit area, and it exits 0 whether it found nothing or a hundred "
             "things -- read the findings it prints, because the pass says only that it "
             "could look"))
+        out.append((
+            "(cd ui && npm run storybook &) && (cd server && npm run e2e:kit)",
+            "the component checks over the same Storybook -- a ring that is not clipped, "
+            "a sticky head, a row handing over its actions. Unlike the walk, these assert"))
     return out
 
 
@@ -310,7 +336,13 @@ def _reachable(port: int) -> bool:
 
 
 
-_LANDING_BASES = ("@{upstream}", "origin/HEAD")
+#: The branch the work lands on, never the branch's own remote copy.
+#:
+#: `@{upstream}` was tried first and is the wrong ref: after `git push -u`,
+#: which `rules/git-workflow.md` §9 asks for after every commit, it names the
+#: branch itself -- so the range is empty and every tier is skipped, in the
+#: direction that lets a branch land unrun. -> #759
+_LANDING_BASES = ("origin/HEAD", "origin/main")
 
 
 def _landing_base(given: str | None) -> str:
@@ -321,7 +353,14 @@ def _landing_base(given: str | None) -> str:
                                capture_output=True, text=True)
         if probe.returncode == 0:
             return ref
-    return "origin/main"
+    # **A refusal rather than a traceback.** Every ref above is absent in a
+    # repository with no `origin`, and the range built from the literal below
+    # then fails inside `git diff`, which reports git's own error and names
+    # this file nowhere.
+    print("test_scope: no origin/HEAD and no origin/main, so there is no branch to land on.\n"
+          "Give the base as an argument: test_scope.py --landing <ref>",
+          file=sys.stderr)
+    raise SystemExit(2)
 
 
 def main() -> int:
@@ -334,7 +373,8 @@ def main() -> int:
         # one produces `a..b..HEAD`, which git rejects with 128 -- and the
         # traceback names git rather than this line.
         base = _landing_base(given)
-        paths = changed(base if ".." in base else f"{base}..HEAD")
+        # The branch's own commits: from where it left the base, to its tip.
+        paths = changed(base if ".." in base else f"{_since(base)}..HEAD")
         found, why = decide(paths)
         why = f"landing -- {why}"
     else:

@@ -234,7 +234,7 @@ export const evidence = pgTable(
     hashAlgorithm: text('hash_algorithm'),
 
     /**
-     * Set when the bytes are held by this app, at `evidence/<hash>`.
+     * Set when this case holds the bytes, which the upload alone decides.
      *
      * **Null is the ordinary case.** Most evidence lives in an evidence locker
      * and this row records that it exists and where - `location`. Only small

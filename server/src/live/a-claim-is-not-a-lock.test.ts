@@ -1,113 +1,84 @@
 /**
  * **A claim warns; it does not lock** -- and the way that stays true is that
- * the write path has never heard of claims.
+ * nothing outside `live/` asks the channel anything but the two questions a
+ * write is allowed to ask.
  *
- * > #### Scenario: Somebody writes to a claimed entry
- * > - GIVEN an entry held by one analyst
- * > - WHEN another writes to it anyway
- * > - **THEN the write is judged on the version it was made against, not on
- * >   the claim**
+ * > Nothing MUST be built on a claim as though it were a lock.
  *
- * > Nothing MUST be built on a claim as though it were a lock. The record of
- * > who wrote what, and the refusal of a write made against a version that
- * > moved, are what make concurrent work safe. A claim is a courtesy on top of
- * > those.
+ * **What the channel can be asked is read off the channel itself**, so a
+ * method added to it is refused here by default rather than missed by a
+ * hand-written list. `test/a-claimed-row-is-written-through-every-door.test.ts`
+ * is the behavioural half, over every door that exists.
  *
- * **A behavioural test cannot hold this.** Driving one write against a claimed
- * entry shows that *this* path ignores the claim; it says nothing about the
- * next path somebody adds. The property is about the whole write surface, and
- * the honest form of it is that the surface holds no reference to a claim at
- * all -- there is nothing there to build a lock on.
- *
- * The version half is asserted where it lives: a write naming a version that
- * has moved is refused, in `compliance.write.test.ts` and the collection
- * suites. This file asserts only the other half of the sentence.
+ * Reads the source for how the channel is reached, `this.<name>?.<member>(`,
+ * so a channel passed around under another name is not seen.
  */
 import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
+import { CaseChannel } from './case-channel.service.js'
+
 const SRC = fileURLToPath(new URL('..', import.meta.url))
 
+/** Everything the channel answers, derived rather than listed. */
+const SURFACE = Object.getOwnPropertyNames(CaseChannel.prototype).filter((name) => name !== 'constructor')
+
 /**
- * The modules that decide whether a write happens.
- *
- * `db/mutate.ts` is the versioned write every collection goes through, and
- * `collections/` is the generic path above it. If a claim ever became a
- * condition of writing, it would be read in one of these.
+ * What code outside `live/` may ask: announce a write it has made, and ask who
+ * is present before a case is deleted. Neither reads a claim.
  */
-const THE_WRITE_PATH = ['db/mutate.ts', 'collections', 'cases']
+const MAY_ASK = ['announce', 'othersOn']
 
-/** How an entry claim is spelled where it is implemented. */
-const CLAIM_SURFACE = ['StoredClaim', 'claimsKey', '.claims(', '.claim(']
+/** How a class holding the channel or its store declares it. */
+const HOLDS = /(\w+)\??\s*:\s*(?:Pick<\s*)?(CaseChannel|PresenceStore|PresenceCoordinator)\b/g
 
-function filesUnder(relative: string): string[] {
-  const path = join(SRC, relative)
-  const stack = [path]
-  const found: string[] = []
-  while (stack.length > 0) {
-    const next = stack.pop()!
-    let entries
-    try {
-      entries = readdirSync(next, { withFileTypes: true })
-    } catch {
-      // A file rather than a directory, which `db/mutate.ts` is.
-      if (/\.ts$/.test(next) && !/\.test\.ts$/.test(next)) found.push(next)
-      continue
-    }
-    for (const entry of entries) {
-      const child = join(next, entry.name)
-      if (entry.isDirectory()) stack.push(child)
-      else if (/\.ts$/.test(entry.name) && !/\.test\.ts$/.test(entry.name)) found.push(child)
+const outsideLive = readdirSync(SRC, { recursive: true, withFileTypes: true })
+  .filter((entry) => entry.isFile() && /\.ts$/.test(entry.name) && !/\.test\.ts$/.test(entry.name))
+  .map((entry) => join(entry.parentPath, entry.name))
+  .filter((path) => !relative(SRC, path).startsWith('live/'))
+
+/** Every `holder.member` reached outside `live/`, as `file: holder.member`. */
+function asked(): { file: string; kind: string; member: string }[] {
+  const found: { file: string; kind: string; member: string }[] = []
+  for (const path of outsideLive) {
+    const code = readFileSync(path, 'utf8')
+    for (const [, name, kind] of code.matchAll(HOLDS)) {
+      for (const [, member] of code.matchAll(new RegExp(String.raw`(?<![\w-])${name!}\??\.(\w+)`, 'g'))) {
+        found.push({ file: relative(SRC, path), kind: kind!, member: member! })
+      }
     }
   }
   return found
 }
 
 describe('a claim is not a lock', () => {
-  const swept = THE_WRITE_PATH.flatMap((one) => filesUnder(one))
+  const reached = asked()
 
-  /**
-   * **The vacuity guard**, and the one most likely to fail first: a directory
-   * renamed out from under this list leaves the sweep covering nothing and
-   * reporting the property held.
-   */
-  it('finds the write path to sweep', () => {
-    expect(swept.length, 'the write path is not where this test thinks it is').toBeGreaterThan(5)
-    expect(
-      swept.some((path) => path.endsWith('mutate.ts')),
-      'the versioned write itself is not in the sweep',
-    ).toBe(true)
-  })
+  it('asks the channel nothing outside live/ but what a write may ask', () => {
+    const offenders = reached
+      .filter((one) => one.kind !== 'CaseChannel' || !MAY_ASK.includes(one.member))
+      .map((one) => `${one.file}: ${one.kind}.${one.member}`)
 
-  it('decides a write without reading any claim', () => {
-    const offenders: string[] = []
-    for (const path of swept) {
-      const text = readFileSync(path, 'utf8')
-      // Comments discuss claims freely -- the concurrency reasoning is all
-      // over this tier -- and the code is the subject.
-      const code = text.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, '')
-      for (const spelling of CLAIM_SURFACE) {
-        if (code.includes(spelling)) offenders.push(`${path.replace(SRC, '')}: ${spelling}`)
-      }
-    }
-
-    expect(
-      offenders,
-      'the write path reads a claim, so a claim has become a condition of writing',
-    ).toEqual([])
+    expect(offenders, 'a claim, or the store behind it, is read outside live/').toEqual([])
   })
 
   /**
-   * **And the claim surface is real**, so the sweep above is looking for
-   * something that exists. A rename of `StoredClaim` would otherwise leave it
-   * searching for nothing and passing for ever.
+   * **The vacuity guards.** A sweep that finds no holder, or an allowance that
+   * names a member the channel no longer has, reports the property held while
+   * looking at nothing.
    */
-  it('is looking for a claim surface that exists', () => {
-    const store = readFileSync(join(SRC, 'live', 'presence.store.ts'), 'utf8')
-    const present = CLAIM_SURFACE.filter((spelling) => store.includes(spelling))
-    expect(present, 'none of these spellings appears where claims are implemented').not.toEqual([])
+  it('finds the write path holding the channel and announcing through it', () => {
+    const holders = new Set(reached.filter((one) => one.member === 'announce').map((one) => one.file))
+    expect([...holders]).toEqual(
+      expect.arrayContaining(['collections/collection.service.ts', 'cases/cases.service.ts']),
+    )
+  })
+
+  it('allows only members the channel has, and forbids every other one', () => {
+    expect(SURFACE).toEqual(expect.arrayContaining(MAY_ASK))
+    expect(SURFACE.filter((member) => !MAY_ASK.includes(member)), 'the channel answers nothing else').not.toEqual([])
   })
 })

@@ -1,15 +1,15 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url'
 
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
 import { chromium } from 'playwright'
-import { defineConfig, type Plugin, type ProxyOptions } from 'vite'
-import type { Reporter, TestModule, Vitest } from 'vitest/node'
+import { defineConfig, searchForWorkspaceRoot, type Plugin, type ProxyOptions } from 'vite'
 
 /**
  * Whether the story tier can run here, decided once and announced when it
@@ -32,6 +32,18 @@ const STORY_TIER = ((): boolean => {
     return false
   }
 })()
+
+/**
+ * The real directories behind `node_modules`, for `server.fs.allow`.
+ *
+ * A link is followed here so the served path matches what a module resolves
+ * to; a directory that is not a link answers itself, and a missing one is left
+ * out rather than throwing.
+ */
+const LINKED_DEPENDENCIES: string[] = ['node_modules', '../node_modules']
+  .map((one) => resolve(import.meta.dirname, one))
+  .filter((one) => existsSync(one))
+  .map((one) => realpathSync(one))
 
 if (!STORY_TIER) {
   console.warn(
@@ -71,48 +83,6 @@ function ignoreReactAriaWindowFocusThrow(error: {
     message.includes("Failed to execute 'contains' on 'Node'") &&
     stack.includes('isFocusMovingToTarget')
   return isTheThrow ? false : undefined
-}
-
-/** The fewest test files a whole certifying run may finish and still pass. */
-const MUST_RUN_FILES = 200
-
-/**
- * Refuses a certifying run that reported green having run little of the tier.
- *
- * A worker pool that times out leaves the run with no test modules and no
- * failure to report, which vitest exits 0 on. -> #797
- *
- * Armed by `IC_SUITE_MUST_RUN` alone, where `server/test/must-run.ts` also
- * reads `CI`.
- */
-class MustRunReporter implements Reporter {
-  private floor = MUST_RUN_FILES
-
-  onInit(vitest: Vitest): void {
-    // A shard is a fraction of the tier by construction, and nothing is
-    // missing from it. The count a shard was never given is not evidence.
-    const shard = vitest.config.shard
-    if (shard) this.floor = Math.ceil(MUST_RUN_FILES / shard.count)
-  }
-
-  onTestRunEnd(testModules: readonly TestModule[]): void {
-    if (!process.env.IC_SUITE_MUST_RUN) return
-    // A module the pool enqueued and never reached is `queued` or `pending`,
-    // and counting one of those is how a timed-out run passes this.
-    const ran = testModules.filter((module) => {
-      const state = module.state()
-      return state !== 'queued' && state !== 'pending'
-    }).length
-    if (ran >= this.floor) return
-
-    console.error(
-      `The client tier finished ${String(ran)} test files, where it owes ` +
-        `${String(this.floor)}. This run is certifying (IC_SUITE_MUST_RUN), ` +
-        'where a tier that ran less than itself is a failure rather than a pass. ' +
-        'Run without IC_SUITE_MUST_RUN to run part of the tier deliberately.',
-    )
-    process.exitCode = 1
-  }
 }
 
 /**
@@ -232,9 +202,10 @@ function demoPolicy(): Plugin {
 
 export default defineConfig({
   /**
-   * The prefix, and it must equal `app/react_ui.py`'s `MOUNT_PREFIX` or every
-   * asset is requested from a path the mount does not cover.
-   * `tests/test_react_ui_serving.py` reads both and fails when they disagree.
+   * The prefix every asset is requested from, which is the root.
+   *
+   * `platform.ts` serves the built bundle with no prefix, so an asset asked
+   * for anywhere below the root is asked for from a path nothing serves.
    *
    * It applies to `vite dev` too, so both ways of running share one address
    * shape, and the router's basename comes off `import.meta.env.BASE_URL` so
@@ -246,6 +217,8 @@ export default defineConfig({
    */
   base: process.env.DEMO_BASE ?? '/',
   plugins: [react(), tailwindcss(), demoPolicy()],
+  /** The manifest is how the API reference page finds the hashed stylesheet. -> `server/src/docs.controller.ts` */
+  build: { manifest: true },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -275,6 +248,21 @@ export default defineConfig({
 
   server: {
     /**
+     * **Where a worktree's dependencies really live.** A worktree links
+     * `node_modules` from the main checkout rather than installing its own, so
+     * a module resolves to a path outside this root and Vite refuses to serve
+     * it. The story tier is what reaches it first, and the refusal arrives as
+     * every story file failing to import its setup. -> #894
+     *
+     * **`searchForWorkspaceRoot` first, because declaring this replaces rather
+     * than extends.** `allow: raw?.fs?.allow ?? [workspaceRoot]` -- a nullish
+     * coalesce, so naming the linked directories alone drops the root Vite
+     * would have found, and a file under it is then served only if the module
+     * graph already reached it.
+     */
+    fs: { allow: [searchForWorkspaceRoot(import.meta.dirname), ...LINKED_DEPENDENCIES] },
+
+    /**
      * **Plaintext, and the cookie rule that forced https here is what permits
      * it.** Better Auth names the cookie `__Secure-` from its *base URL*, and
      * a `__Secure-` cookie rides TLS only -- so a plaintext hop in front of an
@@ -291,7 +279,7 @@ export default defineConfig({
       // be served by Vite as the SPA index - a 200 that advances no clock and
       // signs the analyst out after the idle window with nothing to show why.
       '/activity': proxied,
-      // `index.html`'s `<link>` is root-scoped to match `app/main.py`'s
+      // `index.html`'s `<link>` is root-scoped to match `brand.controller.ts`'s
       // `/favicon.svg`, which `ui/public/` does not carry - unproxied, Vite
       // answers the SPA index for it under history-fallback and the tab shows
       // a broken-image glyph, not the browser's own default icon.
@@ -334,7 +322,18 @@ export default defineConfig({
       ? ['--no-webstorage']
       : [],
     setupFiles: ['./src/test/setup.ts'],
-    reporters: ['default', new MustRunReporter()],
+    // `IC_REPORT` names where `tests/certify.py` reads this run. The story
+    // tier's accessibility results ride on each case's `meta` as `reports`,
+    // and nothing reading the report wants them.
+    reporters: process.env.IC_REPORT
+      ? [
+          'default',
+          [
+            'json',
+            { outputFile: process.env.IC_REPORT, filterMeta: (key: string) => key !== 'reports' },
+          ],
+        ]
+      : ['default'],
     onUnhandledError: ignoreReactAriaWindowFocusThrow,
     css: false,
     // `include` lives on the `unit` project below, not here. Once `projects`
@@ -363,6 +362,16 @@ export default defineConfig({
     // survives being here: a `.ts` config evaluates it, and on a Node without
     // the global no flag is passed.
     /**
+     * **Two workers, not one per core.** A jsdom worker is a React
+     * environment, and Vitest's default is the core count -- a throughput
+     * default that assumes memory to spend. Two rather than one because the
+     * client tier is fast, and one worker makes a full run tedious enough
+     * that people skip it. `server` sets `fileParallelism: false` for the
+     * same reason.
+     */
+    maxWorkers: 2,
+
+    /**
      * Two projects over one runner, and the second is what the stories are for.
      *
      * **`storybook` is not a second test tool.** `storybookTest` is a *Vitest*
@@ -381,16 +390,6 @@ export default defineConfig({
      * browser tier does, so it is a local gate rather than a guarantee.
      * `npx playwright install chromium` is what it wants.
      */
-    /**
-     * **Two workers, not one per core.** A jsdom worker is a React
-     * environment, and Vitest's default is the core count -- a throughput
-     * default that assumes memory to spend. Two rather than one because the
-     * client tier is fast, and one worker makes a full run tedious enough
-     * that people skip it. `server` sets `fileParallelism: false` for the
-     * same reason.
-     */
-    maxWorkers: 2,
-
     projects: [
       {
         extends: true,

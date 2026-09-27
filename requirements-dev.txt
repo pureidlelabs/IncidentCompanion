@@ -12,10 +12,7 @@
 pytest>=9.1.0,<10.0.0
 pytest-asyncio>=1.4.0,<2.0.0
 
-# `-n auto` brings the suite down from minutes to seconds, and workers are
-# separate processes -- `tests/conftest.py`'s per-session temporary root is what
-# makes that safe. Always paired with `--dist loadfile`, which
-# `tests/repo/test_platform_portability.py` holds true.
+# `-n auto` brings the suite down from minutes to seconds.
 pytest-xdist>=3.5.0,<4.0.0
 
 # `tests/docker/test_container_config.py` parses `compose.yaml` rather than

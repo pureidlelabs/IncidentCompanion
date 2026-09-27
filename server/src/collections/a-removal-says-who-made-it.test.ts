@@ -21,17 +21,19 @@
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import type { PgColumn } from 'drizzle-orm/pg-core'
 
 import { CollectionService } from './collection.service.js'
-import { DEFINITION as TIMELINE } from './timeline.controller.js'
-import { ordered } from './entities.controller.js'
+import { TIMELINE_COLLECTION as TIMELINE } from './definitions.js'
+import { ordered } from './definitions.js'
 import { cases } from '../db/schema/case.js'
 import { changeFeed } from '../db/schema/change-feed.js'
 import { systems } from '../db/schema/entities.js'
 import { user } from '../db/schema/auth.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -61,12 +63,12 @@ const KINDS = [
   },
 ] as const
 
-describe.skipIf(!db)('an analyst removing something inside a case', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('an analyst removing something inside a case', () => {
   let service: CollectionService
   let caseId: string
 
   beforeAll(async () => {
-    service = new CollectionService(db!)
+    service = as(ANALYST, new CollectionService(db!, suiteStore()))
 
     const now = new Date()
     await seed!
@@ -105,8 +107,7 @@ describe.skipIf(!db)('an analyst removing something inside a case', () => {
 
       expect(made.id, 'nothing was created, so nothing is being removed').toBeDefined()
 
-      const removed = await service.remove(kind.def, caseId, made.id, made.version, ANALYST)
-      expect(removed, 'the service reported that it removed nothing').toBe(true)
+      await service.remove(kind.def, caseId, made.id, made.version, ANALYST)
 
       const idColumn = (kind.def.table as unknown as { id: PgColumn }).id
       const left = await seed!.select().from(kind.def.table).where(eq(idColumn, made.id))

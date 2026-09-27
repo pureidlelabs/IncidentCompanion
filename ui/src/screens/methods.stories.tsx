@@ -7,6 +7,8 @@ import { specsFixture } from '@/fixtures/specs'
 import { inACase } from '@/fixtures/in-a-case'
 
 import { MethodsScreen, type MethodWrites } from './methods'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
+import type { Drawn } from '@/api/rowWrite'
 
 /**
  * How each finding in this case was obtained.
@@ -204,17 +206,20 @@ const NEVER: MethodWrites = {
 
 /** A container that answers at once, with the rows it stored. */
 const ANSWERS: MethodWrites = {
-  save: fn((entry: MethodEntry | null, fields: Partial<MethodEntry>) =>
+  save: fn((entry: Drawn<MethodEntry> | null, fields: Partial<MethodEntry>) =>
     Promise.resolve({ ...(entry ?? METHODS[0]!), ...fields, id: 'm-stored' }),
   ),
-  patch: fn((ids: readonly string[], fields: Partial<MethodEntry>) =>
-    Promise.resolve(ids.map((id) => ({ ...METHODS[0]!, ...fields, id }))),
+  patch: fn((rows: readonly BulkPatchRow[], fields: Partial<MethodEntry>) =>
+    Promise.resolve(rows.map(({ id }) => ({ ...METHODS[0]!, ...fields, id }))),
   ),
   remove: fn(() => Promise.resolve()),
 }
 
 /** The collection's ids, in the order the fixture lists them. */
 const IDS = METHODS.map((row) => row.id)
+
+/** The same rows as a selection reads them: each id with the version it was drawn at. */
+const READ = METHODS.map((row) => ({ id: row.id, version: row.version }))
 
 /** Served and quiet: nothing in flight, so it reads exactly like the gallery. */
 export const Served: Story = {
@@ -238,7 +243,7 @@ export const Writing: Story = {
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     // The first row's own id, not its position. Both dim the same row.
-    await expect(args.writes!.remove).toHaveBeenCalledWith([IDS[0]])
+    await expect(args.writes!.remove).toHaveBeenCalledWith([READ[0]])
   },
 }
 
@@ -274,7 +279,7 @@ export const BulkDeleted: Story = {
     await userEvent.click(await canvas.findByRole('button', { name: /^Delete \d+$/ }))
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
-    await expect(args.writes!.remove).toHaveBeenCalledWith(IDS)
+    await expect(args.writes!.remove).toHaveBeenCalledWith(READ)
   },
 }
 
@@ -295,7 +300,7 @@ export const BulkEdited: Story = {
     await userEvent.click(within(dialog).getByRole('button', { name: /Kind/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'interview' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
-    await expect(args.writes!.patch).toHaveBeenCalledWith([IDS[0], IDS[1]], { kind: 'interview' })
+    await expect(args.writes!.patch).toHaveBeenCalledWith([READ[0], READ[1]], { kind: 'interview' })
   },
 }
 

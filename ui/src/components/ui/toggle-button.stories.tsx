@@ -165,7 +165,11 @@ export const SegmentedMultiple: Story = {
 export const Layouts: Story = {
   render: () => (
     <div className="flex items-start gap-6">
-      <ToggleButtonGroup aria-label="Spaced view" variant="spaced" defaultSelectedKeys={['outline']}>
+      <ToggleButtonGroup
+        aria-label="Spaced view"
+        variant="spaced"
+        defaultSelectedKeys={['outline']}
+      >
         <ToggleButton id="outline">Outline</ToggleButton>
         <ToggleButton id="preview">Preview</ToggleButton>
       </ToggleButtonGroup>
@@ -252,6 +256,34 @@ export const Sizes: Story = {
 
     await expect(heights[1]).toBeGreaterThan(heights[0]!)
     await expect(heights[2]).toBeGreaterThan(heights[1]!)
+  },
+}
+
+/**
+ * The icon sizes, square rather than a rung on the ladder above.
+ *
+ * `icon-sm` ships on several screens and stories render it, so Axe reaches it.
+ * What none of them measured is the size itself. -> #1014
+ */
+export const IconSizes: Story = {
+  render: () => (
+    <div className="flex items-center gap-3">
+      <ToggleButton size="icon-sm" aria-label="Pin, small">
+        <Star aria-hidden />
+      </ToggleButton>
+      <ToggleButton size="icon" aria-label="Pin">
+        <Star aria-hidden />
+      </ToggleButton>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const [small, medium] = canvas
+      .getAllByRole('button')
+      .map((button) => button.getBoundingClientRect())
+
+    await expect(small!.height).toBeLessThan(medium!.height)
+    await expect(Math.round(small!.width)).toBe(Math.round(small!.height))
+    await expect(Math.round(medium!.width)).toBe(Math.round(medium!.height))
   },
 }
 

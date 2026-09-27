@@ -26,6 +26,9 @@ import { findings, setGround, shoot, sayFinding } from './view.js'
 const SLUG = process.env['SECTION'] ?? 'cloud-apps'
 const OUT = process.env['SHOT_DIR'] ?? '/tmp/section'
 
+// A capture, not a check: the screenshots are the output and the eye
+// reading them is the oracle.
+// eslint-disable-next-line playwright/expect-expect
 test(`captures ${SLUG} on the demo case`, async ({ browser, baseURL, request }) => {
   await requireServedApp(baseURL ?? '')
 

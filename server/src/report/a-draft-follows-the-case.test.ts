@@ -15,14 +15,16 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
-import { DEFINITION as TIMELINE } from '../collections/timeline.controller.js'
+import { TIMELINE_COLLECTION as TIMELINE } from '../collections/definitions.js'
 import { cases, reportBlocks, reports, user } from '../db/schema/index.js'
 import { ProseService } from '../prose/prose.service.js'
 import { ReportRenderService } from './render.service.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -41,7 +43,7 @@ const englishOnly = {
 
 
 
-describe.skipIf(!db)('a draft report against a case that moves', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a draft report against a case that moves', () => {
   let render: ReportRenderService
   let collections: CollectionService
   let caseId: string
@@ -66,10 +68,10 @@ describe.skipIf(!db)('a draft report against a case that moves', () => {
       .returning()
     caseId = row!.id
 
-    collections = new CollectionService(db!)
-    render = new ReportRenderService(db!, new CasesService(db!), new ProseService(db!), englishOnly, {
+    collections = as(actorId, new CollectionService(db!, suiteStore()))
+    render = as(actorId, new ReportRenderService(db!, new CasesService(db!, suiteStore()), new ProseService(db!), englishOnly, {
       read: () => Promise.resolve(null),
-    } as never)
+    } as never))
 
     const [report] = await seed!
       .insert(reports)

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
@@ -22,7 +24,26 @@ export function ProseRefusal({
   status: SyncStatus | undefined
 }) {
   if (status !== 'refused' || channel === null) return null
-  const filed = channel.refusedBecause === 'report-sent'
+  if (channel.refusedBecause !== 'report-sent') return <ReadOnlyNotice />
+  return (
+    <Notice title="This report was filed while you were writing">
+      {whenFiled(channel.refusedAt)}Nothing written here since then was saved. Copy anything you
+      still need, then correct the report to write again.
+    </Notice>
+  )
+}
+
+/** The analyst's reach on the case is read-only. */
+export function ReadOnlyNotice() {
+  return (
+    <Notice title="You cannot write to this case">
+      Your access to this case is read-only. Nothing typed here is saved -- copy anything you still
+      need, and ask for write access if you should have it.
+    </Notice>
+  )
+}
+
+function Notice({ title, children }: { title: string; children: ReactNode }) {
   return (
     /**
      * `status` rather than `alert`: this stands from the first paint when the
@@ -30,22 +51,8 @@ export function ProseRefusal({
      * announcement is for something that has just changed.
      */
     <Alert variant="warning" role="status" className="mb-3">
-      <AlertTitle>
-        {filed ? 'This report was filed while you were writing' : 'You cannot write to this case'}
-      </AlertTitle>
-      <AlertDescription>
-        {filed ? (
-          <>
-            {whenFiled(channel.refusedAt)}Nothing written here since then was saved. Copy anything
-            you still need, then correct the report to write again.
-          </>
-        ) : (
-          <>
-            Your access to this case is read-only. Nothing typed here is saved -- copy anything you
-            still need, and ask for write access if you should have it.
-          </>
-        )}
-      </AlertDescription>
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription>{children}</AlertDescription>
     </Alert>
   )
 }

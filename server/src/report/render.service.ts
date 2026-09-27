@@ -20,9 +20,10 @@ import { LanguageService } from './language.service.js'
 import { UnresolvableSections, resolveReport } from './document/resolve.js'
 import { defangDocument } from './document/defang.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
+import { MANUAL } from '../db/schema/columns.js'
 import { withCase } from '../db/scope.js'
 import type { CaseData } from './document/sections.js'
-import { documentSchema, type Document, type FigureNode, type Images } from './document/model.js'
+import { documentSchema, figuresOf, type Document, type Images } from './document/model.js'
 import type { Translate } from './document/packs.js'
 import { CONTENT_PT } from './document/pdf.js'
 import { EvidenceStore } from '../evidence/store.js'
@@ -41,6 +42,8 @@ export interface Rendered {
    * file does not have.
    */
   images: Images
+  /** What a draft's document was drawn from: the report's version, and each part's. */
+  basis?: { version: number; parts: { id: string; version: number }[] }
 }
 
 /**
@@ -72,19 +75,17 @@ export class ReportRenderService {
    * A null `t` means a frozen report - the bytes are loaded and nothing is
    * measured or annotated, so a filed document keeps the layout it was sent at.
    */
-  private async figures(document_: Document, t: Translate | null): Promise<Images> {
-    const nodes = document_.sections.flatMap((one) =>
-      one.nodes.filter((node_): node_ is FigureNode => node_.type === 'figure'),
-    )
+  private async figures(caseId: string, document_: Document, t: Translate | null): Promise<Images> {
+    const nodes = figuresOf(document_)
     const images = new Map<string, Uint8Array>()
 
     await Promise.all(
       nodes.map(async (node_) => {
         if (!node_.hash) return
-        // **A read failure is a missing image, not a failed export.** The store
-        // is content-addressed and an artefact can be absent from this install
-        // entirely; the block still draws its caption.
-        const bytes = await this.evidence.read(node_.hash).catch(() => null)
+        // **A read failure is a missing image, not a failed export.** An
+        // artefact can be absent from this case entirely; the block still draws
+        // its caption.
+        const bytes = await this.evidence.read(caseId, node_.hash).catch(() => null)
         if (!bytes) {
           if (t) node_.note = t('figure.unavailable')
           return
@@ -153,23 +154,21 @@ export class ReportRenderService {
     // first step of the re-render this branch exists to prevent.
     if (report.frozen) {
       /**
-       * **Not defanged again here, and that is not an omission.** `send`
-       * freezes what this method returned, which had already been through the
-       * pass -- so the stored tree holds bracketed addresses and a second pass
-       * is a measured no-op: removing it left the suite green while removing
-       * the one below turned it red. What guarantees the sent document is safe
-       * is the test, which asserts it on this branch rather than trusting
-       * either call.
+       * **A report sent here is not defanged again**: `send` froze what this
+       * method returned, which had already been through the pass. **A report
+       * read in is**, with no exemption: it is stored as it arrived, and its
+       * written and verbatim marks came from whoever wrote the archive.
        */
       // **Parsed, not cast.** The frozen tree is the compliance artefact and
       // the only source a sent report is painted from; a stored tree that lost
       // or drifted a field fails here rather than painting a wrong document.
-      const document_: Document = documentSchema.parse(report.frozen)
+      const preserved: Document = documentSchema.parse(report.frozen)
+      const document_ = report.source === MANUAL ? preserved : defangDocument(preserved, { preserved: true })
       return {
         document_,
         title: document_.title || report.label,
         frozen: true,
-        images: await this.figures(document_, null),
+        images: await this.figures(caseId, document_, null),
       }
     }
 
@@ -211,7 +210,13 @@ export class ReportRenderService {
         })),
       })
       const painted = defangDocument(document_)
-      return { document_: painted, title, frozen: false, images: await this.figures(painted, t) }
+      return {
+        document_: painted,
+        title,
+        frozen: false,
+        images: await this.figures(caseId, painted, t),
+        basis: { version: report.version, parts: blocks.map(({ id, version }) => ({ id, version })) },
+      }
     } catch (error) {
       if (error instanceof UnresolvableSections) {
         // **400, not 500.** The report holds a section this build cannot draw;

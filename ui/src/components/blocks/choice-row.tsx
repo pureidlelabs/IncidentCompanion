@@ -3,7 +3,6 @@ import { useId, type ReactNode } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
-import { Radio, RadioGroup } from '@/components/ui/radio-group'
 import { cn } from '@/lib/cn'
 
 export interface Choice {
@@ -19,14 +18,10 @@ export interface Choice {
   apart?: boolean | undefined
   /** A word qualifying the choice, beside its title. */
   chip?: string | undefined
-  /** What `ChoicePicker` reports when this one is picked. Unused by `ChoiceRow`. */
-  value?: string | undefined
 }
 
 /**
  * The inside of a choice: its glyph, its title and the line under it.
- *
- * Shared by the door and the picker card, so the two are one drawing.
  */
 function ChoiceBody({
   choice,
@@ -197,90 +192,6 @@ export function ChoiceRows({
         </div>
       ))}
       {children}
-    </div>
-  )
-}
-
-/**
- * A pick-one grid of the same cards: choose one, and it stays chosen.
- *
- * - Holds `value` as the choice's `value`, falling back to its `title`.
- * - The grid is a single child of the group, since the kit's `RadioGroup`
- *   stacks whatever it is given.
- * - The card is a `div` with a handler: a `label` forwards no click to a
- *   button, and a button around the radio would nest one control in another.
- * - The keyboard path is the radio group's own, so the card takes no tab stop.
- */
-export function ChoicePicker({
-  choices,
-  value,
-  onValueChange,
-  label,
-  columns = 3,
-  className,
-}: {
-  choices: Choice[]
-  value: string
-  onValueChange: (next: string) => void
-  /** Names the set for a screen reader; the visible heading is the caller's. */
-  label: string
-  columns?: 2 | 3 | undefined
-  className?: string | undefined
-}) {
-  return (
-    <RadioGroup
-      aria-label={label}
-      value={value}
-      onChange={(next) => {
-        onValueChange(next)
-      }}
-      {...(className === undefined ? {} : { className })}
-    >
-      <div
-        className={cn(
-          'grid grid-cols-1 items-stretch gap-3',
-          columns === 3 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2',
-        )}
-      >
-        {choices.map((choice) => (
-          <PickerCard
-            key={choice.value ?? choice.title}
-            choice={choice}
-            chosen={(choice.value ?? choice.title) === value}
-          />
-        ))}
-      </div>
-    </RadioGroup>
-  )
-}
-
-function PickerCard({ choice, chosen }: { choice: Choice; chosen: boolean }) {
-  const titleId = useId()
-  const detailId = useId()
-  const value = choice.value ?? choice.title
-  return (
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-    <div
-      data-part="choice-row"
-      onClick={() => {
-        choice.onSelect?.()
-      }}
-      className={cn(
-        'group/choice flex h-full w-full cursor-pointer items-start gap-3 rounded-md border bg-surface px-4 py-3.5 text-left',
-        'transition-colors hover:bg-highlight hover:text-on-highlight',
-        chosen ? 'border-primary bg-primary/5' : 'border-field-border',
-      )}
-    >
-      <ChoiceBody choice={choice} card titleId={titleId} detailId={detailId} />
-      {/* Last in the row and pushed right: the mark saying which one is
-          standing, read after the thing it marks. */}
-      <span className="ml-auto shrink-0">
-        <Radio
-          value={value}
-          aria-labelledby={titleId}
-          {...(choice.detail === undefined ? {} : { 'aria-describedby': detailId })}
-        />
-      </span>
     </div>
   )
 }

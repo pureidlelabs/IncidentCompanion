@@ -256,20 +256,26 @@ export const Pressing: Story = {
  */
 export const TooManyChips: Story = {
   name: 'More values than fit one row',
+  // **A stage narrow enough that the chips must wrap**, so the premise below
+  // is the story's own. Read at the viewport it happened to be given, it
+  // asserted nothing at any width where `TACTICS` fits one row -- and the
+  // vocabulary is counted off the fixture, so its length moves too. -> #904
   render: (args) => (
-    <FilterBar {...args}>
-      <FilterGroup label="Tactic" first>
-        {TACTICS.map((tactic) => (
-          <Chip
-            key={tactic.label}
-            label={tactic.label}
-            count={tactic.count}
-            pressed={false}
-            onToggle={() => undefined}
-          />
-        ))}
-      </FilterGroup>
-    </FilterBar>
+    <div className="w-[28rem]">
+      <FilterBar {...args}>
+        <FilterGroup label="Tactic" first>
+          {TACTICS.map((tactic) => (
+            <Chip
+              key={tactic.label}
+              label={tactic.label}
+              count={tactic.count}
+              pressed={false}
+              onToggle={() => undefined}
+            />
+          ))}
+        </FilterGroup>
+      </FilterBar>
+    </div>
   ),
   play: async ({ canvas, canvasElement, step }) => {
     const bar = canvasElement.querySelector<HTMLElement>('[data-part="filter-bar"]')!

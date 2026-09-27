@@ -45,8 +45,8 @@ export interface ReportLayout {
   /** Whether this layout belongs to the NIS2 regime, which decides whether
    *  a stage applies to it at all. */
   nis2: boolean
-  /** The reporting step this layout is, where it is one of them. */
-  stage?: string
+  /** The step of a regime's obligation this layout files. Empty for one that files none. */
+  stage: string
   blocks: LayoutBlock[]
 }
 

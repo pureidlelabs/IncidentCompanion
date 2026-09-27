@@ -143,13 +143,13 @@ test.describe('importing a Sentinel incident', () => {
     await settle(page)
 
     /**
-     * **The incident's own number, which the case is seeded with and named
-     * by.** Asserted rather than the title the analyst typed: the rail head
-     * prefers the reference, so a case that kept the title here would be one
-     * the seed never reached -- and the seed is what ties the case back to the
-     * incident it came from.
+     * **The title the analyst typed, which carries the clock.** The case is
+     * seeded with no reference -- one is unique within its customer, so a case
+     * seeded from the incident's number could only ever be created once per
+     * incident, and this test could only pass against a database the door had
+     * not been used on. -> #882
      */
-    await expect(page.getByRole('complementary', { name: 'Case sections' })).toContainText('1001')
+    await expect(page.getByRole('complementary', { name: 'Case sections' })).toContainText(title)
 
     // **The rows, not only the case.** The scenario is *the case exists and
     // holds what was approved*; a create that made an empty case and lost the

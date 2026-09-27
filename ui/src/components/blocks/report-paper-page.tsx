@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 
 import type { Case, Report, ReportBlock } from '@/api/model'
 import { markdownToHtml } from '@/components/blocks/prose-schema'
+import { cn } from '@/lib/cn'
 
 import { bandsOf, paperScrollTop, scrollerOf } from './report-paper-sync'
 import { WRITTEN_KINDS, factsFor, headingOf } from './report-shape'
@@ -24,6 +25,7 @@ export function ReportPaperPage({
   report,
   here,
   headings,
+  className,
 }: {
   blocks: readonly ReportBlock[]
   live: Readonly<Record<string, string>>
@@ -32,6 +34,14 @@ export function ReportPaperPage({
   here: string
   /** The heading keys resolved in the report's language, as served. -> #513 */
   headings: Readonly<Record<string, string>>
+  /**
+   * Which pane width brings the page back, from whoever owns the columns.
+   *
+   * Omitted, the page is drawn at every width: a container query resolves
+   * against an ancestor container, and a page mounted outside one would
+   * silently never draw. -> `FOLD`
+   */
+  className?: string | undefined
 }) {
   const box = useRef<HTMLDivElement>(null)
 
@@ -87,10 +97,13 @@ export function ReportPaperPage({
       // **Not "Paper".** That is the control's name, and the control you press
       // and the region it opens are different objects.
       aria-label="The printed page"
-      className="hidden min-w-0 border-l border-border bg-muted/30 lg:block"
+      className={cn('min-w-0 border-l border-border bg-muted/30', className)}
     >
       <div
         ref={box}
+        // The scroller itself takes focus: arrow keys move the focused
+        // element's nearest scrollable ancestor. -> #929
+        tabIndex={0}
         className="sticky top-14 h-(--document-viewport-h) overflow-y-auto p-4"
       >
         <div className="mx-auto w-full max-w-[26rem] bg-paper px-8 py-9 text-paper-ink shadow-lg">
@@ -101,10 +114,10 @@ export function ReportPaperPage({
           )}
           {blocks.map((block, at) => (
             <div key={block.id} id={paperDomId(block.id)}>
-              <h4 className="mt-5 flex items-baseline gap-2 border-b border-paper-accent pb-1 font-sans text-sm font-semibold text-paper-accent first:mt-0">
+              <h3 className="mt-5 flex items-baseline gap-2 border-b border-paper-accent pb-1 font-sans text-sm font-semibold text-paper-accent first:mt-0">
                 <span className="font-mono text-2xs">{String(at + 1).padStart(2, '0')}</span>
                 {headingOf(block, headings)}
-              </h4>
+              </h3>
               {WRITTEN_KINDS.includes(block.kind) ? (
                 <div
                   // The schema is the sanitiser. -> `markdownToHtml`

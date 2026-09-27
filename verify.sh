@@ -47,9 +47,6 @@ expensive() { [ "$MODE" = detailed ]; }
 FAILED=()
 SKIPPED=()
 PASSED=()
-# A tier that ran but could not cover everything it names. Distinct from a skip,
-# which ran nothing, and from a failure, which found something.
-PARTIAL=()
 # Containers this run brought up and is deliberately leaving behind.
 STARTED_SERVICES=0
 
@@ -62,6 +59,9 @@ step() {
     FAILED+=("$name")
   fi
 }
+
+# What each tier reports, for `tests/certify.py` to read at the end.
+rm -rf reports && mkdir reports
 
 reachable() {
   "$(command -v python3 || command -v python)" - "$1" "$2" <<'PY' 2>/dev/null
@@ -103,7 +103,7 @@ if expensive; then
      && (cd server && node scripts/stack.mjs --roles) \
      && eval "$(node server/scripts/stack.mjs --export)" \
      && DATABASE_URL="$IC_MIGRATE_DATABASE_URL" \
-        bash -c 'cd server && npm run --silent db:push -- --force' >/dev/null; then
+        bash -c 'cd server && npm run --silent db:push' >/dev/null; then
     STARTED_SERVICES=1
   else
     SKIPPED+=("the services could not be started; the suites fall back to the in-process engine")
@@ -124,15 +124,13 @@ elif [ -n "$REDIS_PORT" ] && [ -n "$PG_PORT" ] \
   # Here the stack was found, which is the one case where a suite that declines
   # anyway is telling us something -- a partly-raised stack, or a run that never
   # reached the tests it thinks it ran. -> `server/test/must-run.ts`
-  step "server: suite" bash -c 'cd server && IC_SUITE_MUST_RUN=1 npx vitest run --pool=threads'
-elif bash -c 'cd server && npx vitest run --pool=threads'; then
-  # Green on the embedded engine is a real pass of everything it can reach.
-  PASSED+=("server: suite (in-process engine -- the write paths were not covered)")
+  step "server: suite" bash -c 'cd server && IC_SUITE_MUST_RUN=1 npx vitest run --pool=threads \
+    --reporter=default --reporter=json --outputFile.json=../reports/server.json'
 else
-  PARTIAL+=("server: suite ran on the in-process engine and some of it failed there.
-            The write paths need two concurrent transactions and cannot pass
-            against one backend. Start the dev stack and run this again before
-            reading those failures as yours: ./dev-node.sh")
+  # Tests needing two concurrent transactions decline on the embedded engine.
+  # -> `server/test/database.ts::hasConcurrentConnections`
+  step "server: suite (in-process engine -- the write paths were not covered)" \
+    bash -c 'cd server && npx vitest run --pool=threads'
 fi
 behaviour && step "server: build" bash -c 'cd server && npm run --silent build'
 
@@ -145,31 +143,47 @@ step "client: typecheck" bash -c 'cd ui && npx tsc -b --noEmit --force'
 # client never did, so `ui` was linted by nothing here - an error sat on the
 # release branch unseen.
 step "client: lint" bash -c 'cd ui && npm run --silent lint'
-# Armed, because a worker pool that times out leaves this tier reporting green
-# having run none of itself. -> `ui/vite.config.ts`
-behaviour && step "client: suite" bash -c 'cd ui && IC_SUITE_MUST_RUN=1 npx vitest run'
+behaviour && step "client: suite" env IC_REPORT="$PWD/reports/client.json" \
+  bash -c 'cd ui && npx vitest run'
 
 # ------------------------------------------------------- repository checks
 # **`tests/docker` builds containers**, which is the whole reason a full sweep
 # ran past twenty minutes -- `test.sh` runs `pytest tests` unqualified and the
 # everyday selection excludes it. It is the expensive question, so it is asked
 # in the expensive mode. -> `CLAUDE.md`
+# The repository tier's selection is CI's: every docker file but the two that
+# read files rather than run containers, which the containers tier runs again.
+REPOSITORY_ONLY=(--ignore=tests/lifecycle)
+for file in tests/docker/test_*.py; do
+  case "$file" in
+    */test_container_config.py | */test_stack_images.py) ;;
+    *) REPOSITORY_ONLY+=("--ignore=$file") ;;
+  esac
+done
+
 if expensive; then
-  # The mode that just started containers is the mode where "no docker on
-  # PATH" is a broken run rather than a machine without Docker.
-  #
   # **`INCIDENTCOMPANION_CONTAINER_TESTS` too, or the container cases skip
-  # while this step's own name says it ran them.** The TLS entrypoint cases opt
-  # in behind that variable so the cheap `repository` job stays daemon-free;
-  # only `ci.yml`'s `containers` job set it, so a detailed sweep here reported
-  # the tier as run having executed none of it. That is the shape `CLAUDE.md`
-  # records for the browser tier -- a run against nothing exits 0 -- arriving
-  # through an environment variable instead of a missing server.
-  step "repository: suite (with the container files)" \
-    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 ./test.sh -q
+  # while this step's own name says it ran them.** The lifecycle tier opts in
+  # the same way. A report per tier, as CI writes them, so `tests/certify.py`
+  # counts each shared file for both tiers that owe it. **The lifecycle runs
+  # after the containers, never beside them**: both build the same local image
+  # tags, and the lifecycle refuses a tag that moved under it.
+  step "repository: suite (armed)" \
+    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_SKIP_UI=1 ./test.sh -q "${REPOSITORY_ONLY[@]}" \
+    --junitxml=reports/repository.xml
+  step "containers: suite" \
+    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_SKIP_UI=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 ./test.sh -q \
+    --ignore=tests/docs --ignore=tests/repo --ignore=tests/contract --ignore=tests/lifecycle \
+    --junitxml=reports/containers.xml
+  step "lifecycle: suite" \
+    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_SKIP_UI=1 INCIDENTCOMPANION_LIFECYCLE_TESTS=1 ./test.sh -q \
+    --ignore=tests/docs --ignore=tests/repo --ignore=tests/contract --ignore=tests/docker \
+    --junitxml=reports/lifecycle.xml
 elif behaviour; then
-  step "repository: suite" ./test.sh -q --ignore=tests/docker
+  step "repository: suite" env INCIDENTCOMPANION_SKIP_UI=1 ./test.sh -q "${REPOSITORY_ONLY[@]}" \
+    --junitxml=reports/repository.xml
   SKIPPED+=("tests/docker -- builds containers; ./verify.sh --detailed runs it")
+  SKIPPED+=("tests/lifecycle -- builds and runs the shipped stack; ./verify.sh --detailed runs it")
 fi
 
 # ------------------------------------------------------------------ hooks
@@ -184,7 +198,8 @@ fi
 # or repairs one -- so there is no state left where this tier has nothing to
 # run and says so in a SKIPPED line. -> #653
 if behaviour; then
-  step "hooks and guidance" "$(scripts/venv_python.sh --ensure)" -m pytest .claude/tests -q
+  step "hooks and guidance" "$(scripts/venv_python.sh --ensure)" -m pytest .claude/tests -q \
+    --junitxml=reports/repository-hooks.xml
 fi
 
 # ----------------------------------------------------------------- prose
@@ -226,14 +241,7 @@ fi
 # skipped it. `--no-global` is what makes this a repository config rather than a
 # self-hosted global one, which is validated against a different schema and
 # accepts almost anything.
-#
-# Needs the network, unlike the linters above, so it declines the same way they
-# do rather than failing the tier offline.
-if npx --yes --package renovate@latest -- renovate-config-validator --version >/dev/null 2>&1; then
-  step "renovate config" bash -c 'npm run --silent lint:renovate'
-else
-  SKIPPED+=("renovate config (cannot reach the npm registry)")
-fi
+step "renovate config" bash -c 'npm run --silent lint:renovate'
 
 # --------------------------------------------------------------- browser
 # **It raises its own stack now, so there is nothing to be reachable first.**
@@ -258,11 +266,18 @@ else
   SKIPPED+=("browser tier, app and kit (./verify.sh --detailed runs both)")
 fi
 
+# ---------------------------------------------------------------- ledger
+# **What the tiers above reported, read the way the merge group reads it.** A
+# file a tier owns that it never ran, a skip nobody excused, a row whose cited
+# test did not pass at the entry point. `--partial`, because a tier this mode
+# does not run is named as not run rather than refused.
+behaviour && step "ledger: what this run certified" \
+  "$(scripts/venv_python.sh --ensure)" -m tests.certify reports --partial
+
 # ----------------------------------------------------------------- said
 printf '\n\033[1m== what ran (%s)\033[0m\n' "$MODE"
 for one in "${PASSED[@]:-}"; do [ -n "$one" ] && printf '  \033[32mpassed\033[0m  %s\n' "$one"; done
 for one in "${SKIPPED[@]:-}"; do [ -n "$one" ] && printf '  \033[33mskipped\033[0m %s\n' "$one"; done
-for one in "${PARTIAL[@]:-}"; do [ -n "$one" ] && printf '  \033[33mPARTIAL\033[0m %s\n' "$one"; done
 for one in "${FAILED[@]:-}"; do [ -n "$one" ] && printf '  \033[31mFAILED\033[0m  %s\n' "$one"; done
 
 if [ "$STARTED_SERVICES" = 1 ]; then
@@ -272,9 +287,5 @@ fi
 if [ "${#FAILED[@]}" -gt 0 ]; then
   printf '\n%s tier(s) failed.\n' "${#FAILED[@]}"
   exit 1
-fi
-if [ "${#PARTIAL[@]}" -gt 0 ]; then
-  printf '\n%s tier(s) ran without covering everything they name. Nothing failed.\n' "${#PARTIAL[@]}"
-  exit 0
 fi
 printf '\nEvery tier that could run, ran.\n'

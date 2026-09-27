@@ -2,10 +2,11 @@
  * Seeding, as a one-shot that exits - not as something every server does on boot.
  *
  *     node dist/src/seed.js            the built-in library and language pack
- *     node dist/src/seed.js --demos    ...and rebuild the demo cases and reports
+ *     node dist/src/seed.js --demos    ...and the demo cases and reports, once,
+ *                                      on an install nobody has claimed
  *
  * Runs as a one-shot rather than from a bootstrap hook, so replicas cannot
- * race: the demo reseed deletes every demo case before rebuilding it.
+ * race. Safe to run again: it writes only what is missing or changed.
  *
  * **The step order is declared here**, never inherited from which module
  * imports which - a refactor can reverse that silently.
@@ -18,14 +19,16 @@ import 'reflect-metadata'
 import { Logger } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 
-import { AppModule } from './app.module'
 import { loadEnv } from './config/env'
+import { DATABASE } from './db/db.module'
+import type { Database } from './db/client'
+import { unattended } from './db/scope'
 import { DemoReportSender } from './demo-reports/sender.service'
 import { DemoSeederService } from './demos/seeder.service'
 import { AuthService } from '@thallesp/nestjs-better-auth'
 
-import type { Auth } from './auth/auth.config'
-import { CustomersService } from './customers/customers.service'
+import { signUpClosed, type Auth } from './auth/auth.config'
+import { CustomersService, attributeUnattributedCases } from './customers/customers.service'
 import { LibraryService } from './library/library.service'
 import { LanguageService } from './report/language.service'
 
@@ -54,63 +57,82 @@ async function seed(): Promise<void> {
    * `strict: false` because `LibraryService` is not exported from the module
    * that provides it; resolving across the whole graph is what a one-shot
    * wants and what a request-serving process should never do.
+   *
+   * **It connects as the seeding role throughout**, the one role the policies
+   * exempt: it writes cases nobody is asking for, on an install that may hold
+   * no account yet. Set before the module loads, because its configuration is
+   * read then.
    */
+  process.env.DATABASE_URL = env.SEED_DATABASE_URL
+  const { AppModule } = await import('./app.module.js')
   const app = await NestFactory.createApplicationContext(AppModule)
 
   try {
-    await app.get(LibraryService, { strict: false }).seedBuiltIns()
-    log.log('Library built-ins written')
+    await unattended(async () => {
+      await app.get(LibraryService, { strict: false }).seedBuiltIns()
+      log.log('Library built-ins written')
 
-    // **Before the demos**, which open cases: a case created without a
-    // customer to point at would carry none, and the install is required to
-    // always hold the default.
-    const fallback = await app.get(CustomersService, { strict: false }).ensureDefault()
-    log.log(`Default customer: ${fallback.name}`)
+      // **Before the demos**, which open cases: a case created without a
+      // customer to point at would carry none, and the install is required to
+      // always hold the default.
+      const fallback = await app.get(CustomersService, { strict: false }).ensureDefault()
+      log.log(`Default customer: ${fallback.name}`)
 
-    await app.get(LanguageService, { strict: false }).seedBuiltIn()
-    log.log('Language pack written')
+      // **Cases opened before a case carried a customer.** Silent when there are
+      // none, which is every run after the first.
+      const moved = await attributeUnattributedCases(app.get<Database>(DATABASE, { strict: false }))
+      if (moved > 0) log.log(`Put ${String(moved)} case(s) with no customer under ${fallback.name}`)
 
-    if (wantsDemos) {
-      const rebuilt = await app.get(DemoSeederService, { strict: false }).reseed()
-      log.log(`Demo cases rebuilt: ${String(rebuilt)}`)
-      await app.get(DemoReportSender, { strict: false }).fileDeclared()
-    } else {
-      log.log('Demo content skipped \u2014 pass --demos to rebuild it')
-    }
+      await app.get(LanguageService, { strict: false }).seedBuiltIn()
+      log.log('Language pack written')
 
-    /**
-     * **The dev loop's own analyst.**
-     *
-     * `--dev-account` exists because `/sign-up/email` is not served: the setup
-     * token is the only door over HTTP and it lives in the server's console
-     * output, so the alternative was a shell script scraping a log. This is the
-     * same in-process call `setup.controller.ts` makes once the token matches.
-     *
-     * **The install rule still refuses a second account**: the `before` hook in
-     * `auth.config.ts` throws once any account exists, so a populated database
-     * is left alone. A refusal here is the ordinary case on every run after the
-     * first, and says "sign in instead" rather than failing the seed.
-     */
-    if (wantsAccount) {
-      const email = process.env['IC_DEV_EMAIL']
-      const password = process.env['IC_DEV_PASSWORD']
-      if (!email || !password) {
-        log.warn('--dev-account needs IC_DEV_EMAIL and IC_DEV_PASSWORD; skipped')
+      if (wantsDemos) {
+        const written = await app.get(DemoSeederService, { strict: false }).seedOnce()
+        if (written > 0) {
+          await app.get(DemoReportSender, { strict: false }).fileDeclared()
+          log.log(`Demo cases written: ${String(written)}`)
+        } else {
+          log.log('Demo cases left as they are: the install is claimed or already has them')
+        }
       } else {
-        try {
-          // **Typed with this install's own `Auth`.** `AuthService`'s default
-          // generic is a plugin-less instance, so `api` is `any` and every
-          // call through it is unchecked -- the same reason
-          // `accounts.controller.ts` names the generic.
-          await app
-            .get<AuthService<Auth>>(AuthService, { strict: false })
-            .api.signUpEmail({ body: { email, password, name: 'Dev Analyst' } })
-          log.log(`Dev account created: ${email}`)
-        } catch {
-          log.log('This install already has accounts \u2014 sign in, or ask an admin for one')
+        log.log('Demo content skipped \u2014 pass --demos to write it')
+      }
+
+      /**
+       * **The dev loop's own analyst.**
+       *
+       * `--dev-account` exists because `/sign-up/email` is not served: the setup
+       * token is the only door over HTTP and it lives in the server's console
+       * output, so the alternative was a shell script scraping a log. This is the
+       * same in-process call `setup.controller.ts` makes once the token matches.
+       *
+       * **The install rule still refuses a second account**: the `before` hook in
+       * `auth.config.ts` throws once any account exists, so a populated database
+       * is left alone. A refusal here is the ordinary case on every run after the
+       * first, and says "sign in instead" rather than failing the seed.
+       */
+      if (wantsAccount) {
+        const email = process.env['IC_DEV_EMAIL']
+        const password = process.env['IC_DEV_PASSWORD']
+        if (!email || !password) {
+          log.warn('--dev-account needs IC_DEV_EMAIL and IC_DEV_PASSWORD; skipped')
+        } else {
+          try {
+            // **Typed with this install's own `Auth`.** `AuthService`'s default
+            // generic is a plugin-less instance, so `api` is `any` and every
+            // call through it is unchecked -- the same reason
+            // `accounts.controller.ts` names the generic.
+            await app
+              .get<AuthService<Auth>>(AuthService, { strict: false })
+              .api.signUpEmail({ body: { email, password, name: 'Dev Analyst' } })
+            log.log(`Dev account created: ${email}`)
+          } catch (error) {
+            if (!signUpClosed(error)) throw error
+            log.log('This install already has accounts \u2014 sign in, or ask an admin for one')
+          }
         }
       }
-    }
+    })
   } finally {
     // Closes the pools. Without it the process holds its Postgres and Redis
     // connections open and the Job never completes.
@@ -120,5 +142,8 @@ async function seed(): Promise<void> {
 
 seed().catch((error: unknown) => {
   new Logger('Seed').error(error instanceof Error ? error.message : String(error))
-  process.exitCode = 1
+  // Exited rather than left to drain: a context that failed while it was
+  // being built holds pools nothing here can close, and they keep the process
+  // alive for good, which an install waiting on this reads as a hang.
+  process.exit(1)
 })

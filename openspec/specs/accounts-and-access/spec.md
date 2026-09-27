@@ -14,7 +14,7 @@ The first account is the exception, and MUST be creatable only while the install
 
 Claiming an install MUST require a bootstrap credential that only somebody with access to the machine can obtain. It MUST be issued to the install's own output at start, never over the network, and MUST be verifiable without revealing it to a caller who guesses. Reaching the service first MUST NOT be enough to become its administrator.
 
-Whether an install is still claimable MUST be decided from what it holds when the claim is made, never from what was true when it started. Claiming MUST be atomic: two claims arriving together MUST produce one administrator.
+Whether an install is still claimable MUST be decided from what it holds when the claim is made, never from what was true when it started. Claiming MUST be atomic: two claims arriving together MUST produce one administrator. A claim that loses MUST leave nothing behind — no account and no session, in any store the install keeps one in.
 
 #### Scenario: An install with no accounts is claimed
 
@@ -35,6 +35,7 @@ Whether an install is still claimable MUST be decided from what it holds when th
 - GIVEN an unclaimed install
 - WHEN two valid claims arrive at the same moment
 - THEN exactly one administrator exists afterwards
+- AND the claim that lost holds no account and no session
 
 #### Scenario: The claim is attempted twice
 
@@ -122,6 +123,49 @@ An administrator can grant themselves data access, and that is deliberate. The p
 - THEN they reach that group's customers at that membership's level
 - AND the grant is logged naming them as both the grantor and the subject
 
+### Requirement: What the install is made of is management-plane
+
+The size and shape of the installation and the resources of the host it runs on MUST be reachable by an administrator alone.
+
+That is its storage and how much it holds there, its open connections, how many rows each of its tables holds, and the memory, processor and free space available to it. None of it is what a case holds, and none of it is an account's own.
+
+**A count of rows answers the question the route beside it refuses.** Who may sign in is management-plane, so the account list is an administrator's; a per-table row count reports how many accounts exist without naming them. A boundary one route holds and the table beside it reports around is not held.
+
+**The liveness probe is the exception, and it is the only one.** Whether the application can serve a request at all MUST be answerable without a session, because an answer that needs one cannot be given by an install that has stopped serving. It MUST report only that, and MUST NOT carry the install's size, shape or host resources.
+
+Where a screen is drawn for these facts, it MUST NOT be offered to an account that every route behind it refuses.
+
+#### Scenario: An analyst asks what the install holds
+
+- GIVEN an account signed in as an analyst
+- WHEN they request where the install keeps its data, how many artefacts it holds, or its table sizes and row counts
+- THEN they are refused
+
+#### Scenario: An analyst asks what the host has left
+
+- GIVEN an account signed in as an analyst
+- WHEN they request the host's memory, processor and free space
+- THEN they are refused
+
+#### Scenario: An administrator asks the same questions
+
+- GIVEN an account signed in as an administrator
+- WHEN they request either
+- THEN they are answered
+
+#### Scenario: The rail offers a pane nobody behind it would answer
+
+- GIVEN an account signed in as an analyst
+- WHEN they are offered the panes they may open
+- THEN the pane drawn from install telemetry is not among them
+
+#### Scenario: Something asks whether the install is serving
+
+- GIVEN a caller with no session
+- WHEN it asks whether the application is live
+- THEN it is answered
+- AND the answer carries nothing about the install's size, shape or host resources
+
 ### Requirement: Case data is reached through groups, at a level
 
 A group holds customers. An analyst joins a group at a level, and that level is what they may do to the cases of every customer in it.
@@ -137,6 +181,8 @@ Delete is about the case as a whole and nothing smaller.
 A customer MAY belong to more than one group and an analyst MAY belong to more than one. Where memberships overlap the most permissive applies. An analyst belonging to no group reaches no customer's cases beyond the default customer.
 
 Membership and its level MUST be grantable and revocable one at a time, and a revocation MUST take effect for sessions already open rather than at their next sign-in.
+
+**A list names only what its analyst reaches.** Where the application answers with a list that names cases rather than the contents of one case, it MUST name only the cases the asking analyst reaches, decided by the same rule that decides whether they reach one case by name. A list built from what an analyst has already opened MUST be decided when it is read rather than when it was written, so that reach withdrawn after the visit withdraws the case from the list, and a case kept in such a list deliberately MUST be withdrawn on the same terms as one that was not.
 
 **The default customer is the one exception in this specification, and it is stated here so that every other rule can be read without one.** Every account reaches it regardless of groups, federation or mapping, and that MUST NOT be revocable. The level is the account's role: an analyst reaches it at read and write, and an administrator reaches it at read, write and delete, so that an install can dispose of a case nobody has attributed without first building the access model.
 
@@ -214,6 +260,26 @@ It is not an inherited grant to somebody's data. The default customer holds only
 - WHEN they delete a case nobody has attributed
 - THEN it is deleted
 
+#### Scenario: An identity the install does not hold
+
+- GIVEN a session whose account no longer exists
+- WHEN it asks for a case, one of the default customer's included
+- THEN it is refused
+
+#### Scenario: A list is asked for by an analyst in no group
+
+- GIVEN an administrator belonging to no group
+- WHEN they ask for a list that names cases
+- THEN no case of a customer somebody has been onboarded as is named by it
+- AND a case the install has attributed to nobody is named by it
+- AND they may grant themselves the access and ask again
+
+#### Scenario: Reach is withdrawn after the case was opened
+
+- GIVEN an analyst who has opened a case, and kept it in their list
+- WHEN the group that reached it is revoked
+- THEN the list stops naming that case
+
 ### Requirement: An install always has somebody who can administer it
 
 An install MUST NOT be able to reach a state where nobody can administer it. The last administrator MUST NOT be removable or demotable.
@@ -224,6 +290,13 @@ An install MUST NOT be able to reach a state where nobody can administer it. The
 - WHEN somebody attempts to remove or demote them
 - THEN it is refused
 - AND they are told they are the last
+
+#### Scenario: Two administrators act on each other at once
+
+- GIVEN an install whose only two administrators each demote or disable the other at the same moment
+- WHEN both are answered
+- THEN one succeeds and the other is refused
+- AND somebody who can administer the install remains
 
 ### Requirement: An install can be recovered without another administrator
 
@@ -298,7 +371,13 @@ Restoring from a backup is the other way back, and belongs to the backup specifi
 
 This requirement governs local accounts. An account whose credentials belong to an identity provider is guarded there, and this install MUST NOT duplicate it.
 
-Sign-in MUST resist repeated guessing. A local account MUST lock after a number of failures the install sets, for a duration the install sets, and the lock MUST be releasable by an administrator.
+Sign-in MUST resist repeated guessing, and guessing MUST NOT give anybody the power to lock an account's holder out. A local account's failures MUST count against the account in two runs: one for the addresses the account's right password has come from, and one for every other address. When a run reaches a number of failures the install sets, the addresses that run counts for MUST be locked out of the account, and the addresses of the other run MUST NOT be.
+
+The first lock MUST last a duration the install sets. Each later lock of the same run, with no right password between them, MUST last longer than the one before, up to a maximum the install sets, and a lock that has lifted MUST take the install's number of failures to fall again. The same wrong password offered again MUST count once. The install MUST NOT keep a wrong password, nor anything from which one could be confirmed without the install's own secret. An administrator MUST be able to release an account, and a release MUST clear both runs.
+
+**An address stays familiar for a stated life, and no longer.** An address MUST stop counting as one the account's right password has come from once that password has not come from it for a fixed period, or once it is no longer among a fixed number of the account's most recent such addresses, and a failure or a right password from it then falls in the other run. Each right password from an address MUST start its period again. An address no longer familiar MUST be removed, and each pass that removes any MUST be logged with how many it removed and without the addresses themselves. An address that is only waiting to be removed MUST NOT count as familiar.
+
+**Every door that checks a password is a door a guess arrives through.** A wrong password MUST count toward the lock whichever door checked it — signing in, confirming the current password before changing it, or any other — and the failures from every door MUST count into the same two runs. While an address is locked out of an account, the account's password offered from it MUST be answered as wrong at every door, and nothing a door would do with the right one — signing in, replacing the password — MUST happen. Each wrong answer MUST be logged as a failed sign-in, naming the door, and each lock MUST be logged once, when it falls, with how long it lasts.
 
 Local passwords MUST meet a policy the install sets. Where a password must be changed, the holder MUST be unable to reach anything else until they change it.
 
@@ -306,20 +385,89 @@ A policy the install sets MUST govern every door that writes a password, includi
 
 The policy MUST govern what may be written and never what may be offered. Raising the minimum MUST NOT refuse a password already in use, or the change locks out every account holding a shorter one.
 
-These controls exist to answer OWASP ASVS 5.0 Level 2, which the constitution names as the grounding.
+These controls exist to answer OWASP ASVS 5.0 Level 2, which the constitution names as the grounding, and this requirement is the documentation of how they are configured and how they keep a guesser from locking somebody else out.
 
 #### Scenario: Repeated failures lock an account
 
 - GIVEN an account
-- WHEN sign-in fails more times than the install permits
-- THEN the account is locked
-- AND further correct credentials do not sign it in until the lock lifts
+- WHEN sign-in fails from one address as many times as the install permits
+- THEN that address is locked out of the account
+- AND further correct credentials from it do not sign it in until the lock lifts
 
 #### Scenario: A locked account reveals nothing
 
-- GIVEN a locked account
-- WHEN somebody attempts to sign in
+- GIVEN an account an address is locked out of
+- WHEN somebody at that address attempts to sign in
 - THEN the response does not distinguish a locked account from a wrong password
+
+#### Scenario: Another machine guesses at an analyst's account
+
+- GIVEN an analyst who has signed in from their own machine
+- WHEN another machine guesses at their account until it is locked out
+- THEN the analyst signs in from their own machine
+- AND the guessing machine is refused the right password
+
+#### Scenario: Guesses arrive from many machines
+
+- GIVEN an account and its holder, who has signed in from their own machine
+- WHEN machines the account has never signed in from guess at it, each fewer times than the install permits and together as many
+- THEN every address the account has never signed in from is locked out, including one that did not guess
+- AND the holder signs in from their own machine
+
+#### Scenario: The holder's own machine guesses
+
+- GIVEN an analyst who has signed in from their own machine
+- WHEN that machine guesses at their account until it is locked out
+- THEN the right password from an address the account has never signed in from signs in
+
+#### Scenario: The same wrong password is offered again
+
+- GIVEN an account
+- WHEN one wrong password is offered again and again
+- THEN it counts as one failure
+
+#### Scenario: A lock follows a lock
+
+- GIVEN addresses locked out of an account, whose lock has lifted, with no right password since
+- WHEN they reach the install's number of failures again
+- THEN the lock lasts longer than the one before
+- AND no lock lasts longer than the install's maximum
+- AND fewer failures than the install's number do not lock them again
+
+#### Scenario: An administrator releases an account
+
+- GIVEN an account locked out from the addresses it has signed in from and from every other, one of them more than once
+- WHEN an administrator releases it
+- THEN its holder signs in
+- AND the next lock of an address it has never signed in from lasts the install's first duration
+
+#### Scenario: A familiar address falls out of use
+
+- GIVEN an analyst who signed in from a machine, and has not signed in from it for longer than an address stays familiar
+- WHEN a machine the account has never signed in from guesses at it until it is locked out
+- THEN the right password from the analyst's unused machine is refused
+- AND a machine they signed in from within that period still signs in
+
+#### Scenario: Signing in keeps an address familiar
+
+- GIVEN an analyst whose machine is near the end of the period an address stays familiar
+- WHEN they sign in from it, and guessing from elsewhere later locks out the machines the account has never signed in from
+- THEN they still sign in from that machine
+
+#### Scenario: An account signs in from more addresses than it keeps
+
+- GIVEN an analyst who has signed in from as many machines as an account keeps familiar
+- WHEN they sign in from one more, and guessing from elsewhere then locks out the machines the account has never signed in from
+- THEN the machine they signed in from least recently is refused
+- AND the others still sign in
+
+#### Scenario: Addresses no longer familiar are removed
+
+- GIVEN an account with addresses past their period or beyond the number it keeps
+- WHEN the install removes them
+- THEN the removal is logged with how many addresses went
+- AND the log names none of them
+- AND where the log cannot take the line, nothing is removed
 
 #### Scenario: An account must change its password
 
@@ -339,6 +487,20 @@ These controls exist to answer OWASP ASVS 5.0 Level 2, which the constitution na
 - GIVEN an account whose password was set before the minimum was raised
 - WHEN its holder signs in with it
 - THEN they are signed in
+
+#### Scenario: A password is guessed at through a door other than sign-in
+
+- GIVEN a signed-in analyst's session in somebody else's hands
+- WHEN they guess at the current password where it is changed
+- THEN each wrong answer counts toward the lock, together with any at sign-in
+- AND each is logged as a failed sign-in naming the door
+
+#### Scenario: A locked account's password is offered where it is changed
+
+- GIVEN an account the address of a request is locked out of, and its right password
+- WHEN it is offered from that address as the current password to change it
+- THEN it is answered exactly as a wrong one
+- AND the password is not changed
 
 ### Requirement: A second factor is available, and enforcing it is the install's policy
 
@@ -602,6 +764,8 @@ A request MUST be served through the session of the caller who made it, never th
 
 A session MUST end after an idle period the install sets, and MUST also end at an absolute lifetime the install sets, whether or not it has been idle. An unattended session that stays busy is still a session nobody is watching.
 
+**Reporting that a session is in use is not a credential attempt, and MUST NOT be limited as one.** A session in use MUST NOT go idle, and its holder's sign-in MUST NOT be refused, because somebody else at the same address reported use or tried to sign in. Analysts behind one address are colleagues, and one address is all a guesser needs to be among them.
+
 An analyst MUST be able to see their own active sessions and end any of them. An administrator MUST be able to end a session, and MUST be able to end every session at once.
 
 **Ending one account's sessions is a verb of the roster**, so it is refused on the account the request is made with; ending *every* session is where an administrator ends their own, and it says so before it runs.
@@ -620,6 +784,18 @@ Ending a session MUST take effect immediately, not at its next expiry.
 - GIVEN a session that has been idle longer than the install permits
 - WHEN it makes a request
 - THEN it is refused
+
+#### Scenario: Colleagues at one address keep their sessions in use
+
+- GIVEN analysts working behind one address
+- WHEN their sessions report use, more often than sign-in is permitted
+- THEN another analyst at that address still signs in
+
+#### Scenario: Somebody at an analyst's address guesses at sign-in
+
+- GIVEN an analyst working at an address somebody else is guessing from
+- WHEN the guesses are refused as too many
+- THEN the analyst's session still reports use
 
 #### Scenario: A session reaches its absolute lifetime
 
@@ -712,6 +888,8 @@ That is: creating, changing or removing an account; making somebody an administr
 
 Changing what the logging itself does is an administrative event.
 
+**An entry records what happened, not what was asked for.** A request that changed nothing MUST NOT be logged as the change it named: ending a session the caller does not hold, one that does not exist, or signing out with no session is answered and ends nothing, and the record says nothing ended.
+
 #### Scenario: Somebody is given reach
 
 - GIVEN an administrator adding an analyst to a group
@@ -775,3 +953,79 @@ Changing what the logging itself does is an administrative event.
 - GIVEN an administrator
 - WHEN they change the log's destination or how long it is kept
 - THEN the change is itself logged, at both the old destination and the new
+
+#### Scenario: A session is refused after its account is gone
+
+- GIVEN a session whose account no longer exists
+- WHEN it is refused a case
+- THEN the refusal is logged with who the session was issued to and what it asked for
+
+#### Scenario: An analyst ends their own session
+
+- GIVEN an analyst signed in from more than one place
+- WHEN they sign out, end one of their own sessions, or end every other one
+- THEN each session ended is logged with who ended it, whose it was, and the moment
+
+#### Scenario: An ending that ends nothing
+
+- GIVEN a request to end a session that belongs to another account, one that does not exist, or a sign-out carrying no session
+- WHEN it is answered
+- THEN no session is ended
+- AND nothing is logged as ended
+
+#### Scenario: A removal that removes nothing
+
+- GIVEN a request to take an analyst out of a group they are not in, or a customer out of a group that does not hold it, including a group or an analyst that does not exist
+- WHEN it is answered
+- THEN nothing is logged as removed
+
+#### Scenario: A change to what already stands
+
+- GIVEN a request for a membership at the level it has, a customer a group already holds, or an account's current state or role
+- WHEN it is answered
+- THEN nothing is logged as changed
+
+#### Scenario: An act half done is asked for again
+
+- GIVEN an administrative act whose change was made but whose answer failed
+- WHEN the administrator asks for it again
+- THEN the act is finished, the account's open sessions included
+- AND it is logged once
+
+### Requirement: An install serves only the account operations it offers
+
+An account operation MUST be reachable over the network only where a requirement in this specification offers it. The authentication mechanism an install is built on may define more — changing an address, deleting an account, linking another provider, an administrator's own shortcuts — and every one no requirement offers MUST NOT exist to a caller, whoever asks, at any role, signed in or not.
+
+The refusal MUST be the one for a route that never existed. An answer that differs from it says the operation is there and is merely refused, which is the first thing somebody probing an install wants to know.
+
+An operation MUST NOT be reachable through a second spelling of a route the install does not offer: a change of case, a trailing separator, an encoded character or a doubled one.
+
+An account that must change its password MUST reach, of these operations, only reading its own session, signing in and signing out. Everything else it is offered waits until it has changed its password.
+
+An account MUST NOT change its own display name. The name is how every change the account makes is attributed on screen, and a name its holder chose — another account's included — would let them write as somebody else.
+
+#### Scenario: A caller asks for an account operation the install does not offer
+
+- GIVEN an install
+- WHEN anybody, at any role and signed in or not, asks for an account operation no requirement offers
+- THEN the answer is the one for a route that never existed
+- AND nothing about any account changes
+
+#### Scenario: An operation is asked for by another spelling
+
+- GIVEN an account operation the install does not offer
+- WHEN somebody asks for it with its route spelled differently
+- THEN the answer is the one for a route that never existed
+
+#### Scenario: A held account asks for an operation the install offers
+
+- GIVEN an account that must change its password
+- WHEN it asks for any offered account operation other than reading its own session, signing in or signing out
+- THEN it is refused, and told that it must change its password
+
+#### Scenario: An analyst takes another account's name
+
+- GIVEN an analyst and another account with a display name of its own
+- WHEN the analyst asks to take that name
+- THEN it is refused
+- AND the analyst's display name is unchanged

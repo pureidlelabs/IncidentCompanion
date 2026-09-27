@@ -209,6 +209,25 @@ export const figureNodeSchema = z.object({
 })
 export type FigureNode = z.infer<typeof figureNodeSchema>
 
+/**
+ * Every figure a document places, in order: what render draws and what an
+ * install keeps for a sent report. Takes a stored tree unparsed as well.
+ */
+export function figuresOf(tree: unknown): FigureNode[] {
+  const sections = (tree as { sections?: unknown } | null)?.sections
+  if (!Array.isArray(sections)) return []
+  return sections.flatMap((one: { nodes?: unknown } | null) =>
+    Array.isArray(one?.nodes)
+      ? one.nodes.filter((node: { type?: unknown } | null): node is FigureNode => node?.type === 'figure')
+      : [],
+  )
+}
+
+/** The digest of every figure `figuresOf` finds that names one. */
+export function figureHashes(tree: unknown): string[] {
+  return figuresOf(tree).flatMap(({ hash }) => (typeof hash === 'string' ? [hash] : []))
+}
+
 export const dividerNodeSchema = z.object({ type: z.literal('divider') })
 
 export const nodeSchema = z.discriminatedUnion('type', [

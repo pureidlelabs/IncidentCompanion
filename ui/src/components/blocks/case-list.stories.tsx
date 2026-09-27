@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 
+import { CASE_STATES } from '@contract/vocabularies.lists'
+
 import { ApiError } from '@/api/client'
 
 import { CaseList } from './case-list'
@@ -28,7 +30,7 @@ type Story = StoryObj<typeof meta>
 /** Six of the analyst's own cases; the demo is filtered out until asked for. */
 export const Populated: Story = {
   name: 'Cases on this install',
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step }) => {
     await step('the analyst`s own cases are listed', async () => {
       await expect(canvas.getAllByRole('row').length).toBeGreaterThan(1)
     })
@@ -38,6 +40,25 @@ export const Populated: Story = {
     })
     await step('with neither write wired, the row offers neither', async () => {
       await expect(canvas.queryByRole('button', { name: /pin/i })).toBeNull()
+    })
+    await step('and a case`s state is never cut', async () => {
+      // The state column is fixed at a width taken from the longest of a
+      // closed vocabulary. Nothing executable tied the two, so a fifth and
+      // longer state would ellipsise in silence -- and `clipped-text` cannot
+      // see it, because that rule exempts anything with an ellipsis. -> #896
+      const longest = [...CASE_STATES].sort((a, b) => b.length - a.length)[0]!
+      const shown = PICKER_CASES.filter((one) => !one.isDemo).map((one) => one.status)
+      await expect(
+        shown,
+        'the fixture shows no case in the longest state, so this asserts nothing',
+      ).toContain(longest)
+
+      for (const badge of canvasElement.querySelectorAll('[data-part="badge"]')) {
+        await expect(
+          badge.scrollWidth,
+          `the state ${badge.textContent} is cut by ${String(badge.scrollWidth - badge.clientWidth)}px`,
+        ).toBeLessThanOrEqual(badge.clientWidth)
+      }
     })
   },
 }
@@ -158,7 +179,9 @@ export const DidNotLoad: Story = {
  */
 export const Refused: Story = {
   name: 'Refused, not failed',
-  args: { problem: new ApiError(403, 'Your account may not read this install\u2019s cases.', null) },
+  args: {
+    problem: new ApiError(403, 'Your account may not read this install\u2019s cases.', null),
+  },
   play: async ({ canvas, step }) => {
     await step('the refusal is stated calmly, not as a fault', async () => {
       await expect(canvas.queryByRole('alert')).toBeNull()

@@ -1,6 +1,12 @@
 /**
  * Set a whole table's order: optimistic resequence, POST, rollback on failure.
  *
+ * Each row goes with the version this screen holds for it, so a row somebody
+ * else changed since it was read refuses the whole reorder with 409 rather
+ * than being rearranged under them. The versions the route answers with are
+ * written back at once, and one table's reorders run one at a time, so the
+ * analyst's next move carries what their last one left.
+ *
  * Same skeleton as the other three writes - cancel, snapshot, apply, restore on
  * error, invalidate on settled - and the fourth of the four rather than a
  * generic over them, for the reason `useEntryCreate` gives.
@@ -34,7 +40,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 
 import { request, type ApiError } from './client'
-import type { CollectionEntry, CollectionName } from './model'
+import { COLLECTION_TO_CASE_KEY, type Case, type CollectionEntry, type CollectionName } from './model'
 import { keys } from './queryKeys'
 
 /** The field the collection definition names as its `position`. */
@@ -45,13 +51,32 @@ export interface EntryOrder {
   ids: string[]
 }
 
-/** The route echoes the ids it wrote. */
+/**
+ * The ids as the route takes them, each with the version `held` has for it.
+ *
+ * Throws for an id `held` has no version for: a row created since the list
+ * was read, which the route would refuse anyway.
+ */
+export function versioned(
+  held: readonly { id: string; version?: number }[],
+  ids: readonly string[],
+): { id: string; version: number }[] {
+  const versions = new Map(held.map((row) => [row.id, row.version]))
+  return ids.map((id) => {
+    const version = versions.get(id)
+    if (version === undefined) throw new Error(`This screen holds no version for ${id}.`)
+    return { id, version }
+  })
+}
+
+/** Every row the route wrote, in order, at the version it now holds. */
 export interface ReorderedEntries {
-  ids: string[]
+  rows: { id: string; version: number }[]
 }
 
 interface OrderRollback<N extends CollectionName> {
   previous: CollectionEntry[N][] | undefined
+  previousCase: Case | undefined
 }
 
 /**
@@ -137,28 +162,60 @@ export function useEntryReorder<N extends CollectionName>(
 ): UseMutationResult<ReorderedEntries, ApiError, EntryOrder, OrderRollback<N>> {
   const client = useQueryClient()
   const listKey = keys.collection(caseId, collection)
+  const caseKey = keys.case(caseId)
+  const onCase = COLLECTION_TO_CASE_KEY[collection]
 
   return useMutation<ReorderedEntries, ApiError, EntryOrder, OrderRollback<N>>({
     mutationKey: [...listKey, 'reorder'],
+    scope: { id: JSON.stringify([...listKey, 'reorder']) },
 
-    mutationFn: ({ ids }) =>
-      request<ReorderedEntries>(
+    mutationFn: ({ ids }) => {
+      const held = [
+        ...((client.getQueryData<Case>(caseKey)?.[onCase] ?? []) as { id: string; version?: number }[]),
+        ...((client.getQueryData<CollectionEntry[N][]>(listKey) ?? []) as { id: string; version?: number }[]),
+      ]
+      return request<ReorderedEntries>(
         `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}/order`,
-        { method: 'POST', body: { ids } },
-      ),
+        { method: 'POST', body: { rows: versioned(held, ids) } },
+      )
+    },
 
     onMutate: async ({ ids }) => {
-      await client.cancelQueries({ queryKey: listKey })
+      // The screens render from the case document, so the write lands there as well as on the list.
+      await Promise.all([
+        client.cancelQueries({ queryKey: listKey }),
+        client.cancelQueries({ queryKey: caseKey, exact: true }),
+      ])
       const previous = client.getQueryData<CollectionEntry[N][]>(listKey)
+      const previousCase = client.getQueryData<Case>(caseKey)
 
-      client.setQueryData<CollectionEntry[N][]>(listKey, (rows) =>
-        rows ? resequence(rows as (CollectionEntry[N] & { id: string })[], ids) : rows,
+      const apply = (rows: CollectionEntry[N][] | undefined) =>
+        rows ? resequence(rows as (CollectionEntry[N] & { id: string })[], ids) : rows
+      client.setQueryData<CollectionEntry[N][]>(listKey, apply)
+      client.setQueryData<Case>(caseKey, (kase) =>
+        kase && { ...kase, [onCase]: apply(kase[onCase] as CollectionEntry[N][]) },
       )
-      return { previous }
+      return { previous, previousCase }
+    },
+
+    onSuccess: ({ rows }) => {
+      const now = new Map(rows.map((row) => [row.id, row.version]))
+      const bump = (held: CollectionEntry[N][] | undefined) =>
+        held?.map((row) => {
+          const version = now.get((row as { id: string }).id)
+          return version === undefined ? row : { ...row, version }
+        })
+      client.setQueryData<CollectionEntry[N][]>(listKey, bump)
+      client.setQueryData<Case>(
+        caseKey,
+        (kase) => kase && { ...kase, [onCase]: bump(kase[onCase] as CollectionEntry[N][]) },
+      )
     },
 
     onError: (_error, _order, context) => {
-      if (context) client.setQueryData(listKey, context.previous)
+      if (!context) return
+      client.setQueryData(listKey, context.previous)
+      client.setQueryData(caseKey, context.previousCase)
     },
 
     onSettled: () => {

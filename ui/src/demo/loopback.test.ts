@@ -36,7 +36,7 @@ async function join(
   socket: LoopbackSocket,
   field = FIELD,
 ): Promise<{ doc: Y.Doc; answered: number }> {
-  const doc = new Y.Doc({ gc: false })
+  const doc = new Y.Doc()
   let answered = 0
   socket.onmessage = (event) => {
     const frame = JSON.parse(event.data) as { type: string; field: string; update: string }

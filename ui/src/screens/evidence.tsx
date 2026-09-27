@@ -1,8 +1,10 @@
 import { useMemo, useState, type ReactNode } from 'react'
 
 import type { Case, EvidenceEntry } from '@/api/model'
+import { editedAt, type Drawn, type Read } from '@/api/rowWrite'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 import { fieldOf, formSpec, type Specs } from '@/api/specs'
-import { BulkActionBar, bulkFieldsFor } from '@/components/blocks/bulk-actions'
+import { BulkActionBar, bulkFieldsFor, selected } from '@/components/blocks/bulk-actions'
 import { Collection } from '@/components/blocks/collection'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { ReferenceCell, TextCell } from '@/components/blocks/data-cell'
@@ -41,16 +43,16 @@ import { useCaseRows, useResetOnCase } from '@/lib/case-rows'
 export interface EvidenceWrites {
   /** `entry` null creates. Resolves with the stored row. */
   save: (
-    entry: EvidenceEntry | null,
+    entry: Drawn<EvidenceEntry> | null,
     fields: Partial<EvidenceEntry>,
     file: File | null,
   ) => Promise<EvidenceEntry>
   /** One patch across a named selection. Resolves with the stored rows. */
   patch: (
-    ids: readonly string[],
+    rows: readonly BulkPatchRow[],
     fields: Partial<EvidenceEntry>,
   ) => Promise<readonly EvidenceEntry[]>
-  remove: (ids: readonly string[]) => Promise<void>
+  remove: (rows: readonly BulkPatchRow[]) => Promise<void>
 }
 
 export interface EvidenceScreenProps {
@@ -136,11 +138,11 @@ function galleryWrites(): EvidenceWrites {
     save: (entry, fields, file) =>
       Promise.resolve(
         entry
-          ? { ...entry, ...fields, ...collectedFrom(file) }
+          ? { ...entry, ...fields, ...collectedFrom(file), version: entry.version + 1 }
           : { ...BLANK_EVIDENCE, ...fields, ...collectedFrom(file), id: localId('evidence') },
       ),
-    patch: (ids, fields) =>
-      Promise.resolve(ids.map((id) => ({ ...BLANK_EVIDENCE, ...fields, id }))),
+    patch: (chosen, fields) =>
+      Promise.resolve(chosen.map(({ id }) => ({ ...BLANK_EVIDENCE, ...fields, id }))),
     remove: () => Promise.resolve(),
   }
 }
@@ -176,7 +178,7 @@ export function EvidenceScreen({
 
   const [query, setQuery] = useState(search)
 
-  const [deleting, setDeleting] = useState<string[] | null>(null)
+  const [deleting, setDeleting] = useState<BulkPatchRow[] | null>(null)
   const editor = useRowEditor<EvidenceEntry>()
   /**
    * The file the open dialog is carrying, if any.
@@ -280,7 +282,8 @@ export function EvidenceScreen({
       // Delete asks before it acts either way -- the confirmation is the
       // screen's, and only the answer leaves.
       remove: (id) => {
-        setDeleting([id])
+        const found = rows.find((row) => row.id === id)
+        if (found) setDeleting([selected(found)])
       },
       edit: (id) => {
         const found = rows.find((row) => row.id === id)
@@ -292,7 +295,7 @@ export function EvidenceScreen({
 
   /** The dialog's answer, written into this screen's copy of the register.
    *  A record with no file keeps `storedAt` null and reads as promised. */
-  const save = (entry: EvidenceEntry | null, fields: Partial<EvidenceEntry>) => {
+  const save = (entry: Drawn<EvidenceEntry> | null, fields: Partial<EvidenceEntry>) => {
     // The bytes go out, not what this screen would derive from them.
     const file = attached
     // **Answered, not fired and forgotten.** The dialog closes itself when
@@ -334,9 +337,9 @@ export function EvidenceScreen({
         <BulkActionBar
           table={table}
           fields={bulkFields}
-          onApply={(ids, fields) => {
-            void inFlight(ids, async () => {
-              for (const stored of await write.patch(ids, fields)) {
+          onApply={(chosen, fields) => {
+            void inFlight(chosen.map((row) => row.id), async () => {
+              for (const stored of await write.patch(chosen, fields)) {
                 setRows((was) => was.map((row) => (row.id === stored.id ? stored : row)))
               }
             })
@@ -376,16 +379,19 @@ export function EvidenceScreen({
       }}
     >
       <ConfirmDeleteDialog
-        ids={deleting}
+        rows={deleting}
         onOpenChange={(isOpen) => {
           if (!isOpen) setDeleting(null)
         }}
+        named={(id) => rows.find((row) => row.id === id)?.name}
+        // **Returned**, so a refusal keeps the dialog open and names the rows that moved.
         onConfirm={() => {
           const doomed = deleting ?? []
-          table.resetRowSelection()
-          void inFlight(doomed, async () => {
+          const gone = new Set(doomed.map((row) => row.id))
+          return inFlight([...gone], async () => {
             await write.remove(doomed)
-            setRows((was) => was.filter((row) => !doomed.includes(row.id)))
+            table.resetRowSelection()
+            setRows((was) => was.filter((row) => !gone.has(row.id)))
           })
         }}
         title={(count) =>
@@ -415,8 +421,12 @@ export function EvidenceScreen({
           // `methods`, and a reference field with no options draws every
           // chip as "(missing reference)".
           references={referenceOptions(kase)}
-          {...(editor.editing ? { entry: editor.editing } : {})}
-          onCreate={(fields) => save(editor.editing, fields)}
+          {...(editor.editing
+            ? { entry: editor.editing, served: rows.find((row) => row.id === editor.editing?.id) }
+            : {})}
+          onCreate={(fields, read?: Read) =>
+            save(editedAt(editor.editing, read), fields)
+          }
         />
       )}
     </Collection>

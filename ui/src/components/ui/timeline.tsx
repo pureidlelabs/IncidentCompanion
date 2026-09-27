@@ -5,6 +5,8 @@ import { cn } from '@/lib/cn'
 interface TimelineContextValue {
   activeStep: number
   setActiveStep: (step: number) => void
+  /** Read by the separator, which picks its own size rather than prefixing it. */
+  orientation: 'horizontal' | 'vertical'
 }
 
 const TimelineContext = createContext<TimelineContextValue | null>(null)
@@ -34,7 +36,9 @@ export interface TimelineProps extends React.ComponentProps<'div'> {
  *
  * - Steps are 1-based. An item is `data-completed` while `step <= value`.
  * - Presentational: nothing here is focusable and no part is a control.
- * - `orientation` is read by every part through a group selector.
+ * - `orientation` reaches most parts through a group selector, and the
+ *   separator through the context: a prefixed class outranks a caller's bare
+ *   one, so the part a caller sizes picks for itself. -> #897
  */
 export function Timeline({
   defaultValue = 1,
@@ -55,7 +59,10 @@ export function Timeline({
     [value, onValueChange],
   )
 
-  const context = useMemo(() => ({ activeStep, setActiveStep }), [activeStep, setActiveStep])
+  const context = useMemo(
+    () => ({ activeStep, setActiveStep, orientation }),
+    [activeStep, setActiveStep, orientation],
+  )
 
   return (
     <TimelineContext.Provider value={context}>
@@ -127,18 +134,21 @@ export function TimelineIndicator({ className, ...props }: React.ComponentProps<
 
 /** The line between one mark and the next. Coloured where the run is complete. */
 export function TimelineSeparator({ className, ...props }: React.ComponentProps<'div'>) {
+  const { orientation } = useTimeline()
   return (
     <div
       aria-hidden
       data-part="timeline-separator"
       className={cn(
         'absolute bg-primary/20 group-data-completed/timeline-item:bg-primary',
-        'group-data-[orientation=vertical]/timeline:-left-6 group-data-[orientation=vertical]/timeline:top-4',
-        'group-data-[orientation=vertical]/timeline:h-[calc(100%-1rem)] group-data-[orientation=vertical]/timeline:w-0.5',
-        'group-data-[orientation=vertical]/timeline:-translate-x-1/2',
-        'group-data-[orientation=horizontal]/timeline:-top-6 group-data-[orientation=horizontal]/timeline:left-4',
-        'group-data-[orientation=horizontal]/timeline:h-0.5 group-data-[orientation=horizontal]/timeline:w-[calc(100%-1rem)]',
-        'group-data-[orientation=horizontal]/timeline:-translate-y-1/2',
+        // **Unprefixed, all of it.** A prefixed class is an attribute
+        // selector, so it outranks a caller's bare one whatever the merge
+        // does. Branching on the orientation the component already knows
+        // makes the selector redundant and leaves caller and default at equal
+        // specificity, where the merge decides. -> #897
+        orientation === 'vertical'
+          ? 'top-4 -left-6 h-[calc(100%-1rem)] w-0.5 -translate-x-1/2'
+          : '-top-6 left-4 h-0.5 w-[calc(100%-1rem)] -translate-y-1/2',
         className,
       )}
       {...props}

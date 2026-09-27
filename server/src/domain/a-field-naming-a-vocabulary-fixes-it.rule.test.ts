@@ -33,7 +33,6 @@ import { FORM_SCHEMAS, VOCABULARIES } from '../specs/specs.controller.js'
 import { COMPLIANCE } from './compliance-form.js'
 import { fields } from './field-spec.js'
 import { caseComplianceSchema } from './entities/case-compliance.js'
-import { caseFactsSchema } from './entities/case-facts.js'
 import { reportBlockSchema, reportSchema } from './entities/report.js'
 
 /**
@@ -63,7 +62,6 @@ const SEARCHED: readonly { where: string; schema: z.ZodObject }[] = [
   ...Object.entries(FORM_SCHEMAS).map(([name, { schema }]) => ({ where: name, schema })),
   { where: 'reportSchema', schema: reportSchema },
   { where: 'reportBlockSchema', schema: reportBlockSchema },
-  { where: 'caseFactsSchema', schema: caseFactsSchema },
   { where: 'caseComplianceSchema', schema: caseComplianceSchema },
 ]
 
@@ -75,7 +73,7 @@ const SEARCHED: readonly { where: string; schema: z.ZodObject }[] = [
  * comfortably. A new tagged field fails this until it is added deliberately,
  * and that is the point of the number.
  */
-const TAGGED_FIELDS = 68
+const TAGGED_FIELDS = 64
 
 /**
  * Tags whose list neither registry publishes, so nothing can check them.
@@ -85,13 +83,10 @@ const TAGGED_FIELDS = 68
  * the schema's own enum. Named rather than skipped, so a tag pointing at
  * nothing is visible instead of quietly uncovered.
  *
- * `rsitClass` and `rsitType` are the case's facts, which no route validates
- * and no form serves. `language` is #699, `doraRootCauseAdditional` is #702.
+ * `language` is #699, `doraRootCauseAdditional` is #702.
  */
 const UNSERVED: readonly string[] = [
   'caseComplianceSchema.doraRootCauseAdditional (doraRootCauseAdditional)',
-  'caseFactsSchema.rsitClass (rsitClass)',
-  'caseFactsSchema.rsitType (rsitType)',
   'reportBlockSchema.kind (blockKind)',
   'reportSchema.language (reportLanguage)',
   'reportSchema.stage (reportStage)',

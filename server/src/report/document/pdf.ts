@@ -7,11 +7,12 @@
  * expresses it.
  */
 import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 
 import type { CanvasElement, Content, TDocumentDefinitions } from 'pdfmake/interfaces.js'
 
 import { coverageNote, type Cell, type Cover, type Document, type Images, type ListItem, type Node, type Run, type Section, type SpineNode, type TableNode } from './model.js'
+import { listMarkers, urlBeside } from './marks.js'
 import {
   ACCENT,
   INK,
@@ -25,7 +26,7 @@ import {
   chipColours,
   tlpInk,
 } from './palette.js'
-import { spineGeometry } from './spine.js'
+import { ROBOTO_DIR, spineGeometry } from './spine.js'
 
 const require_ = createRequire(__filename)
 
@@ -42,21 +43,25 @@ let ready = false
 
 function prepare(): void {
   if (ready) return
-  const root = join(dirname(require_.resolve('pdfmake/package.json')), 'fonts', 'Roboto')
   pdfMake.setFonts({
     Roboto: {
-      normal: join(root, 'Roboto-Regular.ttf'),
-      bold: join(root, 'Roboto-Medium.ttf'),
-      italics: join(root, 'Roboto-Italic.ttf'),
-      bolditalics: join(root, 'Roboto-MediumItalic.ttf'),
+      normal: join(ROBOTO_DIR, 'Roboto-Regular.ttf'),
+      bold: join(ROBOTO_DIR, 'Roboto-Medium.ttf'),
+      italics: join(ROBOTO_DIR, 'Roboto-Italic.ttf'),
+      bolditalics: join(ROBOTO_DIR, 'Roboto-MediumItalic.ttf'),
     },
   })
 
   // Nothing outbound, ever, and the only local read is the bundled font
   // directory: the definitions this painter builds name no other file.
   pdfMake.setUrlAccessPolicy(() => false)
-  pdfMake.setLocalAccessPolicy((path) => path.includes('pdfmake'))
+  pdfMake.setLocalAccessPolicy(mayRead)
   ready = true
+}
+
+/** The local access policy: true for a file inside the bundled font directory, and nothing else. */
+export function mayRead(path: string): boolean {
+  return resolve(path).startsWith(ROBOTO_DIR + sep)
 }
 
 
@@ -82,7 +87,8 @@ function runs(from: Run[]): Content[] {
       italics: one.italic ?? false,
       ...(one.code ? { font: 'Roboto', fontSize: 9 } : {}),
     })
-    if (one.url && one.url !== one.text) out.push({ text: ` (${one.url})`, italics: true })
+    const beside = urlBeside(one)
+    if (beside !== null) out.push({ text: beside, italics: true })
   }
   return out
 }
@@ -232,26 +238,10 @@ function table(node: TableNode): Content {
 }
 
 function list(items: ListItem[]): Content[] {
-  const counters = new Map<number, number>()
-  let previous = 0
-
-  return items.map((item) => {
-    if (item.level < previous) {
-      for (const level of [...counters.keys()]) if (level > item.level) counters.delete(level)
-    }
-    previous = item.level
-
-    let marker = '\u2022 '
-    if (item.ordered) {
-      const next = (counters.get(item.level) ?? 0) + 1
-      counters.set(item.level, next)
-      marker = `${String(next)}. `
-    } else {
-      counters.delete(item.level)
-    }
-
-    return { text: [{ text: marker }, ...runs(item.runs)], margin: [12 * (item.level + 1), 1, 0, 1] }
-  })
+  return listMarkers(items).map(({ item, marker }) => ({
+    text: [{ text: marker }, ...runs(item.runs)],
+    margin: [12 * (item.level + 1), 1, 0, 1],
+  }))
 }
 
 function node(one: Node, images: Images): Content[] {

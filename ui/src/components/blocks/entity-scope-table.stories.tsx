@@ -94,6 +94,10 @@ export const Scoped: Story = {
     // rather than navigating, and the kit's tabs are what carry the travelling
     // underline, the rail beneath the row and a focus ring sized for a tab --
     // none of which a row of buttons drawing its own border has.
+    await step('the tab that is selected names a panel that is there', async () => {
+      await panelHoldsTheSection(canvasElement)
+    })
+
     await step('the scope row is the kit`s tabs', async () => {
       await expect(canvas.getByRole('tablist', { name: 'Scope' })).toBeInTheDocument()
       await expect(canvas.getByRole('tab', { name: /^Assets/ })).toHaveAttribute(
@@ -262,6 +266,33 @@ export const NarrowPaintedColumns: Story = {
 }
 
 /**
+ * The selected tab names a panel, and that panel encloses the section.
+ *
+ * **Both halves, because the id resolving is the weaker claim.** A panel
+ * hoisted out from around the section, or emptied, still carries the id the
+ * tab names -- so an id that resolves says only that something answers to the
+ * name, not that the read cannot take the panel away. -> #937
+ */
+async function panelHoldsTheSection(root: HTMLElement) {
+  const selected = root.querySelector('[role="tab"][aria-selected="true"]')
+  const named = selected?.getAttribute('aria-controls') ?? ''
+  await expect(named).not.toBe('')
+
+  const panel = root.ownerDocument.getElementById(named)
+  await expect(
+    panel,
+    `the selected tab names ${named}, which is not in the document`,
+  ).not.toBeNull()
+
+  const head = root.querySelector('[data-part="section-head"]')
+  await expect(head, 'the section drew no head, so there is nothing to enclose').not.toBeNull()
+  await expect(
+    panel !== null && head !== null && panel.contains(head),
+    'the panel does not enclose the section, so a read replacing the body takes the panel with it',
+  ).toBe(true)
+}
+
+/**
  * The read has not come back.
  *
  * **The state this block had no story for**, and the one where its head can
@@ -273,13 +304,34 @@ export const NarrowPaintedColumns: Story = {
 export const Reading: Story = {
   name: 'The read has not come back',
   args: { kase: undefined, busy: true },
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step }) => {
+    await step('the tab that is selected names a panel that is there', async () => {
+      await panelHoldsTheSection(canvasElement)
+    })
     await step('the wait is drawn rather than a count of nothing', async () => {
       await expect(canvas.getByRole('status')).toBeInTheDocument()
       // `0 rows` is an answer, and nobody has one yet. The badge is what the
       // eye lands on beside the title, so it is the one asserted rather than
       // every zero the skeleton happens to draw.
       await expect(canvas.queryByText('0 rows')).toBeNull()
+    })
+  },
+}
+
+/**
+ * The read came back as a failure.
+ *
+ * **The boundary's other replacement.** A failed read swaps the section's
+ * children for the refusal exactly as a pending one swaps them for the
+ * skeleton, so the tablist has the same way of pointing at nothing -- and no
+ * story set `problem`, which left that half drawn by nothing. -> #937
+ */
+export const ReadFailed: Story = {
+  name: 'The read came back as a failure',
+  args: { kase: undefined, problem: new Error('the case could not be read') },
+  play: async ({ canvasElement, step }) => {
+    await step('the tab that is selected names a panel that is there', async () => {
+      await panelHoldsTheSection(canvasElement)
     })
   },
 }
@@ -335,8 +387,7 @@ export const LongestValue: Story = {
         {
           ...campaignCase.systems[0]!,
           id: 'longest',
-          hostname:
-            'fin-prod-sql-cluster-node-07.corp.internal.meridian-logistics.example',
+          hostname: 'fin-prod-sql-cluster-node-07.corp.internal.meridian-logistics.example',
         },
         ...campaignCase.systems.slice(1),
       ],
@@ -349,20 +400,6 @@ export const LongestValue: Story = {
         canvas.getByTitle('fin-prod-sql-cluster-node-07.corp.internal.meridian-logistics.example'),
       ).toBeInTheDocument()
     })
-  },
-}
-
-/**
- * A write another analyst got in first with.
- *
- * The refusal sits above the table rather than in a toast: it names a field and
- * a row, which is what the analyst has to reopen.
- */
-export const Refused: Story = {
-  name: 'A refused write',
-  args: {
-    scope: 'assets',
-    refusal: { field: 'Verdict', row: 'FIN-WS-014', by: 'A. Okonkwo' },
   },
 }
 
@@ -401,9 +438,13 @@ function asset(hostname: string): SystemEntry {
   return found
 }
 
-/** The write seam, spied on. A pair per story, since `fn` remembers its calls. */
+/** The write seam, spied on. One set per story, since `fn` remembers its calls. */
 function spying(): EntityWrites {
-  return { save: fn(() => Promise.resolve({})), remove: fn(() => Promise.resolve()) }
+  return {
+    save: fn(() => Promise.resolve({})),
+    patch: fn(() => Promise.resolve()),
+    remove: fn(() => Promise.resolve()),
+  }
 }
 
 /**
@@ -494,9 +535,9 @@ export const SendsADelete: Story = {
 }
 
 /**
- * The bulk bar, which is `save` again and once per row.
+ * The bulk bar, which is one patch across the selection.
  *
- * **Not one call carrying a list.** The version check is per row, so each row
+ * **Each row carries its own version.** The check is per row, so each row
  * leaves at the version it was read at -- and the two rows here sit at
  * different versions, which a seam sending one number for the whole selection
  * cannot reproduce.
@@ -515,15 +556,13 @@ export const SendsABulkApply: Story = {
     await userEvent.click(await screen.findByRole('option', { name: 'clean' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
 
-    await expect(args.writes!.save).toHaveBeenCalledTimes(2)
-    await expect(args.writes!.save).toHaveBeenCalledWith(
+    await expect(args.writes!.patch).toHaveBeenCalledTimes(1)
+    await expect(args.writes!.patch).toHaveBeenCalledWith(
       'systems',
-      { id: asset('DC-01').id, version: VERSIONS['DC-01'] },
-      { verdict: 'clean' },
-    )
-    await expect(args.writes!.save).toHaveBeenCalledWith(
-      'systems',
-      { id: asset('FS-01').id, version: VERSIONS['FS-01'] },
+      expect.arrayContaining([
+        { id: asset('DC-01').id, version: VERSIONS['DC-01'] },
+        { id: asset('FS-01').id, version: VERSIONS['FS-01'] },
+      ]),
       { verdict: 'clean' },
     )
   },

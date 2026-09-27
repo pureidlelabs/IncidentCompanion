@@ -10,7 +10,7 @@
  * first, which is a merge review rather than an error. Incrementing it without
  * the `where` looks identical in a diff.
  *
- * `updatedBy` is the caller.
+ * `updatedBy` is the caller, or for a prose document its latest writer, and null once that account is gone.
  */
 import { sql } from 'drizzle-orm'
 import { bigint, check, customType, integer, text, timestamp } from 'drizzle-orm/pg-core'
@@ -45,7 +45,9 @@ export const rowVersioning = {
  * `db/import-stamp.ts` is what narrows a stamp to the columns a table has: a
  * table without this one takes the stamp and stores nothing.
  */
-export const source = () => text('source').notNull().default('manual')
+export const MANUAL = 'manual'
+
+export const source = () => text('source').notNull().default(MANUAL)
 
 /**
  * Postgres `bytea`.

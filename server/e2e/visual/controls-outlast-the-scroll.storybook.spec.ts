@@ -30,30 +30,25 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
 
 /** Screens whose section holds a table long enough to scroll. */
-const STORIES = ['screens-collect-all-entities--in-the-shell', 'screens-case-timeline--in-the-shell']
-
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
+const STORIES = [
+  'screens-collect-all-entities--in-the-shell',
+  'screens-case-timeline--in-the-shell',
+]
 
 async function openStory(page: Page, id: string): Promise<void> {
-  await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, { waitUntil: 'load', timeout: 20_000 })
+  await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
+    waitUntil: 'load',
+    timeout: 20_000,
+  })
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
   expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
   await page.locator('[data-part="section-body"]').first().waitFor({ timeout: 30_000 })
-  // The rows arrive after the frame does, and a walk over an empty table
-  // measures a section that has nothing to scroll.
-  await page.waitForTimeout(1_000)
 }
 
 interface Reading {
@@ -100,24 +95,32 @@ test.describe('a table keeps its controls while the rows move', () => {
   test.use({ viewport: { width: 1400, height: 900 } })
 
   test.beforeAll(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook answering at ${SB}`)
+    await requireStorybook()
   })
 
   for (const id of STORIES) {
     test(`${id} keeps its head and toolbar on screen`, async ({ page }) => {
       await openStory(page, id)
 
+      // The rows arrive after the frame does, and an empty table has nothing to scroll.
+      await expect
+        .poll(async () => (await measure(page)).travel, {
+          message: 'nothing on this screen can be scrolled at all',
+          timeout: 30_000,
+        })
+        .toBeGreaterThan(200)
+
       const before = await measure(page)
       expect(before.error).toBeUndefined()
-      // Whichever box holds it, something has to move -- otherwise every
-      // assertion below is true of a screen with four rows in it.
-      expect(before.travel, 'nothing on this screen can be scrolled at all').toBeGreaterThan(200)
       expect(before.head, 'the section draws no head to keep').toBe(true)
 
       // Far more than the travel, so the gesture ends against a hard stop
       // wherever the chain leaves it rather than part way down.
       await page.mouse.move(700, 500)
       for (let push = 0; push < 60; push += 1) await page.mouse.wheel(0, 400)
+      // Smooth scrolling ends at no event, and the only condition that would
+      // say it had is `after.head`, which is the assertion below.
+      // eslint-disable-next-line playwright/no-wait-for-timeout
       await page.waitForTimeout(500)
 
       const after = await measure(page)

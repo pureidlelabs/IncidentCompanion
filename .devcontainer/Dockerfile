@@ -6,7 +6,7 @@
 #
 # **Several things here look like a devcontainer feature somebody forgot to
 # use, starting with the base.** Each is a rejected alternative.
-FROM python:3.14-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6
+FROM python:3.14-slim@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2
 
 # `common-utils` (in devcontainer.json) creates the non-root user and needs
 # these present first -- without `sudo` the feature succeeds and every later
@@ -53,7 +53,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Still not the `node` devcontainer feature, for the reason that always applied:
 # its installer pipes `raw.githubusercontent.com` into `bash` with no `-f`, so
 # that host's 429 executes as a build step.
-COPY --from=jdxcode/mise:2026.9.6@sha256:45a6612a95e3de3af6dc92867e324b64b6a62555e4fde4417c69bbe7c4bda642 /usr/local/bin/mise /usr/local/bin/mise
+COPY --from=jdxcode/mise:2026.9.12@sha256:868b004119abb2e7c146618da63371ec65da40bfb0f38a0ec4128ca9e96c057a /usr/local/bin/mise /usr/local/bin/mise
 
 # `--system` installs outside the home directory, which devcontainer.json mounts
 # over. The shims are on PATH for every user the image ends up with.
@@ -68,10 +68,10 @@ ENV MISE_DATA_DIR=/usr/local/share/mise \
 COPY mise.toml /etc/mise/config.toml
 RUN mise install --system && mise reshim
 
-# **The shims above do not read `[env]`**, so the workspace's `mise.toml` needs
-# activation as well. Interactive shells only; everything scripted keeps the
-# shims. `/etc/zsh` is made first: zsh arrives with the `common-utils` feature,
-# after this image builds.
+# **A shim applies the workspace's `[env]` to the program it starts and to
+# nothing else**, so a shell sees it only through activation. Interactive
+# shells only; everything scripted keeps the shims. `/etc/zsh` is made first:
+# zsh arrives with the `common-utils` feature, after this image builds.
 RUN printf '\neval "$(mise activate bash)"\n' >> /etc/bash.bashrc \
     && mkdir -p /etc/zsh \
     && printf '\neval "$(mise activate zsh)"\n' >> /etc/zsh/zshrc
@@ -91,7 +91,7 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins \
 # unchanged (verified against the lockfile, 1233 packages, no blocked script).
 # Pinned like Node; bump the two together when the major moves.
 # renovate: datasource=npm depName=npm
-ARG NPM_VERSION=12.0.2
+ARG NPM_VERSION=12.1.0
 RUN npm install -g "npm@${NPM_VERSION}" && npm --version
 
 # **The block reaches the `claude-code` feature too, and that install has no

@@ -5,9 +5,7 @@
  * asks who last wrote each row and keys a `Map` on `table:id`; this asks what
  * has been happening and keeps the order. Same table, two questions.
  *
- * The key sits under `keys.case(caseId)`, so the change feed's whole-case
- * invalidation reaches it - which is exactly right here, because any write on
- * the case is a new entry in this list.
+ * The key sits under `keys.case(caseId)`, so a whole-case invalidation reaches it by prefix.
  */
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 

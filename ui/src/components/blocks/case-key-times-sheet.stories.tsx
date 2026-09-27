@@ -44,15 +44,3 @@ export const Open: Story = {
     })
   },
 }
-
-/**
- * A stamp another analyst wrote first.
- *
- * The band sits above the fields rather than against the control: the value in
- * the field is now theirs, so the field itself has nothing wrong with it.
- */
-export const Refused: Story = {
-  name: 'A write another analyst refused',
-  parameters: frame('560px'),
-  args: { isOpen: true, refusal: { field: 'Contained at', by: 'A. Okonkwo' } },
-}

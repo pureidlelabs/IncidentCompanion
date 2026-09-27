@@ -1,13 +1,7 @@
 <!--
-Version 1.0.0, unratified. The maintainer signs off once specifications exist, because this document is deliberately abstract and is expected to grow concrete from them.
+Version 1.1.0, unratified. The maintainer signs off once specifications exist, because this document is deliberately abstract and is expected to grow concrete from them.
 
 Each article states a property the system must have -- never the mechanism that achieves it, and never what the code does today. Four earlier drafts were discarded for carrying one or the other.
-
-Open:
-  - RATIFICATION.
-  - Quality gates is unwritten. It is filled from what the first specifications need.
-  - Cross-case reach is a security boundary that is not built. It is the first entry in
-    the deviation register.
 
 The condensed form in openspec/config.yaml is what reaches every generated artifact. Changing an article here means changing that too. -->
 
@@ -43,7 +37,9 @@ Whether a caller may reach something MUST be decided once, never re-decided by e
 
 Access MUST be refused unless something explicitly grants it, and every grant MUST be a decision somebody made rather than a default somebody inherited.
 
-**One grant is the system's own, and it is the only one.** Work that has not yet been attributed to anybody belongs to whoever can act on it, and reach to it is a property of the system rather than a decision about a person. That grant MUST reach nothing that has been attributed: the moment work belongs to somebody identified, it leaves, and reach to it is decided like everything else. Any second exception to this article is an amendment, not an interpretation.
+**One grant is the system's own.** Work that has not yet been attributed to anybody belongs to whoever can act on it, and reach to it is a property of the system rather than a decision about a person. That grant MUST reach nothing that has been attributed: the moment work belongs to somebody identified, it leaves, and reach to it is decided like everything else.
+
+**Reach is decided when a change is accepted, and keeping it is not a second decision.** A change the system accepted from somebody it reached at that moment MUST be kept, attributed to them, even where their reach ends before it is stored. Whatever keeps it MUST be able to store that change, into the record and the case it was accepted into, and nothing else: it serves no caller and reaches nothing the system did not accept. Any further exception to this article is an amendment, not an interpretation.
 
 **Rationale:** A rule spread across its enforcement points is re-audited whenever one is added, and that audit is the step that gets skipped.
 
@@ -105,10 +101,13 @@ The matrix is `openspec/matrix/`. A security-bearing requirement that it does no
 | --- | --- | --- | --- |
 | Article IV, separation of duty | An administrator can grant themselves data-plane access to any customer's cases. | Deliberate. Separation of duty is an operational control belonging to the organisation running the install, and the product answers it with an attributable record rather than a restriction. | Nothing here. It closes in the operator's own procedure, against the log. |
 | Article IV, separation of duty | The management role carries a data-plane level over one customer: an administrator reaches the default customer at delete with no grant behind it. | Deliberate. It reaches only the record standing for incidents nobody has been named for, which are nobody's data, and it is what lets an install dispose of an untriaged case without first building the access model to get at a case nobody owns. It reaches no customer somebody has been onboarded as, and it is stated as the floor rather than checked at the door, so one place answers what an account reaches. | Attributing a case when it is created. The default customer would then hold only what nobody has named, and the exception would reach that much and no more. -> #131 |
-| ASVS 5.0 L2, multi-factor authentication | No second factor is offered at all. An account is reached with a password and nothing else. | Not built. `auth/lockout.ts` says so in the source -- *"two-factor verification, which this install does not offer"*. The requirement is kept normative and recorded as unbuilt rather than deferred, because a security product reached over a network owes L2 an authenticator. | Building it. The requirement already makes enforcement the install's policy, so what is missing is the factor itself rather than the choice about it. |
+| ASVS 5.0 L2, V6.3.3 and V6.4.4, multi-factor authentication | No second factor is offered at all. An account is reached with a password and nothing else. | Not built. `auth/lockout.ts` says so in the source -- *"two-factor verification, which this install does not offer"*. The requirement is kept normative and recorded as unbuilt rather than deferred, because a security product reached over a network owes L2 an authenticator. | Building it. The requirement already makes enforcement the install's policy, so what is missing is the factor itself rather than the choice about it. |
+| ASVS 5.0 L2, V6.4.1, account recovery | No recovery credential is issued, so an install whose only administrator forgets their password or is locked out has no way back but a restore. | Not built, and kept normative. -> #59 | Building the recovery credential the requirement describes. |
+| ASVS 5.0 L2, V7.4.2 and V7.6.1, federated sign-in | An install cannot federate its sign-in, so an account the organisation's identity provider disables is not ended here, and no session is shared with a provider to govern. | Not built, and kept normative. -> #59 | Building federation. |
+| ASVS 5.0 L2, V8.2.2, configuration naming a customer | Library configuration carries no customer, so an entry naming one is read by every analyst, whichever customers they reach. The control is answered for case data and not for this. | Not built, and kept normative. -> #223 | Scoping configuration to the customer it names. |
 | ASVS 5.0 L2, V14.1.1 and V14.1.2, data classification | No data is classified, so no protection requirement is stated per classification. | Deliberate. Classification is a product decision nobody has taken, and inventing one to satisfy a control would produce levels nothing enforces. Encryption at rest, which this control usually drives, is Article IV: the storage belongs to the operator and the application states its assumption rather than encrypting over them. | Classifying what the application holds -- case content, evidence, identity, the audit record -- and stating what each level requires. |
 | ASVS 5.0 L2, V3.4.1, transport security across subdomains | The install tells a browser to keep its own name protected, and says nothing about names below it. The control requires the policy to cover subdomains at Level 2. | Deliberate. An install speaks for the name it is reached at; names below it belong to whoever runs the domain, and an install cannot withdraw an instruction it had no standing to give. Applied at a loopback address the instruction would reach every application on the machine. | Nothing in the product. It closes where an operator runs the install on a name whose subdomains are theirs, and chooses to say so. |
-| ASVS 5.0 L2, V12.2.2, publicly trusted certificate | The install generates its own certificate at first start and it is not publicly trusted. | Unavoidable rather than chosen. An install reached at a loopback address on somebody's private network cannot obtain a publicly trusted certificate, and refusing to serve without one would mean refusing to serve. | An operator supplying their own certificate, from whatever authority their organisation already trusts. The install must accept one. |
+| ASVS 5.0 L2, V12.2.2, publicly trusted certificate | The install generates its own certificate at first start, for the name it is reached at, and it is not publicly trusted. | The install is reached on a private network at a name no public authority validates. The certificate it makes for that name is trusted by no analyst's browser until each is shown its fingerprint, and a browser discards the instruction to keep the name protected over a connection it does not trust, so V3.4.1's protection also starts with a trusted certificate. | The operator supplying a certificate from an authority the analysts' machines already trust. The install uses it and never replaces it. |
 
 
 ## Quality gates
@@ -131,6 +130,10 @@ That ordering is the whole point, and it is what the old discipline could not pr
 
 **A test written against an implementation is not evidence that a specification is met.** It was written from what the code does, so it passes while the specification it was never shown remains unmet. Such a test is evidence where it happens to demonstrate a scenario, and evidence of nothing on its own — however much of the implementation it covers.
 
+**A scenario is demonstrated only by evidence that fails when the scenario is false.** That evidence MUST reach the product through the surface the scenario's actor uses, and MUST pass, unskipped, in the run that decides whether a change lands. A path existing, a test named after the property, and a test of a part the actor never reaches are not evidence. Whoever marks a scenario demonstrated MUST say what change to the product would turn its evidence red, and somebody else makes that change and sees it.
+
+**A green verdict on a change means every check able to see that change ran.** A check that was skipped, not scheduled, or reported nothing is a verdict of nothing, and MUST be reported as one rather than counted as a pass.
+
 ## Governance
 
 This constitution supersedes other practice. Where a document, a note or a habit disagrees with it, this file wins.
@@ -145,4 +148,4 @@ Promotion is an amendment and takes a MINOR bump. Nothing is promoted because it
 
 **Compliance.** Code that violates an article is the highest-severity finding available. An article that has come to name a mechanism, or to describe what the code does today, has drifted into specification and is rewritten as a property.
 
-**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE): awaiting maintainer sign-off | **Last Amended**: 2026-08-29
+**Version**: 1.2.0 | **Ratified**: TODO(RATIFICATION_DATE): awaiting maintainer sign-off | **Last Amended**: 2026-09-25

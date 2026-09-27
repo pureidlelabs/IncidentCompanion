@@ -14,9 +14,11 @@ Every response MUST carry a content policy, and the policy MUST be the same whet
 
 The policy MUST permit code only from the install itself. It MUST NOT permit code built from text at run time, and it MUST NOT name a third party as a source of anything, because Article V means there is no third party to name.
 
-Where the application needs the browser to reach somewhere that is not the install, the policy MUST name that destination exactly. It MUST NOT be widened to a pattern, and every destination it names MUST be one the operator has chosen to point the install at.
+Where the application needs the browser to reach somewhere that is not the install, the policy MUST name that destination exactly. It MUST NOT be widened to a pattern, and every destination it names MUST be one the operator has chosen to point the install at. A source that names a scheme on its own is a pattern: it matches every host speaking that scheme.
 
 Every response MUST also tell the browser not to guess at what it has been sent.
+
+**An answer the install gives without the application is a response too** — a refusal before the application is asked, a request it cannot read, the application unreachable. It MUST carry a policy that permits nothing and refuses to be framed, and MUST tell the browser not to guess. No answer MUST name the version of the software that wrote it.
 
 #### Scenario: A response is read by a browser
 
@@ -24,6 +26,14 @@ Every response MUST also tell the browser not to guess at what it has been sent.
 - WHEN a browser reads it
 - THEN it carries a content policy
 - AND the policy is the same one in both cases
+
+#### Scenario: The install answers without the application
+
+- GIVEN a request the install answers without the application, refused or with the application unreachable
+- WHEN a browser reads the answer
+- THEN it carries a content policy that permits nothing and refuses to be framed
+- AND it tells the browser not to guess at what it was sent
+- AND it names no software version
 
 #### Scenario: The policy is read for what it permits
 
@@ -38,6 +48,19 @@ Every response MUST also tell the browser not to guess at what it has been sent.
 - WHEN the policy is read
 - THEN it names that destination exactly
 - AND it names no pattern that would match anywhere else
+
+#### Scenario: An install pointed at nothing outside itself
+
+- GIVEN an install with nothing configured
+- WHEN the policy is read
+- THEN it names no destination outside the install
+- AND no source that would match any host, a scheme on its own included
+
+#### Scenario: The analyst's browser must reach an import platform
+
+- GIVEN an install whose operator turned importing from a platform on
+- WHEN the policy is read
+- THEN it names that platform's destinations exactly
 
 ### Requirement: The application refuses to be framed
 
@@ -97,6 +120,8 @@ The instruction MUST NOT be extended to names below the one the install is reach
 
 The application MUST decide which origins are its own, and MUST treat a request presented as coming from anywhere else as coming from somewhere else. The set MUST be derived from where the install is actually reached rather than configured separately, so it cannot drift from reality.
 
+An ordinary request and a socket MUST be admitted by the same set.
+
 Where the install is reached at a loopback address, every spelling of that address MUST be accepted, because a browser and an operator will not agree on which one to write.
 
 The set MUST NOT be widened by scheme or by port. An install reached over a protected connection MUST NOT accept the unprotected spelling of itself, and MUST NOT accept another port on the same host.
@@ -127,6 +152,12 @@ Where the install cannot work out where it is reached, it MUST answer that it tr
 - WHEN the trusted set is read
 - THEN it is empty
 - AND nothing is trusted by default
+
+#### Scenario: A socket is opened from the unprotected spelling of the install
+
+- GIVEN an install reached over a protected connection at a name of its own
+- WHEN a socket is opened presenting the unprotected spelling of that name as its origin
+- THEN it is refused, as an ordinary request from that origin is
 
 ### Requirement: A development convenience cannot exist in a running install
 

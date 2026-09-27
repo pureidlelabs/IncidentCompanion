@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react'
+import { useRef, useState, type SyntheticEvent } from 'react'
 import { ClipboardList, FilePlus2, LibraryBig } from 'lucide-react'
 
 import type { LibraryEntry } from '@/api/library'
@@ -38,6 +38,10 @@ export interface NewCaseScreenProps {
   onCreated?: (caseId: string) => void
   /** Omitted in the gallery, where a submit resolves nothing. */
   writes?: NewCaseWrites
+  /** What the door that opened this calls itself. Names the dialog and its heading. */
+  title?: string
+  /** What the submit runs, where `Create case` understates it. */
+  submitLabel?: string
   /** The library and the form are still being read. */
   busy?: boolean
   /** Why the library or the form failed to load. */
@@ -84,6 +88,8 @@ export function NewCaseScreen({
   writes,
   busy = false,
   problem,
+  title = 'New case',
+  submitLabel = 'Create case',
 }: NewCaseScreenProps) {
   const templates = templatesGiven ?? []
   const [fields, setFields] = useState(BLANK)
@@ -92,6 +98,7 @@ export function NewCaseScreen({
   const [refusal, setRefusal] = useState<string | undefined>(undefined)
   const [source, setSource] = useState<'all' | 'shipped' | 'yours'>('all')
   const [typed, setTyped] = useState('')
+  const titleInput = useRef<HTMLInputElement>(null)
 
   const caseForm = specs ? formSpec(specs, 'CASE_FIELDS') : undefined
 
@@ -131,15 +138,16 @@ export function NewCaseScreen({
     event.preventDefault()
     if (!fields.title.trim()) {
       setRefused({ title: 'Required.' })
-      document.querySelector<HTMLElement>('[data-field="title"] input')?.focus()
+      titleInput.current?.focus()
       return
     }
     setRefused({})
     if (!writes) return
 
-    const filled = Object.fromEntries(
-      Object.entries(fields).filter(([, value]) => value.trim() !== ''),
-    ) as unknown as NewCaseFields
+    const filled: NewCaseFields = { title: fields.title }
+    for (const name of ['summary', 'customer', 'reference', 'template'] as const) {
+      if (fields[name].trim() !== '') filled[name] = fields[name]
+    }
 
     setPending(true)
     setRefusal(undefined)
@@ -169,10 +177,10 @@ export function NewCaseScreen({
       onOpenChange={(next) => {
         if (!next) close()
       }}
-      dialogProps={{ 'aria-label': 'New case' }}
+      dialogProps={{ 'aria-label': title }}
     >
       <DialogHeader
-        title="New case"
+        title={title}
         description="The title is the only field that has to be filled."
         onClose={close}
       />
@@ -185,6 +193,7 @@ export function NewCaseScreen({
                 names={['title', 'customer', 'reference']}
                 required={['title']}
                 autoFocus="title"
+                refs={{ title: titleInput }}
                 problems={refused}
                 values={fields}
                 hints={{ reference: 'The ticket this was raised under, if there is one.' }}
@@ -276,7 +285,7 @@ export function NewCaseScreen({
             isDisabled={pending || busy}
             isPending={pending}
           >
-            Create case
+            {submitLabel}
           </Button>
         </DialogFooter>
       </form>

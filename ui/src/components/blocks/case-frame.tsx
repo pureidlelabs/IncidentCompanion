@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 
-import { LayoutGrid, Plus } from 'lucide-react'
+import { LayoutGrid, Plus, Unplug } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
 import {
@@ -27,6 +27,7 @@ import { RailFold, RailGroup, NavRow } from '@/components/blocks/rail-nav'
 import { NavRail, type RailSignedIn } from '@/components/blocks/rail'
 import { PresenceStack, type Person } from '@/components/blocks/presence'
 import { isFrozen } from '@/components/blocks/report-shape'
+import { Button } from '@/components/ui/button'
 import { Mark } from '@/components/ui/mark'
 import { RailList, RailItem, RailSubList, RailSubItem } from '@/components/ui/rail'
 import { usePersistedFlag } from '@/lib/persistedFlag'
@@ -83,6 +84,11 @@ export interface CaseFrameProps {
    * it from the roster the socket serves.
    */
   people?: readonly Person[] | undefined
+  /**
+   * Whether the screen can know it is current. `behind` draws the line that
+   * says it is not; `failed` adds the way to read the case again.
+   */
+  live?: { behind: boolean; failed: boolean; reread: () => void } | undefined
   /** What has been written to the case, for the header's activity door. */
   activity?:
     | {
@@ -115,6 +121,8 @@ export interface CaseFrameProps {
   openReport?: string | null | undefined
   /** Where a row points. The gallery sends it nowhere real. */
   hrefFor?: ((slug: string) => string) | undefined
+  /** Rail rows this install does not offer, left out of the rail. */
+  absent?: readonly string[] | undefined
   children: ReactNode
 }
 
@@ -151,11 +159,13 @@ export function CaseFrame({
   headerStart,
   user,
   people,
+  live,
   activity,
   counts,
   reports,
   openReport,
   hrefFor = (slug) => `/${slug}`,
+  absent,
   children,
 }: CaseFrameProps) {
   const open = groupHolding(section)
@@ -213,18 +223,20 @@ export function CaseFrame({
                 testId={`rail-${(group.label ?? 'top').toLowerCase()}`}
               >
                 <RailList>
-                  {group.rows.map((row) => (
-                    <Row
-                      key={row.slug}
-                      row={row}
-                      section={section}
-                      fragment={fragment}
-                      counts={counts}
-                      hrefFor={hrefFor}
-                      reports={reports}
-                      openReport={openReport}
-                    />
-                  ))}
+                  {group.rows
+                    .filter((row) => !absent?.includes(row.slug))
+                    .map((row) => (
+                      <Row
+                        key={row.slug}
+                        row={row}
+                        section={section}
+                        fragment={fragment}
+                        counts={counts}
+                        hrefFor={hrefFor}
+                        reports={reports}
+                        openReport={openReport}
+                      />
+                    ))}
                 </RailList>
               </RailGroup>
             ))}
@@ -233,6 +245,7 @@ export function CaseFrame({
         {...(headerStart === undefined ? {} : { headerStart })}
         headerEnd={
           <>
+            {live?.behind === true && <NotLive failed={live.failed} onReread={live.reread} />}
             {people !== undefined && <PresenceStack people={people} />}
             {activity !== undefined && (
               <ActivityDoor
@@ -321,28 +334,36 @@ function Row({
         // idea: a row reached through another. The registry declares these and
         // the case carries those, which is the only difference an analyst must
         // never see.
-        <div className="relative flex items-center">
-          <div className="min-w-0 flex-1">
-            <NavRow
-              icon={identity.icon}
-              label={identity.title}
-              to={hrefFor(row.slug)}
-              active={row.slug === section}
-              alsoActive={holdsSection}
-              // Only while the child is on screen to carry it: folded, the row
-              // that would have been marked is not drawn, and the rail stops
-              // saying where the analyst is at all. And only when a child is
-              // the one being stood on - the parent is a section itself, so
-              // deferring on its own page marks nothing at all.
-              deferToChild={!folded && holdsSection}
-              reserveRight
-              {...(count === undefined
-                ? {}
-                : { count, countLabel: `${String(count)} in ${identity.title}` })}
+        <RailItem>
+          <div className="relative flex items-center">
+            <div className="min-w-0 flex-1">
+              <NavRow
+                bare
+                icon={identity.icon}
+                label={identity.title}
+                to={hrefFor(row.slug)}
+                active={row.slug === section}
+                alsoActive={holdsSection}
+                // Only while the child is on screen to carry it: folded, the row
+                // that would have been marked is not drawn, and the rail stops
+                // saying where the analyst is at all. And only when a child is
+                // the one being stood on - the parent is a section itself, so
+                // deferring on its own page marks nothing at all.
+                deferToChild={!folded && holdsSection}
+                reserveRight
+                {...(count === undefined
+                  ? {}
+                  : { count, countLabel: `${String(count)} in ${identity.title}` })}
+              />
+            </div>
+            <RailFold
+              open={!folded}
+              title={identity.title}
+              slug={row.slug}
+              onToggle={toggleFolded}
             />
           </div>
-          <RailFold open={!folded} title={identity.title} slug={row.slug} onToggle={toggleFolded} />
-        </div>
+        </RailItem>
       )}
       {folded
         ? null
@@ -570,5 +591,37 @@ export function switcherRows(
         </MenuItem>
       </MenuSectionGroup>
     </>
+  )
+}
+
+/**
+ * The screen saying it may be behind: its connection is down, or back and the
+ * case not yet read again.
+ *
+ * In the header beside who else is here, because it is a fact about the case
+ * as a whole and every section inherits it.
+ */
+function NotLive({ failed, onReread }: { failed: boolean; onReread: () => void }) {
+  return (
+    <div
+      data-part="not-live"
+      role="status"
+      className="flex items-center gap-2 text-xs text-severity-medium"
+    >
+      <Unplug aria-hidden className="size-4 shrink-0" />
+      <span>
+        Not live
+        <span className="hidden md:inline">
+          {failed
+            ? ': the case could not be read again'
+            : ': changes by others will appear once reconnected'}
+        </span>
+      </span>
+      {failed && (
+        <Button size="xs" variant="outline" onPress={onReread}>
+          Read the case again
+        </Button>
+      )}
+    </div>
   )
 }

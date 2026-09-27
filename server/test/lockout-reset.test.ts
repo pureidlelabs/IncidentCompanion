@@ -2,11 +2,13 @@
  * That a password reset lifts the lockout it lands on top of, not just the
  * password.
  *
- * `CLEARED` applied on exactly one path - a successful sign-in - leaves an
+ * A lock cleared on exactly one path - a successful sign-in - leaves an
  * administrator resetting a locked-out analyst's password with the lock still
  * standing: the new password is correct and the account refuses it until the
  * window expires on its own.
  */
+import { randomUUID } from 'node:crypto'
+
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { LOCKOUT_AFTER_FAILURES } from '../src/policy/keys.js'
@@ -27,7 +29,8 @@ async function failSignIn(base: string, email: string): Promise<Response> {
   return fetch(`${base}/api/auth/sign-in/email`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email, password: 'definitely-the-wrong-password' }),
+    // Distinct each time: the same wrong password offered again counts once.
+    body: JSON.stringify({ email, password: `definitely-the-wrong-password-${randomUUID()}` }),
   })
 }
 
@@ -92,21 +95,20 @@ describe.skipIf(!runnable)('a password reset on a locked-out account', () => {
     })
     expect(reset.ok, await reset.text()).toBe(true)
 
-    // The counter is zeroed, not merely "not yet locked again": read it back
-    // from Postgres directly, rather than inferring it from a sign-in working.
+    // Both runs are gone, not merely "not yet locked again": read back from
+    // Postgres directly, rather than inferring it from a sign-in working.
     const db = await pool()
-    let row: { failed_sign_ins: number; locked_until: Date | null }
+    let runs: number
     try {
-      const result = await db.query<{ failed_sign_ins: number; locked_until: Date | null }>(
-        'select failed_sign_ins, locked_until from "user" where email = $1',
+      const result = await db.query(
+        'select 1 from sign_in_lockout l join "user" u on u.id = l.user_id where u.email = $1',
         [VICTIM],
       )
-      row = result.rows[0]!
+      runs = result.rowCount ?? 0
     } finally {
       await db.end()
     }
-    expect(row.failed_sign_ins, 'the failure counter is zeroed, not left standing').toBe(0)
-    expect(row.locked_until, 'the lock is lifted, not merely unexpired').toBeNull()
+    expect(runs, 'the reset left a run of failures, or its lock, standing').toBe(0)
 
     // And signs in immediately with the new password - no waiting out the
     // window.

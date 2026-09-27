@@ -1,0 +1,3 @@
+# Design
+
+An administrator's act is decided by the write that performs it, never by the request. Removing a membership or a customer from a group names the thing removed, so where there is none the act is refused as not there, as a grant naming a missing group or account is, and the record holds a refused request rather than the removal. Asking for a state that already stands — a membership at the level it has, a customer the group already holds, an account's current state or role — is answered as done and writes no line for the change: the state asked for is the state there is, and nothing changed to record.

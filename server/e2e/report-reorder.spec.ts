@@ -88,6 +88,12 @@ test('a section moves down one place, and the order is written', async ({ browse
       .locator('[data-testid="rail"] [data-testid^="rail-report-"]:not([data-testid="rail-report-index"]):not([data-testid="rail-report-new"])')
       .filter({ hasNotText: /SENT/i })
     await drafts.first().click()
+    // `settle` reads what is rendered, so a navigating click leaves it
+    // certifying the screen just left. -> #1053
+    await expect(
+      page.locator('[aria-label="Report sections"]'),
+      'the click did not open the report',
+    ).toBeVisible({ timeout: 15_000 })
     await settle(page)
 
     /**
@@ -145,8 +151,8 @@ test('a section moves down one place, and the order is written', async ({ browse
     await page.keyboard.press(DROP)
 
     const request_ = await posted
-    const body = JSON.parse(request_.postData() ?? '{}') as { ids?: string[] }
-    const sent = body.ids ?? []
+    const body = JSON.parse(request_.postData() ?? '{}') as { rows?: { id: string; version: number }[] }
+    const sent = (body.rows ?? []).map((row) => row.id)
     expect(sent.length, 'the drop posted no order').toBeGreaterThan(0)
 
     const answer = await request_.response()

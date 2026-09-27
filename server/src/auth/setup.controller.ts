@@ -159,7 +159,7 @@ export class SetupController {
      * **In process, never over the loopback.** A POST to this server's own
      * `/api/auth/sign-up/email` has to satisfy the origin check and, behind
      * TLS, a certificate `fetch` will not accept - for something the library
-     * exposes directly. `asResponse` is what carries the `set-cookie` back.
+     * exposes directly. It makes the account and no session.
      */
     const signedUp = await this.auth.api.signUpEmail({
       body: { email: body.username, password: body.password, name: body.username },
@@ -168,11 +168,6 @@ export class SetupController {
     if (!signedUp.ok) {
       throw new BadRequestException(`The account could not be created: ${await signedUp.text()}`)
     }
-
-    // **The cookie is forwarded, so claiming signs you in.** Otherwise the
-    // operator sets a password and is handed the sign-in form to type it into.
-    const cookie = signedUp.headers.get('set-cookie')
-    if (cookie) response.setHeader('set-cookie', cookie)
 
     /**
      * **Promoted by a direct write**, because `createUser` needs an admin
@@ -208,6 +203,15 @@ export class SetupController {
 
     this.token = null
     this.log.log('This install has been claimed; the setup token is now void.')
+
+    // **Signed in only once the claim is won**, so the cookie is forwarded and
+    // claiming signs the winner in, while a losing claim never held a session.
+    const signedIn = await this.auth.api.signInEmail({
+      body: { email: body.username, password: body.password },
+      asResponse: true,
+    })
+    const cookie = signedIn.headers.get('set-cookie')
+    if (cookie) response.setHeader('set-cookie', cookie)
     return { claimed: true }
   }
 }

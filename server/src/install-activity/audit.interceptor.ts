@@ -41,6 +41,7 @@ import {
 import type { Request } from 'express'
 import { catchError, tap, throwError, type Observable } from 'rxjs'
 
+import { sentReportIn } from '../db/schema/store-guards.js'
 import { InstallActivityService } from './install-activity.service.js'
 import { NAMED } from './named.js'
 import { routeOf } from './route-of.js'
@@ -134,5 +135,7 @@ export class AuditInterceptor implements NestInterceptor {
 }
 
 function statusOf(why: unknown): number | undefined {
-  return why instanceof HttpException ? why.getStatus() : undefined
+  if (why instanceof HttpException) return why.getStatus()
+  // The store refusing a write to a sent report, which a filter answers as 409 after this has run.
+  return sentReportIn(why) ? 409 : undefined
 }

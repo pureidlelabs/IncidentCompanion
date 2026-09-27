@@ -34,7 +34,7 @@ const meta = {
   component: ConfirmDeleteDialog,
   parameters: { layout: 'centered' },
   args: {
-    ids: ['a'],
+    rows: ['a'],
     onOpenChange: () => undefined,
     // Typed wide, so a story may hand back a promise.
     onConfirm: ((): unknown => undefined),
@@ -78,7 +78,7 @@ function Demo({
         {label}
       </Button>
       <ConfirmDeleteDialog
-        ids={ids}
+        rows={ids}
         onOpenChange={(open) => {
           if (!open) setIds(null)
         }}

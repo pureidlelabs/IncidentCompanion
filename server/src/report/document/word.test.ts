@@ -185,6 +185,34 @@ describe('the Word painter', () => {
     const firstRow = xml.slice(xml.indexOf('<w:tr'), xml.indexOf('</w:tr>'))
     expect((firstRow.match(/<w:tc>/g) ?? []).length).toBe(1)
   })
+
+  /**
+   * **The marker reaches the paragraph, and the count is per level.** Word's
+   * own numbering is not used -- `word.ts` says why -- so a painter that
+   * stopped asking `marks.ts` for the marker would write an unnumbered column
+   * of indented text and the file would still open.
+   */
+  it('numbers a nested ordered list per level', async () => {
+    const xml = documentXml(
+      await toWord(
+        paper([
+          {
+            type: 'list',
+            items: [
+              { runs: [{ text: 'one' }], level: 0, ordered: true },
+              { runs: [{ text: 'one-a' }], level: 1, ordered: true },
+              { runs: [{ text: 'two' }], level: 0, ordered: true },
+              { runs: [{ text: 'two-a' }], level: 1, ordered: true },
+            ],
+          },
+        ]),
+      ),
+    )
+
+    expect(xml).toContain('2. ')
+    // Three items numbered one: both outer firsts' children, and the first item.
+    expect(xml.split('>1. <').length - 1).toBe(3)
+  })
 })
 
 const COVER: Cover = {

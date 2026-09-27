@@ -10,16 +10,17 @@
  * **No guard, pipe or middleware runs on an upgrade**, so all four checks
  * below are done by hand, and a missing one looks like nothing at all.
  *
- * - **Origin, against Host.** WebSocket handshakes are *not* subject to CORS,
- *   so without this any website an analyst visits can open a socket carrying
+ * - **Origin, against the install's own.** WebSocket handshakes are *not*
+ *   subject to CORS, so without this any website an analyst visits can open a
+ *   socket carrying
  *   their cookie and read the case - cross-site WebSocket hijacking. There is
  *   no preflight to stop it and the browser sends the cookie regardless.
  * - **A session**, from the same cookie every request carries. Otherwise the
  *   roster shows names nobody proved.
  * - **Access to *that case*.** Authenticating and then trusting the id in the
  *   path is the classic IDOR: any signed-in analyst could open a socket on any
- *   case uuid and receive its presence and every change announcement. The HTTP
- *   routes have `CaseAccessGuard`; this is that check, run by hand.
+ *   case uuid and receive its presence and every change announcement. This
+ *   asks `ReachService.levelOnCase`, the question `CaseAccessGuard` asks.
  *
  * - **A password the account chose itself.** `MustChangePasswordInterceptor`
  *   returns `next.handle()` for any non-HTTP context, so a held account is
@@ -28,25 +29,27 @@
  *
  * `live.gateway.test.ts` asserts all four, because a missing one is invisible.
  */
-import { Inject, Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common'
+import { Injectable, Logger, type BeforeApplicationShutdown, type OnModuleInit } from '@nestjs/common'
 import { AuthService } from '@thallesp/nestjs-better-auth'
-import { eq } from 'drizzle-orm'
-import type { IncomingMessage, Server } from 'node:http'
+import type { IncomingHttpHeaders, IncomingMessage, Server } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type * as Y from 'yjs'
 
-import { DATABASE } from '../db/db.module.js'
-import type { Database } from '../db/client.js'
-import { cases } from '../db/schema/index.js'
+import { actingAs } from '../db/scope.js'
 import { CaseChannel, type Member } from './case-channel.service.js'
-import { ProseService, type ProseAddress } from '../prose/prose.service.js'
+import { Carets } from './carets.js'
+import { ProseService, type ProseRecord, type Writer } from '../prose/prose.service.js'
+import type { ProseState, ProseStateFrame } from '../domain/prose-state.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
-import { ReachService, type Level } from '../access/reach.service.js'
+import { ReachService } from '../access/reach.service.js'
+import { UUID } from '../access/case-access.guard.js'
 import { onReachChanged } from '../access/reach-changed.js'
+import { attribute, callerAddress, NO_ADDRESS } from '../wire/caller-address.js'
+import { Allowances } from './allowance.js'
 
-const LIVE_PATH = /^\/api\/cases\/([0-9a-f-]{36})\/live$/i
+const LIVE_PATH = /^\/api\/cases\/([^/]+)\/live$/i
 
 /** Why an upgrade was refused. Returned rather than logged, so a test can read it. */
 export type Refusal =
@@ -55,6 +58,7 @@ export type Refusal =
   | 'unauthenticated'
   | 'must-change-password'
   | 'no-such-case'
+  | 'too-many'
 
 /**
  * The status line each refusal answers with.
@@ -76,113 +80,218 @@ export const STATUS: Record<Refusal, string> = {
   // distinguishable from one that does not exist, or the socket becomes an
   // oracle for which case ids are real.
   'no-such-case': '404 Not Found',
+  'too-many': '429 Too Many Requests',
 }
 
-/**
- * The scope a filing moves, as `case-channel.service.ts` announces it.
- *
- * Spelled once: the fan-out names scopes as strings, so a typo here is a
- * watcher that never fires and a window that never closes, with nothing red.
- * `live.gateway.test.ts` drives the real string through a real frame.
- */
-const REPORTS_SCOPE = 'reports'
+/** Refusals made before anybody is known, so they are counted against the address. */
+const ANONYMOUS: ReadonlySet<Refusal> = new Set(['no-such-path', 'cross-origin', 'unauthenticated'])
 
-/**
- * Whether this analyst may be admitted to a socket on this case.
- *
- * **Read is enough and no more is asked.** A socket only ever shows what a
- * case holds, so requiring write here would lock a read-only analyst out of a
- * screen they are entitled to.
- *
- * **A case nobody has attributed is the default customer's**, matching
- * `CaseAccessGuard` - the two doors have to answer the same question the same
- * way, or the socket becomes the weaker one.
- */
-export async function levelOnCase(
-  db: Database,
-  reach: ReachService,
-  caseId: string,
-  userId: string,
-): Promise<Level | null> {
-  const [row] = await db
-    .select({ customerId: cases.customerId })
-    .from(cases)
-    .where(eq(cases.id, caseId))
-  if (!row) return null
+/** The close code for a connection that sent past its budget. */
+const TOO_MUCH = 4429
 
-  const customerId = row.customerId ?? (await reach.defaultCustomerId())
-  if (!customerId) return null
-  return reach.levelFor(userId, customerId)
+/** Authority that ended on an open connection, and the close code that says which way. */
+type Ended = 'unauthenticated' | 'must-change-password' | 'no-such-case'
+const CLOSE: Record<Ended, number> = {
+  unauthenticated: 4401,
+  'must-change-password': 4403,
+  'no-such-case': 4404,
 }
 
-export async function reachesCase(
-  db: Database,
-  reach: ReachService,
-  caseId: string,
-  userId: string,
-): Promise<boolean> {
-  return (await levelOnCase(db, reach, caseId, userId)) !== null
+/** One admitted connection, as authority is read again against it. */
+interface Admission {
+  caseId: string
+  userId: string
+  sessionId?: string
+  headers: IncomingHttpHeaders
+  /** Leaves the roster and lets go of what the connection holds. */
+  release?: () => void
+  /** Lets go of every row the connection claims, in its frame order. */
+  yieldClaims?: () => void
 }
+
+/** How often an open connection's authority is read again when it sends nothing. */
+const SWEEP_MS = 15_000
+
+/** The largest frame this socket will read, in bytes, sized for a prose sync update. */
+const MAX_FRAME_BYTES = 64 * 1024
+
+/** What a claim key may be: a shape, because `live` may not import the collection registry. */
+const CLAIM_TABLE = /^[a-z_]{1,40}$/
+const CLAIM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** How many rows one connection may hold at once. A browser holds one. */
+const CLAIMS_PER_CONNECTION = 64
+
+/** How many frames one connection may have waiting to be acted on before it is ended. */
+const FRAMES_WAITING = 256
+
+/** How many connections one account may hold at once, and open: a burst, then one a second. */
+const CONNECTIONS_PER_ACCOUNT = 32
+const UPGRADES_PER_ACCOUNT = { burst: 60, perSecond: 1 }
+
+/** How many upgrades one address may have refused before anybody is known. */
+const ANONYMOUS_REFUSALS_PER_ADDRESS = { burst: 30, perSecond: 0.5 }
+
+/** What one connection may send: a burst, then a steady rate, in frames and in bytes. */
+const FRAMES_PER_CONNECTION = { burst: 1_000, perSecond: 100 }
+const BYTES_PER_CONNECTION = { burst: 4 * 1024 * 1024, perSecond: 256 * 1024 }
 
 interface OpenDocument {
   /** Which record this document is - a report, or one case note. */
-  address: ProseAddress
+  address: ProseRecord
   doc: Y.Doc
-  /**
-   * When the record was frozen, or null. Refreshed on open and whenever
-   * `stale` is set, never per frame. **Always null for a note**, which has no
-   * state that refuses a write.
-   */
-  sentAt: Date | null
-  stale: boolean
+  /** What this connection was last told about the words the document holds unsaved, while they are. */
+  unsaved: ProseState | null
   stop: () => void
 }
 
 @Injectable()
-export class LiveGateway implements OnApplicationShutdown {
+export class LiveGateway implements OnModuleInit, BeforeApplicationShutdown {
   private readonly log = new Logger(LiveGateway.name)
-  private readonly sockets = new WebSocketServer({ noServer: true })
+  private readonly sockets = new WebSocketServer({ noServer: true, maxPayload: MAX_FRAME_BYTES })
   private connections = 0
 
-  private readonly admitted = new Map<WebSocket, { caseId: string; userId: string }>()
+  /** Each connection's case and analyst, the session and headers it was admitted with, and how it lets go. */
+  private readonly admitted = new Map<WebSocket, Admission>()
+  /** The frame types each connection has had refused and recorded, so a repeat writes no second line. */
+  private readonly refusalsRecorded = new WeakMap<WebSocket, Set<string>>()
+  private readonly carets = new Carets()
+  private readonly upgradesByAccount = new Allowances(UPGRADES_PER_ACCOUNT.burst, UPGRADES_PER_ACCOUNT.perSecond)
+  private readonly refusalsByAddress = new Allowances(
+    ANONYMOUS_REFUSALS_PER_ADDRESS.burst,
+    ANONYMOUS_REFUSALS_PER_ADDRESS.perSecond,
+  )
+  /** Connections each account holds, counted from admission to the socket closing. */
+  private readonly holding = new Map<string, number>()
+  /** Accounts refused for holding too many since they last opened one, so the run is told once. */
+  private readonly crowded = new Set<string>()
+  private sweep: NodeJS.Timeout | undefined
   private readonly stopListeningForSessionEnds: () => void
   private readonly stopListeningForReachChanges: () => void
 
   constructor(
     private readonly channel: CaseChannel,
     private readonly auth: AuthService,
-    @Inject(DATABASE) private readonly db: Database,
     private readonly prose: ProseService,
     /**
      * **The socket audits itself, because nothing else can.** No guard, pipe,
      * middleware or interceptor runs on an upgrade - so the boundary that
-     * records every HTTP write is blind here, and this is the one path that
-     * persists a report.
+     * records every HTTP write is blind here.
      */
     private readonly activity: InstallActivityService,
     /**
-     * **The socket's own copy of the reach question**, because no guard runs
-     * on an upgrade. -> `reachesCase`
+     * **The question the guard asks, asked by hand**, because no guard runs on
+     * an upgrade. Read is enough to be admitted; an edit asks again for write.
      */
     private readonly reach: ReachService,
   ) {
-    this.stopListeningForSessionEnds = onSessionEnded((userId) => { this.dropUser(userId) })
-    /**
-     * **A revocation has to reach a session already open**, rather than
-     * waiting for the next sign-in - so every connection this analyst holds
-     * ends and the ones they still reach are re-admitted by asking again.
-     *
-     * Every connection rather than the ones that actually went: working out
-     * which survived would be a second copy of the reach rules, kept in step
-     * by hand, and the client reconnects to what it is still entitled to.
-     */
-    this.stopListeningForReachChanges = onReachChanged((userId) => { this.dropUser(userId) })
+    // The ended session's own connections end outright: the library clears its cached copy after telling us.
+    this.stopListeningForSessionEnds = onSessionEnded((_userId, sessionId, recorded) => {
+      for (const [live, admission] of this.admitted) {
+        if (sessionId && admission.sessionId === sessionId) this.end(live, admission, 'unauthenticated', recorded)
+      }
+    })
+    // A revocation reaches a session already open, and ends only the connections it ended.
+    this.stopListeningForReachChanges = onReachChanged((userId) => { void this.revalidate(userId) })
   }
 
-  dropUser(userId: string): void {
+  /** A saved change to prose is announced to the case, as any write is. */
+  onModuleInit(): void {
+    // ponytail: one sweep, O(connections) per 15 s; a deadline per connection if the bound must tighten.
+    this.sweep = setInterval(() => {
+      for (const [live, admission] of this.admitted) void this.revalidateOne(live, admission)
+      this.upgradesByAccount.forgetFull()
+      this.refusalsByAddress.forgetFull()
+    }, SWEEP_MS)
+    this.sweep.unref()
+    this.prose.onSaved((caseId, record) => {
+      this.channel.announce(caseId, [record.table])
+    })
+  }
+
+  /** Read again the authority of every connection `userId` holds, and end those it no longer covers. */
+  async revalidate(userId: string): Promise<void> {
     for (const [live, admission] of this.admitted) {
-      if (admission.userId === userId) live.terminate()
+      if (admission.userId === userId) await this.revalidateOne(live, admission)
     }
+  }
+
+  /** Never rejects: a store that cannot answer leaves the connection for the next pass. */
+  private async revalidateOne(live: WebSocket, admission: Admission): Promise<void> {
+    try {
+      const ended = await this.authorityOf(admission)
+      if (ended === 'below-write') admission.yieldClaims?.()
+      else if (ended) this.end(live, admission, ended)
+    } catch (error) {
+      this.log.warn(`could not read a connection's authority again: ${String(error)}`)
+    }
+  }
+
+  /**
+   * Why the session that opened a connection no longer covers it, or null.
+   * The same questions the upgrade asked, of the same session, asked now.
+   * `below-write` still reads, and may hold no claim. Throws where the session
+   * cannot be read, which is not an ending.
+   */
+  private async authorityOf(admission: Admission): Promise<Ended | 'below-write' | null> {
+    if (!admission.sessionId) return 'unauthenticated'
+    const session = await this.sessionFor(admission.headers, true)
+    if (!session || session.sessionId !== admission.sessionId || session.id !== admission.userId) {
+      return 'unauthenticated'
+    }
+    if (session.held) return 'must-change-password'
+    const level = (await this.reach.levelOnCase(admission.userId, admission.caseId))?.level
+    if (!level) return 'no-such-case'
+    return level === 'write' || level === 'delete' ? null : 'below-write'
+  }
+
+  /**
+   * A frame refused for its level, recorded as the guard records a refused
+   * request, once per connection and frame type: a socket has no request
+   * limiter in front of it.
+   */
+  private recordRefusal(
+    live: WebSocket,
+    member: Member,
+    frame: string,
+    reached: { customerId?: string | null; level?: string | null } | null,
+  ): void {
+    const seen = this.refusalsRecorded.get(live) ?? new Set<string>()
+    if (seen.has(frame)) return
+    seen.add(frame)
+    this.refusalsRecorded.set(live, seen)
+    void this.activity.record({
+      event: 'access_denied',
+      outcome: 'failure',
+      actor: { id: member.userId, label: member.username },
+      target: `live ${frame}`,
+      detail: {
+        case: member.caseId,
+        ...(reached?.customerId ? { customer: reached.customerId } : {}),
+        needed: 'write',
+        held: reached?.level ?? 'none',
+      },
+      headers: this.admitted.get(live)?.headers ?? {},
+    })
+  }
+
+  /**
+   * Close a connection whose authority ended, recording the refusal as the
+   * upgrade records one, unless the act that ended it already `recorded` it.
+   */
+  private end(live: WebSocket, admission: Admission, why: Ended, recorded = false): void {
+    if (!this.admitted.delete(live)) return
+    if (!recorded) void this.activity.record({
+      event: 'live_refused',
+      outcome: 'failure',
+      actor: { id: admission.userId, label: null },
+      target: `live connection: ${why}`,
+      detail: { why, case: admission.caseId },
+      headers: admission.headers,
+    })
+    // Released now: a peer that never answers the close would otherwise hold its place for the handshake's timeout.
+    admission.release?.()
+    live.close(CLOSE[why])
   }
 
   dropCase(caseId: string): void {
@@ -211,13 +320,25 @@ export class LiveGateway implements OnApplicationShutdown {
   }
 
   private async upgrade(request: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
+    // Node drops its own error listener on an upgrade, so a reset here would be thrown unhandled.
+    socket.on('error', () => socket.destroy())
+    await attribute(request.headers, request.socket.remoteAddress)
     const verdict = await this.check(request)
+    if (verdict.refused && ANONYMOUS.has(verdict.refused)) {
+      const address = callerAddress(request.headers) ?? NO_ADDRESS
+      const taken = this.refusalsByAddress.take(address)
+      if (taken !== 'taken') {
+        if (taken === 'first') this.limited(request.headers, null, 'live upgrade', 'address')
+        this.refuse(socket, 'too-many')
+        return
+      }
+    }
+    if (verdict.refused === 'too-many') {
+      this.refuse(socket, 'too-many')
+      return
+    }
     if (verdict.refused) {
-      // **Refused, not ignored.** An unanswered upgrade stays open in the
-      // browser's per-host pool; enough of those and every later request
-      // queues forever. That failure cost an evening on the Vite proxy side.
-      socket.write(`HTTP/1.1 ${STATUS[verdict.refused]}\r\n\r\n`)
-      socket.destroy()
+      this.refuse(socket, verdict.refused)
       // A refused upgrade is an authorisation failure, and the one kind the
       // HTTP boundary never sees.
       //
@@ -230,7 +351,7 @@ export class LiveGateway implements OnApplicationShutdown {
       // partition -- and which a collector receives whole while the activity
       // pane draws no attributes at all, so on the screen it is gone until
       // that pane grows a column. -> #541, #544
-      const asked = LIVE_PATH.exec(request.url ?? '')?.[1]
+      const asked = LIVE_PATH.exec(request.url ?? '')?.[1]?.match(UUID)?.[0].toLowerCase()
       void this.activity.record({
         event: 'live_refused',
         outcome: 'failure',
@@ -241,12 +362,27 @@ export class LiveGateway implements OnApplicationShutdown {
       return
     }
 
-    /**
-     * **One line per opening, not per write.** The document is a CRDT flushed
-     * on a timer, so a line per flush would be a line every few seconds per
-     * reader; the question an audit is read for is *who could have edited
-     * this*, and that is answered when the socket opens.
-     */
+    const userId = verdict.session.id
+    // A socket that closed during the checks has fired its close already, and is never counted.
+    if (socket.destroyed) return
+    const held = this.holding.get(userId) ?? 0
+    if (held >= CONNECTIONS_PER_ACCOUNT) {
+      if (!this.crowded.has(userId)) {
+        this.crowded.add(userId)
+        this.limited(request.headers, verdict.session, 'live upgrade', 'connections')
+      }
+      this.refuse(socket, 'too-many')
+      return
+    }
+    this.crowded.delete(userId)
+    this.holding.set(userId, held + 1)
+    socket.once('close', () => {
+      const now = (this.holding.get(userId) ?? 1) - 1
+      if (now > 0) this.holding.set(userId, now)
+      else this.holding.delete(userId)
+    })
+
+    // Who could have edited; who did is the line each saved change writes.
     void this.activity.record({
       event: 'case_opened_live',
       actor: { id: verdict.session.id, label: verdict.session.name },
@@ -255,10 +391,36 @@ export class LiveGateway implements OnApplicationShutdown {
     })
 
     this.sockets.handleUpgrade(request, socket, head, (live) => {
-      this.open(live, verdict.caseId, verdict.session).catch((error: unknown) => {
+      this.open(live, verdict.caseId, verdict.session, request.headers).catch((error: unknown) => {
         this.log.warn(`could not open a socket: ${String(error)}`)
         live.terminate()
       })
+    })
+  }
+
+  /**
+   * **Refused, not ignored.** An unanswered upgrade stays open in the browser's
+   * per-host pool; enough of those and every later request queues forever.
+   */
+  private refuse(socket: Duplex, why: Refusal): void {
+    // Ended rather than destroyed, which can reset the connection before the status is read.
+    socket.once('finish', () => socket.destroy())
+    socket.end(`HTTP/1.1 ${STATUS[why]}\r\nConnection: close\r\n\r\n`)
+  }
+
+  /** One line for a run of limited upgrades or frames, as the throttler writes one for a request. */
+  private limited(
+    headers: IncomingHttpHeaders,
+    actor: { id: string; name: string } | null,
+    target: 'live upgrade' | 'live frames',
+    tier: 'address' | 'account' | 'connections' | 'connection',
+  ): void {
+    void this.activity.record({
+      event: 'rate_limited',
+      ...(actor ? { actor: { id: actor.id, label: actor.name } } : {}),
+      target,
+      detail: { tier },
+      headers,
     })
   }
 
@@ -272,19 +434,24 @@ export class LiveGateway implements OnApplicationShutdown {
     request: IncomingMessage,
   ): Promise<
     | { refused: Refusal }
-    | { refused: null; caseId: string; session: { id: string; name: string; held: boolean } }
+    | { refused: null; caseId: string; session: { id: string; name: string; held: boolean; sessionId?: string } }
   > {
-    const match = LIVE_PATH.exec(request.url ?? '')
-    if (!match) return { refused: 'no-such-path' }
+    const named = LIVE_PATH.exec(request.url ?? '')?.[1]
+    if (!named) return { refused: 'no-such-path' }
     if (!this.sameOrigin(request)) return { refused: 'cross-origin' }
 
-    const caseId = match[1]!
-    const session = await this.sessionFor(request)
-    if (!session) return { refused: 'unauthenticated' }
+    const session = await this.sessionFor(request.headers)
+    if (!session?.sessionId) return { refused: 'unauthenticated' }
+    const taken = this.upgradesByAccount.take(session.id)
+    if (taken === 'first') this.limited(request.headers, session, 'live upgrade', 'account')
+    if (taken !== 'taken') return { refused: 'too-many' }
     // Before the case lookup, so a held account learns nothing about which
     // case ids exist -- the same ordering reason the origin check comes first.
     if (session.held) return { refused: 'must-change-password' }
-    if (!(await reachesCase(this.db, this.reach, caseId, session.id))) {
+    // Only a signed-in caller learns that a name is no case; one spelling from here on.
+    if (!UUID.test(named)) return { refused: 'no-such-case' }
+    const caseId = named.toLowerCase()
+    if (!(await this.reach.levelOnCase(session.id, caseId))?.level) {
       return { refused: 'no-such-case' }
     }
 
@@ -292,42 +459,39 @@ export class LiveGateway implements OnApplicationShutdown {
   }
 
   /**
-   * **Same-origin, compared against `Host` rather than a configured list.**
-   * The app is served from whatever address it was started on - a port picked
-   * at runtime, a container publish, an analyst's own hostname - so a fixed
-   * allowlist is one more thing to keep true. A missing `Origin` is refused:
+   * **The origins sign-in admits, and no others**: the set Better Auth
+   * enforces on every credential route, so an ordinary request and a socket
+   * cannot disagree about who the install is. A missing `Origin` is refused:
    * every browser sends one on a WebSocket handshake, and this route has no
    * non-browser caller.
    */
   private sameOrigin(request: IncomingMessage): boolean {
     const origin = request.headers.origin
-    const host = request.headers.host
-    if (typeof origin !== 'string' || typeof host !== 'string') return false
-    try {
-      return new URL(origin).host === host
-    } catch {
-      return false
-    }
+    const trusted = this.auth.instance.options.trustedOrigins
+    return typeof origin === 'string' && Array.isArray(trusted) && trusted.includes(origin)
   }
 
   private async sessionFor(
-    request: IncomingMessage,
-  ): Promise<{ id: string; name: string; held: boolean } | null> {
+    given: IncomingHttpHeaders,
+    rethrow = false,
+  ): Promise<{ id: string; name: string; held: boolean; sessionId?: string } | null> {
     try {
       const headers = new Headers()
-      for (const [name, value] of Object.entries(request.headers)) {
+      for (const [name, value] of Object.entries(given)) {
         if (typeof value === 'string') headers.set(name, value)
       }
       const found = await this.auth.api.getSession({ headers })
       if (!found?.user) return null
       return {
         id: found.user.id,
+        sessionId: (found.session as { id?: string } | undefined)?.id,
         name: found.user.name?.trim() || found.user.email,
         // `mustChangePassword` is an `additionalFields` column: present at
         // runtime, absent from Better Auth's inferred user type.
         held: (found.user as { mustChangePassword?: boolean }).mustChangePassword === true,
       }
     } catch (error) {
+      if (rethrow) throw error
       this.log.warn(`could not read the session off an upgrade: ${String(error)}`)
       return null
     }
@@ -337,10 +501,13 @@ export class LiveGateway implements OnApplicationShutdown {
   async open(
     live: WebSocket,
     caseId: string,
-    session: { id: string; name: string },
+    session: { id: string; name: string; sessionId?: string },
+    headers: IncomingHttpHeaders = {},
   ): Promise<void> {
+    const writer: Writer = { id: session.id, label: session.name, headers }
     this.connections += 1
-    this.admitted.set(live, { caseId, userId: session.id })
+    const admission: Admission = { caseId, userId: session.id, sessionId: session.sessionId, headers }
+    this.admitted.set(live, admission)
     const member: Member = {
       caseId,
       userId: session.id,
@@ -349,27 +516,7 @@ export class LiveGateway implements OnApplicationShutdown {
       // with the process, so two instances cannot mint the same id.
       sessionId: `${String(process.pid)}-${String(this.connections)}`,
       joinedAt: Date.now(),
-      /**
-       * **Watched on the way past, not intercepted.** Every frame the case
-       * fans out already reaches this connection; a `reports` change is the
-       * one that can have filed a document somebody here has open, so it
-       * drops the cached stamp rather than costing a query per keystroke.
-       * Anything unparseable is forwarded untouched - this is a listener on
-       * the way to the socket, and must never be able to swallow a frame.
-       */
       send: (payload) => {
-        try {
-          const frame = JSON.parse(payload) as { type?: unknown; scopes?: unknown }
-          if (
-            frame.type === 'case.changed' &&
-            Array.isArray(frame.scopes) &&
-            frame.scopes.includes(REPORTS_SCOPE)
-          ) {
-            for (const [, held] of opened) held.stale = true
-          }
-        } catch {
-          // Not JSON, or not a shape this knows. Forwarded regardless.
-        }
         live.send(payload)
       },
     }
@@ -380,36 +527,53 @@ export class LiveGateway implements OnApplicationShutdown {
      * **Per connection, not per case.** Two tabs are two readers of the same
      * report document, and the refcount in `ProseService` is what keeps it
      * alive for the second when the first closes.
+     *
+     * The promise, not the document: a `reports` change arrives outside the
+     * frame sequence, so one announced while a document is still opening has
+     * to mark it stale once it has opened.
      */
-    const opened = new Map<string, OpenDocument>()
+    const opened = new Map<string, Promise<OpenDocument | null>>()
+
+    /** The rows this connection holds, so `CLAIMS_PER_CONNECTION` is countable. */
+    const claims = new Set<string>()
 
     const joined = this.channel.join(member)
+    /**
+     * **Settled, not fulfilled.** `PresenceStore.join` starts the heartbeat
+     * and `CaseChannel.join` then announces the roster, so a join that rejects
+     * in that last step has already armed the interval, and the leave has to
+     * run after it anyway. Leaving after a partial join is safe: `leave` clears
+     * the interval and deletes keys that may not exist.
+     */
+    const ready = joined.then(
+      () => true,
+      () => false,
+    )
+
+    /**
+     * **Every frame, and then the connection's own end, one at a time in the
+     * order they arrived**, all behind the join. A join that failed acts on
+     * none of them. -> `openspec/specs/live/design.md`
+     */
+    let order: Promise<void> = Promise.resolve()
+    let waiting = 0
 
     let gone = false
     const close = () => {
       if (gone) return
       gone = true
       this.admitted.delete(live)
-      // **Released before the roster changes.** The last reader out flushes
-      // the document, and a closing tab must not leave the report newer in
-      // memory than on disk.
-      for (const [, held] of opened) held.stop()
-      opened.clear()
-      /**
-       * **Chained onto the join rather than run now**, or a socket that goes
-       * mid-handshake is deleted from a roster it has not been written to yet
-       * and the write lands after it.
-       *
-       * **Settled, not fulfilled.** `PresenceStore.join` starts the heartbeat
-       * and `CaseChannel.join` then announces the roster, so a join that
-       * rejects in that last step has already armed the interval -- and a
-       * `.then` chain skips the leave exactly there, leaving the ghost this
-       * whole change is about. Leaving after a partial join is safe: `leave`
-       * clears the interval and deletes keys that may not exist.
-       */
-      joined
-        .catch(() => undefined)
-        .then(() => this.channel.leave(member))
+      this.carets.release(live)
+      order = order
+        .then(async () => {
+          await ready
+          // **Released before the roster changes.** The last reader out flushes
+          // the document, and a closing tab must not leave the report newer in
+          // memory than on disk.
+          for (const [, held] of opened) (await held.catch(() => null))?.stop()
+          opened.clear()
+          await this.channel.leave(member)
+        })
         .catch((error: unknown) => {
           this.log.warn(`could not release ${member.sessionId}: ${String(error)}`)
         })
@@ -421,152 +585,197 @@ export class LiveGateway implements OnApplicationShutdown {
      * of the process -- leaving a case nobody can ever delete, refused in the
      * name of an analyst whose browser is long gone. -> #389
      */
+    admission.release = close
+    admission.yieldClaims = () => {
+      order = order
+        .then(async () => {
+          // Asked again in order: a claim taken at write since the re-read that queued this stays.
+          const level = (await this.reach.levelOnCase(member.userId, member.caseId))?.level
+          if (level === 'write' || level === 'delete') return
+          for (const field of [...claims]) {
+            const at = field.indexOf(':')
+            claims.delete(field)
+            await this.channel.release(member, field.slice(0, at), field.slice(at + 1))
+          }
+        })
+        .catch((error: unknown) => {
+          this.log.warn(`could not release the claims of ${member.sessionId}: ${String(error)}`)
+        })
+    }
     live.on('close', close)
     live.on('error', close)
-
-    await joined
-
+    const frames = new Allowances(FRAMES_PER_CONNECTION.burst, FRAMES_PER_CONNECTION.perSecond)
+    const bytes = new Allowances(BYTES_PER_CONNECTION.burst, BYTES_PER_CONNECTION.perSecond)
     live.on('message', (raw: Buffer) => {
-      let message: { type?: unknown; table?: unknown; id?: unknown; field?: unknown; update?: unknown }
-      try {
-        message = JSON.parse(raw.toString()) as typeof message
-      } catch {
-        return // A frame this build does not understand is ignored, not fatal.
-      }
-
-      // Caught: a frame from the client is not awaited, so a store failure
-      // here would otherwise be an unhandled rejection and the process.
-      const failed = (error: unknown) => {
-        this.log.warn(`could not apply a ${String(message.type)}: ${String(error)}`)
-      }
-
-      /**
-       * **Prose is routed before the claim gate**, which requires `table` and
-       * `id` and returns early without them. A prose frame carries `field` and
-       * `update` instead, so leaving it below that check is a socket that
-       * silently drops every keystroke - which is exactly what it did.
-       */
-      if (message.type === 'prose.sync' || message.type === 'prose.awareness') {
-        const field = typeof message.field === 'string' ? message.field : null
-        const update = typeof message.update === 'string' ? message.update : null
-        if (!field || !update) return
-        this.onProse(member, live, opened, message.type, field, update).catch(failed)
+      if (gone) return
+      if (frames.take('') !== 'taken' || bytes.take('', raw.length) !== 'taken') {
+        this.limited(headers, session, 'live frames', 'connection')
+        close()
+        live.close(TOO_MUCH)
         return
       }
-
-      const table = typeof message.table === 'string' ? message.table : null
-      const id = typeof message.id === 'string' ? message.id : null
-      if (!table || !id) return
-
-      if (message.type === 'claim') this.channel.claim(member, table, id).catch(failed)
-      if (message.type === 'release') this.channel.release(member, table, id).catch(failed)
+      // ponytail: one fixed cap; a per-type budget if a client legitimately bursts past it.
+      if (++waiting > FRAMES_WAITING) {
+        live.terminate()
+        return
+      }
+      order = order
+        .then(async () => {
+          // Handled as the analyst the connection admitted, so each read and
+          // write a frame makes is scoped to what they reach.
+          if (!(await ready)) return
+          // Every frame asks whether the session that opened this connection still covers it.
+          const ended = await this.authorityOf(admission)
+          if (ended === 'below-write') admission.yieldClaims?.()
+          else if (ended) {
+            this.end(live, admission, ended)
+            return
+          }
+          await actingAs(member.userId, () => this.onFrame(member, writer, live, opened, claims, raw))
+        })
+        // One failed frame must not stop the ones behind it, nor the leave.
+        .catch((error: unknown) => {
+          this.log.warn(`could not apply a frame from ${member.sessionId}: ${String(error)}`)
+        })
+        .finally(() => {
+          waiting -= 1
+        })
     })
 
+    await joined
+  }
+
+  /** One frame from the client, acted on to completion. */
+  private async onFrame(
+    member: Member,
+    writer: Writer,
+    live: WebSocket,
+    opened: Map<string, Promise<OpenDocument | null>>,
+    claims: Set<string>,
+    raw: Buffer,
+  ): Promise<void> {
+    let message: { type?: unknown; table?: unknown; id?: unknown; field?: unknown; update?: unknown } | null
+    try {
+      message = JSON.parse(raw.toString()) as typeof message
+    } catch {
+      return // A frame this build does not understand is ignored, not fatal.
+    }
+    // `null` parses, and reading a field off it throws.
+    if (typeof message !== 'object' || message === null) return
+
+    /**
+     * **Prose is routed before the claim gate**, which requires `table` and
+     * `id` and returns early without them. A prose frame carries `field` and
+     * `update` instead, so leaving it below that check is a socket that
+     * silently drops every keystroke - which is exactly what it did.
+     */
+    if (message.type === 'prose.sync' || message.type === 'prose.awareness') {
+      const field = typeof message.field === 'string' ? message.field : null
+      const update = typeof message.update === 'string' ? message.update : null
+      if (!field || !update) return
+      await this.onProse(member, writer, live, opened, message.type, field, update)
+      return
+    }
+
+    const table = typeof message.table === 'string' ? message.table : null
+    const id = typeof message.id === 'string' ? message.id.toLowerCase() : null
+    if (!table || !id) return
+
+    if (message.type === 'claim') await this.onClaim(member, live, claims, table, id)
+    if (message.type === 'release') {
+      claims.delete(`${table}:${id}`)
+      await this.channel.release(member, table, id)
+    }
+  }
+
+  /**
+   * One claim frame. A claim says its holder is editing, so it takes write on
+   * the case; admission asked only for read. `release` is not gated:
+   * `PresenceStore.release` refuses a field another session holds.
+   */
+  private async onClaim(
+    member: Member,
+    live: WebSocket,
+    claims: Set<string>,
+    table: string,
+    id: string,
+  ): Promise<void> {
+    // Silence, as for a frame this build does not understand: no client sends this shape.
+    if (!CLAIM_TABLE.test(table) || !CLAIM_ID.test(id)) return
+    const field = `${table}:${id}`
+    if (!claims.has(field) && claims.size >= CLAIMS_PER_CONNECTION) return
+
+    const reached = await this.reach.levelOnCase(member.userId, member.caseId)
+    if (reached?.level !== 'write' && reached?.level !== 'delete') {
+      live.send(JSON.stringify({ type: 'claim.refused', table, id, reason: 'read-only' }))
+      this.recordRefusal(live, member, 'claim', reached)
+      return
+    }
+    claims.add(field)
+    await this.channel.claim(member, table, id)
   }
 
   /**
    * One prose frame: sync or awareness.
    *
-   * **Awareness is relayed and never interpreted** - carets are not stored.
+   * **Awareness is relayed as the connection's own carets, named for its
+   * analyst** -> `Carets`. Carets are not stored.
    * A sync frame is applied to the server's own document first, since that
    * document is the record; the answer goes to the sender and the update to
    * everyone else.
    *
-   * **A sent report's field is readable and not writable**, the same refusal
-   * `freeze.ts` makes at every collection door. The gate is per *frame*, not
-   * on `resolve` or `open`, so the text still loads and only a frame carrying
-   * content is refused. **A note never reaches it**: `resolve` answers a note
-   * with `sentAt: null` because there is no state a note can be in that
-   * refuses a write, so the branch below is dead for one of the two tables
-   * rather than being skipped for it.
-   *
-   * The sent state is re-read when `case.changed` says reports moved, never
-   * per frame - reading it once leaves a connection holding the field taking
-   * updates into a report that has since been filed.
+   * **A sent report's field is readable and not writable**: `ProseService`
+   * answers a frame carrying content with the report's stamp, and the text
+   * still loads.
    */
   private async onProse(
     member: Member,
+    writer: Writer,
     live: WebSocket,
-    opened: Map<string, OpenDocument>,
+    opened: Map<string, Promise<OpenDocument | null>>,
     type: 'prose.sync' | 'prose.awareness',
     field: string,
     update: string,
   ): Promise<void> {
     if (type === 'prose.awareness') {
+      // A caret frame still queued when its connection closed would hold carets that release has already let go.
+      if (!this.admitted.has(live)) return
       // Relayed on the field alone: an awareness frame for a field this
-      // connection never opened is still somebody's caret, and refusing it
-      // would need the roster this deliberately does not keep.
-      this.channel.prose(member.caseId, { type, field, update }, member.sessionId)
+      // connection never opened is still somebody's caret.
+      const vouched = this.carets.vouch(member.caseId, live, member.userId, member.username, Buffer.from(update, 'base64'))
+      if (vouched) {
+        this.channel.prose(member.caseId, { type, field, update: Buffer.from(vouched).toString('base64') }, member.sessionId)
+      }
       return
     }
 
-    let held = opened.get(field)
-    if (!held) {
-      const address = await this.prose.resolve(member.caseId, field)
-      // **Unresolvable is silence, not an error frame.** The field key comes
-      // from a browser; answering "no such field" would make the socket an
-      // oracle for which block ids exist in other cases.
-      if (!address) return
-
-      const doc = await this.prose.open(member.caseId, address)
-      const { sentAt } = address
-
-      const onUpdate = (bytes: Uint8Array, origin: unknown) => {
-        if (origin === live) return
-        live.send(
-          JSON.stringify({
-            type: 'prose.sync',
-            field,
-            update: Buffer.from(this.prose.frameUpdate(bytes)).toString('base64'),
-          }),
-        )
-      }
-      doc.on('update', onUpdate)
-
-      held = {
-        address,
-        doc,
-        sentAt,
-        stale: false,
-        stop: () => {
-          doc.off('update', onUpdate)
-          // Same rule as `attach`: a release racing a closing Redis rejects,
-          // and `void` would let it escape as an unhandled rejection.
-          this.prose.release(member.caseId, address).catch((error: unknown) => {
-            this.log.warn(`could not release ${field}: ${String(error)}`)
-          })
-        },
-      }
-      opened.set(field, held)
+    let opening = opened.get(field)
+    const opens = !opening
+    if (!opening) {
+      // **In the map before the first await.** -> `open`
+      opening = this.openDocument(member, live, field)
+      opened.set(field, opening)
     }
-
-    /**
-     * **Re-read once, then decided.** The fan-out only says *reports moved*,
-     * so the stamp is fetched again rather than assumed to be a filing: a
-     * label edited on another report would otherwise freeze this one.
-     */
-    if (held.stale) {
-      const fresh = await this.prose.resolve(member.caseId, field)
-      held.sentAt = fresh?.sentAt ?? held.sentAt
-      held.stale = false
+    let held
+    try {
+      held = await opening
+    } catch (error) {
+      opened.delete(field)
+      throw error
+    }
+    if (!held) {
+      opened.delete(field)
+      return
     }
 
     const frame = Buffer.from(update, 'base64')
 
-    /**
-     * **Admission is read; editing is a write, and the socket has to ask
-     * again.** `reachesCase` lets a read-only analyst watch, which is right - and
-     * without this the same connection could then edit the document, making
-     * the socket the weaker of the two doors the moment the HTTP guard started
-     * asking for a level.
-     *
-     * A state request is not an edit: it is how a client asks for what it
-     * missed, and refusing it would leave a read-only analyst watching a
-     * document that never caught up.
-     */
+    // Admission asked only for read, so an edit asks for write. A state request
+    // and a frame adding nothing are not edits: a read-only analyst sends both
+    // to catch up.
     if (!this.prose.isStateRequest(frame)) {
-      const held = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
-      if (held !== 'write' && held !== 'delete') {
+      const reached = await this.reach.levelOnCase(member.userId, member.caseId)
+      if (reached?.level !== 'write' && reached?.level !== 'delete' && !this.prose.addsNothing(held.doc, frame)) {
         live.send(
           JSON.stringify({
             type: 'prose.refused',
@@ -574,39 +783,97 @@ export class LiveGateway implements OnApplicationShutdown {
             reason: 'read-only',
           }),
         )
+        this.recordRefusal(live, member, 'prose.sync', reached)
         return
       }
     }
 
+    const applied = await this.prose.apply(member.caseId, held.address, frame, live, writer)
     /**
      * **Told, not dropped.** A silently discarded update is the worst outcome
      * on this path: the analyst types, sees their own text, and it reaches
-     * nobody and nothing. This is the socket's form of the 409 `freeze.ts`
-     * raises at the HTTP door, and it names the same two things - the field
-     * and when the report was filed.
+     * nobody and nothing. It names what the 409 at the HTTP door names: the
+     * field and when the report was filed.
      */
-    if (held.sentAt && !this.prose.isStateRequest(frame)) {
+    if ('refused' in applied) {
       live.send(
         JSON.stringify({
           type: 'prose.refused',
           field,
           reason: 'report-sent',
-          sentAt: held.sentAt.toISOString(),
+          sentAt: applied.refused.toISOString(),
         }),
       )
       return
     }
 
-    const reply = this.prose.applySync(held.doc, frame, live)
-    if (reply) {
+    const { reply } = applied
+    // A screen opening the field again is told what an earlier one was.
+    if (!opens && held.unsaved && this.prose.isStateRequest(frame)) this.tellUnsaved(live, field, held.unsaved)
+    // The server's own step 1 goes after the answer, so the client is ready first.
+    for (const bytes of [reply, opens ? this.prose.hello(held.doc) : null]) {
+      if (!bytes) continue
       live.send(
         JSON.stringify({
           type: 'prose.sync',
           field,
-          update: Buffer.from(reply).toString('base64'),
+          update: Buffer.from(bytes).toString('base64'),
         }),
       )
     }
+  }
+
+  /**
+   * Take a reader on one field's document and wire its updates to this socket.
+   * Null when the field does not resolve, which the caller answers with silence
+   * so the socket says nothing about which block ids exist in other cases.
+   */
+  private async openDocument(
+    member: Member,
+    live: WebSocket,
+    field: string,
+  ): Promise<OpenDocument | null> {
+    const address = await this.prose.resolve(member.caseId, field)
+    if (!address) return null
+
+    const doc = await this.prose.open(member.caseId, address)
+
+    const onUpdate = (bytes: Uint8Array, origin: unknown) => {
+      if (origin === live) return
+      live.send(
+        JSON.stringify({
+          type: 'prose.sync',
+          field,
+          update: Buffer.from(this.prose.frameUpdate(bytes)).toString('base64'),
+        }),
+      )
+    }
+    doc.on('update', onUpdate)
+
+    const open: OpenDocument = {
+      address,
+      doc,
+      unsaved: null,
+      stop: () => {
+        doc.off('update', onUpdate)
+        void unwatch.then((stop) => stop())
+        // As in `attach`: a release racing a closing Redis rejects, which `void` would leak.
+        this.prose.release(member.caseId, address).catch((error: unknown) => {
+          this.log.warn(`could not release ${field}: ${String(error)}`)
+        })
+      },
+    }
+    const unwatch = this.prose.watch(member.caseId, address, (state) => {
+      open.unsaved = state === 'saved' ? null : state
+      this.tellUnsaved(live, field, state)
+    })
+    await unwatch
+    return open
+  }
+
+  private tellUnsaved(live: WebSocket, field: string, state: ProseState): void {
+    const frame: ProseStateFrame = { type: 'prose.state', field, state }
+    live.send(JSON.stringify(frame))
   }
 
   /**
@@ -617,7 +884,8 @@ export class LiveGateway implements OnApplicationShutdown {
    * rebuild compiles cleanly and then cannot listen. One leftover socket from
    * a probe is enough to hold the old process.
    */
-  onApplicationShutdown(): void {
+  beforeApplicationShutdown(): void {
+    clearInterval(this.sweep)
     this.stopListeningForSessionEnds()
     this.stopListeningForReachChanges()
     for (const live of this.sockets.clients) live.terminate()

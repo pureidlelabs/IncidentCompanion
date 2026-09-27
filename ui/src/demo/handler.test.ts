@@ -248,11 +248,52 @@ describe('what the demo has no store for', () => {
 })
 
 describe("a collection's own verbs are not row ids", () => {
-  it('refuses a bulk edit rather than calling it a missing entry', async () => {
-    const answer = await ask(`/cases/${caseId()}/timeline/bulk`, {
-      method: 'PATCH',
-      body: JSON.stringify({}),
-    })
+  const bulk = (ids: { id: string; version: number }[], fields: Record<string, unknown>): RequestInit => ({
+    method: 'PATCH',
+    body: JSON.stringify(toWire({ ids, fields })),
+  })
+  const timeline = async (): Promise<{ id: string; version: number; description: string }[]> =>
+    (await ask(`/cases/${caseId()}/timeline`)).body as unknown as {
+      id: string
+      version: number
+      description: string
+    }[]
+
+  it('answers a bulk edit per row, each at the version it was read at', async () => {
+    const [first, second] = await timeline()
+    const gone = crypto.randomUUID()
+    const answer = await ask(
+      `/cases/${caseId()}/timeline/bulk`,
+      bulk(
+        [
+          { id: first!.id, version: first!.version },
+          { id: second!.id, version: second!.version + 1 },
+          { id: gone, version: 1 },
+        ],
+        { description: 'Edited together' },
+      ),
+    )
+    expect(answer.status, JSON.stringify(answer.body)).toBe(200)
+    expect(answer.body).toEqual({ updated: [first!.id], refused: [second!.id], missing: [gone] })
+    const [afterFirst, afterSecond] = await timeline()
+    expect([afterFirst!.description, afterSecond!.description]).toEqual([
+      'Edited together',
+      second!.description,
+    ])
+  })
+
+  it('refuses a bulk edit whole when the fields would not stand', async () => {
+    const [first] = await timeline()
+    const answer = await ask(
+      `/cases/${caseId()}/timeline/bulk`,
+      bulk([{ id: first!.id, version: first!.version }], { description: '' }),
+    )
+    expect(answer.status).toBe(422)
+    expect((await timeline())[0]!.description).toBe(first!.description)
+  })
+
+  it('refuses a reorder rather than calling it a missing entry', async () => {
+    const answer = await ask(`/cases/${caseId()}/timeline/order`, post({ ids: [] }))
     expect(answer.status).toBe(501)
     expect(answer.body.message).toMatch(/demo/i)
   })

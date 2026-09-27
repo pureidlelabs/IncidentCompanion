@@ -56,7 +56,6 @@ const ALLOWED = new Set([
   // Hand-run maintenance tools, each with an environment override in front of
   // the literal. They operate on the wrong stack from a worktree, which is
   // wrong and is not silent - they print the URL they connect to.
-  'server/scripts/backup.sh',
   'server/scripts/prune.sh',
   'server/scripts/prose-two-instances.ts',
   '.claude/scripts/injection_probe.py',

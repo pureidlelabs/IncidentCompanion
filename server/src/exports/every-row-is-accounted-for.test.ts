@@ -21,16 +21,17 @@ import { parse } from 'csv-parse/sync'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ExportsController } from './exports.controller.js'
 import { ImportService, type OnDuplicate } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, user } from '../db/schema/index.js'
 import { IMPORTABLE } from '../domain/collections.js'
 import { TABLES, type BulkTarget } from '../collections/registry.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -73,7 +74,7 @@ function dataRows(csv: string): number {
 const accountedFor = (result: Counted) =>
   result.added + result.skipped + result.replaced + result.refused
 
-describe.skipIf(!db)('every row in the file is accounted for', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('every row in the file is accounted for', () => {
   let service: ImportService
   let exports_: ExportsController
   let caseId: string
@@ -81,7 +82,7 @@ describe.skipIf(!db)('every row in the file is accounted for', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
 
@@ -101,9 +102,9 @@ describe.skipIf(!db)('every row in the file is accounted for', () => {
     const [blank] = await seed!.insert(cases).values({ title: 'Blank' }).returning()
     emptyCaseId = blank!.id
 
-    const collections = new CollectionService(db!)
-    service = new ImportService(collections)
-    exports_ = new ExportsController(collections, service)
+    const collections = as(ME, new CollectionService(db!, suiteStore()))
+    service = as(ME, new ImportService(collections))
+    exports_ = as(ME, new ExportsController(collections, service))
   })
 
   afterAll(async () => {

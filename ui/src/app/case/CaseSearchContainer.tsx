@@ -4,6 +4,8 @@ import { useCase } from '@/api/case'
 import { useCaseId } from '@/app/useCaseId'
 import { useCaseCommands } from '@/app/case/useCaseCommands'
 import { CaseSearchBox } from '@/components/blocks/case-search-box'
+import { SECTIONS } from '@/components/blocks/palette-rows'
+import { useSentinelOffered } from '@/api/importPlatforms'
 
 export interface CaseSearchContainerProps {
   /** The header's box, for the chord that focuses it. */
@@ -22,6 +24,7 @@ export function CaseSearchContainer({ inputRef, onShortcuts }: CaseSearchContain
   const caseId = useCaseId()
   const [query, setQuery] = useState('')
   const kase = useCase(caseId, query.trim() !== '')
+  const sentinel = useSentinelOffered()
 
   const focusSearch = useCallback(() => {
     inputRef?.current?.focus()
@@ -39,6 +42,9 @@ export function CaseSearchContainer({ inputRef, onShortcuts }: CaseSearchContain
   return (
     <CaseSearchBox
       kase={kase.data}
+      sections={
+        sentinel === true ? SECTIONS : SECTIONS.filter((one) => one.slug !== 'import-sentinel')
+      }
       query={query}
       onQueryChange={setQuery}
       {...(inputRef === undefined ? {} : { inputRef })}

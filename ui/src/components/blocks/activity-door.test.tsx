@@ -79,6 +79,12 @@ describe('the activity door marks what is new', () => {
    * sixty, and it runs whether or not the panel has ever been opened.
    */
   it('installs no timer', () => {
+    // **jsdom runs `requestAnimationFrame` on a `setInterval`**, started on the
+    // first call and reused after -- and framer-motion's projection node makes
+    // that call when it mounts. Warmed here, so the spies below see this
+    // render rather than the frame loop somebody else already paid for.
+    requestAnimationFrame(() => undefined)
+
     const interval = vi.spyOn(globalThis, 'setInterval')
     const timeout = vi.spyOn(globalThis, 'setTimeout')
     render(<ActivityDoor entries={[entry(9, 1000)]} seen={8} />)

@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import type { Case } from '@/api/model'
 import { DetailGrid, Fact } from '@/components/blocks/detail-grid'
 import { EmptyState } from '@/components/blocks/empty-state'
-import { SeverityBadge, TONE_FILL } from '@/components/blocks/severity-badge'
+import { SeverityBadge, TONE_FILL, TONE_STRIPE } from '@/components/blocks/severity-badge'
 import { Section } from '@/components/blocks/section'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,11 @@ import {
   firstMoment,
   milestonesOf,
   MILESTONES,
+  laneOf,
+  runsCrossing,
+  runsSpanning,
   silenceHeight,
+  spans,
   type CascadeMetric,
   type CascadeRun,
 } from './cascade-rows'
@@ -74,6 +78,62 @@ const SPINE =
   'linear-gradient(to right, transparent calc(50% - 0.5px), var(--border) calc(50% - 0.5px),' +
   ' var(--border) calc(50% + 0.5px), transparent calc(50% + 0.5px))'
 
+/**
+ * Where a moment's stamp sits inside its row, in pixels from the row's top.
+ *
+ * The connector is drawn at this height, so a track meeting the stamp has to
+ * stop here or run under the clock it is pointing at.
+ */
+const STAMP_CENTRE = 13
+
+const LANE_GAP = 6
+
+/** What a piece of track is: which run, and the box it paints in its row. */
+interface SpanPiece {
+  run: CascadeRun
+  box: { top: number; bottom?: number; height?: number }
+}
+
+/** Where a run's track sits, as a `left` for a bar centred by a half-translate. */
+function laneLeft(run: CascadeRun, lanes: { lane: Map<string, number>; count: number }): string {
+  const index = lanes.lane.get(`${run.key}@${String(run.start)}`) ?? 0
+  return `calc(50% + ${String((index - (lanes.count - 1) / 2) * LANE_GAP)}px)`
+}
+
+/**
+ * The track a run paints across a row it is still running through.
+ *
+ * **Drawn on every kind of row, not only on moments.** A day heading and a
+ * stage rule both fall between two moments, so a run crossing midnight had its
+ * track stop above the heading and restart below it - a break at the one place
+ * the drawing is asserting that nothing was interrupted.
+ */
+function SpanTrack({
+  pieces,
+  lanes,
+}: {
+  pieces: readonly SpanPiece[]
+  lanes: { lane: Map<string, number>; count: number }
+}) {
+  return (
+    <>
+      {pieces.map((piece) => (
+        <span
+          key={`${piece.run.key}@${String(piece.run.start)}`}
+          aria-hidden
+          data-part="cascade-span"
+          data-severity={piece.run.tone}
+          className={cn(
+            'absolute w-1 -translate-x-1/2 rounded-full',
+            piece.run.track === 'response' ? 'bg-action-contain' : TONE_FILL[piece.run.tone],
+          )}
+          style={{ left: laneLeft(piece.run, lanes), opacity: 0.55, ...piece.box }}
+        />
+      ))}
+    </>
+  )
+}
+
 export function TimelineGraphScreen({
   kase,
   onOpenTimeline,
@@ -84,6 +144,10 @@ export function TimelineGraphScreen({
   const runs = useMemo(() => (kase ? buildCascade(kase) : []), [kase])
   const milestones = useMemo(() => (kase ? milestonesOf(kase) : []), [kase])
   const rows = useMemo(() => cascadeRows(runs, { milestones }), [runs, milestones])
+  const lanes = useMemo(() => laneOf(runs), [runs])
+  /** Full-height track for every run still going across a row that is not a moment. */
+  const crossing = (at: number): SpanPiece[] =>
+    runsCrossing(runs, at).map((run) => ({ run, box: { top: 0, bottom: 0 } }))
   const longest = Math.max(0, ...rows.map((row) => (row.kind === 'silence' ? row.span : 0)))
   const silences = rows.filter((row) => row.kind === 'silence').length
   const metrics = kase ? metricsOf(kase, silences) : []
@@ -156,7 +220,12 @@ export function TimelineGraphScreen({
           ))}
         </dl>
 
-        <div className="flex flex-col rounded-sm border border-border bg-surface">
+        {/* Clipped to its own radius: the readout below is opaque and
+            square-cornered, so without this it paints over the corners the
+            border curves away from. `clip-path` rather than `overflow-hidden`
+            because the readout is sticky, and a scrollport is what a sticky
+            child positions against. -> #912 */}
+        <div className="flex flex-col rounded-sm border border-border bg-surface [clip-path:inset(0_round_var(--radius-sm))]">
           {/* Opaque, because it is stuck over rows that scroll under it: a
               tinted bar lets the card beneath read through the readout. */}
           <p
@@ -195,8 +264,9 @@ export function TimelineGraphScreen({
                     <li
                       key={row.key}
                       data-part="cascade-day"
-                      className="flex items-center gap-3 py-4 text-2xs font-semibold uppercase tracking-micro text-ink-muted"
+                      className="relative flex items-center gap-3 py-4 text-2xs font-semibold uppercase tracking-micro text-ink-muted"
                     >
+                      <SpanTrack pieces={crossing(row.at)} lanes={lanes} />
                       <span className="shrink-0 bg-surface pr-2">
                         {dayLabelOf(new Date(row.at).toISOString())}
                       </span>
@@ -212,8 +282,9 @@ export function TimelineGraphScreen({
                     <li
                       key={row.key}
                       data-part="cascade-milestone"
-                      className="flex items-center gap-3 py-3 text-2xs text-action-contain"
+                      className="relative flex items-center gap-3 py-3 text-2xs text-action-contain"
                     >
+                      <SpanTrack pieces={crossing(row.at)} lanes={lanes} />
                       <span
                         aria-hidden
                         className="h-0 flex-1 border-t border-dashed border-current"
@@ -258,12 +329,45 @@ export function TimelineGraphScreen({
                 }
                 const observed = row.runs.filter((run) => run.track === 'observed')
                 const response = row.runs.filter((run) => run.track === 'response')
+                // A moment that only ends things is a stamp: no card, and the
+                // clock reads dimmer than one where something happened.
+                const endOnly = row.runs.length === 0 && row.ends.length > 0
+                const space = Math.round(row.spaceBefore)
+                /**
+                 * The three pieces of one track, laned together.
+                 *
+                 * **They are disjoint by construction** - a run spanning this
+                 * moment neither starts nor ends at it - so one lane index
+                 * across the three is what keeps two concurrent durations
+                 * side by side instead of one hiding the other.
+                 *
+                 * **Each reaches into its own row's space above.** That space
+                 * is the elapsed time, so a piece stopping at the row's own
+                 * top edge breaks the track exactly where the drawing is
+                 * making its claim.
+                 */
+                const pieces: SpanPiece[] = [
+                  ...runsSpanning(runs, row.at).map((run) => ({
+                    run,
+                    box: { top: -space, bottom: 0 },
+                  })),
+                  ...row.runs.filter(spans).map((run) => ({
+                    run,
+                    box: { top: STAMP_CENTRE, bottom: 0 },
+                  })),
+                  ...row.ends.map((run) => ({
+                    run,
+                    box: { top: -space, height: space + STAMP_CENTRE },
+                  })),
+                ]
                 return (
-                  <li
-                    key={row.key}
-                    className={LANE}
-                    style={{ marginTop: Math.round(row.spaceBefore) }}
-                  >
+                  <li key={row.key} className={cn(LANE, 'relative')} style={{ marginTop: space }}>
+                    {/* **Out of flow, so the track decorates and never
+                        displaces.** In flow it pushed everything after it down
+                        by its own duration, and an action at the same instant
+                        as a long-running event was drawn at the far end of
+                        that event's bar, reading as an hour later. */}
+                    <SpanTrack pieces={pieces} lanes={lanes} />
                     <span className="flex flex-col items-end gap-1.5">
                       {observed.map((run) => (
                         <span
@@ -289,10 +393,23 @@ export function TimelineGraphScreen({
                       />
                       <span
                         data-part="cascade-stamp"
-                        className="relative z-10 rounded-sm bg-surface px-1.5 font-mono text-2xs tabular-nums text-ink-muted"
+                        className={cn(
+                          'relative z-10 rounded-sm bg-surface px-1.5 font-mono text-2xs tabular-nums',
+                          endOnly ? 'text-ink-muted/70' : 'text-ink-muted',
+                        )}
                       >
                         {clockOf(new Date(row.at).toISOString())}
                       </span>
+                      {endOnly && (
+                        // Said, because a bare second stamp under a card reads
+                        // as another event with its description missing.
+                        <span
+                          data-part="cascade-ends"
+                          className="relative z-10 mt-0.5 bg-surface px-1.5 text-2xs text-ink-muted/70"
+                        >
+                          {row.ends.length === 1 ? 'ends' : `${String(row.ends.length)} end`}
+                        </span>
+                      )}
                     </span>
                     <span className="flex flex-col items-start gap-1.5">
                       {response.map((run) => (
@@ -348,16 +465,21 @@ function RunCard({ run }: { run: CascadeRun }) {
         className={cn(
           'h-auto w-full shrink items-stretch justify-start gap-0 whitespace-normal',
           'rounded-md border-border bg-surface p-0 text-left font-normal',
-          response && 'flex-row-reverse',
+          // Painted by the button, so the radius clips it. Clipping a child
+          // stripe instead is what `probe.js` skips rather than reads. -> #915
+          response
+            ? cn(
+                'flex-row-reverse',
+                TONE_STRIPE.done,
+                '[background-image:linear-gradient(to_left,var(--tone-stripe)_0_4px,transparent_4px)]',
+              )
+            : cn(
+                TONE_STRIPE[run.tone],
+                '[background-image:linear-gradient(to_right,var(--tone-stripe)_0_4px,transparent_4px)]',
+              ),
         )}
       >
-        <span
-          aria-hidden
-          className={cn(
-            'w-1 shrink-0 self-stretch',
-            response ? 'bg-action-contain' : TONE_FILL[run.tone],
-          )}
-        />
+        <span aria-hidden className="w-1 shrink-0 self-stretch" />
         <span className="min-w-0 flex-1 px-2.5 py-1.5">
           {/* Clamped rather than wrapped without limit: at a narrow measure a
               long description becomes a tower and sets the rhythm for the

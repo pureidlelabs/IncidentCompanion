@@ -26,7 +26,7 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { boot, bootable, sharedAnalyst, signIn, type Harness, type Persona } from './app-harness.js'
+import { boot, bootable, sharedAnalyst, signIn, type Harness } from './app-harness.js'
 import { session } from '../src/db/schema/auth.js'
 import { openTestPool } from './database.js'
 
@@ -34,8 +34,7 @@ import { openTestPool } from './database.js'
 const PREFIX = 'auth:'
 
 let harness: Harness | null = null
-let expired: Persona
-let fresh: Persona
+let analystEmail = ''
 let pool: ReturnType<typeof openTestPool> | null = null
 let redis: Redis | null = null
 
@@ -48,9 +47,7 @@ const served = async (cookie: string) =>
 describe.skipIf(!(await bootable()))('a session left idle past the window', () => {
   beforeAll(async () => {
     harness = await boot()
-    const analyst = await sharedAnalyst(harness)
-    expired = await signIn(harness, analyst.email)
-    fresh = await signIn(harness, analyst.email)
+    analystEmail = (await sharedAnalyst(harness)).email
 
     pool = openTestPool(process.env['SEED_DATABASE_URL'] ?? process.env['DATABASE_URL']!, 'ic_seed')
     redis = new Redis(process.env['REDIS_URL']!)
@@ -63,10 +60,12 @@ describe.skipIf(!(await bootable()))('a session left idle past the window', () =
   })
 
   it('is served while its window is open', async () => {
-    expect(await served(expired.cookie), 'the session was refused before anything was done').toBe(200)
+    const open = await signIn(harness!, analystEmail)
+    expect(await served(open.cookie), 'the session was refused before anything was done').toBe(200)
   })
 
   it('is refused once the window has closed behind it', async () => {
+    const expired = await signIn(harness!, analystEmail)
     const db = drizzle({ client: pool! })
     const token = tokenOf(expired.cookie)
     expect(token, 'no token could be read off the cookie').not.toBe('')
@@ -94,6 +93,7 @@ describe.skipIf(!(await bootable()))('a session left idle past the window', () =
    * the refusal above is equally explained by the key having been dropped.
    */
   it('serves a session whose cache was dropped but whose window is open', async () => {
+    const fresh = await signIn(harness!, analystEmail)
     await redis!.del(PREFIX + tokenOf(fresh.cookie))
 
     expect(

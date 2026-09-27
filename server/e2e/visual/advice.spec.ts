@@ -62,22 +62,29 @@ const DOORS = [
 
 const GROUNDS = (process.env['VISUAL_GROUNDS'] ?? 'light,dark').split(',') as Ground[]
 
-test('draws advice under the control it is about', async ({ browser, baseURL, request }) => {
-  await requireServedApp(baseURL ?? '')
-  await mkdir(OUT, { recursive: true })
+for (const ground of GROUNDS) {
+  test(`draws advice under the control it is about, ${ground}`, async ({
+    browser,
+    baseURL,
+    request,
+  }) => {
+    // Both grounds ran in one test against the config's 60s: 390 actions, none
+    // over 6s, and the second ground ran out at 60s in run 35856792164.
+    test.setTimeout(180_000)
+    await requireServedApp(baseURL ?? '')
+    await mkdir(OUT, { recursive: true })
 
-  const { page } = await asPersona(browser, ADMIN)
-  await page.setViewportSize({ width: 1440, height: 900 })
+    const { page } = await asPersona(browser, ADMIN)
+    await page.setViewportSize({ width: 1440, height: 900 })
 
-  // **The guided demo, by name and by id.** The picker keeps demos out of Your
-  // cases, so the rail cannot reach one; and it is the demo with a row in every
-  // entity table, which taking whichever came back first did not guarantee.
-  // -> #453
-  const demoId = await demoCase(request, 'DEMO-2026-001')
-  await page.goto(`/cases/${demoId}/timeline`)
-  await settle(page)
+    // **The guided demo, by name and by id.** The picker keeps demos out of Your
+    // cases, so the rail cannot reach one; and it is the demo with a row in every
+    // entity table, which taking whichever came back first did not guarantee.
+    // -> #453
+    const demoId = await demoCase(request, 'DEMO-2026-001')
+    await page.goto(`/cases/${demoId}/timeline`)
+    await settle(page)
 
-  for (const ground of GROUNDS) {
     await setGround(page, ground)
 
     for (const door of DOORS) {
@@ -146,7 +153,9 @@ test('draws advice under the control it is about', async ({ browser, baseURL, re
         .locator(ids.map((one) => `#${one}`).join(', '))
         .filter({ hasText: door.said })
       const advice = await box(described, 'the advice row')
-      console.log(`ADVICE ${where} control=${JSON.stringify(box_)} advice=${JSON.stringify(advice)}`)
+      console.log(
+        `ADVICE ${where} control=${JSON.stringify(box_)} advice=${JSON.stringify(advice)}`,
+      )
 
       // **Under it, never over it.** The line joins a plate that was already
       // laid out, so landing on the control is the failure worth naming.
@@ -167,5 +176,5 @@ test('draws advice under the control it is about', async ({ browser, baseURL, re
       // a fifteen-second timeout on a control that is present and enabled.
       await closeDialog(page)
     }
-  }
-})
+  })
+}

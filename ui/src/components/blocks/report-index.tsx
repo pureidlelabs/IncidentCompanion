@@ -347,7 +347,7 @@ export function ReportIndexPane({
 
       {onDelete && (
         <ConfirmDeleteDialog
-          ids={deleting}
+          rows={deleting}
           onOpenChange={(isOpen) => {
             if (!isOpen) setDeleting(null)
           }}

@@ -145,6 +145,7 @@ Where two records turn out to be one organisation they MUST be mergeable, since 
 - WHEN they are merged
 - THEN the merge is refused until one is changed
 - AND the analyst is told which two cases collide
+- AND nothing either case holds is shown beyond its identifier and the reference
 
 #### Scenario: The default customer is merged
 

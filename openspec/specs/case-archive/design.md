@@ -10,11 +10,17 @@
 
 **Evidence may be left out**, and what is missing is stated rather than discovered later.
 
+**An archive carries the case as it reads, never how it came to read that way.** The record's history belongs to the install it happened in.
+
+**A plain archive is checked for damage, not for alteration.** Whoever holds one can rewrite it and its statement together. Sealing is what makes alteration evident, to anybody not holding the secret.
+
+**How many rows an archive may describe is the operator's to set**, and the export and the import read the same number, so the install never writes an archive it will not read back.
+
 # Design
 
 ## The archive states what it holds, and the statement is checked
 
-Every member is listed with a digest, and reading checks each one before it is used. A file damaged in transit, or altered, is refused rather than read into a case as though sound.
+Every member is listed with a digest, and reading checks each one before it is used. A file damaged in transit is refused rather than read into a case as though sound.
 
 ## The seal is the analyst's, and the install cannot open it
 
@@ -72,3 +78,13 @@ What is true whichever cause produced it is that the case names rows that are no
 
 - A reference field this install has no column for. The referenced row may well be in the archive; what is missing is the column, so counting it would make the sentence false. It is the other-build case, and what it wants is its own answer about fields dropped rather than rows.
 - Prose carried for a report the archive does not describe. That is content arriving for a row that does not exist, the mirror of the attachment count rather than an instance of this one. It is logged where it happens.
+
+## The prose travels as each section reads
+
+Each report's written sections and each note travel as a copy of their visible content, keyed by the section, the same copy a correction starts from and an import writes. A section that is not written is not carried, because no view reads it.
+
+The record never carries a prose document, in either direction: a document arriving inside the record is read as though it were not there.
+
+## A row is held to every rule its collection's door holds it to
+
+The shape, the terms, the rules across fields and a report's lifecycle are each checked on the row as it will be stored, by the same evaluation the collection's own door runs, so a rule added to a collection reaches the archive without anyone editing the archive. A report's sent stamp and preserved document are written together, last, once its parts are in, and a preserved document is contained on the way in as the install contains its own.

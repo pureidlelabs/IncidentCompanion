@@ -58,13 +58,15 @@ What it printed here:
 **Its false positives, all four seen here:**
 
 - **A dynamic require.** `fontkit` reads as unused and `spine.ts` calls `require_('fontkit')` to draw the kill-chain spine. Grep the bare name before believing a dependency row.
-- **An entry point nobody imports.** `src/seed.ts`, `src/repl.ts` and the ten `server/scripts/*.ts` are run, not imported; `vendor/redoc` is shipped bytes and `server/e2e/visual/probe.d.ts` is a declaration. **Fourteen of the server's fifteen "unused files" are one of those**, and the fifteenth, `domain/entities/case-facts.ts`, is the only real one.
+- **An entry point nobody imports.** `src/seed.ts`, `src/repl.ts` and the ten `server/scripts/*.ts` are run, not imported; `vendor/redoc` is shipped bytes and `server/e2e/visual/probe.d.ts` is a declaration. **A server "unused file" is almost always one of those**, so check it against this list before believing the row.
 - **The kit.** `alert-dialog.tsx`, `avatar.tsx` and `disclosure.tsx` are the tier the app is built out of, and the component ladder says the kit is the tier you do not hand-roll. Unused is their normal state; deleting one means re-adding it through the CLI.
 - **`import type` across the tier boundary.** `ui` reads the server's wire types through the `@contract/*` alias onto `server/src/domain/*`. Run both packages before trusting either — knip scoped to `server` alone calls every entity type dead.
 
 ### 2. Orphan modules, which knip over-reports and you can check by hand
 
-A file reached by no `import` in either tier. **Resolve `@/` and `@contract/`, and strip the `.js` a Nest import writes**, or the sweep reports live modules. Excluding tests, stories and the entry points above, the whole repository has **one** candidate, and it is not a defect: `server/src/domain/entities/case-facts.ts`, which `domain/wire.ts` documents as a deliberately unconsumed declaration - `rsitClass` and `rsitType` are served columns no live schema states. Confirm any candidate with `rg -n -w "<name>" server/src ui/src --glob '!*.test.*'` returning its own definition and a prose mention.
+A file reached by no `import` in either tier. **Resolve `@/` and `@contract/`, and strip the `.js` a Nest import writes**, or the sweep reports live modules. Confirm a candidate with `rg -n -w "<name>" server/src ui/src` returning its own definition and nothing else. **Run it without `--glob '!*.test.*'` first.** Excluding tests is what makes a module look orphaned when a suite imports it, and it is how a sweep under-reports what a deletion will break -- the same exclusion made #641 name a file with a real importer as prose-only.
+
+**The shape worth reporting is a declaration whose only reader is its own test.** It compiles, its suite is green, and nothing in the product reaches it; #641 records the live one.
 
 **Two more stood here and were deleted**, both second implementations rather than leftovers: a whole per-collection timeline hook superseded by the generic ones, and a graph sort key nothing called.
 
@@ -84,7 +86,7 @@ cd ui && npx tsc -b --noEmit --force # exit 0
 A hit is *alive* if it is any of these. Check before reporting.
 
 - **String dispatch.** `RESOLVERS` in `server/src/report/document/resolve.ts` maps 18 block kinds to functions — `case_header: caseHeader` is the only place `caseHeader` is named. `sectionFor(slug)` in `ui/src/app/case/section-elements.tsx` resolves a URL segment against the section registry, and `t('heading.<kind>')` resolves a label against `report/document/labels.en.ts`.
-- **A selector standing in for a component.** `features/shortcuts/focusTargets.ts` reaches controls by `[data-part="node-list-toggle"]` and `[data-testid="header-search"]`. The attribute and the constant never appear in the same file, so renaming either leaves both compiling and the chord silently dead. `ChordLayerContainer.test.tsx` is the only thing holding that pair.
+- **A selector standing in for a component.** `data-table.tsx` reaches the sticky header by `[data-part="table-header"]`, and `table.tsx` is what sets it. The attribute and the reach never appear in the same file, so renaming either leaves both compiling and the measurement silently dead.
 - **A Nest decorator.** A controller, guard, interceptor, pipe or subscriber is registered by a module and called by name nowhere.
 - **A Zod schema behind `@ZodResponse`.** The decorator is the only reader, and `architecture.test.ts` requires one per JSON route.
 - **A Drizzle table or row type.** Persisted shape, not code.

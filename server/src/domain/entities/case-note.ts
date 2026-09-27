@@ -17,6 +17,7 @@ export const caseNoteSchema = z.object({
   note: field(z.string().trim().min(1).max(20_000), {
     label: 'Note',
     kind: 'textarea',
+    derived: true,
   }),
 
   author: field(z.string().trim().max(120).default(''), {

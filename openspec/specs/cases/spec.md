@@ -43,6 +43,23 @@ A case MUST be addressable by an identifier that is stable, unguessable, and not
 - WHEN it is moved to a customer that already has a case with that reference
 - THEN the move is refused
 
+#### Scenario: The mover reaches the customer that already uses the reference
+
+- GIVEN a case carrying a reference
+- AND an analyst who reaches a customer already holding a case with that reference
+- WHEN they move the case to that customer
+- THEN the move is refused
+- AND they are told which case holds the reference
+
+#### Scenario: A case carrying a reference is moved to a customer the mover does not reach
+
+- GIVEN a case carrying a reference
+- AND an analyst who does not reach a customer
+- WHEN they move the case to that customer
+- THEN the move is refused
+- AND the refusal is the same whether or not that customer uses the reference
+- AND the case stays with the customer it had
+
 #### Scenario: Several cases for one customer have no reference
 
 - GIVEN a case for a customer, carrying no reference
@@ -185,6 +202,12 @@ An analyst MUST reach a case only where they reach that case's customer, and MUS
 - WHEN they supply a title and no customer
 - THEN the case is created against the install's default customer
 - AND every analyst may reach it
+
+#### Scenario: A case is reached over a live connection
+
+- GIVEN an analyst at some level over a case's customer, or at none
+- WHEN they open the case over a live connection and act on it
+- THEN they may see and change what a request of the same kind would let them
 
 ### Requirement: Demonstration content is distinguishable from real work
 

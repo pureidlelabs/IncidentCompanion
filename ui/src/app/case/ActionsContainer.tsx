@@ -3,7 +3,6 @@ import { useSpecs } from '@/api/specs'
 import { useBulkPatch } from '@/api/useBulkPatch'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useBulkDelete } from '@/api/useBulkDelete'
-import { useEntryDelete } from '@/api/useEntryDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useCaseId } from '@/app/useCaseId'
 import { ActionsScreen, type ActionWrites } from '@/screens/actions'
@@ -20,12 +19,11 @@ export function ActionsContainer() {
       create: useEntryCreate(caseId, 'actions'),
       patch: useEntryMutation(caseId, 'actions'),
       bulk: useBulkPatch(caseId, 'actions'),
-      remove: useEntryDelete(caseId, 'actions'),
       bulkDelete: useBulkDelete(caseId),
     },
     { one: 'the task', many: 'the selected tasks' },
-    () => kase.data?.actions ?? [],
     async () => (await kase.refetch()).data?.actions ?? [],
+    (row) => row.task,
     'actions',
   ) as ActionWrites
 

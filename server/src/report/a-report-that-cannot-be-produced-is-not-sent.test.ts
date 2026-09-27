@@ -22,7 +22,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { cases, reports, user } from '../db/schema/index.js'
 import { ProseService } from '../prose/prose.service.js'
 import { ReportLifecycleService } from './lifecycle.service.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -37,7 +37,7 @@ const cannotRender = {
   render: () => Promise.reject(new Error('the document cannot be produced')),
 } as never
 
-describe.skipIf(!db)('a report that cannot be rendered', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a report that cannot be rendered', () => {
   let lifecycle: ReportLifecycleService
   let caseId: string
   let reportId: string

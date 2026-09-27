@@ -101,16 +101,17 @@ export const SolidCarriesNoFill: Story = {
 }
 
 /**
- * **A badge never wraps and never truncates**: `whitespace-nowrap` with
- * `overflow-hidden` and no ellipsis, so a label longer than the space it is
- * given is clipped mid-word with nothing to say it was.
+ * **A badge never wraps, and says so when it is cut**: `whitespace-nowrap`
+ * with `overflow-hidden` and `text-ellipsis`, so a label longer than the
+ * space it is given ends in an ellipsis rather than mid-word. -> #896
  *
- * The badge is `w-fit`, so it takes the width it needs and the clipping starts
- * only once an ancestor constrains it. **Constraining a badge is the caller's
+ * The badge is `w-fit`, so it takes the width it needs and the cut starts only
+ * once an ancestor constrains it. **Constraining a badge is the caller's
  * decision**, and a caller that makes it owes the full value somewhere the
- * analyst can still reach.
+ * analyst can still reach -- the ellipsis says a value was cut and never what
+ * it was.
  */
-export const LongLabelIsClipped: Story = {
+export const LongLabelIsCut: Story = {
   render: (args) => (
     <div className="flex flex-col gap-3">
       <Badge {...args} variant="outlined">
@@ -187,12 +188,7 @@ function StateCycle({ uppercase }: { uppercase: boolean }) {
   const state = STATES[at % STATES.length]!
   return (
     <div className="flex flex-col items-center gap-4">
-      <Badge
-        variant="solid"
-        uppercase={uppercase}
-        stateKey={state.key}
-        className={state.className}
-      >
+      <Badge variant="solid" uppercase={uppercase} stateKey={state.key} className={state.className}>
         {state.label}
       </Badge>
       <Button size="sm" variant="outline" onPress={() => setAt((n) => n + 1)}>

@@ -20,7 +20,13 @@ import {
   SEVERITY_COLOUR,
 } from '../domain/colours.lists.js'
 import { NOUNS, SCREEN_KEY } from '../domain/collections.js'
-import { blankOf, fields as fieldRegistry, type FieldKind, type FieldMeta } from '../domain/field-spec.js'
+import {
+  blankOf,
+  fields as fieldRegistry,
+  FIELD_KINDS,
+  type FieldKind,
+  type FieldMeta,
+} from '../domain/field-spec.js'
 import { accountSchema } from '../domain/entities/account.js'
 import { cloudAppSchema } from '../domain/entities/cloud-app.js'
 import { evidenceSchema } from '../domain/entities/evidence.js'
@@ -36,7 +42,6 @@ import {
   DEFAULT_TACTIC_LINKS,
   EVENT_ALWAYS_CLEAR,
   EVENT_CORE,
-  FIELD_KINDS,
   TACTIC_LINKS,
 } from '../domain/tiering.js'
 import { FIELD_TONES } from '../domain/field-tones.js'
@@ -67,10 +72,10 @@ export const VOCABULARIES: Record<string, readonly string[]> = {
   tactic: vocab.TACTIC,
   ukcPhase: vocab.UKC_PHASE,
   /**
-   * Served ahead of the field that will name it - `case-facts.ts` declares
-   * `incidentClass` against this list and nothing imports that module yet.
-   * `specs.controller.test.ts` carries the exemption and fails once a field
-   * does name it.
+   * Served ahead of any field naming it: the case's own class is
+   * `INCIDENT_CLASS`, which is this list with `unknown` in front, under the
+   * tag `incidentClass`. `specs.controller.test.ts` carries the exemption and
+   * fails once a field does name this one.
    */
   verisAction: compliance.VERIS_ACTIONS,
   entryColour: ENTRY_COLOUR,
@@ -141,8 +146,8 @@ function emptyUndrawn(field: z.ZodType): unknown {
 }
 
 /**
- * A whole row of this schema with nothing filled in - what a client's
- * optimistic append is completed from, since the create dialog drops blanks.
+ * A whole row of this schema with nothing filled in, every declared default
+ * applied.
  *
  * A declared default wins over the kind's empty value, `null` included -
  * `specs.controller.test.ts` holds every form to that. Distinct from the
@@ -162,8 +167,7 @@ function blankRow(schema: z.ZodObject): Record<string, unknown> {
      * **`null` is a declared default like any other.** A guard reading
      * `!== undefined && !== null` sends every `z.uuid().nullable().default(null)`
      * to the empty value for its control kind, publishing `""` - a value the
-     * same schema refuses, in the row a client's optimistic append is completed
-     * from.
+     * same schema refuses, in a row the document offers as blank.
      */
     if (declared !== undefined) {
       out[name] = declared

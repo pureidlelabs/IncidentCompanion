@@ -1,4 +1,5 @@
 import { useCase } from '@/api/case'
+import { drawn } from '@/api/rowWrite'
 import { useSpecs } from '@/api/specs'
 import { createEntry, useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryDelete } from '@/api/useEntryDelete'
@@ -47,9 +48,8 @@ export function NotesContainer() {
      * refused and issuing a request that outlives the page are not
      * alternatives, and treating them as two doors lost the write.
      *
-     * The optimistic row and the invalidation the mutation adds are what the
-     * ordinary blur still wants, and are worth nothing to a screen that is
-     * going.
+     * The invalidation the mutation adds is what the ordinary blur still
+     * wants, and is worth nothing to a screen that is going.
      */
     create: (fields, leaving = false) =>
       leaving
@@ -60,7 +60,7 @@ export function NotesContainer() {
     // in is answered rather than taken. -> `db/mutate.ts`
     remove: async (entry) => {
       await announcing('the note', () =>
-        remove.mutateAsync({ entryId: entry.id, version: entry.version }),
+        remove.mutateAsync({ entryId: entry.id, version: drawn(entry).version }),
       )
     },
   }

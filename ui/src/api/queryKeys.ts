@@ -76,6 +76,7 @@ export const keys = {
   caseTemplates: () => ['case-templates'] as const,
   /** Case-less: build identity, constant for the life of the process. */
   about: () => ['about'] as const,
+  importPlatforms: () => ['import-platforms'] as const,
   /** The readiness probe, polled rather than invalidated - see `useBackendHealth`. */
   health: () => ['health'] as const,
   /** **Prefixed by `health()` on purpose**, so the Health pane's two reads

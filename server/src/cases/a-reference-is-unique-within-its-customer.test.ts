@@ -19,12 +19,14 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from './cases.service.js'
 import { attributeUnattributedCases, defaultCustomer } from '../customers/customers.service.js'
 import { openTestPool } from '../../test/database.js'
 import { clearCustomers } from '../../test/customers.js'
-import { cases, customers, user } from '../db/schema/index.js'
+import { cases, customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -56,14 +58,15 @@ describe.skipIf(!db)('a reference within its customer', () => {
         updatedAt: now,
       })
       .onConflictDoNothing()
-    service = new CasesService(db!, {
-      announce: () => undefined,
-      othersOn: () => Promise.resolve([]),
-    } as never)
+    service = as(
+      ANALYST,
+      new CasesService(db!, suiteStore(), { announce: () => undefined, othersOn: () => Promise.resolve([]) } as never),
+    )
   })
 
   beforeEach(async () => {
     await seed!.delete(cases)
+    await seed!.delete(groups).where(eq(groups.name, 'Reference analysts'))
     await clearCustomers(seed!)
     /**
      * **The install always holds a default customer**, ensured on every boot by
@@ -75,10 +78,18 @@ describe.skipIf(!db)('a reference within its customer', () => {
     const [two] = await seed!.insert(customers).values({ name: 'Other NV' }).returning()
     acme = one!.id
     other = two!.id
+    // The analyst works both, so a move into either is theirs to make.
+    const [team] = await seed!.insert(groups).values({ name: 'Reference analysts' }).returning()
+    await seed!.insert(groupCustomers).values([
+      { groupId: team!.id, customerId: acme },
+      { groupId: team!.id, customerId: other },
+    ])
+    await seed!.insert(groupMembers).values({ groupId: team!.id, userId: ANALYST, level: 'write' })
   })
 
   afterAll(async () => {
     await seed!.delete(cases)
+    await seed!.delete(groups).where(eq(groups.name, 'Reference analysts'))
     await clearCustomers(seed!)
     await seed!.delete(user).where(eq(user.id, ANALYST))
     await pool?.end()
@@ -107,7 +118,7 @@ describe.skipIf(!db)('a reference within its customer', () => {
    */
   it('refuses a second case taking a reference an attributed case holds', async () => {
     const first = await make({ title: 'First for Acme', reference: 'TICKET-2' })
-    await service.attribute(first.id, acme, ANALYST)
+    await service.attribute(first.id, acme)
 
     const second = await make({ title: 'Second for Acme' })
 
@@ -116,7 +127,7 @@ describe.skipIf(!db)('a reference within its customer', () => {
       'a reference was free for a case in the default group and taken in Acme',
     ).resolves.toMatchObject({ ok: true })
 
-    await service.attribute(second.id, acme, ANALYST).catch(() => undefined)
+    await service.attribute(second.id, acme).catch(() => undefined)
     const rows = await seed!.select().from(cases).where(eq(cases.reference, 'TICKET-2'))
     expect(
       rows.filter((row) => row.customerId === acme),
@@ -153,10 +164,10 @@ describe.skipIf(!db)('a reference within its customer', () => {
     // never reaches -- which is how this rule was believed covered while the
     // door that introduces collisions checked nothing.
     const first = await make({ title: 'Acme side', reference: 'TICKET-4' })
-    await service.attribute(first.id, acme, ANALYST)
+    await service.attribute(first.id, acme)
 
     const second = await make({ title: 'Other side', reference: 'TICKET-4' })
-    await service.attribute(second.id, other, ANALYST)
+    await service.attribute(second.id, other)
 
     const rows = await seed!.select().from(cases).orderBy(cases.title)
     expect(

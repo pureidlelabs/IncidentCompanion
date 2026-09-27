@@ -151,10 +151,7 @@ export function StepperItem({
   const state: StepState =
     completed || step < activeStep ? 'complete' : step === activeStep ? 'current' : 'upcoming'
 
-  const ctx = useMemo(
-    () => ({ step, state, isDisabled: disabled }),
-    [step, state, disabled],
-  )
+  const ctx = useMemo(() => ({ step, state, isDisabled: disabled }), [step, state, disabled])
 
   return (
     <StepItemContext.Provider value={ctx}>
@@ -226,11 +223,7 @@ const stepperIndicator = tv({
 })
 
 /** The step's number, replaced by a tick once the step is complete. */
-export function StepperIndicator({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<'span'>) {
+export function StepperIndicator({ className, children, ...props }: React.ComponentProps<'span'>) {
   const { step, state } = useStepItem()
 
   return (
@@ -260,11 +253,7 @@ export function StepperIndicator({
           />
         )}
       </AnimatePresence>
-      {state === 'complete' ? (
-        <Check aria-hidden className="size-3.5" />
-      ) : (
-        (children ?? step)
-      )}
+      {state === 'complete' ? <Check aria-hidden className="size-3.5" /> : (children ?? step)}
     </span>
   )
 }
@@ -332,11 +321,11 @@ export function StepperSeparator({ className, ...props }: React.ComponentProps<'
       data-state={state}
       className={cn(
         'relative m-0.5 overflow-hidden rounded-sm bg-muted',
-        'group-data-[orientation=horizontal]/stepper-nav:h-0.5',
-        'group-data-[orientation=horizontal]/stepper-nav:flex-1',
-        'group-data-[orientation=vertical]/stepper-nav:ms-3',
-        'group-data-[orientation=vertical]/stepper-nav:h-12',
-        'group-data-[orientation=vertical]/stepper-nav:w-0.5',
+        // **Unprefixed, so a caller can win.** A prefixed class is an
+        // attribute selector and outranks a caller's bare one whatever the
+        // merge does. The stepper's context carries its orientation, so the
+        // size is chosen here instead. -> #897
+        orientation === 'horizontal' ? 'h-0.5 flex-1' : 'ms-3 h-12 w-0.5',
         className,
       )}
       {...props}
@@ -346,9 +335,7 @@ export function StepperSeparator({ className, ...props }: React.ComponentProps<'
         className="absolute inset-0 origin-top-left rounded-sm bg-primary"
         initial={false}
         animate={
-          orientation === 'vertical'
-            ? { scaleY: filled ? 1 : 0 }
-            : { scaleX: filled ? 1 : 0 }
+          orientation === 'vertical' ? { scaleY: filled ? 1 : 0 } : { scaleX: filled ? 1 : 0 }
         }
         // `spring.fill`, the token the progress bar's own fill takes: progress
         // arrives in discrete jumps and a spring is what turns those into one

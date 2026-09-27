@@ -34,19 +34,6 @@ const project = setProjectAnnotations([a11yAnnotations, previewAnnotations])
 beforeAll(project.beforeAll)
 
 /**
- * A React warning fails the story that printed it.
- *
- * The story tier renders every story in a real browser and asserts whatever
- * its `play` asserts, which for a story with no `play` is nothing at all. A
- * render warning is the one defect class that surface still emits: React
- * reports a nullish `key`, a bad prop, a nested `<p>` and an act violation
- * through `console.error`, and a tier that only watches for thrown errors
- * counts every one of them as a pass.
- *
- * The message is attached with the story's own name because the console line
- * has already scrolled past by the time the run summarises.
- */
-/**
  * React's `act(...)` warning, exempted for the three Base UI internals that
  * emit it and for nothing else.
  *
@@ -80,10 +67,35 @@ function isExemptActWarning(args: unknown[]): boolean {
   )
 }
 
+/**
+ * Every `console.error` this story printed, which fails it at the end.
+ *
+ * The story tier renders every story in a real browser and asserts whatever
+ * its `play` asserts, which for a story with no `play` is nothing at all. A
+ * render warning is the one defect class that surface still emits: React
+ * reports a nullish `key`, a bad prop, a nested `<p>` and an act violation
+ * through `console.error`, and a tier that only watches for thrown errors
+ * counts every one of them as a pass.
+ *
+ * Collected rather than thrown where it happens, because the console line has
+ * already scrolled past by the time the run summarises.
+ */
 const seen: string[] = []
 let realError: typeof console.error | undefined
 
 beforeEach(() => {
+  /**
+   * **The surface a story starts on, which is otherwise the last story's.**
+   * Every story here runs in one browser, so what one writes is still there
+   * for the next. The shell persists the rail's fold, and a folded rail draws
+   * no sub-list -- so a story about a rail row can fail on state a different
+   * file put there, and what the tier asserts depends on the order it ran in.
+   * The unit tier clears the same storage for the same reason, per file.
+   * `sessionStorage` is not cleared: nothing in the tree writes one.
+   * -> #527
+   */
+  localStorage.clear()
+
   seen.length = 0
   realError = console.error
   console.error = (...args: unknown[]) => {

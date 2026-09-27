@@ -17,19 +17,18 @@
  * is no telling "we both edited this" from "the row moved underneath me", and
  * the review degrades to naming every patched field.
  */
-import { ConflictException, Inject, Injectable, Optional } from '@nestjs/common'
+import { ConflictException, Inject, Injectable } from '@nestjs/common'
 import { and, eq, inArray } from 'drizzle-orm'
 
-import { isScope } from '../domain/scopes.lists.js'
 import { REVIEWABLE } from './registry.js'
+import { CollectionService } from './collection.service.js'
+import { DEFINITIONS } from './definitions.js'
+import type { Collection } from '../domain/collections.js'
 import { columnOf } from '../db/column-access.js'
 import { withCase } from '../db/scope.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import { updateVersioned } from '../db/mutate.js'
 import { conflicts } from '../db/schema/index.js'
-import { CaseChannel } from '../live/case-channel.service.js'
-import { freezeGuardFor } from '../report/freeze.js'
 import { z } from 'zod'
 
 /** One field, three ways. Values are rendered, because the review is read by a person. */
@@ -91,7 +90,7 @@ const LABEL_FIELDS = [
 export class ConflictsService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
-    @Optional() private readonly channel?: CaseChannel,
+    private readonly collections: CollectionService,
   ) {}
 
   /**
@@ -288,39 +287,22 @@ export class ConflictsService {
     )
     if (held.length === 0) return { settled: 0 }
 
-    const touched = new Set<string>()
     if (choice === 'mine') {
       for (const entry of held) {
-        // **`REVIEWABLE`, the same list `rowById` reads.** The bulk-delete
-        // targets do not carry reports or report blocks, so resolving through
-        // them finds no table -- and the record below is deleted either way, so
-        // "keep mine" on a report closes the review, answers `settled`, and
-        // writes nothing. The analyst is told their choice was applied and
-        // cannot see that it was not.
-        const table = REVIEWABLE[entry.entity]
-        if (!table) continue
         const row = await this.rowById(entry.entity, entry.entityId, caseId)
         // Deleted by them and answered "keep mine": there is no row to write
         // to. Putting it back is a different feature from resolving a field
         // disagreement, so the record is dropped and the row stays gone.
-        if (!row) continue
+        if (!row || !Object.hasOwn(DEFINITIONS, entry.entity)) continue
 
-        // A write path outside `CollectionService`, so the freeze is asked for
-        // here rather than inherited. -> `report/freeze.ts`
-        await freezeGuardFor(entry.entity)?.(this.db, caseId, {
-          ids: [entry.entityId],
-          rows: [entry.mine],
-        })
-
-        const written = await updateVersioned(this.db, {
-          table,
-          entity: entry.entity,
+        const written = await this.collections.update(
+          DEFINITIONS[entry.entity as Collection],
           caseId,
-          id: entry.entityId,
-          expectedVersion: row['version'] as number,
-          actorId: userId,
-          patch: entry.mine,
-        })
+          entry.entityId,
+          row['version'] as number,
+          entry.mine,
+          userId,
+        )
 
         // Thrown rather than ignored: the delete below is unconditional, so a
         // discarded refusal drops the analyst's values and still answers
@@ -335,8 +317,6 @@ export class ConflictsService {
             currentVersion: written.currentVersion,
           })
         }
-
-        touched.add(entry.entity)
       }
     }
 
@@ -346,11 +326,6 @@ export class ConflictsService {
         .where(and(eq(conflicts.caseId, caseId), eq(conflicts.userId, userId))),
     )
 
-    // **Filtered, not cast.** `entity` is a column, so it is whatever was
-    // written to it; a value the union does not have would otherwise become a
-    // query key no screen reads, and the settle would look like it worked.
-    const scopes = [...touched].filter(isScope)
-    if (scopes.length > 0) this.channel?.announce(caseId, scopes, userId)
     return { settled: held.length }
   }
 }

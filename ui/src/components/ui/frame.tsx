@@ -1,4 +1,3 @@
-
 import { cn, tv } from '@/lib/cn'
 
 /**
@@ -49,10 +48,16 @@ export function Frame({ variant, spacing, className, ...props }: FrameProps) {
   )
 }
 
-/** The tinted band across the top, holding the title and its description. */
-export function FrameHeader({ className, ...props }: React.ComponentProps<'header'>) {
+/**
+ * The tinted band across the top, holding the title and its description.
+ *
+ * A `div` rather than a `header`: `Frame` is a `div`, so no sectioning
+ * ancestor scopes it and every band on a screen claimed `role="banner"`.
+ * -> #928
+ */
+export function FrameHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <header
+    <div
       data-part="frame-header"
       className={cn(
         'flex flex-col gap-0.5 border-b border-border bg-muted/50',

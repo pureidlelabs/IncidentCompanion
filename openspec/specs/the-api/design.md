@@ -45,3 +45,13 @@ A schema states what one field may hold. A rule holding *between* two fields -- 
 **A refusal carries its status, never a success carrying bad news.** A write that did not happen answers a refusing status with the sentence in its body, rather than a 200 or a 201 saying it did not work. Anything reading the status rather than the body -- a proxy, a log, a client somebody writes later -- is right to believe it, and a surface that unwraps both shapes lets the two drift because each works.
 
 **The shape a refusal carries is described once, and every route answers with that description.** A body assembled at the door is a second description of the wire, and the tier that reads it cannot tell which door it came from -- so a door that disagrees is found by an analyst rather than by a check.
+
+## A route's answer is its schema, not a second description of it
+
+What a route returns is parsed through its response schema before it leaves, and an object schema drops a key it does not declare. So a field the route builds and the schema does not name is deleted on the way out, and nothing above the wire can report it: the handler's return type is that schema's own inference, so the typecheck agrees with the schema rather than with the value, and a test calling the builder instead of the route never meets the serializer.
+
+**The shape a route builds is inferred from its schema rather than declared beside it.** Two declarations of one shape is the arrangement that drifts, and it drifts silently in the one direction nothing checks — a field added to the builder alone. Inferring makes that drift a compile error instead.
+
+**Not `.strict()` on the response.** It turns the same drift into a throw, which outbound is a failed screen rather than a thin answer, and keeping it strict in tests and stripping in production is two behaviours to hold in step. The stripping is not the defect; describing the answer twice is.
+
+**A schema is not evidence about a route until something parses a built answer through it.** A test over the builder alone passes whatever the schema says, because the serializer is not in that path.

@@ -96,7 +96,9 @@ export function Calendar<T extends DateValue>({ errorMessage, ...props }: Calend
       <div className="flex gap-4 overflow-x-auto">
         {Array.from({ length: months }, (_, index) => (
           <div key={index} className="flex flex-col gap-2">
-            <header className="flex items-center gap-1">
+            {/* A `div`: the month strip is not the page banner, and `header` maps
+                to one wherever no sectioning element scopes it. -> #932 */}
+            <div className="flex items-center gap-1">
               {index === 0 ? (
                 <Button variant="ghost" size="icon-sm" slot="previous" aria-label="Previous month">
                   <ChevronLeftIcon className="rtl:rotate-180" />
@@ -111,7 +113,7 @@ export function Calendar<T extends DateValue>({ errorMessage, ...props }: Calend
                   <ChevronRightIcon className="rtl:rotate-180" />
                 </Button>
               ) : null}
-            </header>
+            </div>
             <CalendarGrid offset={{ months: index }} className="border-separate border-spacing-0.5">
               <GridHeader />
               <CalendarGridBody>
@@ -125,7 +127,9 @@ export function Calendar<T extends DateValue>({ errorMessage, ...props }: Calend
                   <CalendarCell
                     date={date}
                     data-day={date.toString()}
-                    className={(render) => cell({ ...render, isReadOnly: props.isReadOnly ?? false })}
+                    className={(render) =>
+                      cell({ ...render, isReadOnly: props.isReadOnly ?? false })
+                    }
                   />
                 )}
               </CalendarGridBody>

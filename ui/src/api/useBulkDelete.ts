@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import { request, type ApiError } from './client'
 import type { CollectionName } from './model'
 import { keys } from './queryKeys'
+import { rowKey, writeRows, type Read } from './rowWrite'
 
 /**
  * Remove a selection spanning tables, in one request.
@@ -27,7 +28,7 @@ export interface BulkDeleteVars {
    * single-row door has always demanded it; sending ids alone let a bulk
    * delete remove a row another analyst had edited since. -> #682
    */
-  targets: Partial<Record<CollectionName, { id: string; version: number }[]>>
+  targets: Partial<Record<CollectionName, { id: string; version: Read }[]>>
 }
 
 export interface BulkDeleted {
@@ -64,26 +65,42 @@ export function useBulkDelete(
   const client = useQueryClient()
   return useMutation<BulkDeleted, ApiError, BulkDeleteVars>({
     mutationKey: [...keys.case(caseId), 'bulk-delete'],
-    mutationFn: ({ targets }) =>
-      request<BulkDeleted>(`/cases/${encodeURIComponent(caseId)}/bulk-delete`, {
-        method: 'POST',
-        /**
-         * **Pairs on the wire, a map at the call site.**
-         *
-         * The server camelCases every key of every request body before its
-         * schema sees it, and cannot tell a field name from data -- so
-         * `network_indicators` arrived as `networkIndicators`, was refused by
-         * the enum, and deleting a selection on the Network or Cloud apps
-         * screen answered "Invalid key in record" while the eight
-         * single-word collections worked. The collection travels as a value.
-         */
-        body: {
-          targets: Object.entries(targets).map(([collection, rows]) => ({
-            collection,
-            rows,
-          })),
+    mutationFn: ({ targets }) => {
+      const named = Object.entries(targets).flatMap(([collection, rows]) =>
+        rows.map((row) => ({ collection, id: row.id, read: row.version })),
+      )
+      return writeRows(
+        client,
+        named.map((row) => ({ key: rowKey(caseId, row.collection, row.id), read: row.read })),
+        (versions) => {
+          const stated = new Map(
+            named.map((row, at) => [`${row.collection}:${row.id}`, versions[at]]),
+          )
+          return request<BulkDeleted>(`/cases/${encodeURIComponent(caseId)}/bulk-delete`, {
+            method: 'POST',
+            /**
+             * **Pairs on the wire, a map at the call site.**
+             *
+             * The server camelCases every key of every request body before its
+             * schema sees it, and cannot tell a field name from data -- so
+             * `network_indicators` arrived as `networkIndicators`, was refused by
+             * the enum, and deleting a selection on the Network or Cloud apps
+             * screen answered "Invalid key in record" while the eight
+             * single-word collections worked. The collection travels as a value.
+             */
+            body: {
+              targets: Object.entries(targets).map(([collection, rows]) => ({
+                collection,
+                rows: rows.map((row) => ({
+                  id: row.id,
+                  version: stated.get(`${collection}:${row.id}`),
+                })),
+              })),
+            },
+          })
         },
-      }),
+      )
+    },
     onSuccess: (result) => {
       // Every collection the call touched, plus the case itself: the counts on
       // the scope chips and the rail come off `useCase`, so invalidating only

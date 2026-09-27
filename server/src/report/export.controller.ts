@@ -17,6 +17,7 @@ import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
+import { contentDisposition } from '../domain/disposition.js'
 import { ReportRenderService } from './render.service.js'
 import { toMarkdown } from './document/markdown.js'
 import { toPdf } from './document/pdf.js'
@@ -30,7 +31,7 @@ import { toWord } from './document/word.js'
  * several.
  */
 const exportQuery = z.object({
-  report: z.string().describe('Which of the case\u2019s reports to export.'),
+  report: z.uuid().describe('Which of the case\u2019s reports to export.'),
   lang: z.string().describe('The language to assemble in. Absent is English.').optional(),
 })
 
@@ -56,7 +57,7 @@ export class ReportExportController {
     response
       .status(200)
       .type('text/markdown; charset=utf-8')
-      .setHeader('content-disposition', `attachment; filename="${filename(title, 'md')}"`)
+      .setHeader('content-disposition', contentDisposition('attachment', filename(title, 'md')))
       .send(toMarkdown(document_))
   }
 
@@ -74,7 +75,7 @@ export class ReportExportController {
       // **`inline`, unlike the other two.** A PDF is the send-ready copy an
       // analyst reads before it goes; the browser shows it rather than dropping
       // it in Downloads, and the `download` attribute on the link still saves.
-      .setHeader('content-disposition', `inline; filename="${filename(title, 'pdf')}"`)
+      .setHeader('content-disposition', contentDisposition('inline', filename(title, 'pdf')))
       .send(file)
   }
 
@@ -89,7 +90,7 @@ export class ReportExportController {
     response
       .status(200)
       .type('application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-      .setHeader('content-disposition', `attachment; filename="${filename(title, 'docx')}"`)
+      .setHeader('content-disposition', contentDisposition('attachment', filename(title, 'docx')))
       .send(file)
   }
 

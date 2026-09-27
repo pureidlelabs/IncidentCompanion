@@ -20,22 +20,13 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { brokenPreview } from './storybook-lifecycle.js'
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
 
 /** A window narrowed inside a case, so both grips are away from the edges. */
 const STORY = 'components-timebrush--narrowed'
-
-/** Whether a Storybook is listening, asked once. */
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
-}
 
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
@@ -84,7 +75,7 @@ async function measure(page: Page): Promise<Band> {
 
 test.describe('the time brush grip against its density', () => {
   test.beforeEach(async ({ page }) => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB}`)
+    await requireStorybook()
     await openStory(page, STORY)
   })
 
@@ -106,9 +97,12 @@ test.describe('the time brush grip against its density', () => {
    * two, since neither can be seen at one value.
    */
   test('follows the floor when the floor moves', async ({ page }) => {
-    await page.locator('[data-part="time-brush"]').first().evaluate((node) => {
-      node.style.setProperty('--brush-floor', '0.75rem')
-    })
+    await page
+      .locator('[data-part="time-brush"]')
+      .first()
+      .evaluate((node) => {
+        node.style.setProperty('--brush-floor', '0.75rem')
+      })
     const { ceiling, floor, grips } = await measure(page)
     expect(grips.length).toBeGreaterThan(0)
     for (const grip of grips) {

@@ -14,6 +14,7 @@ import { sql } from 'drizzle-orm'
 
 import { rowVersioning } from './columns.js'
 import { customers } from './customer.js'
+import { customerScoped } from './scoped.js'
 
 /**
  * Open and closed only. **`archived` is not a status**: archiving is a storage
@@ -139,6 +140,7 @@ export const cases = pgTable(
     uniqueIndex('cases_customer_reference_idx')
       .on(sql`coalesce(${table.customerId}::text, '')`, table.reference)
       .where(sql`${table.reference} is not null and ${table.reference} <> ''`),
+    ...customerScoped(table.customerId),
   ],
 )
 

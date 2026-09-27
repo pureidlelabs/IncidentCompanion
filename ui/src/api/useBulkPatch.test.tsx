@@ -6,8 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { keys } from './queryKeys'
 import { setSession } from './session'
 import type { SystemEntry } from './model'
+import { drawn } from './rowWrite'
 import { useBulkPatch } from './useBulkPatch'
 
+const at = (version: number) => drawn({ version }).version
 const CASE = 'DEMO-CAMPAIGN'
 const listKey = keys.collection(CASE, 'systems')
 
@@ -44,7 +46,7 @@ describe('useBulkPatch', () => {
     const hook = renderHook(() => useBulkPatch(CASE, 'systems'), { wrapper })
 
     act(() => {
-      hook.result.current.mutate({ ids: [{ id: 's1', version: 1 }, { id: 's4', version: 2 }], fields: { verdict: 'compromised' } })
+      hook.result.current.mutate({ ids: [{ id: 's1', version: at(1) }, { id: 's4', version: at(2) }], fields: { verdict: 'compromised' } })
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
 
@@ -66,7 +68,7 @@ describe('useBulkPatch', () => {
     const hook = renderHook(() => useBulkPatch(CASE, 'systems'), { wrapper })
 
     act(() => {
-      hook.result.current.mutate({ ids: [{ id: 's1', version: 1 }, { id: 's4', version: 2 }], fields: { verdict: 'clean' } })
+      hook.result.current.mutate({ ids: [{ id: 's1', version: at(1) }, { id: 's4', version: at(2) }], fields: { verdict: 'clean' } })
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
     expect(hook.result.current.data).toEqual({ updated: ['s1'], missing: ['s4'], refused: [] })
@@ -85,8 +87,8 @@ describe('useBulkPatch', () => {
     act(() => {
       hook.result.current.mutate({
         ids: [
-          { id: 's1', version: 1 },
-          { id: 's4', version: 2 },
+          { id: 's1', version: at(1) },
+          { id: 's4', version: at(2) },
         ],
         fields: { verdict: 'clean' },
       })
@@ -102,7 +104,7 @@ describe('useBulkPatch', () => {
     const hook = renderHook(() => useBulkPatch(CASE, 'systems'), { wrapper })
 
     act(() => {
-      hook.result.current.mutate({ ids: [{ id: 's1', version: 1 }], fields: { verdict: 'clean' } })
+      hook.result.current.mutate({ ids: [{ id: 's1', version: at(1) }], fields: { verdict: 'clean' } })
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
 
@@ -122,7 +124,7 @@ describe('useBulkPatch', () => {
       // cannot be written without one - and a test that could not express
       // a bad value could not assert that the server refuses it.
       hook.result.current.mutate({
-        ids: [{ id: 's1', version: 1 }, { id: 's2', version: 3 }],
+        ids: [{ id: 's1', version: at(1) }, { id: 's2', version: at(3) }],
         fields: { verdict: 'not-a-verdict' as SystemEntry['verdict'] },
       })
     })

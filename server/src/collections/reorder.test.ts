@@ -13,13 +13,15 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { and, eq, isNull, ne } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, changeFeed, reportBlocks, reports, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { sentReportRefusal } from '../report/freeze.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -33,7 +35,11 @@ interface Session {
 }
 
 interface Reorderable {
-  reorder(caseId: string, body: unknown, session: Session): Promise<{ ids: string[] }>
+  reorder(
+    caseId: string,
+    body: unknown,
+    session: Session,
+  ): Promise<{ rows: { id: string; version: number }[] }>
 }
 
 const announced: { caseId: string; scopes: string[]; by: string }[] = []
@@ -49,7 +55,7 @@ function controllerFor(name: string): Reorderable {
     othersOn: () => Promise.resolve([]),
   }
   return new (found as new (s: CollectionService) => Reorderable)(
-    new CollectionService(db!, channel as never),
+    as('reorder-analyst', new CollectionService(db!, suiteStore(), channel as never)),
   )
 }
 
@@ -58,7 +64,12 @@ afterAll(async () => {
   await seedPool?.end()
 })
 
-describe.skipIf(!db)('reordering a collection that carries a position', () => {
+/** The body a reorder takes: each row in order, with the version it was read at. */
+const sending = (rows: readonly { id: string; version: number }[]) => ({
+  rows: rows.map(({ id, version }) => ({ id, version })),
+})
+
+describe.skipIf(!db || !hasConcurrentConnections())('reordering a collection that carries a position', () => {
   let caseId: string
   let reportId: string
   let session: Session
@@ -82,7 +93,7 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = one!.id
     const [report] = await seed!
@@ -93,22 +104,37 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
     reportId = report!.id
   })
 
-  const blocksOf = async (): Promise<{ id: string; position: number }[]> =>
+  const blocksOf = async (): Promise<{ id: string; position: number; version: number }[]> =>
     await seed!
-      .select({ id: reportBlocks.id, position: reportBlocks.position })
+      .select({ id: reportBlocks.id, position: reportBlocks.position, version: reportBlocks.version })
       .from(reportBlocks)
       .where(eq(reportBlocks.reportId, reportId))
       .orderBy(reportBlocks.position)
 
-  it('renumbers to the order it was sent, and answers with it', async () => {
+  it('renumbers to the order it was sent, and answers with each row at its stored version', async () => {
     const before = await blocksOf()
     expect(before.length, 'the demo report has blocks to move').toBeGreaterThan(2)
 
-    const moved = [before[1]!.id, before[0]!.id, ...before.slice(2).map((b) => b.id)]
-    const { ids } = await controllerFor('report_blocks').reorder(caseId, { ids: moved }, session)
+    const moved = [before[1]!, before[0]!, ...before.slice(2)]
+    const { rows } = await controllerFor('report_blocks').reorder(caseId, sending(moved), session)
 
-    expect(ids).toEqual(moved)
-    expect((await blocksOf()).map((b) => b.id)).toEqual(moved)
+    const after = await blocksOf()
+    expect(after.map((b) => b.id)).toEqual(moved.map((b) => b.id))
+    expect(rows).toEqual(after.map((b) => ({ id: b.id, version: b.version })))
+    expect(rows[0]!.version).toBeGreaterThan(before[1]!.version)
+  })
+
+  it('refuses a list carrying a version a row has moved past, naming it, and writes nothing', async () => {
+    const before = await blocksOf()
+    await seed!
+      .update(reportBlocks)
+      .set({ heading: 'Edited meanwhile', version: before[2]!.version + 1 })
+      .where(eq(reportBlocks.id, before[2]!.id))
+
+    await expect(
+      controllerFor('report_blocks').reorder(caseId, sending([before[1]!, before[0]!, ...before.slice(2)]), session),
+    ).rejects.toMatchObject({ status: 409, response: { refused: [before[2]!.id] } })
+    expect((await blocksOf()).map((b) => b.id)).toEqual(before.map((b) => b.id))
   })
 
   it('refuses a list that is not the whole collection', async () => {
@@ -116,7 +142,7 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
     await expect(
       controllerFor('report_blocks').reorder(
         caseId,
-        { ids: before.slice(1).map((b) => b.id) },
+        sending(before.slice(1)),
         session,
       ),
     ).rejects.toMatchObject({ status: 422 })
@@ -125,10 +151,9 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
 
   it('refuses an id that is not in this case', async () => {
     const before = await blocksOf()
-    const foreign = before.map((b) => b.id)
-    foreign[0] = '00000000-0000-4000-8000-000000000000'
+    const foreign = [{ id: '00000000-0000-4000-8000-000000000000', version: 1 }, ...before.slice(1)]
     await expect(
-      controllerFor('report_blocks').reorder(caseId, { ids: foreign }, session),
+      controllerFor('report_blocks').reorder(caseId, sending(foreign), session),
     ).rejects.toMatchObject({ status: 422 })
   })
 
@@ -136,8 +161,8 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
     const before = await blocksOf()
     await seed!.delete(changeFeed).where(eq(changeFeed.caseId, caseId))
 
-    const moved = [before[1]!.id, before[0]!.id, ...before.slice(2).map((b) => b.id)]
-    await controllerFor('report_blocks').reorder(caseId, { ids: moved }, session)
+    const moved = [before[1]!, before[0]!, ...before.slice(2)]
+    await controllerFor('report_blocks').reorder(caseId, sending(moved), session)
 
     const feed = await seed!
       .select()
@@ -162,9 +187,9 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
      * feed assertion cannot stand in for this one.
      */
     const before = await blocksOf()
-    const moved = [before[1]!.id, before[0]!.id, ...before.slice(2).map((b) => b.id)]
+    const moved = [before[1]!, before[0]!, ...before.slice(2)]
     announced.length = 0
-    await controllerFor('report_blocks').reorder(caseId, { ids: moved }, session)
+    await controllerFor('report_blocks').reorder(caseId, sending(moved), session)
 
     expect(announced).toHaveLength(1)
     expect(announced[0]?.caseId).toBe(caseId)
@@ -175,10 +200,9 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
     // it: the count still matches. Two positions would be written for one row
     // and the last write would win silently.
     const before = await blocksOf()
-    const doubled = [before[0]!.id, ...before.slice(1).map((b) => b.id)]
-    doubled[1] = before[0]!.id
+    const doubled = [before[0]!, before[0]!, ...before.slice(2)]
     await expect(
-      controllerFor('report_blocks').reorder(caseId, { ids: doubled }, session),
+      controllerFor('report_blocks').reorder(caseId, sending(doubled), session),
     ).rejects.toMatchObject({ status: 422 })
     expect((await blocksOf()).map((b) => b.id)).toEqual(before.map((b) => b.id))
   })
@@ -201,32 +225,32 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
       .limit(1)
     expect(other, 'the demo case has a second report').toBeDefined()
     const [stranger] = await seed!
-      .select({ id: reportBlocks.id })
+      .select({ id: reportBlocks.id, version: reportBlocks.version })
       .from(reportBlocks)
       .where(eq(reportBlocks.reportId, other!.id))
       .limit(1)
     expect(stranger, 'the second report has a block').toBeDefined()
 
-    const mixed = [...before.slice(0, -1).map((b) => b.id), stranger!.id]
+    const mixed = [...before.slice(0, -1), stranger!]
     expect(mixed).toHaveLength(before.length)
 
     await expect(
-      controllerFor('report_blocks').reorder(caseId, { ids: mixed }, session),
+      controllerFor('report_blocks').reorder(caseId, sending(mixed), session),
     ).rejects.toMatchObject({ status: 422, response: { message: /one reportId at a time/ } })
     expect((await blocksOf()).map((b) => b.id)).toEqual(before.map((b) => b.id))
   })
 
   it('refuses to reorder the blocks of a report that has been sent', async () => {
     const before = await blocksOf()
-    await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
+    await seed!.update(reports).set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() }).where(eq(reports.id, reportId))
 
     await expect(
       controllerFor('report_blocks').reorder(
         caseId,
-        { ids: [before[1]!.id, before[0]!.id, ...before.slice(2).map((b) => b.id)] },
+        sending([before[1]!, before[0]!, ...before.slice(2)]),
         session,
       ),
-    ).rejects.toMatchObject({ status: 409 })
+    ).rejects.toSatisfy((error) => sentReportRefusal(error)?.getStatus() === 409)
     expect((await blocksOf()).map((b) => b.id)).toEqual(before.map((b) => b.id))
   })
 
@@ -242,7 +266,7 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
     announced.length = 0
     await controllerFor('report_blocks').reorder(
       caseId,
-      { ids: before.map((b) => b.id) },
+      sending(before),
       session,
     )
     expect(announced).toEqual([])
@@ -260,13 +284,13 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
      * the collection's own orderability as the only thing that can refuse it.
      */
     const rows = await seed!
-      .select({ id: reports.id })
+      .select({ id: reports.id, version: reports.version })
       .from(reports)
       .where(eq(reports.caseId, caseId))
     expect(rows.length, 'the demo case has reports').toBeGreaterThan(0)
 
     await expect(
-      controllerFor('reports').reorder(caseId, { ids: rows.map((row) => row.id) }, session),
+      controllerFor('reports').reorder(caseId, sending(rows), session),
     ).rejects.toMatchObject({ status: 422 })
   })
 })

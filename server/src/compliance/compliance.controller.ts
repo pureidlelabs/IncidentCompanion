@@ -162,7 +162,7 @@ export class ComplianceController {
     @Session() session: UserSession,
   ): Promise<ComplianceRecord> {
     const { version, ...rest } = (body ?? {}) as { version?: unknown } & Record<string, unknown>
-    if (!Number.isInteger(version)) {
+    if (!rowVersion().safeParse(version).success) {
       throw new UnprocessableEntityException({ message: 'A patch has to name the version it read.' })
     }
 

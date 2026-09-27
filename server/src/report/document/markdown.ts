@@ -6,6 +6,7 @@
  * carries runs rather than markup.
  */
 import { coverageNote, type Cell, type Document, type ListItem, type Node, type Run, type Section, type TableNode } from './model.js'
+import { listMarkers, urlBeside } from './marks.js'
 
 /**
  * Characters that start a markdown construct at the beginning of a line, or
@@ -34,7 +35,8 @@ function paint(run: Run): string {
   let text = run.code ? '`' + run.text.replace(/`/g, '') + '`' : escape(run.text)
   if (run.bold) text = `**${text}**`
   if (run.italic) text = `*${text}*`
-  if (run.url && run.url !== run.text) text = `${text} (${escape(run.url)})`
+  const beside = urlBeside(run, escape)
+  if (beside !== null) text = `${text}${beside}`
   return text
 }
 
@@ -84,26 +86,13 @@ function table(node: TableNode): string[] {
  * The counter restarts when the list leaves a level.
  */
 function list(items: ListItem[]): string[] {
-  const counters = new Map<number, number>()
-  let previous = 0
-  const lines: string[] = []
-
-  for (const item of items) {
-    if (item.level < previous) {
-      for (const level of [...counters.keys()]) if (level > item.level) counters.delete(level)
-    }
-    previous = item.level
+  return listMarkers(items).map(({ item, marker }) => {
     const indent = '  '.repeat(item.level)
-    if (item.ordered) {
-      const next = (counters.get(item.level) ?? 0) + 1
-      counters.set(item.level, next)
-      lines.push(`${indent}${String(next)}. ${inline(item.runs)}`)
-    } else {
-      counters.delete(item.level)
-      lines.push(`${indent}- ${inline(item.runs)}`)
-    }
-  }
-  return lines
+    // Markdown's own bullet, where the shared marker is the glyph a rendered
+    // format draws. The number is the shared one.
+    const bullet = item.ordered ? marker : '- '
+    return `${indent}${bullet}${inline(item.runs)}`
+  })
 }
 
 function node(one: Node): string[] {

@@ -83,9 +83,7 @@ const documents = new Map<string, Promise<Y.Doc>>()
 const saving = new Map<string, Promise<void>>()
 
 async function build(field: string): Promise<Y.Doc> {
-  // `gc: false`, as every other holder of these fields: this end persists the
-  // document, and a collected history cannot be handed back whole.
-  const doc = new Y.Doc({ gc: false })
+  const doc = new Y.Doc()
   const stored = await loadProse(field)
   const restored = stored === null ? null : base64.decode(stored)
   if (restored) Y.applyUpdate(doc, restored)

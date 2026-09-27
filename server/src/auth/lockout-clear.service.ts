@@ -1,34 +1,27 @@
 /**
- * Clearing a stale lockout counter on the write that means "let them back in".
+ * An administrator's release of an account's lockout.
  *
  * In `auth/` for the same layering reason as `PasswordHoldService` -
- * `accounts/` may reach `auth` and not `db`, so a query against the user row
+ * `accounts/` may reach `auth` and not `db`, so a query against the lockout
  * cannot grow a second time in a folder the rule keeps off it.
- *
- * **A reset that leaves this column alone hands out a password that does not
- * work.** Applied on a successful sign-in only, `CLEARED` leaves an
- * administrator's reset with the lock standing: the new password is correct
- * and the account refuses it until the window expires on its own.
  */
 import { Inject, Injectable } from '@nestjs/common'
+import { inArray } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { user } from '../db/schema/auth.js'
-import { CLEARED } from './lockout.js'
+import { signInLockout } from '../db/schema/lockout.js'
 import { sameAddress } from './same-address.js'
 
 @Injectable()
 export class LockoutClearService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  /**
-   * **Unconditional, matching `CLEARED`'s own contract on the sign-in path.**
-   * An administrator choosing an account's password is at least as strong a
-   * signal as that account typing it correctly, so the reset takes the same
-   * clearing a success does rather than a narrower one.
-   */
+  /** Forgets both of the account's runs: every count, lock and remembered wrong password. */
   async clear(email: string): Promise<void> {
-    await this.db.update(user).set(CLEARED).where(sameAddress(email))
+    await this.db
+      .delete(signInLockout)
+      .where(inArray(signInLockout.userId, this.db.select({ id: user.id }).from(user).where(sameAddress(email))))
   }
 }

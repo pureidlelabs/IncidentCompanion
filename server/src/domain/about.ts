@@ -15,6 +15,14 @@ export const aboutSchema = z.object({
   makerUrl: z.url(),
   repoUrl: z.url(),
   issuesUrl: z.url(),
+  /** How long a lost connection's name stays on a case's roster, at most. */
+  presenceBoundSeconds: z
+    .number()
+    .int()
+    .positive()
+    .describe(
+      "The longest a connection that ended without notice stays on a case's roster, in seconds.",
+    ),
 })
 
 export type About = z.infer<typeof aboutSchema>

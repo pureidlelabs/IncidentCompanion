@@ -5,6 +5,7 @@
  * host/port/user/password quartet is four things to get wrong per environment,
  * where a URL is one string the app never inspects.
  */
+import { Logger } from '@nestjs/common'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 
@@ -46,6 +47,12 @@ export function createPool(url: string): Pool {
      */
     connectionTimeoutMillis: 10_000,
   })
+  // An idle client whose backend ended (a Postgres restart, `57P01`) is
+  // emitted here, and an `error` with no listener ends the process. The pool
+  // has already discarded the client, so the next query opens a fresh one.
+  pool.on('error', (error: Error & { code?: string }) => {
+    new Logger('Postgres').warn(`idle connection ended (${error.code ?? error.message})`)
+  })
 
   /**
    * **`PG_ADOPT_ROLE_FROM_URL` is off in normal use and must stay off** - a
@@ -54,6 +61,13 @@ export function createPool(url: string): Pool {
    * hands every client the superuser, and is never a security boundary.
    */
   if (process.env.PG_ADOPT_ROLE_FROM_URL === '1') {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'Refusing to start -- PG_ADOPT_ROLE_FROM_URL issues `set role` on every ' +
+          'connection and exists for a test engine that hands every client the ' +
+          'superuser. A production server authenticates the role in the URL.',
+      )
+    }
     const role = decodeURIComponent(new URL(url).username)
     if (role) {
       pool.on('connect', (client) => {

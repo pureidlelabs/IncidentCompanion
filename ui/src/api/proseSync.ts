@@ -91,20 +91,7 @@ export interface ProseChannelOptions {
  * is testable against a fake link, which a hook is not.
  */
 export class ProseChannel {
-  /**
-   * **`gc: false`, and it cannot be decided later.** A default document
-   * collects deleted content on the transaction that deletes it, so the past
-   * is gone before anything asks for it - `createDocFromSnapshot` throws on a
-   * collected origin, and a *snapshot exported* from one restores the wrong
-   * text with no error at all: `"finding was a false positive"` for
-   * `"the initial finding was a false positive"`.
-   *
-   * So this is a property of the stored record rather than of a session:
-   * every document that ever holds this field has to agree, because one
-   * collecting peer exports a record with the history already missing and
-   * every later reader inherits the loss. It costs blob size to keep.
-   */
-  readonly doc = new Y.Doc({ gc: false })
+  readonly doc = new Y.Doc()
   readonly awareness: Awareness
   status: SyncStatus = 'opening'
 
@@ -125,6 +112,19 @@ export class ProseChannel {
    * note's writer their report was filed.
    */
   refusedBecause: 'read-only' | 'report-sent' | null = null
+
+  /**
+   * Whether the install holds this document's words unsaved (`unsaved`), or
+   * has given them up (`lost`), as it last said. Null once a save stores them.
+   */
+  unsaved: 'unsaved' | 'lost' | null = null
+  private readonly unsavedListeners = new Set<() => void>()
+
+  /** Calls `listener` whenever `unsaved` changes. Returns what stops it. */
+  readonly watchUnsaved = (listener: () => void): (() => void) => {
+    this.unsavedListeners.add(listener)
+    return () => this.unsavedListeners.delete(listener)
+  }
 
   /**
    * **Public because `CollaborationCaret` has to be handed the same object.**
@@ -167,6 +167,8 @@ export class ProseChannel {
       // vector is also the right thing to send after a gap: it says what this
       // client has, so the answer is only what it missed.
       this.hello()
+      // What was typed while down was dropped by `send`, and the server may never ask for it.
+      this.send(writeUpdate, Y.encodeStateAsUpdate(this.doc))
       // **And say who we are again.** The identity is set in this constructor,
       // which routinely runs before the socket is up -- the awareness update
       // it fires is dropped, and the other analyst gets a caret with no name
@@ -239,10 +241,20 @@ export class ProseChannel {
     if (kind === 'prose.refused') {
       this.refusedAt = typeof message.sentAt === 'string' ? message.sentAt : null
       this.refusedBecause = message.reason === 'report-sent' ? 'report-sent' : 'read-only'
+      // The refusal says what became of the words from here on.
+      if (this.refusedBecause === 'report-sent') this.setUnsaved(null)
       this.settle('refused')
       return
     }
     if (this.status === 'refused') return
+
+    if (kind === 'prose.state') {
+      // The states `server/src/domain/prose-state.ts` declares, spelled here
+      // because a server suite runs this file where `@contract` resolves nothing.
+      if (message.state === 'unsaved' || message.state === 'lost') this.setUnsaved(message.state)
+      else if (message.state === 'saved') this.setUnsaved(null)
+      return
+    }
 
     if (kind === 'prose.sync') {
       const bytes = typeof message.update === 'string'
@@ -289,6 +301,11 @@ export class ProseChannel {
       // exchange rather than answering each other for ever.
       if (this.awareness.getStates().size > known) this.announce()
     }
+  }
+
+  private setUnsaved(state: 'unsaved' | 'lost' | null): void {
+    this.unsaved = state
+    for (const listener of [...this.unsavedListeners]) listener()
   }
 
   private announce(): void {
@@ -376,7 +393,7 @@ function acquireDocument(
   }
 
   const listeners = new Set<(status: SyncStatus) => void>([onStatus])
-  const link: CaseLink = acquireLink(caseId, (url) => new WebSocket(url))
+  const link: CaseLink = acquireLink(caseId)
   const channel = new ProseChannel(link, docKey, {
     ...(user ? { user } : {}),
     // `settle` has already written `channel.status`; this only fans it out.
@@ -412,8 +429,7 @@ function releaseDocument(
  *
  * `docKey` addresses the record - `reports:<id>:document` - and the fragment
  * inside it is named by the caller when it configures the editor. One document
- * per report is what makes the awareness roster report-wide and gives the
- * report a single restore point.
+ * per report is what makes the awareness roster report-wide.
  */
 export function useProseSync(
   caseId: string,

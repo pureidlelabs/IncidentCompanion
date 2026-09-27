@@ -23,14 +23,16 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from './acting.js'
 
 import { CollectionService } from '../src/collections/collection.service.js'
-import { REPORT_BLOCKS_COLLECTION } from '../src/collections/entities.controller.js'
+import { REPORT_BLOCKS_COLLECTION } from '../src/collections/definitions.js'
 import { cases } from '../src/db/schema/case.js'
 import { evidence } from '../src/db/schema/entities.js'
 import { reports } from '../src/db/schema/report.js'
 import { user } from '../src/db/schema/auth.js'
-import { openTestPool } from './database.js'
+import { hasConcurrentConnections, openTestPool } from './database.js'
+import { suiteStore } from './evidence-on-disk.js'
 
 const ANALYST = 'cross-case-analyst'
 
@@ -50,9 +52,9 @@ let theirEvidence = ''
 let ourEvidence = ''
 let ourReport = ''
 
-describe.skipIf(!db)('a report section naming evidence', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a report section naming evidence', () => {
   beforeAll(async () => {
-    service = new CollectionService(db!)
+    service = as(ANALYST, new CollectionService(db!, suiteStore()))
 
     const now = new Date()
     await seed!

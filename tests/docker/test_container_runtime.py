@@ -32,7 +32,9 @@ from pathlib import Path
 
 import pytest
 
+from tests import _checkout as checkout
 from tests import posix_modes
+from tests._must_run import declined
 from tests._repo import REPO_ROOT
 
 REPO_ROOT = REPO_ROOT
@@ -126,16 +128,18 @@ def _docker_available() -> bool:
     return result.returncode == 0
 
 
-pytestmark = [
-    pytest.mark.skipif(
-        os.environ.get("INCIDENTCOMPANION_CONTAINER_TESTS", "") != "1",
-        reason="opt-in: set INCIDENTCOMPANION_CONTAINER_TESTS=1 (builds an image)"),
-    pytest.mark.skipif(
-        not _docker_available(),
-        reason="no Docker daemon is reachable"),
-]
+pytestmark = pytest.mark.skipif(
+    os.environ.get("INCIDENTCOMPANION_CONTAINER_TESTS", "") != "1",
+    reason="opt-in: set INCIDENTCOMPANION_CONTAINER_TESTS=1 (builds an image)")
 
-IMAGE = "incidentcompanion-node:local"
+
+@pytest.fixture(autouse=True)
+def _a_daemon_answers() -> None:
+    """The daemon probe, as a decline; the opt-in above stays a skip. -> #1080"""
+    if not _docker_available():
+        declined("The container runtime tier", "no Docker daemon is reachable")
+
+IMAGE = checkout.image("node")
 
 
 def test_the_host_profile_is_recognised_and_named(capsys):
@@ -311,8 +315,8 @@ def test_the_detected_profile_names_the_runtime_the_daemon_reports():
 #: This worktree's copy of the stack, and the project name that keeps a run of
 #: this tier off whatever the analyst has up.
 STACK = REPO_ROOT / "compose.yaml"
-PROJECT = "incidentcompanion-runtime-test"
-PORT = 18443
+PROJECT = checkout.project("runtime")
+PORT = checkout.port("runtime")
 
 
 def _compose(*args, env=None, **kwargs):
@@ -320,7 +324,7 @@ def _compose(*args, env=None, **kwargs):
     """
     return subprocess.run(
         ["docker", "compose", "-p", PROJECT, "-f", str(STACK), *args],
-        capture_output=True, text=True, env={**os.environ, **(env or {})},
+        capture_output=True, text=True, env={**os.environ, **(env or {}), **checkout.ENV},
         **kwargs)
 
 
@@ -472,8 +476,11 @@ def bind_mount_root(built_image, tmp_path):
 
 
 @pytest.fixture
-def running_container(built_image):
+def running_container(built_image, record_property):
     """The whole stack, brought up the way an analyst brings it up.
+
+    Records `entry=compose` on the case, which is what `tests/certify.py` reads
+    as one that reached the install through its entry point.
 
     **One `up`, and the fixture may not sequence anything itself.** A fixture
     that starts the services in order, polls for a connection and applies the
@@ -493,6 +500,7 @@ def running_container(built_image):
         assert up.returncode == 0, (
             f"the stack did not come up from a single `up`, which is the whole "
             f"procedure an analyst follows:\n{up.stderr[-3000:]}")
+        record_property("entry", "compose")
         yield env
     finally:
         _compose("down", "-v", env=env)
@@ -535,6 +543,15 @@ def test_the_app_answers_on_the_published_port(running_container):
     the schema being there to query.
     """
     assert _wait_for_app(HEALTH) == 200
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "localhost"])
+def test_an_install_at_loopback_is_never_told_to_stay_protected(running_container, host):
+    """A loopback address is every application on the machine, so no response pins it."""
+    _wait_for_app(HEALTH)
+    asked = urllib.request.Request(HEALTH, headers={"Host": f"{host}:{PORT}"})
+    with urllib.request.urlopen(asked, timeout=10, context=_UNVERIFIED) as answer:
+        assert answer.headers.get_all("Strict-Transport-Security") is None
 
 
 def test_docker_stop_shuts_down_gracefully_rather_than_being_killed(
@@ -631,6 +648,49 @@ def test_the_container_writes_its_install_volume(running_container):
         "this is what its absence looks like")
 
 
+#: What the serving and seeding roles may do to the tables whose privileges are
+#: narrower than a row policy, as the database answers it.
+_PRIVILEGES = """select
+  has_table_privilege('ic_app', 'change_feed', 'INSERT'),
+  has_table_privilege('ic_app', 'change_feed', 'UPDATE'),
+  has_table_privilege('ic_app', 'change_feed', 'DELETE'),
+  has_column_privilege('ic_app', 'cases', 'title', 'UPDATE'),
+  has_column_privilege('ic_app', 'cases', 'customer_id', 'UPDATE'),
+  has_column_privilege('ic_app', 'cases', 'is_demo', 'UPDATE'),
+  has_table_privilege('ic_app', 'prose_acceptances', 'UPDATE'),
+  has_table_privilege('ic_seed', 'prose_acceptances', 'UPDATE'),
+  has_table_privilege('ic_seed', 'install_activity', 'TRUNCATE')"""
+
+
+def _privileges(env) -> str:
+    asked = _compose(
+        "exec", "-T", "postgres", "psql", "-tA", "-U", "incidentcompanion",
+        "-d", "incidentcompanion", "-c", _PRIVILEGES, env=env)
+    assert asked.returncode == 0, f"the privileges could not be read: {asked.stderr}"
+    return asked.stdout.strip()
+
+
+def test_the_shipped_store_holds_the_app_to_its_privileges(running_container):
+    """After one `up`, and again after the roles step runs a second time.
+
+    The roles step and the schema step both run on every `up` and a `restart`
+    starts them together, so the privileges are asserted where either order
+    leaves them.
+    """
+    env = running_container
+    expected = "t|f|f|t|f|f|f|f|f"
+    assert _privileges(env) == expected, (
+        "after `up`, the app or the seeder holds a privilege on the change feed, "
+        "a case's customer or demo mark, or the acceptances, that the schema "
+        "step withholds")
+
+    rerun = _compose("up", "--no-deps", "--force-recreate", "roles", env=env)
+    assert rerun.returncode == 0, f"the roles step did not run again: {rerun.stderr[-2000:]}"
+    assert _privileges(env) == expected, (
+        "running the roles step again gave back a table privilege the schema "
+        "step withholds")
+
+
 def test_the_edge_keeps_the_private_key_owner_only(running_container):
     """0600 on the key, asserted where the key now lives.
 
@@ -683,32 +743,27 @@ def _upgrade(origin: str, path: str, host: str | None = None) -> int:
     return int(head.split(" ", 2)[1])
 
 
-#: A well-formed uuid that names no case. **The shape matters**: the gateway's
-#: `LIVE_PATH` regex rejects anything that is not a uuid *before* it checks the
-#: origin, so `does-not-exist` answers 404 for every origin and reads as the
-#: probe never arriving.
+#: A case that does not exist. The gateway reads the session before it says
+#: anything about the case a path names, so without a cookie this answers 401
+#: from the install's own origin and 403 from another.
 NO_SUCH_CASE = "/api/cases/00000000-0000-0000-0000-000000000000/live"
 
 
 def test_a_socket_upgrade_survives_the_proxy(running_container):
-    """The forwarded `Host` carries the published port, or every socket dies.
+    """The install's own origin opens a socket through the edge.
 
     Presence, claims, the change fan-out and the report CRDT all ride this
-    handshake, and `LiveGateway.sameOrigin` compares the forwarded `Host`
-    against the browser's `Origin`. `proxy_set_header Host $host` drops the
-    port; `$http_host` keeps it.
+    handshake.
 
     **401, not 200**: this probe carries no cookie, so reaching the session
-    check is the pass. Under a port-stripping proxy the same request answers
-    **403** -- refused as cross-origin before authentication is considered.
-    Measured both ways on this port.
+    check is the pass. A refusal as cross-origin answers **403** before
+    authentication is considered.
     """
     _wait_for_app(HEALTH)
 
     assert _upgrade(f"https://localhost:{PORT}", NO_SUCH_CASE) == 401, (
-        "the upgrade was refused before the session check -- the edge is "
-        "forwarding a Host the browser's Origin cannot match, so every "
-        "WebSocket in the app is dead while every HTTP route answers")
+        "the install's own origin was refused before the session check, so "
+        "every WebSocket in the app is dead while every HTTP route answers")
 
 
 def test_a_socket_upgrade_from_another_origin_is_refused(running_container):

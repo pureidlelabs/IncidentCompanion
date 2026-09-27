@@ -8,14 +8,15 @@
 import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ExportsController } from './exports.controller.js'
 import { ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, systems, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -36,17 +37,17 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const IMPORTER = 'export-analyst'
 
-describe.skipIf(!db)('exporting a collection as CSV', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('exporting a collection as CSV', () => {
   let controller: ExportsController
   let caseId: string
 
   beforeAll(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
-    const collections = new CollectionService(db!)
-    controller = new ExportsController(collections, new ImportService(collections))
+    const collections = as(IMPORTER, new CollectionService(db!, suiteStore()))
+    controller = as(IMPORTER, new ExportsController(collections, new ImportService(collections)))
 
     /**
      * **A real actor, because a refusal test needs the write to be *able* to

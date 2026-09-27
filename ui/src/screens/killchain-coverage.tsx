@@ -80,9 +80,7 @@ export function KillchainCoverageScreen({
   return (
     <Section
       title="Kill chain coverage"
-      meta={
-        <SectionMeta>{`${String(reached)} of ${String(phases.length)} reached`}</SectionMeta>
-      }
+      meta={<SectionMeta>{`${String(reached)} of ${String(phases.length)} reached`}</SectionMeta>}
       read={{
         isPending: busy,
         isError: problem !== undefined,
@@ -141,7 +139,7 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
     // need about 36rem to letter; below that the abbreviations lose characters
     // with no ellipsis to say so, which is a phase name that reads as a
     // different phase. The pane scrolls the page, so the scroller is here.
-    <div className="overflow-x-auto">
+    <div tabIndex={0} className="overflow-x-auto">
       <ol
         data-part="killchain-ribbon"
         aria-label="Kill chain phases reached"
@@ -158,11 +156,11 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
               'text-micro font-semibold whitespace-nowrap',
               phase.observed
                 ? cn(CYCLE_FILL[phase.cycle], 'text-on-severity')
-                // The token, not the token at three quarters. This branch never
-                // inverts -- the observed one carries its own fill and its own
-                // ink -- so an opacity here dims a colour already chosen for
-                // being dim, and makes a sixth grey out of the one.
-                : 'border border-dashed border-border text-ink-muted',
+                : // The token, not the token at three quarters. This branch never
+                  // inverts -- the observed one carries its own fill and its own
+                  // ink -- so an opacity here dims a colour already chosen for
+                  // being dim, and makes a sixth grey out of the one.
+                  'border border-dashed border-border text-ink-muted',
             )}
           >
             {!phase.observed && (

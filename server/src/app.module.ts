@@ -34,6 +34,8 @@ import { HealthModule } from './health/health.module.js'
 import { DocsController } from './docs.controller.js'
 import { OpenApiController, OpenApiStore } from './openapi.controller.js'
 import { ALL_ROUTES, CamelCaseBodyMiddleware } from './wire/camel-case.middleware.js'
+import { CanonicalIdsPipe } from './wire/canonical-ids.pipe.js'
+import { actingAs } from './db/scope.js'
 import { ValidationPipe } from './wire/refusals.js'
 
 @Module({
@@ -90,6 +92,7 @@ import { ValidationPipe } from './wire/refusals.js'
      * whatever shape a client sent.
      */
     { provide: APP_PIPE, useClass: ValidationPipe },
+    { provide: APP_PIPE, useClass: CanonicalIdsPipe },
     /**
      * Parses every `@ZodResponse` route's payload against the schema the
      * reference publishes; undecorated routes pass through untouched.
@@ -116,5 +119,16 @@ export class AppModule implements NestModule {
    */
   configure(consumer: MiddlewareConsumer): void {
     consumer.apply(CamelCaseBodyMiddleware).forRoutes(ALL_ROUTES)
+    /**
+     * **Every request acts as its caller, and nothing else names one.** Read
+     * when a scope opens rather than now, because authentication runs after
+     * middleware; a request no session carries names nobody, and a scope it
+     * opens refuses.
+     */
+    consumer
+      .apply((request: { user?: { id?: string } | null }, _response: unknown, next: () => void) =>
+        actingAs(() => request.user?.id ?? undefined, next),
+      )
+      .forRoutes(ALL_ROUTES)
   }
 }

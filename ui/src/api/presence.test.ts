@@ -15,7 +15,8 @@ const snapshot = (extra: Record<string, unknown> = {}) =>
 describe('readMessage', () => {
   it('reads a roster and its claims', () => {
     const message = snapshot({
-      roster: [{ username: 'r.okonkwo', joined_at: 1, last_seen: 2, connections: 3 }],
+      roster: [{ user_id: 'u-1', username: 'r.okonkwo', joined_at: 1, last_seen: 2,
+                 connections: 3 }],
       claims: [{ table: 'timeline', entry_id: 't-1', username: 'r.okonkwo',
                  session_id: 'ws-1', taken_at: 1 }],
     })
@@ -47,6 +48,18 @@ describe('readMessage', () => {
     // reader that assumed every frame was text would throw on the first
     // keystroke somebody else typed.
     expect(readMessage(new ArrayBuffer(8))).toBeNull()
+  })
+
+  it('drops a roster entry with no string id or name, and keeps the rest', () => {
+    // An entry without `username` draws `initialsOf(undefined)`, and two
+    // without `user_id` compare equal.
+    const whole = { user_id: 'u-1', username: 'r.okonkwo', joined_at: 1, last_seen: 2,
+                    connections: 1 }
+    const read = readMessage(snapshot({
+      roster: [whole, { user_id: 'u-2', joined_at: 1 }, { username: 'a.n.other' },
+               { user_id: 7, username: 'x' }, null, 'u-3'],
+    }))
+    expect(read?.roster).toEqual([whole])
   })
 
   it('survives a roster that is not an array', () => {

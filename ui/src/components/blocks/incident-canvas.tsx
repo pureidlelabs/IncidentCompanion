@@ -19,10 +19,11 @@ import { RowMenuItems, type RowMenuGroup } from '@/components/blocks/row-menu'
 import { GraphCanvas, type GraphViewport } from '@/components/ui/graph-canvas'
 import { Transport } from './transport'
 import { cn } from '@/lib/cn'
+import { Plate } from '@/components/ui/plate'
 import { tokenColour } from '@/lib/tokenColour'
 
 import { heldBackAt, type IncidentGraph, type IncidentNode } from './incident-graph'
-import { KIND_LABEL } from './graph-kinds'
+import { selectionSummary } from './incident-selection'
 import { SEVERITY_TONE, toneOf, type Tone } from './graph-tones'
 
 /**
@@ -752,12 +753,16 @@ export function IncidentCanvas({
   const groups = [...(menuFor?.(menuNode) ?? []), viewGroup].filter((group) => group.length > 0)
 
   return (
-    <div
+    <Plate
       data-part="canvas"
-      className={cn(
-        'relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-surface',
-        className,
-      )}
+      tone="surface"
+      // **`clip` rather than `hidden`, and the cut as well as either.** The
+      // plate's cut stops the paint at the corner and contains nothing, so an
+      // oversized descendant would inflate the pane's scrollable overflow from
+      // inside the box meant to have clipped it -- the defect `section.tsx`
+      // documents. `overflow: clip` contains it without making this a
+      // scrollport, which `hidden` would. -> #914
+      className={cn('isolate min-h-0 min-w-0 flex-1 overflow-clip', className)}
     >
       <div data-part="canvas-surface" className="relative min-h-0 min-w-0 flex-1">
         {/* Sized, never positioned: cytoscape adds `__________cytoscape_container`
@@ -772,8 +777,7 @@ export function IncidentCanvas({
              only one of the three is somebody's cue to go and add an event.
              The failure below says its own thing for the same reason. */
           <p data-part="canvas-empty" className="p-4 text-sm text-ink-muted">
-            Nothing to draw yet. A case gets a graph once its timeline has
-            entries.
+            Nothing to draw yet. A case gets a graph once its timeline has entries.
           </p>
         ) : failed ? (
           /* Only the drawing is replaced. The strip stays: the Nodes list is
@@ -895,11 +899,7 @@ export function IncidentCanvas({
               <Dialog aria-label={picked.label} size="compact">
                 <div data-part="graph-selection" className="p-3">
                   <p className="text-2xs uppercase tracking-micro text-ink-muted">
-                    {picked.kind === 'event' ? 'Event' : (KIND_LABEL[picked.kind] ?? picked.kind)}
-                    {picked.severity && ` \u00b7 ${picked.severity}`}
-                    {picked.count > 1 && ` \u00b7 ${String(picked.count)} together`}
-                    {picked.bridge && ` \u00b7 in ${String(picked.spans)} kinds of event`}
-                    {picked.entry && ' \u00b7 entry point'}
+                    {selectionSummary(picked)}
                   </p>
                   <ul className="mt-1 max-h-56 space-y-0.5 overflow-y-auto text-sm">
                     {picked.members.map((member) => (
@@ -974,7 +974,7 @@ export function IncidentCanvas({
       {onCursor !== undefined && (
         <IncidentTransport nodes={graph.nodes} cursor={cursor} onCursor={onCursor} />
       )}
-    </div>
+    </Plate>
   )
 }
 
@@ -1014,11 +1014,10 @@ function IncidentLegend() {
     },
   ]
   return (
-    <Disclosure
-      data-part="graph-legend"
-      className="rounded-md border border-border bg-surface"
-    >
-      <DisclosureHeader className="text-2xs tracking-micro uppercase">Legend</DisclosureHeader>
+    <Disclosure data-part="graph-legend" className="rounded-md border border-border bg-surface">
+      <DisclosureHeader level={2} className="text-2xs tracking-micro uppercase">
+        Legend
+      </DisclosureHeader>
       <DisclosurePanel>
         <ul className="flex flex-col gap-2">
           {rows.map((row) => (

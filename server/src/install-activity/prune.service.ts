@@ -162,7 +162,7 @@ export class InstallActivityPruneService {
          * direction of the two: an install that cannot write its audit should
          * stop deleting from it.
          */
-        const recorded = await recordInstallActivity(tx as unknown as Database, {
+        const recorded = await recordInstallActivity(tx, {
           event: 'audit_pruned',
           detail: {
             removed: String(count),

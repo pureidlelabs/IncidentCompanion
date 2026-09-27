@@ -8,6 +8,8 @@ import { specsFixture } from '@/fixtures/specs'
 import { ActionsScreen, type ActionWrites } from './actions'
 import { EMPTY_CASE } from '@/fixtures/empty-cases'
 import { inACase } from '@/fixtures/in-a-case'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
+import type { Drawn } from '@/api/rowWrite'
 
 /**
  * The case's task list.
@@ -196,11 +198,11 @@ function never(): ActionWrites {
 /** A container that answers at once, with the rows it stored. */
 function answering(): ActionWrites {
   return {
-    save: fn((entry: ActionEntry | null, fields: Partial<ActionEntry>) =>
+    save: fn((entry: Drawn<ActionEntry> | null, fields: Partial<ActionEntry>) =>
       Promise.resolve({ ...(entry ?? TASKS[0]!), ...fields, id: entry?.id ?? 'ac-stored' }),
     ),
-    patch: fn((ids: readonly string[], fields: Partial<ActionEntry>) =>
-      Promise.resolve(ids.map((id) => ({ ...TASKS[0]!, ...fields, id }))),
+    patch: fn((rows: readonly BulkPatchRow[], fields: Partial<ActionEntry>) =>
+      Promise.resolve(rows.map(({ id }) => ({ ...TASKS[0]!, ...fields, id }))),
     ),
     remove: fn(() => Promise.resolve()),
   }
@@ -208,6 +210,9 @@ function answering(): ActionWrites {
 
 /** The task list's ids, in the order the fixture lists them. */
 const IDS = TASKS.map((row) => row.id)
+
+/** The same rows as a selection reads them: each id with the version it was drawn at. */
+const READ = TASKS.map((row) => ({ id: row.id, version: row.version }))
 
 /**
  * The same screen with something serving it.
@@ -297,7 +302,7 @@ export const RowDeleted: Story = {
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     await expect(args.writes!.remove).toHaveBeenCalledOnce()
-    await expect(args.writes!.remove).toHaveBeenCalledWith([IDS[1]])
+    await expect(args.writes!.remove).toHaveBeenCalledWith([READ[1]])
   },
 }
 
@@ -318,7 +323,7 @@ export const BulkDeleted: Story = {
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     await expect(args.writes!.remove).toHaveBeenCalledOnce()
-    await expect(args.writes!.remove).toHaveBeenCalledWith(IDS)
+    await expect(args.writes!.remove).toHaveBeenCalledWith(READ)
   },
 }
 
@@ -345,6 +350,6 @@ export const BulkEdited: Story = {
     await userEvent.click(await screen.findByRole('option', { name: 'blocked' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
     await expect(args.writes!.patch).toHaveBeenCalledOnce()
-    await expect(args.writes!.patch).toHaveBeenCalledWith([IDS[0], IDS[1]], { status: 'blocked' })
+    await expect(args.writes!.patch).toHaveBeenCalledWith([READ[0], READ[1]], { status: 'blocked' })
   },
 }

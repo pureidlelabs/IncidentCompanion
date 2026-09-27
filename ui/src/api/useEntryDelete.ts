@@ -1,10 +1,11 @@
-/** Remove one row: optimistic filter, DELETE, rollback on failure. */
+/** Remove one row: a DELETE stating the version the analyst read. */
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 
 import { request, type ApiError } from './client'
-import type { CollectionEntry, CollectionName } from './model'
+import type { CollectionName } from './model'
 import { keys } from './queryKeys'
+import { rowKey, writeRow, type Read } from './rowWrite'
 
 export interface EntryRemoval {
   entryId: string
@@ -16,51 +17,33 @@ export interface EntryRemoval {
    * lost update as overwriting it - the difference is that nothing survives to
    * show what went. -> `collections/entities.controller.ts`
    */
-  version: number
+  version: Read
 }
 
 /** The route answers with no body worth reading; the removal is the result. */
 export type Removed = Record<string, never>
 
-interface DeleteRollback<N extends CollectionName> {
-  previous: CollectionEntry[N][] | undefined
-}
-
-export function useEntryDelete<N extends CollectionName>(
+export function useEntryDelete(
   caseId: string,
-  collection: N,
-): UseMutationResult<Removed, ApiError, EntryRemoval, DeleteRollback<N>> {
+  collection: CollectionName,
+): UseMutationResult<Removed, ApiError, EntryRemoval> {
   const client = useQueryClient()
   const listKey = keys.collection(caseId, collection)
 
-  return useMutation<Removed, ApiError, EntryRemoval, DeleteRollback<N>>({
+  return useMutation<Removed, ApiError, EntryRemoval>({
     mutationKey: [...listKey, 'delete'],
 
     // **A query parameter, not a body.** A DELETE with a body is refused or
     // silently dropped by enough of the stack that the route reads it off the
     // URL; `@Query('version')` is what the server declares.
     mutationFn: ({ entryId, version }) =>
-      request<Removed>(
-        `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}/${encodeURIComponent(entryId)}` +
-          `?version=${encodeURIComponent(String(version))}`,
-        { method: 'DELETE' },
+      writeRow(client, rowKey(caseId, collection, entryId), version, (at) =>
+        request<Removed>(
+          `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}/${encodeURIComponent(entryId)}` +
+            `?version=${encodeURIComponent(String(at))}`,
+          { method: 'DELETE' },
+        ),
       ),
-
-    onMutate: async ({ entryId }) => {
-      await client.cancelQueries({ queryKey: listKey })
-      const previous = client.getQueryData<CollectionEntry[N][]>(listKey)
-
-      client.setQueryData<CollectionEntry[N][]>(listKey, (rows) =>
-        rows?.filter((row) => (row as { id: string }).id !== entryId),
-      )
-      return { previous }
-    },
-
-    onError: (_error, _removal, context) => {
-      // The whole snapshot: a delete that fails alongside an edit to another
-      // row must not restore the deleted row and drop the edit.
-      if (context) client.setQueryData(listKey, context.previous)
-    },
 
     onSettled: () => {
       void client.invalidateQueries({ queryKey: listKey })

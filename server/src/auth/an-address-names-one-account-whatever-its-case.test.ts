@@ -4,7 +4,7 @@
  * Every query addressing a user row folds case, through `sameAddress`. The
  * column it folds does not, so two rows whose addresses differ only in case
  * are both matched by each of those queries: `LockoutClearService.clear`
- * updates by that predicate with no limit, so clearing one account's lockout
+ * deletes by that predicate with no limit, so clearing one account's lockout
  * clears the other's, and `hold` takes `.limit(1)` with no ordering, so it
  * holds whichever row the database returns.
  *
@@ -22,11 +22,13 @@
  * Skips rather than fails with no database: a green run proving nothing is
  * worse than an obvious skip.
  */
+import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { openTestPool } from '../../test/database.js'
 import { user } from '../db/schema/auth.js'
+import { signInLockout } from '../db/schema/lockout.js'
 import { LockoutClearService } from './lockout-clear.service.js'
 import { sameAddress } from './same-address.js'
 
@@ -78,41 +80,38 @@ describe.skipIf(!db)('an address', () => {
 
   /**
    * **The write itself, not a count of what it would match.** A lockout is a
-   * brute-force control, the clear updates by the folded predicate with no
+   * brute-force control, the clear deletes by the folded predicate with no
    * limit, and clearing one an administrator did not name is silent.
    */
   it('is cleared for the account named and for no other', async () => {
-    const LOCKED = { failedSignIns: 9, lockedUntil: new Date(Date.now() + 3_600_000) }
     await db!.delete(user).where(sameAddress(OTHER))
     await db!.insert(user).values([
-      { ...rowFor('case-folded-lower', LOWER), ...LOCKED },
-      { ...rowFor('case-folded-other', OTHER), ...LOCKED },
+      rowFor('case-folded-lower', LOWER),
+      rowFor('case-folded-other', OTHER),
     ])
+    const lockedUntil = new Date(Date.now() + 3_600_000)
+    await db!.insert(signInLockout).values(
+      ['case-folded-lower', 'case-folded-other'].flatMap((userId) =>
+        [true, false].map((familiar) => ({ userId, familiar, failures: 9, locks: 2, lockedUntil })),
+      ),
+    )
 
     await new LockoutClearService(db!).clear(UPPER)
 
-    const [named] = await db!
-      .select({ failed: user.failedSignIns })
-      .from(user)
-      .where(sameAddress(LOWER))
-    const [untouched] = await db!
-      .select({ failed: user.failedSignIns, until: user.lockedUntil })
-      .from(user)
-      .where(sameAddress(OTHER))
-
-    expect(named?.failed, 'the account named by the address was not cleared').toBe(0)
+    const runsOf = (userId: string) =>
+      db!.select({ locks: signInLockout.locks }).from(signInLockout).where(eq(signInLockout.userId, userId))
+    expect(await runsOf('case-folded-lower'), 'the account named by the address kept a run').toEqual([])
     expect(
-      untouched?.failed,
+      (await runsOf('case-folded-other')).length,
       'an account nobody named had its lockout cleared, which is the control removed',
-    ).toBe(9)
-    expect(untouched?.until).not.toBeNull()
+    ).toBe(2)
 
     await db!.delete(user).where(sameAddress(OTHER))
   })
 
   /**
    * **What the duplicate costs, stated as the write it corrupts.** The lockout
-   * clear is the sharpest of them: it is a brute-force control, it updates by
+   * clear is the sharpest of them: it is a brute-force control, it deletes by
    * the folded predicate with no limit, and clearing the wrong account's is
    * silent.
    */

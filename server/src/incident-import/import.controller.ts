@@ -16,12 +16,14 @@
 import {
   Body,
   Controller,
+  Get,
   Inject,
   Param,
   ParseUUIDPipe,
   Post,
   UseGuards,
 } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
@@ -31,11 +33,14 @@ import { CasesService } from '../cases/cases.service.js'
 import { asOneAct } from '../db/act.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import type { Env } from '../config/env.js'
 import {
   commitBodySchema,
   importedSchema,
+  platformsSchema,
   previewBodySchema,
   previewResultSchema,
+  type ImportPlatforms,
 } from '../domain/incident-import.js'
 import { ImportService } from './import.service.js'
 import { caseSeverityOf } from './providers/sentinel/severity.js'
@@ -45,16 +50,20 @@ class PreviewBodyDto extends createZodDto(previewBodySchema) {}
 class PreviewResultDto extends createZodDto(previewResultSchema) {}
 class CommitBodyDto extends createZodDto(commitBodySchema) {}
 class IncidentImportedDto extends createZodDto(importedSchema) {}
+class ImportPlatformsDto extends createZodDto(platformsSchema) {}
 
 /**
  * The start door's body: an import, plus what the case is called.
  *
- * **The fields the incident can seed, plus the one it cannot.** Sentinel names
+ * **The field the incident can seed, and the ones it cannot.** Sentinel names
  * an incident rather than an engagement, so the title and the customer are the
- * analyst's to give -- but the reference and the first activity are the
- * incident's own, and a case created without them loses what the provider
- * already knew. The client seeds them and the analyst may correct them; either
- * way they arrive here.
+ * analyst's to give -- but the first activity is the incident's own, and a
+ * case created without it loses when the incident actually started.
+ *
+ * **A reference is accepted and never seeded.** It is unique within its
+ * customer, so one taken from an incident's number lets that incident start
+ * exactly one case and refuses every later attempt as the case is written.
+ * -> #882
  *
  * **`severity` is not among them.** It is derived from `incidents`, already in
  * this body, by the mapper that owns the provider's words -- so a caller
@@ -129,7 +138,19 @@ export class StartImportController {
     private readonly imports: ImportService,
     private readonly cases: CasesService,
     @Inject(DATABASE) private readonly db: Database,
+    private readonly config: ConfigService<Env, true>,
   ) {}
+
+  /** Which platforms the client may offer to import from, as the operator set them. */
+  @Get()
+  @ZodResponse({
+    status: 200,
+    type: ImportPlatformsDto,
+    description: 'The detection platforms this install imports from.',
+  })
+  platforms(): ImportPlatforms {
+    return { sentinel: this.config.get('IC_IMPORTERS', { infer: true }).includes('sentinel') }
+  }
 
   /**
    * What an incident would become in a case that does not exist yet.

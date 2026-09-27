@@ -17,13 +17,14 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
-import { cases } from '../db/schema/index.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
+import { cases, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 /**
  * Every collection the client asks for, `reports` and `report_blocks`
@@ -69,12 +70,20 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/** Reads the demos, which sit under the default customer every account reaches. */
+const READER = 'entities-reader'
+
 describe.skipIf(!db)('the entity collections serve their rows', () => {
   let caseId: string
 
   beforeAll(async () => {
+    const now = new Date()
+    await seed!
+      .insert(user)
+      .values({ id: READER, name: READER, email: `${READER}@example.test`, emailVerified: true, createdAt: now, updatedAt: now })
+      .onConflictDoNothing()
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
   })
@@ -106,7 +115,7 @@ describe.skipIf(!db)('the entity collections serve their rows', () => {
       controller as new (s: CollectionService) => {
         list(id: string): Promise<unknown[]>
       }
-    )(new CollectionService(db!))
+    )(as(READER, new CollectionService(db!, suiteStore())))
     expect(await instance.list(caseId)).toHaveLength(expected)
   })
 
@@ -124,7 +133,7 @@ describe.skipIf(!db)('the entity collections serve their rows', () => {
     const accountsController = ENTITY_CONTROLLERS.find(
       (c) => Reflect.getMetadata(PATH_METADATA, c) === 'api/cases/:caseId/accounts',
     )!
-    const service = new CollectionService(db!)
+    const service = as(READER, new CollectionService(db!, suiteStore()))
     const rows = (await new (
       accountsController as new (s: CollectionService) => {
         list(id: string): Promise<Record<string, unknown>[]>

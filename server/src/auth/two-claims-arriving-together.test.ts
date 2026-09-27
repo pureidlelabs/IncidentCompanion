@@ -13,13 +13,9 @@
  * two callers arriving at once produce one winner, and nothing about that is
  * visible to a test that calls once.
  *
- * **What this does not cover, and the reason is recorded rather than assumed:**
- * the whole claim through the HTTP door. That needs an install holding no
- * accounts, and this suite runs against a database that already holds the
- * personas every other file depends on -- which is why three scenarios under
- * this requirement stay undemonstrated. `claiming-an-install.test.ts` states
- * the same gap. What is asserted here is the step those three turn on, and
- * that the controller asks it before it promotes anybody.
+ * The whole claim through the HTTP door is
+ * `test/two-claims-leave-one-account-and-one-session.test.ts`; this holds the
+ * step it turns on.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq } from 'drizzle-orm'

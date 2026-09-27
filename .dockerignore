@@ -12,6 +12,8 @@ docs
 .pytest_cache
 .ruff_cache
 *.iccase
+# A copy of an install: every case, artefact and password hash. -> docker/backup.sh
+backups
 # The ui build stage needs ui/ sources only; these three are regenerated
 # inside the stage or not needed, and node_modules alone is hundreds of MB
 # of context upload. Excluding ui/dist also means the stage can never COPY a

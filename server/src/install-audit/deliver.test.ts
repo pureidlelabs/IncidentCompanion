@@ -22,7 +22,7 @@ import {
   installActivity,
   installActivityDelivery,
 } from '../db/schema/install-activity.js'
-import { asRole, openTestPool } from '../../test/database.js'
+import { asRole, hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -85,7 +85,7 @@ function collector() {
 const label = (prefix: string) =>
   `${prefix}-${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
 
-describe.skipIf(!db)('delivering the audit', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('delivering the audit', () => {
   const far = collector()
   let delivery: InstallActivityDelivery
 

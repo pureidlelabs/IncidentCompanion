@@ -6,12 +6,7 @@ import { refOptions } from '@/api/refOptions'
 import { fieldsOf, formSpec, sectionsOf, type FieldSpec } from '@/api/specs'
 import { FieldControl } from '@/components/blocks/field-control'
 import { FieldRow, summarise } from '@/components/blocks/field-row'
-import {
-  FoldedGroups,
-  FormCell,
-  FormSection,
-  spansRow,
-} from '@/components/blocks/form-section'
+import { FoldedGroups, FormCell, FormSection, spansRow } from '@/components/blocks/form-section'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 import { narrow } from '@/fixtures/viewport'
@@ -101,7 +96,6 @@ function columnsDrawn(root: HTMLElement): number {
   return cells.filter((cell) => Math.round(cell.getBoundingClientRect().top) === firstRow).length
 }
 
-
 /**
  * Three across, which is what a group of short numeric fields wants.
  *
@@ -173,11 +167,7 @@ export const AFieldSpanningTheRow: Story = {
     title: 'Scale',
     columns: 2,
     children: (
-      <Fields
-        form={impactForm}
-        names={['subjectCount', 'recordCount', 'notes']}
-        draft={IMPACT}
-      />
+      <Fields form={impactForm} names={['subjectCount', 'recordCount', 'notes']} draft={IMPACT} />
     ),
   },
 }
@@ -270,9 +260,10 @@ export const Folded: Story = {
 export const FoldOpen: Story = {
   name: 'The same fold, opened',
   play: async ({ canvasElement }) => {
-    await expect(
-      canvasElement.querySelector('[data-fold="Classification"]'),
-    ).toHaveAttribute('aria-expanded', 'true')
+    await expect(canvasElement.querySelector('[data-fold="Classification"]')).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
   },
   args: {
     title: 'Classification',
@@ -418,14 +409,14 @@ export const PlateWithAHeading: Story = {
     // Nothing between the plate's edge and its grid carries a rule. Walked
     // rather than guessed at: the class sits on a wrapper `closest` does not
     // reach from the heading's own element.
-    const plateEl = canvasElement.querySelector('[aria-label="Identity"]')!
+    const plateEl = canvasElement.querySelector('[data-part="form-section"]')!
     for (const child of plateEl.children) {
       await expect(getComputedStyle(child).borderBottomWidth).toBe('0px')
     }
     await expect(heading.textContent).toBe('Identity')
 
     // And the plate around it still has its edge.
-    const plate = canvasElement.querySelector('[aria-label="Identity"]')!
+    const plate = canvasElement.querySelector('[data-part="form-section"]')!
     await expect(Number.parseFloat(getComputedStyle(plate).borderBottomWidth)).toBeGreaterThan(0)
   },
 }
@@ -456,9 +447,7 @@ export const TooMuchData: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const bound = canvasElement
-      .querySelector('[data-testid="bounded"]')!
-      .getBoundingClientRect()
+    const bound = canvasElement.querySelector('[data-testid="bounded"]')!.getBoundingClientRect()
     const cells = [...canvasElement.querySelectorAll('[data-part="form-cell"]')]
 
     // A form worth calling a volume, not three fields called one.

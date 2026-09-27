@@ -12,9 +12,9 @@
  * routes is Better Auth's own rules, production-gated, which a suite outside
  * production cannot reach without changing what it is testing.
  *
- * **`/api/health` is chosen because it needs no session.** A 401 and a 429 both
+ * **`/api/setup` is chosen because it needs no session.** A 401 and a 429 both
  * being refusals, a route that also refuses anonymously would leave the test
- * unable to say which control answered.
+ * unable to say which control answered. Health is not one: it skips every tier.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -41,9 +41,13 @@ describe.skipIf(!(await bootable()))('a caller asking faster than the install pe
    * anything.
    */
   const rush = (n: number) =>
-    Promise.all(Array.from({ length: n }, () => fetch(`${harness!.base}/api/health`)))
+    Promise.all(Array.from({ length: n }, () => fetch(`${harness!.base}/api/setup`)))
 
   it('lets the permitted number through and refuses the rest', async () => {
+    // The exact count is the claim, so the window has to be empty: the other
+    // cases here rush the same endpoint and their allowance is still spent.
+    await new Promise((wake) => setTimeout(wake, BURST.ttl + 250))
+
     const answers = await rush(BURST.limit * 3)
 
     const allowed = answers.filter((one) => one.status === 200)

@@ -24,8 +24,8 @@ import type { BulkTarget, Collection } from '../domain/collections.js'
  * Rows whose reference an analyst could still release, per holder collection.
  *
  * **A reference nobody can remove is not one worth refusing over.** A block in
- * a sent report cannot be deleted or edited -- `refuseWritesToSentReport`
- * turns both away -- so counting it leaves the analyst with a delete that is
+ * a sent report cannot be deleted or edited -- the store turns both away --
+ * so counting it leaves the analyst with a delete that is
  * refused, a holder they cannot reach, and no way out. The reference is inert
  * besides: a sent report is painted from its frozen tree and its figure is
  * fetched by hash from the evidence store, so the row being refused over is
@@ -35,7 +35,7 @@ import type { BulkTarget, Collection } from '../domain/collections.js'
  * counted -- which is why the collection is scoped rather than dropped.
  *
  * Only the report tier has rows that close, so this is one entry rather than a
- * table. -> `collection.service.ts`, which says the same of `refuseIfClosed`.
+ * table. -> `db/schema/store-guards.ts`
  */
 function releasable(collection: Collection): SQL | undefined {
   if (collection !== 'report_blocks') return undefined

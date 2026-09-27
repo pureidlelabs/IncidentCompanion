@@ -145,7 +145,10 @@ export function FilterPicker({
         {active > 0 && <span className="tabular-nums">{active}</span>}
       </Button>
       <Popover placement="bottom start" className="w-72">
-        <ScrollArea className="max-h-80 p-2">{children}</ScrollArea>
+        {/* The rows inside take focus already, so a stop on the box is noise. */}
+        <ScrollArea tabIndex={-1} className="max-h-80 p-2">
+          {children}
+        </ScrollArea>
       </Popover>
     </DialogTrigger>
   )
@@ -234,9 +237,7 @@ export function FilterBarEnd({ children }: { children: ReactNode }) {
 export function PickerGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <>
-      <p className="px-2 pb-1 pt-1 text-2xs uppercase tracking-micro text-ink-muted">
-        {label}
-      </p>
+      <p className="px-2 pb-1 pt-1 text-2xs uppercase tracking-micro text-ink-muted">{label}</p>
       {children}
     </>
   )

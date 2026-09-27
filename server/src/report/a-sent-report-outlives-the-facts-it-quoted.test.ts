@@ -25,16 +25,19 @@
 import { and, asc, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { cases, impact, reportBlocks, reports, timeline, user } from '../db/schema/index.js'
 import { ProseService } from '../prose/prose.service.js'
+import { sentReportRefusal } from './freeze.js'
 import { ReportLifecycleService } from './lifecycle.service.js'
 import { ReportRenderService } from './render.service.js'
 import { english } from './document/packs.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -72,7 +75,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
  */
 const DERIVED_KINDS = ['case_header', 'metrics', 'timeline', 'impact'] as const
 
-describe.skipIf(!db)('a sent report, when the case moves under it', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a sent report, when the case moves under it', () => {
   let render: ReportRenderService
   let lifecycle: ReportLifecycleService
   let caseId: string
@@ -124,10 +127,10 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
       })
       .onConflictDoNothing()
 
-    const cases_ = new CasesService(db!, {
+    const cases_ = as(actorId, new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
+    } as never))
     const row = await cases_.create(
       { title: 'Mailbox exfiltration', severity: 'medium' },
       actorId,
@@ -147,14 +150,14 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
       disposition: 'exposed',
     })
 
-    const prose = new ProseService(db!)
-    render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
-    lifecycle = new ReportLifecycleService(
+    const prose = as(actorId, new ProseService(db!))
+    render = as(actorId, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
+    lifecycle = as(actorId, new ReportLifecycleService(
       db!,
       { entry: () => Promise.resolve(undefined) } as never,
       render,
       prose,
-    )
+    ))
 
     sentId = await reportOf('Filed with the authority')
     draftId = await reportOf('Still being written')
@@ -166,8 +169,11 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
   })
 
   it('draws a section per block before either report is sent', async () => {
-    const sent = (await documentOf(sentId)) as { sections: unknown[] }
-    expect(sent.sections).toHaveLength(DERIVED_KINDS.length)
+    // Its own report: the case below sends the filed one, and what this
+    // asserts is the shape of one that has not been sent.
+    const unsent = await reportOf('Not filed with anybody')
+    const drawn = (await documentOf(unsent)) as { sections: unknown[] }
+    expect(drawn.sections).toHaveLength(DERIVED_KINDS.length)
   })
 
   /**
@@ -178,10 +184,13 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
    * would fail for a reason that is not the one on trial.
    */
   it('holds the filed document unchanged while the draft moves', async () => {
-    const filedBefore = await documentOf(sentId)
+    // Its own report to file: sending is one-way, and the case below sends
+    // the one the file made.
+    const filed = await reportOf('Filed while the case moves')
+    const filedBefore = await documentOf(filed)
     const draftBefore = await documentOf(draftId)
 
-    await lifecycle.send(caseId, sentId, actorId, 'en')
+    await lifecycle.send(caseId, filed, actorId, 'en')
 
     await seed!.insert(timeline).values({
       caseId,
@@ -204,22 +213,26 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
     // any section, and the assertion below would hold on a re-rendering server.
     expect(await documentOf(draftId)).not.toEqual(draftBefore)
 
-    const filedAfter = await render.render(caseId, sentId, 'en')
+    const filedAfter = await render.render(caseId, filed, 'en')
     expect(filedAfter.frozen).toBe(true)
     expect(filedAfter.document_).toEqual(filedBefore)
   })
 
-  it('paints the filed report with its own blocks deleted', async () => {
-    await seed!
-      .delete(reportBlocks)
-      .where(and(eq(reportBlocks.caseId, caseId), eq(reportBlocks.reportId, sentId)))
+  it('keeps its own blocks, which even the seeding role cannot delete, and paints the frozen tree', async () => {
+    // Frozen is the premise: the case above sends it.
+    await lifecycle.send(caseId, sentId, actorId, 'en').catch(() => undefined)
+    const held = () =>
+      seed!
+        .select()
+        .from(reportBlocks)
+        .where(and(eq(reportBlocks.caseId, caseId), eq(reportBlocks.reportId, sentId)))
+        .orderBy(asc(reportBlocks.position))
+    const before = await held()
 
-    const remaining = await seed!
-      .select()
-      .from(reportBlocks)
-      .where(and(eq(reportBlocks.caseId, caseId), eq(reportBlocks.reportId, sentId)))
-      .orderBy(asc(reportBlocks.position))
-    expect(remaining).toHaveLength(0)
+    await expect(
+      seed!.delete(reportBlocks).where(and(eq(reportBlocks.caseId, caseId), eq(reportBlocks.reportId, sentId))),
+    ).rejects.toSatisfy((error) => sentReportRefusal(error) !== undefined)
+    expect(await held()).toEqual(before)
 
     const painted = await render.render(caseId, sentId, 'en')
     expect(painted.frozen).toBe(true)

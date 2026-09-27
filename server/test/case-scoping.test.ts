@@ -9,12 +9,10 @@
  * row-level security would comply. The database defends against forgetting;
  * only the route can get the answer wrong.
  *
- * **There is no membership rule to test, and that is deliberate**: any signed-in
- * analyst may open any case, because several analysts work one case at once.
- * `CaseAccessGuard` answers 404 for a case that does not exist and says in its
- * own comment that 403 would be a fact about someone else's case. So the
- * property worth asserting is not *who* may read a case - it is that reading
- * one case never returns another's rows.
+ * **Who may read a case is asserted elsewhere**, at the route and in the store
+ * (`a-route-that-forgets-its-guard-serves-nothing.test.ts`). This asserts that
+ * reading one case, as somebody who reaches both, never returns the other's
+ * rows.
  *
  * Run against the demo cases, which the suite's database already carries fully
  * populated, so the sweep needs no fixtures of its own and covers real content.

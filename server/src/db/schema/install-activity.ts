@@ -30,6 +30,7 @@ import {
 import { sql } from 'drizzle-orm'
 
 import { user } from './auth.js'
+import { proseAudited } from './scoped.js'
 
 /**
  * What happened. One value per thing this install can have done to it.
@@ -94,6 +95,7 @@ export const installEvent = pgEnum('install_event', [
   // takes the only copy, so an unrecorded prune makes a gap in the audit
   // indistinguishable from a period when nothing happened.
   'audit_pruned',
+  'familiar_addresses_pruned',
   'setting_changed',
   'account_created',
   'account_disabled',
@@ -194,6 +196,7 @@ export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], Instal
   // Beside the retention change it enacts, so the setting and its effect are
   // read in one stream.
   audit_pruned: 'operations',
+  familiar_addresses_pruned: 'operations',
   // **Administration, because somebody decided it.** The retention change
   // predates this and stays in operations; a new one would not be filed
   // there, and moving it would rewrite what old lines mean.
@@ -270,7 +273,7 @@ const operationalRetention = sql`nullif(current_setting('app.operational_retenti
  * anyone holding `ic_migrate` or the superuser, who can drop the policy; an
  * audit that cannot be removed by its own owner is not something Postgres
  * offers. `TRUNCATE` is a table privilege that row-level security never sees,
- * and its absence from `docker/db/roles.sql` is load-bearing.
+ * and its absence from `grants.ts` is load-bearing.
  *
  * `ic_seed` gets no delete policy at all, which is what stops a demo rebuild
  * taking the audit with the cases it is replacing.
@@ -456,6 +459,7 @@ export const installActivity = pgTable(
     // cursor, ascending, within one log.
     index('install_activity_channel_seq_idx').on(table.channel, table.seq),
     ...appendOnly(),
+    proseAudited(table.detail, table.actorId),
   ],
 )
 

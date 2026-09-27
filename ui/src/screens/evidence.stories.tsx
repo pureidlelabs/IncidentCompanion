@@ -8,6 +8,8 @@ import { specsFixture } from '@/fixtures/specs'
 import { inACase } from '@/fixtures/in-a-case'
 import { EvidenceScreen, type EvidenceWrites } from './evidence'
 import { EMPTY_CASE } from '@/fixtures/empty-cases'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
+import type { Drawn } from '@/api/rowWrite'
 
 /**
  * The evidence register.
@@ -220,17 +222,20 @@ const NEVER: EvidenceWrites = {
 
 /** A container that answers at once, with the row it stored. */
 const ANSWERS: EvidenceWrites = {
-  save: fn((entry: EvidenceEntry | null, fields: Partial<EvidenceEntry>) =>
+  save: fn((entry: Drawn<EvidenceEntry> | null, fields: Partial<EvidenceEntry>) =>
     Promise.resolve({ ...(entry ?? campaignCase.evidence[0]!), ...fields, id: 'ev-stored' }),
   ),
-  patch: fn((ids: readonly string[], fields: Partial<EvidenceEntry>) =>
-    Promise.resolve(ids.map((id) => ({ ...campaignCase.evidence[0]!, ...fields, id }))),
+  patch: fn((rows: readonly BulkPatchRow[], fields: Partial<EvidenceEntry>) =>
+    Promise.resolve(rows.map(({ id }) => ({ ...campaignCase.evidence[0]!, ...fields, id }))),
   ),
   remove: fn(() => Promise.resolve()),
 }
 
 /** The register's ids, in the order the fixture lists them. */
 const IDS = campaignCase.evidence.map((row) => row.id)
+
+/** The same rows as a selection reads them: each id with the version it was drawn at. */
+const READ = campaignCase.evidence.map((row) => ({ id: row.id, version: row.version }))
 
 /** Served and quiet: nothing in flight, so it reads exactly like the gallery. */
 export const Served: Story = {
@@ -255,7 +260,7 @@ export const Writing: Story = {
     await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     // The first row's own id and nothing else. A screen deleting by position
     // rather than by id dims the same row and empties the same line.
-    await expect(args.writes!.remove).toHaveBeenCalledWith([IDS[0]])
+    await expect(args.writes!.remove).toHaveBeenCalledWith([READ[0]])
   },
 }
 
@@ -353,7 +358,7 @@ export const BulkDeleted: Story = {
     await userEvent.click(await canvas.findByRole('button', { name: /^Delete \d+$/ }))
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
-    await expect(args.writes!.remove).toHaveBeenCalledWith(IDS)
+    await expect(args.writes!.remove).toHaveBeenCalledWith(READ)
   },
 }
 
@@ -374,6 +379,8 @@ export const BulkEdited: Story = {
     await userEvent.click(within(dialog).getByRole('button', { name: /Type/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'disk image' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
-    await expect(args.writes!.patch).toHaveBeenCalledWith([IDS[0], IDS[1]], { type: 'disk image' })
+    await expect(args.writes!.patch).toHaveBeenCalledWith([READ[0], READ[1]], {
+      type: 'disk image',
+    })
   },
 }

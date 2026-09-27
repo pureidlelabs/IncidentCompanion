@@ -142,15 +142,7 @@ export interface FormSpec<TData = Record<string, unknown>> {
   columns: number
   /** Descriptors and section markers, interleaved in render order. */
   fields: readonly FormEntry<TData>[]
-  /**
-   * A whole row of this form's collection with nothing filled in.
-   *
-   * **What an optimistic append is built on.** A create dialog drops every
-   * blank before it posts, so a cache row spread from the submitted fields
-   * alone is *missing* whatever the analyst left empty - and one
-   * `entry.someField.trim()` takes the section to the error boundary with zero
-   * rows showing. -> `optimisticRow.ts`
-   */
+  /** A whole row of this form's collection with nothing filled in. */
   blank: Readonly<Record<string, unknown>>
 }
 

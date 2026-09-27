@@ -16,12 +16,14 @@
  * what a level permits -- and a model that answered correctly while the guard
  * consulted `role` would pass every case there.
  */
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CaseAccessGuard } from './case-access.guard.js'
+import { CasesService } from '../cases/cases.service.js'
+import { as } from '../../test/acting.js'
 import { GroupsService } from './groups.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { ReachService } from './reach.service.js'
@@ -30,6 +32,7 @@ import { customers } from '../db/schema/customer.js'
 import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
 import { user } from '../db/schema/auth.js'
 import { openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -44,7 +47,10 @@ const ADMIN = 'plane-separation-admin'
 
 const asking = (caseId: string) =>
   ({
+    getHandler: () => () => undefined,
     switchToHttp: () => ({
+      // The refusal is recorded once the answer closes, which these never do.
+      getResponse: () => ({ once: () => undefined }),
       getRequest: () => ({
         params: { caseId },
         method: 'GET',
@@ -57,13 +63,16 @@ const asking = (caseId: string) =>
 describe.skipIf(!db)('an administrator who is in no group', () => {
   let guard: CaseAccessGuard
   let groupsService: GroupsService
+  let casesService: CasesService
   let caseId: string
+  let unattributed: string
   let customerId: string
   let sector: string
 
   beforeAll(async () => {
-    guard = new CaseAccessGuard(db!, new ReachService(db!), new InstallActivityService(db!))
+    guard = new CaseAccessGuard(new ReachService(db!), new InstallActivityService(db!))
     groupsService = new GroupsService(db!)
+    casesService = new CasesService(db!, suiteStore())
 
     const now = new Date()
     await seed!
@@ -102,10 +111,22 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
       })
       .returning({ id: cases.id })
     caseId = made!.id
+
+    // The control for the list: a case attributed to nobody is the default
+    // customer's, so it is offered whatever this administrator is granted.
+    const [nobodys] = await seed!
+      .insert(cases)
+      .values({
+        title: 'A case attributed to nobody',
+        createdBy: ADMIN,
+        updatedBy: ADMIN,
+      })
+      .returning({ id: cases.id })
+    unattributed = nobodys!.id
   }, 90_000)
 
   afterAll(async () => {
-    await seed!.delete(cases).where(eq(cases.id, caseId))
+    await seed!.delete(cases).where(inArray(cases.id, [caseId, unattributed]))
     await seed!.delete(groupMembers)
     await seed!.delete(groupCustomers)
     await seed!.delete(groups).where(eq(groups.id, sector))
@@ -114,6 +135,10 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
   })
 
   it('is refused the case, being an administrator and nothing else', async () => {
+    // The cases below grant this membership; being in no group is this one's
+    // subject rather than the state it happens to start in.
+    await groupsService.revoke(sector, ADMIN)
+
     const refused = await guard.canActivate(asking(caseId)).catch((why: unknown) => why)
 
     expect(
@@ -132,6 +157,7 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
    * one, and the product's answer is the record rather than a restriction.
    */
   it('reaches the same case once it has granted itself the reach', async () => {
+    await groupsService.revoke(sector, ADMIN)
     await groupsService.grant(sector, ADMIN, 'read')
 
     expect(
@@ -154,9 +180,10 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
    * `a-revocation-reaches-an-open-session.test.ts` holds that.
    */
   it('stops reaching it the moment the membership is revoked', async () => {
+    await groupsService.grant(sector, ADMIN, 'read')
     expect(
       await guard.canActivate(asking(caseId)),
-      'the grant from the previous case did not survive into this one',
+      'the grant did not take, so the refusal below cannot be attributed to the revocation',
     ).toBe(true)
 
     await groupsService.revoke(sector, ADMIN)
@@ -166,5 +193,30 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
       refused,
       'the case was still served after the membership that reached it was revoked',
     ).not.toBe(true)
+  })
+
+  it("is offered no such case by the list either, and the default customer's regardless", async () => {
+    await groupsService.revoke(sector, ADMIN)
+
+    const offered = (await as(ADMIN, casesService).list()).map((row) => row.id)
+
+    expect(
+      offered,
+      'the list handed an administrator in no group a case they are refused by id',
+    ).not.toContain(caseId)
+    expect(
+      offered,
+      "a case attributed to nobody is the default customer's, which every analyst reaches",
+    ).toContain(unattributed)
+  })
+
+  it('is offered it by the list once it has granted itself the reach', async () => {
+    await groupsService.revoke(sector, ADMIN)
+    await groupsService.grant(sector, ADMIN, 'read')
+
+    expect(
+      (await as(ADMIN, casesService).list()).map((row) => row.id),
+      'the grant did not take, so the absence above cannot be attributed to reach',
+    ).toContain(caseId)
   })
 })

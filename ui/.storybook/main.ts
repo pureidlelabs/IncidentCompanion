@@ -1,4 +1,32 @@
+import { realpathSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import type { StorybookConfig } from '@storybook/react-vite'
+import { mergeConfig, searchForWorkspaceRoot, type Plugin } from 'vite'
+
+/**
+ * Lets the browser keep a font file across story navigations.
+ *
+ * The dev server sends no validator for one, so a walk that navigates per
+ * story refetches it every time -- and the file is content-addressed by its
+ * own name, so it can be held for as long as the browser likes. -> #1069
+ *
+ * Registered before Vite's own middlewares, which is where a header has to be
+ * set to reach the static response.
+ */
+function cacheTheFont(): Plugin {
+  return {
+    name: 'incidentcompanion:cache-the-font',
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        if (/\.(?:woff2?|ttf|otf)(?:\?|$)/.test(request.url ?? '')) {
+          response.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+        }
+        next()
+      })
+    },
+  }
+}
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(ts|tsx)', '../src/**/*.mdx'],
@@ -8,6 +36,27 @@ const config: StorybookConfig = {
   // story renders from `src/fixtures/`; a story needing the API is a story
   // that cannot be opened in the morning.
   staticDirs: [],
+  /**
+   * Serves the product's own font when `node_modules` is a symlink.
+   *
+   * Vite resolves the asset to its real path, which in a worktree is outside
+   * the tree and refused by `server.fs` -- so the gallery renders in a
+   * fallback face and every text measurement the visual tier takes is of a
+   * font nobody ships. Naming `allow` turns the automatic workspace lookup
+   * off, so `searchForWorkspaceRoot` puts it back.
+   */
+  viteFinal: (config) =>
+    mergeConfig(config, {
+      server: {
+        fs: {
+          allow: [
+            searchForWorkspaceRoot(process.cwd()),
+            realpathSync(resolve(process.cwd(), '..', 'node_modules')),
+          ],
+        },
+      },
+      plugins: [cacheTheFont()],
+    }),
   /**
    * **The props table is generated from the types, not written twice.**
    *

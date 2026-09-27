@@ -26,7 +26,7 @@ class Relay {
   /** Every message the relay was given, for asserting what went on the wire. */
   readonly sent: { from: number; message: Message }[] = []
   /** The authoritative document, as `ProseService` holds one per field. */
-  readonly doc = new Y.Doc({ gc: false })
+  readonly doc = new Y.Doc()
   /** The row's markdown, which the server seeds a cold document from. */
   row: string | null = null
   private seeded = false
@@ -63,12 +63,6 @@ class Relay {
     readSyncMessage(decoding.createDecoder(bytes), reply, this.doc, 'relay')
     if (encoding.length(reply) > 0) {
       this.send(from, field, encoding.toUint8Array(reply))
-    }
-    // Its own step 1 in answer to a step 1, so it learns what the client has.
-    if (bytes[0] === 0) {
-      const ask = encoding.createEncoder()
-      writeSyncStep1(ask, this.doc)
-      this.send(from, field, encoding.toUint8Array(ask))
     }
     // What the transaction added goes to everyone else.
     const diff = Y.encodeStateAsUpdate(this.doc, before)
@@ -213,6 +207,19 @@ describe('opening a field', () => {
     channel.destroy()
   })
 
+  it('hands over what was typed while the socket was down', () => {
+    // The relay never asks for it, so only the client offering it can pass.
+    const link = relay.link()
+    const channel = new ProseChannel(link, FIELD)
+    link.up()
+    link.down()
+    type(channel, 'typed while disconnected')
+    link.up()
+
+    expect(relay.doc.getText('body').toJSON()).toBe('typed while disconnected')
+    channel.destroy()
+  })
+
   it('ignores a message for a different field', () => {
     const channel = connected()
     const before = channel.doc.getXmlFragment('default').toJSON()
@@ -340,10 +347,7 @@ describe('joining a document', () => {
   })
 
   it('tells the server nothing it did not already have', () => {
-    // A caught-up client still answers the server's step 1, with the empty
-    // update - four bytes, and standard. What must not happen is it handing
-    // back a copy of what it was just sent, which is a whole document on the
-    // wire every time anyone opens a section.
+    // A joining client offers what it holds, which is nothing yet.
     const first = connected()
     type(first, 'shared')
     const before = Y.encodeStateVector(relay.doc)
@@ -420,40 +424,6 @@ describe('after destroy', () => {
     channel.destroy()
 
     expect(relay.sent.filter((s) => s.message.type === 'prose.sync')).toEqual([])
-  })
-})
-
-describe('history', () => {
-  /**
-   * **Garbage collection is silent and one-way.** A `Y.Doc` collects deleted
-   * content on the transaction that deletes it, so a document built with the
-   * default `gc: true` has no past to return - and flipping the flag later
-   * recovers nothing already dropped. Both tests below fail on a default
-   * document, one by throwing and one by returning the wrong text.
-   */
-  it('reconstructs a past state after the text was deleted', () => {
-    const channel = connected()
-    type(channel, 'the initial finding was a false positive')
-    const past = Y.snapshot(channel.doc)
-    channel.doc.getText('body').delete(0, 12)
-
-    expect(Y.createDocFromSnapshot(channel.doc, past).getText('body').toJSON())
-      .toBe('the initial finding was a false positive')
-    channel.destroy()
-  })
-
-  it('keeps the deleted content in what the server was sent', () => {
-    // The wire copy is the one that matters: a collected document exports a
-    // record with the history already missing, so every later reader inherits
-    // the loss whatever flag *they* open with.
-    const channel = connected()
-    type(channel, 'the initial finding was a false positive')
-    const past = Y.snapshot(channel.doc)
-    channel.doc.getText('body').delete(0, 12)
-
-    expect(Y.createDocFromSnapshot(relay.doc, past).getText('body').toJSON())
-      .toBe('the initial finding was a false positive')
-    channel.destroy()
   })
 })
 

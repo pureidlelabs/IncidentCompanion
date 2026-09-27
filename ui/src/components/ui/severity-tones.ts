@@ -63,13 +63,10 @@ const TONE_OF: ReadonlyMap<string, SeverityTone> = new Map([['informational', 'i
 /**
  * The tone a severity word resolves to.
  *
- * **Takes the value defensively, though the type says `string`.** An
- * optimistic row is the fields the dialog sent and nothing else, so a timeline
- * entry can reach here mid-flight with no `severity` at all - and
- * `undefined.trim()` takes the whole SPA to React Router's error boundary
- * ("Unexpected Application Error!"), not just the row. The server refuses the
- * write correctly either way; the crash is the client rendering its own
- * optimistic guess.
+ * **Takes the value defensively, though the type says `string`.** An activity
+ * reaches here with no `severity` at all -- the key is absent on the wire --
+ * and `undefined.trim()` takes the whole SPA to React Router's error boundary
+ * ("Unexpected Application Error!"), not just the row.
  *
  * `none` is the documented answer for a value that is not a known tone, and a
  * missing value is one of those.
@@ -77,6 +74,17 @@ const TONE_OF: ReadonlyMap<string, SeverityTone> = new Map([['informational', 'i
 export function toneFor(severity: string | null | undefined): SeverityTone {
   const key = (severity ?? '').trim().toLowerCase()
   return TONE_OF.get(key) ?? (Object.hasOwn(TONE_CLASS, key) ? (key as SeverityTone) : 'none')
+}
+
+/**
+ * What a severity reads as, which for an empty one is a word rather than a
+ * blank chip.
+ *
+ * Beside `toneFor` because the two answer the same question about the same
+ * value.
+ */
+export function severityLabel(severity: string | null | undefined): string {
+  return (severity ?? '').trim() || 'unset'
 }
 
 /**
@@ -130,6 +138,18 @@ export const TONE_INK: Record<FieldTone, string> = {
   info: 'text-severity-info',
   none: 'text-severity-none',
   done: 'text-action-contain',
+}
+
+/** The tones as a custom property, for a surface painting its own stripe: a
+ * gradient takes a colour value and a `bg-*` class is not one. */
+export const TONE_STRIPE: Record<FieldTone, string> = {
+  critical: '[--tone-stripe:var(--severity-critical-type)]',
+  high: '[--tone-stripe:var(--severity-high)]',
+  medium: '[--tone-stripe:var(--severity-medium)]',
+  low: '[--tone-stripe:var(--severity-low-type)]',
+  info: '[--tone-stripe:var(--severity-info)]',
+  none: '[--tone-stripe:var(--severity-none)]',
+  done: '[--tone-stripe:var(--action-contain)]',
 }
 
 export const TONE_FILL: Record<FieldTone, string> = {

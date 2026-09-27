@@ -6,7 +6,7 @@
  * the set of rules the design turns on: which people appear, whose name is
  * written out, and the two states that must draw nothing at all.
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { ClaimBadge, PresenceStack, presenceTone } from './presence'
@@ -17,6 +17,18 @@ describe('PresenceStack', () => {
   it('draws one disc per person', () => {
     render(<PresenceStack people={people('R. Okonkwo', 'J. Mbeki')} />)
     expect(screen.getByLabelText(/R\. Okonkwo, J\. Mbeki/)).toBeInTheDocument()
+  })
+
+  /** The server does not make a display name unique; the roster carries the id for that. */
+  it('takes the disc away when one of two people sharing a name leaves', async () => {
+    const leaving = { name: 'Sam', userId: 'u-1' }
+    const staying = { name: 'Sam', userId: 'u-2' }
+    const ada = { name: 'Ada', userId: 'u-3' }
+    const { rerender } = render(<PresenceStack people={[leaving, ada, staying]} />)
+
+    rerender(<PresenceStack people={[ada, staying]} />)
+
+    await waitFor(() => expect(screen.getAllByTestId('presence-person')).toHaveLength(2))
   })
 
   it('draws nothing when nobody is in the case', () => {

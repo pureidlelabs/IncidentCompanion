@@ -11,12 +11,12 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { BulkDeleteController, bulkDeleteBodySchema } from './bulk-delete.controller.js'
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import {
   actions,
   cases,
@@ -30,8 +30,9 @@ import {
   user,
 } from '../db/schema/index.js'
 import { reportBlocks, reports } from '../db/schema/report.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { camelKeys } from '../wire/naming.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -49,6 +50,27 @@ const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
+
+// **One actor for the file, not one per `describe`.** Both suites write as
+// `bulk-analyst`, and the change feed has a foreign key to it, so a suite that
+// borrowed the row from another suite's setup failed on the key rather than on
+// what it was asserting.
+const ACTOR = 'bulk-analyst'
+beforeAll(async () => {
+  if (!seed) return
+  const now = new Date()
+  await seed
+    .insert(user)
+    .values({
+      id: ACTOR,
+      name: 'Bulk Analyst',
+      email: 'bulk@example.test',
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing()
+})
 
 // **One teardown for the file, not one per `describe`.** A per-suite
 // `pool.end()` closes the pool the *next* suite is still holding, and every
@@ -97,34 +119,21 @@ function controllerFor(name: string): Bulk {
   const found = ENTITY_CONTROLLERS.find(
     (c) => Reflect.getMetadata(PATH_METADATA, c) === `api/cases/:caseId/${name}`,
   )!
-  return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Bulk)(as(ACTOR, new CollectionService(db!, suiteStore())))
 }
 
-describe.skipIf(!db)('writing many at once', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('writing many at once', () => {
   let caseId: string
   let otherCaseId: string
   let session: Session
 
-  beforeAll(async () => {
-    const actorId = 'bulk-analyst'
-    const now = new Date()
-    await seed!
-      .insert(user)
-      .values({
-        id: actorId,
-        name: 'Bulk Analyst',
-        email: 'bulk@example.test',
-        emailVerified: true,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoNothing()
-    session = { user: { id: actorId } }
+  beforeAll(() => {
+    session = { user: { id: ACTOR } }
   })
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     const [two] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
     caseId = one!.id
@@ -479,17 +488,17 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 })
 
-describe.skipIf(!db)('deleting a selection that spans collections', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('deleting a selection that spans collections', () => {
   let caseId: string
   let session: Session
-  const controller = () => new BulkDeleteController(new CollectionService(db!))
+  const controller = () => as(ACTOR, new BulkDeleteController(new CollectionService(db!, suiteStore())))
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [one] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = one!.id
-    session = { user: { id: 'bulk-analyst' } }
+    session = { user: { id: ACTOR } }
   })
 
   it('refuses a host the timeline still names, and says how many', async () => {
@@ -747,13 +756,12 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
       .insert(evidence)
       .values({ caseId, type: 'file', name: 'SENT-FIGURE-SOURCE', location: 'nowhere' })
       .returning()
-    const [paper] = await seed!
-      .insert(reports)
-      .values({ caseId, label: 'Sent', sentAt: new Date() })
-      .returning()
+    const [paper] = await seed!.insert(reports).values({ caseId, label: 'Sent' }).returning()
     await seed!
       .insert(reportBlocks)
       .values({ caseId, reportId: paper!.id, kind: 'figure', evidenceId: artefact!.id })
+    // Stamped last: the store refuses a part added to a sent report.
+    await seed!.update(reports).set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() }).where(eq(reports.id, paper!.id))
 
     const result = await controller().remove(
       caseId,

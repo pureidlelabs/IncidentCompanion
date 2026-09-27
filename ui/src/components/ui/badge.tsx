@@ -20,7 +20,11 @@ const badge = tv({
     // `max-w-full` caps the badge at its container, which is what the clip
     // below and a caller's `truncate` both need to fire.
     'inline-flex h-5 w-fit max-w-full shrink-0 items-center justify-center gap-1 rounded-xs',
-    'overflow-hidden whitespace-nowrap align-middle',
+    // **The ellipsis is the floor, not the answer.** A constrained badge cut
+    // `post-incident` to `post-inciden` with nothing saying a character had
+    // gone. A caller that constrains one still owes the full value somewhere
+    // the analyst can reach. -> #896
+    'overflow-hidden text-ellipsis whitespace-nowrap align-middle',
     'border border-transparent font-medium transition-[color,background-color,border-color,box-shadow]',
     '[&_svg]:pointer-events-none [&_svg]:shrink-0 icon-3',
   ],

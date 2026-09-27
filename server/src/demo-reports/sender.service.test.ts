@@ -9,16 +9,17 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { unattended } from '../db/scope.js'
 
 import { CasesService } from '../cases/cases.service.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DEMO_REPORTS } from '../demos/reports.js'
 import { LibraryService } from '../library/library.service.js'
 import { ProseService } from '../prose/prose.service.js'
 import { cases } from '../db/schema/case.js'
 import { reports } from '../db/schema/report.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 import { DemoReportSender } from './sender.service.js'
 import { LanguageService } from '../report/language.service.js'
@@ -64,26 +65,28 @@ const DECLARED = Object.entries(DEMO_REPORTS).flatMap(([reference, listed]) =>
   listed.filter((one) => one.sentAtMinute !== undefined).map((one) => ({ reference, label: one.label })),
 )
 
-describe.skipIf(!db)('filing the demo reports', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('filing the demo reports', () => {
   let sender: DemoReportSender
 
   beforeAll(async () => {
     const library = new LibraryService(db!, seed)
     await library.seedBuiltIns()
 
-    const seeder = new DemoSeederService(seed!, seed, new DemoContentSeeder())
-    await seeder.reseed()
+    await reseedDemos(seed!)
 
-    const cases_ = new CasesService(db!, {
+    // **On the seeding role throughout, as the seed one-shot runs it**: the
+    // demos stand under the default customer on an install that may hold no
+    // account, so no principal could file them. -> `src/seed.ts`
+    const cases_ = new CasesService(seed!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
     } as never)
-    const prose = new ProseService(db!)
-    const languages = new LanguageService(db!, seed)
-    const render = new ReportRenderService(db!, cases_, prose, languages, noFigures())
-    sender = new DemoReportSender(seed, new ReportLifecycleService(db!, library, render, prose))
+    const prose = new ProseService(seed!)
+    const languages = new LanguageService(seed!, seed)
+    const render = new ReportRenderService(seed!, cases_, prose, languages, noFigures())
+    sender = new DemoReportSender(seed, new ReportLifecycleService(seed!, library, render, prose))
 
-    await sender.fileDeclared()
+    await unattended(() => sender.fileDeclared())
   }, 180_000)
 
   afterAll(async () => {

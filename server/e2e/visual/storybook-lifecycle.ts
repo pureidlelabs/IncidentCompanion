@@ -81,9 +81,14 @@ const DEFAULT_FINISH_TIMEOUT_MS = 20_000
  * Call once per `Page`, before the first `page.goto`. Playwright re-runs an
  * init script on every subsequent navigation, so one call covers every story
  * the page visits afterwards.
+ *
+ * Also empties `localStorage` and `sessionStorage` at the start of every
+ * document the page loads.
  */
 export async function armStoryFinished(page: Page): Promise<void> {
   await page.addInitScript(() => {
+    localStorage.clear()
+    sessionStorage.clear()
     window.__frameOraclePlayError = null
     window.__frameOracleStoryFinished = new Promise((resolve) => {
       const attach = (): void => {
@@ -99,7 +104,9 @@ export async function armStoryFinished(page: Page): Promise<void> {
         // its first throw.
         channel.on('playFunctionThrewException', (thrown) => {
           window.__frameOraclePlayError ??=
-            typeof thrown.message === 'string' ? thrown.message : 'play threw a value with no message'
+            typeof thrown.message === 'string'
+              ? thrown.message
+              : 'play threw a value with no message'
         })
         channel.once('storyFinished', resolve)
       }
@@ -169,7 +176,9 @@ async function currentViewportGlobal(page: Page): Promise<string | null> {
  * widening support past `MINIMAL_VIEWPORTS`' four pixel-only entries has
  * nothing here to prove it against.
  */
-export async function applyStoryViewport(page: Page): Promise<{ width: number; height: number } | null> {
+export async function applyStoryViewport(
+  page: Page,
+): Promise<{ width: number; height: number } | null> {
   const value = await currentViewportGlobal(page)
   if (value === null || !isKnownViewport(value)) return null
   const { styles } = MINIMAL_VIEWPORTS[value]
@@ -184,6 +193,35 @@ export async function applyStoryViewport(page: Page): Promise<{ width: number; h
 const PREVIEW_SCRIPT_FAILED = "Failed to load the Storybook preview file 'vite-app.js'"
 
 /**
+ * Asks again when a navigation destroys the context the question was asked in.
+ *
+ * The questions here hold an evaluate open for seconds by design, and
+ * Storybook reloads a preview whose script failed -- so under load the reload
+ * lands inside the window. The question survives it: the script that failed is
+ * still the one that failed, so re-asking answers it. Anything else throws.
+ * -> #1037
+ */
+export async function askDespiteNavigation<T>(
+  page: Page,
+  ask: (attempt: number) => Promise<T>,
+): Promise<T> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await ask(attempt)
+    } catch (thrown) {
+      const lost =
+        thrown instanceof Error && thrown.message.includes('Execution context was destroyed')
+      if (!lost || attempt >= 2) throw thrown
+      // **Bounded, like the question it recovers.** The context's navigation
+      // timeout resolves to 0 here, which installs no rejection at all -- so
+      // an unbounded wait holds for the enclosing test, which is the 45
+      // minutes the bound inside the question exists to refuse.
+      await page.waitForLoadState('domcontentloaded', { timeout: 5_000 }).catch(() => undefined)
+    }
+  }
+}
+
+/**
  * What the preview script answers when asked again, from the page that failed to load it.
  *
  * **Storybook's error page carries no diagnosis**, so the reason is asked for
@@ -193,34 +231,41 @@ const PREVIEW_SCRIPT_FAILED = "Failed to load the Storybook preview file 'vite-a
  * script* is serveable, which a module it imports need not be.
  */
 async function whyThePreviewScriptFailed(page: Page): Promise<string> {
-  return page.evaluate(async () => {
-    // The tag's `src` rather than the virtual path it is written with: Vite
-    // rewrites it, and the rewritten URL is the one that was actually fetched.
-    const tag = document.querySelector<HTMLScriptElement>('script[src*="vite-app"]')
-    if (tag === null) return 'no preview script tag in the document to ask about'
-    try {
-      // **Bounded**, because `page.evaluate` has no timeout of its own: a
-      // server that accepts and never answers -- what a restarting Vite leaves
-      // -- would hold this for the enclosing test's 45 minutes.
-      const answer = await fetch(tag.src, {
-        cache: 'no-store',
-        signal: AbortSignal.timeout(5_000),
-      })
-      // **`ok` does not mean transient.** The `error` event fires for a
-      // failure anywhere in the module graph, which leaves the entry script
-      // itself perfectly serveable.
-      return answer.ok
-        ? `the entry script re-fetched ${String(answer.status)}, so the failure is either ` +
-          'in a module it imports or was transient -- read the preview console'
-        : `re-fetched ${String(answer.status)} ${answer.statusText}`
-    } catch (thrown) {
-      // The budget is named: `signal timed out` is Chromium's wording for our
-      // own ceiling and reads as though the server said it.
-      const why = thrown instanceof Error ? thrown.message : String(thrown)
-      return why.includes('timed out')
-        ? `re-fetch gave up after 5s: ${why} -- the server accepted and answered nothing`
-        : `re-fetch threw ${why}`
-    }
+  return askDespiteNavigation(page, async (attempt) => {
+    const said = await page.evaluate(async () => {
+      // The tag's `src` rather than the virtual path it is written with: Vite
+      // rewrites it, and the rewritten URL is the one that was actually fetched.
+      const tag = document.querySelector<HTMLScriptElement>('script[src*="vite-app"]')
+      if (tag === null) return 'no preview script tag in the document to ask about'
+      try {
+        // **Bounded**, because `page.evaluate` has no timeout of its own: a
+        // server that accepts and never answers -- what a restarting Vite leaves
+        // -- would hold this for the enclosing test's 45 minutes.
+        const answer = await fetch(tag.src, {
+          cache: 'no-store',
+          signal: AbortSignal.timeout(5_000),
+        })
+        // **`ok` does not mean transient.** The `error` event fires for a
+        // failure anywhere in the module graph, which leaves the entry script
+        // itself perfectly serveable.
+        return answer.ok
+          ? `the entry script re-fetched ${String(answer.status)}, so the failure is either ` +
+              'in a module it imports or was transient -- read the preview console'
+          : `re-fetched ${String(answer.status)} ${answer.statusText}`
+      } catch (thrown) {
+        // The budget is named: `signal timed out` is Chromium's wording for our
+        // own ceiling and reads as though the server said it.
+        const why = thrown instanceof Error ? thrown.message : String(thrown)
+        return why.includes('timed out')
+          ? `re-fetch gave up after 5s: ${why} -- the server accepted and answered nothing`
+          : `re-fetch threw ${why}`
+      }
+    })
+    // A reload destroyed the first ask, so this answer is about whatever
+    // replaced the document that failed, not about that document.
+    return attempt === 0
+      ? said
+      : `${said} -- asked again after a reload, so this reads the document that replaced it`
   })
 }
 
@@ -241,9 +286,17 @@ async function whyThePreviewScriptFailed(page: Page): Promise<string> {
  * document, so there is nothing to read before then.
  */
 export async function brokenPreview(page: Page): Promise<string | null> {
-  const said = await page.locator('#error-message').textContent({ timeout: 1_000 })
+  // **Neither read may fail the story.** A root too big to read in the budget
+  // has rendered, and a read that cannot answer is not evidence. -> #1058
+  const read = async (selector: string): Promise<string | null> =>
+    page
+      .locator(selector)
+      .textContent({ timeout: 1_000 })
+      .catch(() => null)
+
+  const said = await read('#error-message')
   if (said !== null && said.trim() !== '') return said.trim().split('\n')[0] ?? ''
-  const root = await page.locator('#storybook-root').textContent({ timeout: 1_000 })
+  const root = await read('#storybook-root')
   if (root === null || !root.includes(PREVIEW_SCRIPT_FAILED)) return null
   return `${PREVIEW_SCRIPT_FAILED}: ${await whyThePreviewScriptFailed(page)}`
 }
@@ -256,9 +309,49 @@ export interface StoryLoad {
 }
 
 /**
- * Navigates to one story's standalone preview and waits until it has
- * genuinely finished -- `play` included -- applying its `viewport` global
- * along the way. Leaves probing and capturing to the caller.
+ * What a module that did not arrive says, in Chromium's wording.
+ *
+ * **A fetch that failed is about the server, not the story.** The dev server
+ * compiles a story's module graph on demand and re-optimises when it changes,
+ * and a page asking for a URL from before that leaves the browser holding a
+ * module it cannot fetch. The story is fine and the request was not.
+ *
+ * The browser writes this, not Vite -- neither string appears anywhere under
+ * `node_modules/vite` or `node_modules/@storybook` -- and this tier declares
+ * one project, `chromium`. Gecko's wording for the same failure is *error
+ * loading dynamically imported module*, and matching it here would be surface
+ * nothing can reach.
+ */
+const MODULE_DID_NOT_ARRIVE = /Failed to fetch dynamically imported module/
+
+/**
+ * What a `storyFinished` that never fires says, in Playwright's wording.
+ *
+ * The same stale module graph reaches the walk this way too: the preview never
+ * finishes because the module it is waiting on never arrives. Measured on one
+ * story reporting both shapes across two runs of an unchanged tree. -> #887
+ */
+const NEVER_FINISHED = /storyFinished never fired/
+
+/**
+ * Whether a failure is about the server that served the story, not the story.
+ *
+ * A dev Storybook compiles a story's module graph on demand and re-optimises
+ * when it changes, so a long-lived one hands the browser URLs from before the
+ * last re-optimisation. What comes back names the component, which is what
+ * makes it read as a breakage in the tree.
+ *
+ * Both shapes survive the one retry `loadStory` makes, so this is what the
+ * report classifies by rather than what it retries on.
+ */
+export function fromAStaleServer(failure: string): boolean {
+  return MODULE_DID_NOT_ARRIVE.test(failure) || NEVER_FINISHED.test(failure)
+}
+
+/**
+ * Loads one story, asking a second time for a module that did not arrive.
+ *
+ * Leaves probing and capturing to the caller.
  */
 export async function loadStory(
   page: Page,
@@ -266,17 +359,49 @@ export async function loadStory(
   storyId: string,
   ground: string,
 ): Promise<StoryLoad> {
-  await page.goto(`${storybookUrl}/iframe.html?id=${storyId}&viewMode=story`, {
-    waitUntil: 'load',
-    timeout: 20_000,
-  })
+  const first = await attemptStory(page, storybookUrl, storyId, ground)
+  // **Asked again once, and only for a module that did not arrive.** A story
+  // that renders an error, or whose `play` threw, is answering about itself
+  // and a second reading of it says the same thing.
+  //
+  // **A `storyFinished` that never fires is left alone for its cost, and for
+  // nothing else.** It can be the same stale server -- #887 measured one story
+  // reporting both shapes across two runs of the same tree -- but this path
+  // returns before the wait, so a refused module costs ~300ms while that one
+  // costs twenty seconds, twice. The preview script's own failure
+  // (`vite-app.js`) is transient too and also left alone: it is one fact about
+  // the run rather than one per story. -> #887
+  if (first.broke === null || !MODULE_DID_NOT_ARRIVE.test(first.broke)) return first
+  return attemptStory(page, storybookUrl, storyId, ground)
+}
+
+/**
+ * Navigates to one story's standalone preview and waits until it has
+ * genuinely finished -- `play` included -- applying its `viewport` global
+ * along the way.
+ */
+async function attemptStory(
+  page: Page,
+  storybookUrl: string,
+  storyId: string,
+  ground: string,
+): Promise<StoryLoad> {
+  // `a11y.manual` keeps the addon from running axe before `storyFinished`,
+  // for a report nothing on this page reads.
+  await page.goto(
+    `${storybookUrl}/iframe.html?id=${storyId}&viewMode=story&globals=a11y.manual:!true`,
+    {
+      waitUntil: 'load',
+      timeout: 20_000,
+    },
+  )
   await page.evaluate((one) => {
     document.documentElement.setAttribute('data-theme', one)
   }, ground)
   // **`attached`, not the default `visible`.** Several stories draw nothing
   // on purpose, and an empty root has no box -- `visible` fails them for
   // succeeding.
-  await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 10_000 })
+  await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
   const broke = await brokenPreview(page)
   if (broke !== null) {
     return { broke, playError: null }

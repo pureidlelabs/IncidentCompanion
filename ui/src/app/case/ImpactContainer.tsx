@@ -3,7 +3,6 @@ import { useSpecs } from '@/api/specs'
 import { useBulkPatch } from '@/api/useBulkPatch'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useBulkDelete } from '@/api/useBulkDelete'
-import { useEntryDelete } from '@/api/useEntryDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useCaseId } from '@/app/useCaseId'
 import { ImpactScreen, type ImpactWrites } from '@/screens/impact'
@@ -20,12 +19,11 @@ export function ImpactContainer() {
       create: useEntryCreate(caseId, 'impact'),
       patch: useEntryMutation(caseId, 'impact'),
       bulk: useBulkPatch(caseId, 'impact'),
-      remove: useEntryDelete(caseId, 'impact'),
       bulkDelete: useBulkDelete(caseId),
     },
     { one: 'the impact row', many: 'the selected rows' },
-    () => kase.data?.impact ?? [],
     async () => (await kase.refetch()).data?.impact ?? [],
+    (row) => row.label,
     'impact',
   ) as ImpactWrites
 

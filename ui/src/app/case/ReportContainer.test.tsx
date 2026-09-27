@@ -134,10 +134,10 @@ describe('what the report container hands the screen', () => {
 describe('changing the language a report is produced in', () => {
   /**
    * **The row's own version, and the row beside it.** A patch is refused
-   * without the version it is against, and the optimistic write needs the row
-   * it replaces -- neither is visible from the screen, so this is the seam
-   * where a language change is either a write or a control that moves and
-   * does nothing.
+   * without the version it is against, and a refusal names what moved only
+   * against the row it was written over -- neither is visible from the
+   * screen, so this is the seam where a language change is either a write or
+   * a control that moves and does nothing.
    */
   it('sends the code against the version it read', async () => {
     patched.length = 0
@@ -158,7 +158,7 @@ describe('changing the language a report is produced in', () => {
     })
     expect(
       (patched[0] as { base?: unknown }).base,
-      'the optimistic write has no row to replace',
+      'a refusal has no row to say what moved against',
     ).toBe(report)
   })
 })
@@ -169,7 +169,9 @@ describe('the promise the container hands the new-report dialog', () => {
     seeded = () => Promise.resolve([])
   })
 
-  function choice(blocks: { position: number; kind: string; heading: string; headingKey: string }[]) {
+  function choice(
+    blocks: { position: number; kind: string; heading: string; headingKey: string }[],
+  ) {
     return { layout: 'standard', label: 'A report', stage: '', tlp: '', blocks }
   }
 
@@ -189,7 +191,10 @@ describe('the promise the container hands the new-report dialog', () => {
    */
   it('resolves for a layout that seeds no sections', async () => {
     const onCreate = (await drawn()).onCreate as (c: unknown) => Promise<unknown>
-    await expect(onCreate(choice([])), 'a blank report left the dialog open').resolves.toBeUndefined()
+    await expect(
+      onCreate(choice([])),
+      'a blank report left the dialog open',
+    ).resolves.toBeUndefined()
   })
 
   /**

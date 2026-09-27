@@ -11,14 +11,8 @@
  * cannot claim anything: the assertions here are all about a *claimed* install
  * refusing, which is the state that persists.
  *
- * **The success path is covered by hand, against a genuinely empty install**:
- * every account deleted and the server restarted, then the token read from the
- * console, `GET /api/setup` answering `{unclaimed:true}`, a wrong token refused
- * with 403, the right one answering `{claimed:true}` and setting a session
- * cookie whose user comes back with role `admin`, and a second claim refused.
- * Automating it needs a database this tier can empty, which is the hermetic
- * tier's job and not this file's - recorded here so the gap is visible rather
- * than assumed covered.
+ * The success path runs on an install of its own, in
+ * `two-claims-leave-one-account-and-one-session.test.ts`.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

@@ -177,7 +177,6 @@ function PictureRow({
 }) {
   const [chosen, setChosen] = useState<string | null>(null)
   const input = useRef<HTMLInputElement>(null)
-  const something = held || chosen !== null
 
   return (
     <div className="flex flex-col gap-2">
@@ -189,9 +188,9 @@ function PictureRow({
             input.current?.click()
           }}
         >
-          {something ? 'Replace picture' : 'Choose picture'}
+          {held ? 'Replace picture' : 'Choose picture'}
         </Button>
-        {something && (
+        {held && (
           <Button
             variant="outline"
             size="sm"

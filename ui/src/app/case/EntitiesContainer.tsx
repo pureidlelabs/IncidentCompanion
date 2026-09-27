@@ -2,13 +2,14 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 import { useCase } from '@/api/case'
 import { useSpecs } from '@/api/specs'
+import type { Read } from '@/api/rowWrite'
+import { useBulkPatch } from '@/api/useBulkPatch'
 import { useEntryCreate } from '@/api/useEntryCreate'
-import { useEntryDelete } from '@/api/useEntryDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useBulkDelete } from '@/api/useBulkDelete'
-import { reportBulkMissing } from '@/components/blocks/notify'
+import { reportBulkMissing, reportBulkRefused } from '@/components/blocks/notify'
 import { useCaseId } from '@/app/useCaseId'
-import { kindFor } from '@/components/blocks/entity-scope'
+import { entityRows, kindFor } from '@/components/blocks/entity-scope'
 import { EntitiesScreen } from '@/screens/entities'
 
 import { announcing } from './entryWrites'
@@ -29,7 +30,7 @@ import type { EntityScope } from '@/components/blocks/entity-scope'
  * the container's business here as everywhere: the block is drawn in the
  * gallery, where there is no router to ask.
  *
- * The five hook triples are called unconditionally and by name rather than in
+ * The five hook sets are called unconditionally and by name rather than in
  * a loop: `ENTITY_KINDS` is a constant of five, but a hook reached through it
  * reads as conditional to anyone auditing this file.
  */
@@ -50,34 +51,34 @@ export function EntitiesContainer() {
     | {
         create: ReturnType<typeof useEntryCreate>
         patch: ReturnType<typeof useEntryMutation>
-        remove: ReturnType<typeof useEntryDelete>
+        bulk: ReturnType<typeof useBulkPatch>
       }
     | undefined
   > = {
     systems: {
       create: useEntryCreate(caseId, 'systems'),
       patch: useEntryMutation(caseId, 'systems'),
-      remove: useEntryDelete(caseId, 'systems'),
+      bulk: useBulkPatch(caseId, 'systems'),
     },
     accounts: {
       create: useEntryCreate(caseId, 'accounts'),
       patch: useEntryMutation(caseId, 'accounts'),
-      remove: useEntryDelete(caseId, 'accounts'),
+      bulk: useBulkPatch(caseId, 'accounts'),
     },
     network_indicators: {
       create: useEntryCreate(caseId, 'network_indicators'),
       patch: useEntryMutation(caseId, 'network_indicators'),
-      remove: useEntryDelete(caseId, 'network_indicators'),
+      bulk: useBulkPatch(caseId, 'network_indicators'),
     },
     malware: {
       create: useEntryCreate(caseId, 'malware'),
       patch: useEntryMutation(caseId, 'malware'),
-      remove: useEntryDelete(caseId, 'malware'),
+      bulk: useBulkPatch(caseId, 'malware'),
     },
     cloud_apps: {
       create: useEntryCreate(caseId, 'cloud_apps'),
       patch: useEntryMutation(caseId, 'cloud_apps'),
-      remove: useEntryDelete(caseId, 'cloud_apps'),
+      bulk: useBulkPatch(caseId, 'cloud_apps'),
     },
   } as Record<CollectionName, never>
 
@@ -99,6 +100,23 @@ export function EntitiesContainer() {
       )
     },
 
+    patch: async (collection, chosen, fields) => {
+      const hooks = rows[collection]
+      if (!hooks) return
+      const written = await announcing('the selected entities', () =>
+        hooks.bulk.mutateAsync({ ids: [...chosen], fields }),
+      )
+      reportBulkMissing(written.missing, 'entities')
+      const fresh = (await kase.refetch()).data
+      const names = new Map(
+        (fresh && specs.data ? entityRows(fresh, specs.data.fieldTones) : []).map((row) => [
+          row.id,
+          row.identity,
+        ]),
+      )
+      reportBulkRefused(written.refused.map((id) => names.get(id) ?? id))
+    },
+
     remove: async (doomed) => {
       /**
        * **One request, because order would otherwise decide the outcome.**
@@ -110,12 +128,15 @@ export function EntitiesContainer() {
        */
       // **The version each row was read at travels with it**, so a row another
       // analyst has edited since is refused rather than deleted. -> #682
-      const targets: Partial<Record<CollectionName, { id: string; version: number }[]>> = {}
+      const targets: Partial<Record<CollectionName, { id: string; version: Read }[]>> = {}
       for (const row of doomed) {
         ;(targets[row.collection] ??= []).push({ id: row.id, version: row.version })
       }
       if (Object.keys(targets).length === 0) return
-      const written = await announcing('the entities', () => bulkDelete.mutateAsync({ targets }))
+      // The confirmation says which rows moved, so the refusal is its to draw.
+      const written = await announcing('the entities', () => bulkDelete.mutateAsync({ targets }), {
+        refused: () => undefined,
+      })
       // **Told, not discarded.** A row another analyst had already deleted
       // comes back under `missing`, and an analyst who selected six and lost
       // two of them silently has no way to know which case they are looking at.

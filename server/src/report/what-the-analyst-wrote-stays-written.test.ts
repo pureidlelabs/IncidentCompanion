@@ -17,6 +17,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 import * as Y from 'yjs'
 
 import { CasesService } from '../cases/cases.service.js'
@@ -25,8 +26,9 @@ import { ReportRenderService } from './render.service.js'
 import { cases, reportBlocks, reports, timeline, user } from '../db/schema/index.js'
 import { english } from './document/packs.js'
 import { EvidenceStore } from '../evidence/store.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { defaultPolicy } from '../policy/read.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -67,7 +69,7 @@ let writtenId = ''
 const rendered = async () =>
   JSON.stringify((await render.render(caseId, reportId, 'en')).document_)
 
-describe.skipIf(!db)('prose an analyst wrote into a report', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('prose an analyst wrote into a report', () => {
   beforeAll(async () => {
     const now = new Date()
     await seed!
@@ -82,10 +84,10 @@ describe.skipIf(!db)('prose an analyst wrote into a report', () => {
       })
       .onConflictDoNothing()
 
-    const cases_ = new CasesService(db!, {
+    const cases_ = as(ACTOR, new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
+    } as never))
     const row = await cases_.create({ title: 'A case with an assessment' }, ACTOR)
     caseId = row.id
 
@@ -123,8 +125,8 @@ describe.skipIf(!db)('prose an analyst wrote into a report', () => {
       .returning({ id: reportBlocks.id })
     writtenId = written!.id
 
-    prose = new ProseService(db!)
-    render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
+    prose = as(ACTOR, new ProseService(db!))
+    render = as(ACTOR, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
 
     /**
      * **One paragraph per line, which is the node shape the editor expects** --

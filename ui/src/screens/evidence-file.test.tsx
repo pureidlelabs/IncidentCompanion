@@ -20,10 +20,15 @@
  * - **The file does not outlive its dialog.** One left behind attaches itself
  *   to the next record, which is a wrong artefact reading as a correct one.
  */
-import { render, screen, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import type { ReactNode } from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { keys } from '@/api/queryKeys'
+import { setSession } from '@/api/session'
+import { useEvidenceUpload } from '@/api/useEvidenceUpload'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
@@ -156,5 +161,58 @@ describe('one add door, with the file optional inside it', () => {
       within(rowFor('WKS-FIN01 KAPE triage')).queryByText('promised'),
       'a file abandoned in the add dialog was attached to an edited row',
     ).not.toBeNull()
+  })
+})
+
+describe('attaching the bytes to the record just made', () => {
+  const CASE = 'DEMO-CAMPAIGN'
+
+  /** The record POST answers first; `bytes` answers the attach. Headers are built as `fetch` builds them. */
+  function upload(bytes: Response) {
+    const named: (string | null)[] = []
+    const fetchMock = vi.fn<typeof fetch>((_url, init) => {
+      if (fetchMock.mock.calls.length === 1) {
+        return Promise.resolve(new Response(JSON.stringify({ id: 'ev-new' }), { status: 200 }))
+      }
+      named.push(new Headers(init?.headers).get('x-original-filename'))
+      return Promise.resolve(bytes)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    setSession({ userId: 'u-analyst', username: 'analyst' })
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const hook = renderHook(() => useEvidenceUpload(CASE), { wrapper })
+    const invalidated = () => invalidate.mock.calls.map(([options]) => JSON.stringify(options?.queryKey))
+    return { hook, named, invalidated }
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('refreshes the list when the bytes fail after the record landed', async () => {
+    const { hook, invalidated } = upload(new Response(JSON.stringify({ error: 'store down' }), { status: 500 }))
+
+    act(() => {
+      hook.result.current.mutate({ file: someFile(), fields: { name: 'DC-02 memory image' } })
+    })
+    await waitFor(() => expect(hook.result.current.isError).toBe(true))
+
+    expect(invalidated()).toContain(JSON.stringify(keys.collection(CASE, 'evidence')))
+    expect(invalidated()).toContain(JSON.stringify(keys.case(CASE)))
+  })
+
+  it('sends a non-Latin-1 filename percent-encoded, which the server decodes', async () => {
+    const { hook, named } = upload(new Response(JSON.stringify({ id: 'ev-new' }), { status: 200 }))
+
+    act(() => {
+      hook.result.current.mutate({ file: someFile('\u65E5\u672C\u8A9E.pdf'), fields: { name: 'Scan' } })
+    })
+    await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
+
+    expect(named).toEqual(['%E6%97%A5%E6%9C%AC%E8%AA%9E.pdf'])
   })
 })

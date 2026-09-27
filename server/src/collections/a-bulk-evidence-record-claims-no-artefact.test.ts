@@ -22,12 +22,14 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { COLLECTIONS } from '../domain/collections.js'
 import { cases, evidence, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -52,7 +54,7 @@ function batchDoorFor(name: string): Bulk {
     (one) => Reflect.getMetadata(PATH_METADATA, one) === `api/cases/:caseId/${name}`,
   )
   if (!found) throw new Error(`no controller is mounted at ${name}`)
-  return new (found as new (s: CollectionService) => Bulk)(new CollectionService(db!))
+  return new (found as new (s: CollectionService) => Bulk)(as(ANALYST, new CollectionService(db!, suiteStore())))
 }
 
 // One teardown for the file rather than one per `describe`, which is the trap
@@ -62,7 +64,7 @@ afterAll(async () => {
   await pool?.end()
 })
 
-describe.skipIf(!db)('creating evidence a batch at a time', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('creating evidence a batch at a time', () => {
   let caseId = ''
   const session = { user: { id: ANALYST } }
 

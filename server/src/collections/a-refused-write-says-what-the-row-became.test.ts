@@ -1,3 +1,5 @@
+import { derivedFields } from '../domain/field-spec.js'
+import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 /**
  * **A write refused for being stale names the version the row actually
  * reached**, across every collection rather than one.
@@ -14,13 +16,14 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -66,20 +69,20 @@ function collections(): { name: string; make: () => Writable }[] {
     return {
       name: path.replace('api/cases/:caseId/', ''),
       make: () =>
-        new (controller as new (s: CollectionService) => Writable)(new CollectionService(db!)),
+        new (controller as new (s: CollectionService) => Writable)(as('stale-writer', new CollectionService(db!, suiteStore()))),
     }
   })
 }
 
-function aStringFieldOf(row: Record<string, unknown>): [string, string] | null {
+function aStringFieldOf(row: Record<string, unknown>, collection: string): [string, string] | null {
+  const derived = COLLECTION_SCHEMAS[collection] ? derivedFields(COLLECTION_SCHEMAS[collection]) : []
   for (const [key, value] of Object.entries(row)) {
-    if (NOT_A_PATCH.has(key)) continue
+    if (NOT_A_PATCH.has(key) || derived.includes(key)) continue
     if (typeof value === 'string' && value.length > 0) return [key, value]
   }
   return null
 }
 
-const exercised: string[] = []
 
 describe.skipIf(!db)('a refused write says what the row became', () => {
   let caseId: string
@@ -87,7 +90,7 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
 
   beforeAll(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [row] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = row!.id
     const now = new Date()
@@ -112,13 +115,13 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
 
   it.each(collections().map((c) => [c.name, c] as const))(
     '%s refuses a stale patch and names the current version',
-    async (_name, collection) => {
+    async (name, collection) => {
       const controller = collection.make()
       const rows = await controller.list(caseId)
-      const row = rows.find((r) => aStringFieldOf(r) !== null)
+      const row = rows.find((r) => aStringFieldOf(r, name) !== null)
       if (!row) return
 
-      const [field, value] = aStringFieldOf(row)!
+      const [field, value] = aStringFieldOf(row, name)!
       const readAt = row['version'] as number
       const id = row['id'] as string
 
@@ -140,7 +143,6 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
         `${collection.name} refused the write without saying what the row became`,
       ).toBe(readAt + 1)
 
-      exercised.push(collection.name)
     },
   )
 
@@ -149,7 +151,16 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
    * case leaves empty, so a seeder that stopped writing rows would leave the
    * whole sweep green having asserted nothing.
    */
-  it('covered most of the collections, or the sweep above proved little', () => {
-    expect(exercised.length).toBeGreaterThan(7)
+  it('covered most of the collections, or the sweep above proved little', async () => {
+    // Counted from the case rather than from what the sweep recorded: the
+    // sweep's cases are what this guards, so reading their tally makes the
+    // guard hold only where it sits.
+    let patchable = 0
+    for (const collection of collections()) {
+      const rows = await collection.make().list(caseId)
+      if (rows.some((row) => aStringFieldOf(row, collection.name) !== null)) patchable += 1
+    }
+
+    expect(patchable).toBeGreaterThan(7)
   })
 })

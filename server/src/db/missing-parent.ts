@@ -9,8 +9,21 @@
  * instead.
  */
 export function isMissingParent(error: unknown): boolean {
+  return carries(error, '23503')
+}
+
+/**
+ * Whether a database error is the store refusing a row its principal does not
+ * reach -- `42501`, which a row-level policy raises for a write. To the caller
+ * that is the case not being there, whether it is absent or out of reach.
+ */
+export function isOutOfReach(error: unknown): boolean {
+  return carries(error, '42501')
+}
+
+function carries(error: unknown, code: string): boolean {
   for (let at = error, hops = 0; at && hops < 5; at = (at as { cause?: unknown }).cause, hops++) {
-    if ((at as { code?: unknown }).code === '23503') return true
+    if ((at as { code?: unknown }).code === code) return true
   }
   return false
 }

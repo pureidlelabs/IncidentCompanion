@@ -2,8 +2,8 @@ import { Clock3 } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Case } from '@/api/model'
+import { useRowDraft } from '@/api/rowDraft'
 import type { Specs } from '@/api/specs'
-import type { Problems } from '@/api/validateDraft'
 import { Button } from '@/components/ui/button'
 import { Sheet } from '@/components/ui/sheet'
 import { Tooltip, TooltipTrigger } from '@/components/ui/tooltip'
@@ -19,14 +19,13 @@ import { CaseRecordForm, type CaseWrites } from './case-record-form'
  *
  * Uncontrolled by default. Pass `isOpen` with `onOpenChange` to drive it from
  * outside, which is what a story does to show the panel open.
+ *
+ * The stamps being changed are held here rather than in the panel's content,
+ * so one still being written survives the panel closing.
  */
 export interface CaseKeyTimesSheetProps {
   kase?: Case | undefined
   specs?: Specs | undefined
-  /** A write another analyst got in first with. */
-  refusal?: { field: string; by: string } | undefined
-  /** Fields the last submit was refused on, by name. */
-  refused?: Problems
   /** Drives the panel from outside; without it the trigger owns the state. */
   isOpen?: boolean
   onOpenChange?: (open: boolean) => void
@@ -37,13 +36,12 @@ export interface CaseKeyTimesSheetProps {
 export function CaseKeyTimesSheet({
   kase,
   specs,
-  refusal,
-  refused,
   isOpen,
   onOpenChange,
   writes,
 }: CaseKeyTimesSheetProps) {
   const [own, setOwn] = useState(false)
+  const draft = useRowDraft(kase, writes?.save, true)
   const open = isOpen ?? own
   const setOpen = (next: boolean) => {
     setOwn(next)
@@ -79,14 +77,7 @@ export function CaseKeyTimesSheet({
           setOpen(false)
         }}
       >
-        <CaseRecordForm
-          pane="times"
-          refusal={refusal}
-          kase={kase}
-          specs={specs}
-          {...(refused ? { refused } : {})}
-          {...(writes ? { writes } : {})}
-        />
+        <CaseRecordForm pane="times" draft={draft} caseId={kase?.id} specs={specs} />
       </Sheet>
     </>
   )

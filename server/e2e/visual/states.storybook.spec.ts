@@ -16,6 +16,7 @@
  */
 import { expect, test, type ElementHandle, type Page } from '@playwright/test'
 
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -62,7 +63,11 @@ const PROBES: Probe[] = [
     target: '[role="row"]:not([aria-selected="true"])',
     pressed: true,
   },
-  { story: 'components-tabs--default', target: '[role="tab"]:not([aria-selected="true"])', pressed: false },
+  {
+    story: 'components-tabs--default',
+    target: '[role="tab"]:not([aria-selected="true"])',
+    pressed: false,
+  },
   { story: 'components-link--default', target: 'a', pressed: false },
   { story: 'components-select--default', target: 'button', pressed: false },
   {
@@ -90,10 +95,7 @@ const PAINT = [
  * between two states and equals neither, which reads as a state that never
  * arrived.
  */
-async function paint(
-  page: Page,
-  target: ElementHandle<Element>,
-): Promise<Record<string, string>> {
+async function paint(page: Page, target: ElementHandle<Element>): Promise<Record<string, string>> {
   const read = () =>
     target.evaluate((el, props) => {
       const style = getComputedStyle(el)
@@ -101,6 +103,9 @@ async function paint(
     }, PAINT)
   let last = await read()
   for (let i = 0; i < 8; i += 1) {
+    // A transition ends at no event this can await, and the settled value is
+    // what this function is reading.
+    // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(120)
     const next = await read()
     if (PAINT.every((prop) => next[prop] === last[prop])) return next
@@ -121,20 +126,25 @@ async function open(page: Page, story: string): Promise<void> {
   // story's own `play` may have just pressed the control.
   await page.mouse.move(2, 2)
   await page.mouse.click(2, 2)
+  await faded(page)
 }
 
-async function storybookIsUp(): Promise<boolean> {
-  try {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
-    return answer.ok
-  } catch {
-    return false
-  }
+/**
+ * Every running transition finished. A reading taken mid-fade agrees with the
+ * hovered one, and `paint` settles on two equal readings, which a slow fade
+ * satisfies before it has moved.
+ */
+async function faded(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.all(
+      document.getAnimations().map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  )
 }
 
 test.describe('a control paints its states', () => {
   test.beforeAll(async () => {
-    test.skip(!(await storybookIsUp()), `no Storybook at ${SB}`)
+    await requireStorybook()
   })
 
   for (const probe of PROBES) {
@@ -146,6 +156,12 @@ test.describe('a control paints its states', () => {
       await found.waitFor()
       const target = (await found.elementHandle()) as ElementHandle<Element>
 
+      // In and out with a real pointer before the rest reading: a story's
+      // `play` hovers with a synthetic one, and only a real leave clears the
+      // hover it left set.
+      await target.hover()
+      await page.mouse.move(2, 2)
+      await faded(page)
       const rest = await paint(page, target)
       await target.hover()
       const hovered = await paint(page, target)
@@ -173,15 +189,21 @@ test.describe('a control paints its states', () => {
 
     if (probe.disabled) {
       const twin = probe.disabled
+
       test(`${twin.story} ignores the pointer`, async ({ page }) => {
         await open(page, twin.story)
         const found = page.locator(`#storybook-root ${twin.target}`).first()
         await found.waitFor()
         const target = (await found.elementHandle()) as ElementHandle<Element>
         const rest = await paint(page, target)
+        // Forced, because a disabled control fails the actionability check
+        // and refusing the pointer is the thing being asserted.
+        // eslint-disable-next-line playwright/no-force-option
         await target.hover({ force: true })
         const hovered = await paint(page, target)
-        expect(differs(rest, hovered), `a disabled ${twin.target} lit under the pointer`).toBe(false)
+        expect(differs(rest, hovered), `a disabled ${twin.target} lit under the pointer`).toBe(
+          false,
+        )
       })
     }
   }

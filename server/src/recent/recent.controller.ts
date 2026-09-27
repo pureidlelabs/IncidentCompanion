@@ -26,7 +26,7 @@ import {
 } from './recent.service.js'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 
-import { CaseAccessGuard } from '../access/case-access.guard.js'
+import { CaseAccessGuard, CaseLevel } from '../access/case-access.guard.js'
 
 /**
  * **Free text and bounded, because the section list belongs to the client.**
@@ -63,6 +63,7 @@ export class RecentController {
   }
 
   @UseGuards(CaseAccessGuard)
+  @CaseLevel('read')
   @Put(':caseId')
   async visit(
     @Param('caseId', ParseUUIDPipe) caseId: string,
@@ -73,6 +74,7 @@ export class RecentController {
   }
 
   @UseGuards(CaseAccessGuard)
+  @CaseLevel('read')
   @Put(':caseId/pinned')
   async pin(
     @Param('caseId', ParseUUIDPipe) caseId: string,
@@ -83,6 +85,7 @@ export class RecentController {
   }
 
   @UseGuards(CaseAccessGuard)
+  @CaseLevel('read')
   @Delete(':caseId')
   async forget(
     @Param('caseId', ParseUUIDPipe) caseId: string,

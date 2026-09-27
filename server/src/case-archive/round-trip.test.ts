@@ -15,15 +15,27 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
+import * as Y from 'yjs'
 
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
+import { ProseService } from '../prose/prose.service.js'
 import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
 import { isSealed } from '../archive/envelope.js'
 import { readArchive } from '../archive/format.js'
-import { cases, customers, evidence, reports, systems, timeline, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import {
+  cases,
+  customers,
+  evidence,
+  reportBlocks,
+  reports,
+  systems,
+  timeline,
+  user,
+} from '../db/schema/index.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -36,7 +48,27 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const PASS = 'a-long-enough-passphrase'
 
-describe.skipIf(!db)('a case, out and back', () => {
+/** A report document holding `text` under each block id, one paragraph apiece. */
+function written(text: Record<string, string>): Buffer {
+  const doc = new Y.Doc()
+  for (const [blockId, words] of Object.entries(text)) {
+    const paragraph = new Y.XmlElement('paragraph')
+    paragraph.insert(0, [new Y.XmlText(words)])
+    doc.getXmlFragment(blockId).insert(0, [paragraph])
+  }
+  return Buffer.from(Y.encodeStateAsUpdate(doc))
+}
+
+/** Each fragment of a stored report document, as its name and its text. */
+function sections(document: Uint8Array): Record<string, string> {
+  const doc = new Y.Doc()
+  Y.applyUpdate(doc, document)
+  return Object.fromEntries(
+    [...doc.share.keys()].map((name) => [name, doc.getXmlFragment(name).toJSON()]),
+  )
+}
+
+describe.skipIf(!db || !hasConcurrentConnections())('a case, out and back', () => {
   let exporter: ArchiveExportService
   let importer: ArchiveImportService
   let cases_: CasesService
@@ -79,6 +111,7 @@ describe.skipIf(!db)('a case, out and back', () => {
       .returning()
     const artefact = Buffer.from('the artefact bytes')
     const stored = await store.put(
+      row.id,
       (async function* () {
         yield artefact
       })(),
@@ -112,10 +145,29 @@ describe.skipIf(!db)('a case, out and back', () => {
       .values({
         caseId: row.id,
         label: 'The report',
-        document: Buffer.from('pretend-yjs-bytes'),
         createdBy: actorId,
       })
       .returning()
+    const blocks = await seed!
+      .insert(reportBlocks)
+      .values(
+        [0, 1].map((position) => ({
+          caseId: row.id,
+          reportId: report!.id,
+          position,
+          createdBy: actorId,
+        })),
+      )
+      .returning()
+    await seed!
+      .update(reports)
+      .set({
+        document: written({
+          [blocks[0]!.id]: 'What happened first.',
+          [blocks[1]!.id]: 'What was done about it.',
+        }),
+      })
+      .where(eq(reports.id, report!.id))
     return {
       caseId: row.id,
       systemId: box!.id,
@@ -141,12 +193,12 @@ describe.skipIf(!db)('a case, out and back', () => {
 
     root = await mkdtemp(join(tmpdir(), 'ic-archive-'))
     store = new EvidenceStore({ get: () => root } as never, policy)
-    cases_ = new CasesService(
-      db!,
-      { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
+    cases_ = as(
+      actorId,
+      new CasesService(db!, store, { announce: () => {}, othersOn: () => Promise.resolve([]) } as never),
     )
-    exporter = new ArchiveExportService(cases_, store, policy)
-    importer = new ArchiveImportService(db!, store, policy)
+    exporter = as(actorId, new ArchiveExportService(cases_, store, policy, new ProseService(db!)))
+    importer = as(actorId, new ArchiveImportService(db!, store, policy))
   })
 
   afterAll(async () => {
@@ -173,14 +225,14 @@ describe.skipIf(!db)('a case, out and back', () => {
     // **Below the floor a route would accept, deliberately.** What this asks
     // is whether the stored value is read and used, and the archive a case
     // fixture builds is smaller than the smallest an operator may set.
-    const mean = new ArchiveImportService(db!, store, {
+    const mean = as(actorId, new ArchiveImportService(db!, store, {
       read: () =>
         Promise.resolve({
           ...POLICY_DEFAULTS,
           'evidence.archiveMegabytes': 0,
           'evidence.attachmentMegabytes': 0,
         }),
-    } as never)
+    } as never))
 
     await expect(
       mean.load(built.bytes, '', other),
@@ -194,7 +246,7 @@ describe.skipIf(!db)('a case, out and back', () => {
     // its customer, so an archive of a case the install still holds is refused
     // on that ground -- which would answer this control with a rejection that
     // says nothing about the ceiling. -> #220
-    await db!.update(cases).set({ reference: '' }).where(eq(cases.id, made.caseId))
+    await seed!.update(cases).set({ reference: '' }).where(eq(cases.id, made.caseId))
     const result = await importer.load(built.bytes, '', other)
     expect(result.id).toBeDefined()
   })
@@ -389,21 +441,31 @@ describe.skipIf(!db)('a case, out and back', () => {
     const [row] = await seed!.select().from(evidence).where(eq(evidence.caseId, result.id))
     expect(row!.hash).toBe(made.hash)
     expect(row!.storedAt).not.toBeNull()
-    expect(Buffer.from((await store.read(row!.hash))!).toString()).toBe('the artefact bytes')
+    expect(Buffer.from((await store.read(result.id, row!.hash))!).toString()).toBe('the artefact bytes')
     expect(result.missingFiles).toBe(0)
   })
 
-  it('carries the prose document onto the report it now belongs to', async () => {
-    // Filed under the old report id it would be in the archive and reachable
-    // from nothing - the same class as the supersede re-keying.
+  /** A fragment left under an old block id is text no block reads. -> #1142 */
+  it('carries each section of prose onto the block it now belongs to', async () => {
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
     await freeTheReference(made.caseId)
     const result = await importer.load(built.bytes, '', other)
 
     const [report] = await seed!.select().from(reports).where(eq(reports.caseId, result.id))
+    const blocks = await seed!
+      .select()
+      .from(reportBlocks)
+      .where(eq(reportBlocks.reportId, report!.id))
+      .orderBy(reportBlocks.position)
     expect(report!.document).not.toBeNull()
-    expect(Buffer.from(report!.document!).toString()).toBe('pretend-yjs-bytes')
+    const text = sections(report!.document!)
+    expect(
+      Object.keys(text).filter((name) => blocks.some((block) => block.id === name)),
+      'sections of prose naming a block of the imported report',
+    ).toHaveLength(2)
+    expect(text[blocks[0]!.id]).toContain('What happened first.')
+    expect(text[blocks[1]!.id]).toContain('What was done about it.')
   })
 
   it('keeps the prose document out of the JSON a human reads', async () => {
@@ -501,11 +563,11 @@ describe.skipIf(!db)('a case, out and back', () => {
   it('opens the case it reads under the install default', async () => {
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
-    await db!.update(cases).set({ reference: '' }).where(eq(cases.id, made.caseId))
+    await seed!.update(cases).set({ reference: '' }).where(eq(cases.id, made.caseId))
 
     const result = await importer.load(built.bytes, '', other)
 
-    const [row] = await db!.select().from(cases).where(eq(cases.id, result.id))
+    const [row] = await seed!.select().from(cases).where(eq(cases.id, result.id))
     const [fallback] = await db!
       .select({ id: customers.id })
       .from(customers)
@@ -525,11 +587,11 @@ describe.skipIf(!db)('a case, out and back', () => {
     // **The archive carries the padded spelling**, which is reachable: a
     // hand-built `.iccase` states whatever it likes, and no door trims what an
     // archive already holds.
-    await db!.update(cases).set({ reference: '  INC-PAD  ' }).where(eq(cases.id, made.caseId))
+    await seed!.update(cases).set({ reference: '  INC-PAD  ' }).where(eq(cases.id, made.caseId))
     const built = await exporter.build({ caseId: made.caseId, includeFiles: false })
 
     // The install holds the trimmed one, which is what every other door writes.
-    await db!.update(cases).set({ reference: 'INC-PAD' }).where(eq(cases.id, made.caseId))
+    await seed!.update(cases).set({ reference: 'INC-PAD' }).where(eq(cases.id, made.caseId))
     await expect(
       importer.load(built.bytes, '', other),
       'an archive took a reference the install already holds',
@@ -604,7 +666,7 @@ describe('a handover, exported without its files', () => {
      */
     it('says the install that wrote it had already lost it', async () => {
       const made = await furnished()
-      await rm(join(root, made.hash))
+      await rm(join(root, made.caseId, made.hash))
 
       const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
       expect(built.attachments, 'the artefacts were not asked for').toBe('included')
@@ -635,7 +697,7 @@ describe('a handover, exported without its files', () => {
         storedAt: new Date(),
         createdBy: actorId,
       })
-      await rm(join(root, made.hash))
+      await rm(join(root, made.caseId, made.hash))
 
       const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
       await freeTheReference(made.caseId)

@@ -8,6 +8,7 @@ import { headingLabelsByKey, useReportLayouts } from '@/api/reportLayouts'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useEntryReorder } from '@/api/useEntryReorder'
+import { drawn } from '@/api/rowWrite'
 import { useCaseId } from '@/app/useCaseId'
 import { REPORT_PARAM, reportQuery } from '@/lib/reportAddress'
 import { useSession } from '@/api/useSession'
@@ -92,7 +93,7 @@ export function ReportContainer() {
         void announced('the language', () =>
           patchReport.mutateAsync({
             entryId: report.id,
-            version: report.version,
+            version: drawn(report).version,
             fields: { language },
             base: report,
           }),

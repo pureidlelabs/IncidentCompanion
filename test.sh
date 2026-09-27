@@ -116,15 +116,9 @@ if [ -z "${INCIDENTCOMPANION_SKIP_UI:-}" ]; then
 fi
 
 echo "Running tests..."
-# Parallel by default; each xdist worker is a separate process and
-# `tests/conftest.py` mints a per-process scratch root. **`--dist loadfile`
-# keeps a file's tests on one worker, and it masks a real order dependence
-# rather than fixing it.** Both flags are pinned by
-# `tests/repo/test_platform_portability.py`.
-#
 # Stand down for an explicit -n and for the flags wanting one readable stream:
 # interleaved worker output defeats --pdb and -s entirely.
-XDIST="-n auto --dist loadfile"
+XDIST="-n auto"
 for arg in "$@"; do
     case "$arg" in
         -n*|--numprocesses*|--pdb|-s|--capture=no) XDIST="" ;;

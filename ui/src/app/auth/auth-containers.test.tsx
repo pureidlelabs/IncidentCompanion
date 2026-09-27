@@ -23,6 +23,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '@/api/client'
 import type * as ApiClient from '@/api/client'
+import { getSession, setSession } from '@/api/session'
 
 import { ChangePasswordContainer } from './ChangePasswordContainer'
 import { FirstRunContainer } from './FirstRunContainer'
@@ -289,6 +290,43 @@ describe('changing a password somebody else chose', () => {
 
     expect(await screen.findByText('That is not your current password.')).toBeVisible()
     expect(changed).not.toHaveBeenCalled()
+  })
+})
+
+/** The real `changeOwnPassword`, over a `fetch` stubbed with the route's own refusal. */
+describe('a refused change against the real client', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    setSession(null)
+  })
+
+  it('keeps the session when the current password is wrong', async () => {
+    const real = await vi.importActual<typeof ApiClient>('@/api/client')
+    changeOwnPassword.mockImplementation((fields) =>
+      real.changeOwnPassword(fields as Parameters<typeof real.changeOwnPassword>[0]),
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ message: 'That is not the current password.' }), {
+            status: 422,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      ),
+    )
+    setSession({ userId: 'u-held', username: 'held' })
+    const user = userEvent.setup()
+    render(<ChangePasswordContainer onChanged={vi.fn()} />)
+
+    await user.type(screen.getByLabelText('Current password'), 'a-wrong-password')
+    await user.type(screen.getByLabelText('New password'), 'a-password-of-my-own')
+    await user.type(screen.getByLabelText('Repeat new password'), 'a-password-of-my-own')
+    await user.click(screen.getByRole('button', { name: 'Change password' }))
+
+    expect(await screen.findByText('That is not the current password.')).toBeVisible()
+    expect(getSession()?.userId, 'a mistyped password signed the analyst out').toBe('u-held')
   })
 })
 

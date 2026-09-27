@@ -12,6 +12,9 @@
 import { readdirSync, statSync, type Dirent } from 'node:fs'
 import { join } from 'node:path'
 
+import { mustRun } from '../../test/must-run.js'
+import { CASE_NAME, MANIFEST_NAME, pack, unpack } from '../../src/archive/format.js'
+
 import {
   expect,
   request as apiRequest,
@@ -42,6 +45,9 @@ export async function requireServedApp(baseURL: string): Promise<void> {
   if (stale !== null) throw new Error(stale)
   const why = await unservedReason(baseURL)
   if (why === null) return
+  // A certifying run refuses rather than skipping: `prerequisites.ts` makes
+  // that split once before collection and cannot make it again. -> #1035
+  if (mustRun()) throw new Error(why)
   // The reason on stdout, because the list reporter prints a skip as one dash
   // and the annotation is only read by whoever opens the HTML report.
   console.warn(`SKIPPED ${test.info().titlePath.join(' > ')}: ${why}`)
@@ -380,7 +386,12 @@ export async function settle(page: Page, timeout = 10_000): Promise<void> {
 }
 
 /**
- * The demo case with this reference, by name rather than by list order.
+ * This worker's own copy of the demo case with this reference, by name rather
+ * than by list order.
+ *
+ * **A copy, because four workers on the seeded demo let a writer in one empty a
+ * reader in another.** The first ask in a slot exports the demo and imports it
+ * under the reference `<reference>-<slot>`; later asks find it by that. -> #1065
  *
  * **`cases.find((row) => row.isDemo)` is the trap this exists to close.** The
  * listing is not ordered by anything a spec may rely on, so a case that wants
@@ -406,9 +417,29 @@ export async function demoCase(
     id: string
     reference?: string | null
   }[]
+  const copy = `${reference}-${slot().replace('/', '-')}`
+  const mine = rows.find((row) => row.reference === copy)
+  if (mine) return mine.id
+
   const found = rows.find((row) => row.reference === reference)
   expect(found, `no demo case with reference ${reference} is seeded`).toBeDefined()
-  return found!.id
+  const exported = await request.post(`/api/cases/${found!.id}/archive`, { data: {} })
+  expect(exported.ok(), `exporting ${reference} answered ${String(exported.status())}`).toBe(true)
+
+  // The reference is unique within its customer, so the import refuses the demo's own.
+  const { members, manifest } = await unpack(await exported.body(), {
+    memberBytes: Number.MAX_SAFE_INTEGER,
+    totalBytes: Number.MAX_SAFE_INTEGER,
+  })
+  const record = JSON.parse(Buffer.from(members[CASE_NAME]!).toString('utf8')) as object
+  members[CASE_NAME] = Buffer.from(JSON.stringify({ ...record, reference: copy }))
+  delete members[MANIFEST_NAME]
+  const imported = await request.post('/api/cases/import', {
+    data: await pack(members, manifest.attachments, manifest.missing),
+    headers: { 'content-type': 'application/octet-stream' },
+  })
+  expect(imported.ok(), `importing a copy of ${reference} answered ${String(imported.status())}`).toBe(true)
+  return ((await imported.json()) as { id: string }).id
 }
 
 /**
@@ -800,7 +831,13 @@ export async function openAddDialog(page: Page): Promise<boolean> {
    * wrong door on twenty screens reports twenty covered screens.
    */
   const trigger = page.locator('main').getByRole('button', { name: /^(Add|New) / }).first()
-  if ((await trigger.count()) === 0) return false
+  // Waited for, not counted: a section still mounting its header has no door
+  // yet, and `settle` cannot tell that from a section that never has one.
+  const found = await trigger.waitFor({ state: 'visible', timeout: 5_000 }).then(
+    () => true,
+    () => false,
+  )
+  if (!found) return false
   await trigger.click()
   await expect(page.locator(DIALOG), 'pressed Add and no dialog opened').toBeVisible({
     timeout: 10_000,
@@ -852,8 +889,20 @@ export async function closeDialog(page: Page): Promise<'closed' | 'needed-button
   // poll interval, and anything shorter calls an absent overlay present.
   if ((await page.locator(OVERLAY).count()) === 0) return 'closed'
 
-  await page.keyboard.press('Escape')
-  if (await gone(EXIT)) return 'closed'
+  /**
+   * **One press per layer, while the press is still achieving something.** A
+   * calendar opened inside a create dialog is two overlays, and Escape closes
+   * the innermost -- so a single press leaves one behind and reads as stuck.
+   * The loop stops the moment a press stops reducing the count, which is the
+   * state the caller is entitled to hear about. -> #1054
+   */
+  for (let open = await page.locator(OVERLAY).count(); open > 0; ) {
+    await page.keyboard.press('Escape')
+    if (await gone(EXIT)) return 'closed'
+    const left = await page.locator(OVERLAY).count()
+    if (left >= open) break
+    open = left
+  }
 
   const close = page
     .locator(DIALOG)
@@ -935,6 +984,10 @@ export function complaints(page: Page): Locator {
       // draws. It carries no `role="alert"`, so without this arm the paragraph
       // above describes a sweep that reports it as a clean pass. -> #451
       '[data-testid="section-error"]',
+      // And the boundary above the router, which no `errorElement` reaches:
+      // a throw in the providers or the session hooks unmounts the tree, and
+      // this is the only thing still on screen. -> #1029
+      '[data-testid="root-error"]',
     ].join(', '),
   )
 }

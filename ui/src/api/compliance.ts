@@ -25,6 +25,7 @@ import type { CaseCompliance as CaseComplianceFields } from '@contract/entities/
 
 import { request, type ApiError } from './client'
 import { keys } from './queryKeys'
+import { rowKey, writeRow, type Read } from './rowWrite'
 
 /**
  * One limb of a determination.
@@ -104,60 +105,38 @@ export function useComplianceRecord(caseId: string): UseQueryResult<ComplianceRe
   })
 }
 
+/** One write to the record: the answers, and the version of the record they were read at. */
+export interface ComplianceWrite {
+  version: Read
+  fields: Record<string, unknown>
+}
+
 /**
- * Write one field of the record.
- *
- * **The version travels with every patch and comes from the cached record**,
- * which is the version this analyst actually read. Taking it from a refetch
- * just before the write is the shape the rule forbids: it adopts the other
- * analyst's value as the base, and the check then passes on a save that should
- * have been a question.
+ * Write answers to the record.
  *
  * **The verdict is invalidated too.** Every field here is an input to it, so a
  * verdict left cached is one that disagrees with the form beneath it.
  */
 export function useComplianceMutation(
   caseId: string,
-): UseMutationResult<ComplianceRecord, ApiError, Record<string, unknown>, { previous: ComplianceRecord | undefined }> {
+): UseMutationResult<ComplianceRecord, ApiError, ComplianceWrite> {
   const client = useQueryClient()
-  const recordKey = [...keys.compliance(caseId), 'record']
 
-  return useMutation<
-    ComplianceRecord,
-    ApiError,
-    Record<string, unknown>,
-    { previous: ComplianceRecord | undefined }
-  >({
-    mutationKey: [...recordKey, 'patch'],
+  return useMutation<ComplianceRecord, ApiError, ComplianceWrite>({
+    mutationKey: [...keys.compliance(caseId), 'record', 'patch'],
 
-    mutationFn: (fields) => {
-      const held = client.getQueryData<ComplianceRecord>(recordKey)
-      return request<ComplianceRecord>(`/cases/${encodeURIComponent(caseId)}/compliance`, {
-        method: 'PATCH',
-        body: { ...fields, version: held?.version },
-      })
-    },
-
-    onMutate: async (fields) => {
-      await client.cancelQueries({ queryKey: recordKey })
-      const previous = client.getQueryData<ComplianceRecord>(recordKey)
-      client.setQueryData<ComplianceRecord>(recordKey, (current) =>
-        current ? { ...current, ...fields } : current,
-      )
-      return { previous }
-    },
-
-    onError: (_error, _fields, context) => {
-      if (context) client.setQueryData(recordKey, context.previous)
-    },
-
-    // **Replaced rather than merged**, because the answer carries the version
-    // the next write has to name. Merging the patch alone leaves the cache
-    // holding the version this write consumed, and the second field an analyst
-    // fills is refused as a conflict.
-    onSuccess: (row) => {
-      client.setQueryData<ComplianceRecord>(recordKey, row)
-    },
+    mutationFn: ({ version, fields }) =>
+      writeRow(
+        client,
+        rowKey(caseId, 'case_compliance', caseId),
+        version,
+        (at) =>
+          request<ComplianceRecord>(`/cases/${encodeURIComponent(caseId)}/compliance`, {
+            method: 'PATCH',
+            body: { ...fields, version: at },
+          }),
+        (stored) => stored.version,
+      ),
 
     onSettled: () => {
       void client.invalidateQueries({ queryKey: keys.compliance(caseId) })

@@ -10,7 +10,11 @@ This spec covers taking one case out as a single file and reading one back in. C
 
 ### Requirement: An archive is one file holding the whole case
 
-An archive MUST be a single file, and MUST hold everything needed to read the case again: the record, the prose as it was written, and the material attached as evidence.
+An archive MUST be a single file, and MUST hold everything needed to read the case again: the record, the prose as it reads, and the material attached as evidence.
+
+What an archive carries MUST be the case as it reads when it is made. Text an analyst deleted, a section removed from a report, and prose under a section that is no longer written MUST NOT travel. A note's prose travels as a report's does.
+
+The number of rows an archive describes MUST NOT exceed what the install reads back, so a case past it is refused rather than archived, with the refusal naming the limit.
 
 An analyst MUST be able to leave the attached material out, because evidence is what makes an archive large and moving the record alone is often what is wanted.
 
@@ -34,11 +38,38 @@ Where material is left out, or is expected and not found, the archive MUST say s
 - WHEN it is archived
 - THEN the archive says how much was not found
 
+#### Scenario: Deleted text does not travel
+
+- GIVEN a report from which an analyst deleted text
+- WHEN the case is archived
+- THEN the archive does not carry the deleted text
+- AND it carries the text that remains
+
+#### Scenario: A removed section does not travel
+
+- GIVEN a report with a section the analyst removed, and one no longer written
+- WHEN the case is archived
+- THEN the archive carries neither section's prose
+
+#### Scenario: A note's prose is archived
+
+- GIVEN a note written with formatting
+- WHEN the case is archived and read back in
+- THEN the note reads as it was written
+
+#### Scenario: A case larger than an archive may carry
+
+- GIVEN a case holding more rows than the install reads from one archive
+- WHEN it is archived
+- THEN the archive is refused, naming the limit
+
 ### Requirement: An archive says what it should contain, and is checked against it
 
 An archive MUST carry a statement of what it holds, and reading one MUST check what is there against that statement before any of it is used.
 
-An archive whose content does not match its own statement MUST be refused. A file that has been damaged in transit, or altered, MUST NOT be read into a case as though it were sound.
+An archive whose content does not match its own statement MUST be refused. A file damaged in transit MUST NOT be read into a case as though it were sound. A sealed archive altered by anybody not holding its secret MUST be refused.
+
+Whoever holds a plain archive can rewrite it and its statement together, so sealing is what protects an archive against alteration, and the people it is handed to MUST be told so.
 
 #### Scenario: An archive is read
 
@@ -51,6 +82,18 @@ An archive whose content does not match its own statement MUST be refused. A fil
 - GIVEN an archive whose content no longer matches its own statement
 - WHEN it is read
 - THEN it is refused
+
+#### Scenario: A sealed archive is altered by somebody without its secret
+
+- GIVEN a sealed archive altered by somebody not holding its secret
+- WHEN it is read with the secret
+- THEN it is refused
+
+#### Scenario: An analyst archives without sealing
+
+- GIVEN an analyst archiving a case without a secret
+- WHEN they choose not to seal it
+- THEN they are told that whoever holds the archive can change it without that showing
 
 ### Requirement: Reading an archive says how complete the case it made is
 
@@ -123,7 +166,7 @@ An archive is a file from outside the install, and the work of opening one is de
 
 Where an archive declares that opening it costs more than this install would ever produce, it MUST be refused before that work begins rather than after.
 
-The size of what an archive claims to hold MUST be bounded before it is read, so that a small file cannot describe an unbounded amount of content.
+The size of what an archive claims to hold MUST be bounded before it is read, so that a small file cannot describe an unbounded amount of content. The number of rows it describes MUST be bounded too, and counted before any row is written.
 
 #### Scenario: An archive declares more work than the install produces
 
@@ -137,6 +180,13 @@ The size of what an archive claims to hold MUST be bounded before it is read, so
 - WHEN it is read
 - THEN it is refused
 
+#### Scenario: An archive describing more rows than the install writes
+
+- GIVEN an archive describing more rows than the install reads from one archive
+- WHEN it is read
+- THEN it is refused before any row is written
+- AND the refusal names the limit
+
 ### Requirement: Reading an archive creates a case; it never overwrites one
 
 Reading an archive MUST produce a new case. It MUST NOT be a way to write into a case that already exists, and MUST NOT be a way to replace one.
@@ -146,6 +196,8 @@ Nothing carried by an archive MUST be able to decide what the new case is called
 Where a row came from MUST be recorded as the archive, rather than as whatever the archive says a row came through on the install that wrote it. A row an analyst typed elsewhere did not arrive here by being typed, and a timeline entry somebody read elsewhere has not been read here — so an archive read in MUST leave its entries marked unreviewed, as any other import does.
 
 The analyst reading the archive in MUST be recorded as having brought it in, so a case that arrived from elsewhere is attributable to the person who put it there.
+
+The new case MUST hold the artefacts the archive carries and nothing else. A digest the archive names and does not carry names something held elsewhere, and MUST NOT reach an artefact this install holds for another case.
 
 #### Scenario: An archive is read in
 
@@ -161,6 +213,14 @@ The analyst reading the archive in MUST be recorded as having brought it in, so 
 - THEN the new case's rows are identified by this install's own names
 - AND nothing already in the install was reached
 
+#### Scenario: An archive names an artefact it does not carry
+
+- GIVEN an archive whose rows name the digest of an artefact another case holds
+- AND the archive does not carry that artefact
+- WHEN it is read in
+- THEN the new case holds nothing under that digest
+- AND nothing the new case produces carries the artefact
+
 #### Scenario: An archive is attributed
 
 - GIVEN an analyst reading an archive in
@@ -174,11 +234,43 @@ The analyst reading the archive in MUST be recorded as having brought it in, so 
 - THEN the new case's rows say they came from an archive
 - AND its timeline entries are marked unreviewed
 
+### Requirement: An archive is refused where its reference is already held
+
+Reading an archive MUST be refused where the case reference it carries is already held by another case within the same customer, and the refusal MUST name the case holding it.
+
+A reference identifies the customer's own record of the incident, so two cases carrying one reference leave no answer to which of them that record refers to. The refusal MUST leave the install unchanged, and MUST NOT depend on which door the archive arrived through.
+
+An archive read into an install that does not hold the reference is unaffected, which is the handover between installs the format exists for.
+
+#### Scenario: The install still holds the case the archive was made from
+
+- GIVEN a case carrying a reference
+- WHEN an archive of it is read into the same install
+- THEN it is refused
+- AND the analyst is told which case already holds that reference
+- AND no case is created
+
+#### Scenario: The reference is free
+
+- GIVEN an install holding no case with the archive's reference
+- WHEN the archive is read
+- THEN the case is created carrying that reference
+
+#### Scenario: The archive carries no reference
+
+- GIVEN an archive of a case with no reference
+- WHEN it is read into an install already holding cases with no reference
+- THEN it is created, because the absence of a reference is not a value
+
 ### Requirement: An archive's rows are checked against what this install can hold
 
 An archive matching its own statement MUST NOT be read as though its rows were sound. A statement covers what the file carries; it says nothing about whether the rows inside are ones this install can mean.
 
-Every row MUST be checked against the shape its collection declares, before any row is written. A value of a shape the field does not take MUST be refused rather than stored, and where a field's terms are fixed, a term outside them MUST be refused too.
+Every row MUST be checked against the shape its collection declares, before any row is written, and against the rules its collection declares across fields, as its own door checks them.
+
+A report an archive says was sent MUST also preserve its document, and one that preserves a document MUST say it was sent; the preserved document MUST be one this install can produce. The preserved document MUST be stored as it arrived, and every output of it MUST carry no live indicator, whatever the archive carried and whichever part the archive marks as an analyst's writing: nothing read in shows which prose an analyst wrote.
+
+An archive's record MUST NOT carry a prose document: prose travels beside the record, and a record planting one is read as though it carried none. A value of a shape the field does not take MUST be refused rather than stored, and where a field's terms are fixed, a term outside them MUST be refused too.
 
 What the check can refuse is what the collection states. A field whose terms are published as guidance rather than fixed in its shape is open at every door, and an archive is not the place to close it.
 
@@ -231,3 +323,29 @@ A field this install does not know MUST be dropped rather than refused, so that 
 - WHEN it is read
 - THEN the column keeps the value the install would give it
 - AND the row does not gain a value the archive never stated
+
+#### Scenario: An archive states a value in a field its other fields make inapplicable
+
+- GIVEN a row setting a field its collection's rules say does not apply to the row
+- WHEN the archive is read
+- THEN it is refused naming the collection
+
+#### Scenario: An archive's report is sent without its document, or the reverse
+
+- GIVEN an archive whose report says it was sent and preserves nothing, preserves a document and was never sent, or preserves one no painter reads
+- WHEN it is read
+- THEN it is refused naming the collection
+- AND no case is left behind
+
+#### Scenario: An archive carries a report it says was sent
+
+- GIVEN a report sent and archived by an install
+- WHEN the archive is read
+- THEN the report reads as sent
+- AND an address it preserved reaches no reader as a live link
+
+#### Scenario: An archive's record plants a note document
+
+- GIVEN an archive whose record carries a note's prose document
+- WHEN it is read
+- THEN the note opens as its own words, not as the planted document

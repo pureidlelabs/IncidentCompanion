@@ -32,6 +32,8 @@ const ADDED = `An operator template ${String(Date.now())}`
 let harness: Harness | null = null
 let admin: Persona
 let before: Record<string, string> = {}
+/** The template is added once, after the snapshot: two cases read it back. */
+let added: { status: number; said: string } = { status: 0, said: '' }
 
 /** Every door an anonymous caller may knock on, and what it answers. */
 async function openDoor(): Promise<Record<string, string>> {
@@ -49,6 +51,13 @@ describe.skipIf(!(await bootable()))('an install somebody has extended', () => {
     harness = await boot()
     admin = await sharedAdmin(harness)
     before = await openDoor()
+
+    const made = await fetch(`${harness.base}/api/library/templates`, {
+      method: 'POST',
+      headers: { cookie: admin.cookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ label: ADDED, description: 'Added by this test.' }),
+    })
+    added = { status: made.status, said: await made.text() }
   }, 90_000)
 
   afterAll(async () => {
@@ -91,14 +100,8 @@ describe.skipIf(!(await bootable()))('an install somebody has extended', () => {
     ).toContain('critical')
   })
 
-  it('takes the template the operator added', async () => {
-    const made = await fetch(`${harness!.base}/api/library/templates`, {
-      method: 'POST',
-      headers: { cookie: admin.cookie, 'content-type': 'application/json' },
-      body: JSON.stringify({ label: ADDED, description: 'Added by this test.' }),
-    })
-    const body = await made.text()
-    expect(made.status, `creating the template answered ${body}`).toBe(200)
+  it('takes the template the operator added', () => {
+    expect(added.status, `creating the template answered ${added.said}`).toBe(200)
   })
 
   it('shows it to a caller who has a session, so the door below is a choice', async () => {

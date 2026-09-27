@@ -1,0 +1,995 @@
+{
+  "templates": {
+    "slug": "templates",
+    "noun": "template",
+    "newLabel": "New template",
+    "allowBlank": true,
+    "entries": [
+      {
+        "name": "phishing",
+        "label": "Phishing campaign",
+        "description": "A malicious message reached users: scope the campaign, find who clicked, contain the payload.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "bec",
+        "label": "Business email compromise",
+        "description": "A mailbox is under someone else's control: audit logs, inbox rules, and anything financial that moved.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "ransomware",
+        "label": "Ransomware",
+        "description": "Encryption has fired: scope the blast radius, find the entry point, and check what left before it did.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "insider",
+        "label": "Insider / data theft",
+        "description": "An authorized user is the subject: evidence handling and HR/Legal sequencing matter as much as the technical work.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      }
+    ],
+    "problems": [],
+    "startOptions": [
+      {
+        "value": "",
+        "label": "Blank"
+      },
+      {
+        "value": "phishing",
+        "label": "Phishing campaign"
+      },
+      {
+        "value": "bec",
+        "label": "Business email compromise"
+      },
+      {
+        "value": "ransomware",
+        "label": "Ransomware"
+      },
+      {
+        "value": "insider",
+        "label": "Insider / data theft"
+      }
+    ]
+  },
+  "report-layouts": {
+    "slug": "report-layouts",
+    "noun": "layout",
+    "newLabel": null,
+    "allowBlank": false,
+    "entries": [
+      {
+        "name": "standard",
+        "label": "Customer RCA",
+        "description": "The full account, written for the customer. Your own sections sit between the derived ones.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": false,
+        "disabled": false
+      },
+      {
+        "name": "executive",
+        "label": "Executive briefing",
+        "description": "One page for a management audience: the figures and the shape of the attack, and nothing to look up.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": false,
+        "disabled": false
+      },
+      {
+        "name": "technical",
+        "label": "Technical appendix",
+        "description": "Everything, in the order an investigator would re-walk it. For another analyst to check your work.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": false,
+        "disabled": false
+      },
+      {
+        "name": "methods-pack",
+        "label": "Methods pack",
+        "description": "Every query and collection step behind the findings, with its window and what it returned.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": false,
+        "disabled": false
+      },
+      {
+        "name": "nis2-early-warning",
+        "label": "NIS2 early warning",
+        "description": "Article 23, filed within 24 hours: whether the incident looks malicious, and whether it crosses a border.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": false,
+        "disabled": false
+      },
+      {
+        "name": "nis2-notification",
+        "label": "NIS2 notification",
+        "description": "Filed at 72 hours and superseding the early warning: an initial assessment of severity and impact.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": false,
+        "disabled": false
+      },
+      {
+        "name": "nis2-intermediate",
+        "label": "NIS2 intermediate",
+        "description": "A progress update while the incident is still open: where it stands, and what is still unanswered.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": false,
+        "disabled": false
+      },
+      {
+        "name": "nis2-final",
+        "label": "NIS2 final report",
+        "description": "The closing filing: root cause, the impact as measured, and the measures taken.",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": false,
+        "disabled": false
+      }
+    ],
+    "problems": [],
+    "startOptions": [
+      {
+        "value": "standard",
+        "label": "Customer RCA"
+      },
+      {
+        "value": "executive",
+        "label": "Executive briefing"
+      },
+      {
+        "value": "technical",
+        "label": "Technical appendix"
+      },
+      {
+        "value": "methods-pack",
+        "label": "Methods pack"
+      },
+      {
+        "value": "nis2-early-warning",
+        "label": "NIS2 early warning"
+      },
+      {
+        "value": "nis2-notification",
+        "label": "NIS2 notification"
+      },
+      {
+        "value": "nis2-intermediate",
+        "label": "NIS2 intermediate"
+      },
+      {
+        "value": "nis2-final",
+        "label": "NIS2 final report"
+      }
+    ]
+  },
+  "report-snippets": {
+    "slug": "report-snippets",
+    "noun": "snippet",
+    "newLabel": "New snippet",
+    "allowBlank": true,
+    "entries": [
+      {
+        "name": "absence-of-evidence",
+        "label": "Absence of evidence is not evidence of absence",
+        "description": "evidence",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "alert-interactive-service-logon",
+        "label": "Alert on interactive service-account logons",
+        "description": "detection",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "alert-service-creation",
+        "label": "Alert on service and scheduled-task creation",
+        "description": "detection",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "application-control",
+        "label": "Control which executables may run",
+        "description": "execution",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "asset-inventory",
+        "label": "Bring the asset inventory up to date",
+        "description": "visibility",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "attachment-filtering",
+        "label": "Filter executable and macro-enabled attachments",
+        "description": "initial access",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "backup-off-domain",
+        "label": "Take the backup system off the domain it protects",
+        "description": "backup",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "block-legacy-auth",
+        "label": "Block legacy authentication protocols",
+        "description": "access",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "block-macros",
+        "label": "Block macros from the internet",
+        "description": "initial access",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "central-logging",
+        "label": "Centralise logs and extend retention",
+        "description": "visibility",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "deny-interactive-service-logon",
+        "label": "Deny interactive logon to service accounts",
+        "description": "hardening",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "disable-smbv1",
+        "label": "Disable SMBv1 and restrict SMB between hosts",
+        "description": "lateral movement",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "dns-logging",
+        "label": "Log and inspect DNS",
+        "description": "visibility",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "edr-coverage",
+        "label": "Close the endpoint detection gaps",
+        "description": "visibility",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "egress-monitoring",
+        "label": "Monitor egress volume and destinations",
+        "description": "exfiltration",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "email-authentication",
+        "label": "Enforce SPF, DKIM and DMARC",
+        "description": "spoofing",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-bec",
+        "label": "Opening: business email compromise",
+        "description": "opening",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-confidence",
+        "label": "How much of this is established",
+        "description": "evidence",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-contained",
+        "label": "Where the response stands now",
+        "description": "status",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-dwell",
+        "label": "The dwell time, and why it is the number",
+        "description": "framing",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-edge-device",
+        "label": "Opening: an internet-facing service",
+        "description": "opening",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-impact",
+        "label": "What this cost the business",
+        "description": "framing",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-insider",
+        "label": "Opening: a person with access",
+        "description": "opening",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-not-contained",
+        "label": "The response is not finished",
+        "description": "status",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-phishing",
+        "label": "Opening: phishing to hands-on-keyboard",
+        "description": "opening",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-ransomware",
+        "label": "Opening: ransomware",
+        "description": "opening",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-reportable",
+        "label": "This is reportable",
+        "description": "obligation",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-third-party",
+        "label": "Opening: through a supplier",
+        "description": "opening",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-valid-account",
+        "label": "Opening: a valid account",
+        "description": "opening",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "exec-what-now",
+        "label": "The one thing to do first",
+        "description": "framing",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "ir-plan",
+        "label": "Document and exercise the response plan",
+        "description": "process",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "limits-of-this-analysis",
+        "label": "What this analysis could not establish",
+        "description": "scope",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "mass-file-change-alert",
+        "label": "Alert on mass file modification",
+        "description": "ransomware",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "mfa-everywhere",
+        "label": "Require multi-factor authentication for remote and privileged access",
+        "description": "access",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "no-attribution",
+        "label": "Attribution was not attempted",
+        "description": "attribution",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "oauth-consent",
+        "label": "Restrict and review third-party application consent",
+        "description": "cloud",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "offline-backup",
+        "label": "Keep an offline backup, and test the restore",
+        "description": "backup",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "patch-the-vector",
+        "label": "Remediate the vulnerability that was used",
+        "description": "exposure",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "phishing-reporting",
+        "label": "Give staff one button to report a suspicious message",
+        "description": "process",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "point-in-time",
+        "label": "This describes a point in time",
+        "description": "scope",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "post-incident-review",
+        "label": "Hold a post-incident review",
+        "description": "process",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "powershell-hardening",
+        "label": "Log and constrain PowerShell",
+        "description": "execution",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "privileged-group-review",
+        "label": "Review and monitor privileged group membership",
+        "description": "governance",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "reduce-internet-exposure",
+        "label": "Reduce the internet-facing surface",
+        "description": "exposure",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "retention-limited",
+        "label": "Retention limited the timeline",
+        "description": "evidence",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "rmm-control",
+        "label": "Inventory and restrict remote management tools",
+        "description": "persistence",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "rotate-credentials",
+        "label": "Rotate every credential in scope",
+        "description": "recovery",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "scope-boundary",
+        "label": "The scope this covers",
+        "description": "scope",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "segmentation",
+        "label": "Segment the network",
+        "description": "containment",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "service-accounts-least-privilege",
+        "label": "Reduce service accounts to least privilege",
+        "description": "privilege",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "stale-accounts",
+        "label": "Remove stale and orphaned accounts",
+        "description": "governance",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "supplier-access-review",
+        "label": "Review third-party and supplier access",
+        "description": "third party",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "tabletop",
+        "label": "Exercise the plan against this scenario",
+        "description": "process",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "tiering",
+        "label": "Tier administrative accounts",
+        "description": "privilege",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "unique-local-admin",
+        "label": "Give every host a unique local administrator password",
+        "description": "hardening",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      },
+      {
+        "name": "vulnerability-cadence",
+        "label": "Set a patching cadence with an owner",
+        "description": "exposure",
+        "origin": "built-in",
+        "canEdit": false,
+        "canDelete": false,
+        "canDuplicate": true,
+        "disabled": false
+      }
+    ],
+    "problems": [],
+    "startOptions": [
+      {
+        "value": "",
+        "label": "Blank"
+      },
+      {
+        "value": "absence-of-evidence",
+        "label": "Absence of evidence is not evidence of absence"
+      },
+      {
+        "value": "alert-interactive-service-logon",
+        "label": "Alert on interactive service-account logons"
+      },
+      {
+        "value": "alert-service-creation",
+        "label": "Alert on service and scheduled-task creation"
+      },
+      {
+        "value": "application-control",
+        "label": "Control which executables may run"
+      },
+      {
+        "value": "asset-inventory",
+        "label": "Bring the asset inventory up to date"
+      },
+      {
+        "value": "attachment-filtering",
+        "label": "Filter executable and macro-enabled attachments"
+      },
+      {
+        "value": "backup-off-domain",
+        "label": "Take the backup system off the domain it protects"
+      },
+      {
+        "value": "block-legacy-auth",
+        "label": "Block legacy authentication protocols"
+      },
+      {
+        "value": "block-macros",
+        "label": "Block macros from the internet"
+      },
+      {
+        "value": "central-logging",
+        "label": "Centralise logs and extend retention"
+      },
+      {
+        "value": "deny-interactive-service-logon",
+        "label": "Deny interactive logon to service accounts"
+      },
+      {
+        "value": "disable-smbv1",
+        "label": "Disable SMBv1 and restrict SMB between hosts"
+      },
+      {
+        "value": "dns-logging",
+        "label": "Log and inspect DNS"
+      },
+      {
+        "value": "edr-coverage",
+        "label": "Close the endpoint detection gaps"
+      },
+      {
+        "value": "egress-monitoring",
+        "label": "Monitor egress volume and destinations"
+      },
+      {
+        "value": "email-authentication",
+        "label": "Enforce SPF, DKIM and DMARC"
+      },
+      {
+        "value": "exec-bec",
+        "label": "Opening: business email compromise"
+      },
+      {
+        "value": "exec-confidence",
+        "label": "How much of this is established"
+      },
+      {
+        "value": "exec-contained",
+        "label": "Where the response stands now"
+      },
+      {
+        "value": "exec-dwell",
+        "label": "The dwell time, and why it is the number"
+      },
+      {
+        "value": "exec-edge-device",
+        "label": "Opening: an internet-facing service"
+      },
+      {
+        "value": "exec-impact",
+        "label": "What this cost the business"
+      },
+      {
+        "value": "exec-insider",
+        "label": "Opening: a person with access"
+      },
+      {
+        "value": "exec-not-contained",
+        "label": "The response is not finished"
+      },
+      {
+        "value": "exec-phishing",
+        "label": "Opening: phishing to hands-on-keyboard"
+      },
+      {
+        "value": "exec-ransomware",
+        "label": "Opening: ransomware"
+      },
+      {
+        "value": "exec-reportable",
+        "label": "This is reportable"
+      },
+      {
+        "value": "exec-third-party",
+        "label": "Opening: through a supplier"
+      },
+      {
+        "value": "exec-valid-account",
+        "label": "Opening: a valid account"
+      },
+      {
+        "value": "exec-what-now",
+        "label": "The one thing to do first"
+      },
+      {
+        "value": "ir-plan",
+        "label": "Document and exercise the response plan"
+      },
+      {
+        "value": "limits-of-this-analysis",
+        "label": "What this analysis could not establish"
+      },
+      {
+        "value": "mass-file-change-alert",
+        "label": "Alert on mass file modification"
+      },
+      {
+        "value": "mfa-everywhere",
+        "label": "Require multi-factor authentication for remote and privileged access"
+      },
+      {
+        "value": "no-attribution",
+        "label": "Attribution was not attempted"
+      },
+      {
+        "value": "oauth-consent",
+        "label": "Restrict and review third-party application consent"
+      },
+      {
+        "value": "offline-backup",
+        "label": "Keep an offline backup, and test the restore"
+      },
+      {
+        "value": "patch-the-vector",
+        "label": "Remediate the vulnerability that was used"
+      },
+      {
+        "value": "phishing-reporting",
+        "label": "Give staff one button to report a suspicious message"
+      },
+      {
+        "value": "point-in-time",
+        "label": "This describes a point in time"
+      },
+      {
+        "value": "post-incident-review",
+        "label": "Hold a post-incident review"
+      },
+      {
+        "value": "powershell-hardening",
+        "label": "Log and constrain PowerShell"
+      },
+      {
+        "value": "privileged-group-review",
+        "label": "Review and monitor privileged group membership"
+      },
+      {
+        "value": "reduce-internet-exposure",
+        "label": "Reduce the internet-facing surface"
+      },
+      {
+        "value": "retention-limited",
+        "label": "Retention limited the timeline"
+      },
+      {
+        "value": "rmm-control",
+        "label": "Inventory and restrict remote management tools"
+      },
+      {
+        "value": "rotate-credentials",
+        "label": "Rotate every credential in scope"
+      },
+      {
+        "value": "scope-boundary",
+        "label": "The scope this covers"
+      },
+      {
+        "value": "segmentation",
+        "label": "Segment the network"
+      },
+      {
+        "value": "service-accounts-least-privilege",
+        "label": "Reduce service accounts to least privilege"
+      },
+      {
+        "value": "stale-accounts",
+        "label": "Remove stale and orphaned accounts"
+      },
+      {
+        "value": "supplier-access-review",
+        "label": "Review third-party and supplier access"
+      },
+      {
+        "value": "tabletop",
+        "label": "Exercise the plan against this scenario"
+      },
+      {
+        "value": "tiering",
+        "label": "Tier administrative accounts"
+      },
+      {
+        "value": "unique-local-admin",
+        "label": "Give every host a unique local administrator password"
+      },
+      {
+        "value": "vulnerability-cadence",
+        "label": "Set a patching cadence with an owner"
+      }
+    ]
+  }
+}

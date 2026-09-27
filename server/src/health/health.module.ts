@@ -18,11 +18,12 @@ import { ResourcesController } from './resources.controller.js'
 import { PostgresHealth, RedisHealth } from './dependencies.health.js'
 import { healthRedisProvider } from './health.redis.js'
 import { ArtefactCensus, saysAtStart } from './artefact-census.service.js'
+import { EvidenceStore } from '../evidence/store.js'
 
 @Module({
   imports: [TerminusModule],
   controllers: [HealthController, ResourcesController, ActivityController],
-  providers: [PostgresHealth, RedisHealth, healthRedisProvider, ArtefactCensus],
+  providers: [PostgresHealth, RedisHealth, healthRedisProvider, ArtefactCensus, EvidenceStore],
   // Exported for `InstallSettingsController`, which `AppModule` registers.
   exports: [ArtefactCensus],
 })
@@ -30,7 +31,8 @@ export class HealthModule implements OnApplicationBootstrap {
   constructor(private readonly census: ArtefactCensus) {}
 
   /**
-   * Say at start what this install expects beside it and cannot find.
+   * Say what this install expects beside it, what it cannot find, and what it
+   * holds that nothing names.
    *
    * **Caught rather than propagated.** A census that cannot be taken is a
    * missing directory or a database that is not up yet, and neither is a
@@ -38,13 +40,13 @@ export class HealthModule implements OnApplicationBootstrap {
    */
   async onApplicationBootstrap(): Promise<void> {
     const log = new Logger('Evidence')
-    let said
+    let held
     try {
-      said = saysAtStart(await this.census.take())
+      held = await this.census.take()
     } catch (why) {
       log.warn(`Could not count the artefacts this install expects: ${String(why)}`)
       return
     }
-    if (said) log[said.level](said.message)
+    for (const said of saysAtStart(held)) log[said.level](said.message)
   }
 }

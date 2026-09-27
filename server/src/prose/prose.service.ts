@@ -3,10 +3,9 @@
  *
  * **Two kinds of record, and the granularity differs on purpose.** A report is
  * one document with a fragment per block - one awareness roster, so an outline
- * can say *"Bob is in section 4"*, and one restore point per report rather
- * than one per section. A **note** is one document on its own, because a note
- * is created, read and deleted on its own and a case-wide document would keep
- * a fragment for every note that ever went.
+ * can say *"Bob is in section 4"*. A **note** is one document on its own,
+ * because a note is created, read and deleted on its own and a case-wide
+ * document would keep a fragment for every note that ever went.
  *
  * **The codec, not a second server.** `y-protocols` is the state-vector
  * exchange every Yjs transport speaks, and it rides the case socket that
@@ -34,8 +33,17 @@
  * document is re-encoded each time. The last reader out flushes synchronously,
  * so a document is never left newer in memory than on disk.
  */
-import { Inject, Injectable, Logger, Optional, type OnApplicationShutdown } from '@nestjs/common'
-import { and, eq } from 'drizzle-orm'
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+  type OnApplicationBootstrap,
+  type OnApplicationShutdown,
+} from '@nestjs/common'
+import type { IncomingHttpHeaders } from 'node:http'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import {
@@ -48,9 +56,17 @@ import * as Y from 'yjs'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import { reports } from '../db/schema/report.js'
+import { user } from '../db/schema/auth.js'
+import { changeFeed } from '../db/schema/change-feed.js'
+import { proseAcceptances } from '../db/schema/prose-acceptances.js'
+import { reportBlocks, reports } from '../db/schema/report.js'
+import { sentReportIn } from '../db/schema/store-guards.js'
 import { caseNotes } from '../db/schema/tracker.js'
-import { withCase } from '../db/scope.js'
+import { ACCEPTANCE_LASTS, PROSE_ROLE } from '../db/schema/scoped.js'
+import { actingAs, principalNow, unattended, withCase, type Executor } from '../db/scope.js'
+import { fragmentFor, plainText } from '../domain/prose-fields.js'
+import type { ProseState } from '../domain/prose-state.js'
+import { writeInstallActivity } from '../install-activity/record.js'
 
 /**
  * The one fragment a note's document holds.
@@ -70,40 +86,29 @@ export const NOTE_FRAGMENT = 'note'
 const PROSE_TABLES = ['reports', 'casenotes'] as const
 export type ProseTable = (typeof PROSE_TABLES)[number]
 
-/**
- * The note's words, as plain text, for the column the index and the search
- * read.
- *
- * **From the deltas rather than `toString()`.** `Y.XmlText.toString()`
- * serialises marks as tags, so a bolded word would put `<strong>` into the
- * column the index draws and the CSV exports.
- */
+/** The note's words, as plain text, for the column the index and the search read. */
 export function noteText(doc: Y.Doc): string {
-  const flat = (node: unknown): string => {
-    if (node instanceof Y.XmlText) {
-      // `toDelta()` is typed `any[]` by yjs; the only shape read here is the
-      // insert, and anything that is not a string is an embed rather than text.
-      const runs = node.toDelta() as { insert?: unknown }[]
-      return runs.map((run) => (typeof run.insert === 'string' ? run.insert : '')).join('')
-    }
-    if (node instanceof Y.XmlElement || node instanceof Y.XmlFragment) {
-      return node.toArray().map(flat).join('')
-    }
-    return ''
-  }
-  return doc
-    .getXmlFragment(NOTE_FRAGMENT)
-    .toArray()
-    .map(flat)
-    .join('\n')
-    .trim()
+  return plainText(doc.getXmlFragment(NOTE_FRAGMENT))
 }
 
 function isProseTable(name: string): name is ProseTable {
   return (PROSE_TABLES as readonly string[]).includes(name)
 }
 
-const QUIET_MS = 750
+/** How the store of a held document is paced. */
+export const PROSE_PACE = {
+  /** The pause in writing a save waits for. */
+  quietMs: 750,
+  /** The longest a stream of writing defers a save. */
+  longestWaitMs: 5_000,
+  /** How long a held document waits between failed saves. */
+  retryMs: 5 * 60 * 1000,
+  /** How often a document holding acceptances keeps them current, well inside how long one lasts. */
+  keepCurrentMs: 60 * 60 * 1000,
+} as const
+
+/** Removes every lapsed acceptance, in any case, as a definer act. */
+const sweepLapsed = sql`select ic_sweep_acceptances()`
 
 /**
  * Which record a document key names.
@@ -118,31 +123,6 @@ export interface ProseRecord {
   table: ProseTable
   id: string
 }
-
-/**
- * A record, plus the state a caller decides per frame from.
- *
- * `ProseRecord` alone is what opening, releasing and flushing need; only the
- * socket's per-frame refusal wants the stamp, and it is carried on the lookup
- * `resolve` already does because a second query for it would run per keystroke.
- */
-export interface ProseAddress extends ProseRecord {
-  /**
-   * When the record was frozen, or null.
-   *
-   * **Always null for a note**, which has nothing to be filed into: a note is
-   * the analyst's own scratchpad and never becomes a deliverable, so no state
-   * of it refuses a write. -> `domain/entities/case-note.ts`
-   *
-   * **Carried from the lookup `resolve` already does**, because the caller has
-   * to decide per frame whether an update may be applied and a second query
-   * for that would run per keystroke. It is the timestamp rather than a boolean
-   * so the refusal can say *when*, which is the only thing that makes the
-   * sentence actionable. -> `report/freeze.ts`
-   */
-  sentAt: Date | null
-}
-
 
 /**
  * How a document reaches the other instances.
@@ -163,6 +143,8 @@ export interface ProseRelay {
  * not published back. The client end uses the same idea for the same reason.
  */
 const REMOTE = Symbol('remote')
+/** A section pruned on a stored copy, applied to the live document: relayed, and not a new edit. */
+const PRUNED = Symbol('pruned')
 
 /** What one instance sends the others when a document moves. */
 interface ProseFrame {
@@ -176,8 +158,56 @@ interface LiveDocument {
   doc: Y.Doc
   readers: number
   timer: NodeJS.Timeout | null
+  /** When the first update no save has taken arrived, or null. */
+  unsavedSince: number | null
+  /** Keeps `acceptances` current while there are any. */
+  keeper: NodeJS.Timeout | null
   dirty: boolean
   unsubscribe: (() => void) | null
+  /** When the report was sent; a note is never sent. */
+  sealed: Date | null
+  /** Content waiting on a send that is deciding, or null when none is. */
+  deciding: (() => void)[] | null
+  /** Whoever wrote into it since it was last stored, the latest last. */
+  writers: Map<string, Writer>
+  /** Writers whose acceptance is recorded since it was last stored. */
+  accepted: Set<string>
+  /** The acceptances recorded since it was last stored, which the next store removes. */
+  acceptances: string[]
+  /** The last flush queued; each waits for the one before it. */
+  saving: Promise<void>
+  /** Whether a save of what it holds has failed since one last stored it, and whether it still can. */
+  unsaved: 'unsaved' | 'lost' | null
+  /** Told each time `unsaved` changes. */
+  watchers: Set<(state: ProseState) => void>
+  /** When a writer here last changed it, in epoch milliseconds. */
+  changedAt: number
+}
+
+/** An analyst writing through a connection, and the headers that connection arrived with. */
+export interface Writer {
+  readonly id: string
+  readonly label: string
+  readonly headers: IncomingHttpHeaders
+}
+
+/** The writers a store holds current acceptances for on one record, and the acceptances. */
+interface Accepted {
+  writers: Writer[]
+  ids: string[]
+}
+
+/** Told once a flush has stored, and recorded in the install's audit, what somebody wrote. */
+export type Saved = (caseId: string, record: ProseRecord) => void
+
+/** What a connection's frame is answered with. */
+export type Applied = { refused: Date } | { reply: Uint8Array | null }
+
+/** A report's document held still for a send, at `bytes`. */
+export interface Seal {
+  readonly bytes: Uint8Array
+  /** The send's stamp, or null where it did not stamp. Gives back the reader `seal` took. */
+  settle(stamp: Date | null): Promise<void>
 }
 
 /**
@@ -215,9 +245,10 @@ function seedNote(doc: Y.Doc, text: string): void {
 }
 
 @Injectable()
-export class ProseService implements OnApplicationShutdown {
+export class ProseService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly log = new Logger(ProseService.name)
   private readonly live = new Map<string, Promise<LiveDocument>>()
+  private saved: Saved | undefined
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -231,6 +262,32 @@ export class ProseService implements OnApplicationShutdown {
   ) {}
 
   /**
+   * Whether this connection can store accepted prose: it can become the prose
+   * role, and the role holds its grant on the words. Call before serving.
+   *
+   * @throws naming the role where it cannot
+   */
+  async assertIdentity(): Promise<void> {
+    try {
+      const granted = await this.db.transaction(async (tx) => {
+        await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
+        const { rows } = await tx.execute<{ granted: boolean }>(
+          sql`select has_column_privilege('casenotes', 'document', 'UPDATE')
+                 and has_column_privilege('reports', 'document', 'UPDATE') as granted`,
+        )
+        return rows[0]?.granted === true
+      })
+      if (!granted) throw new Error('it holds no grant on the prose columns')
+    } catch (error) {
+      throw new Error(
+        `Accepted prose is stored as ${PROSE_ROLE}, and this connection cannot store it that way: ` +
+          `${error instanceof Error ? error.message : String(error)}. Run docker/db/roles.sql, then the schema step.`,
+        { cause: error },
+      )
+    }
+  }
+
+  /**
    * Resolve a field key to the row that stores it.
    *
    * **Refuses anything it does not recognise rather than guessing.** A field
@@ -239,7 +296,7 @@ export class ProseService implements OnApplicationShutdown {
    * The case is checked too - the block has to belong to the case whose socket
    * asked.
    */
-  async resolve(caseId: string, field: string): Promise<ProseAddress | null> {
+  async resolve(caseId: string, field: string): Promise<ProseRecord | null> {
     const parts = field.split(':')
     if (parts.length !== 3) return null
     const [table, rowId, column] = parts as [string, string, string]
@@ -261,20 +318,17 @@ export class ProseService implements OnApplicationShutdown {
           .where(and(eq(caseNotes.id, rowId), eq(caseNotes.caseId, caseId))),
       )
       if (!note) return null
-      // A note never freezes, so there is no state in which a frame for one is
-      // refused. Written as a literal rather than read from a column, because
-      // there is no column and inventing one would be the thing to maintain.
-      return { table, id: note.id, sentAt: null }
+      return { table, id: note.id }
     }
 
     const [report] = await withCase(this.db, caseId, (tx) =>
       tx
-        .select({ id: reports.id, sentAt: reports.sentAt })
+        .select({ id: reports.id })
         .from(reports)
         .where(and(eq(reports.id, rowId), eq(reports.caseId, caseId))),
     )
     if (!report) return null
-    return { table, id: report.id, sentAt: report.sentAt }
+    return { table, id: report.id }
   }
 
   /**
@@ -311,7 +365,8 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   private async build(caseId: string, address: ProseRecord): Promise<LiveDocument> {
-    const doc = new Y.Doc({ gc: false })
+    const doc = new Y.Doc()
+    let sealed: Date | null = null
     if (address.table === 'casenotes') {
       const [row] = await withCase(this.db, caseId, (tx) =>
         tx
@@ -324,29 +379,68 @@ export class ProseService implements OnApplicationShutdown {
       // block has no column to seed from, so nothing is seeded there; a note
       // reaches the app from a demo, a CSV import or a `.iccase` archive with
       // its body already written, and opening one to an empty editor would
-      // read as the note having been lost. Guarded on there being no document
-      // yet, so it can never overwrite what anybody typed.
-      else if (row?.note) seedNote(doc, row.note)
+      // read as the note having been lost. Stored at once: a document built
+      // again from the words would hold them a second time for any client
+      // still holding the first.
+      else if (row?.note) {
+        seedNote(doc, row.note)
+        const document = Buffer.from(Y.encodeStateAsUpdate(doc))
+        await withCase(this.db, caseId, (tx) =>
+          tx
+            .update(caseNotes)
+            .set({ document })
+            .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId), isNull(caseNotes.document))),
+        )
+      }
     } else {
       const [row] = await withCase(this.db, caseId, (tx) =>
         tx
-          .select({ document: reports.document })
+          .select({ document: reports.document, sentAt: reports.sentAt })
           .from(reports)
           .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId))),
       )
       if (row?.document) Y.applyUpdate(doc, new Uint8Array(row.document))
+      sealed = row?.sentAt ?? null
     }
 
     // **Registered before the first update can land.** `doc.on('update')` is
     // attached here rather than by the caller, so there is no window in which
     // an update is applied to a document nothing is watching.
-    const entry: LiveDocument = { doc, readers: 1, timer: null, dirty: false, unsubscribe: null }
+    const entry: LiveDocument = {
+      doc,
+      readers: 1,
+      timer: null,
+      unsavedSince: null,
+      keeper: null,
+      dirty: false,
+      unsubscribe: null,
+      sealed,
+      deciding: null,
+      writers: new Map(),
+      accepted: new Set(),
+      acceptances: [],
+      saving: Promise.resolve(),
+      unsaved: null,
+      watchers: new Set(),
+      changedAt: 0,
+    }
     doc.on('update', (update: Uint8Array, origin: unknown) => {
+      if (origin === PRUNED) {
+        void this.relayOut(caseId, address, update)
+        return
+      }
       entry.dirty = true
-      if (entry.timer) clearTimeout(entry.timer)
-      entry.timer = setTimeout(() => {
-        void this.flush(caseId, address)
-      }, QUIET_MS)
+      const now = Date.now()
+      if (origin !== REMOTE) entry.changedAt = now
+      entry.unsavedSince ??= now
+      // A stream of writing past the longest wait leaves the pending save alone.
+      if (!entry.timer || now - entry.unsavedSince < PROSE_PACE.longestWaitMs) {
+        if (entry.timer) clearTimeout(entry.timer)
+        entry.timer = setTimeout(() => {
+          entry.timer = null
+          void this.flush(caseId, address)
+        }, PROSE_PACE.quietMs)
+      }
 
       // **Not what another instance just told us.** Publishing it back is an
       // echo every instance would forward again.
@@ -357,7 +451,7 @@ export class ProseService implements OnApplicationShutdown {
     // is a window in which another instance's edits are dropped silently.
     if (this.relay) {
       entry.unsubscribe = await this.relay.subscribe(caseId, (payload) => {
-        this.relayIn(address, doc, payload)
+        this.relayIn(address, entry, payload)
       })
     }
     return entry
@@ -391,7 +485,7 @@ export class ProseService implements OnApplicationShutdown {
    * without comment - a channel shared with other traffic is the price of not
    * standing up a second one.
    */
-  private relayIn(address: ProseRecord, doc: Y.Doc, payload: string): void {
+  private relayIn(address: ProseRecord, entry: LiveDocument, payload: string): void {
     let frame: Partial<ProseFrame>
     try {
       frame = JSON.parse(payload) as Partial<ProseFrame>
@@ -401,11 +495,48 @@ export class ProseService implements OnApplicationShutdown {
     if (frame.type !== 'prose.document') return
     if (frame.record !== recordOf(address)) return
     if (typeof frame.update !== 'string') return
+    if (entry.sealed) return
+    if (entry.deciding) {
+      entry.deciding.push(() => {
+        this.relayIn(address, entry, payload)
+      })
+      return
+    }
 
     try {
-      Y.applyUpdate(doc, new Uint8Array(Buffer.from(frame.update, 'base64')), REMOTE)
+      Y.applyUpdate(entry.doc, new Uint8Array(Buffer.from(frame.update, 'base64')), REMOTE)
     } catch (error) {
       this.log.warn(`dropping a relayed prose update for ${recordOf(address)}: ${String(error)}`)
+    }
+  }
+
+  /**
+   * A copy of `doc` holding no fragment whose section `tx` cannot find, so a
+   * late edit to a removed one is not kept. `doc` itself is left as it is.
+   */
+  private async prunedCopy(tx: Executor, reportId: string, doc: Y.Doc): Promise<Y.Doc> {
+    const live = await tx.select({ id: reportBlocks.id }).from(reportBlocks).where(eq(reportBlocks.reportId, reportId))
+    const kept = new Set(live.map((block) => block.id))
+    const copy = new Y.Doc()
+    Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc))
+    for (const name of [...copy.share.keys()]) {
+      const fragment = fragmentFor(copy, name)
+      if (!kept.has(name) && fragment.length > 0) fragment.delete(0, fragment.length)
+    }
+    return copy
+  }
+
+  /** Empty a removed section's fragment, and store the report without it. Call after its block row is deleted. */
+  async clearSection(caseId: string, reportId: string, blockId: string): Promise<void> {
+    const address = reportDocument(reportId)
+    const doc = await this.open(caseId, address)
+    try {
+      const fragment = fragmentFor(doc, blockId)
+      if (fragment.length === 0) return
+      fragment.delete(0, fragment.length)
+      await this.flush(caseId, address, true)
+    } finally {
+      await this.release(caseId, address)
     }
   }
 
@@ -435,6 +566,170 @@ export class ProseService implements OnApplicationShutdown {
     held.unsubscribe?.()
     this.live.delete(key)
     held.doc.destroy()
+    if (held.keeper) clearInterval(held.keeper)
+    if (!held.dirty && held.acceptances.length > 0) await this.forget(caseId, address, held.acceptances)
+  }
+
+  /** Removes acceptances nothing will store, such as a frame refused because its report was sent. */
+  private async forget(caseId: string, address: ProseRecord, acceptances: readonly string[]): Promise<void> {
+    try {
+      await unattended(() =>
+        withCase(this.db, caseId, async (tx) => {
+          await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
+          await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
+          await tx.delete(proseAcceptances).where(inArray(proseAcceptances.id, [...acceptances]))
+        }),
+      )
+    } catch (error) {
+      // Left to lapse: an acceptance authorises nothing once it is older than it lasts.
+      this.log.warn(`could not remove the acceptances of ${recordOf(address)}: ${String(error)}`)
+    }
+  }
+
+  /** Removes every acceptance older than one lasts, whatever case it is in, as the application starts. */
+  async onApplicationBootstrap(): Promise<void> {
+    await this.sweepExpiredAcceptances()
+  }
+
+  /** Removes every acceptance older than one lasts, whatever case it is in. */
+  async sweepExpiredAcceptances(): Promise<void> {
+    await this.db.execute(sweepLapsed)
+  }
+
+  /**
+   * Tells `listener` whenever the words an open document holds fail to store,
+   * store after all, or can no longer be stored, and at once where they are
+   * already unsaved. Returns what stops it.
+   */
+  async watch(caseId: string, address: ProseRecord, listener: (state: ProseState) => void): Promise<() => void> {
+    const holding = this.live.get(keyOf(caseId, address))
+    if (!holding) throw new Error(`${recordOf(address)} is not open`)
+    const held = await holding
+    held.watchers.add(listener)
+    if (held.unsaved) listener(held.unsaved)
+    return () => held.watchers.delete(listener)
+  }
+
+  private tell(held: LiveDocument, state: ProseState): void {
+    held.unsaved = state === 'saved' ? null : state
+    for (const listener of held.watchers) listener(state)
+  }
+
+  /** Sets who is told once a flush has stored what somebody wrote. */
+  onSaved(listener: Saved): void {
+    this.saved = listener
+  }
+
+  /**
+   * Apply one connection's sync frame, and what to answer it with.
+   *
+   * Content for a sent report is refused with its stamp. Content arriving while
+   * a send decides waits for it: refused if the send stamps, applied if not.
+   * Content that changes the document names `writer` in the next flush. The
+   * first such frame since the last store is recorded as accepted, as `writer`
+   * and under their reach. The document has to be open.
+   *
+   * @throws where the store refuses to record `writer`'s acceptance, applying nothing
+   */
+  async apply(
+    caseId: string,
+    address: ProseRecord,
+    frame: Uint8Array,
+    origin: unknown,
+    writer: Writer,
+  ): Promise<Applied> {
+    const holding = this.live.get(keyOf(caseId, address))
+    if (!holding) throw new Error(`${recordOf(address)} is not open`)
+    const held = await holding
+    // Recorded before the send check below, so a send that seals while this
+    // waits is seen there, and the frame is refused or held rather than lost.
+    if (
+      !held.sealed &&
+      !held.accepted.has(writer.id) &&
+      !this.isStateRequest(frame) &&
+      !this.addsNothing(held.doc, frame)
+    ) {
+      held.accepted.add(writer.id)
+      try {
+        const [row] = await actingAs(writer.id, () =>
+          withCase(this.db, caseId, (tx) =>
+            tx
+              .insert(proseAcceptances)
+              .values({ caseId, entity: address.table, recordId: address.id, writerId: writer.id })
+              .returning({ id: proseAcceptances.id }),
+          ),
+        )
+        held.acceptances.push(row!.id)
+        held.keeper ??= setInterval(() => {
+          void this.keepCurrent(caseId, address, held)
+        }, PROSE_PACE.keepCurrentMs)
+      } catch (error) {
+        held.accepted.delete(writer.id)
+        throw error
+      }
+    }
+    const deciding = held.deciding
+    if ((held.sealed || deciding) && !this.addsNothing(held.doc, frame)) {
+      if (held.sealed) return { refused: held.sealed }
+      if (deciding) {
+        return new Promise((answer) => {
+          deciding.push(() => {
+            answer(this.apply(caseId, address, frame, origin, writer))
+          })
+        })
+      }
+    }
+    let changed = false
+    const mark = () => {
+      changed = true
+    }
+    held.doc.on('update', mark)
+    const reply = this.applySync(held.doc, frame, origin)
+    held.doc.off('update', mark)
+    if (changed) {
+      held.writers.delete(writer.id)
+      held.writers.set(writer.id, writer)
+    }
+    return { reply }
+  }
+
+  /**
+   * Hold a report's document still while a send decides, once what was typed
+   * into it is stored and attributed by `flush`.
+   *
+   * Takes a reader, which `settle` gives back. A second seal waits for the
+   * first to settle. Throws, holding nothing, where that flush fails.
+   */
+  async seal(caseId: string, reportId: string): Promise<Seal> {
+    const address = reportDocument(reportId)
+    await this.open(caseId, address)
+    const held = await this.live.get(keyOf(caseId, address))!
+    while (held.deciding) {
+      const waiting = held.deciding
+      await new Promise<void>((next) => waiting.push(next))
+    }
+    held.deciding = []
+    await (held.dirty ? this.flush(caseId, address) : held.saving)
+    const seal: Seal = {
+      bytes: Y.encodeStateAsUpdate(held.doc),
+      settle: async (stamp) => {
+        if (stamp) {
+          // The stamp stored these bytes, and nothing has been applied since.
+          held.sealed = stamp
+          held.dirty = false
+          if (held.timer) clearTimeout(held.timer)
+        }
+        const waiting = held.deciding ?? []
+        held.deciding = null
+        for (const go of waiting) go()
+        await this.release(caseId, address)
+      },
+    }
+    if (held.dirty) {
+      await seal.settle(null)
+      throw new Error(`the prose of report ${reportId} could not be stored, so it is not sent`)
+    }
+    return seal
   }
 
   /**
@@ -484,6 +779,22 @@ export class ProseService implements OnApplicationShutdown {
     }
   }
 
+  /**
+   * Does this frame carry nothing `doc` does not already hold?
+   *
+   * Costs a pass over the document, so ask only before a refusal.
+   */
+  addsNothing(doc: Y.Doc, frame: Uint8Array): boolean {
+    if (this.isStateRequest(frame)) return true
+    try {
+      const decoder = decoding.createDecoder(frame)
+      decoding.readVarUint(decoder)
+      return Y.snapshotContainsUpdate(Y.snapshot(doc), decoding.readVarUint8Array(decoder))
+    } catch {
+      return false
+    }
+  }
+
   /** The server's own opening move: what it has, so the client can answer. */
   hello(doc: Y.Doc): Uint8Array {
     const encoder = encoding.createEncoder()
@@ -498,44 +809,259 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   /**
-   * Write the document to its row. Public so a test can force it.
+   * Write the document to its row as the prose role, whoever wrote it and
+   * whatever they reach now. `updated_by` names the latest who wrote since it
+   * was last stored, and everyone who wrote gets a feed row and an audit line
+   * in the same transaction. Then tells the `onSaved` listener. Resolves once
+   * every flush queued before it has run too. Public so a test can force it.
+   *
+   * A document no writer on this instance has touched is stored naming the
+   * writers the store holds acceptances for, and not at all where it holds none
+   * or nobody asks. `byAsker` stores it as whoever asks, naming nobody, for an
+   * act that is attributed on its own. One the store refuses stays unsaved and
+   * is logged, and the next flush tries again.
    *
    * **The row's version is deliberately not bumped.** `reports.version` guards
    * the analyst-facing fields against a concurrent edit; the document is a
    * CRDT, which is the mechanism that makes concurrent writing safe, so
    * bumping it would refuse a title change because somebody was typing.
    */
-  async flush(caseId: string, address: ProseRecord): Promise<void> {
+  async flush(caseId: string, address: ProseRecord, byAsker = false): Promise<void> {
     const holding = this.live.get(keyOf(caseId, address))
     if (!holding) return
     const held = await holding
-    const bytes = Buffer.from(Y.encodeStateAsUpdate(held.doc))
+    // One at a time: two in flight could store the older document last.
+    held.saving = held.saving.then(() => this.store(caseId, address, held, byAsker))
+    await held.saving
+  }
+
+  private async store(caseId: string, address: ProseRecord, held: LiveDocument, byAsker: boolean): Promise<void> {
+    if (held.writers.size === 0 && !principalNow()) {
+      held.unsavedSince = null
+      return
+    }
+    let current: Accepted = { writers: [], ids: [] }
+    if (!byAsker) {
+      try {
+        current = await this.acceptedWriters(caseId, address)
+      } catch (error) {
+        this.log.error(`could not read who wrote ${recordOf(address)}, so it is not saved: ${String(error)}`)
+        return
+      }
+      // Only a save here removes an acceptance this document holds, so one the store no longer holds lapsed.
+      if (held.acceptances.some((id) => !current.ids.includes(id))) {
+        this.log.error(`an acceptance of ${recordOf(address)} lapsed before its words were stored, so they cannot be`)
+        if (held.unsaved !== 'lost') this.tell(held, 'lost')
+      }
+      held.acceptances = held.acceptances.filter((id) => current.ids.includes(id))
+      // A writer whose acceptance lapsed is named by nothing here until their next frame is accepted afresh.
+      const accepted = new Set(current.writers.map((writer) => writer.id))
+      for (const id of [...held.writers.keys()]) {
+        if (accepted.has(id)) continue
+        held.writers.delete(id)
+        held.accepted.delete(id)
+      }
+    }
+    const local = [...held.writers.values()]
+    const writers = byAsker ? local : current.writers.map((writer) => held.writers.get(writer.id) ?? writer)
+    if (writers.length === 0 && !byAsker) {
+      held.dirty = false
+      held.unsavedSince = null
+      this.log.warn(`${recordOf(address)} holds words no acceptance names, so they are not saved here`)
+      return
+    }
+    const own = held.acceptances
+    const acceptances = [...new Set([...current.ids, ...own])]
+    held.writers.clear()
+    held.accepted = new Set()
+    held.acceptances = []
     held.dirty = false
-    try {
-      await withCase(this.db, caseId, (tx) =>
-        address.table === 'casenotes'
+    held.unsavedSince = null
+    // Null where the account is gone, as it would be had it gone after the write.
+    const account = (id: string) => sql<string | null>`(select ${user.id} from ${user} where ${user.id} = ${id})`
+    const by = writers.at(-1)
+    const attributed = by ? { updatedBy: account(by.id), updatedAt: new Date() } : {}
+    // False where the store has no such row in this case.
+    const write = async (): Promise<boolean> => {
+      let pruned: Y.Doc | null = null
+      // Words written here are stored as the prose role; a save with none, as
+      // whoever asks, under their own reach.
+      const scope = writers.length > 0 ? unattended : <T>(work: () => T) => work()
+      const stored = await scope(() => withCase(this.db, caseId, async (tx) => {
+        // A save that cannot finish fails, and takes the failure path, rather than holding words.
+        await tx.execute(sql`set local lock_timeout = '5s'`)
+        await tx.execute(sql`set local statement_timeout = '30s'`)
+        if (writers.length > 0) {
+          await tx.execute(sweepLapsed)
+          await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
+          await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
+        }
+        // A copy, so only a store that took it reaches the live document.
+        if (address.table === 'reports') pruned = await this.prunedCopy(tx, address.id, held.doc)
+        const bytes = Buffer.from(Y.encodeStateAsUpdate(pruned ?? held.doc))
+        const [row] = await (address.table === 'casenotes'
           ? tx
               .update(caseNotes)
               // **`note` is re-derived from the document on every flush.**
               // The document is the record; the column is the projection the
               // index row, the search and the CSV export read, and a note has
-              // no heading to find it by instead. The column is also written
-              // straight by the paths a note arrives on -- case seeding, the
-              // archive import, the generic collection write -- and this
-              // replaces whatever they left once a document exists.
-              .set({ document: bytes, note: noteText(held.doc) })
+              // no heading to find it by instead. A note's creation writes the
+              // column once, as the document's first words; this is its only
+              // writer after that.
+              .set({ document: bytes, note: noteText(held.doc), ...attributed })
               .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
+              .returning({ version: caseNotes.version })
           : tx
               .update(reports)
-              .set({ document: bytes })
-              .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId))),
-      )
+              .set({ document: bytes, ...attributed })
+              .where(and(eq(reports.id, address.id), eq(reports.caseId, caseId)))
+              .returning({ version: reports.version }))
+        if (!row) return false
+        if (writers.length > 0) {
+          await tx.insert(changeFeed).values(
+            writers.map((writer) => ({
+              caseId,
+              entity: address.table,
+              entityId: address.id,
+              op: 'update' as const,
+              version: row.version,
+              actorId: account(writer.id),
+              fields: address.table === 'casenotes' ? ['document', 'note'] : ['document'],
+            })),
+          )
+        }
+        for (const writer of writers) {
+          await writeInstallActivity(tx, {
+            event: 'api_called',
+            outcome: 'success',
+            actor: { id: writer.id, label: writer.label },
+            target: `live prose.sync ${address.table}`,
+            detail: { case: caseId, record: address.id },
+            headers: writer.headers,
+          })
+        }
+        if (acceptances.length > 0) await tx.delete(proseAcceptances).where(inArray(proseAcceptances.id, acceptances))
+        return true
+      }))
+      if (pruned) {
+        const copy: Y.Doc = pruned
+        if (stored) Y.applyUpdate(held.doc, Y.encodeStateAsUpdate(copy, Y.encodeStateVector(held.doc)), PRUNED)
+        copy.destroy()
+      }
+      return stored
+    }
+    try {
+      const stored = await write()
+      if (!stored && writers.length === 0) throw new Error('its row is gone')
+      if (held.acceptances.length === 0 && held.keeper) {
+        clearInterval(held.keeper)
+        held.keeper = null
+      }
+      if (!stored) {
+        // Deleted prose is not kept: nothing is held for it, and nothing retries.
+        await this.forget(caseId, address, acceptances)
+        this.log.warn(`${recordOf(address)} is gone, so what was written into it is not kept`)
+        return
+      }
+      if (writers.length > 0) this.saved?.(caseId, address)
+      if (held.unsaved) this.tell(held, 'saved')
     } catch (error) {
-      // **Marked dirty again**, so the next quiet moment or the last reader
-      // leaving tries once more. Swallowing it silently is how a report loses
-      // an afternoon to a transient database error nobody saw.
+      // Sent by a path this document did not see: nothing more is taken.
+      const sent = sentReportIn(error)
+      if (sent) {
+        held.sealed ??= sent.sentAt
+        await this.forget(caseId, address, own)
+        if (held.changedAt > sent.sentAt.getTime()) this.tell(held, 'lost')
+        return
+      }
+      // **Marked dirty again**, so the next edit's quiet moment, the last
+      // reader leaving or shutdown tries once more. Swallowing it silently is
+      // how a report loses an afternoon to a transient database error nobody saw.
       held.dirty = true
-      this.log.error(`could not save the prose for ${recordOf(address)}: ${String(error)}`)
+      held.unsavedSince = null
+      held.acceptances = [...own, ...held.acceptances]
+      for (const writer of local) held.accepted.add(writer.id)
+      held.writers = new Map([
+        ...local.filter((writer) => !held.writers.has(writer.id)).map((writer) => [writer.id, writer] as const),
+        ...held.writers,
+      ])
+      const reason =
+        error instanceof NotFoundException
+          ? 'the store holds no current acceptance for a writer it would name'
+          : String(error)
+      this.log.error(`could not save the prose for ${recordOf(address)}: ${reason}`)
+      if (!held.unsaved) this.tell(held, 'unsaved')
+      if (held.acceptances.length > 0) await this.keepCurrent(caseId, address, held)
+      if (held.readers > 0) {
+        if (held.timer) clearTimeout(held.timer)
+        held.timer = setTimeout(() => {
+          held.timer = null
+          void this.flush(caseId, address)
+        }, PROSE_PACE.retryMs)
+      }
+    }
+  }
+
+  /** The writers the store holds current acceptances for on this record, the latest accepted last, and those acceptances. */
+  private async acceptedWriters(caseId: string, address: ProseRecord): Promise<Accepted> {
+    const rows = await unattended(() =>
+      withCase(this.db, caseId, async (tx) => {
+        await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
+        await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
+        return tx
+          .select({ id: proseAcceptances.id, writer: proseAcceptances.writerId })
+          .from(proseAcceptances)
+          .where(and(eq(proseAcceptances.recordId, address.id), sql`${proseAcceptances.acceptedAt} > now() - ${ACCEPTANCE_LASTS}`))
+          .orderBy(proseAcceptances.acceptedAt)
+      }),
+    )
+    // A writer's latest acceptance decides their place.
+    const latest = new Set<string>()
+    for (const row of rows) {
+      latest.delete(row.writer)
+      latest.add(row.writer)
+    }
+    const order = [...latest]
+    const ids = rows.map((row) => row.id)
+    if (order.length === 0) return { writers: [], ids }
+    const accounts = await this.db
+      .select({ id: user.id, name: user.name, email: user.email })
+      .from(user)
+      .where(inArray(user.id, order))
+    const labels = new Map(accounts.map((account) => [account.id, account.name.trim() || account.email]))
+    // Labelled as the accepting connection labels them; an account that is gone is named by nobody.
+    return { writers: order.map((id) => ({ id, label: labels.get(id) ?? id, headers: {} })), ids }
+  }
+
+  /**
+   * Makes `held`'s acceptances current again, so words a failing save holds
+   * stay storable for as long as it holds them. One that has already lapsed
+   * stays lapsed, is logged, and its words are told `lost`.
+   */
+  private async keepCurrent(caseId: string, address: ProseRecord, held: LiveDocument): Promise<void> {
+    const acceptances = held.acceptances
+    if (acceptances.length === 0) return
+    try {
+      const kept = await unattended(() =>
+        withCase(this.db, caseId, async (tx) => {
+          await tx.execute(sql.raw(`set local role ${PROSE_ROLE}`))
+          await tx.execute(sql`select set_config('app.prose_record', ${address.id}, true)`)
+          return tx
+            .update(proseAcceptances)
+            .set({ acceptedAt: sql`now()` })
+            .where(inArray(proseAcceptances.id, [...acceptances]))
+            .returning({ id: proseAcceptances.id })
+        }),
+      )
+      // Lapsed or swept alike: only a save here removes one this document holds.
+      if (kept.length < acceptances.length) {
+        this.log.error(
+          `${String(acceptances.length - kept.length)} acceptance(s) of ${recordOf(address)} lapsed while its saves failed, so the words they accepted cannot be stored`,
+        )
+        if (held.unsaved !== 'lost') this.tell(held, 'lost')
+      }
+    } catch (error) {
+      this.log.warn(`could not keep the acceptances of ${recordOf(address)} current: ${String(error)}`)
     }
   }
 
@@ -550,9 +1076,16 @@ export class ProseService implements OnApplicationShutdown {
     for (const [key, holding] of this.live) {
       const held = await holding
       if (held.timer) clearTimeout(held.timer)
-      if (!held.dirty) continue
+      if (held.keeper) clearInterval(held.keeper)
+      // A save the last reader leaving started is waited for, not left to a closing pool.
+      if (!held.dirty) {
+        await held.saving
+        continue
+      }
       const [caseId, table, id] = key.split('/') as [string, ProseTable, string]
       await this.flush(caseId, { table, id })
+      // A failed save arms a retry, which would hold the process open.
+      if (held.timer) clearTimeout(held.timer)
     }
   }
 }

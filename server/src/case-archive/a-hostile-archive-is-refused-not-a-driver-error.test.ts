@@ -20,18 +20,28 @@
 import { defaultPolicy } from '../policy/read.js'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
+import { createHash, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
+import { ProseService } from '../prose/prose.service.js'
 import { ARCHIVE_IMPORT, ArchiveImportService } from './import.service.js'
-import { CASE_NAME, MANIFEST_NAME, pack, readArchive } from '../archive/format.js'
+import {
+  CASE_NAME,
+  EVIDENCE_PREFIX,
+  MANIFEST_NAME,
+  PROSE_PREFIX,
+  pack,
+  readArchive,
+} from '../archive/format.js'
 import { cases, cloudApps, systems, timeline, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -45,7 +55,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 const LIMITS = { memberBytes: 256 * 1024 * 1024, totalBytes: 512 * 1024 * 1024 }
 const policy = { read: () => Promise.resolve(defaultPolicy()) } as never
 
-describe.skipIf(!db)('an archive carrying a row this build cannot write', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('an archive carrying a row this build cannot write', () => {
   let exporter: ArchiveExportService
   let importer: ArchiveImportService
   let store: EvidenceStore
@@ -72,10 +82,11 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
     store = new EvidenceStore({ get: () => root } as never, policy)
     const cases_ = new CasesService(
       db!,
+      store,
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
     )
-    exporter = new ArchiveExportService(cases_, store, policy)
-    importer = new ArchiveImportService(db!, store, policy)
+    exporter = as(actorId, new ArchiveExportService(cases_, store, policy, new ProseService(db!)))
+    importer = as(actorId, new ArchiveImportService(db!, store, policy))
   })
 
   afterAll(async () => {
@@ -92,7 +103,7 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
    */
   async function exported() {
     minted += 1
-    const made = await db!
+    const made = await seed!
       .insert(cases)
       .values({
         title: 'Hostile archive',
@@ -178,6 +189,22 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
       'a value no column can hold reached the database, so the operator meets a driver ' +
         'error naming column names instead of a refusal',
     ).rejects.toThrow('this archive states a value in evidence that this install cannot write')
+  })
+
+  it('refuses a report whose prose is not a document', async () => {
+    const withReport = await tamperedWith(await exported(), 'reports', [
+      { id: 'rep-1', label: 'The report' },
+    ])
+    const { members } = await readArchive(withReport, LIMITS)
+    const { [MANIFEST_NAME]: _old, ...rest } = members
+    const hostile = await pack(
+      { ...rest, [`${PROSE_PREFIX}rep-1.ydoc`]: new TextEncoder().encode('not a document') },
+      'omitted',
+    )
+
+    await expect(importer.load(hostile, '', actorId)).rejects.toThrow(
+      "this archive's prose for report rep-1 is unreadable",
+    )
   })
 
   it('names the collection and the field rather than the column that overflowed', async () => {
@@ -277,6 +304,32 @@ describe.skipIf(!db)('an archive carrying a row this build cannot write', () => 
       after.length,
       'a case was left behind by an import that refused, so a retry meets a half-written case',
     ).toBe(before.length)
+  })
+
+  it('leaves in the store only the artefacts it held before a refused import', async () => {
+    const built = await exported()
+    const hostile = await tamperedWith(built, 'systems', [{ id: 'sys-e', hostname: { not: 'a string' } }])
+    const { members } = await readArchive(hostile, LIMITS)
+    const fresh = new TextEncoder().encode(`only this import carries me ${String(Date.now())}`)
+    const shared = new TextEncoder().encode(`already held ${String(Date.now())}`)
+    const digest = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
+    const holder = randomUUID()
+    await store.put(holder, (async function* () { yield Buffer.from(shared) })())
+    const { [MANIFEST_NAME]: _old, ...rest } = members
+    const carrying = await pack(
+      {
+        ...rest,
+        [`${EVIDENCE_PREFIX}${digest(fresh)}`]: fresh,
+        [`${EVIDENCE_PREFIX}${digest(shared)}`]: shared,
+      },
+      'omitted',
+    )
+
+    await expect(importer.load(carrying, '', actorId)).rejects.toThrow(/this install cannot/)
+
+    const held = (await readdir(root, { recursive: true })).map((path) => basename(path))
+    expect(held, 'a refused import left its artefact in the store for ever').not.toContain(digest(fresh))
+    expect(await store.held(holder), 'the rollback removed a file another case held').toContain(digest(shared))
   })
 
   /**

@@ -39,11 +39,16 @@
  * component, default 8), `AFFORDANCE_ONLY` (comma-separated substrings of a
  * component's slug).
  */
+/* eslint-disable playwright/no-wait-for-timeout --
+   What a screen does next is what the audit discovers, so no condition to wait
+   on exists that does not assume the finding. */
+
 import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 import {
@@ -534,10 +539,7 @@ test.describe('the probe can tell reachable from painted-at-zero', () => {
    * a probe that answered "blocked" for everything fails here too.
    */
   test('a zero-opacity control reads as blocked and its twin does not', async ({ page }) => {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(10_000) }).catch(
-      () => null,
-    )
-    test.skip(!answer?.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
 
     await page.goto(`${SB}/iframe.html?id=blocks-empty-state-empty-state--default&viewMode=story`, {
       waitUntil: 'load',
@@ -580,10 +582,7 @@ test.describe('the probe can tell reachable from painted-at-zero', () => {
   test('a control is reported with the landmark it sits in and its place in it', async ({
     page,
   }) => {
-    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(10_000) }).catch(
-      () => null,
-    )
-    test.skip(!answer?.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+    await requireStorybook()
 
     await page.goto(`${SB}/iframe.html?id=blocks-empty-state-empty-state--default&viewMode=story`, {
       waitUntil: 'load',
@@ -619,10 +618,15 @@ test.describe('the probe can tell reachable from painted-at-zero', () => {
 })
 
 test.describe('what a family of components does not agree about', () => {
+  // The sweep's output is the report it writes; a finding is a row in that
+  // file rather than a failed expectation.
+  // eslint-disable-next-line playwright/expect-expect
   test('every family agrees with itself', async ({ page }) => {
     test.setTimeout(120 * 60_000)
+    await requireStorybook()
+    // The probe above answers whether Storybook is up; this reads the index it
+    // serves, which is what the sweep walks.
     const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(10_000) })
-    test.skip(!answer.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
     const index = (await answer.json()) as { entries: Record<string, StoryEntry> }
 
     const only = ONLY.split(',')

@@ -3,13 +3,16 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { TimelineEntry } from './model'
+import type { Case, TimelineEntry } from './model'
 import { keys } from './queryKeys'
 import { setSession } from './session'
+import { drawn } from './rowWrite'
 import { useEntryMutation } from './useEntryMutation'
 
 const CASE = 'DEMO-CAMPAIGN'
 const listKey = keys.collection(CASE, 'timeline')
+const caseKey = keys.case(CASE)
+const at = (version: number) => drawn({ version }).version
 
 function row(id: string, description: string): TimelineEntry {
   return { id, description } as TimelineEntry
@@ -22,6 +25,7 @@ function harness() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   client.setQueryData(listKey, [row('e1', 'before'), row('e2', 'untouched')])
+  client.setQueryData<Case>(caseKey, { timeline: [row('e1', 'before'), row('e2', 'untouched')] } as Case)
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
@@ -31,6 +35,21 @@ function harness() {
 
 function rows(client: QueryClient): TimelineEntry[] {
   return client.getQueryData<TimelineEntry[]>(listKey) ?? []
+}
+
+/** What every collection screen renders from: the case document, not the list key. */
+function caseRows(client: QueryClient): TimelineEntry[] {
+  return client.getQueryData<Case>(caseKey)?.timeline ?? []
+}
+
+function held(): { release: (value: Response) => void } {
+  const gate: { release: (value: Response) => void } = { release: () => undefined }
+  fetchMock.mockReturnValue(
+    new Promise<Response>((resolve) => {
+      gate.release = resolve
+    }),
+  )
+  return gate
 }
 
 beforeEach(() => {
@@ -44,42 +63,37 @@ afterEach(() => {
 })
 
 describe('the per-row mutation helper', () => {
-  it('applies the edit to the cache before the request resolves', async () => {
-    let release: (value: Response) => void = () => undefined
-    fetchMock.mockReturnValue(
-      new Promise<Response>((resolve) => {
-        release = resolve
-      }),
-    )
+  it('leaves the list and the case document as served while the write is out', async () => {
+    const gate = held()
     const { client, hook } = harness()
 
     act(() => {
-      hook.result.current.mutate({ entryId: 'e1', version: 1, fields: { description: 'after' } })
+      hook.result.current.mutate({ entryId: 'e1', version: at(1), fields: { description: 'after' } })
     })
 
-    await waitFor(() => expect(rows(client)[0]?.description).toBe('after'))
-    // The other row is untouched: an optimistic write that replaced the list
-    // would lose a concurrent edit and still pass an assertion on row one.
-    expect(rows(client)[1]?.description).toBe('untouched')
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(rows(client).map((r) => r.description)).toEqual(['before', 'untouched'])
+    expect(caseRows(client).map((r) => r.description)).toEqual(['before', 'untouched'])
 
     act(() => {
-      release(new Response(JSON.stringify({ id: 'e1' }), { status: 200 }))
+      gate.release(new Response(JSON.stringify({ id: 'e1', version: 2 }), { status: 200 }))
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
   })
 
-  it('rolls the cache back when the write is refused', async () => {
+  it('leaves both as served when the write is refused', async () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ error: 'read-only' }), { status: 403 }),
     )
     const { client, hook } = harness()
 
     act(() => {
-      hook.result.current.mutate({ entryId: 'e1', version: 1, fields: { description: 'after' } })
+      hook.result.current.mutate({ entryId: 'e1', version: at(1), fields: { description: 'after' } })
     })
 
     await waitFor(() => expect(hook.result.current.isError).toBe(true))
     expect(rows(client)[0]?.description).toBe('before')
+    expect(caseRows(client)[0]?.description).toBe('before')
     expect(hook.result.current.error?.status).toBe(403)
   })
 
@@ -88,7 +102,7 @@ describe('the per-row mutation helper', () => {
     const { hook } = harness()
 
     act(() => {
-      hook.result.current.mutate({ entryId: 'e1', version: 3, fields: { description: 'after' } })
+      hook.result.current.mutate({ entryId: 'e1', version: at(3), fields: { description: 'after' } })
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
 
@@ -97,7 +111,7 @@ describe('the per-row mutation helper', () => {
     expect(init?.method).toBe('PATCH')
     // The whole row would also succeed against the API, and would write every
     // field the analyst did not touch.
-    expect(JSON.parse(init?.body as string)).toEqual({ version: 3, description: 'after' })
+    expect(JSON.parse(init?.body as string)).toEqual({ version: at(3), description: 'after' })
   })
 
   /**
@@ -115,7 +129,7 @@ describe('the per-row mutation helper', () => {
     const { hook } = harness()
 
     act(() => {
-      hook.result.current.mutate({ entryId: 'e1', version: 7, fields: { description: 'after' } })
+      hook.result.current.mutate({ entryId: 'e1', version: at(7), fields: { description: 'after' } })
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
 
@@ -138,7 +152,7 @@ describe('the per-row mutation helper', () => {
     act(() => {
       hook.result.current.mutate({
         entryId: 'e1',
-        version: 2,
+        version: at(2),
         base: { description: 'before' },
         fields: { description: 'after' },
       })
@@ -157,7 +171,7 @@ describe('the per-row mutation helper', () => {
     const invalidate = vi.spyOn(client, 'invalidateQueries')
 
     act(() => {
-      hook.result.current.mutate({ entryId: 'e1', version: 1, fields: { description: 'after' } })
+      hook.result.current.mutate({ entryId: 'e1', version: at(1), fields: { description: 'after' } })
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
 

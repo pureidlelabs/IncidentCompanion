@@ -11,8 +11,9 @@
  * **A fetch cannot do this**: the optimiser runs when the modules execute, not
  * when the HTML is served.
  *
- * Best-effort. Only the kit tier has a precondition behind it; the sweeps skip
- * per test, so for them this returns having warmed nothing.
+ * Best-effort. The tiers that raise their own Storybook have one to warm by
+ * the time this runs, because `webServer` is a plugin task and plugin tasks
+ * run before `globalSetup`.
  */
 import { chromium } from '@playwright/test'
 

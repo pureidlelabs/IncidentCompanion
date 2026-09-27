@@ -20,18 +20,20 @@ import { Readable } from 'node:stream'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { CollectionService } from '../collections/collection.service.js'
-import { REPORT_BLOCKS_COLLECTION } from '../collections/entities.controller.js'
+import { REPORT_BLOCKS_COLLECTION } from '../collections/definitions.js'
 import { cases, evidence, reportBlocks, reports, user } from '../db/schema/index.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ProseService } from '../prose/prose.service.js'
 import { ReportRenderService } from './render.service.js'
 import { english } from './document/packs.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import type { FigureNode } from './document/model.js'
 import { defaultPolicy } from '../policy/read.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -58,7 +60,7 @@ const englishOnly = {
 
 const root = mkdtempSync(join(tmpdir(), 'ic-figure-render-'))
 
-describe.skipIf(!db)('placing a figure', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('placing a figure', () => {
   let render: ReportRenderService
   let collections: CollectionService
   let store: EvidenceStore
@@ -92,14 +94,14 @@ describe.skipIf(!db)('placing a figure', () => {
       .returning()
     caseId = row!.id
 
-    collections = new CollectionService(db!)
-    render = new ReportRenderService(
+    collections = as(actorId, new CollectionService(db!, suiteStore()))
+    render = as(actorId, new ReportRenderService(
       db!,
-      new CasesService(db!),
+      new CasesService(db!, suiteStore()),
       new ProseService(db!),
       englishOnly,
       store,
-    )
+    ))
   }, 60_000)
 
   /** A 400x300 artefact in the store, and the evidence row that names it. */
@@ -114,7 +116,7 @@ describe.skipIf(!db)('placing a figure', () => {
       // eslint-disable-next-line no-unexpected-multiline
       [format]()
       .toBuffer()
-    const stored = await store.put(Readable.from([bytes]) as never, `shot.${format}`)
+    const stored = await store.put(caseId, Readable.from([bytes]) as never, `shot.${format}`)
 
     const [row] = await seed!
       .insert(evidence)
@@ -154,7 +156,7 @@ describe.skipIf(!db)('placing a figure', () => {
     })
       .png()
       .toBuffer()
-    const stored = await store.put(Readable.from([bytes]) as never, 'picked.png')
+    const stored = await store.put(caseId, Readable.from([bytes]) as never, 'picked.png')
     const [row] = await seed!
       .insert(evidence)
       .values({ caseId, name: 'picked.png', hash: stored.hash, createdBy: actorId })
@@ -269,7 +271,7 @@ describe.skipIf(!db)('placing a figure', () => {
     const { document_ } = await render.render(caseId, reportId)
     await seed!
       .update(reports)
-      .set({ frozen: document_, frozenAt: new Date() })
+      .set({ sentAt: new Date(), frozen: document_, frozenAt: new Date() })
       .where(eq(reports.id, reportId))
 
     const again = await render.render(caseId, reportId)
@@ -296,7 +298,7 @@ describe.skipIf(!db)('placing a figure', () => {
     // document keeps the size it was sent at.
     await seed!
       .update(reports)
-      .set({ frozen: document_, frozenAt: new Date() })
+      .set({ sentAt: new Date(), frozen: document_, frozenAt: new Date() })
       .where(eq(reports.id, reportId))
 
     const again = await render.render(caseId, reportId)
@@ -322,7 +324,7 @@ describe.skipIf(!db)('placing a figure', () => {
     })
       .png()
       .toBuffer()
-    const stored = await store.put(Readable.from([damage(whole)]) as never, 'broken.png')
+    const stored = await store.put(caseId, Readable.from([damage(whole)]) as never, 'broken.png')
 
     const [row] = await seed!
       .insert(evidence)

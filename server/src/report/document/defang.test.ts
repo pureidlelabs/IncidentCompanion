@@ -2,10 +2,9 @@
  * Written from an attack on the defanger, in both directions.
  *
  * A missing defang hands a customer a live C2 address one click away, because
- * Word and Outlook autolink a bare domain. An over-eager one is *quieter and
- * worse*: the reader cannot tell a mangled filename from a real one, so
- * `payload.zip` arriving as `payload[.]zip` is a fact the report has destroyed
- * rather than protected. Both halves are asserted here.
+ * Word and Outlook autolink a bare domain. An over-eager one mangles prose
+ * shaped like an address: a version number, an abbreviation, a filename with
+ * no top-level domain for an extension. Both halves are asserted here.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -22,6 +21,13 @@ describe('a value the model says is entirely an indicator', () => {
     expect(defangIndicator('http://evil.example.com/a.b/c.d?x=1.2')).toBe(
       'hxxp://evil[.]example[.]com/a.b/c.d?x=1.2',
     )
+  })
+
+  it.each([
+    ['ftp://evil.example.com/a.b', 'fxp://evil[.]example[.]com/a.b'],
+    ['ops@evil.example.com', 'ops[@]evil[.]example[.]com'],
+  ])('defangs %s whatever its spelling', (given, expected) => {
+    expect(defangIndicator(given)).toBe(expected)
   })
 
   it('preserves the case the analyst typed in the scheme', () => {
@@ -62,17 +68,56 @@ describe('free text inside a generated block', () => {
     )
   })
 
-  /**
-   * **The half that matters most, and the one an over-eager rule breaks.**
-   * `.zip` and `.mov` are real TLDs, so any looks-like-a-domain regex turns a
-   * filename into a mangled one and the reader cannot tell which it was.
-   */
   it.each([
-    'the operator dropped payload.zip on the share',
-    'renamed it to invoice.mov before exfil',
-    'see evil.example.com in the indicator table',
-  ])('leaves a bare domain alone: %s', (text) => {
+    'the operator dropped payload.exe on the share',
+    'opened report.pdf, e.g. at 16:10:00',
+    'wrote C:\\Users\\x\\evil.com',
+    'released v1.\u200b2 today',
+    '\u0d05\u0d35\u0d28\u0d4d\u200d. then',
+  ])('leaves prose with no host in it alone: %s', (text) => {
     expect(defangText(text)).toBe(text)
+  })
+
+  /** A filename whose extension is a top-level domain is linked by readers, so it is bracketed like any host. */
+  it.each([
+    ['dropped payload.zip and setup.py', 'dropped payload[.]zip and setup[.]py'],
+    ['beacon to evil-c2.pl', 'beacon to evil-c2[.]pl'],
+  ])('defangs a name under a file-type ending: %s', (given, expected) => {
+    expect(defangText(given)).toBe(expected)
+  })
+
+  it.each([
+    ['see evil.example.com in the table', 'see evil[.]example[.]com in the table'],
+    ['beacon to www.c2.example/login', 'beacon to www[.]c2[.]example/login'],
+    ['pulled ftp://c2.example.com/x', 'pulled fxp://c2[.]example[.]com/x'],
+    ['mounted smb://c2.example.com/share', 'mounted smb[:]//c2[.]example[.]com/share'],
+    [
+      'copied to \\\\files.c2.example.com\\share',
+      'copied to \\\\files[.]c2[.]example[.]com\\share',
+    ],
+    ['mail from ops@c2.example.org', 'mail from ops[@]c2[.]example[.]org'],
+    [
+      '\u043f\u0440\u0438\u043c\u0435\u0440.\u0440\u0444',
+      '\u043f\u0440\u0438\u043c\u0435\u0440[.]\u0440\u0444',
+    ],
+    ['txt _dmarc.evil.com', 'txt _dmarc[.]evil[.]com'],
+    ['from a_b.evil.com and evil_x.com', 'from a_b[.]evil[.]com and evil_x[.]com'],
+    ['load //evil.example.com/x', 'load //evil[.]example[.]com/x'],
+    ['open http:evil.example.com', 'open hxxp:evil[.]example[.]com'],
+    ['copy \\\\?\\UNC\\evil.example.com\\share', 'copy \\\\?\\UNC\\evil[.]example[.]com\\share'],
+    ['beacon evil\u200b.example.com', 'beacon evil[.]example[.]com'],
+    ['beacon evil.\u200bexample.com', 'beacon evil[.]example[.]com'],
+    ['open http:\\\\evil.example.com', 'open hxxp:\\\\evil[.]example[.]com'],
+    ['beacon evil\uff0eexample\uff0ecom', 'beacon evil[.]example[.]com'],
+    ['beacon evil\u3002example\u3002com', 'beacon evil[.]example[.]com'],
+    ['mail a@evil\uff0eexample\uff0ecom', 'mail a[@]evil[.]example[.]com'],
+    ['load //evil\uff0eexample\u3002com/x', 'load //evil[.]example[.]com/x'],
+    ['copy \\\\evil\uff0eexample\uff0ecom\\s', 'copy \\\\evil[.]example[.]com\\s'],
+    ['fetch http://evil\uff0eexample\u200b.com/x', 'fetch hxxp://evil[.]example[.]com/x'],
+    ['open http:evil\u3002example\u3002com', 'open hxxp:evil[.]example[.]com'],
+  ])('defangs %s', (given, expected) => {
+    expect(defangText(given)).toBe(expected)
+    expect(defangText(expected), 'a second pass changes nothing').toBe(expected)
   })
 
   it('is not fooled by a version string that is shaped like an address', () => {
@@ -110,7 +155,7 @@ describe('the pass over a built document', () => {
   it('defangs the cover, which is not a section and not a node', () => {
     const document_ = documentWith([], {
       eyebrow: 'Reported from 198.51.100.7',
-      title: 'Phishing, then a payload.zip from 203.0.113.9',
+      title: 'Phishing, then a payload.pdf from 203.0.113.9',
       subtitle: 'Acme  \u00b7  CASE-1  \u00b7  callback to http://evil.example.com/beacon',
       rows: [
         { label: 'First contact', value: { text: 'evil.example.com', indicator: true } },
@@ -126,9 +171,9 @@ describe('the pass over a built document', () => {
 
     // **The whole value is the indicator here**, which is the flag on the
     // fixture row above -- so the bare domain is blanked, while the title
-    // beside it keeps `payload.zip` under the free-text rule.
+    // beside it keeps `payload.pdf` under the free-text rule.
     expect(cover?.rows[0]?.value.text).not.toContain('evil.example.com')
-    expect(cover?.title).toContain('payload.zip')
+    expect(cover?.title).toContain('payload.pdf')
 
     // The labels are the app's own words and carry no address to defang.
     expect(cover?.rows[0]?.label).toBe('First contact')

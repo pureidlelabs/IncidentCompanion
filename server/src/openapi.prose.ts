@@ -12,6 +12,7 @@ import { COLLECTION_SCHEMAS } from './domain/collections.js'
 import { fields, patchSchema } from './domain/field-spec.js'
 import { reportBlockSchema, reportSchema } from './domain/entities/report.js'
 import { caseSchema } from './cases/cases.dto.js'
+import { BULK_LIMIT, selectionSchema } from './collections/write-door.js'
 import { timelineWriteSchema } from './domain/entities/timeline.js'
 
 /**
@@ -101,7 +102,7 @@ const GROUPS: ReadonlyArray<readonly [RegExp, string]> = [
   [/^\/api\/cases\/\{[^}]+\}\//, 'Case data'],
   [/^\/api\/(cases|demos|recent-cases)/, 'Cases'],
   [/^\/api\/(library|collections|specs)/, 'Library'],
-  [/^\/api\/(accounts|appearance|change-password|preferences)/, 'Accounts and access'],
+  [/^\/api\/(accounts|appearance|auth|change-password|preferences)/, 'Accounts and access'],
   [/^\/api\/(about|settings|health|openapi)/, 'This install'],
 ]
 
@@ -481,6 +482,9 @@ const ANONYMOUS: ReadonlySet<string> = new Set([
   '/api/health',
   '/api/openapi.json',
   '/api/setup',
+  '/api/auth/sign-in/email',
+  '/api/auth/get-session',
+  '/api/auth/sign-out',
 ])
 
 /** Nest's refusal body: a status, a message, and the exception's own name. */
@@ -551,12 +555,16 @@ const VERSIONED_POST: ReadonlySet<string> = new Set(['/api/cases/{caseId}/eviden
  * exist, and a versioned write means somebody else may have written first.
  * `@nestjs/swagger` documents only what a decorator says, and this codebase
  * validates through a pipe, so nothing else describes these.
+ *
+ * `parsesAUuid` is the shape the path alone cannot carry: whether the route
+ * refuses a malformed parameter before the handler runs. -> `openapi.ts`
  */
 export function refusals(
   method: string,
   path: string,
   hasBody: boolean,
   hasQuery = false,
+  parsesAUuid = false,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   const row = /\{[^}]+\}/.test(path)
@@ -565,9 +573,18 @@ export function refusals(
 
   // Two statuses, and the split is the contract: a body the server cannot read
   // is 400; one it read and will not act on is 422. -> `wire/refusals.ts`
-  if (hasBody) {
+  if (hasBody || parsesAUuid) {
     out['400'] = {
-      description: 'The body is not readable \u2014 malformed JSON, or not the media type this route takes.',
+      description: [
+        parsesAUuid
+          ? 'A path parameter is not a uuid. A well-formed id that names nothing is the 404.'
+          : '',
+        hasBody
+          ? 'The body is not readable \u2014 malformed JSON, or not the media type this route takes.'
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
       ...json(REFUSAL),
     }
   }
@@ -651,6 +668,20 @@ export function refusals(
 }
 
 /**
+ * `schema` with the version a write presents beside its fields, on every
+ * branch of a union. The route takes it off before the fields are validated.
+ */
+function presenting(schema: Record<string, unknown>, version: unknown): Record<string, unknown> {
+  const oneOf = schema['oneOf'] as Record<string, unknown>[] | undefined
+  if (oneOf) return { ...schema, oneOf: oneOf.map((branch) => presenting(branch, version)) }
+  return {
+    ...schema,
+    properties: { ...(schema['properties'] as Record<string, unknown>), version },
+    required: [...((schema['required'] as string[] | undefined) ?? []), 'version'],
+  }
+}
+
+/**
  * Give a collection route the shapes it accepts and returns, from
  * `PUBLISHABLE` keyed by the path's own segment. Does nothing for a path that
  * names no collection.
@@ -698,7 +729,10 @@ export function describeOperation(
 
   const patchForm = patchFormOf(PUBLISHABLE[resource]!)
   const partial = patchForm ? published(patchForm) : rows
-  const ids = { type: 'array', items: { type: 'string', format: 'uuid' } }
+  const { $schema: _, ...ids } = published(selectionSchema) as {
+    $schema?: unknown
+    items: { properties: { version: unknown } }
+  }
 
   // The bulk bodies are envelopes, not arrays: `POST /bulk` takes
   // `{ entries: [...] }` and `PATCH /bulk` takes `{ ids, fields }` - one patch
@@ -709,7 +743,7 @@ export function describeOperation(
         ? {
             type: 'object',
             required: ['entries'],
-            properties: { entries: { type: 'array', maxItems: 1000, items: rows } },
+            properties: { entries: { type: 'array', maxItems: BULK_LIMIT, items: rows } },
           }
         : rows,
     )
@@ -721,11 +755,14 @@ export function describeOperation(
             type: 'object',
             required: ['ids', 'fields'],
             properties: {
-              ids: { ...ids, maxItems: 1000, description: 'The rows to change.' },
+              ids: {
+                ...ids,
+                description: 'The rows to change, each at the version it was read at.',
+              },
               fields: { ...partial, description: 'Applied to every row in `ids`.' },
             },
           }
-        : partial,
+        : presenting(partial, ids.items.properties.version),
     )
   }
 
@@ -744,8 +781,13 @@ export function describeOperation(
         method === 'delete'
           ? ['Removed.', { type: 'object', properties: { deleted: { type: 'boolean' } } }]
           : bulk && method === 'post'
-            ? ['The ids minted, in the order the entries were given.',
-               { type: 'object', properties: { ids } }]
+            ? [
+                'The ids minted, in the order the entries were given.',
+                {
+                  type: 'object',
+                  properties: { ids: { type: 'array', items: { type: 'string', format: 'uuid' } } },
+                },
+              ]
             : bulk
               ? ['The rows as stored.', { type: 'array', items: rows }]
               : ['The row as stored, with its new `version`.', rows]

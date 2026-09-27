@@ -13,16 +13,18 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ConflictsService } from './conflicts.service.js'
 import { CollectionService } from './collection.service.js'
 import { SystemsController } from './entities.controller.js'
-import { DemoContentSeeder } from '../demos/content.seeder.js'
-import { DemoSeederService } from '../demos/seeder.service.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { cases, conflicts, reports, systems, user } from '../db/schema/index.js'
 import { reportBlocks } from '../db/schema/report.js'
-import { openTestPool } from '../../test/database.js'
+import { sentReportRefusal } from '../report/freeze.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { randomUUID } from 'node:crypto'
+import { reseedDemos } from '../../test/demo-fixture.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -44,7 +46,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 const ME = 'analyst-mine'
 const THEM = 'analyst-theirs'
 
-describe.skipIf(!db)('the merge review', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the merge review', () => {
   let service: ConflictsService
   let collections: CollectionService
   let caseId: string
@@ -67,7 +69,7 @@ describe.skipIf(!db)('the merge review', () => {
 
   beforeEach(async () => {
     await seed!.delete(cases)
-    await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+    await reseedDemos(seed!)
     const [kase] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
     caseId = kase!.id
     await seedAnalyst(ME)
@@ -82,8 +84,8 @@ describe.skipIf(!db)('the merge review', () => {
      */
     await seed!.update(systems).set({ analyst: 'Nobody' }).where(eq(systems.id, rowId))
 
-    service = new ConflictsService(db!)
-    collections = new CollectionService(db!)
+    collections = as(ME, new CollectionService(db!, suiteStore()))
+    service = as(ME, new ConflictsService(db!, collections))
   })
 
   afterAll(async () => {
@@ -304,7 +306,7 @@ describe.skipIf(!db)('the merge review', () => {
    */
   describe('a refused PATCH leaves a review behind', () => {
     it('records the analyst edit that the 409 discarded', async () => {
-      const controller = new SystemsController(collections, service)
+      const controller = as(ME, new SystemsController(collections, service))
       const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
       await theyWrite({ analyst: 'Them' })
 
@@ -325,7 +327,7 @@ describe.skipIf(!db)('the merge review', () => {
 
     it('does not treat base as a column to write', async () => {
       const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const controller = new SystemsController(collections, service)
+      const controller = as(ME, new SystemsController(collections, service))
 
       const updated = (await controller.update(
         caseId,
@@ -336,128 +338,6 @@ describe.skipIf(!db)('the merge review', () => {
 
       expect(updated['analyst']).toBe('Me')
       expect(updated).not.toHaveProperty('base')
-    })
-  })
-
-  /**
-   * **The claim is what makes a review rare, and it is advisory.** A claim
-   * lives in `live/`, so a write path that reads none leaves "checked out
-   * until saved or discarded" true of the pencil and false of the API.
-   *
-   * **It does not replace the version check**, and these cases are written so
-   * that is visible: a claim is released when its socket goes, so a dropped
-   * connection frees the row and the next analyst writes legitimately.
-   */
-  describe('a row another analyst holds', () => {
-    /**
-     * **The fake records what it was asked**, because the whole of this
-     * feature is the lookup key. A `holderOf` that ignores its arguments
-     * certifies that *a* refusal happens and nothing about *which row* was
-     * checked -- asking for a collection that does not exist leaves the suite
-     * green while the refusal silently never fires.
-     */
-    let asked: unknown[] = []
-    function holding(holder: { userId: string; username: string } | null): CollectionService {
-      asked = []
-      return new CollectionService(db!, {
-        announce: () => {},
-        holderOf: (...args: unknown[]) => {
-          asked = args
-          return Promise.resolve(holder)
-        },
-      } as never)
-    }
-
-    it('refuses a patch to a row somebody else has open', async () => {
-      const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const guarded = holding({ userId: THEM, username: 'Them' })
-
-      await expect(
-        guarded.update(
-          { name: 'systems', table: systems, orderBy: 'id' },
-          caseId,
-          rowId,
-          row!.version,
-          { analyst: 'Me' },
-          ME,
-        ),
-      ).rejects.toMatchObject({ status: 409 })
-    })
-
-    /**
-     * **Which row was asked about, not merely that something was.** The key
-     * has three vertices that must agree - the collection name the UI claims
-     * with, the string the gateway passes through unvalidated, and `def.name`
-     * here - and nothing else pins them together.
-     */
-    it('asks about the row being written, by case, collection and id', async () => {
-      const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const guarded = holding(null)
-
-      await guarded.update(
-        { name: 'systems', table: systems, orderBy: 'id' },
-        caseId,
-        rowId,
-        row!.version,
-        { analyst: 'Me' },
-        ME,
-      )
-
-      expect(asked).toEqual([caseId, 'systems', rowId])
-    })
-
-    it('names the holder, or the refusal is a dead end', async () => {
-      const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const guarded = holding({ userId: THEM, username: 'Them' })
-
-      await expect(
-        guarded.update(
-          { name: 'systems', table: systems, orderBy: 'id' },
-          caseId,
-          rowId,
-          row!.version,
-          { analyst: 'Me' },
-          ME,
-        ),
-      ).rejects.toMatchObject({ response: { message: expect.stringContaining('Them') } })
-    })
-
-    /**
-     * **Holding your own claim must not lock you out**, which is the failure
-     * that would make the feature unusable: the analyst editing a row is
-     * exactly the analyst who holds it, so a check on presence rather than
-     * identity refuses every save made from an open dialog.
-     */
-    it('lets the holder write to the row they hold', async () => {
-      const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const guarded = holding({ userId: ME, username: 'Me' })
-
-      const result = await guarded.update(
-        { name: 'systems', table: systems, orderBy: 'id' },
-        caseId,
-        rowId,
-        row!.version,
-        { analyst: 'Me' },
-        ME,
-      )
-
-      expect(result.ok).toBe(true)
-    })
-
-    it('lets anyone write to a row nobody holds', async () => {
-      const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
-      const guarded = holding(null)
-
-      const result = await guarded.update(
-        { name: 'systems', table: systems, orderBy: 'id' },
-        caseId,
-        rowId,
-        row!.version,
-        { analyst: 'Me' },
-        ME,
-      )
-
-      expect(result.ok).toBe(true)
     })
   })
 
@@ -537,15 +417,7 @@ describe.skipIf(!db)('the merge review', () => {
   })
 
   describe('answering it against a sent report', () => {
-    /**
-     * **The sixth door.** `refuseIfClosed` is wired at the five
-     * `CollectionService` write methods; `resolve` writes through
-     * `updateVersioned` directly.
-     *
-     * The route is ordinary rather than contrived: a refused `PATCH` records
-     * the analyst's values, the report is sent, and answering the review that
-     * is already on their screen replays those values into it.
-     */
+    /** Answering a review writes without a `PATCH`, and owes the sent-report guard it meets. */
     it('refuses to write a kept-mine value into a report that has been sent', async () => {
       const reportId = randomUUID()
       await seed!.insert(reports).values({
@@ -566,9 +438,9 @@ describe.skipIf(!db)('the merge review', () => {
         mine: { label: 'AFTER IT WAS SENT' },
       })
 
-      await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
+      await seed!.update(reports).set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() }).where(eq(reports.id, reportId))
 
-      await expect(service.resolve(caseId, ME, 'mine')).rejects.toThrow(/sent report/i)
+      await expect(service.resolve(caseId, ME, 'mine')).rejects.toSatisfy((error) => sentReportRefusal(error) !== undefined)
 
       const [row] = await seed!.select().from(reports).where(eq(reports.id, reportId))
       expect(row!.label, 'the frozen report kept its own label').toBe('Before it was sent')
@@ -603,7 +475,7 @@ describe.skipIf(!db)('the merge review', () => {
       // and the assertion below passes for the wrong reason.
       await seed!
         .update(reports)
-        .set({ label: 'Theirs', sentAt: new Date() })
+        .set({ label: 'Theirs', sentAt: new Date(), frozen: {}, frozenAt: new Date() })
         .where(eq(reports.id, reportId))
 
       await expect(service.resolve(caseId, ME, 'mine')).rejects.toThrow()
@@ -649,9 +521,9 @@ describe.skipIf(!db)('the merge review', () => {
         base: { heading: 'Before it was sent' },
         mine: { heading: 'AFTER IT WAS SENT' },
       })
-      await seed!.update(reports).set({ sentAt: new Date() }).where(eq(reports.id, reportId))
+      await seed!.update(reports).set({ sentAt: new Date(), frozen: {}, frozenAt: new Date() }).where(eq(reports.id, reportId))
 
-      await expect(service.resolve(caseId, ME, 'mine')).rejects.toThrow(/sent report/i)
+      await expect(service.resolve(caseId, ME, 'mine')).rejects.toSatisfy((error) => sentReportRefusal(error) !== undefined)
 
       const [after] = await seed!
         .select()
@@ -697,6 +569,34 @@ describe.skipIf(!db)('the merge review', () => {
       const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
       expect(row!.analyst, 'the refused write did not land').toBe('Them')
       expect(await service.pending(caseId, ME), 'and the record survived it').toHaveLength(1)
+    })
+  })
+
+  describe('answering it runs the guards the PATCH door runs', () => {
+    it('refuses to keep a report language the install does not serve', async () => {
+      const reportId = randomUUID()
+      await seed!.insert(reports).values({
+        id: reportId,
+        caseId,
+        label: 'A report',
+        language: 'en',
+        tlp: 'TLP:RED',
+        createdBy: ME,
+        updatedBy: ME,
+      })
+      await service.record({
+        caseId,
+        userId: ME,
+        entity: 'reports',
+        entityId: reportId,
+        base: { language: 'en' },
+        mine: { language: 'qq-not-a-pack' },
+      })
+
+      await expect(service.resolve(caseId, ME, 'mine')).rejects.toThrow()
+
+      const [row] = await seed!.select().from(reports).where(eq(reports.id, reportId))
+      expect(row!.language, 'the report kept a language it can be printed in').toBe('en')
     })
   })
 

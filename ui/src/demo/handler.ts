@@ -15,6 +15,7 @@ import {
 
 import about from './catalogue/about.json'
 import collections from './catalogue/collections.json'
+import libraryListings from './catalogue/library.json'
 import reportLayouts from './catalogue/report-layouts.json'
 import specs from './catalogue/specs.json'
 
@@ -209,6 +210,37 @@ function patch(
   return json(row)
 }
 
+/**
+ * A selection edited at once, answered as the route answers: which rows took
+ * it, which had moved since they were read, and which were not there.
+ *
+ * The fields are judged against every row before any is written, so a value
+ * the collection will not take refuses the whole selection.
+ */
+function bulkPatch(state: DemoState, collection: string, body: Record<string, unknown>): Response {
+  const rows = rowsOf(state, collection)
+  if (rows === null) return refuse(501, UNAVAILABLE)
+  const { ids, fields } = body as { ids?: { id?: unknown; version?: unknown }[]; fields?: unknown }
+  if (!Array.isArray(ids) || typeof fields !== 'object' || fields === null) {
+    return refuse(422, 'A bulk patch names its rows and the fields it changes.')
+  }
+  const changes = fields as Record<string, unknown>
+  if (Object.keys(changes).length === 0) return refuse(422, EMPTY_PATCH)
+  for (const row of rows.filter((candidate) => ids.some((named) => named.id === candidate.id))) {
+    const refused = patchProblems(collection, row, changes)
+    if (refused !== null) return refused
+  }
+
+  const answer = { updated: [] as string[], refused: [] as string[], missing: [] as string[] }
+  for (const { id, version } of ids) {
+    const status = patch(state, collection, String(id), { ...changes, version }).status
+    ;(status === 200 ? answer.updated : status === 409 ? answer.refused : answer.missing).push(
+      String(id),
+    )
+  }
+  return json(answer)
+}
+
 function remove(state: DemoState, collection: string, id: string): Response {
   const rows = rowsOf(state, collection)
   if (rows === null) return refuse(501, UNAVAILABLE)
@@ -387,6 +419,22 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
     if (at[0] === 'recent-cases') return json(recentCases(state))
   }
 
+  /**
+   * `/api/library/<slug>`, from the capture of what a fresh install holds.
+   *
+   * **Two segments, and an unknown slug refuses.** Matching the first alone
+   * would answer `/library/<slug>/<name>/editor` with the listing, which is a
+   * body the editor cannot read and would draw as an empty form rather than a
+   * refusal.
+   *
+   * Writing is not served: a built-in cannot be edited on an install either,
+   * and every row here is one.
+   */
+  if (at[0] === 'library' && at.length === 2 && method === 'GET') {
+    const listing = (libraryListings as Record<string, unknown>)[at[1] ?? '']
+    return listing === undefined ? refuse(404, 'No such library.') : json(listing)
+  }
+
   // The landing screen records a visit as the analyst opens a case, and pins or
   // forgets one. There is nowhere for any of that to go here, and refusing it
   // would draw a refusal over a screen that is working.
@@ -426,6 +474,9 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
     // as ids they reached the single-row patch, which answered `No such entry.`
     // for a bulk edit - a refusal that is not the demo's and is not true.
     const row = at[3] ?? ''
+    if (at.length === 4 && row === 'bulk' && method === 'PATCH') {
+      return bulkPatch(state, collection, body)
+    }
     if (at.length === 4 && (row === 'bulk' || row === 'order')) return refuse(501, UNAVAILABLE)
     if (at.length === 4 && method === 'PATCH') return patch(state, collection, row, body)
     if (at.length === 4 && method === 'DELETE') return remove(state, collection, row)

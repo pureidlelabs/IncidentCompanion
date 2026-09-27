@@ -8,11 +8,15 @@
  */
 import { and, eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { RECENT_LIMIT, RecentService } from './recent.service.js'
+import { GroupsService } from '../access/groups.service.js'
 import { caseVisits, cases, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { customers } from '../db/schema/customer.js'
+import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -27,7 +31,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 const SAM = 'recent-sam'
 const ALEX = 'recent-alex'
 
-describe.skipIf(!db)('the cases an analyst has been in', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the cases an analyst has been in', () => {
   let service: RecentService
 
   async function aCase(title: string): Promise<string> {
@@ -55,7 +59,8 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
     }
     await seed!.delete(caseVisits)
     await seed!.delete(cases)
-    service = new RecentService(db!)
+    // Each call made as the analyst it is for, whose visits are theirs alone.
+    service = as(([userId]) => userId as string, new RecentService(db!))
   })
 
   afterAll(async () => {
@@ -209,15 +214,16 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
       )
 
       // Read from Postgres rather than through the API, which renders a stamp
-      // with `toISOString()` and hides the microseconds this is about.
-      const stamps = await db!
+      // with `toISOString()` and hides the microseconds this is about -- by the
+      // seeding role, which reads every analyst's visits.
+      const stamps = await seed!
         .select({ at: caseVisits.visitedAt, caseId: caseVisits.caseId })
         .from(caseVisits)
         .where(eq(caseVisits.userId, SAM))
       const mine = made.map((id) => stamps.find((row) => row.caseId === id)?.at?.getTime())
       expect(mine.every((at) => at !== undefined), 'a visit is missing its row').toBe(true)
 
-      const microseconds = await db!.execute<{ ordered: boolean }>(
+      const microseconds = await seed!.execute<{ ordered: boolean }>(
         // `getTime()` above is milliseconds and would tie exactly as the API
         // does, so the strict-increase check has to happen in the database.
         // Column references come from the schema: the database spells these
@@ -244,7 +250,7 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
        * which is correct - `visit()` runs once per transaction and cannot tie
        * in the shape that ships.
        */
-      const resolution = await db!.execute<{ sub: number }>(
+      const resolution = await seed!.execute<{ sub: number }>(
         sql`select count(*)::int as sub from ${caseVisits}
             where ${eq(caseVisits.userId, SAM)}
               and (extract(microseconds from ${caseVisits.visitedAt})::bigint % 1000) <> 0`,
@@ -301,6 +307,70 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
         [],
       )
       expect((await service.list(SAM)).recent).toEqual([])
+    })
+  })
+
+  /**
+   * The same case is asked for again with the membership restored, so a row the
+   * fixture never committed cannot pass for one filtered out.
+   */
+  describe('a case whose reach is revoked', () => {
+    let groupsService: GroupsService
+    let customerId: string
+    let sector: string
+    let caseId: string
+
+    beforeEach(async () => {
+      groupsService = new GroupsService(db!)
+      const [customer] = await seed!
+        .insert(customers)
+        .values({ name: 'Recent customer' })
+        .returning()
+      customerId = customer!.id
+      const [group] = await seed!.insert(groups).values({ name: 'Recent group' }).returning()
+      sector = group!.id
+      await seed!.insert(groupCustomers).values({ groupId: sector, customerId })
+
+      const [made] = await seed!
+        .insert(cases)
+        .values({ title: 'Reached for now', customerId, createdBy: SAM, updatedBy: SAM })
+        .returning({ id: cases.id })
+      caseId = made!.id
+
+      await groupsService.grant(sector, SAM, 'read')
+      await service.visit(SAM, caseId, 'timeline')
+      await service.pin(SAM, caseId, true)
+    })
+
+    afterEach(async () => {
+      await seed!.delete(groupMembers)
+      await seed!.delete(groupCustomers)
+      await seed!.delete(cases).where(eq(cases.id, caseId))
+      await seed!.delete(groups).where(eq(groups.id, sector))
+      await seed!.delete(customers).where(eq(customers.id, customerId))
+    })
+
+    it('stops being named once the membership is revoked, pinned or not', async () => {
+      const held = await service.list(SAM)
+      expect(
+        held.pinned.map((r) => r.caseId),
+        'the grant did not take, so the absence below cannot be attributed to the revocation',
+      ).toContain(caseId)
+
+      await groupsService.revoke(sector, SAM)
+
+      const after = await service.list(SAM)
+      expect(
+        [...after.pinned, ...after.recent].map((r) => r.caseId),
+        'the recent list kept naming a case after the reach to it was revoked',
+      ).not.toContain(caseId)
+    })
+
+    it('is named again once the membership is granted back', async () => {
+      await groupsService.revoke(sector, SAM)
+      await groupsService.grant(sector, SAM, 'read')
+
+      expect((await service.list(SAM)).pinned.map((r) => r.caseId)).toContain(caseId)
     })
   })
 })

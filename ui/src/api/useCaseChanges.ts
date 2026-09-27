@@ -17,7 +17,7 @@
  * wrong is a support call.
  */
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { acquireLink, releaseLink } from './caseSocket'
 import { isScope } from '@contract/scopes.lists'
@@ -86,6 +86,8 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
      * scoped.
      */
     { queryKey: keys.summary(caseId) },
+    // Under the case key like the summary, so the `exact` above misses it too.
+    { queryKey: keys.activity(caseId) },
   ]
 
   for (const scope of scopes) {
@@ -93,7 +95,7 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
     // the socket. A scope the client does not know produced
     // `['case', id, 'collection', <it>]` - a key no query reads, so the
     // invalidation ran and no screen refreshed. Dropping it loses precision
-    // and keeps correctness: the three unconditional entries above still
+    // and keeps correctness: the unconditional entries above still
     // refresh the case document, the summary and attribution.
     if (!isScope(scope)) continue
     // **`cases`, plural, which is what the server announces.** Every
@@ -101,7 +103,7 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
     // delete); the singular falls through to `keys.collection(caseId, 'cases')`,
     // a key no query ever reads.
     // **A case-scalar write is already covered, so it adds nothing here.** The
-    // three unconditional entries above take attribution, the document and the
+    // unconditional entries above take attribution, the document and the
     // summary. Pushing the case key *without* `exact` takes the whole subtree
     // instead, which invalidates every key a client holds -- and the Overview
     // form commits one PATCH per field, so an edit fans that out once per field
@@ -124,8 +126,6 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
 export interface CaseChanged {
   /** The tables that moved, or `null` for "assume everything did". */
   scopes: string[] | null
-  /** Who wrote it. Not used to skip -- `useCaseChanges` says why. */
-  by: string
 }
 
 export function readChange(message: Record<string, unknown>): CaseChanged | null {
@@ -133,9 +133,23 @@ export function readChange(message: Record<string, unknown>): CaseChanged | null
   const scopes = message.scopes
   return {
     scopes: Array.isArray(scopes) ? scopes.filter((s) => typeof s === 'string') : null,
-    by: typeof message.by === 'string' ? message.by : '',
   }
 }
+
+/**
+ * Whether the screen can know it is current.
+ *
+ * `behind` from the moment the connection drops until it is back and the case
+ * has been read again; `failed` when that read did not come back, which is
+ * when `reread` is the way out.
+ */
+export interface CaseLive {
+  behind: boolean
+  failed: boolean
+  reread: () => void
+}
+
+const CURRENT = { behind: false, failed: false }
 
 /**
  * Live for the whole case, mounted once by the shell.
@@ -144,24 +158,64 @@ export function readChange(message: Record<string, unknown>): CaseChanged | null
  * is not currently rendered still holds a cached query, and it is the one the
  * analyst meets stale when they navigate back to it.
  */
-export function useCaseChanges(caseId: string): void {
+export function useCaseChanges(caseId: string): CaseLive {
   const queries = useQueryClient()
+  const [state, setState] = useState(CURRENT)
+
+  /** Whether the socket is down, and how many times it has dropped. */
+  const socket = useRef({ down: false, drops: 0 })
+
+  /**
+   * The whole case read again: current once it lands, unless the socket was
+   * down when it was asked for, dropped since, or is down. A read that fails
+   * says so only while it is still the latest word.
+   */
+  const readAgain = useCallback((reading: Promise<unknown>) => {
+    const asked = socket.current.down ? -1 : socket.current.drops
+    const latest = () => !socket.current.down && socket.current.drops === asked
+    reading.then(
+      () => {
+        if (latest()) setState(CURRENT)
+      },
+      () => {
+        if (latest()) setState({ behind: true, failed: true })
+      },
+    )
+  }, [])
+
+  // Another case starts live: the drop the last one saw says nothing about it.
+  const [shown, setShown] = useState(caseId)
+  if (shown !== caseId) {
+    setShown(caseId)
+    setState(CURRENT)
+  }
 
   useEffect(() => {
     if (!caseId || typeof WebSocket === 'undefined') return undefined
-    const link = acquireLink(caseId, (url) => new WebSocket(url))
+    const link = acquireLink(caseId)
 
     const pending = new Set<string>()
     let timer: ReturnType<typeof setTimeout> | undefined
+    /** The next settle is the read after a drop, whose outcome says whether the screen is current. */
+    let catchingUp = false
 
     const settle = () => {
       timer = undefined
       const scopes = [...pending]
       pending.clear()
-      for (const one of invalidationsFor(caseId, scopes)) {
-        void queries.invalidateQueries(
-          one.exact ? { queryKey: one.queryKey, exact: true } : { queryKey: one.queryKey },
-        )
+      const reading = Promise.all(
+        invalidationsFor(caseId, scopes).map((one) =>
+          queries.invalidateQueries(
+            one.exact ? { queryKey: one.queryKey, exact: true } : { queryKey: one.queryKey },
+            { throwOnError: true },
+          ),
+        ),
+      )
+      if (catchingUp) {
+        catchingUp = false
+        readAgain(reading)
+      } else {
+        reading.catch(() => undefined)
       }
     }
 
@@ -197,21 +251,34 @@ export function useCaseChanges(caseId: string): void {
      * one, and it is the same answer a write that could not say what it
      * touched already gets.
      *
-     * **Only after a drop, never on the first connect.** `onConnected` reports
-     * the current state on registration, so re-reading on every `up` would
-     * refetch the whole case the moment a screen opened it.
+     * **A drop is a close, not the state reported on registering.** A socket
+     * still opening reports down too, and a screen that said it was not live
+     * every time a case opened would be saying it about nothing. The read once
+     * it opens still happens, since nothing was listening before it did, but
+     * only the read after a drop decides whether the screen is current.
      */
     let wasDown = false
+    let dropped = false
+    let registering = true
     const stopWatching = link.onConnected((up) => {
+      socket.current.down = !up
       if (!up) {
         wasDown = true
+        socket.current.drops += 1
+        if (!registering) {
+          dropped = true
+          setState((was) => (was.behind ? was : { behind: true, failed: false }))
+        }
         return
       }
       if (!wasDown) return
       wasDown = false
       pending.add(EVERYTHING)
+      catchingUp = dropped
+      dropped = false
       timer ??= setTimeout(settle, COALESCE_MS)
     })
+    registering = false
 
     return () => {
       stop()
@@ -219,5 +286,12 @@ export function useCaseChanges(caseId: string): void {
       if (timer !== undefined) clearTimeout(timer)
       releaseLink(caseId)
     }
-  }, [caseId, queries])
+  }, [caseId, queries, readAgain])
+
+  const reread = useCallback(() => {
+    setState({ behind: true, failed: false })
+    readAgain(queries.invalidateQueries({ queryKey: keys.case(caseId) }, { throwOnError: true }))
+  }, [caseId, queries, readAgain])
+
+  return { ...state, reread }
 }

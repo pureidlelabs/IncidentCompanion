@@ -69,6 +69,7 @@ describe('the response interceptor verifies what the document promises', () => {
     makerUrl: 'https://example.invalid/maker',
     repoUrl: 'https://example.invalid/repo',
     issuesUrl: 'https://example.invalid/repo/issues',
+    presenceBoundSeconds: 30,
   }
 
   /** Stands in for the request: only the handler and its class are read. */

@@ -66,6 +66,11 @@ export const reportLayoutsSchema = z.object({
         .describe(
           'Whether a NIS2 stage applies, which is the layout requiring the nis2 feature. Groups the layout on the New report card list, and decides whether that form offers a reporting stage.',
         ),
+      stage: z
+        .string()
+        .describe(
+          'The step of the regime obligation this layout files, as a value of stages. Empty for a layout that files no step. A report created from the layout records it without the analyst being asked.',
+        ),
       blocks: z.array(
         z.object({
           kind: z.string(),

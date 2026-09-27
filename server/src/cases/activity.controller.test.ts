@@ -1,8 +1,9 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ActivityController } from './activity.controller.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { cases, changeFeed, user } from '../db/schema/index.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -19,7 +20,7 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-describe.skipIf(!db)('the case activity feed', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the case activity feed', () => {
   let controller: ActivityController
   let caseId: string
   const actorId = 'activity-analyst'
@@ -86,7 +87,7 @@ describe.skipIf(!db)('the case activity feed', () => {
       },
     ])
 
-    controller = new ActivityController(db!)
+    controller = as(actorId, new ActivityController(db!))
   })
 
   afterAll(async () => {
@@ -146,8 +147,14 @@ describe.skipIf(!db)('the case activity feed', () => {
   })
 
   it('caps what it returns', async () => {
+    // Its own case: sixty rows on the shared one push every row the other
+    // cases read out of the newest fifty.
+    const [own] = await seed!
+      .insert(cases)
+      .values({ title: 'Activity capped', createdBy: actorId })
+      .returning()
     const many = Array.from({ length: 60 }, (_unused, index) => ({
-      caseId,
+      caseId: own!.id,
       entity: 'timeline' as const,
       entityId: '33333333-3333-4333-8333-333333333333',
       op: 'update' as const,
@@ -157,7 +164,7 @@ describe.skipIf(!db)('the case activity feed', () => {
     }))
     await seed!.insert(changeFeed).values(many)
 
-    const { rows } = await controller.activity(caseId)
+    const { rows } = await controller.activity(own!.id)
 
     expect(rows.length).toBeLessThanOrEqual(50)
   })

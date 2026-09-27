@@ -118,6 +118,21 @@ export default tseslint.config(
       'jsx-a11y/label-has-associated-control': 'off',
     },
   },
+  /**
+   * The scrollers, which take focus: a region that scrolls is reached by keyboard or not at all.
+   * The rule exempts only by tag or literal `role`, so these go by file. -> #929
+   */
+  {
+    files: [
+      'src/components/ui/scroll-area.tsx',
+      'src/components/ui/dialog.tsx',
+      'src/components/ui/code-block.tsx',
+      'src/components/blocks/report-paper-page.tsx',
+      'src/screens/killchain-coverage.tsx',
+      'src/screens/investigation-graph.tsx',
+    ],
+    rules: { 'jsx-a11y/no-noninteractive-tabindex': 'off' },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     // Typed linting is scoped here rather than applied at the top level: the
@@ -237,6 +252,8 @@ export default tseslint.config(
            * `prose-authoring` writes markdown into a block's fragment, which is
            * how the demo seeds a report document the way the server's seeder
            * does. Its closure is yjs, which the client already runs.
+           * `prose-fields` is where a fragment lives and its words as plain
+           * text, which the unsaved notice copies; its closure is yjs too.
            *
            * `killchain` is which phase sits in which cycle, which the coverage
            * screen asks rather than spelling the one member that has none. Its
@@ -267,12 +284,13 @@ export default tseslint.config(
             '!@contract/killchain',
             '!@contract/malware-shape',
             '!@contract/prose-authoring',
+            '!@contract/prose-fields',
           ],
           allowTypeImports: true,
           message:
             'Types only, except @contract/*.lists, @contract/analyst-account, ' +
             '@contract/collections, @contract/identity, @contract/killchain, ' +
-            '@contract/prose-authoring ' +
+            '@contract/prose-authoring, @contract/prose-fields ' +
             'and the @contract/*-shape advice modules. A value import from ' +
             'anywhere else can reach a Drizzle table.',
         }],

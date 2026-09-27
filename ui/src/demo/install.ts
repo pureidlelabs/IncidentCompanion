@@ -6,7 +6,8 @@
  * serves.
  */
 import { setSession } from '@/api/session'
-import { setTransport } from '@/api/client'
+import { setSocketFactory } from '@/api/caseSocket'
+import { setTransport } from '@/api/transport'
 
 import { mountDemoChrome } from './chrome'
 import { handle, DEMO_ANALYST } from './handler'
@@ -29,8 +30,6 @@ function signIn(): void {
 /**
  * The case socket, answered from the browser.
  *
- * The three hooks that open it construct `new WebSocket(url)` inline, so the
- * substitution is the global rather than a factory threaded through them.
  * The loopback never closes, on purpose: `caseSocket.ts` schedules its
  * reconnect from `onclose` alone.
  *
@@ -57,22 +56,7 @@ function answerSockets(state: DemoState): void {
       void save(state)
     },
   })
-  window.WebSocket = LoopbackSocket as unknown as typeof WebSocket
-}
-
-/**
- * Better Auth's client resolves `fetch` per call and never goes through the
- * client's transport, so its session probe reached the network and answered
- * 404 on every load. Only its own mount is taken; everything else keeps the
- * real `fetch`, which the demo has no other use for.
- */
-function answerAuth(state: DemoState): void {
-  const real = globalThis.fetch.bind(globalThis)
-  globalThis.fetch = (input, init) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-    const path = new URL(url, window.location.href).pathname
-    return path.startsWith('/api/auth/') ? handle(state, url, init ?? {}) : real(input, init)
-  }
+  setSocketFactory((url) => new LoopbackSocket(url))
 }
 
 export async function installDemo(): Promise<void> {
@@ -82,7 +66,6 @@ export async function installDemo(): Promise<void> {
   // the stored document.
   markWritten(state.kase)
   answerSockets(state)
-  answerAuth(state)
 
   setTransport(async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
@@ -96,18 +79,9 @@ export async function installDemo(): Promise<void> {
   // **The picker's default pane hides demo cases and the only case here is
   // one**, so the bare address otherwise opens on `0 cases` - an empty screen
   // for a visitor who came to see the product full.
-  //
-  // A navigation rather than `history.replaceState`, which does not work here:
-  // `routes.tsx` builds its router at module scope, and that module is
-  // imported - and has already resolved `/` to the picker - before this runs.
-  // Reloading costs one request on the bare address and depends on no import
-  // ordering. It cannot loop: the path it lands on is no longer the root, so
-  // the next call answers nothing.
+  // The router reads the address when the app first renders, which is after this.
   const landing = landingPath(window.location.pathname, state.kase.id, import.meta.env.BASE_URL)
-  if (landing !== null) {
-    window.location.replace(landing)
-    return
-  }
+  if (landing !== null) window.history.replaceState(null, '', landing)
 
   mountDemoChrome({
     build: import.meta.env.VITE_DEMO_BUILD ?? 'local',

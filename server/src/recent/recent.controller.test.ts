@@ -8,6 +8,7 @@
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { pinSchema, visitSchema, RecentController } from './recent.controller.js'
 import { RecentService } from './recent.service.js'
@@ -50,7 +51,7 @@ describe.skipIf(!db)('the recent-cases routes', () => {
       .values({ title: 'At the door', createdBy: SAM, updatedBy: SAM })
       .returning({ id: cases.id })
     caseId = row!.id
-    controller = new RecentController(new RecentService(db!))
+    controller = as(SAM, new RecentController(new RecentService(db!)))
   })
 
   afterAll(async () => {

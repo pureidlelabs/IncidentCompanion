@@ -25,12 +25,14 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { ExportsController } from './exports.controller.js'
 import { ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { cases, evidence, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -51,7 +53,7 @@ let fromId = ''
 let intoId = ''
 let file = ''
 
-describe.skipIf(!db)('a row that left a value blank', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a row that left a value blank', () => {
   beforeAll(async () => {
     const now = new Date()
     await seed!
@@ -84,9 +86,9 @@ describe.skipIf(!db)('a row that left a value blank', () => {
       type: 'system logs',
     })
 
-    const collections = new CollectionService(db!)
-    service = new ImportService(collections)
-    exports_ = new ExportsController(collections, service)
+    const collections = as(ME, new CollectionService(db!, suiteStore()))
+    service = as(ME, new ImportService(collections))
+    exports_ = as(ME, new ExportsController(collections, service))
     // The route types its own response, so a direct call is handed somewhere
     // to say so. -> `a-refusal-is-labelled-as-a-refusal.test.ts`
     file = await exports_.collectionCsv(fromId, 'evidence', { type: () => undefined })
@@ -123,6 +125,10 @@ describe.skipIf(!db)('a row that left a value blank', () => {
   })
 
   it('leaves the blank fields unset rather than empty', async () => {
+    // Imported here rather than borrowed from the case above: what this reads
+    // is the row an import writes.
+    await service.fromCsv('evidence', intoId, file, ME)
+
     const [written] = await seed!.select().from(evidence).where(eq(evidence.caseId, intoId))
 
     expect(written, 'the import wrote no row').toBeDefined()

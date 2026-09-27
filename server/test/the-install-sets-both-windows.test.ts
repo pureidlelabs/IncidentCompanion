@@ -23,9 +23,11 @@ import {
   type Harness,
   type Persona,
 } from './app-harness.js'
+import { hasConcurrentConnections } from './database.js'
 import {
   SESSION_IDLE_MINUTES,
   SESSION_LIFETIME_FLOOR_MINUTES,
+  SESSION_LIFETIME_MINUTES,
 } from '../src/policy/keys.js'
 
 const RUNNABLE = await bootable()
@@ -36,7 +38,7 @@ const REDIS_PREFIX = 'auth:'
 /** Wide enough for a slow harness, far narrower than the windows it separates. */
 const TOLERANCE_MINUTES = 2
 
-describe.skipIf(!RUNNABLE)('the windows an install sets', () => {
+describe.skipIf(!RUNNABLE || !hasConcurrentConnections())('the windows an install sets', () => {
   let harness: Harness
   let redis: Redis
   let pool: Pool
@@ -117,6 +119,9 @@ describe.skipIf(!RUNNABLE)('the windows an install sets', () => {
       SESSION_IDLE_MINUTES,
     )
     await set('auth.sessionIdleMinutes', asked)
+    // The expiry written is the earlier of the two windows, and the cases
+    // below leave the lifetime on its floor -- which is below what this asks.
+    await set('auth.sessionLifetimeMinutes', SESSION_LIFETIME_MINUTES)
 
     const session = await working()
 

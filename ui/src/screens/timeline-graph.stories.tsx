@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
 
+import { SEVERITY } from '@contract/vocabularies.lists'
+
 import { campaignCase } from '@/fixtures/campaign'
 import { msOf } from '@/lib/case-time'
 
@@ -46,10 +48,12 @@ export const Populated: Story = {
     await expect(readout.getBoundingClientRect().right).toBe(column.getBoundingClientRect().right)
     // The half that read as dead. A drawing reserving a lane for a track
     // the case does have, and never filling it, is the defect.
-    await expect(canvasElement.querySelectorAll('[data-track="observed"]').length)
-      .toBeGreaterThan(0)
-    await expect(canvasElement.querySelectorAll('[data-track="response"]').length)
-      .toBeGreaterThan(0)
+    await expect(canvasElement.querySelectorAll('[data-track="observed"]').length).toBeGreaterThan(
+      0,
+    )
+    await expect(canvasElement.querySelectorAll('[data-track="response"]').length).toBeGreaterThan(
+      0,
+    )
   },
 }
 
@@ -71,8 +75,7 @@ export const Dated: Story = {
     await expect(contain?.textContent).not.toBe('not recorded')
     // And the stamps are rules across the spine, which is what makes the two
     // figures above legible as distances rather than as arithmetic.
-    await expect(canvasElement.querySelectorAll('[data-part="cascade-milestone"]'))
-      .toHaveLength(4)
+    await expect(canvasElement.querySelectorAll('[data-part="cascade-milestone"]')).toHaveLength(4)
   },
 }
 
@@ -132,6 +135,50 @@ export const Empty: Story = {
   },
   name: 'Nothing recorded yet',
   args: { kase: EMPTY_CAMPAIGN },
+}
+
+/**
+ * The campaign with its severities spread over the whole vocabulary.
+ *
+ * The fixture is a real case and carries what a real case carries: mostly
+ * `high`, a little `medium` and `low`, and nothing critical or informational.
+ * Those two reach the cascade through `toneFor` and painted in no story, so
+ * nothing could see them. Taken from the vocabulary rather than listed here,
+ * so a severity added later arrives in the picture. -> #922
+ */
+function everySeverity() {
+  const spread = [...SEVERITY]
+  return {
+    ...campaignCase,
+    timeline: campaignCase.timeline.map((entry) => {
+      if (entry.kind !== 'event') return entry
+      const severity = spread.shift()
+      return severity ? { ...entry, severity } : entry
+    }),
+  }
+}
+
+/**
+ * Every tone the cascade can paint, on one screen.
+ *
+ * The unrated entries still carry `none` and the actions still carry the
+ * response tone, so the two the fixture already reached are not displaced.
+ */
+export const EverySeverity: Story = {
+  name: 'Every severity',
+  args: { kase: everySeverity() },
+  play: async ({ canvasElement }) => {
+    const runs = [...canvasElement.querySelectorAll('[data-part="cascade-run"]')]
+    const tones = runs.map((run) => (run as HTMLElement).dataset.severity)
+    for (const tone of ['critical', 'high', 'medium', 'low', 'info', 'none']) {
+      await expect(tones).toContain(tone)
+    }
+    // The seventh tone is the track rather than the severity: a response run
+    // reads `none` and paints `done`.
+    await expect(canvasElement.querySelectorAll('[data-track="response"]').length).toBeGreaterThan(
+      0,
+    )
+  },
 }
 
 /** A 520px pane: both tracks narrow, the cards fill them, and the spine stays

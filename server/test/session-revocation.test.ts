@@ -18,11 +18,11 @@
  * ones that read without refreshing - which is every app route, the guard
  * having been made an observer. -> `auth.config.ts`, `observesTheWindow`
  */
-import { beforeAll, afterAll, describe, expect, it } from 'vitest'
+import { beforeAll, afterAll, describe, expect, it, onTestFinished } from 'vitest'
 import { Redis } from 'ioredis'
 import { Pool } from 'pg'
 
-import { boot, bootable, sharedAnalyst, type Harness, type Persona } from './app-harness.js'
+import { boot, bootable, sharedAnalyst, signIn, type Harness, type Persona } from './app-harness.js'
 
 const RUNNABLE = await bootable()
 
@@ -43,15 +43,14 @@ describe.skipIf(!RUNNABLE)('a session revoked in Postgres but still in Redis', (
   }
 
   /**
-   * Deliberately the wrong current password: 400 means the session was
-   * accepted and only the password refused, 401 means the session itself was
-   * refused. Neither branch mutates the account.
+   * Ending a session that names nothing: 200 means the session was accepted,
+   * 401 means it was refused. Neither branch ends anything.
    */
   const sensitive = async (): Promise<number> => {
-    const response = await fetch(`${harness.base}/api/auth/change-password`, {
+    const response = await fetch(`${harness.base}/api/auth/revoke-session`, {
       method: 'POST',
-      headers: { cookie: doomed.cookie, 'content-type': 'application/json' },
-      body: JSON.stringify({ currentPassword: 'definitely-not-it', newPassword: 'x'.repeat(20) }),
+      headers: { cookie: doomed.cookie, 'content-type': 'application/json', origin: harness.base },
+      body: JSON.stringify({ token: 'names-no-session' }),
     })
     return response.status
   }
@@ -76,12 +75,24 @@ describe.skipIf(!RUNNABLE)('a session revoked in Postgres but still in Redis', (
     expect(await ordinary(), 'the fresh session was refused, so nothing below means anything').toBe(
       200,
     )
-    expect(await sensitive()).toBe(400)
+    expect(await sensitive()).toBe(200)
 
     const keysBefore = await redis.keys('auth:*')
     // The cookie carries `<token>.<signature>`; the row is keyed on the token.
     const token = decodeURIComponent(doomed.cookie.split('=')[1] ?? '').split('.')[0]
     const revoked = await pool.query('DELETE FROM "session" WHERE token = $1', [token])
+    // The account is shared, so the Redis copy left behind would be listed to
+    // every later file as a session of theirs. Ending it clears Redis.
+    onTestFinished(async () => {
+      const other = await signIn(harness, doomed.email)
+      const ended = await fetch(`${harness.base}/api/auth/revoke-session`, {
+        method: 'POST',
+        headers: { cookie: other.cookie, 'content-type': 'application/json', origin: harness.base },
+        body: JSON.stringify({ token }),
+      })
+      expect(ended.status, 'the session left in Redis was not ended').toBe(200)
+      expect(await redis.exists(`auth:${token}`), 'the session is still in Redis').toBe(0)
+    })
     expect(
       revoked.rowCount,
       'no row was revoked -- the cookie no longer spells `<token>.<signature>`, ' +
@@ -100,7 +111,7 @@ describe.skipIf(!RUNNABLE)('a session revoked in Postgres but still in Redis', (
     expect(
       await sensitive(),
       'the sensitive route accepted a session whose row is gone, so the ' +
-        'window has reopened where a password can be changed',
+        'window has reopened where a session can be ended',
     ).toBe(401)
 
     /**
@@ -110,11 +121,9 @@ describe.skipIf(!RUNNABLE)('a session revoked in Postgres but still in Redis', (
      * says no app route is authoritative, the guard being the only thing
      * between a caller and every Nest route.
      *
-     * The app's own `/api/change-password` -- no `/auth/` -- cannot stand in
-     * here: it throws `UnauthorizedException` for a wrong current password on a
-     * *valid* session, so the two states are indistinguishable by status.
-     * Better Auth's `/api/auth/change-password` answers 400, which is why
-     * `sensitive()` calls that one. The two paths are not in conflict.
+     * The app's own `/api/change-password` cannot stand in for `sensitive()`:
+     * it answers a refused session and a wrong current password with the same
+     * 422, so the two states are indistinguishable by status.
      *
      * **No mutation in this repository isolates this assertion**, because the
      * guard calls the same `auth.api.getSession` as `/api/auth/get-session` and

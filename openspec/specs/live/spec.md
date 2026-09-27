@@ -109,6 +109,13 @@ Nothing MUST be built on a claim as though it were a lock. The record of who wro
 - WHEN another writes to it anyway
 - THEN the write is judged on the version it was made against, not on the claim
 
+#### Scenario: An analyst opens an entry another holds
+
+- GIVEN an entry held by one analyst
+- WHEN another opens it
+- THEN they are told who holds it
+- AND they may still edit it
+
 ### Requirement: A change reaches every open screen, and says only what changed
 
 A write anywhere MUST reach every screen open on that case, so that an analyst reading a case sees what another has just done without asking for it.
@@ -144,6 +151,8 @@ This is the one place where the last write does not win and a version check is t
 
 Where an analyst is disconnected while writing, their work MUST survive and MUST merge when they return.
 
+Words the application accepted from an analyst who could write at that moment MUST be stored and named for them, whether or not they can still write when the words are stored. A word arriving after they can no longer write MUST be refused and never stored. Words MUST be stored only into the record, and the case, they were accepted into.
+
 #### Scenario: Two analysts write in one section
 
 - GIVEN two analysts editing the same passage
@@ -158,11 +167,47 @@ Where an analyst is disconnected while writing, their work MUST survive and MUST
 - THEN what they wrote is present
 - AND merged with whatever arrived while they were away
 
+#### Scenario: One of the writers loses write before the words are stored
+
+- GIVEN two analysts writing in one passage
+- WHEN one of them loses write before what both typed is stored
+- THEN both sets of words are stored
+
+#### Scenario: The only writer loses write before the words are stored
+
+- GIVEN an analyst writing alone in a passage
+- WHEN they lose write before what they typed is stored
+- THEN the words are stored
+- AND the record, the case's record of changes and the install's audit name them
+
+#### Scenario: A writer is disabled while writing
+
+- GIVEN an analyst writing in a passage
+- WHEN their account is disabled before what they typed is stored
+- THEN their connection ends
+- AND what they send after is refused and never stored
+- AND what they typed before is stored, and the record, the case's record of changes and the install's audit name them
+
+#### Scenario: A word arrives after write is withdrawn
+
+- GIVEN an analyst whose write was withdrawn while the passage was open
+- WHEN they send more words
+- THEN those words are refused
+- AND they are never stored
+
+#### Scenario: Words are addressed to a record in another case
+
+- GIVEN an analyst connected to one case
+- WHEN they send words addressed to a record of another case
+- THEN nothing is stored in that record
+
 ### Requirement: A reconnection catches up rather than starts over
 
 A connection that drops and returns MUST leave the analyst where they were. They MUST NOT have to reload to trust what is on their screen.
 
 An install MUST NOT present a screen as current when it cannot know that it is. Where a gap cannot be filled, the analyst MUST be told to re-read rather than shown stale content silently.
+
+A screen MUST say it is not live for as long as its connection is down, and until what changed while it was down has been read again.
 
 #### Scenario: A connection drops briefly
 
@@ -178,11 +223,22 @@ An install MUST NOT present a screen as current when it cannot know that it is. 
 - THEN the analyst is told their screen may be stale
 - AND it is not presented as current
 
+#### Scenario: A connection is lost
+
+- GIVEN an analyst with a case open
+- WHEN their connection drops
+- THEN the screen says it is not live
+- AND it goes on saying so until what changed while it was down has been read again
+
 ### Requirement: The connection dies with the reach that admitted it
 
 Reach withdrawn while an analyst is connected MUST end the connection. A connection admitted once MUST NOT outlive the reach that admitted it.
 
-This covers every way reach ends: the session ended, the group revoked, the customer moved, the account disabled at the identity provider, the case deleted.
+This covers every way reach ends: the session ended, the group revoked, the customer moved, the account disabled at the identity provider, the case deleted. A connection acts only while the session that opened it would be served an ordinary request now, so a session whose window has closed, or whose account must change its password or no longer exists, ends its connections too, whether or not they are sending anything.
+
+Ending one session MUST end only the connections that session opened, so an analyst connected from two places keeps the other.
+
+A refusal over a connection MUST be recorded as the same refusal of an ordinary request is.
 
 A connection MUST be carried over the same protected transport every other request uses. There is no plain connection, and no setting that permits one.
 
@@ -199,3 +255,233 @@ A connection MUST be carried over the same protected transport every other reque
 - WHEN it is deleted
 - THEN their connections end
 - AND nothing further about it reaches them
+
+#### Scenario: A session ends while its connection is silent
+
+- GIVEN an analyst connected to a case who sends nothing
+- WHEN the session's window closes
+- THEN the connection ends
+
+#### Scenario: An account is held while connected
+
+- GIVEN an analyst connected to a case
+- WHEN an administrator resets their password and holds the account
+- THEN nothing more they send is acted on
+- AND the connection ends
+
+#### Scenario: An analyst signs out in one of two places
+
+- GIVEN an analyst connected to one case from two places
+- WHEN they sign out in one
+- THEN that place's connection ends
+- AND the other keeps working
+
+#### Scenario: A connection is refused an edit
+
+- GIVEN a read-only analyst connected to a case
+- WHEN they try to edit over the connection
+- THEN it is refused
+- AND the refusal is recorded as a refused request is
+
+### Requirement: Written prose is attributed like any other write
+
+A saved change to prose MUST name each analyst who wrote into it: on the record the prose belongs to, in the case's record of changes stored in the same act as the words, and in the install's audit. Every screen open on the case MUST learn the record changed.
+
+Somebody who only had the prose open MUST NOT be named.
+
+Prose is exempt from the version check and from nothing else a write owes. What is recorded is who wrote into a saved change, not which of its words each of them wrote.
+
+**Words stored by any act are named, a send included.** Prose typed a moment before its report is sent MUST NOT reach the record under the sender's name alone.
+
+#### Scenario: One of two analysts present writes
+
+- GIVEN two analysts with the same prose open
+- WHEN only one of them writes and the prose is saved
+- THEN the record, the case's record of changes and the install's audit name the one who wrote
+- AND none of them names the one who only read
+
+#### Scenario: Two analysts write before one save
+
+- GIVEN two analysts writing into the same prose
+- WHEN both write before it is saved
+- THEN the case's record of changes and the install's audit name both of them
+
+#### Scenario: Words typed just before the report is sent
+
+- GIVEN an analyst writing into a report
+- WHEN the report is sent before their words are saved
+- THEN the sent report holds their words
+- AND the case's record of changes and the install's audit name them
+
+### Requirement: An open connection is listening
+
+A connection the browser can write to MUST act on everything written over it, in the order it was written. Where the install has accepted a connection and is still preparing it, what arrives in the meantime MUST be held and acted on once it is ready, never discarded.
+
+A screen's first frame is the one it waits on, so a connection that drops it silently leaves that screen waiting for an answer nothing will send. There is no error to show, nothing to retry, and no way for the analyst to tell that state from a slow one -- so this MUST NOT be left to a screen to notice or to a reload to clear.
+
+This holds for every kind of frame and every connection, not only the first frame of the first one. A frame the install cannot read, or fails to act on, is set aside, and it MUST NOT stop what was written after it or the connection's end.
+
+Where preparing the connection does not complete, the connection MUST end, and nothing written over it MUST be acted on -- an install that took a frame it can announce to nobody is worse than one that took none.
+
+#### Scenario: A screen writes before the connection is ready
+
+- GIVEN a connection the install has accepted and is still preparing
+- WHEN a screen writes over it
+- THEN the install acts on what it wrote once the connection is ready
+- AND the screen is answered without being reloaded
+
+#### Scenario: Preparing the connection does not complete
+
+- GIVEN a screen that has written over a connection the install accepted
+- WHEN preparing that connection fails
+- THEN the connection ends
+- AND nothing written over it is acted on
+
+#### Scenario: Frames are acted on in the order sent
+
+- GIVEN an analyst who claims an entry and releases it at once
+- WHEN both reach the install
+- THEN nothing is left held
+
+#### Scenario: A frame the install cannot read
+
+- GIVEN a connection over which a screen has written something the install cannot read
+- WHEN the screen then claims an entry, and the connection ends
+- THEN the claim is acted on
+- AND the analyst leaves the roster
+
+### Requirement: Deleted prose is not kept
+
+Text an analyst deletes from a report or a note MUST NOT be recoverable afterwards: not by a reader who arrives later, not by an archive, and not by any read of the record. A section removed from a report MUST take its prose with it.
+
+A copy of the store taken before the deletion still holds what it held; that is the install's own copy, and returning to it is the state spec's act.
+
+#### Scenario: A reader arrives after text was deleted
+
+- GIVEN a report from which an analyst deleted text
+- WHEN another reader opens it, or the record is read
+- THEN the deleted text is not there
+
+#### Scenario: A section is removed
+
+- GIVEN a report section with prose in it
+- WHEN the section is removed
+- THEN its prose is gone from the report
+
+### Requirement: Words the install cannot yet store are said to be unsaved
+
+Where a save of written prose fails, every analyst with that prose open MUST be told that the words are not saved yet and that the install is holding them, while they can still act on it, and MUST be offered the text to copy. Nothing MUST be locked by it: whoever can write goes on writing.
+
+Once a save stores the words, the notice MUST go.
+
+Where the words can no longer be stored, or an analyst is about to leave with them unsaved, they MUST be told so and offered the copy again.
+
+#### Scenario: A save of written words fails
+
+- GIVEN analysts with a passage open
+- WHEN what was written into it cannot be stored
+- THEN each of them is told the words are not saved yet
+- AND each is offered the text to copy
+- AND they can go on writing
+
+#### Scenario: The words are stored after all
+
+- GIVEN analysts told their words are not saved yet
+- WHEN a later save stores them
+- THEN the notice goes
+
+#### Scenario: A passage is opened while its words are unsaved
+
+- GIVEN words the install holds unsaved
+- WHEN an analyst opens the passage
+- THEN they are told the words are not saved yet
+
+#### Scenario: The words can no longer be stored
+
+- GIVEN words the install holds unsaved
+- WHEN they can no longer be stored
+- THEN the analysts with the passage open are told they are given up
+- AND offered the text to copy again
+
+#### Scenario: An analyst leaves with the words unsaved
+
+- GIVEN an analyst told their words are not saved yet
+- WHEN they go to leave the passage
+- THEN they are asked first
+- AND offered the text to copy
+
+### Requirement: A case is one case however it is named
+
+An identifier MUST name one case, one record and one report whatever letter case it is written in. A connection or a request naming a case in another spelling MUST be in the same room as everybody else on it: on the same roster, writing into the same document, and stored into the same record.
+
+#### Scenario: An analyst names the case in another spelling
+
+- GIVEN an analyst connected to a case
+- WHEN another connects naming the same case in capitals
+- THEN each is on the roster the other sees
+- AND the case is not deleted while they are in it
+
+#### Scenario: Words written through another spelling
+
+- GIVEN two analysts writing into one passage, each naming the case differently
+- WHEN both type
+- THEN each sees the other's words
+- AND what they wrote is stored and named for its writer
+
+#### Scenario: A report is sent by another spelling of its identifier
+
+- GIVEN words typed into a report just before it is sent
+- WHEN the send names the report in capitals
+- THEN the sent report holds the words
+
+### Requirement: A caret names the analyst the install admitted
+
+A caret shown to the others on a case MUST carry the name of the analyst whose connection sent it, whatever name the sender supplied. A connection MUST NOT move, rename or remove a caret another analyst's connection announced.
+
+#### Scenario: A caret carries another analyst's name
+
+- GIVEN two analysts with the same prose open
+- WHEN one sends a caret carrying the other's name
+- THEN the others see it under the sender's own name
+
+#### Scenario: A connection sends for a caret another analyst holds
+
+- GIVEN a caret one analyst's connection announced
+- WHEN another analyst's connection sends an update for that caret
+- THEN the caret is unchanged for everyone
+- AND nothing of the update reaches anybody
+
+### Requirement: A connection is held to a rate
+
+An analyst MUST NOT hold more connections at once, or open them faster, than a stated bound. An address MUST NOT have more upgrades refused before anybody is known than a stated bound. A connection MUST NOT send more frames or more bytes than a stated budget, and one that does MUST be ended with a code that says why.
+
+Every bound MUST sit above what the application's own screens do, however hard they are used, so that an analyst never meets one.
+
+A refusal past a bound MUST be recorded, and a run of them MUST be recorded once rather than once per attempt, so that a flood does not decide how much of the audit the install spends.
+
+#### Scenario: One analyst opens many connections at once
+
+- GIVEN a signed-in analyst
+- WHEN they open far more connections at once than a browser holds
+- THEN only a bounded number is admitted and the rest are refused as too many
+- AND the refusals are recorded as a run rather than one line each
+
+#### Scenario: Many connections nobody signed
+
+- GIVEN one address
+- WHEN it opens many connections carrying no session
+- THEN only a bounded number of refusals is recorded
+- AND the rest are refused as too many and recorded once
+
+#### Scenario: A connection sends faster than a screen does
+
+- GIVEN a connection sending large frames at a steady pace
+- WHEN it passes its budget
+- THEN the connection ends with a code saying it sent too much
+- AND little of what it sent reaches anybody
+
+#### Scenario: A screen used hard
+
+- GIVEN the application's own client in several tabs, reconnecting, opening many documents at once and typing fast
+- WHEN it does so
+- THEN no connection is refused or ended for its rate

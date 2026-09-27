@@ -56,6 +56,29 @@ test.beforeAll(async ({ browser, baseURL }) => {
   await ensureCase(browser, baseURL ?? '')
 })
 
+/**
+ * Whether a failed press is the screen having moved rather than a defect.
+ *
+ * A control can swap the panel without leaving the section -- `?field=` opens
+ * the tab owning that field -- which takes every control enumerated beside it
+ * out of the document. Playwright retries the detached one until its budget
+ * runs out, so the press reads as a control that would not take a click.
+ *
+ * The tell is absence afterwards. One still in the document that refused a
+ * click is a real finding and stays charged. -> #1055
+ */
+export function theScreenMoved(why: string, stillThere: boolean): boolean {
+  return !stillThere && /Timeout \d+ms exceeded|was detached/.test(why)
+}
+
+test('a press that moved the screen and one that broke are told apart', () => {
+  // The measured shape, from run 35542971808: the walk pressed `Set` on the
+  // overview, which opens the Key times tab, and `Capture` went with the panel.
+  expect(theScreenMoved('locator.click: Timeout 15000ms exceeded.', false)).toBe(true)
+  expect(theScreenMoved('locator.click: Timeout 15000ms exceeded.', true)).toBe(false)
+  expect(theScreenMoved('locator.click: Element is not an <input>', false)).toBe(false)
+})
+
 for (const who of [ADMIN, ANALYST] as Persona[]) {
   test.describe(`as ${who.role}`, () => {
     test.setTimeout(600_000)
@@ -108,7 +131,9 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
               const said = await fatalComplaint(page)
               if (said) broke.push(`${slug}/${name}: ${said}`)
             } catch (error) {
-              broke.push(`${slug}/${name}: ${(error as Error).message.split('\n')[0]}`)
+              const why = (error as Error).message.split('\n')[0] ?? ''
+              if (theScreenMoved(why, (await control.count()) > 0)) await section(page, slug)
+              else broke.push(`${slug}/${name}: ${why}`)
             }
 
             /**

@@ -101,6 +101,8 @@ const post = async (path: string, body: unknown) => {
 describe.skipIf(!(await bootable()))('an import asked to open a case and fill it', () => {
   let approved: string[] = []
   let offered: { id: string; collection: string; fields: Record<string, unknown> }[] = []
+  /** The import runs once in `beforeAll`: four cases read the case it opened. */
+  let opened: { status: number; said: string } = { status: 0, said: '' }
 
   beforeAll(async () => {
     harness = await boot()
@@ -117,6 +119,16 @@ describe.skipIf(!(await bootable()))('an import asked to open a case and fill it
     approved = offered
       .filter((one) => JSON.stringify(one.fields).includes(KEPT))
       .map((one) => one.id)
+
+    const started = await post('/api/imports/case', {
+      provider: 'sentinel',
+      title: TITLE,
+      incidents: [INCIDENT],
+      approved,
+      edits: [],
+    })
+    opened = { status: started.status, said: started.said }
+    caseId = (started.body as { caseId?: string }).caseId ?? ''
   }, 120_000)
 
   afterAll(async () => {
@@ -137,17 +149,8 @@ describe.skipIf(!(await bootable()))('an import asked to open a case and fill it
     ).toBe(true)
   })
 
-  it('opens the case and answers with it', async () => {
-    const started = await post('/api/imports/case', {
-      provider: 'sentinel',
-      title: TITLE,
-      incidents: [INCIDENT],
-      approved,
-      edits: [],
-    })
-    expect(started.status, `the import would not open a case: ${started.said}`).toBe(201)
-
-    caseId = (started.body as { caseId: string }).caseId
+  it('opens the case and answers with it', () => {
+    expect(opened.status, `the import would not open a case: ${opened.said}`).toBe(201)
     expect(caseId, 'the import answered without naming the case it opened').toBeTruthy()
   })
 

@@ -49,7 +49,9 @@ The store MUST refuse rows outside the boundary the caller reaches, rather than 
 
 The identity the application connects as MUST NOT be able to bypass that refusal. It MUST NOT be the identity that owns the schema, and MUST NOT hold the privileges that would let it read past a boundary or change the rules that define one.
 
-Reading and changing case data MUST carry which case it is for, established once per operation, so that no individual statement is where the boundary is remembered.
+Reading and changing case data MUST carry which case it is for and who is asking, established once per operation, so that no individual statement is where the boundary is remembered. The store MUST refuse a row to an operation that names nobody as asking, and to one naming somebody who does not reach the case.
+
+A refusal MUST say nothing of a row its caller does not reach, and MUST hold nothing of it. A write naming such a row is refused as a write naming a row that does not exist is, whatever that row is.
 
 #### Scenario: A query forgets its boundary
 
@@ -68,6 +70,27 @@ Reading and changing case data MUST carry which case it is for, established once
 - GIVEN a new table holding rows belonging to a case
 - WHEN it is added without a boundary rule
 - THEN that omission fails loudly rather than serving every case's rows
+
+#### Scenario: An operation names a case its caller does not reach
+
+- GIVEN an operation acting for an analyst
+- WHEN it names a case whose customer that analyst does not reach
+- THEN the store returns none of that case's rows
+- AND refuses a row written into it
+
+#### Scenario: Nobody is named as asking
+
+- GIVEN an operation reading or changing case data
+- WHEN it names nobody as asking
+- THEN it is refused rather than served
+
+#### Scenario: A write names a row of a case its caller does not reach
+
+- GIVEN an analyst writing to a case they reach
+- WHEN the write names a row held by a case they do not reach
+- THEN it is refused as a write naming a row that does not exist is
+- AND the refusal says nothing of the row it named
+- AND nothing that case's own writers do waits on the refused write
 
 ### Requirement: Changing the shape of the store is a separate power
 
@@ -94,6 +117,12 @@ Anything an analyst may change MUST carry a version that moves when it changes. 
 
 The check and the record of the change MUST succeed or fail together. A change that is stored while its record is not leaves every other screen believing something that is no longer true.
 
+The version a write states MUST be the one the value it carries was read at. A record served again while a change is being made MUST NOT lend that change the newer version, because the check then passes on a write that should have been a question. One analyst's changes to one record MUST NOT be refused against each other: a screen that is correct only when its writes do not overlap is built for a single occupant on a fast link.
+
+Where two analysts change the same field, the analyst whose change did not stand MUST be shown both values and MUST keep what they put there until they choose which stands. Leaving the field MUST NOT choose for them. A change to a field nobody else changed MUST NOT be treated as a collision, whatever else moved on the record.
+
+A screen MUST show what the server holds, apart from a change the analyst is still making. A refused change MUST NOT be shown as made, and MUST appear only where the analyst is told it was refused.
+
 #### Scenario: A write and its record are one act
 
 - GIVEN a change to a case
@@ -107,6 +136,70 @@ The check and the record of the change MUST succeed or fail together. A change t
 - WHEN the caller writes against what it read
 - THEN nothing is changed
 - AND the caller is told what the row is on now
+
+#### Scenario: A record is served again while an analyst is changing a field
+
+- GIVEN an analyst part-way through changing a field
+- WHEN another analyst changes the same field and the first analyst's screen is served the new record
+- THEN the first analyst's change is not stored over the second's
+- AND the first analyst is shown the second's value beside their own
+- AND what they typed is still theirs
+
+#### Scenario: A record is served again with a change to another field
+
+- GIVEN an analyst part-way through changing a field
+- WHEN another analyst changes a different field of the same record
+- THEN the first analyst's change is stored
+- AND no collision is raised
+
+#### Scenario: A field the analyst only visited follows the server
+
+- GIVEN an analyst with the cursor in a field they have not changed
+- WHEN another analyst changes that field
+- THEN the first analyst sees the new value
+- AND leaving the field stores nothing
+
+#### Scenario: Leaving a field in collision stores nothing
+
+- GIVEN a field shown with both analysts' values
+- WHEN the analyst leaves it without choosing
+- THEN nothing is stored
+- AND both values are still shown
+
+#### Scenario: An analyst keeps their own value
+
+- GIVEN a field shown with both analysts' values
+- WHEN the analyst chooses their own
+- THEN it is stored over the other's
+
+#### Scenario: An analyst takes the other value
+
+- GIVEN a field shown with both analysts' values
+- WHEN the analyst chooses the other's
+- THEN nothing is stored
+- AND the field holds the other's value
+
+#### Scenario: One analyst changes a record faster than it is answered
+
+- GIVEN one analyst alone on a case making several changes to one record before the first is answered
+- WHEN each is answered
+- THEN every change is stored in the order made
+- AND none is refused as somebody else's
+
+#### Scenario: A refused change is not shown as made
+
+- GIVEN a change the server refused
+- WHEN the screen draws the record
+- THEN it shows what the server holds
+- AND the refused value appears only where the analyst is told it was refused
+
+#### Scenario: A change made in a dialog is refused
+
+- GIVEN an analyst editing an entry in a dialog
+- WHEN another analyst changes the same field and the first analyst saves
+- THEN the dialog stays open holding what the first analyst typed
+- AND it names the field and the value the other analyst stored
+- AND the first analyst can choose which stands without closing it
 
 ### Requirement: The store is not migrated while the shape is still moving
 
@@ -164,8 +257,8 @@ Nothing MUST expand, execute or interpret an artefact to decide what it is.
 
 #### Scenario: The same artefact arrives twice
 
-- GIVEN an artefact already stored
-- WHEN the same bytes are stored again
+- GIVEN an artefact already stored in a case
+- WHEN the same bytes are stored again in that case
 - THEN it is recognised as the same evidence
 - AND the difference between the two wrappers does not make it a second artefact
 
@@ -194,7 +287,6 @@ Nothing MUST expand, execute or interpret an artefact to decide what it is.
 
 What it MUST do is state the assumption: an install MUST be able to tell an operator that its durable state, including evidence, is stored unencrypted by the application and relies on the storage beneath it. An operator who has not encrypted that storage MUST be able to learn it from the application rather than from an auditor.
 
-
 ### Requirement: What is stored can be recovered, and the recovery is proven
 
 An install MUST be able to produce a copy of its durable state, and MUST be able to return to that copy.
@@ -203,9 +295,13 @@ A copy that has never been restored is a belief rather than a backup. The instal
 
 Ephemeral state MUST NOT be part of a copy. Restoring MUST NOT restore somebody's session.
 
+**A copy MUST be readable only by whoever took it.** It holds every case, every artefact and every account's password hash, and a copy more open than the state it was taken from is the easiest way to that state.
+
 **Evidence is copied beside the database, not inside it.** Artefacts are large, they never change once written, and copying them into every database dump would make the routine copy expensive enough that an operator takes it less often — which is the failure that matters more than any of the others here.
 
 The cost of that is two things an operator must keep together, and the application MUST answer it rather than leave it to discipline. A copy of the database MUST name which artefacts it expects to find beside it, so that a restore can say what is missing rather than discovering it when somebody opens a case. Neither copy MUST be presented as sufficient alone.
+
+A copy MUST be checked before it is trusted, and a copy the install cannot return to whole MUST be refused before anything is changed.
 
 #### Scenario: An install is restored from a copy
 
@@ -213,6 +309,12 @@ The cost of that is two things an operator must keep together, and the applicati
 - WHEN it is restored
 - THEN every case, its evidence and its record are as they were
 - AND nobody is signed in
+
+#### Scenario: A copy is taken
+
+- GIVEN a running install
+- WHEN an operator takes a copy of it
+- THEN the copy, and every part of it, is readable by that operator's account alone
 
 #### Scenario: Only the database was restored
 
@@ -234,3 +336,93 @@ The cost of that is two things an operator must keep together, and the applicati
 - WHEN the artefacts are put back beside it
 - THEN the evidence is whole again
 - AND nothing had to be re-recorded
+
+#### Scenario: A damaged copy is checked
+
+- GIVEN a copy whose database or evidence was cut short or altered after it was taken
+- WHEN it is checked
+- THEN it is refused, saying which part is not whole
+
+#### Scenario: A copy from another shape is restored
+
+- GIVEN a copy taken under a different shape of the store
+- WHEN it is restored
+- THEN it is refused, saying what the copy is and what was expected
+- AND the install is as it was before the attempt
+
+### Requirement: An artefact is reached only through the case that holds it
+
+An attached artefact MUST be reachable only through the case that stored it. Its digest names the content and never grants it: digests travel by design, in a case's evidence list, in a report's register and in an archive written without its attachments, so naming one from any other case, in a row, a report or an archive read in, MUST reach nothing.
+
+Nothing produced MUST say whether the install holds an artefact another case stored. What a case produces while naming such a digest MUST be what it would produce had nobody ever held the artefact.
+
+The same bytes attached in two cases MUST be held by each on its own, so that neither case's fate reaches the other's and neither is told what the other called the file.
+
+What a case stored MUST leave the install with the case. Bytes MUST leave a case once nothing in it names them: when the evidence record naming them is deleted or comes to name other bytes, unless another of its records still names them or a report it sent was sent with them. Bytes that arrive for no record the case keeps MUST NOT stay either.
+
+Starting an install MUST remove nothing it finds beside it. A database restored from an older copy, rebuilt, or pointed at the wrong directory has no record of bytes that may be the only copy there is, so the install MUST say how many stored artefacts nothing in it names, at start and in its own description, and leave them for an operator.
+
+#### Scenario: A digest is named in another case
+
+- GIVEN an artefact stored in one case
+- AND another case, of any customer, naming its digest
+- WHEN that other case is archived with its files, or its report is produced or sent
+- THEN the artefact is in none of what it produces
+- AND nothing produced differs from what a digest nobody holds produces
+
+#### Scenario: Reach is withdrawn from an analyst who read a digest
+
+- GIVEN an analyst who read a case's evidence and then lost reach to it
+- WHEN they name its digests in a case of their own
+- THEN they are given none of its artefacts
+
+#### Scenario: A handover is read in by somebody who does not reach the case
+
+- GIVEN an archive of a case written without its attachments
+- WHEN an analyst who does not reach that case reads it in and archives it with its files
+- THEN the archive carries none of the attachments the handover left behind
+- AND it does not say the install lost them
+
+#### Scenario: The same artefact is attached in two cases
+
+- GIVEN the same bytes attached in two cases
+- WHEN one of the cases is deleted
+- THEN the other still holds and serves its own copy
+- AND its download names the file as that case named it
+
+#### Scenario: An artefact nothing names any more
+
+- GIVEN bytes an evidence record of a case names
+- WHEN the record is deleted, alone or in a selection, or comes to name other bytes
+- THEN the bytes are gone from that case
+- AND bytes another of its records still names, or another case holds, are kept
+- AND every report the case sent still draws each figure it was sent with
+
+#### Scenario: Bytes are attached while a record naming them goes
+
+- GIVEN bytes one evidence record of a case names
+- WHEN the same bytes are attached to another of its records as the first is deleted
+- THEN the second record's file is still served
+
+#### Scenario: Bytes arrive that no record comes to name
+
+- GIVEN an attachment refused because its record changed while the bytes arrived
+- OR an archive carrying bytes none of its records name
+- WHEN the attachment is refused, or the archive is read in
+- THEN the case holds none of those bytes
+
+#### Scenario: The install starts beside a database that does not hold a case
+
+- GIVEN artefacts a case stored
+- AND a database, rebuilt or restored from an older copy, that does not hold the case
+- WHEN the install starts
+- THEN the case's artefacts are still there
+- AND the install says how many stored artefacts nothing names
+
+#### Scenario: The install starts beside a database older than a record
+
+- GIVEN bytes an evidence record of a case named
+- AND a database restored from a copy that holds the case but not that record
+- WHEN the install starts
+- THEN the bytes are still there
+- AND the install says how many stored artefacts nothing names

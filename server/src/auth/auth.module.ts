@@ -21,6 +21,7 @@ import { MustChangePasswordInterceptor } from './must-change-password.intercepto
 import { AccountLookupService } from './account-lookup.service.js'
 import { PasswordHoldService } from './password-hold.service.js'
 import { LockoutClearService } from './lockout-clear.service.js'
+import { FamiliarAddressPrune } from './familiar-address-prune.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import type { Env } from '../config/env.js'
@@ -93,6 +94,7 @@ import { AuthRedis } from './redis.js'
     AccountLookupService,
     PasswordHoldService,
     LockoutClearService,
+    FamiliarAddressPrune,
   ],
   // Exported so `accounts/` can find an account, hold it, or clear its
   // lockout, without reaching `db/` itself.

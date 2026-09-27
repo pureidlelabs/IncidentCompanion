@@ -38,11 +38,6 @@ describe('an account that owes its own password', () => {
     expect(allows(contextFor('/api/change-password', held))).toBe(true)
   })
 
-  it("may reach authentication's own surface, or it cannot sign out", () => {
-    expect(allows(contextFor('/api/auth/get-session', held))).toBe(true)
-    expect(allows(contextFor('/api/auth/sign-out', held))).toBe(true)
-  })
-
   it('is refused the case it was created to work on', () => {
     expect(() => allows(contextFor('/api/cases', held))).toThrow(ForbiddenException)
   })
@@ -81,11 +76,9 @@ describe('the paths that stay open', () => {
     ).toThrow(ForbiddenException)
   })
 
-  it('opens the whole of authentication and nothing shaped like it', () => {
-    expect(allows(contextFor('/api/auth/callback/x', held))).toBe(true)
-    expect(() => allows(contextFor('/api/authorship', held))).toThrow(
-      ForbiddenException,
-    )
+  it('opens nothing because it is named like authentication', () => {
+    expect(() => allows(contextFor('/api/auth/callback/x', held))).toThrow(ForbiddenException)
+    expect(() => allows(contextFor('/api/authorship', held))).toThrow(ForbiddenException)
   })
 
   it('decides on the path and not on the query a client appended', () => {

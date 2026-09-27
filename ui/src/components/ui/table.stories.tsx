@@ -1,19 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+
+import { cn } from '@/lib/cn'
 import type { ComponentProps } from 'react'
 import { useState } from 'react'
 import type { SortDescriptor } from 'react-aria-components'
 import { expect, within } from 'storybook/test'
 
 import { Skeleton } from './skeleton'
-import {
-  Cell,
-  Column,
-  ResizableTableContainer,
-  Row,
-  Table,
-  TableBody,
-  TableHeader,
-} from './table'
+import { Cell, Column, ResizableTableContainer, Row, Table, TableBody, TableHeader } from './table'
 
 interface Host {
   id: string
@@ -68,10 +62,7 @@ const meta = {
           <Column id="severity">Severity</Column>
           <Column id="seen">First seen</Column>
         </TableHeader>
-        <TableBody
-          items={rows}
-          renderEmptyState={() => 'No host has been added to this case yet'}
-        >
+        <TableBody items={rows} renderEmptyState={() => 'No host has been added to this case yet'}>
           {(item) => (
             <Row id={item.id}>
               <Cell>{item.host}</Cell>
@@ -97,7 +88,11 @@ export const Default: Story = {}
  * appears and a click moves the selection rather than adding to it.
  */
 export const SingleSelection: Story = {
-  args: { selectionMode: 'single', defaultSelectedKeys: ['ws112'] },
+  args: {
+    selectionMode: 'single',
+    selectionBehavior: 'replace',
+    defaultSelectedKeys: ['ws112'],
+  },
   play: async ({ canvas, step, userEvent }) => {
     await step('The row named as selected is the one marked', async () => {
       await expect(canvas.getByRole('row', { name: /WS-112/ })).toHaveAttribute(
@@ -306,6 +301,10 @@ export const LoadingRows: Story = {
           {[0, 1, 2, 3].map((index) => (
             <Row key={index} id={`placeholder-${String(index)}`}>
               <Cell>
+                {/* The row header names the row, and a skeleton is not text.
+                    Without this the placeholder row reaches a reader with
+                    nothing to announce. */}
+                <span className="sr-only">Loading</span>
                 <Skeleton className="h-4 w-24" />
               </Cell>
               <Cell>
@@ -432,6 +431,55 @@ export const Resizing: Story = {
       </Table>
     </ResizableTableContainer>
   ),
+}
+
+/**
+ * The handle's drag width is a value, not a rule.
+ *
+ * `resizing:w-0.5` was an attribute selector, so it outranked a caller's own
+ * `w-*` -- accepted and ignored. The drag state sets a measurement now and the
+ * width class stays plain, so the two meet at equal specificity. jsdom cannot
+ * see it: what decides is what the selectors compile to. -> #897
+ */
+export const ResizerWidthIsACallersToTake: Story = {
+  ...Resizing,
+  play: async ({ canvasElement, step }) => {
+    const resizer = canvasElement.querySelector('[data-part="table-column-resizer"]')
+    await expect(resizer, 'no resizer to measure').not.toBeNull()
+    if (resizer === null) return
+
+    await step('the drag state still thickens it', async () => {
+      await expect(
+        getComputedStyle(resizer).width,
+        'the handle drew its dragging width at rest',
+      ).toBe('1px')
+      resizer.setAttribute('data-resizing', 'true')
+      await expect(
+        getComputedStyle(resizer).width,
+        'the drag state stopped thickening the handle',
+      ).toBe('2px')
+    })
+
+    await step('and a caller can take it back, which the merge is what decides', async () => {
+      // **Read off the rendered handle, not written out here.** A literal
+      // copy of the component's own class asserts the copy: editing
+      // `columnResizer` would leave it green. What is under test is that the
+      // width the component emits and a caller's own are one utility to
+      // tailwind-merge, so the component's is dropped rather than kept and
+      // outranked -- which is what adding a class to the element would skip.
+      const emitted = resizer.className
+      await expect(emitted, 'the handle stopped emitting a width at all').toMatch(/(^|\s)w-/)
+      await expect(
+        cn(emitted, 'w-1')
+          .split(/\s+/)
+          // `(^|:)` so a variant-prefixed width counts: `resizing:w-0.5` is
+          // exactly the survivor this looks for, and a filter anchored at the
+          // start of the class misses it and passes.
+          .filter((one) => /(^|:)w-/.test(one)),
+        'the handle kept a width of its own beside the caller`s',
+      ).toEqual(['w-1'])
+    })
+  },
 }
 
 /**

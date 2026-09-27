@@ -3,7 +3,7 @@
  *
  * *THEN the next request that session makes is refused*, and *THEN none of them
  * is served further*. Both are stated MUSTs with nothing behind them until now:
- * Better Auth's own `/admin/revoke-user-session*` paths are in `disabledPaths`,
+ * Better Auth's own `/admin/revoke-user-session*` paths are not served,
  * deliberately, and the application route that was to stand in front of them
  * was never written. -> #204
  *
@@ -20,8 +20,9 @@
  * the requirement asks them to end one rather than to list them.
  */
 import { and, eq } from 'drizzle-orm'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
+import { AccountLookupService } from '../src/auth/account-lookup.service.js'
 import { DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
 import { installActivity } from '../src/db/schema/index.js'
@@ -70,6 +71,7 @@ describe.skipIf(!(await bootable()))('an administrator ending sessions', () => {
    * ended one of them would leave the analyst working from the other.
    */
   it('refuses every session the account held, and leaves the administrator its own', async () => {
+    const boss = await signIn(harness!, admin.email)
     const here = await signIn(harness!, analyst.email)
     const there = await signIn(harness!, analyst.email)
     expect(await stillServed(here.cookie), 'the analyst was not signed in to begin with').toBe(true)
@@ -77,7 +79,7 @@ describe.skipIf(!(await bootable()))('an administrator ending sessions', () => {
 
     const ended = await endSessions(
       `${encodeURIComponent(analyst.email)}/sessions/end`,
-      admin.cookie,
+      boss.cookie,
     )
     expect(ended.status, `ending the analyst's sessions answered ${await ended.text()}`).toBe(200)
 
@@ -86,7 +88,7 @@ describe.skipIf(!(await bootable()))('an administrator ending sessions', () => {
     )
     expect(await stillServed(there.cookie), 'the account kept a second session').toBe(false)
     expect(
-      await stillServed(admin.cookie),
+      await stillServed(boss.cookie),
       'ending one account\'s sessions ended the administrator\'s own',
     ).toBe(true)
   }, 60_000)
@@ -100,9 +102,10 @@ describe.skipIf(!(await bootable()))('an administrator ending sessions', () => {
   it.each([['sessions/end'], ['somebody@example.invalid/sessions/end']])(
     'refuses a body sent to %s, which takes none',
     async (path) => {
+      const boss = await signIn(harness!, admin.email)
       const answered = await fetch(`${harness!.base}/api/accounts/${path}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', cookie: admin.cookie },
+        headers: { 'content-type': 'application/json', cookie: boss.cookie },
         body: JSON.stringify({ __not_a_field__: true }),
       })
 
@@ -136,10 +139,11 @@ describe.skipIf(!(await bootable()))('an administrator ending sessions', () => {
       ).length
 
     const before = await linesFor()
+    const boss = await signIn(harness!, admin.email)
     await signIn(harness!, analyst.email)
     const ended = await endSessions(
       `${encodeURIComponent(analyst.email)}/sessions/end`,
-      admin.cookie,
+      boss.cookie,
     )
     expect(ended.status).toBe(200)
 
@@ -147,7 +151,8 @@ describe.skipIf(!(await bootable()))('an administrator ending sessions', () => {
   }, 60_000)
 
   it('refuses an account no analyst holds', async () => {
-    const answered = await endSessions('nobody-at-all@example.invalid/sessions/end', admin.cookie)
+    const boss = await signIn(harness!, admin.email)
+    const answered = await endSessions('nobody-at-all@example.invalid/sessions/end', boss.cookie)
 
     expect(answered.status).toBe(422)
   }, 30_000)
@@ -164,22 +169,45 @@ describe.skipIf(!(await bootable()))('an administrator ending sessions', () => {
   }, 30_000)
 
   /**
-   * **Last, because it ends the administrator's own session too.** That is the
-   * requirement read literally -- *every* session, none served further -- and it
-   * is what the act is for; a case running after it would be authenticating
-   * against a cookie this one revoked.
+   * **This ends the administrator's own session too**, which is the requirement
+   * read literally: *every* session, none served further. Every case here signs
+   * in the cookie it uses, so that costs the ones after it nothing.
    */
   it('ends every session on the install, the administrator\'s included', async () => {
+    const boss = await signIn(harness!, admin.email)
     const theirs = await signIn(harness!, analyst.email)
     expect(await stillServed(theirs.cookie)).toBe(true)
 
-    const ended = await endSessions('sessions/end', admin.cookie)
+    const ended = await endSessions('sessions/end', boss.cookie)
     expect(ended.status, `ending every session answered ${await ended.text()}`).toBe(200)
 
     expect(await stillServed(theirs.cookie), 'an analyst was served after the sweep').toBe(false)
     expect(
-      await stillServed(admin.cookie),
+      await stillServed(boss.cookie),
       'every session did not include the administrator\'s own',
     ).toBe(false)
+  }, 60_000)
+
+  it('ends what was open when it was asked, and leaves a sign-in that lands after', async () => {
+    await endSessions('sessions/end', (await signIn(harness!, admin.email)).cookie)
+    const boss = await signIn(harness!, admin.email)
+
+    const lookup = harness!.app.get(AccountLookupService, { strict: false })
+    const read = lookup.withAnOpenSession.bind(lookup)
+    let late: Persona | undefined
+    const spy = vi.spyOn(lookup, 'withAnOpenSession').mockImplementation(async () => {
+      const holders = await read()
+      late ??= await signIn(harness!, analyst.email)
+      return holders
+    })
+    try {
+      const ended = await endSessions('sessions/end', boss.cookie)
+      expect(ended.status, `ending every session answered ${await ended.text()}`).toBe(200)
+    } finally {
+      spy.mockRestore()
+    }
+
+    expect(await stillServed(boss.cookie), 'a session open at the call survived it').toBe(false)
+    expect(await stillServed(late!.cookie), 'a sign-in after the call was ended by it').toBe(true)
   }, 60_000)
 })

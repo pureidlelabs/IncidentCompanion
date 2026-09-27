@@ -4,6 +4,7 @@ import { EvidenceFileController } from './evidence-file.controller.js'
 import { EvidenceStore } from '../evidence/store.js'
 
 import { LiveModule } from '../live/live.module.js'
+import { ProseModule } from '../prose/prose.module.js'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { CollectionService } from './collection.service.js'
@@ -14,7 +15,7 @@ import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { TimelineController } from './timeline.controller.js'
 
 @Module({
-  imports: [LiveModule],
+  imports: [LiveModule, ProseModule],
   controllers: [
     TimelineController,
     BulkDeleteController,

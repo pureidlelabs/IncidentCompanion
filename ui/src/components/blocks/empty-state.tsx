@@ -44,6 +44,7 @@ export function EmptyState({
   offers,
   offerShape = 'inline',
   bounded = false,
+  headingLevel,
   className,
 }: {
   icon?: LucideIcon | undefined
@@ -58,6 +59,15 @@ export function EmptyState({
   offerShape?: 'inline' | 'stack' | undefined
   /** Draw a dashed panel and centre it at `max-w-md`. Sets `Empty`'s `inset`. */
   bounded?: boolean | undefined
+  /**
+   * Announce the title as a heading at this level.
+   *
+   * Off by default, because an empty state inside a populated screen sits
+   * under that screen's own heading and a second one there is noise. A screen
+   * that *is* the whole window has no other, and a reader arriving by heading
+   * finds nothing at all.
+   */
+  headingLevel?: 1 | 2 | 3 | undefined
   className?: string | undefined
 }) {
   const ways = offers ?? []
@@ -78,7 +88,11 @@ export function EmptyState({
           </IconStack>
         </EmptyMedia>
       )}
-      <EmptyTitle>{title}</EmptyTitle>
+      <EmptyTitle
+        {...(headingLevel === undefined ? {} : { role: 'heading', 'aria-level': headingLevel })}
+      >
+        {title}
+      </EmptyTitle>
       {detail && <EmptyDescription>{detail}</EmptyDescription>}
       {action && <EmptyActions>{action}</EmptyActions>}
       {ways.length > 0 && (

@@ -35,17 +35,11 @@ const SRC = resolve(HERE, '../')
 /**
  * Where a plain element carries a handler and that is right, with the reason.
  *
- * **`choice-row.tsx` wraps a real `Radio` inside a `RadioGroup`.** The handler
- * widens the card to a hit area a mouse can reach; the control an analyst tabs
- * to and answers with the arrow keys is the radio, which carries its own
- * `aria-labelledby`. The two `jsx-a11y` suppressions above it are the same
- * judgement written down once already.
- *
  * An entry here is a claim that the keyboard reaches the thing some other way,
  * and the case below fails when a file stops needing its entry -- an exemption
  * nobody removed is how a list like this stops meaning anything.
  */
-const ANSWERED_ELSEWHERE: readonly string[] = ['components/blocks/choice-row.tsx']
+const ANSWERED_ELSEWHERE: readonly string[] = []
 
 /**
  * Where a plain `<button>` stands in for the kit's, with the reason.

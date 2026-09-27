@@ -1,6 +1,8 @@
 import { useState } from 'react'
 
+import { drawn } from '@/api/rowWrite'
 import { fieldsOf, type FieldKind, type FormSpec } from '@/api/specs'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 import type { EntityTable } from '@/components/blocks/entity-table'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogFooter, DialogHeader } from '@/components/ui/dialog'
@@ -134,12 +136,22 @@ export function bulkPatch<TData>(
   return patch
 }
 
+/**
+ * A row as the analyst selected it, for an act on the selection.
+ *
+ * Taken when the act is pressed, never when it is confirmed: a row another
+ * analyst changes in between is refused rather than acted on.
+ */
+export function selected(row: { id: string; version: number }): BulkPatchRow {
+  return { id: row.id, version: drawn(row).version }
+}
+
 export interface BulkEditDialogProps<TData> {
-  /** `null` is closed; an array is open and names what is about to change. */
-  ids: string[] | null
+  /** `null` is closed; an array is open and names what is about to change, as it was read. */
+  rows: BulkPatchRow[] | null
   fields: readonly BulkField<TData>[]
   onOpenChange: (open: boolean) => void
-  onApply: (ids: string[], patch: Partial<TData>) => void
+  onApply: (rows: BulkPatchRow[], patch: Partial<TData>) => void
 }
 
 /**
@@ -151,13 +163,13 @@ export interface BulkEditDialogProps<TData> {
  * - Closing clears the choices, so reopening on another selection arms nothing.
  */
 export function BulkEditDialog<TData>({
-  ids,
+  rows,
   fields,
   onOpenChange,
   onApply,
 }: BulkEditDialogProps<TData>) {
   const [choices, setChoices] = useState<Record<string, string>>({})
-  const about = ids ?? []
+  const about = rows ?? []
   const patch = bulkPatch(fields, choices)
   const nothingToApply = Object.keys(patch).length === 0
 
@@ -168,7 +180,7 @@ export function BulkEditDialog<TData>({
 
   return (
     <Dialog
-      isOpen={ids !== null}
+      isOpen={rows !== null}
       size="form"
       onOpenChange={(open) => {
         if (!open) setChoices({})
@@ -220,14 +232,14 @@ export function BulkEditDialog<TData>({
   )
 }
 
-export interface BulkActionBarProps<TData extends { id: string }> {
+export interface BulkActionBarProps<TData extends { id: string; version: number }> {
   table: EntityTable<TData>
   /** Empty offers no bulk edit at all, and no Edit button. */
   fields: readonly BulkField<TData>[]
-  /** N per-row PATCHes through the ordinary hooks. Never a whole-case write. */
-  onApply: (ids: string[], patch: Partial<TData>) => void
-  /** Hands the ids to the screen's own delete confirmation. */
-  onRequestDelete: (ids: string[]) => void
+  /** One patch across the selection, as it was when Edit was pressed. */
+  onApply: (rows: BulkPatchRow[], patch: Partial<TData>) => void
+  /** Hands the selection, as it was when Delete was pressed, to the screen's own confirmation. */
+  onRequestDelete: (rows: BulkPatchRow[]) => void
 }
 
 /**
@@ -235,46 +247,47 @@ export interface BulkActionBarProps<TData extends { id: string }> {
  *
  * - Renders nothing with an empty selection, so a header does not reflow the
  *   moment a tick lands.
- * - The ids come from the table's own selection, keyed by entry id, so a
+ * - The rows come from the table's own selection, keyed by entry id, so a
  *   refetch that reorders rows leaves the same entries selected.
  * - Delete is requested, not performed: the screen owns the confirmation.
  */
-export function BulkActionBar<TData extends { id: string }>({
+export function BulkActionBar<TData extends { id: string; version: number }>({
   table,
   fields,
   onApply,
   onRequestDelete,
 }: BulkActionBarProps<TData>) {
-  const [editing, setEditing] = useState<string[] | null>(null)
-  const ids = table.getSelectedRowModel().rows.map((row) => row.id)
+  const [editing, setEditing] = useState<BulkPatchRow[] | null>(null)
+  const chosen = table.getSelectedRowModel().rows
+  const read = () => chosen.map((row) => selected(row.original))
 
-  if (ids.length === 0) return null
+  if (chosen.length === 0) return null
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-ink-muted">{ids.length} selected</span>
+      <span className="text-xs text-ink-muted">{chosen.length} selected</span>
       {fields.length > 0 && (
         <Button
           variant="outline"
           size="sm"
           onPress={() => {
-            setEditing(ids)
+            setEditing(read())
           }}
         >
-          Edit {ids.length}
+          Edit {chosen.length}
         </Button>
       )}
       <Button
         variant="outline"
         size="sm"
         onPress={() => {
-          onRequestDelete(ids)
+          onRequestDelete(read())
         }}
       >
-        Delete {ids.length}
+        Delete {chosen.length}
       </Button>
       <BulkEditDialog
-        ids={editing}
+        rows={editing}
         fields={fields}
         onOpenChange={(open) => {
           if (!open) setEditing(null)

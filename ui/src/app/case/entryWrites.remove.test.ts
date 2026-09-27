@@ -7,6 +7,7 @@ vi.mock('@/components/blocks/notify', () => ({
 }))
 
 const { entryWrites } = await import('./entryWrites')
+const { drawn } = await import('@/api/rowWrite')
 
 /**
  * **A selection is deleted in one request, whichever screen deletes it.**
@@ -19,27 +20,25 @@ const { entryWrites } = await import('./entryWrites')
  * the server's.
  */
 const rows = [
-  { id: 'a', version: 3 },
-  { id: 'b', version: 7 },
+  { id: 'a', version: drawn({ version: 3 }).version },
+  { id: 'b', version: drawn({ version: 7 }).version },
 ]
 
 function build() {
-  const single = vi.fn(() => Promise.resolve({}))
   const bulkDelete = vi.fn(() => Promise.resolve({ deleted: [], missing: [], refused: [] }))
   const writes = entryWrites(
     {
       create: { mutateAsync: vi.fn() },
       patch: { mutateAsync: vi.fn() },
       bulk: { mutateAsync: vi.fn() },
-      remove: { mutateAsync: single },
       bulkDelete: { mutateAsync: bulkDelete },
     },
     { one: 'action', many: 'actions' },
-    () => rows as never,
     () => Promise.resolve([] as never),
+    () => '',
     'actions',
   )
-  return { writes, single, bulkDelete }
+  return { writes, bulkDelete }
 }
 
 beforeEach(() => {
@@ -48,21 +47,20 @@ beforeEach(() => {
 
 describe('removing a selection of entries', () => {
   it('is one request rather than one per row', async () => {
-    const { writes, single, bulkDelete } = build()
+    const { writes, bulkDelete } = build()
 
-    await writes.remove(['a', 'b'])
+    await writes.remove(rows)
 
     expect(
       bulkDelete.mock.calls.length,
       'the selection went row by row, so it half-deletes and the order decides the outcome',
     ).toBe(1)
-    expect(single.mock.calls.length, 'the single-row door was still used').toBe(0)
   })
 
   it('names the collection and carries the version each row was read at', async () => {
     const { writes, bulkDelete } = build()
 
-    await writes.remove(['a', 'b'])
+    await writes.remove(rows)
 
     expect((bulkDelete.mock.calls as unknown as unknown[][])[0]?.[0]).toEqual({
       targets: {

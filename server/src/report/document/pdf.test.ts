@@ -10,9 +10,12 @@
  * over a page more often than not, and a continuation with no column titles is a
  * table the reader has to scroll back to understand.
  */
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
-import { definitionFor, pageRuler, toPdf } from './pdf.js'
+import { definitionFor, mayRead, pageRuler, toPdf } from './pdf.js'
+import { ROBOTO_DIR } from './spine.js'
 import type { Document, Node, Section } from './model.js'
 
 const paper = (nodes: Node[], tlp = ''): Document => ({
@@ -225,6 +228,35 @@ describe('the page ruler', () => {
     expect(marked.split('TLP:AMBER').length - 1).toBeGreaterThanOrEqual(2)
   })
 
+  /**
+   * **The marker reaches the page, and the count is per level.** `marks.ts`
+   * decides the number and this decides the indent; a painter that stopped
+   * asking for the marker would draw an unnumbered column of text, which is a
+   * list only to somebody who already knew it was one.
+   */
+  it('numbers a nested ordered list per level', () => {
+    const drawn = definitionText(
+      definitionFor(
+        paper([
+          {
+            type: 'list',
+            items: [
+              { runs: [{ text: 'one' }], level: 0, ordered: true },
+              { runs: [{ text: 'one-a' }], level: 1, ordered: true },
+              { runs: [{ text: 'two' }], level: 0, ordered: true },
+              { runs: [{ text: 'two-a' }], level: 1, ordered: true },
+            ],
+          },
+        ]),
+      ),
+    )
+
+    expect(drawn).toContain('1. ')
+    expect(drawn).toContain('2. ')
+    // The deeper level restarts rather than carrying on to three.
+    expect(drawn.split('"1. "').length - 1).toBe(3)
+  })
+
   it('draws no marking furniture when the report carries none', () => {
     const bare = definitionText(definitionFor(paper([{ type: 'prose', paras: ['x'] }])))
     expect(bare).not.toContain('#ffc000')
@@ -275,5 +307,17 @@ describe('the page ruler', () => {
     })
     expect(ruler.sections).toHaveLength(2)
     expect(ruler.sections[0]!.heading).toBe('')
+  })
+})
+
+describe('the local access policy', () => {
+  it('reads a font inside the bundled directory', () => {
+    expect(mayRead(join(ROBOTO_DIR, 'Roboto-Regular.ttf'))).toBe(true)
+  })
+
+  it('refuses a path that only mentions pdfmake, or climbs out of the directory', () => {
+    expect(mayRead('/tmp/pdfmake/secret.ttf')).toBe(false)
+    expect(mayRead(`${ROBOTO_DIR}/../../package.json`)).toBe(false)
+    expect(mayRead(`${ROBOTO_DIR}-other/Roboto-Regular.ttf`)).toBe(false)
   })
 })

@@ -13,14 +13,16 @@
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CASE_COLLECTIONS, CasesService } from './cases.service.js'
 import { CasesController } from './cases.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
 import { LibraryService } from '../library/library.service.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import {
   accounts,
   actions,
@@ -38,6 +40,9 @@ import {
   timeline,
   user,
 } from '../db/schema/index.js'
+import { reseedDemos } from '../../test/demo-fixture.js'
+import { CASE_WRITABLE, INCIDENT_CLASS } from '../domain/case.js'
+import { SEVERITY, caseStatusSchema } from '../domain/vocabularies.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -56,7 +61,7 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-describe.skipIf(!db)('writing a case', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('writing a case', () => {
   let controller: CasesController
   let service: CasesService
   let library: LibraryService
@@ -81,6 +86,9 @@ describe.skipIf(!db)('writing a case', () => {
       .insert(user)
       .values({
         id: actorId,
+        // An administrator holds delete over the default customer, which the
+        // store asks of whoever deletes a case there.
+        role: 'admin',
         name: 'Case Write Analyst',
         email: 'case-write@example.test',
         emailVerified: true,
@@ -92,10 +100,13 @@ describe.skipIf(!db)('writing a case', () => {
 
     announced = []
     present = []
-    service = new CasesService(db!, {
-      announce: (caseId: string, scopes: string[]) => announced.push({ caseId, scopes }),
-      othersOn: () => Promise.resolve(present),
-    } as never)
+    service = as(
+      actorId,
+      new CasesService(db!, suiteStore(), {
+        announce: (caseId: string, scopes: string[]) => announced.push({ caseId, scopes }),
+        othersOn: () => Promise.resolve(present),
+      } as never),
+    )
     library = new LibraryService(db!, seed)
     await library.seedBuiltIns()
     /**
@@ -113,15 +124,28 @@ describe.skipIf(!db)('writing a case', () => {
       audited.push({ event, target: title, detail: { caseId: id } })
       return Promise.resolve()
     }
-    controller = new CasesController(
-      service,
-      new DemoSeederService(seed!, seed, new DemoContentSeeder()),
-      library,
-      {
-        caseCreated: recorder('case_created'),
-        caseDeleted: recorder('case_deleted'),
-      } as never,
+    controller = as(
+      actorId,
+      new CasesController(
+        service,
+        new DemoSeederService(seed!, seed, new DemoContentSeeder()),
+        library,
+        {
+          caseCreated: recorder('case_created'),
+          caseDeleted: recorder('case_deleted'),
+        } as never,
+      ),
     )
+  })
+
+  /**
+   * **The roster every test starts from, which is nobody.** `present` is a
+   * `let` the fake channel reads, so a test that puts a name on it hands that
+   * name to whatever runs next: the delete tests then meet a case somebody
+   * else is holding and get a 409 instead of the answer they came for.
+   */
+  beforeEach(() => {
+    present = []
   })
 
   afterAll(async () => {
@@ -149,6 +173,16 @@ describe.skipIf(!db)('writing a case', () => {
       expect(seeded).toHaveLength(expected.length)
       expect(seeded.map((a) => a.task)).toEqual(expect.arrayContaining(expected.map((a) => a.task)))
       expect(seeded.every((a) => a.createdBy === session.user.id)).toBe(true)
+    })
+
+    it('sets the initial access vector the chosen template names', async () => {
+      const entry = await library.entry('templates', 'bec')
+      const expected = (entry!.payload as { initialAccessVector: string }).initialAccessVector
+
+      const row = await controller.create({ title: 'Seeded vector', template: 'bec' }, asCaller())
+
+      const [stored] = await seed!.select().from(cases).where(eq(cases.id, row.id))
+      expect(stored?.initialAccessVector).toBe(expected)
     })
 
     it('seeds nothing when no template is named', async () => {
@@ -345,6 +379,47 @@ describe.skipIf(!db)('writing a case', () => {
   })
 
   describe('patch', () => {
+    /**
+     * **Every field at once, through the serving role**, whose column grant on
+     * the case row is an allowlist. A field the form gains is refused here
+     * until it has a value, so none reaches the analyst unwritable.
+     */
+    it('writes every field a case edit may set', async () => {
+      const at = '2026-01-02T03:04:05.000Z'
+      const values: Record<string, unknown> = {
+        title: 'Every field',
+        customer: 'Somebody',
+        reference: `EVERY-${String(Date.now())}`,
+        analyst: 'An analyst',
+        status: caseStatusSchema.options.find((one) => one !== 'respond'),
+        severity: SEVERITY[0],
+        incidentClass: INCIDENT_CLASS[1],
+        detectionSource: 'A detection',
+        initialAccessVector: 'A vector',
+        detectionGap: 'A gap',
+        summary: 'A summary',
+        openedAt: at,
+        detectedAt: at,
+        containedAt: at,
+        eradicatedAt: at,
+        recoveredAt: at,
+        closedAt: at,
+      }
+      expect(Object.keys(values).sort(), 'a writable field has no value here').toEqual([...CASE_WRITABLE].sort())
+      const { id, version } = await freshCase()
+
+      await controller.patch(id, { version, ...values }, session as never)
+
+      const [row] = await seed!.select().from(cases).where(eq(cases.id, id))
+      const stored = Object.fromEntries(
+        Object.keys(values).map((key) => {
+          const value = (row as Record<string, unknown>)[key]
+          return [key, value instanceof Date ? value.toISOString() : value]
+        }),
+      )
+      expect(stored).toEqual(values)
+    })
+
     it('applies the change, bumps the version and attributes it to the caller', async () => {
       const { id, version } = await freshCase()
 
@@ -561,12 +636,18 @@ describe.skipIf(!db)('writing a case', () => {
      * rows no screen can ever reach and no query will ever clean up.
      */
     it('takes the entity rows with it', async () => {
-      await seed!.delete(cases)
-      await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
-      const [demo] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-001'))
-      const id = demo!.id
+      const { id } = await freshCase()
+      await seed!.insert(timeline).values({
+        caseId: id, kind: 'event', description: 'Beacon',
+        time: new Date('2026-07-24T10:00:00Z'), createdBy: session.user.id,
+      })
+      await seed!.insert(systems).values({
+        caseId: id, hostname: 'host-cascade', createdBy: session.user.id,
+      })
       // The fixture has to have rows, or the cascade assertion passes vacuously.
       expect((await seed!.select().from(timeline).where(eq(timeline.caseId, id))).length)
+        .toBeGreaterThan(0)
+      expect((await seed!.select().from(changeFeed).where(eq(changeFeed.caseId, id))).length)
         .toBeGreaterThan(0)
 
       await controller.remove(id, asCaller())
@@ -631,7 +712,7 @@ describe.skipIf(!db)('writing a case', () => {
      */
     it('deletes a demo case rather than protecting it', async () => {
       await seed!.delete(cases)
-      await new DemoSeederService(seed!, seed, new DemoContentSeeder()).reseed()
+      await reseedDemos(seed!)
       const [demo] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
       expect(demo!.isDemo).toBe(true)
 

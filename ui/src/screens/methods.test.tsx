@@ -8,6 +8,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
 import { MethodsScreen, type MethodWrites } from './methods'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
 
 /**
  * The Methods screen, attacked at the four places its own honesty lives: the
@@ -137,7 +138,7 @@ describe('the expanded row', () => {
 
 describe('deleting a method', () => {
   it('asks before anything leaves, and sends only what was confirmed', async () => {
-    const remove = vi.fn((_ids: readonly string[]) => Promise.resolve())
+    const remove = vi.fn((_rows: readonly BulkPatchRow[]) => Promise.resolve())
     draw({
       kase: withMethods([
         one({ id: 'm-1', name: 'Sweep one' }),
@@ -155,7 +156,7 @@ describe('deleting a method', () => {
     await waitFor(() => {
       expect(remove).toHaveBeenCalledTimes(1)
     })
-    expect(remove.mock.calls[0]?.[0]).toEqual(['m-1'])
+    expect(remove.mock.calls[0]?.[0]?.map((row) => row.id)).toEqual(['m-1'])
   })
 })
 

@@ -8,6 +8,8 @@ import { specsFixture } from '@/fixtures/specs'
 import { ImpactScreen, type ImpactWrites } from './impact'
 import { EMPTY_CAMPAIGN } from '@/fixtures/empty-cases'
 import { inACase } from '@/fixtures/in-a-case'
+import type { BulkPatchRow } from '@/api/useBulkPatch'
+import type { Drawn } from '@/api/rowWrite'
 
 /**
  * What the incident reached.
@@ -258,11 +260,11 @@ function never(): ImpactWrites {
 /** A container that answers at once, with the rows it stored. */
 function answering(): ImpactWrites {
   return {
-    save: fn((entry: ImpactEntry | null, fields: Partial<ImpactEntry>) =>
+    save: fn((entry: Drawn<ImpactEntry> | null, fields: Partial<ImpactEntry>) =>
       Promise.resolve({ ...(entry ?? RECORDS[0]!), ...fields, id: entry?.id ?? 'im-stored' }),
     ),
-    patch: fn((ids: readonly string[], fields: Partial<ImpactEntry>) =>
-      Promise.resolve(ids.map((id) => ({ ...RECORDS[0]!, ...fields, id }))),
+    patch: fn((rows: readonly BulkPatchRow[], fields: Partial<ImpactEntry>) =>
+      Promise.resolve(rows.map(({ id }) => ({ ...RECORDS[0]!, ...fields, id }))),
     ),
     remove: fn(() => Promise.resolve()),
   }
@@ -270,6 +272,9 @@ function answering(): ImpactWrites {
 
 /** The register's ids, in the order the fixture lists them. */
 const IDS = RECORDS.map((row) => row.id)
+
+/** The same rows as a selection reads them: each id with the version it was drawn at. */
+const READ = RECORDS.map((row) => ({ id: row.id, version: row.version }))
 
 /**
  * The same screen with something serving it.
@@ -359,7 +364,7 @@ export const BulkDeleted: Story = {
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: /delete/i }))
     await expect(args.writes!.remove).toHaveBeenCalledOnce()
-    await expect(args.writes!.remove).toHaveBeenCalledWith(IDS)
+    await expect(args.writes!.remove).toHaveBeenCalledWith(READ)
   },
 }
 
@@ -386,7 +391,7 @@ export const BulkEdited: Story = {
     await userEvent.click(await screen.findByRole('option', { name: 'destroyed' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
     await expect(args.writes!.patch).toHaveBeenCalledOnce()
-    await expect(args.writes!.patch).toHaveBeenCalledWith([IDS[0], IDS[1]], {
+    await expect(args.writes!.patch).toHaveBeenCalledWith([READ[0], READ[1]], {
       disposition: 'destroyed',
     })
   },

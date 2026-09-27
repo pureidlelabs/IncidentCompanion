@@ -21,11 +21,12 @@ import pytest
 
 from tests._repo import REPO_ROOT
 
-#: The trees whose comments make citations worth resolving.
-TREES = (
-    'server/src/', 'server/test/', 'server/e2e/', 'server/scripts/',
-    'ui/src/', 'tests/', '.claude/scripts/', '.claude/hooks/', '.claude/tests/',
-)
+#: What the sweep will not read, because nothing in it is ours to fix.
+NOT_OURS = ('ui/dist/', 'server/dist/')
+
+#: Top-level directories an ignore rule is probed under, since a rule written
+#: for one tree can be scoped to it rather than to the repository.
+PROBE_TOPS = ('server', 'ui', 'tests', '.claude', 'packages', 'tools')
 
 #: A backticked path with a real extension. Not bare words: `model.ts` alone is
 #: a citation, `id` is not.
@@ -86,8 +87,14 @@ def tracked() -> list[str]:
 
 
 def swept(files: list[str]) -> list[pathlib.Path]:
+    """Every source file in the tree, which is what `git ls-files` already answers.
+
+    **Named trees rather than the whole tree is what went stale.** A list of
+    directories cannot know about the next package, and the two it had never
+    heard of each held an instance of the defect this module exists to refuse.
+    """
     return [REPO_ROOT / f for f in files
-            if f.startswith(TREES) and f.endswith(('.ts', '.tsx', '.py'))]
+            if f.endswith(('.ts', '.tsx', '.py')) and not f.startswith(NOT_OURS)]
 
 
 def resolves(cited: str, known: set[str], *, near: str = '') -> bool:
@@ -179,22 +186,39 @@ def resolves_directory(cited: str, dirs: set[str]) -> bool:
             or archived_as(bare, dirs) is not None)
 
 
-def git_ignores(paths: set[str]) -> set[str]:
+def git_ignores(paths: set[str], root: pathlib.Path = REPO_ROOT) -> set[str]:
     """Which of these directories git excludes, and so are absent on purpose.
 
     A child path is what the query takes: a pattern ending in `/` matches a
     directory, and the answer cannot tell that a path which is not there is one.
     An ignore file sits in the tree it governs as well as at the root, so each
     citation is asked about under every top-level tree as well as bare.
+
+    **A refused path answers for itself rather than for the batch.** git aborts
+    a whole `--stdin` run over one pathspec it will not resolve -- a worktree's
+    linked `node_modules` is one -- and the empty output that comes back is
+    indistinguishable from none of the paths being ignored. The retry asks one
+    at a time, so a refusal costs one answer rather than every answer, and the
+    probes under each tree reach the same pattern without crossing the link.
     """
     if not paths:
         return set()
     probes = {f'{one}/x': one for one in paths}
-    probes.update({f'{tree.split("/")[0]}/{one}/x': one
-                   for one in paths for tree in TREES})
-    answer = subprocess.run(['git', 'check-ignore', '--stdin'], cwd=REPO_ROOT,
+    probes.update({f'{top}/{one}/x': one
+                   for one in paths for top in PROBE_TOPS})
+    answer = subprocess.run(['git', 'check-ignore', '--stdin'], cwd=root,
                             input='\n'.join(probes), capture_output=True, text=True)
-    return {probes[one] for one in answer.stdout.split() if one in probes}
+    if answer.returncode in (0, 1):
+        return {probes[one] for one in answer.stdout.split() if one in probes}
+
+    found: set[str] = set()
+    for probe, bare in probes.items():
+        # `--` so a citation beginning with a dash is a path rather than a switch.
+        one = subprocess.run(['git', 'check-ignore', '-q', '--', probe], cwd=root,
+                             capture_output=True, text=True)
+        if one.returncode == 0:
+            found.add(bare)
+    return found
 
 
 def test_a_citation_written_from_the_reader_resolves() -> None:
@@ -333,19 +357,13 @@ def test_no_docstring_has_been_emptied_of_its_claim() -> None:
     and every one of those gates stays green over the result.
     """
     empty: list[str] = []
-    for tree in TREES:
-        root = REPO_ROOT / tree
-        if not root.is_dir():
+    for path in swept(tracked()):
+        if path.suffix not in {'.ts', '.tsx'}:
             continue
-        for path in root.rglob('*'):
-            if path.suffix not in {'.ts', '.tsx'}:
-                continue
-            if 'node_modules' in path.parts or 'worktrees' in path.parts:
-                continue
-            lines = path.read_text(encoding='utf8', errors='ignore').splitlines()
-            for number, line in enumerate(lines[:-1], start=1):
-                if line.strip() == '/**' and lines[number].strip() == '*/':
-                    empty.append(f"{path.relative_to(REPO_ROOT)}:{number}")
+        lines = path.read_text(encoding='utf8', errors='ignore').splitlines()
+        for number, line in enumerate(lines[:-1], start=1):
+            if line.strip() == '/**' and lines[number].strip() == '*/':
+                empty.append(f"{path.relative_to(REPO_ROOT)}:{number}")
 
     assert empty == [], (
         f"{len(empty)} docstring(s) hold no words. Restore the claim or delete "

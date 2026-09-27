@@ -1,6 +1,5 @@
 import { Fragment } from 'react'
 
-import { isOptimisticId } from '@/api/useEntryCreate'
 import type {
   EntityRow,
   EntityTableMeta,
@@ -95,7 +94,8 @@ export function RowContextMenu({
  * - Empty when `label` is empty: a `Copy ` item names no value.
  * - Expand is offered only where the row can expand; Edit and Delete only
  *   where the table's meta carries them.
- * - Edit refuses on an optimistic row, which has no server id to PATCH.
+ * - Edit and Delete refuse on a row with a write out, which is answered
+ *   before a second is made against the version the row was drawn at.
  */
 export function defaultRowMenu<TData extends { id: string }>(
   row: EntityRow<TData>,
@@ -130,7 +130,7 @@ export function defaultRowMenu<TData extends { id: string }>(
     editing.push({
       id: 'edit',
       label: 'Edit in full',
-      disabled: isOptimisticId(row.id),
+      disabled: meta.pendingIds.has(row.id),
       onSelect: () => {
         edit(row.id)
       },
@@ -142,9 +142,9 @@ export function defaultRowMenu<TData extends { id: string }>(
       id: 'delete',
       label: 'Delete',
       danger: true,
-      // The same reason `edit` above carries it: an optimistic row has no
-      // server id, so this would delete something the server has never seen.
-      disabled: isOptimisticId(row.id),
+      // The same reason `edit` above carries it: a row with a write out is
+      // answered before a second is made against the version it was drawn at.
+      disabled: meta.pendingIds.has(row.id),
       onSelect: () => {
         remove(row.id)
       },

@@ -51,7 +51,6 @@ describe('the seam between the served vocabulary and the paint', () => {
   })
 
   it('answers for a row that carries no tone at all', () => {
-    // An optimistic row is the fields the dialog sent and nothing else.
     for (const absent of [undefined, {} as unknown as FieldToneSpec]) {
       expect(paintFor(absent).role).toBe(UNMAPPED_ROLE)
     }

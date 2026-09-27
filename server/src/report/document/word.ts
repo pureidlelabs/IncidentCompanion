@@ -26,6 +26,7 @@ import {
 } from 'docx'
 
 import { coverageNote, type Cell, type Cover, type Document, type Images, type ListItem, type Node, type Run, type Section, type SpineNode, type TableNode } from './model.js'
+import { listMarkers, urlBeside } from './marks.js'
 import {
   ACCENT,
   INK,
@@ -117,9 +118,8 @@ function runs(from: Run[], colour?: string): TextRun[] {
         ...(one.code ? { font: 'Consolas' } : {}),
       }),
     )
-    if (one.url && one.url !== one.text) {
-      out.push(new TextRun({ text: ` (${one.url})`, italics: true }))
-    }
+    const beside = urlBeside(one)
+    if (beside !== null) out.push(new TextRun({ text: beside, italics: true }))
   }
   return out
 }
@@ -295,29 +295,13 @@ function table(node: TableNode): Table {
  * model's rule is that the painter counts; this counts.
  */
 function list(items: ListItem[]): Paragraph[] {
-  const counters = new Map<number, number>()
-  let previous = 0
-
-  return items.map((item) => {
-    if (item.level < previous) {
-      for (const level of [...counters.keys()]) if (level > item.level) counters.delete(level)
-    }
-    previous = item.level
-
-    let marker = '\u2022 '
-    if (item.ordered) {
-      const next = (counters.get(item.level) ?? 0) + 1
-      counters.set(item.level, next)
-      marker = `${String(next)}. `
-    } else {
-      counters.delete(item.level)
-    }
-
-    return new Paragraph({
-      indent: { left: 360 * (item.level + 1) },
-      children: [new TextRun({ text: marker }), ...runs(item.runs)],
-    })
-  })
+  return listMarkers(items).map(
+    ({ item, marker }) =>
+      new Paragraph({
+        indent: { left: 360 * (item.level + 1) },
+        children: [new TextRun({ text: marker }), ...runs(item.runs)],
+      }),
+  )
 }
 
 function node(one: Node, drawings: Drawings, images: Images): (Paragraph | Table)[] {

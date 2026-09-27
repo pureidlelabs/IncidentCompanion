@@ -16,6 +16,7 @@ import path from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
+import { requireStorybook } from './require-storybook.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 import { componentGroup, duplicateClusters, hashFrame, type FrameRecord } from './frame-oracle.js'
@@ -163,10 +164,7 @@ async function waitForStorybookEntries(
 test('names a planted pair of identically-rendering stories', async ({ browser }) => {
   test.setTimeout(60_000)
 
-  const probe = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) }).catch(
-    () => null,
-  )
-  test.skip(probe === null || !probe.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`)
+  await requireStorybook()
 
   mkdirSync(path.dirname(DUPLICATE_PLANT_PATH), { recursive: true })
   writeFileSync(DUPLICATE_PLANT_PATH, DUPLICATE_PLANT_SOURCE)
@@ -210,7 +208,10 @@ test('names a planted pair of identically-rendering stories', async ({ browser }
     const clusters = duplicateClusters(frames)
     expect(clusters, 'the planted pair renders identical pixels and must be named').toHaveLength(1)
     expect(clusters[0]?.stories.sort()).toEqual(
-      ['Selftest/Frame Oracle Plant / Planted One', 'Selftest/Frame Oracle Plant / Planted Two'].sort(),
+      [
+        'Selftest/Frame Oracle Plant / Planted One',
+        'Selftest/Frame Oracle Plant / Planted Two',
+      ].sort(),
     )
   } finally {
     rmSync(DUPLICATE_PLANT_PATH, { force: true })
@@ -220,10 +221,7 @@ test('names a planted pair of identically-rendering stories', async ({ browser }
 test('does not pair a story with its sibling once play has run', async ({ browser }) => {
   test.setTimeout(60_000)
 
-  const probe = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) }).catch(
-    () => null,
-  )
-  test.skip(probe === null || !probe.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`)
+  await requireStorybook()
 
   mkdirSync(path.dirname(PLAY_PLANT_PATH), { recursive: true })
   writeFileSync(PLAY_PLANT_PATH, PLAY_PLANT_SOURCE)
@@ -276,10 +274,7 @@ test('does not pair a story with its sibling once play has run', async ({ browse
 test('reports a play function whose assertion did not hold', async ({ browser }) => {
   test.setTimeout(60_000)
 
-  const probe = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) }).catch(
-    () => null,
-  )
-  test.skip(probe === null || !probe.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`)
+  await requireStorybook()
 
   mkdirSync(path.dirname(THREW_PLANT_PATH), { recursive: true })
   writeFileSync(THREW_PLANT_PATH, THREW_PLANT_SOURCE)

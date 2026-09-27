@@ -41,7 +41,7 @@ export const Default: Story = {
 
     // The description is inside the header with the title rather than in the
     // panel, so the two read as one band above the content.
-    const header = canvasElement.querySelector('header')!
+    const header = canvasElement.querySelector('[data-part="frame-header"]')!
     await expect(header.textContent).toContain('Retention')
     await expect(header.textContent).toContain('How long a closed case stays on disk.')
   },
@@ -52,9 +52,7 @@ export const Default: Story = {
         <FrameDescription>How long a closed case stays on disk.</FrameDescription>
       </FrameHeader>
       <FramePanel>
-        <p className="text-sm text-ink-muted">
-          Closed cases are kept for 180 days, then archived.
-        </p>
+        <p className="text-sm text-ink-muted">Closed cases are kept for 180 days, then archived.</p>
       </FramePanel>
     </Frame>
   ),
@@ -122,7 +120,7 @@ export const StackedPanels: Story = {
     // Three panels under one header: the card is one titled block whatever
     // it is divided into, so the header is not repeated per panel.
     await expect(canvasElement.querySelectorAll('[data-part="frame-panel"]')).toHaveLength(3)
-    await expect(canvasElement.querySelectorAll('header')).toHaveLength(1)
+    await expect(canvasElement.querySelectorAll('[data-part="frame-header"]')).toHaveLength(1)
   },
   render: () => (
     <Frame className="w-96">

@@ -50,7 +50,6 @@ const toggleButton = tv({
       lg: 'h-(--control-h-lg) min-w-10 px-2.5',
       icon: 'size-(--control-h-md)',
       'icon-sm': 'size-(--control-h-sm) rounded-md icon-3.5',
-      'icon-lg': 'size-(--control-h-lg)',
     },
     isFocusVisible: { true: 'border-ring ring-3 ring-ring/50' },
     // Pressed is a ground, not a fill: a row of toggles all wearing `primary`
@@ -120,7 +119,7 @@ export interface ToggleButtonLook {
   /** Visual role. `ghost` drops the border, for a dense toolbar. */
   variant?: 'outline' | 'ghost'
   /** Height, from the `--control-h-*` scale. `icon-*` are square and need an `aria-label`. */
-  size?: 'sm' | 'default' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg'
+  size?: 'sm' | 'default' | 'lg' | 'icon' | 'icon-sm'
   /**
    * Draw the selected ground. `false` where the caller paints its own.
    *

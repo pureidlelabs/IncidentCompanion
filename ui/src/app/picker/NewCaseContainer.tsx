@@ -3,8 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { useLibrary } from '@/api/library'
 import { useSpecs } from '@/api/specs'
 import { useCreateCase } from '@/api/useCreateCase'
-import { ENTRY_SLUG } from '@/components/blocks/case-sections'
+import { DOOR_LABELS, ENTRY_SLUG } from '@/components/blocks/case-sections'
 import { NewCaseScreen, type NewCaseWrites } from '@/screens/new-case'
+
+/** The section the importer door lands on, typed against the registry that names it. */
+const IMPORT_SLUG: keyof typeof DOOR_LABELS = 'import'
+
+/** The words the importer door wears, so the dialog says what the tile said. */
+const IMPORTING = { title: DOOR_LABELS[IMPORT_SLUG], submitLabel: 'Create and import' }
 
 /**
  * `NewCaseScreen` bound to the library, the served form and the create call.
@@ -41,10 +47,11 @@ export function NewCaseContainer({
       onCreated={(caseId) => {
         onClose()
         const at = `/cases/${encodeURIComponent(caseId)}`
-        void navigate(door === 'importer' ? `${at}/import` : `${at}/${ENTRY_SLUG}`)
+        void navigate(`${at}/${door === 'importer' ? IMPORT_SLUG : ENTRY_SLUG}`)
       }}
+      {...(door === 'importer' ? IMPORTING : {})}
       busy={templates.isPending || specs.isPending}
-      {...(templates.error ?? specs.error ? { problem: templates.error ?? specs.error } : {})}
+      {...((templates.error ?? specs.error) ? { problem: templates.error ?? specs.error } : {})}
       writes={writes}
     />
   )

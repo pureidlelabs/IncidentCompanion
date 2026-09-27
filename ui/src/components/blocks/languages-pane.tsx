@@ -82,7 +82,7 @@ export function LanguagesPane({
 
       {onRemove && (
         <ConfirmDeleteDialog
-          ids={removing === null ? null : [removing]}
+          rows={removing === null ? null : [removing]}
           onOpenChange={(isOpen) => {
             if (!isOpen) setRemoving(null)
           }}

@@ -10,7 +10,7 @@
  * adapter looks up `user.emailVerified` as a key on this object.
  */
 import { sql } from 'drizzle-orm'
-import { boolean, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { boolean, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
@@ -45,25 +45,6 @@ export const user = pgTable('user', {
    */
   mustChangePassword: boolean('must_change_password').notNull().default(false),
 
-  /**
-   * Consecutive failed sign-ins, and how long the account is shut for.
-   *
-   * **Columns rather than Redis, and that is the security decision here.** A
-   * counter in a cache is cleared by a restart, so an attacker who can make
-   * the process restart - or who simply waits for a deploy - gets a fresh
-   * allowance. The control has to outlive the process it protects.
-   *
-   * **Per account, which is the half a rate limit cannot do.** A per-address
-   * limit slows one attacker; it does nothing about the same password tried
-   * against one analyst from a thousand addresses, and that is the shape a
-   * credential-stuffing run actually has.
-   *
-   * Reset by a successful sign-in, never by time alone: the count is
-   * *consecutive*, so a lockout that expired without a success still leaves
-   * the account one failure from shutting again.
-   */
-  failedSignIns: integer('failed_sign_ins').notNull().default(0),
-  lockedUntil: timestamp('locked_until', { withTimezone: true }),
 }, (t) => [
   /**
    * **One account per address, folded the way every read folds it.**
@@ -71,7 +52,7 @@ export const user = pgTable('user', {
    * `unique()` on the column is case-sensitive, so it admits a second row whose
    * address differs only in case - and then every query written through
    * `sameAddress` matches both. The lockout clear is the sharpest of those: it
-   * updates by that predicate with no limit, so clearing one account's counter
+   * deletes by that predicate with no limit, so clearing one account's lockout
    * clears the other's.
    *
    * **The row that reaches this is one Better Auth did not write.** Its own

@@ -1,18 +1,20 @@
 /**
- * Render indicators unclickable in a report that leaves the app.
+ * Render every address a document carries so no reader's software opens it.
  *
- * Word and Outlook autolink a bare domain, so an undefanged report hands the
- * reader a live C2 address one click away. Everything here is a *render-time*
- * transform: the case keeps real values, which search, the graphs and every
- * pivot need.
+ * Everything here is a *render-time* transform: the case keeps real values,
+ * which search, the graphs and every pivot need. One pass over the built
+ * document covers every renderer, since all three start from `Document`.
  *
  * Two entry points, because the safe transform depends on what the caller
  * knows. `defangIndicator` takes a value the model says is entirely an
- * indicator, so every dot can go; `defangText` takes free text, where the rule
- * is IPv4 literals and scheme-carrying URLs only. One pass over the built
- * document covers every renderer, since all three start from `Document`.
+ * indicator, so every dot and `@` can go; `defangText` takes free text, where
+ * only what a reader's software would link is rewritten. The rules and the
+ * prose they spare are the report design record's.
  */
-import type { Cell, Cover, Document, Node, Section } from './model.js'
+import { domainToUnicode } from 'node:url'
+
+import type { Cell, Cover, Document, Node, Run, Section } from './model.js'
+import { ROOT_ZONE } from './tlds.js'
 
 /**
  * Strict dotted-quad, octet-validated.
@@ -22,8 +24,7 @@ import type { Cell, Cover, Document, Node, Section } from './model.js'
  */
 const IPV4 = /\b(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\b/g
 
-/** Recognised only with a scheme: without one, a host and a filename are the same shape. */
-const URL_WITH_SCHEME = /\bhttps?:\/\/[^\s<>"')\]]+/gi
+const URL_WITH_SCHEME = /\b[a-z][a-z\d+.-]*:\/\/[^\s<>"')\]]+/gi
 
 /**
  * Scheme, host, and everything after it. The path is not an indicator.
@@ -35,7 +36,47 @@ const URL_WITH_SCHEME = /\bhttps?:\/\/[^\s<>"')\]]+/gi
  * names. This spelling satisfies the rule rather than
  * suppressing it, and answers identically on every case in `defang.test.ts`.
  */
-const AUTHORITY = /^(https?:\/\/)([^/?#]*)([/?#][\s\S]*)?$/i
+const AUTHORITY = /^([a-z][a-z\d+.-]*:\/\/)([^/?#]*)([/?#][\s\S]*)?$/i
+
+/** A scheme a reader opens without `//`: `http:evil.example`, `http:\\evil.example`. */
+const SCHEME_ALONE = /\b(https?|ftps?):(?!\/\/)(\\\\)?([^\s/?#\\<>"')\]]+)/gi
+
+/** A protocol-relative address. Not after a letter, `:` or `]`, which is a path or a scheme already handled. */
+const PROTOCOL_RELATIVE = /(?<![\p{L}\p{N}:\]/])\/\/([^\s/?#\\<>"')\]]+)/gu
+
+/** A UNC path's host, after the leading backslashes or the long-path `\\?\UNC\` prefix. */
+const UNC = /\\\\(?:\?\\UNC\\)?([^\\\s/]+)/gi
+
+/**
+ * What separates two labels of a host as a reader's software reads it: a full
+ * stop, its fullwidth and ideographic forms, and any zero-width character
+ * beside one, which hides the name from the eye and not from the software.
+ */
+const SEPARATOR = /[\u200b-\u200d\u2060\ufeff]*[.\uff0e\u3002][\u200b-\u200d\u2060\ufeff]*/u
+
+/** The domain half of an email address; the local part is not an indicator. */
+const EMAIL =
+  /(?<=[\p{L}\p{N}._%+-])@([\p{L}\p{N}-]+(?:[\u200b-\u200d\u2060\ufeff]*[.\uff0e\u3002][\u200b-\u200d\u2060\ufeff]*[\p{L}\p{N}-]+)+)/gu
+
+/**
+ * A dotted name standing on its own, which `bareHost` then judges.
+ *
+ * **Not after `/`, `\`, `:`, `@`, `.` or `[`**, so a path segment, a file in a
+ * Windows path, a port and a label already inside a defanged address are never
+ * taken for a host of their own.
+ */
+const HOST =
+  /(?<![\p{L}\p{N}@.\uff0e\u3002\\/:[-])(?:[\p{L}\p{N}_-]+[\u200b-\u200d\u2060\ufeff]*[.\uff0e\u3002][\u200b-\u200d\u2060\ufeff]*)+[\p{L}\p{N}_-]+/gu
+
+const SCHEMES: Readonly<Record<string, string>> = {
+  http: 'hxxp',
+  https: 'hxxps',
+  ftp: 'fxp',
+  ftps: 'fxps',
+}
+const REWRITTEN = new Set(Object.values(SCHEMES))
+
+const TLDS = new Set(ROOT_ZONE.flatMap((tld) => [tld, domainToUnicode(tld)]))
 
 /**
  * **A dot already inside `[.]` is left alone, which is what makes a second pass
@@ -43,11 +84,31 @@ const AUTHORITY = /^(https?:\/\/)([^/?#]*)([/?#][\s\S]*)?$/i
  * bracket notation contains a dot of its own, so bracketing is *not* naturally
  * idempotent. A frozen report is re-painted from its stored tree, so a document
  * meeting this twice is an ordinary event rather than a mistake.
+ *
+ * Every separator `SEPARATOR` names is bracketed, with the zero-width
+ * characters beside it.
  */
-const dots = (value: string) => value.replace(/(?<!\[)\.(?!\])/g, '[.]')
+const dots = (value: string) =>
+  value.replace(
+    /[\u200b-\u200d\u2060\ufeff]*(?:(?<!\[)\.(?!\])|[\uff0e\u3002])[\u200b-\u200d\u2060\ufeff]*/gu,
+    '[.]',
+  )
 
+const ats = (value: string) => value.replace(/(?<!\[)@(?!\])/g, '[@]')
+
+/** `http` as `hxxp` in the case it was typed, or `undefined` for a scheme with no conventional spelling. */
+function renamed(name: string): string | undefined {
+  const written = SCHEMES[name.toLowerCase()]
+  if (!written) return undefined
+  return name === name.toLowerCase() ? written : written.toUpperCase()
+}
+
+/** `http://` as `hxxp://`, and a scheme with no conventional spelling as `smb[:]//`. */
 function scheme(value: string): string {
-  return value.replace(/^http/i, (found) => (found === found.toLowerCase() ? 'hxxp' : 'HXXP'))
+  const name = value.slice(0, -'://'.length)
+  const written = renamed(name)
+  if (written) return `${written}://`
+  return REWRITTEN.has(name.toLowerCase()) ? value : `${name}[:]//`
 }
 
 /** One URL: scheme and host only, path untouched. */
@@ -57,6 +118,14 @@ export function defangUrl(value: string): string {
   // `?? ''` because the tail is optional: a bare host leaves it undefined,
   // and `+ undefined` appends the word rather than nothing.
   return scheme(match[1]!) + dots(match[2]!) + (match[3] ?? '')
+}
+
+/** A `www.` name whatever its ending, and any other only under a real top-level domain. */
+function bareHost(found: string): string {
+  const labels = found.split(SEPARATOR)
+  const tld = labels.at(-1)!.toLowerCase()
+  const host = /^www\d{0,3}$/i.test(labels[0]!) || TLDS.has(tld)
+  return host ? labels.join('[.]') : found
 }
 
 /**
@@ -69,23 +138,25 @@ export function defangUrl(value: string): string {
 export function defangIndicator(value: string): string {
   const text = value.trim()
   if (!text) return value
-  if (/^https?:\/\//i.test(text)) return defangUrl(text)
-  return dots(text)
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(text)) return defangUrl(text)
+  return ats(dots(text))
 }
 
-/**
- * The indicators embedded in free text, and nothing else.
- *
- * A bare domain is left as typed, which is deliberate rather than an omission:
- * without a scheme a host and a filename are the same shape, as
- * `URL_WITH_SCHEME` says, and an analyst who wants one defanged in prose types
- * it defanged.
- */
+/** The addresses embedded in free text, and nothing else. */
 export function defangText(value: string): string {
   if (!value) return value
   return value
     .replace(URL_WITH_SCHEME, (found) => defangUrl(found))
+    .replace(
+      SCHEME_ALONE,
+      (_, name: string, slashes: string | undefined, host: string) =>
+        `${renamed(name)!}:${slashes ?? ''}${dots(host)}`,
+    )
+    .replace(PROTOCOL_RELATIVE, (_, host: string) => `//${dots(host)}`)
+    .replace(UNC, (found: string, host: string) => found.slice(0, -host.length) + dots(host))
+    .replace(EMAIL, (_, host: string) => `[@]${dots(host)}`)
     .replace(IPV4, (found) => dots(found))
+    .replace(HOST, bareHost)
 }
 
 function defangCell(cell: Cell): Cell {
@@ -98,7 +169,16 @@ function defangCell(cell: Cell): Cell {
   return text === cell.text ? cell : { ...cell, text }
 }
 
-function defangNode(node: Node): Node {
+/** A run's text, and the address it carries beside it. */
+function defangRun(run: Run): Run {
+  return {
+    ...run,
+    text: defangText(run.text),
+    ...(run.url === undefined ? {} : { url: defangIndicator(run.url) }),
+  }
+}
+
+function defangNode(node: Node, preserved: boolean): Node {
   switch (node.type) {
     case 'table':
       return {
@@ -109,30 +189,30 @@ function defangNode(node: Node): Node {
     case 'prose':
       return { ...node, paras: node.paras.map(defangText) }
     case 'richPara':
-      return { ...node, runs: node.runs.map((run) => ({ ...run, text: defangText(run.text) })) }
+      return { ...node, runs: node.runs.map(defangRun) }
     case 'list':
       return {
         ...node,
         items: node.items.map((item) => ({
           ...item,
-          runs: item.runs.map((run) => ({ ...run, text: defangText(run.text) })),
+          runs: item.runs.map(defangRun),
         })),
       }
     case 'code':
       /**
-       * **A code block is quoted evidence and is defanged as free text.** The
-       * IPv4 and URL rules still apply -- a command line carrying a C2 address
-       * autolinks in Word exactly like prose does -- but nothing guesses at a
-       * bare host, which in a command line is usually a filename or a flag.
+       * **A code block is quoted evidence and is defanged as free text** -- a
+       * command line carrying a C2 address autolinks in Word exactly like prose
+       * does.
        *
        * **`verbatim` is the one exemption, and it is a property of the node
        * rather than of the arm.** A method's saved query leaves byte-exact
        * because a neutralised query does not run, which is the maintainer's
        * deliberate trade against an emailed RCA carrying a live address. The
        * flag is set by one producer; every other code block, a pasted result
-       * included, still goes through the rule above.
+       * included, still goes through the rule above. A preserved document's
+       * flag was set by whoever wrote the archive, so it exempts nothing.
        */
-      if (node.verbatim) return node
+      if (node.verbatim && !preserved) return node
       return { ...node, lines: node.lines.map(defangText) }
     case 'quote':
       /**
@@ -144,7 +224,7 @@ function defangNode(node: Node): Node {
        * the node through would be the wrong default for a pass whose entire job
        * is not shipping live addresses.
        */
-      return { ...node, runs: node.runs.map((run) => ({ ...run, text: defangText(run.text) })) }
+      return { ...node, runs: node.runs.map(defangRun) }
     case 'subtitle':
     case 'subhead':
     case 'minorHead':
@@ -158,8 +238,7 @@ function defangNode(node: Node): Node {
       /**
        * **The caption is an evidence record's own name**, which is routinely a
        * filename and occasionally a URL somebody pasted - free text, so the
-       * free-text rule applies: IPv4 and scheme-carrying addresses only, and no
-       * guess at a bare host, or `payload.zip` becomes `payload[.]zip`. The
+       * free-text rule applies, and it spares a filename such as `report.pdf`. The
        * note is this build's own sentence and the digest is hex; neither can
        * carry an address.
        */
@@ -175,8 +254,8 @@ function defangNode(node: Node): Node {
  */
 const WRITTEN = 'written'
 
-function defangSection(section: Section): Section {
-  if (section.kind === WRITTEN) return section
+function defangSection(section: Section, preserved: boolean): Section {
+  if (section.kind === WRITTEN && !preserved) return section
   // **The heading as well as the nodes.** It is not a `Node`, so the exhaustive
   // switch does not reach it -- the same gap the cover and the document title
   // sit in. `headingFor` returns the analyst's own `block.heading`, and a
@@ -184,7 +263,7 @@ function defangSection(section: Section): Section {
   return {
     ...section,
     heading: defangText(section.heading),
-    nodes: section.nodes.map(defangNode),
+    nodes: section.nodes.map((node) => defangNode(node, preserved)),
   }
 }
 
@@ -209,15 +288,14 @@ function defangCover(cover: Cover): Cover {
  * Every generated string in a built document, defanged. Returns a new document:
  * a sent report's frozen tree is stored and read again, so mutating in place
  * would edit the artefact a reader came back for.
+ *
+ * `preserved` is for a document read in from outside: its written sections and
+ * verbatim code blocks are defanged too, since nothing vouches for either flag.
  */
-export function defangDocument({
-  title,
-  tlp,
-  language,
-  languageCoverage,
-  cover,
-  sections,
-}: Document): Document {
+export function defangDocument(
+  { title, tlp, language, languageCoverage, cover, sections }: Document,
+  { preserved = false }: { preserved?: boolean } = {},
+): Document {
   // **Destructured and returned as a literal, not spread.** `...document_`
   // accepts a new field in silence, so a part of a built document goes unwalked
   // with nothing saying so.
@@ -233,6 +311,6 @@ export function defangDocument({
     language,
     languageCoverage,
     cover: cover ? defangCover(cover) : cover,
-    sections: sections.map(defangSection),
+    sections: sections.map((section) => defangSection(section, preserved)),
   }
 }

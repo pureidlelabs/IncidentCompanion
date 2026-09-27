@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, fn, userEvent } from 'storybook/test'
 
 import { PaletteResults } from './palette-results'
 
@@ -50,6 +51,38 @@ export const Grouped: Story = {
         ],
       },
     ],
+  },
+}
+
+/**
+ * An arrow key moves onto a row, and Enter runs that row.
+ *
+ * jsdom cannot see it: which element React Aria gives the keyboard, and what
+ * a press does once it is there, are facts about a browser. -> #963
+ */
+export const KeyboardRunsARow: Story = {
+  args: { ...Grouped.args, onAction: fn() },
+  play: async ({ args, canvas, step }) => {
+    await step('the arrow keys walk the rows', async () => {
+      const rows = await canvas.findAllByRole('option')
+      await expect(rows.length, 'no rows to walk').toBeGreaterThan(1)
+
+      rows[0]?.focus()
+      await userEvent.keyboard('{ArrowDown}')
+
+      await expect(
+        canvas.getByRole('option', { name: /Open the command palette/ }),
+        'the arrow key did not move the focus onto the second row',
+      ).toHaveFocus()
+    })
+
+    await step('Enter runs the row the keyboard is on', async () => {
+      await userEvent.keyboard('{Enter}')
+
+      // The id, not merely that something fired: a list reporting the first
+      // row whatever is focused is the failure this cannot afford.
+      await expect(args.onAction).toHaveBeenCalledWith('command:palette')
+    })
   },
 }
 

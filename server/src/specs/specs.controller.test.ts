@@ -131,11 +131,9 @@ describe('the specs document', () => {
    * kind the client has never heard of renders as a plain box and posts a
    * string -- and `field_kinds` is the only thing a client can check against.
    *
-   * The two declarations of that closed set are `FieldKind` in `field-spec.ts`
-   * and `FIELD_KINDS` in `tiering.ts`, and nothing compared them: a kind added
-   * to the union alone typechecks, serves, and renders as a text box with
-   * every suite green. This asserts the property rather than the pair, so it
-   * holds however the two are arranged.
+   * `FieldKind` is derived from `FIELD_KINDS`, so a kind cannot reach a form
+   * without reaching the served list. What this still catches is the other
+   * direction: a form field whose kind is a string neither of them holds.
    */
   it('serves no field whose kind is missing from the kinds it publishes', () => {
     const served = new Set(document_['field_kinds'] as string[])
@@ -472,9 +470,10 @@ describe('the specs document', () => {
      * field's deletion by nobody noticing. Writing it here makes the first
      * case a decision and leaves the second red.
      *
-     * `verisAction`: `domain/entities/case-facts.ts` declares `incidentClass`
-     * against it and nothing imports that module yet - ENISA RSIT is
-     * first-class in the parked compliance design.
+     * `verisAction`: no field names this list. A case's own class is
+     * `INCIDENT_CLASS` under the tag `incidentClass`, which is this list with
+     * `unknown` in front - VERIS' own vocabulary is served for the parked
+     * compliance design, where a report's action cites it unprefixed.
      */
     const SERVED_AHEAD_OF_THEIR_FIELDS: ReadonlySet<string> = new Set(['verisAction'])
 

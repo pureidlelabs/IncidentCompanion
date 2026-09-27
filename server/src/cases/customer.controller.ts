@@ -1,11 +1,10 @@
 /**
  * `PUT /api/cases/:caseId/customer` - who this case answers for.
  *
- * **The guard is the whole of the check**: `levelNeeded` derives `write` from
- * the shape of this path, so the caller needs `write` over the customer the
- * case has now and nothing over the one it is going to. Why the destination is
- * not asked for, and what that permits, is
- * `openspec/specs/cases/design.md`.
+ * The guard asks `write` over the customer the case has now, which
+ * `levelNeeded` derives from this path. The destination is asked about only
+ * for a case carrying a reference, which moves only to a customer the caller
+ * reaches. -> `openspec/specs/cases/design.md`
  */
 import { Body, Controller, Param, ParseUUIDPipe, Put, UseGuards } from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
@@ -48,7 +47,7 @@ export class CaseCustomerController {
     @Caller() caller: Caller,
   ): Promise<{ done: true; from: string | null }> {
     const { customerId } = attributeSchema.parse(body)
-    const { from, title } = await this.cases.attribute(caseId, customerId, caller.session.user.id)
+    const { from, title } = await this.cases.attribute(caseId, customerId)
 
     await this.activity.caseAttributed(caller, caseId, title, { from, to: customerId })
     return { done: true, from }

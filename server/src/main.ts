@@ -12,6 +12,7 @@ import { openApiDocument } from './openapi'
 import { OpenApiStore } from './openapi.controller'
 import { InstallActivityService } from './install-activity/install-activity.service.js'
 import { SetupController } from './auth/setup.controller'
+import { ProseService } from './prose/prose.service'
 import { bundlePath } from './spa/spa.module'
 
 import { join } from 'node:path'
@@ -44,7 +45,7 @@ async function bootstrap(): Promise<void> {
    *
    * Two hops to `server/`, because swc compiles this to `dist/src/main.js`.
    */
-  applyPlatform(app, {
+  await applyPlatform(app, {
     bundle: bundlePath(app.get(ConfigService)),
     vendor: join(__dirname, '..', '..', 'vendor', 'redoc'),
   })
@@ -57,7 +58,7 @@ async function bootstrap(): Promise<void> {
    */
   const reference = app.get(OpenApiStore)
   try {
-    reference.set(openApiDocument(app))
+    reference.set(await openApiDocument(app))
   } catch (error) {
     // An unpublishable schema is a 404 on the reference, not an outage.
     new Logger('OpenApi').warn(`the OpenAPI document could not be built: ${String(error)}`)
@@ -70,6 +71,9 @@ async function bootstrap(): Promise<void> {
    * `seed` entry included.
    */
   await app.get(SetupController).mintIfUnclaimed()
+
+  // Here for the same reason: only the serving process stores prose.
+  await app.get(ProseService).assertIdentity()
 
   await app.listen(env.PORT, '0.0.0.0')
 

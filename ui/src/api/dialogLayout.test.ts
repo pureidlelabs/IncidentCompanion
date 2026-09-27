@@ -127,9 +127,8 @@ describe('footerFields', () => {
   })
 
   it('is empty at one column, where no column exists to move them out of', () => {
-    // `blank` is what a create hook builds its optimistic row from and nothing
-    // in this file reads it; empty rather than a copy of `event`'s, so it is
-    // clear it is not under test here.
+    // Nothing in this file reads `blank`; empty rather than a copy of
+    // `event`'s, so it is clear it is not under test here.
     const single: FormSpec = { collection: null, columns: 1, fields: event.fields, blank: {} }
     expect(footerFields(single)).toEqual([])
   })

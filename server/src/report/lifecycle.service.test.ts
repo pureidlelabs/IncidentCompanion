@@ -13,6 +13,7 @@ import { asc, eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import * as Y from 'yjs'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { as } from '../../test/acting.js'
 
 import { CasesService } from '../cases/cases.service.js'
 import { LibraryService } from '../library/library.service.js'
@@ -21,10 +22,11 @@ import { ReportLifecycleService } from './lifecycle.service.js'
 import { ReportRenderService } from './render.service.js'
 import { ProseService, reportDocument } from '../prose/prose.service.js'
 import { cases, library, reportBlocks, reports, timeline, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
 import { english } from './document/packs.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { defaultPolicy } from '../policy/read.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 /**
  * The install's bounds, as the doors read them.
@@ -89,7 +91,7 @@ const KEYED_LAYOUT = {
   ],
 }
 
-describe.skipIf(!db)('the sections a report is short of', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the sections a report is short of', () => {
   let lifecycle: ReportLifecycleService
   let cases_: CasesService
   let actorId: string
@@ -153,14 +155,14 @@ describe.skipIf(!db)('the sections a report is short of', () => {
       ])
       .onConflictDoNothing()
 
-    cases_ = new CasesService(db!, { announce: () => {}, othersOn: () => Promise.resolve([]) } as never)
+    cases_ = as(actorId, new CasesService(db!, suiteStore(), { announce: () => {}, othersOn: () => Promise.resolve([]) } as never))
     // **The real service against the real row.** A stub keyed on the slug the
     // caller passes agrees with whatever the caller spells, so a lookup for a
     // kind no row has ever carried passes against it.
     const libraryService = new LibraryService(db!, seed)
-    const prose = new ProseService(db!)
-    const render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
-    lifecycle = new ReportLifecycleService(db!, libraryService, render, prose)
+    const prose = as(actorId, new ProseService(db!))
+    const render = as(actorId, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
+    lifecycle = as(actorId, new ReportLifecycleService(db!, libraryService, render, prose))
   })
 
   afterAll(async () => {
@@ -317,7 +319,7 @@ describe.skipIf(!db)('the sections a report is short of', () => {
  * that left cannot change afterwards, cannot be sent twice, and cannot be
  * stamped sent while frozen to something that could not be produced.
  */
-describe.skipIf(!db)('the report lifecycle', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the report lifecycle', () => {
   let lifecycle: ReportLifecycleService
   let render: ReportRenderService
   let prose: ProseService
@@ -383,14 +385,15 @@ describe.skipIf(!db)('the report lifecycle', () => {
       })
       .onConflictDoNothing()
 
-    cases_ = new CasesService(
+    cases_ = as(actorId, new CasesService(
       db!,
+      suiteStore(),
       { announce: () => {}, othersOn: () => Promise.resolve([]) } as never,
-    )
+    ))
     const libraryService = { entry: () => Promise.resolve(undefined) } as never
-    prose = new ProseService(db!)
-    render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
-    lifecycle = new ReportLifecycleService(db!, libraryService, render, prose)
+    prose = as(actorId, new ProseService(db!))
+    render = as(actorId, new ReportRenderService(db!, cases_, prose, englishOnly, noFigures()))
+    lifecycle = as(actorId, new ReportLifecycleService(db!, libraryService, render, prose))
   })
 
   afterAll(async () => {
@@ -467,7 +470,7 @@ describe.skipIf(!db)('the report lifecycle', () => {
       .spyOn(render, 'render')
       .mockImplementation(async (...args: Parameters<typeof real>) => {
         const drawn = await real(...args)
-        await seed!.update(reports).set({ sentAt: winnerStamp }).where(eq(reports.id, reportId))
+        await seed!.update(reports).set({ sentAt: winnerStamp, frozen: drawn.document_, frozenAt: winnerStamp }).where(eq(reports.id, reportId))
         return drawn
       })
 
@@ -483,12 +486,10 @@ describe.skipIf(!db)('the report lifecycle', () => {
     }
   })
 
-  it('counts the version up from the row, not from the copy it read first', async () => {
-    // Same window as the lost-race test, with the other analyst *editing*
-    // rather than sending. Arithmetic on the pre-render read drives the
-    // version backwards, and a client holding the true one is then refused on
-    // every later compare -- so the number stops identifying the row's state,
-    // which is the whole contract the API publishes for it.
+  it('refuses to send over a change made while the document was drawn, and leaves the draft holding it', async () => {
+    // The other analyst edits the report between the render and the stamp.
+    // Stamping anyway would send a document that is not the report they were
+    // answered 200 for.
     const { caseId, reportId } = await caseWithReport([{ kind: 'timeline' }])
     await addTimelineEntry(caseId, 'first')
 
@@ -498,27 +499,24 @@ describe.skipIf(!db)('the report lifecycle', () => {
       .spyOn(render, 'render')
       .mockImplementation(async (...args: Parameters<typeof real>) => {
         const drawn = await real(...args)
-        // Two writes, so the gap is wider than an off-by-one and cannot be
-        // satisfied by the stale read happening to be one behind.
         await seed!
           .update(reports)
-          .set({ label: 'B first', version: before!.version + 1 })
-          .where(eq(reports.id, reportId))
-        await seed!
-          .update(reports)
-          .set({ label: 'B second', version: before!.version + 2 })
+          .set({ label: 'Renamed while it was drawn', version: before!.version + 1 })
           .where(eq(reports.id, reportId))
         return drawn
       })
 
     try {
-      await lifecycle.send(caseId, reportId, actorId)
+      await expect(lifecycle.send(caseId, reportId, actorId)).rejects.toMatchObject({
+        status: 409,
+        response: { moved: [reportId] },
+      })
     } finally {
       spy.mockRestore()
     }
 
     const [after] = await seed!.select().from(reports).where(eq(reports.id, reportId))
-    expect(after!.version).toBe(before!.version + 3)
+    expect(after).toMatchObject({ sentAt: null, label: 'Renamed while it was drawn', version: before!.version + 1 })
   })
 
   it('answers a report deleted mid-send with a 404, never with a stamp', async () => {
@@ -585,10 +583,14 @@ describe.skipIf(!db)('the report lifecycle', () => {
     // block-level elements from the top of a fragment, so a loose text node
     // resolves to nothing - and a fixture in a shape the editor never produces
     // fails a correct clone.
-    const doc = await prose.open(caseId, reportDocument(reportId))
+    await prose.open(caseId, reportDocument(reportId))
+    const typed = new Y.Doc()
     const para = new Y.XmlElement('paragraph')
     para.insert(0, [new Y.XmlText('a credential was reused')])
-    doc.getXmlFragment(blockIds[0]).insert(0, [para])
+    typed.getXmlFragment(blockIds[0]).insert(0, [para])
+    // Sent as the analyst's editor sends it, so the save names them.
+    const frame = prose.frameUpdate(Y.encodeStateAsUpdate(typed))
+    await prose.apply(caseId, reportDocument(reportId), frame, 'a-socket', { id: actorId, label: 'Analyst', headers: {} })
     await prose.release(caseId, reportDocument(reportId))
 
     const { id: successor } = await lifecycle.supersede(caseId, reportId, actorId)
@@ -738,6 +740,27 @@ describe.skipIf(!db)('the report lifecycle', () => {
 
     const after = await seed!.select().from(reports).where(eq(reports.caseId, caseId))
     expect(after).toHaveLength(before.length)
+  })
+
+  /** The prose is carried last, so failing it fails after every row is written. -> #1181 */
+  it('leaves nothing of a correction that fails partway, and lets it be tried again', async () => {
+    const { caseId, reportId } = await caseWithReport([{ kind: 'written' }])
+    await lifecycle.send(caseId, reportId, actorId)
+    const source = await prose.open(caseId, reportDocument(reportId))
+    const fragment = source.getXmlFragment.bind(source)
+    source.getXmlFragment = () => {
+      throw new Error('the prose could not be carried')
+    }
+
+    await expect(lifecycle.supersede(caseId, reportId, actorId)).rejects.toThrow('the prose could not be carried')
+    source.getXmlFragment = fragment
+    await prose.release(caseId, reportDocument(reportId))
+
+    const rows = await seed!.select({ id: reports.id }).from(reports).where(eq(reports.caseId, caseId))
+    expect(rows.map((row) => row.id), 'a failed correction left a successor behind').toEqual([reportId])
+    const { id } = await lifecycle.supersede(caseId, reportId, actorId)
+    const [fresh] = await seed!.select().from(reports).where(eq(reports.id, id))
+    expect(fresh!.supersedes).toBe(reportId)
   })
 
   it('mints the successor as a draft, whatever the original was', async () => {

@@ -1,95 +1,63 @@
 /**
- * Account lockout: what a run of failed sign-ins costs the account it targets.
- *
- * **Not per-address, which is the whole point.** nginx's limit is per address
- * and stops nobody willing to use a second one; OWASP ASVS V6.3.1 asks for a
- * control keyed on the account instead, and this is it.
- *
- * **Better Auth does not bring one.** The lockout it added in 1.6.22 is for
- * two-factor verification, which this install does not offer; `sentinel`
- * carries a password one and is a hosted plugin needing an API key, which core
- * may not have.
- *
- * The arithmetic lives here rather than in the middleware so a unit test can
- * hold it. What the middleware owns is when to ask.
- * -> <https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html>
+ * The lockout's arithmetic: what the install allows, whether a run is shut,
+ * and what is kept of a wrong password.
+ * `checkPassword` in `auth.config.ts` decides when to ask.
+ * -> `openspec/specs/accounts-and-access/design.md`
  */
-import {
-  LOCKOUT_AFTER_FAILURES,
-  LOCKOUT_CEILING_FAILURES,
-  LOCKOUT_FLOOR_MINUTES,
-  LOCKOUT_MINUTES,
-} from '../policy/keys.js'
+import { createHmac } from 'node:crypto'
+
+import { sql, type SQL, type SQLWrapper } from 'drizzle-orm'
+
+import { familiarAddress } from '../db/schema/lockout.js'
+import type { PolicyValues } from '../policy/read.js'
 
 export interface LockoutPolicy {
   afterFailures: number
   minutes: number
+  maxMinutes: number
 }
 
-/**
- * What the install is set to, floored and capped.
- *
- * **A stored value is not trusted.** Settings are a write path, and one that
- * could be set to `after 10000 failures` would turn the control off while the
- * screen still showed a number.
- */
-export function policyFrom(stored: {
-  afterFailures?: unknown
-  minutes?: unknown
-}): LockoutPolicy {
-  const failures = Number(stored.afterFailures)
-  const minutes = Number(stored.minutes)
+/** The install's settings, with the longest lock never shorter than the first. */
+export function policyFrom(values: PolicyValues): LockoutPolicy {
+  const minutes = values['auth.lockoutMinutes']
   return {
-    afterFailures:
-      Number.isInteger(failures) && failures >= 1 && failures <= LOCKOUT_CEILING_FAILURES
-        ? failures
-        : LOCKOUT_AFTER_FAILURES,
-    minutes:
-      Number.isInteger(minutes) && minutes >= LOCKOUT_FLOOR_MINUTES
-        ? minutes
-        : LOCKOUT_MINUTES,
+    afterFailures: values['auth.lockoutAfterFailures'],
+    minutes,
+    maxMinutes: Math.max(minutes, values['auth.lockoutMaxMinutes']),
   }
 }
 
-export interface LockState {
-  failedSignIns: number
-  lockedUntil: Date | null
+/** Whether a run locked until `lockedUntil` is shut at `now`; open from that instant on. */
+export function isLocked(lockedUntil: Date | null, now: Date): boolean {
+  return lockedUntil !== null && lockedUntil.getTime() > now.getTime()
 }
+
+/** Days an address stays familiar after the last right password from it. */
+export const FAMILIAR_FOR_DAYS = 90
+
+/** How many of its most recent familiar addresses an account keeps. */
+export const FAMILIAR_AT_MOST = 20
 
 /**
- * Is this account shut right now?
- *
- * **Compared against a passed clock, not `Date.now()`**, so the test that
- * matters - the moment a lock expires - is expressible without sleeping.
+ * Whether `address` is familiar to the account `userId` names at `now`: its
+ * right password came from there within `FAMILIAR_FOR_DAYS`, and the address
+ * is among the account's `FAMILIAR_AT_MOST` most recent.
  */
-export function isLocked(state: LockState, now: Date): boolean {
-  return state.lockedUntil !== null && state.lockedUntil.getTime() > now.getTime()
+export function familiarTo(userId: SQLWrapper, address: string, now: Date): SQL<boolean> {
+  const held = familiarAddress
+  return sql<boolean>`exists (select 1 from (
+    select ${held.address} as address from ${held}
+    where ${held.userId} = ${userId}
+      and ${held.lastRightAt} > ${now.toISOString()}::timestamptz - make_interval(days => ${FAMILIAR_FOR_DAYS})
+    order by ${held.lastRightAt} desc, ${held.address}
+    limit ${FAMILIAR_AT_MOST}
+  ) recent where recent.address = ${address})`
 }
 
-/**
- * What one more failure does to the account.
- *
- * Returns the row to write, and whether this failure is the one that shut it -
- * the caller needs that to record a line, and must not re-record on every
- * subsequent attempt against an already-locked account.
- */
-export function afterFailure(
-  state: LockState,
-  policy: LockoutPolicy,
-  now: Date,
-): { failedSignIns: number; lockedUntil: Date | null; justLocked: boolean } {
-  const failedSignIns = state.failedSignIns + 1
-  if (failedSignIns < policy.afterFailures) {
-    return { failedSignIns, lockedUntil: state.lockedUntil, justLocked: false }
-  }
-  return {
-    failedSignIns,
-    lockedUntil: new Date(now.getTime() + policy.minutes * 60_000),
-    // Already shut is not newly shut. Recording every attempt against a locked
-    // account would bury the one line that says when it shut.
-    justLocked: !isLocked(state, now),
-  }
-}
+/** How many of its latest wrong passwords a run recognises when offered again. */
+export const REMEMBERED_MISSES = 3
 
-/** A success clears both, or the next single failure shuts the account again. */
-export const CLEARED = { failedSignIns: 0, lockedUntil: null } as const
+/** What a run keeps of a wrong password: a MAC under the install's secret over the account and the password. */
+export function missOf(secret: string, userId: string, password: string): string {
+  return createHmac('sha256', secret).update(`sign-in-miss\0${userId}\0${password}`).digest('base64url')
+}

@@ -6,23 +6,29 @@
  * it, and a document key that resolves across cases hands one customer's report
  * to another. Everything else here degrades visibly.
  */
-import { eq } from 'drizzle-orm'
+import { AsyncResource } from 'node:async_hooks'
+
+import { and, eq, like, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
+import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { as } from '../../test/acting.js'
 import { writeSyncStep2 } from 'y-protocols/sync'
 import * as Y from 'yjs'
 
 import { CasesService } from '../cases/cases.service.js'
 import {
   NOTE_FRAGMENT,
+  PROSE_PACE,
   ProseService,
   noteText,
   reportDocument,
   type ProseRelay,
 } from './prose.service.js'
-import { caseNotes, cases, reports, user } from '../db/schema/index.js'
-import { openTestPool } from '../../test/database.js'
+import { caseNotes, cases, changeFeed, installActivity, proseAcceptances, reportBlocks, reports, user } from '../db/schema/index.js'
+import { hasConcurrentConnections, openTestPool } from '../../test/database.js'
+import { suiteStore } from '../../test/evidence-on-disk.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
@@ -33,17 +39,25 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/** The fragments a test writes into: the sections of the report it last made, once it has made one. */
+let sections: [string, string] = ['block-1', 'block-2']
+
 /**
  * One client's edit as a raw Yjs update, with the document that made it.
  *
  * Raw, not framed: every caller wraps it in `framed` before the service sees
  * it, and the two are what this file's gate assertions turn on.
  */
-function typed(text: string, fragment = 'block-1'): { update: Uint8Array; doc: Y.Doc } {
+function typed(text: string, fragment = sections[0]): { update: Uint8Array; doc: Y.Doc } {
   const doc = new Y.Doc({ gc: false })
   doc.getXmlFragment(fragment).insert(0, [new Y.XmlText(text)])
   return { update: Y.encodeStateAsUpdate(doc), doc }
 }
+
+/** The analyst every frame here is written as. */
+const WRITER = { id: 'prose-analyst', label: 'Prose Analyst', headers: {} }
+/** A second analyst, writing on the other instance. */
+const COWRITER = { id: 'prose-cowriter', label: 'Prose Cowriter', headers: {} }
 
 // **Ended once, for the file.** The pool is shared across every block here, so
 // a `describe` that closes it in its own teardown takes the next one down with
@@ -51,6 +65,31 @@ function typed(text: string, fragment = 'block-1'): { update: Uint8Array; doc: Y
 // the code under test rather than in the harness.
 afterAll(async () => {
   if (pool) await pool.end()
+})
+
+/**
+ * **The analyst every block here writes as, seeded for the file rather than by
+ * one block.** Three `describe`s open cases as `prose-analyst`, and a case
+ * carries `created_by` into `user`: a block that runs before whichever one
+ * happened to insert the row gets
+ * `cases_created_by_user_id_fkey` rather than the behaviour it came to assert.
+ */
+beforeAll(async () => {
+  if (!seed) return
+  const now = new Date()
+  await seed
+    .insert(user)
+    .values(
+      [WRITER, COWRITER].map((who) => ({
+        id: who.id,
+        name: who.label,
+        email: `${who.id}@example.test`,
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      })),
+    )
+    .onConflictDoNothing()
 })
 
 /**
@@ -80,9 +119,53 @@ describe('telling a read from a write', () => {
     // unreadable as harmless would let a truncated update past the gate.
     expect(codec.isStateRequest(new Uint8Array())).toBe(false)
   })
+
+  describe('a frame that adds nothing', () => {
+    const held = () => {
+      const doc = new Y.Doc({ gc: false })
+      doc.getXmlFragment('block-1').insert(0, [new Y.XmlText('as filed')])
+      return doc
+    }
+    const copyOf = (doc: Y.Doc) => {
+      const copy = new Y.Doc({ gc: false })
+      Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc))
+      return copy
+    }
+    const step2 = (doc: Y.Doc) => {
+      const encoder = encoding.createEncoder()
+      writeSyncStep2(encoder, doc)
+      return encoding.toUint8Array(encoder)
+    }
+
+    it('is a step 2 or an update the document already holds', () => {
+      const doc = held()
+      expect(codec.addsNothing(doc, step2(copyOf(doc)))).toBe(true)
+      expect(codec.addsNothing(doc, framed(Y.encodeStateAsUpdate(copyOf(doc))))).toBe(true)
+      expect(codec.addsNothing(doc, helloFrom(new Y.Doc()))).toBe(true)
+    })
+
+    it('is not one carrying text the document lacks', () => {
+      const doc = held()
+      const theirs = copyOf(doc)
+      theirs.getXmlFragment('block-1').insert(1, [new Y.XmlText('rewritten')])
+      expect(codec.addsNothing(doc, step2(theirs))).toBe(false)
+    })
+
+    it('is not one carrying only a deletion the document lacks', () => {
+      const doc = held()
+      const theirs = copyOf(doc)
+      theirs.getXmlFragment('block-1').delete(0, 1)
+      expect(codec.addsNothing(doc, step2(theirs))).toBe(false)
+    })
+
+    it('is not one nobody can decode', () => {
+      expect(codec.addsNothing(held(), new Uint8Array())).toBe(false)
+      expect(codec.addsNothing(held(), new Uint8Array([1, 200]))).toBe(false)
+    })
+  })
 })
 
-describe.skipIf(!db)('the prose document', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('the prose document', () => {
   let prose: ProseService
   let cases_: CasesService
   let actorId: string
@@ -93,29 +176,22 @@ describe.skipIf(!db)('the prose document', () => {
       .insert(reports)
       .values({ caseId: row.id, label: 'Under test', createdBy: actorId })
       .returning()
+    const made = await seed!
+      .insert(reportBlocks)
+      .values([0, 1].map((position) => ({ caseId: row.id, reportId: report!.id, position, createdBy: actorId })))
+      .returning({ id: reportBlocks.id })
+    sections = [made[0]!.id, made[1]!.id]
     return { caseId: row.id, reportId: report!.id }
   }
 
   beforeAll(async () => {
     actorId = 'prose-analyst'
-    const now = new Date()
-    await seed!
-      .insert(user)
-      .values({
-        id: actorId,
-        name: 'Prose Analyst',
-        email: 'prose@example.test',
-        emailVerified: true,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoNothing()
 
-    cases_ = new CasesService(db!, {
+    cases_ = as('prose-analyst', new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
-    prose = new ProseService(db!)
+    } as never))
+    prose = as('prose-analyst', new ProseService(db!))
   })
 
   afterAll(async () => {
@@ -149,8 +225,8 @@ describe.skipIf(!db)('the prose document', () => {
       ])
       expect(here).toBe(there)
 
-      here.getXmlFragment('block-1').insert(0, [new Y.XmlText('typed by the first analyst')])
-      expect(there.getXmlFragment('block-1').toJSON()).toContain('first analyst')
+      here.getXmlFragment(sections[0]).insert(0, [new Y.XmlText('typed by the first analyst')])
+      expect(there.getXmlFragment(sections[0]).toJSON()).toContain('first analyst')
 
       await prose.release(caseId, reportDocument(reportId))
       expect(there.isDestroyed).toBe(false)
@@ -161,7 +237,7 @@ describe.skipIf(!db)('the prose document', () => {
       const { caseId, reportId } = await freshReport()
 
       const first = await prose.open(caseId, reportDocument(reportId))
-      first.getXmlFragment('block-1').insert(0, [new Y.XmlText('something to flush')])
+      first.getXmlFragment(sections[0]).insert(0, [new Y.XmlText('something to flush')])
 
       const leaving = prose.release(caseId, reportDocument(reportId))
       const second = await prose.open(caseId, reportDocument(reportId))
@@ -178,23 +254,7 @@ describe.skipIf(!db)('the prose document', () => {
       expect(await prose.resolve(caseId, `reports:${reportId}:document`)).toEqual({
         table: 'reports',
         id: reportId,
-        sentAt: null,
       })
-    })
-
-    /**
-     * **The state the caller refuses a write on.** `live.gateway` decides per
-     * frame whether an update may be applied, and it decides from this - so a
-     * `resolve` that answers `sentAt: null` for a filed report reopens the
-     * whole door with every one of its own tests still green.
-     */
-    it('carries when a report was filed', async () => {
-      const { caseId, reportId } = await freshReport()
-      const sentAt = new Date('2026-08-01T09:30:00.000Z')
-      await seed!.update(reports).set({ sentAt }).where(eq(reports.id, reportId))
-
-      const address = await prose.resolve(caseId, `reports:${reportId}:document`)
-      expect(address?.sentAt?.toISOString()).toBe(sentAt.toISOString())
     })
 
     it('refuses a report belonging to another case', async () => {
@@ -224,12 +284,180 @@ describe.skipIf(!db)('the prose document', () => {
     })
   })
 
+  /**
+   * **Readable, or the refusal is worse than the hole.** A sent report's text
+   * still loads; only a frame carrying content is refused.
+   */
+  describe('a sent report', () => {
+    const SENT = new Date('2026-08-01T09:30:00.000Z')
+
+    async function filed(): Promise<{ caseId: string; address: ReturnType<typeof reportDocument>; doc: Y.Doc }> {
+      const { caseId, reportId } = await freshReport()
+      const written = new Y.Doc({ gc: false })
+      written.getXmlFragment(sections[0]).insert(0, [new Y.XmlText('as filed')])
+      await seed!
+        .update(reports)
+        .set({ document: Buffer.from(Y.encodeStateAsUpdate(written)), sentAt: SENT, frozen: {}, frozenAt: SENT })
+        .where(eq(reports.id, reportId))
+      const address = reportDocument(reportId)
+      return { caseId, address, doc: await prose.open(caseId, address) }
+    }
+
+    it('answers a state request, so the filed text still loads', async () => {
+      const { caseId, address } = await filed()
+      const mine = new Y.Doc({ gc: false })
+
+      const applied = await prose.apply(caseId, address, helloFrom(mine), 'a-socket', WRITER)
+      Y.applyUpdate(mine, stepTwoPayload('reply' in applied ? applied.reply : null))
+
+      expect(mine.getXmlFragment(sections[0]).toJSON()).toContain('as filed')
+      await prose.release(caseId, address)
+    })
+
+    it.each([
+      ['an update', () => framed(typed('quietly rewritten after filing').update)],
+      ['a step 2', () => stepTwo(typed('rewritten by answering a hello').doc)],
+    ])('refuses %s with the stamp and leaves the document byte-identical', async (_name, frame) => {
+      const { caseId, address, doc } = await filed()
+      const before = Buffer.from(Y.encodeStateAsUpdate(doc))
+
+      expect(await prose.apply(caseId, address, frame(), 'a-socket', WRITER)).toEqual({ refused: SENT })
+
+      expect(Buffer.from(Y.encodeStateAsUpdate(doc)).equals(before)).toBe(true)
+      await prose.release(caseId, address)
+    })
+
+    it('does not refuse a client answering with nothing new', async () => {
+      const { caseId, address, doc } = await filed()
+      const copy = new Y.Doc({ gc: false })
+      Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc))
+
+      expect(await prose.apply(caseId, address, stepTwo(copy), 'a-socket', WRITER)).toEqual({ reply: null })
+      await prose.release(caseId, address)
+    })
+  })
+
+  describe('a document held while a send decides', () => {
+    async function held() {
+      const { caseId, reportId } = await freshReport()
+      const address = reportDocument(reportId)
+      const doc = await prose.open(caseId, address)
+      return { caseId, reportId, address, doc, seal: await prose.seal(caseId, reportId) }
+    }
+
+    it('keeps content waiting, and refuses it with the stamp the send settles on', async () => {
+      const { caseId, address, doc, seal } = await held()
+      const stamp = new Date('2026-09-01T12:00:00.000Z')
+
+      const waiting = prose.apply(caseId, address, framed(typed('typed while it was sent').update), 'a-socket', WRITER)
+      await new Promise((wake) => setTimeout(wake, 50))
+      expect(doc.getXmlFragment(sections[0]).toJSON()).not.toContain('typed while')
+
+      await seal.settle(stamp)
+      expect(await waiting).toEqual({ refused: stamp })
+      expect(doc.getXmlFragment(sections[0]).toJSON()).not.toContain('typed while')
+      await prose.release(caseId, address)
+    })
+
+    it('applies what waited when the send does not stamp', async () => {
+      const { caseId, address, doc, seal } = await held()
+
+      const waiting = prose.apply(caseId, address, framed(typed('typed while a send failed').update), 'a-socket', WRITER)
+      await seal.settle(null)
+
+      expect(await waiting).toEqual({ reply: null })
+      expect(doc.getXmlFragment(sections[0]).toJSON()).toContain('typed while a send failed')
+      await prose.release(caseId, address)
+    })
+
+    it('waits out a flush already storing, so what it stores is named before the send decides', async () => {
+      const { caseId, reportId } = await freshReport()
+      const address = reportDocument(reportId)
+      await prose.open(caseId, address)
+      await prose.apply(caseId, address, framed(typed('typed before the send').update), 'a-socket', WRITER)
+      // Another connection holds the row, so the flush started below cannot land yet.
+      const holder = await seedPool!.connect()
+      await holder.query('begin')
+      await holder.query('select 1 from reports where id = $1 for update', [reportId])
+      const flushing = prose.flush(caseId, address)
+      let sealed = false
+      const sealing = prose.seal(caseId, reportId).then((seal) => {
+        sealed = true
+        return seal
+      })
+      await new Promise((wake) => setTimeout(wake, 150))
+      const early = sealed
+      await holder.query('rollback')
+      holder.release()
+      await flushing
+      const seal = await sealing
+
+      const feed = await seed!
+        .select({ actorId: changeFeed.actorId })
+        .from(changeFeed)
+        .where(and(eq(changeFeed.entity, 'reports'), eq(changeFeed.entityId, reportId)))
+      expect({ early, named: feed.map((row) => row.actorId) }).toEqual({ early: false, named: [WRITER.id] })
+      await seal.settle(null)
+      await prose.release(caseId, address)
+    })
+
+    it('throws and holds nothing where what was typed cannot be stored', async () => {
+      const { caseId, reportId } = await freshReport()
+      const address = reportDocument(reportId)
+      await prose.open(caseId, address)
+      await prose.apply(caseId, address, framed(typed('into a report about to go').update), 'a-socket', WRITER)
+      // The audit refuses the save's line, so what was typed cannot be stored.
+      const owner = openTestPool(process.env['TEST_DATABASE_URL']!)
+      const refusal = `refuse_the_send_${String(process.pid)}`
+      await owner.query(
+        `create or replace function ${refusal}() returns trigger language plpgsql as $f$ begin if new.detail->>'record' = '${reportId}' then raise exception 'the audit refuses this line'; end if; return new; end $f$`,
+      )
+      await owner.query(`create trigger ${refusal} before insert on install_activity for each row execute function ${refusal}()`)
+      try {
+        await expect(prose.seal(caseId, reportId)).rejects.toThrow('could not be stored')
+        expect(await prose.apply(caseId, address, framed(typed('after').update), 'a-socket', WRITER)).toEqual({
+          reply: null,
+        })
+      } finally {
+        await owner.query(`drop trigger if exists ${refusal} on install_activity`)
+        await owner.query(`drop function if exists ${refusal}()`)
+        await owner.end()
+      }
+      await prose.release(caseId, address)
+    })
+
+    it('answers a state request without waiting', async () => {
+      const { caseId, address, seal } = await held()
+
+      const answered = await prose.apply(caseId, address, helloFrom(new Y.Doc()), 'a-socket', WRITER)
+
+      expect('reply' in answered && answered.reply).toBeTruthy()
+      await seal.settle(null)
+      await prose.release(caseId, address)
+    })
+  })
+
+  it('measures a draft\'s frames once per writer between stores, not once per keystroke', async () => {
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    await prose.open(caseId, address)
+    const measured = vi.spyOn(prose, 'addsNothing')
+
+    for (const keystroke of ['an ordinary keystroke', 'and another', 'and a third']) {
+      await prose.apply(caseId, address, framed(typed(keystroke).update), 'a-socket', WRITER)
+    }
+
+    expect(measured).toHaveBeenCalledTimes(1)
+    measured.mockRestore()
+    await prose.release(caseId, address)
+  })
+
   describe('what survives', () => {
     it('writes the document to its row and reads it back', async () => {
       const { caseId, reportId } = await freshReport()
-      const doc = await prose.open(caseId, reportDocument(reportId))
+      await prose.open(caseId, reportDocument(reportId))
       const { update } = typed('the initial finding was a false positive')
-      prose.applySync(doc, framed(update), 'a-socket')
+      await prose.apply(caseId, reportDocument(reportId), framed(update), 'a-socket', WRITER)
       await prose.flush(caseId, reportDocument(reportId))
       await prose.release(caseId, reportDocument(reportId))
 
@@ -237,47 +465,61 @@ describe.skipIf(!db)('the prose document', () => {
       expect(row!.document).not.toBeNull()
 
       const reopened = await prose.open(caseId, reportDocument(reportId))
-      expect(reopened.getXmlFragment('block-1').toJSON()).toContain('false positive')
+      expect(reopened.getXmlFragment(sections[0]).toJSON()).toContain('false positive')
       await prose.release(caseId, reportDocument(reportId))
+    })
+
+    it('bounds every statement of a save of written words', async () => {
+      const { caseId, reportId } = await freshReport()
+      const address = reportDocument(reportId)
+      await prose.open(caseId, address)
+      await prose.apply(caseId, address, framed(typed('bounded').update), 'a-socket', WRITER)
+      const owner = openTestPool(process.env['TEST_DATABASE_URL']!)
+      const unbounded = `refuse_an_unbounded_save_${String(process.pid)}`
+      await owner.query(
+        `create or replace function ${unbounded}() returns trigger language plpgsql as $f$ begin if new.id = '${reportId}' and current_setting('statement_timeout') = '0' then raise exception 'an unbounded save'; end if; return new; end $f$`,
+      )
+      await owner.query(`create trigger ${unbounded} before update on reports for each row execute function ${unbounded}()`)
+      try {
+        await prose.flush(caseId, address)
+      } finally {
+        await owner.query(`drop trigger if exists ${unbounded} on reports`)
+        await owner.query(`drop function if exists ${unbounded}()`)
+        await owner.end()
+      }
+
+      const [row] = await seed!.select({ updatedBy: reports.updatedBy }).from(reports).where(eq(reports.id, reportId))
+      expect(row?.updatedBy).toBe(WRITER.id)
+      await prose.release(caseId, address)
     })
 
     it('flushes when the last reader leaves, not the first', async () => {
       const { caseId, reportId } = await freshReport()
-      const first = await prose.open(caseId, reportDocument(reportId))
+      await prose.open(caseId, reportDocument(reportId))
       await prose.open(caseId, reportDocument(reportId))
 
-      prose.applySync(first, framed(typed('half a sentence').update), 'a-socket')
+      await prose.apply(caseId, reportDocument(reportId), framed(typed('half a sentence').update), 'a-socket', WRITER)
       await prose.release(caseId, reportDocument(reportId))
 
-      prose.applySync(first, framed(typed(' and the rest', 'block-2').update), 'a-socket')
+      await prose.apply(caseId, reportDocument(reportId), framed(typed(' and the rest', sections[1]).update), 'a-socket', WRITER)
       await prose.release(caseId, reportDocument(reportId))
 
       const reopened = await prose.open(caseId, reportDocument(reportId))
-      expect(reopened.getXmlFragment('block-2').toJSON()).toContain('and the rest')
-      await prose.release(caseId, reportDocument(reportId))
-    })
-
-    it('keeps deleted text, because the document does not collect', async () => {
-      // `gc: false` is a property of the record rather than of a session: one
-      // collecting peer exports a document with its history already gone, and
-      // every later reader inherits the loss.
-      const { caseId, reportId } = await freshReport()
-      const doc = await prose.open(caseId, reportDocument(reportId))
-      expect(doc.gc).toBe(false)
+      expect(reopened.getXmlFragment(sections[1]).toJSON()).toContain('and the rest')
       await prose.release(caseId, reportDocument(reportId))
     })
 
     it('holds two sections of one report in one document', async () => {
       const { caseId, reportId } = await freshReport()
-      const doc = await prose.open(caseId, reportDocument(reportId))
-      prose.applySync(doc, framed(typed('summary text', 'block-a').update), 'a')
-      prose.applySync(doc, framed(typed('root cause text', 'block-b').update), 'b')
+      await prose.open(caseId, reportDocument(reportId))
+      await prose.apply(caseId, reportDocument(reportId), framed(typed('summary text', sections[0]).update), 'a', WRITER)
+      await prose.apply(caseId, reportDocument(reportId), framed(typed('root cause text', sections[1]).update), 'b', WRITER)
       await prose.flush(caseId, reportDocument(reportId))
       await prose.release(caseId, reportDocument(reportId))
 
       const reopened = await prose.open(caseId, reportDocument(reportId))
-      expect(reopened.getXmlFragment('block-a').toJSON()).toContain('summary')
-      expect(reopened.getXmlFragment('block-b').toJSON()).toContain('root cause')
+      expect(reopened.getXmlFragment(sections[0]).toJSON()).toContain('summary')
+      expect(reopened.getXmlFragment(sections[1]).toJSON()).toContain('root cause')
       await prose.release(caseId, reportDocument(reportId))
     })
   })
@@ -319,7 +561,7 @@ describe.skipIf(!db)('the prose document', () => {
  * hit and its CSV cell - so the two failures worth the most here are the column
  * winning over the document, and a key naming one table reaching the other.
  */
-describe.skipIf(!db)('a case note as a live document', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('a case note as a live document', () => {
   let prose: ProseService
   let cases_: CasesService
   let actorId: string
@@ -346,31 +588,41 @@ describe.skipIf(!db)('a case note as a live document', () => {
 
   beforeAll(() => {
     actorId = 'prose-analyst'
-    cases_ = new CasesService(db!, {
+    cases_ = as('prose-analyst', new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
-    prose = new ProseService(db!)
+    } as never))
+    prose = as('prose-analyst', new ProseService(db!))
   })
 
   afterAll(async () => {
     await seed!.delete(cases)
   })
 
+  // A note that arrived with its words and no document: a demo, a CSV import, an archive.
+  it('seeds a note once, so a client holding the first open adds nothing when it returns', async () => {
+    const line = 'arrived with this line'
+    const { caseId, noteId } = await freshNote(line)
+    const address = { table: 'casenotes' as const, id: noteId }
+    const first = await prose.open(caseId, address)
+    const client = new Y.Doc()
+    Y.applyUpdate(client, Y.encodeStateAsUpdate(first))
+    await prose.release(caseId, address)
+
+    const again = await prose.open(caseId, address)
+    Y.applyUpdate(again, Y.encodeStateAsUpdate(client))
+    const shown = again.getXmlFragment(NOTE_FRAGMENT).toJSON()
+    await prose.release(caseId, address)
+
+    expect(shown.split(line)).toHaveLength(2)
+  })
+
   describe('what a frame may address', () => {
-    /**
-     * **`sentAt` has to be null, and asserting the whole object is the point.**
-     * `live.gateway` refuses every frame carrying content while the stamp is
-     * set, so a `resolve` that put any date there would make every note in the
-     * app silently read-only - the text would load, the analyst would type, and
-     * nothing would be kept.
-     */
-    it('resolves a note in this case, with nothing that could freeze it', async () => {
+    it('resolves a note in this case', async () => {
       const { caseId, noteId } = await freshNote()
       expect(await prose.resolve(caseId, `casenotes:${noteId}:document`)).toEqual({
         table: 'casenotes',
         id: noteId,
-        sentAt: null,
       })
     })
 
@@ -430,8 +682,8 @@ describe.skipIf(!db)('a case note as a live document', () => {
     it('writes both the document and the words it now holds', async () => {
       const { caseId, noteId } = await freshNote()
       const record = { table: 'casenotes' as const, id: noteId }
-      const doc = await prose.open(caseId, record)
-      prose.applySync(doc, framed(wrote('the mailbox was read in bulk')), 'a-socket')
+      await prose.open(caseId, record)
+      await prose.apply(caseId, record, framed(wrote('the mailbox was read in bulk')), 'a-socket', WRITER)
       await prose.flush(caseId, record)
       await prose.release(caseId, record)
 
@@ -475,16 +727,16 @@ describe.skipIf(!db)('a case note as a live document', () => {
     /**
      * **The seeding is a one-way door, and this is the test that matters.**
      * Once a document exists it is the record; re-seeding from the column would
-     * let anything that wrote `note` behind the document's back - an import, a
-     * bulk PATCH, a hand-run `UPDATE` - reappear on top of what two analysts
-     * had typed, with no write having failed.
+     * let a hand-run `UPDATE` of `note` reappear on top of what two analysts
+     * had typed. The routes refuse `note` once a note exists:
+     * `test/a-note-has-one-writer.test.ts`.
      */
     it('never re-seeds a document that already exists', async () => {
       const { caseId, noteId } = await freshNote('what it arrived with')
       const record = { table: 'casenotes' as const, id: noteId }
 
-      const first = await prose.open(caseId, record)
-      prose.applySync(first, framed(wrote('what an analyst typed')), 'a-socket')
+      await prose.open(caseId, record)
+      await prose.apply(caseId, record, framed(wrote('what an analyst typed')), 'a-socket', WRITER)
       await prose.flush(caseId, record)
       await prose.release(caseId, record)
 
@@ -497,6 +749,7 @@ describe.skipIf(!db)('a case note as a live document', () => {
       expect(noteText(reopened)).toContain('what an analyst typed')
       expect(noteText(reopened)).not.toContain('straight into the column')
 
+      await prose.apply(caseId, record, framed(wrote('and a line more')), 'a-socket', WRITER)
       await prose.flush(caseId, record)
       await prose.release(caseId, record)
       const [row] = await seed!.select().from(caseNotes).where(eq(caseNotes.id, noteId))
@@ -534,6 +787,20 @@ describe.skipIf(!db)('a case note as a live document', () => {
   })
 })
 
+/** A step 2 carrying everything `doc` holds, as a client answering a hello sends it. */
+function stepTwo(doc: Y.Doc): Uint8Array {
+  const encoder = encoding.createEncoder()
+  writeSyncStep2(encoder, doc)
+  return encoding.toUint8Array(encoder)
+}
+
+/** The update a step 2 reply carries. */
+function stepTwoPayload(reply: Uint8Array | null): Uint8Array {
+  const decoder = decoding.createDecoder(reply ?? new Uint8Array())
+  decoding.readVarUint(decoder)
+  return decoding.readVarUint8Array(decoder)
+}
+
 function framed(update: Uint8Array): Uint8Array {
   return new ProseFrames().update(update)
 }
@@ -558,15 +825,19 @@ class ProseFrames {
 
 /**
  * A pub/sub with no Redis: every subscriber on the bus hears every publish, in
- * order, which is the only property `ProseService` relies on.
+ * order, which is the only property `ProseService` relies on. It delivers in
+ * the context it was built in, as a Redis subscriber hears nobody's request.
  */
 class Bus implements ProseRelay {
   private readonly listeners = new Map<string, Set<(payload: string) => void>>()
+  private readonly deliver = AsyncResource.bind((listener: (payload: string) => void, payload: string) =>
+    listener(payload),
+  )
   readonly published: string[] = []
 
   publish(caseId: string, payload: string): Promise<void> {
     this.published.push(payload)
-    for (const listener of this.listeners.get(caseId) ?? []) listener(payload)
+    for (const listener of this.listeners.get(caseId) ?? []) this.deliver(listener, payload)
     return Promise.resolve()
   }
 
@@ -578,7 +849,7 @@ class Bus implements ProseRelay {
   }
 }
 
-describe.skipIf(!db)('two server instances on one report', () => {
+describe.skipIf(!db || !hasConcurrentConnections())('two server instances on one report', () => {
   let cases_: CasesService
   let actorId: string
 
@@ -588,15 +859,20 @@ describe.skipIf(!db)('two server instances on one report', () => {
       .insert(reports)
       .values({ caseId: row.id, label: 'Under test', createdBy: actorId })
       .returning()
+    const made = await seed!
+      .insert(reportBlocks)
+      .values([0, 1].map((position) => ({ caseId: row.id, reportId: report!.id, position, createdBy: actorId })))
+      .returning({ id: reportBlocks.id })
+    sections = [made[0]!.id, made[1]!.id]
     return { caseId: row.id, reportId: report!.id }
   }
 
   beforeAll(() => {
     actorId = 'prose-analyst'
-    cases_ = new CasesService(db!, {
+    cases_ = as('prose-analyst', new CasesService(db!, suiteStore(), {
       announce: () => {},
       othersOn: () => Promise.resolve([]),
-    } as never)
+    } as never))
   })
 
   it('carries an edit made on one instance to the document held by the other', async () => {
@@ -605,8 +881,8 @@ describe.skipIf(!db)('two server instances on one report', () => {
     // state over one row - the second analyst's afternoon disappears at the
     // next reload, with nothing having failed.
     const bus = new Bus()
-    const one = new ProseService(db!, bus)
-    const two = new ProseService(db!, bus)
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
     const { caseId, reportId } = await freshReport()
 
     const here = await one.open(caseId, reportDocument(reportId))
@@ -614,15 +890,15 @@ describe.skipIf(!db)('two server instances on one report', () => {
 
     one.applySync(here, framed(typed('written on instance one').update), 'a-socket')
 
-    expect(there.getXmlFragment('block-1').toJSON()).toContain('written on instance one')
+    expect(there.getXmlFragment(sections[0]).toJSON()).toContain('written on instance one')
     await one.release(caseId, reportDocument(reportId))
     await two.release(caseId, reportDocument(reportId))
   })
 
   it('turns one edit into one frame, not one per instance holding the document', async () => {
     const bus = new Bus()
-    const one = new ProseService(db!, bus)
-    const two = new ProseService(db!, bus)
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
     const { caseId, reportId } = await freshReport()
 
     const here = await one.open(caseId, reportDocument(reportId))
@@ -645,8 +921,8 @@ describe.skipIf(!db)('two server instances on one report', () => {
     // A document nobody holds must not keep applying updates: it is not being
     // flushed any more, so the state would only ever diverge from the row.
     const bus = new Bus()
-    const one = new ProseService(db!, bus)
-    const two = new ProseService(db!, bus)
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
     const { caseId, reportId } = await freshReport()
 
     const here = await one.open(caseId, reportDocument(reportId))
@@ -654,17 +930,199 @@ describe.skipIf(!db)('two server instances on one report', () => {
     await two.release(caseId, reportDocument(reportId))
 
     one.applySync(here, framed(typed('after the other left').update), 'a-socket')
-    expect(there.getXmlFragment('block-1').toJSON()).not.toContain('after the other left')
+    expect(there.getXmlFragment(sections[0]).toJSON()).not.toContain('after the other left')
     await one.release(caseId, reportDocument(reportId))
   })
 
+  it('stores what a writer types after a relayed frame, at a quiet moment', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    const here = await one.open(caseId, address)
+    await two.open(caseId, address)
+
+    one.applySync(here, framed(typed('relayed first').update), 'a-socket')
+    await new Promise((wake) => setTimeout(wake, PROSE_PACE.longestWaitMs + 1_000))
+    await two.apply(caseId, address, framed(typed('typed on instance two', sections[1]).update), 'a-socket', WRITER)
+    await new Promise((wake) => setTimeout(wake, PROSE_PACE.quietMs + 1_500))
+
+    const [row] = await seed!.select({ document: reports.document }).from(reports).where(eq(reports.id, reportId))
+    const stored = new Y.Doc()
+    if (row?.document) Y.applyUpdate(stored, row.document)
+    expect(stored.getXmlFragment(sections[1]).toJSON()).toContain('typed on instance two')
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+  }, 20_000)
+
+  /** What the store holds for a report: its words, who it names last, and the change rows and audit lines naming writers. */
+  async function storedReport(reportId: string) {
+    const [row] = await seed!
+      .select({ document: reports.document, updatedBy: reports.updatedBy })
+      .from(reports)
+      .where(eq(reports.id, reportId))
+    const words = new Y.Doc()
+    if (row?.document) Y.applyUpdate(words, row.document)
+    const feed = await seed!
+      .select({ actorId: changeFeed.actorId })
+      .from(changeFeed)
+      .where(and(eq(changeFeed.entity, 'reports'), eq(changeFeed.entityId, reportId)))
+    const audit = await seed!
+      .select({ actorId: installActivity.actorId })
+      .from(installActivity)
+      .where(
+        and(
+          sql`${installActivity.detail}->>'record' = ${reportId}`,
+          like(installActivity.targetLabel, 'live prose.sync%'),
+        ),
+      )
+    return {
+      text: words.getXmlFragment(sections[0]).toJSON(),
+      updatedBy: row?.updatedBy ?? null,
+      feed: feed.map((line) => line.actorId),
+      audit: audit.map((line) => line.actorId),
+    }
+  }
+
+  /** `work` with its quiet-moment timer held, so the instance that accepted the words does not store them first. */
+  async function withQuietHeld<T>(work: () => Promise<T>): Promise<T> {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    try {
+      return await work()
+    } finally {
+      vi.useRealTimers()
+    }
+  }
+
+  /** The acceptances the store holds for a report. */
+  const acceptancesOf = async (reportId: string) =>
+    (await seed!.select().from(proseAcceptances).where(eq(proseAcceptances.recordId, reportId))).length
+
+  it('names the writer another instance accepted when a send stores their relayed words', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    await one.open(caseId, address)
+    const there = await two.open(caseId, address)
+
+    await withQuietHeld(() =>
+      one.apply(caseId, address, framed(typed('accepted on instance one').update), 'a-socket', WRITER),
+    )
+    expect(there.getXmlFragment(sections[0]).toJSON()).toContain('accepted on instance one')
+
+    const seal = await two.seal(caseId, reportId)
+    const stored = await storedReport(reportId)
+    expect(stored.text).toContain('accepted on instance one')
+    expect(stored.updatedBy).toBe(WRITER.id)
+    expect(stored.feed).toEqual([WRITER.id])
+    expect(stored.audit).toEqual([WRITER.id])
+    await seal.settle(null)
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+  })
+
+  it('names the writers of both instances when one of them saves', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-cowriter', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    await one.open(caseId, address)
+    await two.open(caseId, address)
+
+    await withQuietHeld(async () => {
+      await one.apply(caseId, address, framed(typed('written on one').update), 'a-socket', WRITER)
+      await two.apply(caseId, address, framed(typed('written on two', sections[1]).update), 'a-socket', COWRITER)
+    })
+    const seal = await two.seal(caseId, reportId)
+
+    const stored = await storedReport(reportId)
+    expect(stored.feed.sort()).toEqual([WRITER.id, COWRITER.id].sort())
+    expect(stored.audit.sort()).toEqual([WRITER.id, COWRITER.id].sort())
+    await seal.settle(null)
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+  })
+
+  it('names one act once, whichever instance stores it first', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    await one.open(caseId, address)
+    await two.open(caseId, address)
+
+    await withQuietHeld(() => one.apply(caseId, address, framed(typed('stored once').update), 'a-socket', WRITER))
+    const seal = await two.seal(caseId, reportId)
+    await seal.settle(null)
+    await one.flush(caseId, address)
+
+    expect((await storedReport(reportId)).feed).toEqual([WRITER.id])
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+    expect(await acceptancesOf(reportId)).toBe(0)
+  })
+
+  it('tells the writer their words are lost when a send another instance made took none of them', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    await one.open(caseId, address)
+    await two.open(caseId, address)
+    const told: string[] = []
+    await one.watch(caseId, address, (state) => told.push(state))
+
+    const seal = await two.seal(caseId, reportId)
+    const stamp = new Date()
+    await new Promise((wake) => setTimeout(wake, 5))
+    await withQuietHeld(() => one.apply(caseId, address, framed(typed('after the send').update), 'a-socket', WRITER))
+    await seed!.update(reports).set({ sentAt: stamp, frozen: {}, frozenAt: stamp }).where(eq(reports.id, reportId))
+    await seal.settle(stamp)
+    await one.flush(caseId, address)
+
+    expect(told).toEqual(['lost'])
+    expect(await one.apply(caseId, address, framed(typed('and more').update), 'a-socket', WRITER)).toEqual({
+      refused: stamp,
+    })
+    expect((await storedReport(reportId)).text).not.toContain('after the send')
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+    expect(await acceptancesOf(reportId)).toBe(0)
+  })
+
+  it('stores nothing relayed that no acceptance on record names', async () => {
+    const bus = new Bus()
+    const one = as('prose-analyst', new ProseService(db!, bus))
+    const two = as('prose-analyst', new ProseService(db!, bus))
+    const { caseId, reportId } = await freshReport()
+    const address = reportDocument(reportId)
+    const here = await one.open(caseId, address)
+    await two.open(caseId, address)
+
+    // Applied with no writer, so nothing is accepted for it anywhere.
+    await withQuietHeld(() => Promise.resolve(one.applySync(here, framed(typed('accepted by nobody').update), 'a-socket')))
+    await two.flush(caseId, address)
+
+    const stored = await storedReport(reportId)
+    expect(stored.text).not.toContain('accepted by nobody')
+    expect(stored.feed).toEqual([])
+    await one.release(caseId, address)
+    await two.release(caseId, address)
+  })
+
   it('is correct for its own sockets with no relay at all', async () => {
-    const alone = new ProseService(db!)
+    const alone = as('prose-analyst', new ProseService(db!))
     const { caseId, reportId } = await freshReport()
     const doc = await alone.open(caseId, reportDocument(reportId))
 
     alone.applySync(doc, framed(typed('no relay needed').update), 'a-socket')
-    expect(doc.getXmlFragment('block-1').toJSON()).toContain('no relay needed')
+    expect(doc.getXmlFragment(sections[0]).toJSON()).toContain('no relay needed')
     await alone.release(caseId, reportDocument(reportId))
   })
 })
