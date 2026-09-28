@@ -127,13 +127,17 @@ export const Quiet: Story = {
   /**
    * Both halves of the variant, because the pointer decides which one shows.
    *
-   * The rest state has to be asserted with the pointer parked somewhere else:
-   * it stays where the previous story left it, and a story that read the rule
-   * without moving it first was told `underline` whenever that was one of these
-   * three links. -> #340
+   * `userEvent` is synthetic, and the real cursor sits at the page origin. A
+   * render under it draws one real `pointerover` a frame later, which marks
+   * the first link hovered or ends a hover already set on it, depending on
+   * where it lands. So the play lets that frame finish before its first move.
+   * -> #340
    */
   play: async ({ canvas, canvasElement, userEvent }) => {
     const first = canvas.getByRole('link', { name: 'social engineering' })
+    for (let frame = 0; frame < 2; frame++) {
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    }
     await userEvent.hover(canvasElement)
     await expect(getComputedStyle(first).textDecorationLine).toBe('none')
     await userEvent.hover(first)
