@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, waitFor } from 'storybook/test'
+import { expect, fn } from 'storybook/test'
 
 import { Link } from './link'
 
@@ -127,17 +127,21 @@ export const Quiet: Story = {
   /**
    * Both halves of the variant, because the pointer decides which one shows.
    *
-   * The rest state has to be asserted with the pointer parked somewhere else:
-   * it stays where the previous file left it, and a link laid out under it is
-   * marked hovered late enough to land after the park. So each half waits for
-   * the rule to settle: a wrong rule stays wrong, and still fails. -> #340
+   * `userEvent` is synthetic, and the real cursor sits at the page origin. A
+   * render under it draws one real `pointerover` a frame later, which marks
+   * the first link hovered or ends a hover already set on it, depending on
+   * where it lands. So the play lets that frame finish before its first move.
+   * -> #340
    */
   play: async ({ canvas, canvasElement, userEvent }) => {
     const first = canvas.getByRole('link', { name: 'social engineering' })
+    for (let frame = 0; frame < 2; frame++) {
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    }
     await userEvent.hover(canvasElement)
-    await waitFor(() => expect(getComputedStyle(first).textDecorationLine).toBe('none'))
+    await expect(getComputedStyle(first).textDecorationLine).toBe('none')
     await userEvent.hover(first)
-    await waitFor(() => expect(getComputedStyle(first).textDecorationLine).toBe('underline'))
+    await expect(getComputedStyle(first).textDecorationLine).toBe('underline')
   },
 }
 
