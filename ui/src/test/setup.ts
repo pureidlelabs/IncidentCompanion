@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { configure } from '@testing-library/dom'
-import { afterEach } from 'vitest'
+import { notifyManager } from '@tanstack/react-query'
+import { afterAll, afterEach } from 'vitest'
 
 import { resetSessionForTest } from '@/api/session'
 
@@ -29,6 +30,29 @@ configure({ asyncUtilTimeout: 5_000 })
 afterEach(() => {
   resetSessionForTest()
 })
+
+/**
+ * A query notification still pending when its test ends is dropped.
+ *
+ * TanStack delivers observer notifications on a `setTimeout(0)`. One left
+ * over when a file's jsdom is torn down reaches React after `window` has gone,
+ * and the worker fails with every test green, blaming whichever file is running
+ * then. Delivery within a test is unchanged. -> #1316
+ */
+const pendingNotifications = new Set<ReturnType<typeof setTimeout>>()
+notifyManager.setScheduler((notify) => {
+  const timer = setTimeout(() => {
+    pendingNotifications.delete(timer)
+    notify()
+  }, 0)
+  pendingNotifications.add(timer)
+})
+function dropPendingNotifications() {
+  for (const timer of pendingNotifications) clearTimeout(timer)
+  pendingNotifications.clear()
+}
+afterEach(dropPendingNotifications)
+afterAll(dropPendingNotifications)
 
 /**
  * jsdom lays nothing out and defines no `scrollIntoView`, so any component
