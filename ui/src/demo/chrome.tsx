@@ -110,16 +110,21 @@ export function DemoChrome({ build, onReset }: DemoChromeProps) {
   )
 }
 
-/** Mount it beside the application's root. */
-export function mountDemoChrome(props: DemoChromeProps): void {
+/** Mount it beside the application's root. Returns what unmounts it. */
+export function mountDemoChrome(props: DemoChromeProps): () => void {
   const host = document.createElement('div')
   host.setAttribute('data-part', 'demo-chrome')
   document.body.append(host)
-  createRoot(host).render(
+  const root = createRoot(host)
+  root.render(
     <StrictMode>
       <MotionConfig reducedMotion="user">
         <DemoChrome {...props} />
       </MotionConfig>
     </StrictMode>,
   )
+  return () => {
+    root.unmount()
+    host.remove()
+  }
 }

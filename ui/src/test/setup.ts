@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom/vitest'
 import { configure } from '@testing-library/dom'
-import { afterEach } from 'vitest'
+import { notifyManager } from '@tanstack/react-query'
+import type * as ReactDomClient from 'react-dom/client'
+import { afterAll, afterEach, vi } from 'vitest'
 
 import { resetSessionForTest } from '@/api/session'
 
@@ -29,6 +31,61 @@ configure({ asyncUtilTimeout: 5_000 })
 afterEach(() => {
   resetSessionForTest()
 })
+
+/**
+ * A test that leaves a React root mounted fails.
+ *
+ * Testing Library unmounts what it renders before this runs. A root made with
+ * `createRoot` directly is the test's own to unmount, and one still mounted
+ * goes on committing after the file's jsdom has gone, which fails whichever
+ * file the worker is running then. -> #1316
+ */
+const mountedRoots = vi.hoisted(() => new Set<object>())
+vi.mock('react-dom/client', async (importOriginal) => {
+  const client = await importOriginal<typeof ReactDomClient>()
+  return {
+    ...client,
+    createRoot: (...args: Parameters<typeof client.createRoot>) => {
+      const root = client.createRoot(...args)
+      const unmount = root.unmount.bind(root)
+      root.unmount = () => {
+        mountedRoots.delete(root)
+        unmount()
+      }
+      mountedRoots.add(root)
+      return root
+    },
+  }
+})
+afterEach(() => {
+  const left = mountedRoots.size
+  mountedRoots.clear()
+  if (left > 0) {
+    throw new Error(`the test left ${String(left)} React root(s) mounted; unmount what it mounts`)
+  }
+})
+
+/**
+ * A query notification still pending when its test ends is dropped.
+ *
+ * Every component has been unmounted by then, so it has no recipient. TanStack
+ * delivers it on a `setTimeout(0)`, and one that fires after the file's jsdom
+ * is torn down reads `window` inside React. -> #1316
+ */
+const pendingNotifications = new Set<ReturnType<typeof setTimeout>>()
+notifyManager.setScheduler((notify) => {
+  const timer = setTimeout(() => {
+    pendingNotifications.delete(timer)
+    notify()
+  }, 0)
+  pendingNotifications.add(timer)
+})
+function dropPendingNotifications() {
+  for (const timer of pendingNotifications) clearTimeout(timer)
+  pendingNotifications.clear()
+}
+afterEach(dropPendingNotifications)
+afterAll(dropPendingNotifications)
 
 /**
  * jsdom lays nothing out and defines no `scrollIntoView`, so any component
