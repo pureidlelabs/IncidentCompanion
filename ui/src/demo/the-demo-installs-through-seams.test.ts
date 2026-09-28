@@ -15,8 +15,10 @@ class Untouched {
   }
 }
 
+let uninstall: () => void = () => undefined
+
 afterEach(() => {
-  document.querySelector('[data-part="demo-chrome"]')?.remove()
+  uninstall()
 })
 
 describe('installing the demo', () => {
@@ -25,7 +27,7 @@ describe('installing the demo', () => {
     const fetchBefore = globalThis.fetch
     ;(globalThis as unknown as { WebSocket: unknown }).WebSocket = Untouched
 
-    await installDemo()
+    uninstall = await installDemo()
 
     expect(window.location.pathname).toMatch(/^\/cases\/[^/]+\/timeline$/)
     expect(globalThis.fetch).toBe(fetchBefore)
@@ -33,7 +35,7 @@ describe('installing the demo', () => {
   })
 
   it('answers the case socket in the browser', async () => {
-    await installDemo()
+    uninstall = await installDemo()
 
     const link = acquireLink('demo-probe')
     await Promise.resolve()
@@ -43,7 +45,7 @@ describe('installing the demo', () => {
   })
 
   it('answers the auth client with the demo analyst', async () => {
-    await installDemo()
+    uninstall = await installDemo()
 
     const session = await authClient.getSession()
 

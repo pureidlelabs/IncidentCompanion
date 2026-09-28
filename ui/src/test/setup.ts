@@ -1,7 +1,8 @@
 import '@testing-library/jest-dom/vitest'
 import { configure } from '@testing-library/dom'
 import { notifyManager } from '@tanstack/react-query'
-import { afterAll, afterEach } from 'vitest'
+import type * as ReactDomClient from 'react-dom/client'
+import { afterAll, afterEach, vi } from 'vitest'
 
 import { resetSessionForTest } from '@/api/session'
 
@@ -32,12 +33,44 @@ afterEach(() => {
 })
 
 /**
+ * A test that leaves a React root mounted fails.
+ *
+ * Testing Library unmounts what it renders before this runs. A root made with
+ * `createRoot` directly is the test's own to unmount, and one still mounted
+ * goes on committing after the file's jsdom has gone, which fails whichever
+ * file the worker is running then. -> #1316
+ */
+const mountedRoots = vi.hoisted(() => new Set<object>())
+vi.mock('react-dom/client', async (importOriginal) => {
+  const client = await importOriginal<typeof ReactDomClient>()
+  return {
+    ...client,
+    createRoot: (...args: Parameters<typeof client.createRoot>) => {
+      const root = client.createRoot(...args)
+      const unmount = root.unmount.bind(root)
+      root.unmount = () => {
+        mountedRoots.delete(root)
+        unmount()
+      }
+      mountedRoots.add(root)
+      return root
+    },
+  }
+})
+afterEach(() => {
+  const left = mountedRoots.size
+  mountedRoots.clear()
+  if (left > 0) {
+    throw new Error(`the test left ${String(left)} React root(s) mounted; unmount what it mounts`)
+  }
+})
+
+/**
  * A query notification still pending when its test ends is dropped.
  *
- * TanStack delivers observer notifications on a `setTimeout(0)`. One left
- * over when a file's jsdom is torn down reaches React after `window` has gone,
- * and the worker fails with every test green, blaming whichever file is running
- * then. Delivery within a test is unchanged. -> #1316
+ * Every component has been unmounted by then, so it has no recipient. TanStack
+ * delivers it on a `setTimeout(0)`, and one that fires after the file's jsdom
+ * is torn down reads `window` inside React. -> #1316
  */
 const pendingNotifications = new Set<ReturnType<typeof setTimeout>>()
 notifyManager.setScheduler((notify) => {

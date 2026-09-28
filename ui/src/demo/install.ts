@@ -59,7 +59,7 @@ function answerSockets(state: DemoState): void {
   setSocketFactory((url) => new LoopbackSocket(url))
 }
 
-export async function installDemo(): Promise<void> {
+export async function installDemo(): Promise<() => void> {
   signIn()
   const state = await load()
   // A case stored by an earlier build carries no marks, and nothing versions
@@ -83,7 +83,7 @@ export async function installDemo(): Promise<void> {
   const landing = landingPath(window.location.pathname, state.kase.id, import.meta.env.BASE_URL)
   if (landing !== null) window.history.replaceState(null, '', landing)
 
-  mountDemoChrome({
+  return mountDemoChrome({
     build: import.meta.env.VITE_DEMO_BUILD ?? 'local',
     onReset: () => {
       forgetProse()
