@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn } from 'storybook/test'
+import { expect, fn, waitFor } from 'storybook/test'
 
 import { Link } from './link'
 
@@ -128,16 +128,16 @@ export const Quiet: Story = {
    * Both halves of the variant, because the pointer decides which one shows.
    *
    * The rest state has to be asserted with the pointer parked somewhere else:
-   * it stays where the previous story left it, and a story that read the rule
-   * without moving it first was told `underline` whenever that was one of these
-   * three links. -> #340
+   * it stays where the previous file left it, and a link laid out under it is
+   * marked hovered late enough to land after the park. So each half waits for
+   * the rule to settle: a wrong rule stays wrong, and still fails. -> #340
    */
   play: async ({ canvas, canvasElement, userEvent }) => {
     const first = canvas.getByRole('link', { name: 'social engineering' })
     await userEvent.hover(canvasElement)
-    await expect(getComputedStyle(first).textDecorationLine).toBe('none')
+    await waitFor(() => expect(getComputedStyle(first).textDecorationLine).toBe('none'))
     await userEvent.hover(first)
-    await expect(getComputedStyle(first).textDecorationLine).toBe('underline')
+    await waitFor(() => expect(getComputedStyle(first).textDecorationLine).toBe('underline'))
   },
 }
 
