@@ -15,7 +15,7 @@ actionlint = "1.7.12"
 # The repository being signed answered for the bytes but nothing answered for
 # the version, which floated with whatever the repository served that day.
 docker-cli = "29.8.2"
-docker-compose = "5.5.1"
+docker-compose = "5.6.0"
 gh = "2.102.0"
 
 # Installed by apt for want of anywhere better to say it.
