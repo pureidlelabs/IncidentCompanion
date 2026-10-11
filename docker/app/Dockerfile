@@ -88,7 +88,8 @@ COPY packages/prose-schema/package.json packages/prose-schema/
 # TypeScript is a devDependency this stage omits. Its `dist` is copied from the
 # build stage into the final image instead of rebuilt here.
 RUN npm ci --omit=dev --omit=peer --no-audit --no-fund --workspace server --ignore-scripts \
- && npm cache clean --force
+ && npm cache clean --force \
+ && mkdir -p server/node_modules
 
 # **`drizzle-kit` survives every npm flag that is safe to pass**, so the four
 # are deleted by name; the other three are reachable through nothing else.
@@ -101,6 +102,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=runtime-deps /repo/node_modules ./node_modules
+# What npm could not hoist past a root slot another version holds. Searched
+# before `node_modules` from anything under `dist/`, as in the workspace.
+COPY --from=runtime-deps /repo/server/node_modules ./dist/node_modules
 
 # The shared schema package the `node_modules` symlink points at, built in the
 # server-build stage. Its relative link (`../../packages/prose-schema`) resolves
