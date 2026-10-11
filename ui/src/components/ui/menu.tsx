@@ -18,7 +18,7 @@ import {
 
 import { spring } from '@/lib/motion'
 
-import { MENU_SURFACE, Popover } from './popover'
+import { MENU_SURFACE, Popover, type PopoverProps } from './popover'
 
 import { tv } from '@/lib/cn'
 
@@ -81,10 +81,18 @@ const ground = tv({
  */
 const MenuGroundContext = createContext<string | undefined>(undefined)
 
-export function Menu<T extends object>(props: AriaMenuProps<T>) {
+export interface MenuProps<T extends object> extends AriaMenuProps<T> {
+  /** Where the menu's surface opens against its trigger. */
+  placement?: PopoverProps['placement']
+}
+
+export function Menu<T extends object>({ placement, ...props }: MenuProps<T>) {
   const layoutId = useId()
   return (
-    <Popover className={`min-w-(--trigger-width) ${MENU_SURFACE}`}>
+    <Popover
+      className={`min-w-(--trigger-width) ${MENU_SURFACE}`}
+      {...(placement === undefined ? {} : { placement })}
+    >
       <MenuGroundContext.Provider value={layoutId}>
         <AriaMenu
           {...props}

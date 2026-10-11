@@ -104,7 +104,8 @@ export function ReportNewDialog({
   onCreate,
 }: ReportNewDialogProps) {
   const layouts = layoutsGiven ?? NONE
-  const markings = markingsGiven ?? []
+  // The registry serves `''` as a marking; the Unmarked row already owns that key.
+  const markings = (markingsGiven ?? []).filter((one) => one !== '')
   const [picked, setPicked] = useState('')
   const [label, setLabel] = useState('')
   const [tlp, setTlp] = useState('')

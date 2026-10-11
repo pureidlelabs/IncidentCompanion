@@ -301,6 +301,10 @@ export const KindsFromTheServer: Story = {
       await expect(await menu.findByText('A served kind')).toBeInTheDocument()
     })
 
+    await step('on one surface, not a popover inside a popover', async () => {
+      await expect(document.querySelectorAll('[data-part="popover"]')).toHaveLength(1)
+    })
+
     await step('and nothing the bundle happens to carry', async () => {
       // A heading the fixture has and this list does not: drawn, the menu is
       // reading its own copy rather than the answer it was handed.
