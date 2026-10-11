@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, within } from 'storybook/test'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
 
 import { reportBlockKinds } from '@/fixtures/reportBlockKinds'
 
@@ -37,6 +37,10 @@ export const Open: Story = {
     const canvas = within(canvasElement)
     const trigger = await canvas.findByRole('button', { name: 'Add section' })
     await userEvent.click(trigger)
-    await expect(await within(document.body).findByRole('menu')).toBeVisible()
+    const menu = await within(document.body).findByRole('menu')
+    // The surface fades in, so it mounts at opacity 0.
+    await waitFor(async () => {
+      await expect(menu).toBeVisible()
+    })
   },
 }
