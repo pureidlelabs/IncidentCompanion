@@ -150,6 +150,24 @@
         'Separately: `@thallesp/nestjs-better-auth` peers on `typescript` `^5.9.2 || ^6.0.0`. `.npmrc` sets `legacy-peer-deps=true`, so the install will succeed and say nothing -- check `npm ls typescript` for one deduped copy rather than reading that silence as agreement.',
       ],
     },
+    // Two more holds of the same kind: each update fails the gate on something
+    // no change to the branch it raises can fix.
+    {
+      description: 'react-aria-components 1.22',
+      matchPackageNames: ['react-aria-components'],
+      dependencyDashboardApproval: true,
+      prBodyNotes: [
+        "**Blocked by `react-aria@3.53`'s `useExitAnimation`**, which waits on `Promise.all(...).catch(() => {})` where 3.52 used `Promise.allSettled`. An overlay closed while its Motion entry animation is still running sees that animation cancelled, the rejection is swallowed, and the overlay never unmounts: an invisible modal stays over the page. 3.53.1 still has it. Tick once `react-aria/dist/private/utils/animation.mjs` at the new version settles a cancelled animation, and run the story tier: the cheat sheet's `Raised over the case` is the story that catches it.",
+      ],
+    },
+    {
+      description: 'OpenSpec 1.14.1 and later',
+      matchPackageNames: ['@fission-ai/openspec'],
+      dependencyDashboardApproval: true,
+      prBodyNotes: [
+        '**Blocked by a new validator rule**: requirement text over 500 characters is a warning, `--strict` turns it into a failure, and the limit is a constant (`MAX_REQUIREMENT_TEXT_LENGTH`) with no setting. 117 requirements across 20 specs exceed it. Ticking this is deciding to rewrite those requirements, which is a change under `openspec/changes/`, not a dependency bump.',
+      ],
+    },
     // `monorepo:nest` is already active through `config:recommended`, and it
     // reaches eight of the eleven `@nestjs/*` packages here: `schedule`,
     // `swagger` and `throttler` are each published from their own repository,

@@ -222,6 +222,23 @@ def test_the_runtime_carries_no_schema_tool() -> None:
     )
 
 
+def test_the_runtime_carries_what_npm_nests_under_the_server() -> None:
+    """A server dependency npm places in `server/node_modules` reaches the image.
+
+    Reads the Dockerfile, not a built image: the lifecycle tier is what boots one.
+    """
+    runtime = _stages().get("runtime")
+    assert runtime, "the Dockerfile has no runtime stage"
+    assert re.search(
+        r"^COPY --from=runtime-deps /repo/server/node_modules \./dist/node_modules$",
+        runtime,
+        re.MULTILINE,
+    ), (
+        "the runtime stage does not copy server/node_modules, so a server "
+        "dependency npm could not hoist is missing from the image"
+    )
+
+
 def test_the_schema_push_runs_as_its_own_service() -> None:
     """The server connects as `ic_app`, which has no DDL at all.
 
