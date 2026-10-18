@@ -1,7 +1,7 @@
 # The stack's TLS edge. **An image rather than a bind-mounted config**, because
 # a mounted config is a host-path dependency and `docker compose up` has to work
 # with no environment set. `openssl` is not in `nginx:alpine` and mints the pair.
-FROM nginx:1.31-alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
+FROM nginx:1.31-alpine@sha256:892bb2152464f0c5d8972593a5f5afaf8054552580b699d95f8ff4af08c2d33d
 
 # **The base image's IPv6 step goes**: it runs `apk manifest`, which fetches
 # the package index over HTTPS on every start, since neither the base image nor
