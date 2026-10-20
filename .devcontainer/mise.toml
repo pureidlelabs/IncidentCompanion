@@ -16,7 +16,7 @@ actionlint = "1.7.12"
 # the version, which floated with whatever the repository served that day.
 docker-cli = "29.9.1"
 docker-compose = "5.6.0"
-gh = "2.102.0"
+gh = "2.102.1"
 
 # Installed by apt for want of anywhere better to say it.
 ripgrep = "15.2.0"
