@@ -35,7 +35,7 @@
     "@fission-ai/openspec": "1.14.0",
     "@typescript-eslint/parser": "8.71.2",
     "eslint": "10.13.0",
-    "renovate": "44.167.0"
+    "renovate": "44.167.1"
   },
   "overrides": {
     "multer": "2.4.0"
