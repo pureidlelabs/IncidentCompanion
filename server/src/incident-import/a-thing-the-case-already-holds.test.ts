@@ -19,11 +19,20 @@ import { definitions as defs } from './targets.js'
 
 function recorder(hosts: () => Record<string, unknown>[]) {
   const written: { collection: string; rows: Record<string, unknown>[] }[] = []
+  /**
+   * The timeline the case holds, which is what the rig has written to it.
+   * A fixture whose timeline stays empty cannot tell a matcher from no
+   * matcher: every run judges a case that holds none of the first run's work.
+   */
+  const entries: Record<string, unknown>[] = []
   return {
     written,
+    entries,
     service: {
       list: (def: { name: string }) =>
-        Promise.resolve(def.name === 'systems' ? hosts() : []),
+        Promise.resolve(
+          def.name === 'systems' ? hosts() : def.name === 'timeline' ? [...entries] : [],
+        ),
       createAcross: (
         _caseId: string,
         _actorId: string,
@@ -38,6 +47,16 @@ function recorder(hosts: () => Record<string, unknown>[]) {
       },
       createMany: (def: { name: string }, _caseId: string, rows: Record<string, unknown>[]) => {
         written.push({ collection: def.name, rows })
+        // **`time` goes back as a `Date`**, which is what the store answers for
+        // a timestamp column. Handing back the string that was written lets a
+        // matcher comparing text pass here and match nothing in a real case.
+        for (const row of rows) {
+          entries.push({
+            id: `row-${String(entries.length)}`,
+            ...row,
+            time: new Date(String(row['time'])),
+          })
+        }
         return Promise.resolve({ ids: rows.map((_, at) => `id-timeline-${String(at)}`), unlinked: 0 })
       },
     },
@@ -138,17 +157,20 @@ describe('a thing the case already holds', () => {
   })
 
   /**
-   * **The exception, and it is deliberate.** *Only collections that have an
-   * identity can be matched this way. For a collection whose rows are events
-   * rather than things, every imported row MUST be a new row.*
+   * **The same alert is one event, and the whole import is run again.**
    *
-   * So running the same import twice is not idempotent everywhere, and the
-   * two halves have to be asserted together: a matcher applied to the timeline
-   * would make the second run silent, and one applied to nothing would
-   * duplicate the host. One run of each, in one case, because the property is
-   * the difference between them.
+   * Both halves are asserted together, because the property is that they agree:
+   * a matcher on the entities alone leaves the timeline doubling under it, and
+   * the analyst reading the case cannot tell the second copy of an alert from a
+   * second occurrence of it.
+   *
+   * **Approved rather than left unchecked**, which is the attack: the preview
+   * offers a matched entry unchecked, and an analyst who checks it anyway --
+   * or a client that approves everything it is shown -- must still not get a
+   * second copy. Skipping at the write is what decides that; the checkbox is
+   * what it looks like.
    */
-  it('writes the event again while the host it names is matched', async () => {
+  it('matches the alert it already wrote, and the host it names with it', async () => {
     let hosts: Record<string, unknown>[] = []
     const rig = recorder(() => hosts)
     const service = new ImportService(rig.service as never)
@@ -156,7 +178,7 @@ describe('a thing the case already holds', () => {
 
     async function runOnce() {
       const plan = await service.preview('case-1', incidents, defs())
-      await service.commit(
+      const wrote = await service.commit(
         'case-1',
         'analyst',
         incidents,
@@ -164,25 +186,82 @@ describe('a thing the case already holds', () => {
         [],
         defs(),
       )
+      return { plan, wrote }
     }
 
-    await runOnce()
+    const first = await runOnce()
     expect(hostRowsWritten(rig.written), 'the first run wrote no host to match against').toHaveLength(
       1,
     )
+    expect(
+      timelineRowsWritten(rig.written),
+      'the first run wrote no entry to match against',
+    ).toHaveLength(1)
+    expect(first.plan.timeline[0]?.existing, 'the first run matched an empty case').toBeNull()
 
     hosts = ALREADY_THERE
-    await runOnce()
+    const second = await runOnce()
 
+    expect(
+      second.plan.timeline[0]?.existing,
+      'the entry the case already holds is offered as new, so the analyst is told the ' +
+        'import will add something it will not',
+    ).toBe('row-0')
     expect(
       hostRowsWritten(rig.written),
       'the host was written a second time, so a thing with an identity was treated as an event',
     ).toHaveLength(1)
     expect(
       timelineRowsWritten(rig.written),
-      'the second run wrote no timeline entry, so an event was treated as a duplicate of ' +
-        'one already recorded -- two occurrences of the same thing are two events',
-    ).toHaveLength(2)
+      'the re-import wrote the alert again, so the timeline carries two of every entry ' +
+        'the first run brought in',
+    ).toHaveLength(1)
+    expect(
+      second.wrote,
+      'the re-import reported as added rows it did not write, so the two sentences the ' +
+        'analyst is shown count different things',
+    ).toEqual({ entities: 0, timeline: 0, skippedExisting: 2 })
+  })
+
+  /**
+   * **An entry the analyst wrote is theirs, and the import writes its own.**
+   *
+   * The analyst's record of an event and the platform's are two accounts of
+   * it, and the one the analyst typed is the one they would go looking for.
+   * Matching against it drops the imported entry and reports it as already
+   * there, which is the import silently deciding their note was the alert.
+   */
+  it('writes its own entry beside one the analyst wrote that reads the same', async () => {
+    const rig = recorder(() => [])
+    rig.entries.push({
+      id: 'row-the-analyst-wrote',
+      provenance: 'typed',
+      sourceTool: 'Microsoft Sentinel',
+      description: 'One host',
+      time: new Date('2026-08-10T12:00:00Z'),
+    })
+    const service = new ImportService(rig.service as never)
+    const incidents = [incident()]
+
+    const plan = await service.preview('case-1', incidents, defs())
+    expect(
+      plan.timeline[0]?.existing,
+      "the import matched the analyst's own entry, so their record is read as the alert",
+    ).toBeNull()
+
+    await service.commit(
+      'case-1',
+      'analyst',
+      incidents,
+      [...plan.entities.map((one) => one.id), ...plan.timeline.map((one) => one.id)],
+      [],
+      defs(),
+    )
+
+    expect(
+      timelineRowsWritten(rig.written),
+      'the alert was dropped, so the case holds the analyst note and none of the import',
+    ).toHaveLength(1)
   })
 
   /**

@@ -185,16 +185,15 @@ export function ImportSentinelContainer({
    * A timeline entry as the review draws it.
    *
    * **The preview answers two lists and both are written**, so both are shown.
-   * A timeline entry carries no verdict and no collection: the server matches
-   * an entity against what the case holds and a timeline row against nothing,
-   * so every one of them is new. -> #392
+   * A timeline entry carries no collection of its own, and its verdict is read
+   * off `existing` the way an entity's is. -> #392
    */
   const timelineForReview = (one: TimelineCandidate): Candidate => ({
     id: one.id,
     incident: one.incident,
     collection: 'timeline',
     label: one.label,
-    verdict: 'new',
+    verdict: one.existing === null ? 'new' : 'merge',
     fields: Object.keys(one.fields).length,
     checked: one.checked,
   })

@@ -2,12 +2,17 @@
  * A collection of events has no identity, so two alike rows stay two rows.
  *
  * *Two entries that look alike are two facts, and merging them loses one. For
- * these, sameness MUST NOT be inferred at all -- not by resemblance, not by
- * content, not by proximity in time.*
+ * these, sameness MUST NOT be inferred from what is written -- not by
+ * resemblance, not by content, not by proximity in time.*
  *
  * > #### Scenario: The same timeline entry is imported twice
+ * > - WHEN an identical one is supplied to the store
  * > - THEN both are kept
  * > - AND nothing merges them
+ *
+ * **What an importer recognises of its own earlier work is decided before
+ * anything reaches here**, and is the incident import's requirement rather
+ * than this one.
  *
  * **Two halves, and the structural one is the stronger.** That two identical
  * rows both persist is what an analyst sees; that `identitiesOf` yields nothing

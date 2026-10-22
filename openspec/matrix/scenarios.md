@@ -430,6 +430,7 @@
 | An import is matched against what the case already holds | An imported thing is already in the case | undemonstrated | |
 | An import is matched against what the case already holds | The case changed while the import was reviewed | undemonstrated | |
 | An import is matched against what the case already holds | An event is imported twice | undemonstrated | |
+| An import is matched against what the case already holds | An analyst's own entry resembles one arriving | undemonstrated | |
 | One import proposes each thing once, however many incidents name it | Two incidents name the same host | undemonstrated | |
 | One import proposes each thing once, however many incidents name it | One incident states a qualifier the other omits | undemonstrated | |
 | One import proposes each thing once, however many incidents name it | An event from the second incident names the shared thing | undemonstrated | |
