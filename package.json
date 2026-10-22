@@ -32,7 +32,7 @@
     "lint:renovate": "npx --no-install renovate-config-validator --no-global --strict .github/renovate.json5"
   },
   "devDependencies": {
-    "@fission-ai/openspec": "1.14.0",
+    "@fission-ai/openspec": "1.14.3",
     "@typescript-eslint/parser": "8.71.2",
     "eslint": "10.13.0",
     "renovate": "44.167.5"
