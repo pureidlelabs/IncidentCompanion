@@ -62,7 +62,7 @@
     "@eslint-react/eslint-plugin": "5.28.1",
     "@eslint/js": "10.0.1",
     "@storybook/addon-a11y": "10.6.3",
-    "@storybook/addon-docs": "10.6.2",
+    "@storybook/addon-docs": "10.6.3",
     "@storybook/addon-mcp": "10.6.3",
     "@storybook/addon-vitest": "10.6.3",
     "@storybook/react-vite": "10.6.3",
