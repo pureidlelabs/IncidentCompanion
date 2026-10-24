@@ -96,7 +96,7 @@
     "@nestjs/schematics": "12.0.9",
     "@nestjs/testing": "12.2.0",
     "@playwright/test": "1.64.1",
-    "@redocly/openapi-core": "2.65.1",
+    "@redocly/openapi-core": "2.66.1",
     "@swc/cli": "0.8.1",
     "@swc/core": "1.16.18",
     "@types/compression": "1.8.1",
