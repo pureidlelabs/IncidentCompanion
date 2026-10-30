@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@fission-ai/openspec": "1.14.0",
-    "@typescript-eslint/parser": "8.71.2",
+    "@typescript-eslint/parser": "8.72.1",
     "eslint": "10.13.0",
     "renovate": "44.171.4"
   },
